@@ -2584,7 +2584,11 @@ def HasUnrestrictedSOffset : Predicate<"!Subtarget->hasRestrictedSOffset()">,
 
 def D16PreservesUnusedBits :
   Predicate<"Subtarget->d16PreservesUnusedBits()">,
-  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureSRAMECC))>;
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureSRAMECC), (not FeatureD16Writes32BitVgpr))>;
+
+def D16NotPreservesUnusedBits :
+  Predicate<"!Subtarget->d16PreservesUnusedBits()">,
+  AssemblerPredicate<(all_of (not FeatureGFX9Insts), FeatureSRAMECC, FeatureD16Writes32BitVgpr)>;
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
@@ -2625,12 +2629,6 @@ def NotUseRealTrue16Insts : True16PredicateClass<"!Subtarget->useRealTrue16Insts
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
                                               "!Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
-
-def UseTrue16WithSramECC : True16PredicateClass<"Subtarget->useRealTrue16Insts() && "
-                                                "!Subtarget->d16PreservesUnusedBits()">;
-
-def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
-  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not FeatureD16Writes32BitVgpr))>;
 
 def NotHasMed3_16 : Predicate<"!Subtarget->hasMed3_16()">;
 def HasMed3_16 : Predicate<"Subtarget->hasMed3_16()">;

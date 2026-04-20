@@ -31,9 +31,10 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
   ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep1, addrspace 1)
   ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep2, addrspace 1)
-  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 killed [[REG_SEQUENCE2]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.in.gep3, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR killed [[REG_SEQUENCE2]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.in.gep3, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[GLOBAL_LOAD_USHORT_SADDR]].lo16
   ; GFX11-REAL16-NEXT:   [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 14336, 0, implicit $exec
-  ; GFX11-REAL16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, killed [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], 0, killed [[V_MOV_B16_t16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, killed [[COPY10]], 0, killed [[V_MOV_B16_t16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
   ; GFX11-REAL16-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-REAL16-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_ADD_F16_t16_e64_]], %subreg.lo16, killed [[DEF]], %subreg.hi16

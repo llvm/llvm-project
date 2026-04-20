@@ -968,7 +968,7 @@ multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [NotLDSRequiresM0Init, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
     def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
   }
-  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = UseTrue16WithSramECC in {
+  let OtherPredicates = [NotLDSRequiresM0Init, D16NotPreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
     def : DSReadPat_t16<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
 }

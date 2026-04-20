@@ -6666,29 +6666,13 @@ define void @freeze_i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: freeze_i16:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: freeze_i16:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: freeze_i16:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: freeze_i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a = load i16, ptr addrspace(1) %ptra
   %freeze = freeze i16 %a
   store i16 %freeze, ptr addrspace(1) %ptrb
@@ -7371,29 +7355,13 @@ define void @freeze_f16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: freeze_f16:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: freeze_f16:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: freeze_f16:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: freeze_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a = load half, ptr addrspace(1) %ptra
   %freeze = freeze half %a
   store half %freeze, ptr addrspace(1) %ptrb
@@ -8096,29 +8064,13 @@ define void @freeze_bf16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: freeze_bf16:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: freeze_bf16:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: freeze_bf16:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: freeze_bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a = load bfloat, ptr addrspace(1) %ptra
   %freeze = freeze bfloat %a
   store bfloat %freeze, ptr addrspace(1) %ptrb
@@ -14088,29 +14040,13 @@ define void @freeze_i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-NEXT:    global_store_byte v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: freeze_i8:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[2:3], v0, off
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: freeze_i8:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[2:3], v0, off
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: freeze_i8:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    global_store_b8 v[2:3], v0, off
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: freeze_i8:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a = load i8, ptr addrspace(1) %ptra
   %freeze = freeze i8 %a
   store i8 %freeze, ptr addrspace(1) %ptrb
@@ -14242,21 +14178,13 @@ define void @freeze_v2i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-GISEL-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: freeze_v2i8:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: freeze_v2i8:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: freeze_v2i8:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-LABEL: freeze_v2i8:
 ; GFX11-GISEL:       ; %bb.0:
@@ -15553,7 +15481,7 @@ define void @freeze_v2i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-TRUE16-LABEL: freeze_v2i1:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
+; GFX11-SDAG-TRUE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 3
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[2:3], v0, off
@@ -15748,7 +15676,7 @@ define void @freeze_v3i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-TRUE16-LABEL: freeze_v3i1:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
+; GFX11-SDAG-TRUE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 7
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[2:3], v0, off

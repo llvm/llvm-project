@@ -63,21 +63,13 @@ define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11TRUE16-LABEL: test_load_store:
-; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11TRUE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11FAKE16-LABEL: test_load_store:
-; GFX11FAKE16:       ; %bb.0:
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: test_load_store:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: test_load_store:
 ; GFX1250:       ; %bb.0:
@@ -2939,21 +2931,13 @@ define void @test_bitcast_from_bfloat(ptr addrspace(1) %in, ptr addrspace(1) %ou
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11TRUE16-LABEL: test_bitcast_from_bfloat:
-; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11TRUE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11FAKE16-LABEL: test_bitcast_from_bfloat:
-; GFX11FAKE16:       ; %bb.0:
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: test_bitcast_from_bfloat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: test_bitcast_from_bfloat:
 ; GFX1250:       ; %bb.0:
@@ -3022,21 +3006,13 @@ define void @test_bitcast_to_bfloat(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11TRUE16-LABEL: test_bitcast_to_bfloat:
-; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11TRUE16-NEXT:    global_load_d16_b16 v2, v[2:3], off
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11FAKE16-LABEL: test_bitcast_to_bfloat:
-; GFX11FAKE16:       ; %bb.0:
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11FAKE16-NEXT:    global_load_u16 v2, v[2:3], off
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: test_bitcast_to_bfloat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v2, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: test_bitcast_to_bfloat:
 ; GFX1250:       ; %bb.0:
@@ -5101,23 +5077,14 @@ define bfloat @test_alloca_load_store_ret(bfloat %in) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11TRUE16-LABEL: test_alloca_load_store_ret:
-; GFX11TRUE16:       ; %bb.0: ; %entry
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11TRUE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
-; GFX11TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 glc dlc
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11FAKE16-LABEL: test_alloca_load_store_ret:
-; GFX11FAKE16:       ; %bb.0: ; %entry
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11FAKE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
-; GFX11FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11FAKE16-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: test_alloca_load_store_ret:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    scratch_store_b16 off, v0, s32 dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: test_alloca_load_store_ret:
 ; GFX1250:       ; %bb.0: ; %entry
@@ -45741,7 +45708,7 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX11TRUE16:       ; %bb.0:
 ; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11TRUE16-NEXT:    s_clause 0x1f
-; GFX11TRUE16-NEXT:    scratch_load_d16_b16 v31, off, s32
+; GFX11TRUE16-NEXT:    scratch_load_u16 v31, off, s32
 ; GFX11TRUE16-NEXT:    scratch_load_b32 v32, off, s32 offset:68
 ; GFX11TRUE16-NEXT:    scratch_load_b32 v33, off, s32 offset:72
 ; GFX11TRUE16-NEXT:    scratch_load_b32 v34, off, s32 offset:76

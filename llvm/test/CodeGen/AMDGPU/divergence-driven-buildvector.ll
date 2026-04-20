@@ -801,7 +801,7 @@ define <2 x i16> @build_vec_v2i16_undeflo_divergent(ptr addrspace(3) %in) #0 {
 ; GFX11-LABEL: build_vec_v2i16_undeflo_divergent:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    ds_load_u16_d16 v0, v0
+; GFX11-NEXT:    ds_load_u16 v0, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -856,7 +856,7 @@ define amdgpu_kernel void @build_vec_v2i16_undeflo_uniform(ptr addrspace(3) %in,
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX11-NEXT:    ds_load_u16_d16 v0, v0
+; GFX11-NEXT:    ds_load_u16 v0, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm

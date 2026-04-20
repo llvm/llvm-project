@@ -3024,9 +3024,10 @@ define void @shuffle_v4i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1,
 ; GFX11-TRUE16-LABEL: shuffle_v4i8_concat:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v[2:3], off
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v[0:1], off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
 ; GFX11-TRUE16-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3034,8 +3035,9 @@ define void @shuffle_v4i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1,
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-FAKE16-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
+; GFX11-FAKE16-NEXT:    global_load_u16 v1, v[2:3], off
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-FAKE16-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <2 x i8>, ptr addrspace(1) %arg0

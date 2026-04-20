@@ -77,18 +77,18 @@ define amdgpu_kernel void @i16_eq(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -174,18 +174,18 @@ define amdgpu_kernel void @i16_ne(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_ne_u16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_ne_u16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -271,18 +271,18 @@ define amdgpu_kernel void @i16_ugt(ptr addrspace(1) %out, ptr addrspace(1) %a.pt
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -368,18 +368,18 @@ define amdgpu_kernel void @i16_uge(ptr addrspace(1) %out, ptr addrspace(1) %a.pt
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -465,18 +465,18 @@ define amdgpu_kernel void @i16_ult(ptr addrspace(1) %out, ptr addrspace(1) %a.pt
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_lt_u16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_lt_u16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -562,18 +562,18 @@ define amdgpu_kernel void @i16_ule(ptr addrspace(1) %out, ptr addrspace(1) %a.pt
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_le_u16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_le_u16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -660,18 +660,18 @@ define amdgpu_kernel void @i16_sgt(ptr addrspace(1) %out, ptr addrspace(1) %a.pt
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -757,18 +757,18 @@ define amdgpu_kernel void @i16_sge(ptr addrspace(1) %out, ptr addrspace(1) %a.pt
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_ge_i16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_ge_i16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -854,18 +854,18 @@ define amdgpu_kernel void @i16_slt(ptr addrspace(1) %out, ptr addrspace(1) %a.pt
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -951,18 +951,18 @@ define amdgpu_kernel void @i16_sle(ptr addrspace(1) %out, ptr addrspace(1) %a.pt
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_le_i16_e32 vcc_lo, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_le_i16_e32 vcc_lo, v2.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1039,17 +1039,17 @@ define amdgpu_kernel void @i16_eq_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX11-TRUE16-LABEL: i16_eq_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1123,17 +1123,17 @@ define amdgpu_kernel void @i16_ne_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX11-TRUE16-LABEL: i16_ne_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_ne_u16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_ne_u16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1207,17 +1207,17 @@ define amdgpu_kernel void @i16_ugt_v_s(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-TRUE16-LABEL: i16_ugt_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_lt_u16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_lt_u16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1291,17 +1291,17 @@ define amdgpu_kernel void @i16_uge_v_s(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-TRUE16-LABEL: i16_uge_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_le_u16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_le_u16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1375,17 +1375,17 @@ define amdgpu_kernel void @i16_ult_v_s(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-TRUE16-LABEL: i16_ult_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_gt_u16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_gt_u16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1459,17 +1459,17 @@ define amdgpu_kernel void @i16_ule_v_s(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-TRUE16-LABEL: i16_ule_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_ge_u16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_ge_u16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1543,17 +1543,17 @@ define amdgpu_kernel void @i16_sgt_v_s(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-TRUE16-LABEL: i16_sgt_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1627,17 +1627,17 @@ define amdgpu_kernel void @i16_sge_v_s(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-TRUE16-LABEL: i16_sge_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_le_i16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_le_i16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1711,17 +1711,17 @@ define amdgpu_kernel void @i16_slt_v_s(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-TRUE16-LABEL: i16_slt_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_gt_i16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_gt_i16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1795,17 +1795,17 @@ define amdgpu_kernel void @i16_sle_v_s(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-TRUE16-LABEL: i16_sle_v_s:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cmp_ge_i16_e32 vcc_lo, s4, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
-; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cmp_ge_i16_e32 vcc_lo, s4, v1.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

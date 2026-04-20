@@ -101,9 +101,10 @@ define amdgpu_kernel void @build_vector_and (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-REAL16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](s32), killed [[S_MOV_B32_]], implicit $exec
   ; GFX11-REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GFX11-REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
-  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 killed [[REG_SEQUENCE]], killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.in.gep1, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR killed [[REG_SEQUENCE]], killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.in.gep1, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[COPY6:%[0-9]+]]:vgpr_16 = COPY [[GLOBAL_LOAD_USHORT_SADDR]].lo16
   ; GFX11-REAL16-NEXT:   [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 1, 0, implicit $exec
-  ; GFX11-REAL16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, killed [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], 0, killed [[V_MOV_B16_t16_e64_]], 0, 0, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, killed [[COPY6]], 0, killed [[V_MOV_B16_t16_e64_]], 0, 0, implicit $exec
   ; GFX11-REAL16-NEXT:   [[V_CVT_U32_U16_t16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_U32_U16_t16_e64 0, killed [[V_ADD_NC_U16_t16_e64_]], 0, implicit $exec
   ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_CVT_U32_U16_t16_e64_]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0

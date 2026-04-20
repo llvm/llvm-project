@@ -2071,7 +2071,7 @@ let True16Predicate = NotUseRealTrue16Insts in {
   defm : FlatStorePats <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
 }
 
-let True16Predicate = UseTrue16WithSramECC in {
+let OtherPredicates = [D16NotPreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
   defm : FlatLoadPats_t16 <FLAT_LOAD_UBYTE, extloadi8_flat, i16>;
   defm : FlatLoadPats_t16 <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
   defm : FlatLoadPats_t16 <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
@@ -2230,7 +2230,7 @@ defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_nonext_16_global, i16
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;
 }
 
-let True16Predicate = UseTrue16WithSramECC in {
+let OtherPredicates = [D16NotPreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, extloadi8_global, i16>;
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, zextloadi8_global, i16>;
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
@@ -2471,7 +2471,7 @@ defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, store_private, i16>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE, truncstorei8_private, i16>;
 }
 
-let True16Predicate = UseTrue16WithSramECC in {
+let OtherPredicates = [D16NotPreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
 defm : ScratchFLATLoadPats_t16 <SCRATCH_LOAD_UBYTE, extloadi8_private, i16>;
 defm : ScratchFLATLoadPats_t16 <SCRATCH_LOAD_UBYTE, zextloadi8_private, i16>;
 defm : ScratchFLATLoadPats_t16 <SCRATCH_LOAD_SBYTE, sextloadi8_private, i16>;

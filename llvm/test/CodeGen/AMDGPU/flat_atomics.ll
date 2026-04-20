@@ -7950,7 +7950,7 @@ define amdgpu_kernel void @atomic_load_i8_offset(ptr %in, ptr %out) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s3
-; GFX11-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:16 glc
+; GFX11-TRUE16-NEXT:    flat_load_u8 v0, v[0:1] offset:16 glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
@@ -8026,7 +8026,7 @@ define amdgpu_kernel void @atomic_load_i8(ptr %in, ptr %out) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s3
-; GFX11-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc
+; GFX11-TRUE16-NEXT:    flat_load_u8 v0, v[0:1] glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
@@ -8119,7 +8119,7 @@ define amdgpu_kernel void @atomic_load_i8_addr64_offset(ptr %in, ptr %out, i64 %
 ; GFX11-TRUE16-NEXT:    s_addc_u32 s1, s1, s5
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:16 glc
+; GFX11-TRUE16-NEXT:    flat_load_u8 v0, v[0:1] offset:16 glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
@@ -8407,7 +8407,7 @@ define amdgpu_kernel void @atomic_load_i16_offset(ptr %in, ptr %out) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s3
-; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1] offset:16 glc
+; GFX11-TRUE16-NEXT:    flat_load_u16 v0, v[0:1] offset:16 glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
@@ -8483,7 +8483,7 @@ define amdgpu_kernel void @atomic_load_i16(ptr %in, ptr %out) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s3
-; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1] glc
+; GFX11-TRUE16-NEXT:    flat_load_u16 v0, v[0:1] glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
@@ -8580,7 +8580,7 @@ define amdgpu_kernel void @atomic_load_i16_addr64_offset(ptr %in, ptr %out, i64 
 ; GFX11-TRUE16-NEXT:    s_addc_u32 s1, s1, s5
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1] offset:16 glc
+; GFX11-TRUE16-NEXT:    flat_load_u16 v0, v[0:1] offset:16 glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
@@ -10599,7 +10599,7 @@ define amdgpu_kernel void @atomic_load_f16_offset(ptr %in, ptr %out) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s3
-; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1] offset:16 glc
+; GFX11-TRUE16-NEXT:    flat_load_u16 v0, v[0:1] offset:16 glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
@@ -10674,7 +10674,7 @@ define amdgpu_kernel void @atomic_load_f16(ptr %in, ptr %out) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s3
-; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1] glc
+; GFX11-TRUE16-NEXT:    flat_load_u16 v0, v[0:1] glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
@@ -10752,7 +10752,7 @@ define amdgpu_kernel void @atomic_load_bf16_offset(ptr %in, ptr %out) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s3
-; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1] offset:16 glc
+; GFX11-TRUE16-NEXT:    flat_load_u16 v0, v[0:1] offset:16 glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
@@ -10827,7 +10827,7 @@ define amdgpu_kernel void @atomic_load_bf16(ptr %in, ptr %out) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s3
-; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1] glc
+; GFX11-TRUE16-NEXT:    flat_load_u16 v0, v[0:1] glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv

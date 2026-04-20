@@ -11,7 +11,7 @@ define amdgpu_ps void @load_uniform_P1_i16_gfx12(ptr addrspace(1) inreg %ptra, p
 ; GFX11-LABEL: load_uniform_P1_i16_gfx12:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_d16_b16 v2, v2, s[0:1]
+; GFX11-NEXT:    global_load_u16 v2, v2, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
@@ -307,7 +307,7 @@ define amdgpu_ps void @load_uniform_P4_i16_gfx12(ptr addrspace(4) inreg %ptra, p
 ; GFX11-LABEL: load_uniform_P4_i16_gfx12:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_d16_b16 v2, v2, s[0:1]
+; GFX11-NEXT:    global_load_u16 v2, v2, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm

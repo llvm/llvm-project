@@ -376,7 +376,8 @@ public:
   bool hasD16LoadStore() const { return getGeneration() >= GFX9; }
 
   bool d16PreservesUnusedBits() const {
-    return hasD16LoadStore() && !TargetID.isSramEccOnOrAny();
+    return hasD16LoadStore() && !TargetID.isSramEccOnOrAny() &&
+           !hasD16Writes32BitVgpr();
   }
 
   bool hasD16Images() const { return getGeneration() >= VOLCANIC_ISLANDS; }
