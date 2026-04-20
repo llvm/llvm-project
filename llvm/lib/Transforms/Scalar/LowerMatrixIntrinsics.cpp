@@ -1873,14 +1873,31 @@ public:
   /// Ensure that the memory in \p Load does not alias \p Store by potentially
   /// copying it to a new location.  This new or otherwise the original location
   /// is returned.
-  Value *getNonAliasingPointer(LoadInst *Load, StoreInst *Store,
-                               CallInst *MatMul) {
+  std::pair<Value *, AllocaInst *>
+  getNonAliasingPointer(LoadInst *Load, StoreInst *Store, CallInst *MatMul) {
     MemoryLocation StoreLoc = MemoryLocation::get(Store);
     MemoryLocation LoadLoc = MemoryLocation::get(Load);
 
     // If we can statically determine noalias we're good.
     if (AA->isNoAlias(LoadLoc, StoreLoc))
-      return Load->getPointerOperand();
+      return {Load->getPointerOperand(), nullptr};
+
+    // If the pointers are in different address spaces, we cannot compare them
+    // at runtime. Conservatively copy the load operand to a new buffer.
+    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
+    if (Load->getPointerAddressSpace() != Store->getPointerAddressSpace()) {
+      auto *VT = cast<FixedVectorType>(Load->getType());
+      auto *ArrayTy =
+          ArrayType::get(VT->getElementType(), VT->getNumElements());
+      AllocaInst *Alloca =
+          AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+      IRBuilder<> Builder(MatMul);
+      Builder.CreateLifetimeStart(Alloca);
+      Builder.CreateMemCpy(Alloca, Alloca->getAlign(),
+                           Load->getPointerOperand(), Load->getAlign(),
+                           LoadLoc.Size.getValue());
+      return {Alloca, Alloca};
+    }
 
     // Create code to check if the memory locations of the Load and Store
     // overlap and if they do, copy Load's operand to a new buffer.
@@ -1910,15 +1927,14 @@ public:
     IRBuilder<> Builder(MatMul);
     Check0->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check0);
-    Type *IntPtrTy = Builder.getIntPtrTy(Load->getDataLayout());
-    Value *StoreBegin = Builder.CreatePtrToInt(
-        const_cast<Value *>(StoreLoc.Ptr), IntPtrTy, "store.begin");
-    Value *StoreEnd = Builder.CreateAdd(
-        StoreBegin, ConstantInt::get(IntPtrTy, StoreLoc.Size.getValue()),
-        "store.end", true, true);
-    Value *LoadBegin = Builder.CreatePtrToInt(const_cast<Value *>(LoadLoc.Ptr),
-                                              IntPtrTy, "load.begin");
-    BranchInst *BR1 = Builder.CreateCondBr(
+    Type *AddrTy = DL.getAddressType(Store->getPointerOperand()->getType());
+    Value *StoreBegin = Store->getPointerOperand();
+    Value *StoreEnd = Builder.CreatePtrAdd(
+        StoreBegin, ConstantInt::get(AddrTy, StoreLoc.Size.getValue()),
+        "store.end",
+        GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
+    Value *LoadBegin = Load->getPointerOperand();
+    CondBrInst *BR1 = Builder.CreateCondBr(
         Builder.CreateICmpULT(LoadBegin, StoreEnd), Check1, Fusion);
     setExplicitlyUnknownBranchWeightsIfProfiled(*BR1, DEBUG_TYPE);
 
@@ -1927,22 +1943,25 @@ public:
     // overlap.
     Check1->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check1, Check1->begin());
-    Value *LoadEnd = Builder.CreateAdd(
-        LoadBegin, ConstantInt::get(IntPtrTy, LoadLoc.Size.getValue()),
-        "load.end", true, true);
-    BranchInst *BR2 = Builder.CreateCondBr(
-        Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy, Fusion);
-    setExplicitlyUnknownBranchWeightsIfProfiled(*BR2, DEBUG_TYPE);
 
-    // Copy load operand to new alloca.
-    Builder.SetInsertPoint(Copy, Copy->begin());
     auto *VT = cast<FixedVectorType>(Load->getType());
     // Use an array type for the alloca, to avoid potentially huge alignment
     // requirements for large vector types.
     auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
     AllocaInst *Alloca =
-        Builder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+    Builder.CreateLifetimeStart(Alloca);
 
+    Value *LoadEnd = Builder.CreatePtrAdd(
+        LoadBegin, ConstantInt::get(AddrTy, LoadLoc.Size.getValue()),
+        "load.end",
+        GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
+    CondBrInst *BR2 = Builder.CreateCondBr(
+        Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy, Fusion);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR2, DEBUG_TYPE);
+
+    // Copy load operand to new alloca.
+    Builder.SetInsertPoint(Copy, Copy->begin());
     Builder.CreateMemCpy(Alloca, Alloca->getAlign(), Load->getPointerOperand(),
                          Load->getAlign(), LoadLoc.Size.getValue());
     Builder.SetInsertPoint(Fusion, Fusion->begin());
@@ -1957,7 +1976,7 @@ public:
     DTUpdates.push_back({DT->Insert, Check1, Copy});
     DTUpdates.push_back({DT->Insert, Check1, Fusion});
     DT->applyUpdates(DTUpdates);
-    return PHI;
+    return {PHI, Alloca};
   }
 
   bool isFusionProfitable(CallInst *MatMul) {
@@ -2079,8 +2098,8 @@ public:
     const unsigned M = LShape.NumColumns;
     auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
-    Value *APtr = getNonAliasingPointer(LoadOp0, Store, MatMul);
-    Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
+    auto [APtr, AAlloca] = getNonAliasingPointer(LoadOp0, Store, MatMul);
+    auto [BPtr, BAlloca] = getNonAliasingPointer(LoadOp1, Store, MatMul);
     Value *CPtr = Store->getPointerOperand();
 
     // Use loop-based tiling when the number of expected operations exceeds
@@ -2116,6 +2135,15 @@ public:
         }
     }
 
+    // End the lifetime of the allocas used for alias-safe copies.
+    {
+      IRBuilder<> Builder(Store);
+      if (AAlloca)
+        Builder.CreateLifetimeEnd(AAlloca);
+      if (BAlloca)
+        Builder.CreateLifetimeEnd(BAlloca);
+    }
+
     // Mark eliminated instructions as fused and remove them.
     FusedInsts.insert(Store);
     FusedInsts.insert(MatMul);
@@ -2139,7 +2167,7 @@ public:
   LowerMatrixMultiplyFused(CallInst *MatMul,
                            SmallPtrSetImpl<Instruction *> &FusedInsts,
                            SmallVector<IntrinsicInst *, 16> &LifetimeEnds) {
-    if (!FuseMatrix || !DT)
+    if (!FuseMatrix || !DT || TileSize == 0)
       return;
 
     assert(AA && LI && "Analyses should be available");

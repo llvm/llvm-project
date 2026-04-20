@@ -37,9 +37,11 @@
 
 /clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
 /clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
 /clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
 /lldb/ @JDevlieghere
+/lldb/**/*FreeBSD* @mchoo7
 
 # MLIR Interfaces.
 /mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
@@ -133,10 +135,10 @@
 /mlir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel
 
 # SPIR-V Dialect in MLIR.
-/mlir/**/SPIRV/ @antiagainst @kuhar
-/mlir/**/SPIRVTo*/ @antiagainst @kuhar
-/mlir/**/*ToSPIRV/ @antiagainst @kuhar
-/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar
+/mlir/**/SPIRV/ @antiagainst @kuhar @IgWod
+/mlir/**/SPIRVTo*/ @antiagainst @kuhar @IgWod
+/mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
+/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
 
 # MLIR Sparsifier.
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
@@ -154,6 +156,10 @@
 
 # MLIR Index Dialect
 /mlir/**/Index* @mogball
+
+# MLIR Shard Dialect
+/mlir/**/*shard* @fschlimb
+/mlir/**/*Shard* @fschlimb
 
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
@@ -189,3 +195,14 @@
 
 # libclang/Python bindings
 /clang/bindings/python @DeinAlptraum
+
+# AMDGPU assembler and disassembler
+/llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86 
+/llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86 
+ 
+# Clang Driver
+/clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j
+/clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas
+
+# GlobalIsel
+/llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95

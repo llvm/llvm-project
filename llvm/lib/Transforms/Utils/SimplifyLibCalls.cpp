@@ -2407,7 +2407,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
     return Base;
 
   // pow(x, 2.0) -> x * x
-  if (match(Expo, m_SpecificFP(2.0)))
+  if (match(Expo, m_SpecificFP(2.0)) && Pow->doesNotAccessMemory())
     return B.CreateFMul(Base, Base, "square");
 
   if (Value *Sqrt = replacePowWithSqrt(Pow, B))
@@ -3378,6 +3378,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     }
     // printf("%s", str"\n") --> puts(str)
     if (OperandStr.back() == '\n') {
+      if (!isLibFuncEmittable(CI->getModule(), TLI, LibFunc_puts))
+        return nullptr;
       OperandStr = OperandStr.drop_back();
       Value *GV = B.CreateGlobalString(OperandStr, "str");
       return copyFlags(*CI, emitPutS(GV, B, TLI));
@@ -3388,6 +3390,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
   // printf("foo\n") --> puts("foo")
   if (FormatStr.back() == '\n' &&
       !FormatStr.contains('%')) { // No format characters.
+    if (!isLibFuncEmittable(CI->getModule(), TLI, LibFunc_puts))
+      return nullptr;
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.
     FormatStr = FormatStr.drop_back();
@@ -3509,7 +3513,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return ConstantInt::get(CI->getType(), SrcLen - 1);
     } else if (Value *V = emitStpCpy(Dest, CI->getArgOperand(2), B, TLI)) {
       // sprintf(dest, "%s", str) -> stpcpy(dest, str) - dest
-      Value *PtrDiff = B.CreatePtrDiff(B.getInt8Ty(), V, Dest);
+      Value *PtrDiff = B.CreatePtrDiff(V, Dest);
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
 

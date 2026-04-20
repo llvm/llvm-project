@@ -20,7 +20,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
@@ -40,6 +40,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -497,7 +498,7 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  if (isa<ub::PoisonAttrInterface>(value))
+  if (matchPattern(value, ub::m_Poison()))
     return value.getDialect().materializeConstant(builder, value, type, loc);
 
   return arith::ConstantOp::materialize(builder, value, type, loc);
@@ -528,8 +529,8 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
 }
 
 OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
-  // Single parallel dim, this is a noop.
-  if (getSourceVectorType().getRank() == 1 && !isReducedDim(0))
+  // No reduction dims: this is a noop regardless of rank.
+  if (getReductionDims().empty())
     return getSource();
   return {};
 }
@@ -1354,19 +1355,6 @@ ExtractOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
   return success();
 }
 
-bool ExtractOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-  // Allow extracting 1-element vectors instead of scalars.
-  auto isCompatible = [](TypeRange l, TypeRange r) {
-    auto vectorType = llvm::dyn_cast<VectorType>(l.front());
-    return vectorType && vectorType.getShape().equals({1}) &&
-           vectorType.getElementType() == r.front();
-  };
-  if (l.size() == 1 && r.size() == 1 &&
-      (isCompatible(l, r) || isCompatible(r, l)))
-    return true;
-  return l == r;
-}
-
 LogicalResult vector::ExtractOp::verify() {
   if (auto resTy = dyn_cast<VectorType>(getResult().getType()))
     if (resTy.getRank() == 0)
@@ -2112,7 +2100,7 @@ static Attribute foldPoisonIndexInsertExtractOp(MLIRContext *context,
 
 /// Fold a vector extract from is a poison source.
 static Attribute foldPoisonSrcExtractOp(Attribute srcAttr) {
-  if (isa_and_nonnull<ub::PoisonAttr>(srcAttr))
+  if (matchPattern(srcAttr, ub::m_Poison()))
     return srcAttr;
 
   return {};
@@ -2298,6 +2286,70 @@ public:
   }
 };
 
+// Pattern to rewrite a ExtractOp(ConstantMask) -> ConstantMask.
+class ExtractOpFromConstantMask final : public OpRewritePattern<ExtractOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    auto constantMaskOp =
+        extractOp.getSource().getDefiningOp<vector::ConstantMaskOp>();
+    if (!constantMaskOp)
+      return failure();
+
+    Type resultType = extractOp.getResult().getType();
+    auto extractedMaskType = dyn_cast<VectorType>(resultType);
+
+    ArrayRef<int64_t> extractOpPos = extractOp.getStaticPosition();
+    ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
+
+    VectorType maskType = constantMaskOp.getVectorType();
+
+    // Check if any extracted position is outside the mask bounds.
+    for (size_t dimIdx = 0; dimIdx < extractOpPos.size(); dimIdx++) {
+      int64_t pos = extractOpPos[dimIdx];
+      if (pos == ShapedType::kDynamic) {
+        // If the dim is all-true, a dynamic index is fine — any position
+        // is within the masked region.
+        if (maskDimSizes[dimIdx] == maskType.getDimSize(dimIdx))
+          continue;
+        // Otherwise we don't know if the position is inside or outside of
+        // the masked area, so bail out.
+        return failure();
+      }
+
+      // If the position is statically outside of the masked area, the result
+      // will be all-false.
+      if (pos >= maskDimSizes[dimIdx]) {
+        if (extractedMaskType) {
+          rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+              extractOp, DenseElementsAttr::get(extractedMaskType, false));
+        } else {
+          rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+              extractOp, rewriter.getIntegerAttr(resultType, false));
+        }
+        return success();
+      }
+    }
+
+    // All positions are within the mask bounds.
+    if (extractedMaskType) {
+      // Vector result: the result is a constant_mask with the remaining
+      // dimensions.
+      rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
+          extractOp, extractedMaskType,
+          maskDimSizes.drop_front(extractOpPos.size()));
+    } else {
+      // Scalar result: all positions are within the masked region, so the
+      // result is true.
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          extractOp, rewriter.getIntegerAttr(resultType, true));
+    }
+    return success();
+  }
+};
+
 // Folds extract(shape_cast(..)) into shape_cast when the total element count
 // does not change.
 LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
@@ -2401,13 +2453,73 @@ struct ExtractToShapeCast final : OpRewritePattern<vector::ExtractOp> {
   }
 };
 
+/// Folds vector.extract from vector.insert when the extract position is a
+/// prefix of the insert position and the remaining (un-indexed) dimensions
+/// of the extracted sub-vector are all size 1. In that case the extracted
+/// value is fully determined by the inserted value.
+///
+/// Examples:
+///   %ins = vector.insert %s, %v [3, 0] : f32 into vector<16x1xf32>
+///   %ext = vector.extract %ins [3] : vector<1xf32> from vector<16x1xf32>
+/// folds to:
+///   %ext = vector.broadcast %s : f32 to vector<1xf32>
+///
+///   %ins = vector.insert %s, %v [0, 0] : vector<1xf32> into vector<16x1x1xf32>
+//    %ext = vector.extract %ins [0] : vector<1x1xf32> from vector<16x1x1xf32>
+/// folds to:
+///   %ext = vector.shape_cast %arg0 : vector<1xf32> to vector<1x1xf32>
+struct FoldExtractFromInsertUnitDim final
+    : OpRewritePattern<vector::ExtractOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    if (extractOp.hasDynamicPosition())
+      return failure();
+
+    auto insertOp = extractOp.getSource().getDefiningOp<vector::InsertOp>();
+    if (!insertOp || insertOp.hasDynamicPosition())
+      return failure();
+
+    ArrayRef<int64_t> extractPos = extractOp.getStaticPosition();
+    ArrayRef<int64_t> insertPos = insertOp.getStaticPosition();
+
+    // The extract position must be a strict prefix of the insert position.
+    if (extractPos.size() >= insertPos.size() ||
+        extractPos != insertPos.take_front(extractPos.size()))
+      return failure();
+
+    // The remaining dimensions (those not indexed by the extract) must all
+    // be size 1 in the source vector type. This guarantees that the inserted
+    // value fully determines the extracted sub-vector.
+    auto srcVecType = extractOp.getSourceVectorType();
+    for (int64_t i = extractPos.size(), e = srcVecType.getRank(); i < e; ++i)
+      if (srcVecType.getDimSize(i) != 1)
+        return failure();
+
+    Value inserted = insertOp.getValueToStore();
+    Type extractedType = extractOp.getResult().getType();
+    if (isa<VectorType>(inserted.getType())) {
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(extractOp, extractedType,
+                                                       inserted);
+    } else {
+      // The inserted value fully determines the extracted sub-vector; broadcast
+      // it to the extracted type.
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+          extractOp, extractOp.getResult().getType(),
+          insertOp.getValueToStore());
+    }
+    return success();
+  }
+};
+
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results
-      .add<ExtractOpFromBroadcast, ExtractOpFromCreateMask, ExtractToShapeCast>(
-          context);
+  results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask,
+              ExtractOpFromConstantMask, ExtractToShapeCast,
+              FoldExtractFromInsertUnitDim>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
 }
@@ -2496,6 +2608,13 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
                                  SmallVectorImpl<OpFoldResult> &results) {
   if (succeeded(foldToElementsFromElements(*this, results)))
     return success();
+
+  // Y = ToElements(ShapeCast(X)) -> Y = ToElements(X)
+  if (auto shapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
+    setOperand(shapeCast.getSource());
+    return success();
+  }
+
   return foldToElementsOfBroadcast(*this, results);
 }
 
@@ -2649,7 +2768,7 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
                                                ArrayRef<Attribute> elements) {
   // Check for null or poison attributes before any processing.
   if (llvm::any_of(elements, [](Attribute attr) {
-        return !attr || isa<ub::PoisonAttrInterface>(attr);
+        return !attr || matchPattern(attr, ub::m_Poison());
       }))
     return {};
 
@@ -3098,7 +3217,7 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   }
   if (auto attr = llvm::dyn_cast<SplatElementsAttr>(adaptor.getSource()))
     return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
-  if (llvm::dyn_cast<ub::PoisonAttr>(adaptor.getSource()))
+  if (matchPattern(adaptor.getSource(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
   return {};
 }
@@ -3202,10 +3321,13 @@ LogicalResult ShuffleOp::verify() {
 }
 
 LogicalResult
-ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
+ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location> loc,
                             ShuffleOp::Adaptor adaptor,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
-  auto v1Type = llvm::cast<VectorType>(adaptor.getV1().getType());
+  auto v1Type = llvm::dyn_cast<VectorType>(adaptor.getV1().getType());
+  if (!v1Type) {
+    return emitOptionalError(loc, "expected vector type");
+  }
   auto v1Rank = v1Type.getRank();
   // Construct resulting type: leading dimension matches mask
   // length, all trailing dimensions match the operands.
@@ -3228,40 +3350,65 @@ static bool isStepIndexArray(ArrayRef<T> idxArr, uint64_t begin, size_t width) {
          });
 }
 
-OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
-  auto v1Type = getV1VectorType();
-  auto v2Type = getV2VectorType();
-
-  assert(!v1Type.isScalable() && !v2Type.isScalable() &&
-         "Vector shuffle does not support scalable vectors");
-
-  // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
-  // but must be a canonicalization into a vector.broadcast.
-  if (v1Type.getRank() == 0)
-    return {};
-
-  // Fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1.
-  auto mask = getMask();
+/// Fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1.
+/// Fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2.
+static OpFoldResult foldShuffleIdentityMask(ShuffleOp op) {
+  auto v1Type = op.getV1VectorType();
+  auto v2Type = op.getV2VectorType();
+  auto mask = op.getMask();
   if (isStepIndexArray(mask, 0, v1Type.getDimSize(0)))
-    return getV1();
-  // Fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2.
+    return op.getV1();
   if (isStepIndexArray(mask, v1Type.getDimSize(0), v2Type.getDimSize(0)))
-    return getV2();
+    return op.getV2();
+  return {};
+}
 
-  Attribute v1Attr = adaptor.getV1(), v2Attr = adaptor.getV2();
-  if (!v1Attr || !v2Attr)
+/// If a shuffle operand is poison, replace all mask indices that reference it
+/// with kPoisonIndex. This is an in-place fold.
+static OpFoldResult foldShufflePoisonOperandToMask(ShuffleOp op) {
+  bool isV1Poison = matchPattern(op.getV1(), ub::m_Poison());
+  bool isV2Poison = matchPattern(op.getV2(), ub::m_Poison());
+  if (!isV1Poison && !isV2Poison)
     return {};
 
-  // Fold shuffle poison, poison -> poison.
-  bool isV1Poison = isa<ub::PoisonAttr>(v1Attr);
-  bool isV2Poison = isa<ub::PoisonAttr>(v2Attr);
-  if (isV1Poison && isV2Poison)
-    return ub::PoisonAttr::get(getContext());
+  int64_t v1Size = op.getV1VectorType().getDimSize(0);
+  bool changed = false;
+  SmallVector<int64_t> newMask = llvm::to_vector(op.getMask());
+  for (int64_t &idx : newMask) {
+    if (idx == ShuffleOp::kPoisonIndex)
+      continue;
+    if ((isV1Poison && idx < v1Size) || (isV2Poison && idx >= v1Size)) {
+      idx = ShuffleOp::kPoisonIndex;
+      changed = true;
+    }
+  }
 
-  // Only support 1-D for now to avoid complicated n-D DenseElementsAttr
-  // manipulation.
+  if (!changed)
+    return {};
+
+  op.setMask(newMask);
+  return op.getResult();
+}
+
+/// Fold shuffle poison, poison -> poison.
+static OpFoldResult foldShufflePoisonInputs(MLIRContext *context,
+                                            Attribute v1Attr,
+                                            Attribute v2Attr) {
+  if (matchPattern(v1Attr, ub::m_Poison()) &&
+      matchPattern(v2Attr, ub::m_Poison()))
+    return ub::PoisonAttr::get(context);
+  return {};
+}
+
+/// Fold a shuffle of constant 1-D inputs by evaluating the mask.
+static OpFoldResult foldShuffleConstantInputs(ShuffleOp op, Attribute v1Attr,
+                                              Attribute v2Attr) {
+  auto v1Type = op.getV1VectorType();
   if (v1Type.getRank() != 1)
     return {};
+
+  bool isV1Poison = matchPattern(v1Attr, ub::m_Poison());
+  bool isV2Poison = matchPattern(v2Attr, ub::m_Poison());
 
   // Poison input attributes need special handling as they are not
   // DenseElementsAttr. If an index is poison, we select the first element of
@@ -3283,6 +3430,7 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
     poisonElement = v1Elements[0];
   }
 
+  ArrayRef<int64_t> mask = op.getMask();
   SmallVector<Attribute> results;
   int64_t v1Size = v1Type.getDimSize(0);
   for (int64_t maskIdx : mask) {
@@ -3300,7 +3448,35 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
     results.push_back(indexedElm);
   }
 
-  return DenseElementsAttr::get(getResultVectorType(), results);
+  return DenseElementsAttr::get(op.getResultVectorType(), results);
+}
+
+OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
+  auto v1Type = getV1VectorType();
+
+  assert(!v1Type.isScalable() && !getV2VectorType().isScalable() &&
+         "Vector shuffle does not support scalable vectors");
+
+  // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
+  // but must be a canonicalization into a vector.broadcast.
+  if (v1Type.getRank() == 0)
+    return {};
+
+  if (auto res = foldShuffleIdentityMask(*this))
+    return res;
+  if (auto res = foldShufflePoisonOperandToMask(*this))
+    return res;
+
+  Attribute v1Attr = adaptor.getV1(), v2Attr = adaptor.getV2();
+  if (!v1Attr || !v2Attr)
+    return {};
+
+  if (auto res = foldShufflePoisonInputs(getContext(), v1Attr, v2Attr))
+    return res;
+  if (auto res = foldShuffleConstantInputs(*this, v1Attr, v2Attr))
+    return res;
+
+  return {};
 }
 
 namespace {
@@ -3411,12 +3587,66 @@ public:
   }
 };
 
+/// Pattern to replace usused shuffle operands / results with poison.
+///
+/// Example Input:
+///   %r = vector.shuffle %v1, %v2 [2, 3, 3, 3] : vector<2xi32>, vector<2xi32>
+///
+/// Example Output:
+///   %0 = ub.poison : vector<2xi32>
+///   %r = vector.shuffle %0, %v2 [2, 3, 3, 3] : vector<2xi32>, vector<2xi32>
+class FoldUnusedShuffleOperand final : public OpRewritePattern<ShuffleOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    // Replace with poison if all mask elements are poison.
+    if (llvm::all_of(op.getMask(), [](int64_t mask) {
+          return mask == ShuffleOp::kPoisonIndex;
+        })) {
+      rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType());
+      return success();
+    }
+
+    // Helper function to replace an operand with poison.
+    auto replaceOperandWithPoison = [&](OpOperand &operand) {
+      // Do not replace if the operand is already poison.
+      if (!matchPattern(operand.get(), ub::m_Poison())) {
+        Value poison = ub::PoisonOp::create(rewriter, op.getLoc(),
+                                            operand.get().getType());
+        rewriter.modifyOpInPlace(op, [&]() { operand.set(poison); });
+        return success();
+      }
+      return failure();
+    };
+
+    // Replace V1 with poison if it is not used.
+    int64_t leadingV1Size = op.getV1VectorType().getRank() > 0
+                                ? op.getV1VectorType().getDimSize(0)
+                                : 1;
+    bool isV1Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask < leadingV1Size;
+    });
+    if (!isV1Used && succeeded(replaceOperandWithPoison(op.getV1Mutable())))
+      return success();
+
+    // Replace V2 with poison if it is not used.
+    bool isV2Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask >= leadingV1Size;
+    });
+    if (!isV2Used && succeeded(replaceOperandWithPoison(op.getV2Mutable())))
+      return success();
+
+    return failure();
+  }
+};
 } // namespace
 
 void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp>(
-      context);
+  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp,
+              FoldUnusedShuffleOperand>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3661,8 +3891,8 @@ public:
         continue;
       }
 
-      SmallVector<Type> elementToInsertTypes(insertSize,
-                                             srcVectorType.getElementType());
+      Repeated<Type> elementToInsertTypes(insertSize,
+                                          srcVectorType.getElementType());
       // Get all elements from the vector in row-major order.
       auto elementsToInsert = vector::ToElementsOp::create(
           rewriter, op.getLoc(), elementToInsertTypes, valueToStore);
@@ -3701,6 +3931,11 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   // Make sure we do not create too many large constants.
   if (destTy.getNumElements() > maxVectorSizeFoldThreshold &&
       !insertOp->hasOneUse())
+    return {};
+
+  // Bail out on poison indices (kPoisonIndex = -1) to avoid computing an
+  // invalid (negative) linearized position which would cause UB below.
+  if (is_contained(insertOp.getStaticPosition(), InsertOp::kPoisonIndex))
     return {};
 
   // Calculate the linearized position for inserting elements.
@@ -4022,7 +4257,8 @@ public:
       return failure();
 
     // TODO: Support poison.
-    if (isa<ub::PoisonAttr>(vectorDestCst) || isa<ub::PoisonAttr>(sourceCst))
+    if (matchPattern(vectorDestCst, ub::m_Poison()) ||
+        matchPattern(sourceCst, ub::m_Poison()))
       return failure();
 
     // TODO: Handle non-unit strides when they become available.
@@ -6130,6 +6366,10 @@ LogicalResult GatherOp::verify() {
     return emitOpError("expected result dim to match mask dim");
   if (resVType != getPassThruVectorType())
     return emitOpError("expected pass_thru of same type as result type");
+  if (getAlignmentAttr() && !isa<MemRefType>(baseType)) {
+    return emitOpError(
+        "alignment is only supported for memref bases, not tensor bases");
+  }
   return success();
 }
 
@@ -6238,6 +6478,10 @@ LogicalResult ScatterOp::verify() {
     return emitOpError("expected valueToStore dim to match indices dim");
   if (valueVType.getShape() != maskVType.getShape())
     return emitOpError("expected valueToStore dim to match mask dim");
+  if (getAlignmentAttr() && !isa<MemRefType>(baseType)) {
+    return emitOpError(
+        "alignment is only supported for memref bases, not tensor bases");
+  }
   return success();
 }
 namespace {
@@ -6514,7 +6758,7 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
     return denseAttr.reshape(getType());
 
   // shape_cast(poison) -> poison
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource()))
+  if (matchPattern(adaptor.getSource(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
 
   return {};
@@ -6628,6 +6872,22 @@ public:
   }
 };
 
+// vector.broadcast has two distinct semantic modes: duplication across leading
+// dimensions, and stretching across inner dimensions. This helper returns the
+// product of the inner-dimension stretching factors.
+int64_t getBroadcastStretchingFactor(ArrayRef<int64_t> srcShape,
+                                     ArrayRef<int64_t> dstShape) {
+  int stretchingFactor = 1;
+  int numLeadingDims = dstShape.size() - srcShape.size();
+  for (int i = 0, e = srcShape.size(); i < e; i++) {
+    int64_t dstDim = dstShape[numLeadingDims + i];
+    if (srcShape[i] == 1 && dstDim != 1) {
+      stretchingFactor *= dstDim;
+    }
+  }
+  return stretchingFactor;
+}
+
 /// Pattern to rewrite Y = ShapeCast(Broadcast(X)) as Y = Broadcast(X)
 class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
 public:
@@ -6650,13 +6910,64 @@ public:
     // to
     // %1 = vector.broadcast %in : vector<3xf32> to vector<8x3xf32>
     VectorType dstVectorType = shapeCastOp.getResultVectorType();
-    if (srcIsScalar || isBroadcastableTo(srcVectorType, dstVectorType) ==
-                           BroadcastableToResult::Success) {
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-          shapeCastOp, dstVectorType, broadcastOp.getSource());
-      return success();
+    ArrayRef<int64_t> dstShape = dstVectorType.getShape();
+    ArrayRef<int64_t> srcShape =
+        srcIsScalar ? ArrayRef<int64_t>{} : srcVectorType.getShape();
+    ArrayRef<int64_t> broadcastShape =
+        broadcastOp.getResultVectorType().getShape();
+
+    if (!srcIsScalar) {
+      if (isBroadcastableTo(srcVectorType, dstVectorType) !=
+          BroadcastableToResult::Success) {
+        return failure();
+      }
+      // Avoid folding if this would result in switching between the two
+      // distinct semantic modes of vector.broadcast (duplication vs
+      // stretching). See https://github.com/llvm/llvm-project/issues/190614.
+      // This is detected by a change in the stretching factor. However if the
+      // source has a single element, there is no ambiguity.
+      if (srcVectorType.getNumElements() != 1) {
+        if (getBroadcastStretchingFactor(srcShape, dstShape) !=
+            getBroadcastStretchingFactor(srcShape, broadcastShape)) {
+          return failure();
+        }
+      }
     }
-    return failure();
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shapeCastOp, dstVectorType,
+                                                     broadcastOp.getSource());
+    return success();
+  }
+};
+
+/// Pattern to rewrite Y = ShapeCast(FromElements(X)) as Y = FromElements(X)
+///
+/// BEFORE:
+///    %1 = vector.from_elements %c1, %c2, %c3 : vector<3xf32>
+///    %2 = vector.shape_cast %1 : vector<3xf32> to vector<1x3xf32>
+/// AFTER:
+///    %2 = vector.from_elements %c1, %c2, %c3 : vector<1x3xf32>
+///
+/// Note: this transformation is implemented as an OpRewritePattern, not as a
+/// fold, because we have to create new op FromElementsOp with updated result
+/// type. This cannot be done with a fold, because fold cannot create new ops
+/// and the existing FromElementsOp result type differs from the ShapeCastOp
+/// result type. Mutating the FromElementsOp (not root op) would violate the
+/// fold contract and break other users.
+class FoldShapeCastOfFromElements final : public OpRewritePattern<ShapeCastOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto fromElements = shapeCastOp.getSource().getDefiningOp<FromElementsOp>();
+    if (!fromElements)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<FromElementsOp>(
+        shapeCastOp, shapeCastOp.getResultVectorType(),
+        fromElements.getElements());
+    return success();
   }
 };
 
@@ -6664,9 +6975,8 @@ public:
 
 void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results
-      .add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder>(
-          context);
+  results.add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder,
+              FoldShapeCastOfFromElements>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6743,7 +7053,7 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
     if (intPack.isSplat()) {
       auto splat = intPack.getSplatValue<IntegerAttr>();
 
-      if (llvm::isa<IntegerType>(dstElemType)) {
+      if (llvm::isa<IntegerType>(dstElemType) && srcElemType.isIntOrFloat()) {
         uint64_t srcBitWidth = srcElemType.getIntOrFloatBitWidth();
         uint64_t dstBitWidth = dstElemType.getIntOrFloatBitWidth();
 
@@ -6840,7 +7150,7 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
     return splat.reshape(getResultVectorType());
 
   // Eliminate poison transpose ops.
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
+  if (matchPattern(adaptor.getVector(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
 
   // Eliminate identity transposes, and more generally any transposes that
@@ -7612,10 +7922,8 @@ static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
 
   Block *block = maskOp.getMaskBlock();
   auto terminator = cast<vector::YieldOp>(block->front());
-  if (terminator.getNumOperands() == 0) {
-    // `vector.mask` has no results, just remove the `vector.mask`.
-    return success();
-  }
+  if (terminator.getNumOperands() == 0)
+    return failure();
 
   // `vector.mask` has results, propagate the results.
   llvm::append_range(results, terminator.getOperands());
@@ -7632,7 +7940,11 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
     return failure();
 
   // Move maskable operation outside of the `vector.mask` region.
+  // If there is no maskable op (empty body), the fold cannot proceed; the
+  // canonicalizer handles this case instead.
   Operation *maskableOp = getMaskableOp();
+  if (!maskableOp)
+    return failure();
   maskableOp->dropAllUses();
   maskableOp->moveBefore(getOperation());
 
@@ -7662,6 +7974,17 @@ class CanonializeEmptyMaskOp : public OpRewritePattern<MaskOp> {
 
     if (!maskOp.hasPassthru())
       return failure();
+
+    // arith.select with a vector condition requires the value types to be
+    // vectors of the same shape. Since vector.mask always has a vector mask
+    // type, bail out when any result type doesn't match the mask shape to
+    // avoid creating invalid IR.
+    VectorType maskType = maskOp.getMask().getType();
+    for (Type resultType : maskOp.getResultTypes()) {
+      auto vecResultType = dyn_cast<VectorType>(resultType);
+      if (!vecResultType || vecResultType.getShape() != maskType.getShape())
+        return failure();
+    }
 
     Block *block = maskOp.getMaskBlock();
     auto terminator = cast<vector::YieldOp>(block->front());

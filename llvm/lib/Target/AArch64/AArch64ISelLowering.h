@@ -144,6 +144,8 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  bool isFPImmLegalAsFMov(const APFloat &Imm, EVT VT) const;
+
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
@@ -182,18 +184,6 @@ public:
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
-
-  // Note: The following group of functions are only used as part of the old SME
-  // ABI lowering. They will be removed once -aarch64-new-sme-abi=true is the
-  // default.
-  MachineBasicBlock *EmitInitTPIDR2Object(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitAllocateSMESaveBuffer(MachineInstr &MI,
-                                               MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
-                                        MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitEntryPStateSM(MachineInstr &MI,
                                        MachineBasicBlock *BB) const;
 
@@ -563,7 +553,12 @@ public:
                               SDValue Chain, SDValue InGlue, unsigned Condition,
                               bool InsertVectorLengthCheck = false) const;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
+  /// Returns true if \p RdxOp should be lowered to a SVE reduction. If a SVE2
+  /// pairwise operation can be used for the reduction \p PairwiseOpIID is set
+  /// to its intrinsic ID.
+  bool
+  shouldLowerReductionToSVE(SDValue RdxOp,
+                            std::optional<Intrinsic::ID> &PairwiseOpIID) const;
 
   // Normally SVE is only used for byte size vectors that do not fit within a
   // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
@@ -779,7 +774,7 @@ private:
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
-
+  SDValue LowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
 
   SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,
@@ -790,8 +785,7 @@ private:
   SDValue LowerFixedLengthVectorMLoadToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE_SEQ_FADD(SDValue ScalarOp, SelectionDAG &DAG) const;
   SDValue LowerPredReductionToSVE(SDValue ScalarOp, SelectionDAG &DAG) const;
-  SDValue LowerReductionToSVE(unsigned Opcode, SDValue ScalarOp,
-                              SelectionDAG &DAG) const;
+  SDValue LowerReductionToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorSelectToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorSetccToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorStoreToSVE(SDValue Op, SelectionDAG &DAG) const;

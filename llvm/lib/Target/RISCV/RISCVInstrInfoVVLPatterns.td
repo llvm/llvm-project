@@ -493,6 +493,13 @@ def true_mask : PatLeaf<(riscv_vmset_vl (XLenVT srcvalue))>;
 def riscv_vmnot_vl : PatFrag<(ops node:$rs, node:$vl),
                              (riscv_vmxor_vl node:$rs, true_mask, node:$vl)>;
 
+// Match riscv_vmxor_vl+riscv_vmset_vl as an operand. By handling as a
+// ComplexPattern we can check both operands of the vmxor_vl without needing
+// tablegen to emit multiple isel patterns.
+def riscv_vmnot_vl_op : ComplexPattern<vAny, 1, "selectVMNOT_VLOp", [], [], 9> {
+  let WantsParent = true;
+}
+
 let HasMaskOp = true in {
   //  vcpop.m with additional mask and VL operands.
   def riscv_vcpop_vl : RVSDNode<"VCPOP_VL",
@@ -1936,12 +1943,14 @@ multiclass VPatSlide1VL_VX<SDNode vop, string instruction_name> {
 }
 
 multiclass VPatSlide1VL_VF<SDNode vop, string instruction_name> {
-  foreach vti = AllFloatVectors in {
+  foreach vti = AllFloatAndBF16Vectors in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
       def : Pat<(vti.Vector (vop (vti.Vector vti.RegClass:$rs3),
                                  (vti.Vector vti.RegClass:$rs1),
                                  vti.Scalar:$rs2, (vti.Mask VMV0:$vm), VLOpFrag)),
-                (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_MASK")
+                (!cast<Instruction>(instruction_name#
+                                    !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                    "_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_MASK")
                     vti.RegClass:$rs3, vti.RegClass:$rs1, vti.Scalar:$rs2,
                     (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TU_MU)>;
     }
@@ -2828,20 +2837,17 @@ foreach mti = AllMasks in {
               (!cast<Instruction>("PseudoVMXOR_MM_" # mti.BX)
                    VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
 
-    def : Pat<(mti.Mask (riscv_vmand_vl VR:$rs1,
-                                        (riscv_vmnot_vl VR:$rs2, VLOpFrag),
+    def : Pat<(mti.Mask (riscv_vmand_vl VR:$rs1, riscv_vmnot_vl_op:$rs2,
                                         VLOpFrag)),
               (!cast<Instruction>("PseudoVMANDN_MM_" # mti.BX)
                    VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
-    def : Pat<(mti.Mask (riscv_vmor_vl VR:$rs1,
-                                       (riscv_vmnot_vl VR:$rs2, VLOpFrag),
+    def : Pat<(mti.Mask (riscv_vmor_vl VR:$rs1, riscv_vmnot_vl_op:$rs2,
                                        VLOpFrag)),
               (!cast<Instruction>("PseudoVMORN_MM_" # mti.BX)
                    VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
     // XOR is associative so we need 2 patterns for VMXNOR.
-    def : Pat<(mti.Mask (riscv_vmxor_vl (riscv_vmnot_vl VR:$rs1,
-                                                        VLOpFrag),
-                                       VR:$rs2, VLOpFrag)),
+    def : Pat<(mti.Mask (riscv_vmxor_vl riscv_vmnot_vl_op:$rs1,
+                                        VR:$rs2, VLOpFrag)),
               (!cast<Instruction>("PseudoVMXNOR_MM_" # mti.BX)
                    VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
 

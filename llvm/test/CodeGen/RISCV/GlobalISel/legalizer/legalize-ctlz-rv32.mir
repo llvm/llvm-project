@@ -58,7 +58,7 @@ body:             |
     ; RV32ZBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; RV32ZBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
     ; RV32ZBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[CTLZ]], [[C1]]
+    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = nuw G_SUB [[CTLZ]], [[C1]]
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
@@ -129,7 +129,7 @@ body:             |
     ; RV32ZBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; RV32ZBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
     ; RV32ZBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[CTLZ]], [[C1]]
+    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = nuw G_SUB [[CTLZ]], [[C1]]
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
@@ -356,7 +356,7 @@ body:             |
     ; RV32ZBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; RV32ZBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
     ; RV32ZBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[CTLZ]], [[C1]]
+    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = nuw G_SUB [[CTLZ]], [[C1]]
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
@@ -427,7 +427,7 @@ body:             |
     ; RV32ZBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; RV32ZBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
     ; RV32ZBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[CTLZ]], [[C1]]
+    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = nuw G_SUB [[CTLZ]], [[C1]]
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10

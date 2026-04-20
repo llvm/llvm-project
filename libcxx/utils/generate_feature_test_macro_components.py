@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 from builtins import range
@@ -197,7 +197,7 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_ref",
             "values": {
                 "c++20": 201806,
-                "c++26": 202411,  # P2835R7: Expose std::atomic_ref 's object address
+                "c++26": 202603,
             },
             "headers": ["atomic"],
         },
@@ -504,8 +504,8 @@ feature_test_macros = [
             "name": "__cpp_lib_destroying_delete",
             "values": {"c++20": 201806},
             "headers": ["new"],
-            "test_suite_guard": "TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
-            "libcxx_guard": "_LIBCPP_STD_VER >= 20 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
+            "test_suite_guard": "defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
+            "libcxx_guard": "defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
         },
         {
             "name": "__cpp_lib_enable_shared_from_this",
@@ -572,6 +572,7 @@ feature_test_macros = [
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
                 # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
+                # "c++26": 202603, P3953R3 Rename std::runtime_format (implemented)
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
             # 202304 P2510R3 Formatting pointers (Implemented)
@@ -1221,7 +1222,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_saturation_arithmetic",
-            "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
+            "values": {"c++26": 202603},  # P0543R3 Saturation arithmetic
             "headers": ["numeric"],
         },
         {

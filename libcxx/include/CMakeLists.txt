@@ -335,9 +335,11 @@ set(files
   __configuration/attributes.h
   __configuration/availability.h
   __configuration/compiler.h
+  __configuration/diagnostic_suppression.h
   __configuration/experimental.h
   __configuration/hardening.h
   __configuration/language.h
+  __configuration/namespace.h
   __configuration/platform.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
@@ -404,6 +406,7 @@ set(files
   __format/format_to_n_result.h
   __format/formatter.h
   __format/formatter_bool.h
+  __format/formatter_bool_impl.h
   __format/formatter_char.h
   __format/formatter_floating_point.h
   __format/formatter_integer.h

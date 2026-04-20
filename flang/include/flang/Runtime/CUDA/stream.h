@@ -21,6 +21,9 @@ extern "C" {
 
 int RTDECL(CUFSetDefaultStream)(cudaStream_t);
 cudaStream_t RTDECL(CUFGetDefaultStream)();
+int RTDECL(CUFStreamSynchronize)(cudaStream_t);
+int RTDECL(CUFStreamSynchronizeNull)();
+int RTDECL(CUFStreamDestroy)(cudaStream_t);
 }
 
 } // namespace Fortran::runtime::cuda

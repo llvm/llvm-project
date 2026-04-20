@@ -126,6 +126,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     if (os == llvm::Triple::Linux &&
         Triple.getEnvironment() == llvm::Triple::Musl)
       return std::make_unique<LinuxTargetInfo<HexagonTargetInfo>>(Triple, Opts);
+    if (Triple.isOSQurt())
+      return std::make_unique<QURTTargetInfo<HexagonTargetInfo>>(Triple, Opts);
     return std::make_unique<HexagonTargetInfo>(Triple, Opts);
 
   case llvm::Triple::lanai:
@@ -175,6 +177,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Hurd:
       return std::make_unique<HurdTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                    Opts);
+    case llvm::Triple::Serenity:
+      return std::make_unique<SerenityTargetInfo<AArch64leTargetInfo>>(Triple,
+                                                                       Opts);
     case llvm::Triple::Win32:
       switch (Triple.getEnvironment()) {
       case llvm::Triple::GNU:
@@ -475,6 +480,10 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
                                                                      Opts);
     case llvm::Triple::Hurd:
       return std::make_unique<HurdTargetInfo<RISCV64TargetInfo>>(Triple, Opts);
+
+    case llvm::Triple::Serenity:
+      return std::make_unique<SerenityTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                     Opts);
     default:
       return std::make_unique<RISCV64TargetInfo>(Triple, Opts);
     }
@@ -542,6 +551,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::tcele:
     return std::make_unique<TCELETargetInfo>(Triple, Opts);
+
+  case llvm::Triple::tcele64:
+    return std::make_unique<TCELE64TargetInfo>(Triple, Opts);
 
   case llvm::Triple::x86:
     if (Triple.isOSDarwin())
@@ -661,6 +673,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<HurdTargetInfo<X86_64TargetInfo>>(Triple, Opts);
     case llvm::Triple::Managarm:
       return std::make_unique<ManagarmTargetInfo<X86_64TargetInfo>>(Triple,
+                                                                    Opts);
+    case llvm::Triple::Serenity:
+      return std::make_unique<SerenityTargetInfo<X86_64TargetInfo>>(Triple,
                                                                     Opts);
     default:
       return std::make_unique<X86_64TargetInfo>(Triple, Opts);

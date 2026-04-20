@@ -2094,14 +2094,19 @@ TEST(FindType, All) {
 TEST(FindType, Definition) {
   Annotations A(R"cpp(
     class $decl[[X]];
-    X *^x;
+    X *$x^x;
     class $def[[X]] {};
+
+    template <class T>
+    concept $Concept^True = true;
   )cpp");
   auto TU = TestTU::withCode(A.code().str());
+  TU.ExtraArgs.push_back("-std=c++20");
   ParsedAST AST = TU.build();
 
-  EXPECT_THAT(findType(AST, A.point(), nullptr),
+  EXPECT_THAT(findType(AST, A.point("x"), nullptr),
               ElementsAre(sym("X", A.range("decl"), A.range("def"))));
+  EXPECT_THAT(findType(AST, A.point("Concept"), nullptr), IsEmpty());
 }
 
 TEST(FindType, Index) {
@@ -2370,6 +2375,16 @@ TEST(FindReferences, WithinAST) {
           [$(Bar)[[F^oo]]...$(Bar)[[Fo^o]] + 1] = 0,
           [$(Bar)[[^Foo]] + 2] = 1
         };
+      )cpp",
+      // Field of pointer-to-member type
+      R"cpp(
+        struct S { void foo(); };
+        struct A {
+          void (S::*$def(A)[[fi^eld]])();
+        };
+        void bar(A& a, S& s) {
+          (s.*(a.$(bar)[[field]]))();
+        }
       )cpp"};
   for (const char *Test : Tests)
     checkFindRefs(Test);

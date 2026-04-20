@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/integer/definitions.h>
-#include <clc/math/clc_ceil.h>
-#include <clc/math/clc_floor.h>
-#include <clc/math/clc_rint.h>
-#include <clc/relational/clc_select.h>
+#include "clc/clc_convert.h"
+#include "clc/integer/definitions.h"
+#include "clc/math/clc_ceil.h"
+#include "clc/math/clc_floor.h"
+#include "clc/math/clc_rint.h"
+#include "clc/relational/clc_select.h"
 
 #define __CLC_S_SCALAR_TYPE_DST __CLC_SCALAR_TYPE_DST
 #define __CLC_U_SCALAR_TYPE_DST __CLC_XCONCAT(u, __CLC_SCALAR_TYPE_DST)
@@ -28,29 +28,29 @@
 
 #define __CLC_SCALAR_TYPE_DST char
 #define __CLC_GENSIZE_DST 8
-#define __CLC_BODY <clc_convert_float2int.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_convert_float2int.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 #undef __CLC_GENSIZE_DST
 
 #define __CLC_SCALAR_TYPE_DST short
 #define __CLC_GENSIZE_DST 16
-#define __CLC_BODY <clc_convert_float2int.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_convert_float2int.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 #undef __CLC_GENSIZE_DST
 
 #define __CLC_SCALAR_TYPE_DST int
 #define __CLC_GENSIZE_DST 32
-#define __CLC_BODY <clc_convert_float2int.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_convert_float2int.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 #undef __CLC_GENSIZE_DST
 
 #define __CLC_SCALAR_TYPE_DST long
 #define __CLC_GENSIZE_DST 64
-#define __CLC_BODY <clc_convert_float2int.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_convert_float2int.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 #undef __CLC_GENSIZE_DST
 

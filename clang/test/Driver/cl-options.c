@@ -579,10 +579,11 @@
 // ZGMLT: "-debug-info-kind=line-tables-only"
 
 // RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=BreproDefault %s
-// BreproDefault: "-mincremental-linker-compatible"
+// BreproDefault-NOT: "-mincremental-linker-compatible"
+// BreproDefault-NOT: "-mno-incremental-linker-compatible"
 
 // RUN: %clang_cl /Brepro- /Brepro /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro %s
-// Brepro-NOT: "-mincremental-linker-compatible"
+// Brepro: "-mno-incremental-linker-compatible"
 
 // RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
 // Brepro_: "-mincremental-linker-compatible"
@@ -671,13 +672,26 @@
 
 // RUN: %clang_cl /guard:cf /guard:ehcont -Wall -Wno-msvc-not-found -### -- %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=BOTHGUARD %s --implicit-check-not=warning:
-// BOTHGUARD: -cfguard
-// BOTHGUARD-SAME: -ehcontguard
+// BOTHGUARD: -ehcontguard
+// BOTHGUARD-SAME: -cfguard
 // BOTHGUARD: -guard:cf
 // BOTHGUARD-SAME: -guard:ehcont
 
 // RUN: not %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
 // CFGUARDINVALID: invalid value 'foo' in '/guard:'
+
+// /d2guardnochecks downgrades /guard:cf to table-only (no-checks).
+// RUN: %clang_cl /guard:cf /d2guardnochecks -### -- %s 2>&1 | FileCheck -check-prefix=D2GUARDNOCHECKS %s
+// D2GUARDNOCHECKS-NOT: "-cfguard"
+// D2GUARDNOCHECKS: "-cfguard-no-checks"
+
+// /d2guardnochecks is a no-op without /guard:cf.
+// RUN: %clang_cl /d2guardnochecks -### -- %s 2>&1 | FileCheck -check-prefix=D2GUARDNOCHECKS-NOOP %s
+// D2GUARDNOCHECKS-NOOP-NOT: -cfguard
+
+// /d2guardnochecks with /guard:cf,nochecks stays as nochecks.
+// RUN: %clang_cl /guard:cf,nochecks /d2guardnochecks -### -- %s 2>&1 | FileCheck -check-prefix=D2GUARDNOCHECKS-ALREADY %s
+// D2GUARDNOCHECKS-ALREADY: -cfguard-no-checks
 
 // Accept "core" clang options.
 // (/Zs is for syntax-only, -Werror makes it fail hard on unknown options)
@@ -701,7 +715,10 @@
 // RUN:     -fdebug-compilation-dir=. \
 // RUN:     -ffile-compilation-dir=. \
 // RUN:     -fdiagnostics-parseable-fixits \
+// RUN:     -fdiagnostics-print-source-range-info \
 // RUN:     -fdiagnostics-absolute-paths \
+// RUN:     -fdiagnostics-show-inlining-chain \
+// RUN:     -fno-diagnostics-show-inlining-chain \
 // RUN:     -ferror-limit=10 \
 // RUN:     -fident \
 // RUN:     -fno-ident \
@@ -846,5 +863,11 @@
 // RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
 // FUNCOVERRIDE: -loader-replaceable-function=override_me1
 // FUNCOVERRIDE-SAME: -loader-replaceable-function=override_me2
+
+// RUN: %clang_cl /d2guardcfgdispatch /c -### -- %s 2>&1 | FileCheck %s --check-prefix=GUARDCFGDISPATCH
+// GUARDCFGDISPATCH: -fwin-cfg-mechanism=dispatch
+
+// RUN: %clang_cl /d2guardcfgdispatch- /c -### -- %s 2>&1 | FileCheck %s --check-prefix=GUARDCFGDISPATCHNEG
+// GUARDCFGDISPATCHNEG: -fwin-cfg-mechanism=check
 
 void f(void) { }

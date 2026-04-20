@@ -849,7 +849,7 @@ template<typename T, typename U> concept C = true;
 template<typename T> auto L = []<C<T> U>() {};
 
 struct Q {
-  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const;
+  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 };
 
 template <class T>
@@ -1659,6 +1659,25 @@ void foo() { call(""); }
 
 }
 
+namespace GH186624 {
+
+template <class T>
+concept C = __is_unsigned(T);
+
+template <C T>
+struct encoder_interface {};
+
+template <template <C> class CodecInterface, C T>
+CodecInterface<T>* create_codec() {
+  return nullptr;
+}
+
+encoder_interface<unsigned>* create_encoder() {
+  return create_codec<encoder_interface, unsigned>();
+}
+
+}
+
 namespace GH170856 {
 
 template <unsigned N, unsigned M> struct symbol_text {
@@ -1704,6 +1723,86 @@ struct ice_point : relative_point_origin<point<kelvin>> {};
 
 }
 
+namespace GH184047 {
+
+template <typename T, int N>
+concept decomposable = requires {
+    []<template <typename...> class U, typename... Args> // #decomposable_lambda
+        requires(sizeof...(Args) >= N)
+    (U<Args...>*) {}(static_cast<T*>(nullptr));
+};
+
+template<typename T>
+struct foo {};
+
+template<typename T>
+concept decomposable_fails = decomposable<T, 2>; // #decomposable_fails
+
+template<typename T>
+concept decomposable_works = requires {
+    requires decomposable<T, 1>;
+};
+
+static_assert(decomposable<foo<int>, 1>);
+
+static_assert(decomposable<foo<int>, 200>);
+// expected-error@-1 {{static assertion failed}}
+// expected-note@-2 {{evaluated to false}}
+// expected-note@#decomposable_lambda {{invalid}}
+
+static_assert(decomposable_works<foo<int>>);
+
+static_assert(decomposable_fails<foo<int>>);
+// expected-error@-1 {{static assertion failed}}
+// expected-note@-2 {{'foo<int>' does not satisfy 'decomposable_fails'}}
+// expected-note@#decomposable_fails {{evaluated to false}}
+// expected-note@#decomposable_lambda {{invalid}}
+
+}
+
+namespace GH182344 {
+
+template <typename T>
+  requires true
+void f() {}
+
+template <typename T>
+  requires false
+void f() = delete;
+
+struct Bar {};
+
+template <typename> using Foo = Bar;
+
+template <int T>
+  requires true
+void f2() {}
+
+template <int T>
+  requires false
+void f2() = delete;
+
+template <int> constexpr auto Value = 1;
+
+template <template <typename> class> using FooTemp = Bar;
+
+template <typename T, int N, template <typename> class C> void use() {
+  f<Foo<T>>();
+  f2<Value<N>>();
+  f<FooTemp<C>>();
+}
+
+}
+
+namespace instantiation_dependent {
+  template <class T> concept C = sizeof(T) >= 1;
+  template <class U> using X = int;
+  template <class V> requires C<X<V&>> struct Y {};
+  Y<void> y;
+  // expected-error@-1 {{constraints not satisfied for class template 'Y' [with V = void]}}
+  // expected-note@-3  {{because substituted constraint expression is ill-formed: cannot form a reference to 'void'}}
+} // namespace instantiation_dependent
+
 namespace GH174667 {
 
 template<class T, class, class U>
@@ -1725,3 +1824,59 @@ namespace GH176402 {
     recursiveLambda(recursiveLambda, 5);
   }
 }
+namespace GH191016 {
+  template <typename T = int>
+  struct S {
+    template <typename Args = int>
+    constexpr static bool P = true;
+    template <typename... Args>
+    constexpr static bool Q = true;
+    S() requires P<> && Q<> {}
+  };
+  void test(){ S<int> s; }
+}
+
+
+namespace GH188640 {
+
+namespace Ex1 {
+template <typename T> constexpr bool CC = true;
+
+template <typename V, typename U = V>
+concept C = CC<U>;
+
+template <typename T>
+constexpr int f()
+    requires C<T> && C<T *>
+{
+    return 21;
+}
+
+template <typename T>
+void f()
+    requires C<T>;
+
+void g() { static_assert(f<void>() == 21); }
+
+} // namespace Ex1
+
+namespace VAR {
+template <auto N> constexpr bool CC = true;
+template <auto V, auto U = V>
+concept C = CC<U>;
+
+template <auto V>
+constexpr int f()
+    requires C<V> && C<V + 1>
+{
+    return 42;
+}
+
+template <auto N>
+int f()
+    requires C<N>;
+
+void g() { static_assert(f<1>() == 42); }
+} // namespace VAR
+
+} // namespace GH188640

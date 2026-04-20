@@ -201,33 +201,6 @@ void BasicBlock::setParent(Function *parent) {
   InstList.setSymTabObject(&Parent, parent);
 }
 
-iterator_range<filter_iterator<BasicBlock::const_iterator,
-                               std::function<bool(const Instruction &)>>>
-BasicBlock::instructionsWithoutDebug(bool SkipPseudoOp) const {
-  std::function<bool(const Instruction &)> Fn = [=](const Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I) &&
-           !(SkipPseudoOp && isa<PseudoProbeInst>(I));
-  };
-  return make_filter_range(*this, Fn);
-}
-
-iterator_range<
-    filter_iterator<BasicBlock::iterator, std::function<bool(Instruction &)>>>
-BasicBlock::instructionsWithoutDebug(bool SkipPseudoOp) {
-  std::function<bool(Instruction &)> Fn = [=](Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I) &&
-           !(SkipPseudoOp && isa<PseudoProbeInst>(I));
-  };
-  return make_filter_range(*this, Fn);
-}
-
-filter_iterator<BasicBlock::const_iterator,
-                std::function<bool(const Instruction &)>>::difference_type
-BasicBlock::sizeWithoutDebug() const {
-  return std::distance(instructionsWithoutDebug().begin(),
-                       instructionsWithoutDebug().end());
-}
-
 void BasicBlock::removeFromParent() {
   getParent()->getBasicBlockList().remove(getIterator());
 }
@@ -570,7 +543,7 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
   New->splice(New->end(), this, I, end());
 
   // Add a branch instruction to the newly formed basic block.
-  BranchInst *BI = BranchInst::Create(New, this);
+  UncondBrInst *BI = UncondBrInst::Create(New, this);
   BI->setDebugLoc(Loc);
 
   // Now we must loop through all of the successors of the New block (which
@@ -615,7 +588,7 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
     this->replacePhiUsesWith(Pred, New);
   }
   // Add a branch instruction from  "New" to "this" Block.
-  BranchInst *BI = BranchInst::Create(this, New);
+  UncondBrInst *BI = UncondBrInst::Create(this, New);
   BI->setDebugLoc(Loc);
 
   return New;
@@ -641,7 +614,7 @@ void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
 
 void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *Old,
                                               BasicBlock *New) {
-  Instruction *TI = getTerminator();
+  Instruction *TI = getTerminatorOrNull();
   if (!TI)
     // Cope with being called on a BasicBlock that doesn't have a terminator
     // yet. Clang's CodeGenFunction::EmitReturnBlock() likes to do this.
@@ -703,7 +676,7 @@ void BasicBlock::flushTerminatorDbgRecords() {
   // DbgRecords in front of the terminator.
 
   // If there's no terminator, there's nothing to do.
-  Instruction *Term = getTerminator();
+  Instruction *Term = getTerminatorOrNull();
   if (!Term)
     return;
 

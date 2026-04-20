@@ -18,17 +18,15 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 9
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = add i64 4, [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX1]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX1]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX1]], 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX1]], 9
-; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nuw nsw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nuw nsw i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i64 [[TMP4]], 4
@@ -40,7 +38,7 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP17]], align 4
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP9]]
@@ -48,7 +46,7 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP23]], align 4
 ; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    store i32 [[TMP21]], ptr [[TMP25]], align 4
-; CHECK-NEXT:    [[TMP26:%.*]] = add nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP26:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = add nuw nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP28:%.*]] = add nuw nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP29:%.*]] = add nuw nsw i64 [[TMP4]], 2
@@ -154,17 +152,15 @@ define void @pr63602_2(ptr %arr) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 9
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = add i64 4, [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX1]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX1]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX1]], 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX1]], 9
-; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nuw nsw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nuw nsw i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i64 [[TMP4]], 4
@@ -176,7 +172,7 @@ define void @pr63602_2(ptr %arr) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP17]], align 4
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP9]]
@@ -184,7 +180,7 @@ define void @pr63602_2(ptr %arr) {
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP23]], align 4
 ; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    store i32 [[TMP21]], ptr [[TMP25]], align 4
-; CHECK-NEXT:    [[TMP26:%.*]] = add nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP26:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = add nuw nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP28:%.*]] = add nuw nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP29:%.*]] = add nuw nsw i64 [[TMP4]], 2

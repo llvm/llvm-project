@@ -112,6 +112,19 @@ public:
     return result;
   }
 
+  template <typename T> bool operator()(const ConditionalExpr<T> &x) const {
+    // A conditional expression is a primary.  Therefore, only the selected
+    // branch must be constant. If the condition is a constant expression
+    // whose value cannot yet be determined, both branches must be constant.
+    if (!(*this)(x.condition())) {
+      return false;
+    } else if (auto condVal{ToLogical(x.condition())}) {
+      return *condVal ? (*this)(x.thenValue()) : (*this)(x.elseValue());
+    } else {
+      return (*this)(x.thenValue()) && (*this)(x.elseValue());
+    }
+  }
+
 private:
   bool IsConstantStructureConstructorComponent(
       const Symbol &, const Expr<SomeType> &) const;
@@ -358,6 +371,10 @@ public:
   bool operator()(const Operation<D, R, O...> &) const {
     return false;
   }
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    // A conditional expression cannot be an initial data target
+    return false;
+  }
   template <typename T> bool operator()(const Parentheses<T> &x) const {
     return (*this)(x.left());
   }
@@ -563,10 +580,15 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
         int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
-            return ArrayConstantBoundChanger{
-                std::move(*AsConstantExtents(
-                    context, GetRawLowerBounds(context, NamedEntity{symbol})))}
-                .ChangeLbounds(std::move(folded));
+            if (auto lbounds{AsConstantExtents(context,
+                    GetRawLowerBounds(context, NamedEntity{symbol}))}) {
+              return ArrayConstantBoundChanger{std::move(*lbounds)}
+                  .ChangeLbounds(std::move(folded));
+            } else {
+              context.messages().Say(symbol.name(),
+                  "The lower bounds of the parameter '%s' are not constant"_err_en_US,
+                  symbol.name());
+            }
           } else {
             context.messages().Say(
                 "Implied-shape parameter '%s' has rank %d but its initializer has rank %d"_err_en_US,
@@ -1188,6 +1210,12 @@ public:
 
   Result operator()(const NullPointer &) const { return true; }
 
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) {
+    // Conditional expressions are never variables; expression results are
+    // always contiguous.
+    return true;
+  }
+
 private:
   // Returns "true" for a provably empty or simply contiguous array section;
   // return "false" for a provably nonempty discontiguous section or for use
@@ -1753,6 +1781,12 @@ public:
   }
   Result operator()(const DescriptorInquiry &) const {
     return {}; // doesn't count as a use
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {
+    auto restorer{common::ScopedSet(isDefinition_, false)};
+    return Combine((*this)(condExpr.condition()),
+        Combine((*this)(condExpr.thenValue()), (*this)(condExpr.elseValue())));
   }
 
 private:

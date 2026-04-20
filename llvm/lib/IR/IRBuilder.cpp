@@ -927,12 +927,12 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
 }
 
 CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
-                                         ArrayRef<Type *> Types,
+                                         ArrayRef<Type *> OverloadTypes,
                                          ArrayRef<Value *> Args,
                                          FMFSource FMFSource,
                                          const Twine &Name) {
   Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Types);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, OverloadTypes);
   return createCallHelper(Fn, Args, Name, FMFSource);
 }
 
@@ -1129,15 +1129,23 @@ Value *IRBuilderBase::CreateSelectFMF(Value *C, Value *True, Value *False,
   return Insert(Sel, Name);
 }
 
-Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
-                                    const Twine &Name) {
+Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name,
+                                    bool IsNUW) {
   assert(LHS->getType() == RHS->getType() &&
          "Pointer subtraction operand types must match!");
-  Value *LHS_int = CreatePtrToInt(LHS, Type::getInt64Ty(Context));
-  Value *RHS_int = CreatePtrToInt(RHS, Type::getInt64Ty(Context));
-  Value *Difference = CreateSub(LHS_int, RHS_int);
-  return CreateExactSDiv(Difference, ConstantExpr::getSizeOf(ElemTy),
-                         Name);
+  Value *LHSAddr = CreatePtrToAddr(LHS);
+  Value *RHSAddr = CreatePtrToAddr(RHS);
+  return CreateSub(LHSAddr, RHSAddr, Name, IsNUW);
+}
+Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
+                                    const Twine &Name) {
+  const DataLayout &DL = BB->getDataLayout();
+  TypeSize ElemSize = DL.getTypeAllocSize(ElemTy);
+  if (ElemSize == TypeSize::getFixed(1))
+    return CreatePtrDiff(LHS, RHS, Name);
+
+  Value *Diff = CreatePtrDiff(LHS, RHS);
+  return CreateExactSDiv(Diff, CreateTypeSize(Diff->getType(), ElemSize), Name);
 }
 
 Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {

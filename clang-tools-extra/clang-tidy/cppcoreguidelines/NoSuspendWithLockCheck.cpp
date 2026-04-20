@@ -56,7 +56,7 @@ void NoSuspendWithLockCheck::check(const MatchFinder::MatchResult &Result) {
   Options.AddTemporaryDtors = true;
 
   const std::unique_ptr<CFG> TheCFG = CFG::buildCFG(
-      nullptr, const_cast<clang::CompoundStmt *>(Block), &Context, Options);
+      nullptr, const_cast<CompoundStmt *>(Block), &Context, Options);
   if (!TheCFG)
     return;
 

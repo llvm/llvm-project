@@ -52,17 +52,6 @@ llvm.func @distribute_order(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-llvm.func @ordered_region_par_level_simd() {
-  // expected-error@below {{not yet implemented: Unhandled clause parallelization-level in omp.ordered.region operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.ordered.region}}
-  omp.ordered.region par_level_simd {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @parallel_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.parallel operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
@@ -312,12 +301,15 @@ llvm.func @taskgroup_task_reduction(%x : !llvm.ptr) {
 // -----
 
 llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskloop.context operation}}
+  omp.taskloop.context allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -334,12 +326,15 @@ llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) 
   }
 
 llvm.func @taskloop_inreduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop in_reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.taskloop.context operation}}
+  omp.taskloop.context in_reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -356,12 +351,15 @@ llvm.func @taskloop_inreduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.pt
   }
 
 llvm.func @taskloop_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.taskloop.context operation}}
+  omp.taskloop.context reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -470,16 +468,6 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }
-  llvm.return
-}
-
-// -----
-llvm.func @task_affinity(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause affinity in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task affinity(%x : !llvm.ptr) {
-    omp.terminator
   }
   llvm.return
 }

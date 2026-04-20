@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/geometric/clc_cross.h>
+#include "clc/geometric/clc_cross.h"
 
 _CLC_OVERLOAD _CLC_DEF float3 cross(float3 p0, float3 p1) {
   return __clc_cross(p0, p1);

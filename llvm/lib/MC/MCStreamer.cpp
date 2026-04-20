@@ -20,6 +20,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCRegister.h"
@@ -95,6 +96,10 @@ MCStreamer::MCStreamer(MCContext &Ctx)
 }
 
 MCStreamer::~MCStreamer() = default;
+
+void MCStreamer::setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter) {
+  LFIRewriter = std::move(Rewriter);
+}
 
 void MCStreamer::reset() {
   DwarfFrameInfos.clear();
@@ -244,7 +249,7 @@ void MCStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
 MCSymbol *MCStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   if (!Table.getLabel()) {
-    StringRef Prefix = Context.getAsmInfo()->getPrivateGlobalPrefix();
+    StringRef Prefix = Context.getAsmInfo()->getInternalSymbolPrefix();
     Table.setLabel(
         Context.getOrCreateSymbol(Prefix + "line_table_start" + Twine(CUID)));
   }
@@ -377,11 +382,20 @@ void MCStreamer::emitCVDefRangeDirective(
   emitCVDefRangeDirective(Ranges, BytePrefix);
 }
 
+void MCStreamer::emitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterRelIndirHeader DRHdr) {
+  SmallString<20> BytePrefix;
+  copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_REGISTER_REL_INDIR,
+                       DRHdr);
+  emitCVDefRangeDirective(Ranges, BytePrefix);
+}
+
 void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
                                      MCSymbol *EHSymbol) {
 }
 
-void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
+void MCStreamer::initSections(const MCSubtargetInfo &STI) {
   switchSectionNoPrint(getContext().getObjectFileInfo()->getTextSection());
 }
 
@@ -398,6 +412,9 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
 
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
+
+  if (LFIRewriter)
+    LFIRewriter->onLabel(Symbol);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
@@ -1346,7 +1363,8 @@ void MCStreamer::emitFill(const MCExpr &NumBytes, uint64_t Value, SMLoc Loc) {}
 void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                           SMLoc Loc) {}
 void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
-void MCStreamer::emitPrefAlign(Align A) {}
+void MCStreamer::emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
+                               uint8_t Fill, const MCSubtargetInfo &STI) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,

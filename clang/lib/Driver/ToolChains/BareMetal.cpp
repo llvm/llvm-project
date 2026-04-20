@@ -24,8 +24,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
-#include <sstream>
-
 using namespace llvm::opt;
 using namespace clang;
 using namespace clang::driver;
@@ -49,6 +47,12 @@ static bool isRISCVBareMetal(const llvm::Triple &Triple) {
 static bool isPPCBareMetal(const llvm::Triple &Triple) {
   return Triple.isPPC() && Triple.getOS() == llvm::Triple::UnknownOS &&
          Triple.getEnvironment() == llvm::Triple::EABI;
+}
+
+/// Is the triple {ix86,x86_64}-*-none-elf?
+static bool isX86BareMetal(const llvm::Triple &Triple) {
+  return Triple.isX86() && Triple.getOS() == llvm::Triple::UnknownOS &&
+         Triple.getEnvironmentName() == "elf";
 }
 
 static bool findRISCVMultilibs(const Driver &D,
@@ -258,89 +262,15 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
-static void
-findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
-                      StringRef MultilibPath, const ArgList &Args,
-                      DetectedMultilibs &Result,
-                      SmallVector<StringRef> &CustomFlagsMacroDefines) {
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
-      D.getVFS().getBufferForFile(MultilibPath);
-  if (!MB)
-    return;
-  Multilib::flags_list Flags = TC.getMultilibFlags(Args);
-  llvm::ErrorOr<MultilibSet> ErrorOrMultilibSet =
-      MultilibSet::parseYaml(*MB.get());
-  if (ErrorOrMultilibSet.getError())
-    return;
-  Result.Multilibs = ErrorOrMultilibSet.get();
-  if (Result.Multilibs.select(D, Flags, Result.SelectedMultilibs,
-                              &CustomFlagsMacroDefines))
-    return;
-  D.Diag(clang::diag::warn_drv_missing_multilib) << llvm::join(Flags, " ");
-  std::stringstream ss;
-
-  // If multilib selection didn't complete successfully, report a list
-  // of all the configurations the user could have provided.
-  for (const Multilib &Multilib : Result.Multilibs)
-    if (!Multilib.isError())
-      ss << "\n" << llvm::join(Multilib.flags(), " ");
-  D.Diag(clang::diag::note_drv_available_multilibs) << ss.str();
-
-  // Now report any custom error messages requested by the YAML. We do
-  // this after displaying the list of available multilibs, because
-  // that list is probably large, and (in interactive use) risks
-  // scrolling the useful error message off the top of the user's
-  // terminal.
-  for (const Multilib &Multilib : Result.SelectedMultilibs)
-    if (Multilib.isError())
-      D.Diag(clang::diag::err_drv_multilib_custom_error)
-          << Multilib.getErrorMessage();
-
-  // If there was an error, clear the SelectedMultilibs vector, in
-  // case it contains partial data.
-  Result.SelectedMultilibs.clear();
-}
-
-static constexpr llvm::StringLiteral MultilibFilename = "multilib.yaml";
-
-static std::optional<llvm::SmallString<128>>
-getMultilibConfigPath(const Driver &D, const llvm::Triple &Triple,
-                      const ArgList &Args) {
-  llvm::SmallString<128> MultilibPath;
-  if (Arg *ConfigFileArg = Args.getLastArg(options::OPT_multi_lib_config)) {
-    MultilibPath = ConfigFileArg->getValue();
-    if (!D.getVFS().exists(MultilibPath)) {
-      D.Diag(clang::diag::err_drv_no_such_file) << MultilibPath.str();
-      return {};
-    }
-  } else {
-    MultilibPath = computeClangRuntimesSysRoot(D, /*IncludeTriple=*/false);
-    llvm::sys::path::append(MultilibPath, MultilibFilename);
-  }
-  return MultilibPath;
-}
-
 void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args) {
-  DetectedMultilibs Result;
   // Look for a multilib.yaml before trying target-specific hardwired logic.
-  // If it exists, always do what it specifies.
-  std::optional<llvm::SmallString<128>> MultilibPath =
-      getMultilibConfigPath(D, Triple, Args);
-  if (!MultilibPath)
-    return;
-  if (D.getVFS().exists(*MultilibPath)) {
-    // If multilib.yaml is found, update sysroot so it doesn't use a target
-    // specific suffix
-    SysRoot = computeClangRuntimesSysRoot(D, /*IncludeTriple=*/false);
-    SmallVector<StringRef> CustomFlagMacroDefines;
-    findMultilibsFromYAML(*this, D, *MultilibPath, Args, Result,
-                          CustomFlagMacroDefines);
-    SelectedMultilibs = Result.SelectedMultilibs;
-    Multilibs = Result.Multilibs;
-    MultilibMacroDefines.append(CustomFlagMacroDefines.begin(),
-                                CustomFlagMacroDefines.end());
+  std::string FallbackDir =
+      computeClangRuntimesSysRoot(D, /*IncludeTriple=*/false);
+  if (loadMultilibsFromYAML(Args, D, FallbackDir)) {
+    SysRoot = FallbackDir;
   } else if (isRISCVBareMetal(Triple) && !detectGCCToolchainAdjacent(D)) {
+    DetectedMultilibs Result;
     if (findRISCVMultilibs(D, Triple, Args, Result)) {
       SelectedMultilibs = Result.SelectedMultilibs;
       Multilibs = Result.Multilibs;
@@ -351,7 +281,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
   return arm::isARMEABIBareMetal(Triple) ||
          aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
-         isPPCBareMetal(Triple);
+         isPPCBareMetal(Triple) || isX86BareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
@@ -360,16 +290,6 @@ Tool *BareMetal::buildLinker() const {
 
 Tool *BareMetal::buildStaticLibTool() const {
   return new tools::baremetal::StaticLibTool(*this);
-}
-
-BareMetal::OrderedMultilibs BareMetal::getOrderedMultilibs() const {
-  // Get multilibs in reverse order because they're ordered most-specific last.
-  if (!SelectedMultilibs.empty())
-    return llvm::reverse(SelectedMultilibs);
-
-  // No multilibs selected so return a single default multilib.
-  static const llvm::SmallVector<Multilib> Default = {Multilib()};
-  return llvm::reverse(Default);
 }
 
 ToolChain::CXXStdlibType BareMetal::GetDefaultCXXStdlibType() const {
@@ -456,7 +376,7 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     return;
 
   const Driver &D = getDriver();
-  std::string Target = getTripleString();
+  StringRef Target = getTripleString();
 
   auto AddCXXIncludePath = [&](StringRef Path) {
     std::string Version = detectLibcxxVersion(Path);
@@ -672,11 +592,10 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_u, options::OPT_T_Group,
-                   options::OPT_s, options::OPT_t, options::OPT_r});
-
+  Args.addAllArgs(CmdArgs, {options::OPT_L});
   TC.AddFilePathLibArgs(Args, CmdArgs);
+  Args.addAllArgs(CmdArgs, {options::OPT_u, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t, options::OPT_r});
 
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
@@ -750,9 +669,4 @@ SanitizerMask BareMetal::getSupportedSanitizers() const {
     Res |= SanitizerKind::KernelHWAddress;
   }
   return Res;
-}
-
-SmallVector<std::string>
-BareMetal::getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const {
-  return MultilibMacroDefines;
 }

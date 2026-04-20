@@ -60,7 +60,6 @@
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
@@ -1024,17 +1023,19 @@ static int runOrcJIT(const char *ProgName) {
     Builder.getJITTargetMachineBuilder()
         ->setRelocationModel(Reloc::PIC_)
         .setCodeModel(CodeModel::Small);
-    Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
-      return std::make_unique<orc::ObjectLinkingLayer>(ES);
-    });
+    Builder.setObjectLinkingLayerCreator(
+        [&](orc::ExecutionSession &ES, jitlink::JITLinkMemoryManager &MemMgr) {
+          return std::make_unique<orc::ObjectLinkingLayer>(ES, MemMgr);
+        });
     break;
   case JITLinkerKind::RuntimeDyld:
-    Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
-      return std::make_unique<orc::RTDyldObjectLinkingLayer>(
-          ES, [](const MemoryBuffer &) {
-            return std::make_unique<SectionMemoryManager>();
-          });
-    });
+    Builder.setObjectLinkingLayerCreator(
+        [&](orc::ExecutionSession &ES, jitlink::JITLinkMemoryManager &MemMgr) {
+          return std::make_unique<orc::RTDyldObjectLinkingLayer>(
+              ES, [](const MemoryBuffer &) {
+                return std::make_unique<SectionMemoryManager>();
+              });
+        });
     break;
   case JITLinkerKind::Default:
     // Let LLJITBuilder decide

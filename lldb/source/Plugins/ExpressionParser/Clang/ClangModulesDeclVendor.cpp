@@ -329,7 +329,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
         return llvm::createStringError("couldn't find modulemap file in %s",
                                        module.search_path.GetCString());
 
-      if (HS.parseAndLoadModuleMapFile(*file, is_system))
+      if (HS.parseAndLoadModuleMapFile(*file, is_system,
+                                       /*ImplicitlyDiscovered=*/false))
         return llvm::createStringError(
             "failed to parse and load modulemap file in %s",
             module.search_path.GetCString());
@@ -337,8 +338,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
   }
 
   if (!HS.lookupModule(module.path.front().GetStringRef()))
-    return llvm::createStringError("header search couldn't locate module '%s'",
-                                   module.path.front().AsCString());
+    return llvm::createStringErrorV(
+        "header search couldn't locate module '{0}'", module.path.front());
 
   llvm::SmallVector<clang::IdentifierLoc, 4> clang_path;
 

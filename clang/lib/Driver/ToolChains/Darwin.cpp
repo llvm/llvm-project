@@ -27,6 +27,10 @@
 #include "llvm/TargetParser/Triple.h"
 #include <cstdlib> // ::getenv
 
+#ifdef CLANG_USE_XCSELECT
+#include <xcselect.h> // ::xcselect_host_sdk_path
+#endif
+
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
@@ -575,7 +579,9 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
-  assert(Output.getType() == types::TY_Image && "Invalid linker output type.");
+  assert((Output.getType() == types::TY_Image ||
+          Output.getType() == types::TY_Object) &&
+         "Invalid linker output type.");
 
   // If the number of arguments surpasses the system limits, we will encode the
   // input files in a separate file, shortening the command line. To this end,
@@ -1145,11 +1151,11 @@ void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
       getDriver().Diag(diag::warn_incompatible_sysroot)
           << SDKInfo->getDisplayName() << Triple.getTriple();
   } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+    // If there is no SDK info, assume this is building against an SDK that
+    // predates SDKSettings.json. Try to match the triple to the SDK path.
     const char *isysroot = A->getValue();
-    StringRef SDK = getSDKName(isysroot);
-    if (!SDK.empty()) {
-      size_t StartVer = SDK.find_first_of("0123456789");
-      StringRef SDKName = SDK.slice(0, StartVer);
+    StringRef SDKName = getSDKName(isysroot);
+    if (!SDKName.empty()) {
       bool supported = true;
       if (Triple.isWatchOS())
         supported = SDKName.starts_with("Watch");
@@ -1161,9 +1167,8 @@ void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
         supported = SDKName.starts_with("iPhone");
       else if (Triple.isMacOSX())
         supported = SDKName.starts_with("MacOSX");
-      else
-        llvm::reportFatalUsageError(Twine("SDK at '") + isysroot +
-                                    "' missing SDKSettings.json.");
+      // If it's not an older SDK, then it might be a damaged SDK or a
+      // non-standard -isysroot path. Don't try to diagnose that here.
 
       if (!supported)
         getDriver().Diag(diag::warn_incompatible_sysroot)
@@ -1367,6 +1372,21 @@ unsigned DarwinClang::GetDefaultDwarfVersion() const {
        TargetVersion.empty())) // apple-darwin, no version.
     return 4;
   return 5;
+}
+
+bool DarwinClang::getDefaultDebugSimpleTemplateNames() const {
+  // Default to an OS version on which LLDB supports debugging
+  // -gsimple-template-names programs.
+  if ((isTargetMacOSBased() && isMacosxVersionLT(26)) ||
+      (isTargetIOSBased() && isIPhoneOSVersionLT(26)) ||
+      (isTargetWatchOSBased() && TargetVersion < llvm::VersionTuple(26)) ||
+      (isTargetXROS() && TargetVersion < llvm::VersionTuple(26)) ||
+      (isTargetDriverKit() && TargetVersion < llvm::VersionTuple(25)) ||
+      (isTargetMacOSBased() &&
+       TargetVersion.empty())) // apple-darwin, no version.
+    return false;
+
+  return true;
 }
 
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
@@ -1905,7 +1925,7 @@ struct DarwinPlatform {
     DarwinPlatform Result(TargetArg, getPlatformFromOS(TT.getOS()),
                           TT.getOSVersion(), A);
     VersionTuple OsVersion = TT.getOSVersion();
-    Result.TargetVariantTriple = TargetVariantTriple;
+    Result.TargetVariantTriple = std::move(TargetVariantTriple);
     Result.setEnvironment(TT.getEnvironment(), OsVersion, SDKInfo);
     return Result;
   }
@@ -1938,9 +1958,12 @@ struct DarwinPlatform {
                                           const DarwinSDKInfo &SDKInfo) {
     const DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
         SDKInfo.getCanonicalPlatformInfo();
-    DarwinPlatform Result(InferredFromSDK,
-                          getPlatformFromOS(PlatformInfo.getOS()),
-                          SDKInfo.getVersion());
+    const llvm::Triple::OSType OS = PlatformInfo.getOS();
+    VersionTuple Version = SDKInfo.getVersion();
+    if (OS == llvm::Triple::MacOSX)
+      Version = getVersionFromString(
+          getSystemOrSDKMacOSVersion(Version.getAsString()));
+    DarwinPlatform Result(InferredFromSDK, getPlatformFromOS(OS), Version);
     Result.Environment = getEnvKindFromEnvType(PlatformInfo.getEnvironment());
     Result.InferSimulatorFromArch = false;
     Result.InferredSource = SDKRoot;
@@ -2461,6 +2484,12 @@ std::optional<DarwinSDKInfo> parseSDKSettings(llvm::vfs::FileSystem &VFS,
 
 void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const OptTable &Opts = getDriver().getOpts();
+  // TryXcselect keeps track of whether we use xcselect to find the SDK
+  // when CLANG_USE_XCSELECT is enabled. Currently, we do this when we
+  // do not have a sysroot from -isysroot, --sysroot, or SDKROOT, and
+  // we do not have --no-xcselect.
+  bool TryXcselect = false;
+  (void)TryXcselect;
 
   // Support allowing the SDKROOT environment variable used by xcrun and other
   // Xcode tools to define the default sysroot, by making it the default for
@@ -2469,21 +2498,24 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     // Warn if the path does not exist.
     if (!getVFS().exists(A->getValue()))
       getDriver().Diag(clang::diag::warn_missing_sysroot) << A->getValue();
-  } else {
-    if (char *env = ::getenv("SDKROOT")) {
-      // We only use this value as the default if it is an absolute path,
-      // exists, and it is not the root path.
-      if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
-          StringRef(env) != "/") {
-        Args.append(Args.MakeSeparateArg(
-            nullptr, Opts.getOption(options::OPT_isysroot), env));
-      }
+  } else if (const char *env = ::getenv("SDKROOT")) {
+    // We only use this value as the default if it is an absolute path,
+    // exists, and it is not the root path.
+    if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
+        StringRef(env) != "/") {
+      Args.append(Args.MakeSeparateArg(
+          nullptr, Opts.getOption(options::OPT_isysroot), env));
     }
+  } else {
+    TryXcselect = !Args.hasArg(options::OPT__sysroot_EQ) &&
+                  !Args.hasArg(options::OPT_no_xcselect);
   }
 
   // Read the SDKSettings.json file for more information, like the SDK version
   // that we can pass down to the compiler.
   SDKInfo = parseSDKSettings(getVFS(), Args, getDriver());
+  // FIXME: If SDKInfo is std::nullopt, diagnose a bad isysroot value (e.g.
+  // doesn't end in .sdk).
 
   // The OS and the version can be specified using the -target argument.
   std::optional<DarwinPlatform> PlatformAndVersion =
@@ -2616,6 +2648,18 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const std::string OSVersionStr = OSVersion.getAsString();
   // Set the tool chain target information.
   if (Platform == MacOS) {
+#ifdef CLANG_USE_XCSELECT
+    if (TryXcselect) {
+      char *p;
+      if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
+        Args.append(Args.MakeSeparateArg(
+            nullptr, Opts.getOption(options::OPT_isysroot), p));
+        ::free(p);
+        if (!SDKInfo)
+          SDKInfo = parseSDKSettings(getVFS(), Args, getDriver());
+      }
+    }
+#endif
     if (!Driver::GetReleaseVersion(OSVersionStr, Major, Minor, Micro,
                                    HadExtra) ||
         HadExtra || Major < 10 || Major >= MajorVersionLimit || Minor >= 100 ||
@@ -3361,6 +3405,23 @@ void Darwin::addClangTargetOptions(
                                 options::OPT_fno_aligned_allocation) &&
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  // Enable objc_msgSend selector stubs by default if the linker supports it.
+  // ld64-811.2+ does, for arm64, arm64e, and arm64_32.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fobjc_msgsend_selector_stubs,
+                                options::OPT_fno_objc_msgsend_selector_stubs) &&
+      getTriple().isAArch64() &&
+      (getLinkerVersion(DriverArgs) >= VersionTuple(811, 2)))
+    CC1Args.push_back("-fobjc-msgsend-selector-stubs");
+
+  // Enable objc_msgSend class selector stubs by default if the linker supports
+  // it. ld64-1250+ does, for arm64, arm64e, and arm64_32.
+  if (!DriverArgs.hasArgNoClaim(
+          options::OPT_fobjc_msgsend_class_selector_stubs,
+          options::OPT_fno_objc_msgsend_class_selector_stubs) &&
+      getTriple().isAArch64() &&
+      (getLinkerVersion(DriverArgs) >= VersionTuple(1250, 0)))
+    CC1Args.push_back("-fobjc-msgsend-class-selector-stubs");
 
   // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
   // or disabled sized deallocations.

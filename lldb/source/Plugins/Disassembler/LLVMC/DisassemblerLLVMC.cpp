@@ -459,7 +459,6 @@ public:
                 lldb::offset_t data_offset) override {
     // All we have to do is read the opcode which can be easy for some
     // architectures
-    bool got_op = false;
     DisassemblerScope disasm(*this);
     if (disasm) {
       const ArchSpec &arch = disasm->GetArchitecture();
@@ -470,42 +469,31 @@ public:
       if (min_op_byte_size == max_op_byte_size) {
         // Fixed size instructions, just read that amount of data.
         if (!data.ValidOffsetForDataOfSize(data_offset, min_op_byte_size))
-          return false;
+          return 0;
 
         switch (min_op_byte_size) {
         case 1:
           m_opcode.SetOpcode8(data.GetU8(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 2:
           m_opcode.SetOpcode16(data.GetU16(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 4:
           m_opcode.SetOpcode32(data.GetU32(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 8:
           m_opcode.SetOpcode64(data.GetU64(&data_offset), byte_order);
-          got_op = true;
           break;
 
         default:
-          if (arch.GetTriple().isRISCV())
-            m_opcode.SetOpcode16_32TupleBytes(
-                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size,
-                byte_order);
-          else
-            m_opcode.SetOpcodeBytes(
-                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size);
-          got_op = true;
+          m_opcode.SetOpcodeBytes(data.PeekData(data_offset, min_op_byte_size),
+                                  min_op_byte_size);
           break;
         }
-      }
-      if (!got_op) {
+      } else {
         bool is_alternate_isa = false;
         DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr =
             GetDisasmToUse(is_alternate_isa, disasm);
@@ -1593,23 +1581,28 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   }
 
   if (triple.isRISCV() && !cpu_or_features_overriden) {
-    uint32_t arch_flags = arch.GetFlags();
-    if (arch_flags & ArchSpec::eRISCV_rvc)
-      features_str += "+c,";
-    if (arch_flags & ArchSpec::eRISCV_rve)
-      features_str += "+e,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
-        ArchSpec::eRISCV_float_abi_single)
-      features_str += "+f,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
-        ArchSpec::eRISCV_float_abi_double)
-      features_str += "+f,+d,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
-        ArchSpec::eRISCV_float_abi_quad)
-      features_str += "+f,+d,+q,";
-    // FIXME: how do we detect features such as `+a`, `+m`?
-    // Turn them on by default now, since everyone seems to use them
-    features_str += "+a,+m,";
+    auto subtarget_features = arch.GetSubtargetFeatures().getString();
+    if (!subtarget_features.empty()) {
+      features_str += subtarget_features;
+    } else {
+      uint32_t arch_flags = arch.GetFlags();
+      if (arch_flags & ArchSpec::eRISCV_rvc)
+        features_str += "+c,";
+      if (arch_flags & ArchSpec::eRISCV_rve)
+        features_str += "+e,";
+      if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
+          ArchSpec::eRISCV_float_abi_single)
+        features_str += "+f,";
+      if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
+          ArchSpec::eRISCV_float_abi_double)
+        features_str += "+f,+d,";
+      if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
+          ArchSpec::eRISCV_float_abi_quad)
+        features_str += "+f,+d,+q,";
+      // FIXME: how do we detect features such as `+a`, `+m`?
+      // Turn them on by default now, since everyone seems to use them
+      features_str += "+a,+m,";
+    }
   }
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this

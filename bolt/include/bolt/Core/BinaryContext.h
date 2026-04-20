@@ -726,6 +726,11 @@ public:
   /// FunctionFragment::getFragmentNum() == FragmentNum::warm()
   bool HasWarmSection{false};
 
+  /// Indicates if the binary should assume large code model
+  /// Can be triggered by the presence of .ltext sections if
+  /// unspecified.
+  bool UseLargeCodeModel{false};
+
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
   /// will have HasFixedLoadAddress set to false.
@@ -851,6 +856,10 @@ public:
   /// enum Constants, e.g. DW_EH_PE_omit.
   unsigned LSDAEncoding = dwarf::DW_EH_PE_omit;
 
+  /// Update LSDAEncoding for the binary taking into account
+  /// large code model and position-independent executables.
+  void updateLSDAEncoding();
+
   BinaryContext(std::unique_ptr<MCContext> Ctx,
                 std::unique_ptr<DWARFContext> DwCtx,
                 std::unique_ptr<Triple> TheTriple,
@@ -887,9 +896,11 @@ public:
 
   bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
 
-  // AArch64-specific functions to check if symbol is used to delimit
+  // AArch64/RISC-V functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.
   MarkerSymType getMarkerType(const SymbolRef &Symbol) const;
+  MarkerSymType getMarkerType(unsigned SymbolType, uint64_t SymbolSize,
+                              StringRef SymbolName) const;
   bool isMarker(const SymbolRef &Symbol) const;
 
   /// Iterate over all BinaryData.
@@ -1560,6 +1571,7 @@ public:
     return Streamer;
   }
 
+  bool hasIOAddressMap() const { return IOAddressMap.has_value(); }
   void setIOAddressMap(AddressMap Map) { IOAddressMap = std::move(Map); }
   const AddressMap &getIOAddressMap() const {
     assert(IOAddressMap && "Address map not set yet");

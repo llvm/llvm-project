@@ -120,8 +120,8 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
     // expect unique exits
     return false;
   assert(CurLoop->contains(CondExitBlock) && "meaning of exit block");
-  auto *BI = dyn_cast<BranchInst>(CondExitBlock->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(CondExitBlock->getTerminator());
+  if (!BI)
     return false;
   // If condition is constant and false leads to ExitBlock then we always
   // execute the true branch.

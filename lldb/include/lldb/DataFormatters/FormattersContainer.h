@@ -58,7 +58,7 @@ class TypeMatcher {
     if (type.IsEmpty())
       return type;
 
-    llvm::StringRef type_lexer(type.AsCString());
+    llvm::StringRef type_lexer(type);
 
     type_lexer.consume_front("class ");
     type_lexer.consume_front("enum ");
@@ -104,7 +104,7 @@ public:
       // Skip callback matching in these cases.
       if (candidate_type.GetScriptInterpreter())
         return candidate_type.GetScriptInterpreter()->FormatterCallbackFunction(
-            m_name.AsCString(),
+            m_name.AsCString(nullptr),
             std::make_shared<TypeImpl>(candidate_type.GetType()));
     }
     return false;

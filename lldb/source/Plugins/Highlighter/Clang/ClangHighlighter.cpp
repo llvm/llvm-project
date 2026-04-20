@@ -21,9 +21,9 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <optional>
 
-LLDB_PLUGIN_DEFINE_ADV(ClangHighlighter, HighlighterClang)
-
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE_ADV(ClangHighlighter, HighlighterClang)
 
 bool ClangHighlighter::isKeyword(llvm::StringRef token) const {
   return keywords.contains(token);

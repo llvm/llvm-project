@@ -501,7 +501,7 @@ cir.func @test_return_computed_value(%arg0: !s32i) -> !s32i {
       %cond = cir.call @shouldReturn() : () -> !cir.bool
       cir.brcond %cond ^bb_return, ^bb_normal
     ^bb_return:
-      %retval = cir.unary(not, %arg0) : !s32i, !s32i
+      %retval = cir.not %arg0 : !s32i
       cir.return %retval : !s32i
     ^bb_normal:
       cir.yield
@@ -533,7 +533,7 @@ cir.func @test_return_computed_value(%arg0: !s32i) -> !s32i {
 // CHECK:         %[[COND:.*]] = cir.call @shouldReturn()
 // CHECK:         cir.brcond %[[COND]] ^[[RET_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
 // CHECK:       ^[[RET_PATH]]:
-// CHECK:         %[[COMPUTED:.*]] = cir.unary(not, %[[ARG0]]) : !s32i, !s32i
+// CHECK:         %[[COMPUTED:.*]] = cir.not %[[ARG0]] : !s32i
 // CHECK:         cir.store %[[COMPUTED]], %[[RET_TMP]]
 // CHECK:         %[[RET_ID:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:         cir.store %[[RET_ID]], %[[DEST_SLOT]]

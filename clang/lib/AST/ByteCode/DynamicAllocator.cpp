@@ -27,15 +27,7 @@ void DynamicAllocator::cleanup() {
       assert(!B->isDead());
       assert(B->isInitialized());
       B->invokeDtor();
-
-      if (B->hasPointers()) {
-        while (B->Pointers) {
-          Pointer *Next = B->Pointers->asBlockPointer().Next;
-          B->Pointers->BS.Pointee = nullptr;
-          B->Pointers = Next;
-        }
-        B->Pointers = nullptr;
-      }
+      B->removePointers();
     }
   }
 
