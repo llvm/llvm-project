@@ -808,40 +808,28 @@ void CodeGenModule::checkAliases() {
       GlobalDecl AliaseeGD;
       lookupRepresentativeDecl(GV->getName(), AliaseeGD);
       assert(AliaseeGD);
+      bool aliasIsFuncDecl = isa<FunctionDecl>(D);
+      bool aliaseeIsFunc = isa<llvm::Function, llvm::GlobalIFunc>(GV);
       // Function declarations can only alias functions (including IFUNCs).
       // Similarly, variable declarations can only alias variables.
-      if (isa<FunctionDecl>(D) != isa<llvm::Function, llvm::GlobalIFunc>(GV)) {
+      if (aliasIsFuncDecl != aliaseeIsFunc) {
         Diags.Report(Location, diag::err_alias_between_function_and_variable)
-            << isa<FunctionDecl>(D);
+            << aliasIsFuncDecl;
         Diags.Report(AliaseeGD.getDecl()->getLocation(),
                      diag::note_aliasee_declaration);
         Error = true;
         continue;
       }
 
-      auto shouldReportTypeMismatch = [&]() {
-        QualType AliasQTy = D->getType().getCanonicalType();
-        QualType AliaseeQTy =
-            cast<ValueDecl>(AliaseeGD.getDecl())->getType().getCanonicalType();
-
-        // Same types, nothing to report.
-        if (AliasQTy == AliaseeQTy)
-          return false;
-        // Only report functions.
-        // Type mismatches for variables can be intentional.
-        auto *AliasFTy = dyn_cast<FunctionType>(AliasQTy.getTypePtr());
-        auto *AliaseeFTy = dyn_cast<FunctionType>(AliaseeQTy.getTypePtr());
-        if (!AliasFTy || !AliaseeFTy)
-          return false;
-        // Only report aliases with unspecified parameter lists if the return
-        // types do not match.
-        if (isa<FunctionNoProtoType>(AliasFTy))
-          return AliasFTy->getReturnType() != AliaseeFTy->getReturnType();
-        return true;
-      };
-      if (shouldReportTypeMismatch()) {
+      QualType AliasTy = D->getType();
+      QualType AliaseeTy = cast<ValueDecl>(AliaseeGD.getDecl())->getType();
+      // Only report functions.
+      // Type mismatches for variables can be intentional.
+      if (aliasIsFuncDecl && aliaseeIsFunc &&
+          !Context.typesAreCompatible(AliasTy.getCanonicalType(),
+                                      AliaseeTy.getCanonicalType())) {
         Diags.Report(Location, diag::warn_alias_type_mismatch)
-            << D->getType() << cast<ValueDecl>(AliaseeGD.getDecl())->getType();
+            << AliasTy << AliaseeTy;
         Diags.Report(AliaseeGD.getDecl()->getLocation(),
                      diag::note_aliasee_declaration);
       }
