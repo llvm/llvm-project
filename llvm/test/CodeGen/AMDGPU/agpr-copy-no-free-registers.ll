@@ -781,6 +781,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    ds_read_b64 v[14:15], v19
 ; GFX90A-NEXT:    ds_read_b64 v[16:17], v0
 ; GFX90A-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; GFX90A-NEXT:    ; kill: killed $sgpr22 killed $sgpr23
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_cbranch_vccnz .LBB3_7
 ; GFX90A-NEXT:  ; %bb.6: ; %bb51

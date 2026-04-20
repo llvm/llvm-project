@@ -439,6 +439,7 @@ define amdgpu_kernel void @s_trunc_i64_mul_to_i32(ptr addrspace(1) %out, i64 %a,
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_load_dword s3, s[4:5], 0x34
+; GFX9-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX9-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s6, -1
 ; GFX9-NEXT:    s_mov_b32 s4, s0
@@ -454,6 +455,7 @@ define amdgpu_kernel void @s_trunc_i64_mul_to_i32(ptr addrspace(1) %out, i64 %a,
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_load_dword s3, s[4:5], 0x34
+; GFX10-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_mul_i32 s2, s3, s2
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
@@ -494,6 +496,7 @@ define amdgpu_kernel void @s_trunc_i64_mul_to_i32(ptr addrspace(1) %out, i64 %a,
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x34 nv
+; GFX1250-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mul_i32 s2, s3, s2
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
@@ -3122,7 +3125,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[4:7], 0
 ; GFX11-NEXT:    s_branch .LBB16_5
 ; GFX11-NEXT:  .LBB16_3:
-; GFX11-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX11-NEXT:    s_branch .LBB16_2
 ; GFX11-NEXT:  .LBB16_4:
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
@@ -3150,7 +3152,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    buffer_load_b64 v[0:1], off, s[4:7], null
 ; GFX12-NEXT:    s_branch .LBB16_5
 ; GFX12-NEXT:  .LBB16_3:
-; GFX12-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX12-NEXT:    s_branch .LBB16_2
 ; GFX12-NEXT:  .LBB16_4:
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
@@ -3206,7 +3207,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX13-NEXT:    buffer_load_b64 v[0:1], off, s[4:7], null
 ; GFX13-NEXT:    s_branch .LBB16_5
 ; GFX13-NEXT:  .LBB16_3:
-; GFX13-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX13-NEXT:    s_branch .LBB16_2
 ; GFX13-NEXT:  .LBB16_4:
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5

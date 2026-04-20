@@ -184,6 +184,7 @@ define <4 x i64> @ashr_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-NEXT:    flat_load_dwordx4 v[12:15], v[8:9]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx4 v[15:18], v[8:9] offset:16
+; CHECK-NEXT:    ; kill: killed $vgpr8 killed $vgpr9
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v11, 31, v1
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v9, 31, v3
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v10, 31, v5

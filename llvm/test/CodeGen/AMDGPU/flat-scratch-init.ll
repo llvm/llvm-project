@@ -116,6 +116,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GCN-NEXT:    s_load_dword vcc_lo, s[4:5], 0x8
 ; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GCN-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_writelane_b32 v0, s0, 0
 ; GCN-NEXT:    v_writelane_b32 v0, s1, 1

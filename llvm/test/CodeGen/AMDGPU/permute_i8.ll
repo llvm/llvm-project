@@ -3779,6 +3779,7 @@ define hidden void @extract_v13i64(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:48
 ; GFX10-NEXT:    global_load_dwordx4 v[11:14], v[0:1], off
 ; GFX10-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:64
+; GFX10-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-NEXT:    v_perm_b32 v0, v12, v13, 0x1000504
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3794,6 +3795,7 @@ define hidden void @extract_v13i64(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    global_load_dwordx4 v[11:14], v[0:1], off
 ; GFX9-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:64
 ; GFX9-NEXT:    s_mov_b32 s4, 0x1000504
+; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v0, v12, v13, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

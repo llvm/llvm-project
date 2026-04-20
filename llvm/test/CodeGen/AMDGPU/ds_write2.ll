@@ -263,6 +263,8 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_mixed_f32(ptr addrspace
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-NEXT:    ; kill: killed $vgpr4
+; GFX9-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[1:2], v4, s[0:1] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

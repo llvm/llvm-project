@@ -627,6 +627,9 @@ define void @flat_offset_inbounds_very_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[18:21], v[16:17]
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[22:25], v[12:13]
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[26:29], v[14:15]
+; GFX942-SDAG-NEXT:    ; kill: killed $vgpr12_vgpr13
+; GFX942-SDAG-NEXT:    ; kill: killed $vgpr14_vgpr15
+; GFX942-SDAG-NEXT:    ; kill: killed $vgpr16_vgpr17
 ; GFX942-SDAG-NEXT:    s_nop 0
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[12:15], v[8:9]
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[30:33], v[10:11]

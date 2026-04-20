@@ -97,6 +97,7 @@
   ; GCN-NEXT:    v_add_u32_e32 v209, v19, v23
   ; GCN-NEXT:    v_add_u32_e32 v203, v19, v30
   ; GCN-NEXT:    v_add_u32_e32 v204, v19, v31
+  ; GCN-NEXT:    ; kill: killed $vgpr17
   ; GCN-NEXT:    ; implicit-def: $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
   ; GCN-NEXT:    ; implicit-def: $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
   ; GCN-NEXT:    ; implicit-def: $vgpr197
@@ -848,6 +849,7 @@
   ; GCN-NEXT:    v_fma_f32 v138, s4, v89, -v128
   ; GCN-NEXT:    v_mul_f32_e32 v139, 0x3fb8aa3b, v139
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[132:133], v[126:127], v[0:15]
+  ; GCN-NEXT:    ; implicit-def: $sgpr0
   ; GCN-NEXT:    v_perm_b32 v154, v135, v131, s5
   ; GCN-NEXT:    v_perm_b32 v156, v135, v131, s7
   ; GCN-NEXT:    v_fma_f32 v135, s4, v88, -v128

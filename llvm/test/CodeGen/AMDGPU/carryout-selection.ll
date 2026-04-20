@@ -3878,7 +3878,6 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX13-NEXT:    s_endpgm
 ; GFX13-NEXT:  .LBB16_4:
-; GFX13-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; GFX13-NEXT:    s_branch .LBB16_2
 ; GCN-ISEL-LABEL: name: sudiv64
 ; GCN-ISEL: bb.0 (%ir-block.0):

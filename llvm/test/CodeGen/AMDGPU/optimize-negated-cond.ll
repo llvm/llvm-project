@@ -126,6 +126,7 @@ define amdgpu_kernel void @negated_cond_dominated_blocks(ptr addrspace(1) %arg1)
 ; GCN-NEXT:    s_cbranch_execnz .LBB1_1
 ; GCN-NEXT:    s_branch .LBB1_5
 ; GCN-NEXT:  .LBB1_4: ; in Loop: Header=BB1_2 Depth=1
+; GCN-NEXT:    ; implicit-def: $sgpr2
 ; GCN-NEXT:    s_mov_b64 vcc, 0
 ; GCN-NEXT:  .LBB1_5: ; %bb5
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1

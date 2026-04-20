@@ -38,6 +38,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx8 s[24:31], s[68:69], 0x30
 ; CHECK-NEXT:    s_load_dwordx16 s[52:67], s[68:69], 0xf0
+; CHECK-NEXT:    ; kill: killed $sgpr8_sgpr9
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[68:69], 0x130
 ; CHECK-NEXT:    ; implicit-def: $vgpr7 : SGPR spill to VGPR lane

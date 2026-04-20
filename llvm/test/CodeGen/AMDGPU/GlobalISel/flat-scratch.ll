@@ -2590,6 +2590,7 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
+; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr0
 ; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:1 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:2 glc
@@ -2668,6 +2669,7 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
+; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr0
 ; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:1 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:2 sc0 sc1
@@ -2885,6 +2887,7 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
+; UNALIGNED_GFX9-NEXT:    ; kill: killed $vgpr0
 ; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:1 glc
 ; UNALIGNED_GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:2 glc
@@ -2999,6 +3002,7 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
+; UNALIGNED_GFX942-NEXT:    ; kill: killed $vgpr0
 ; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:1 sc0 sc1
 ; UNALIGNED_GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; UNALIGNED_GFX942-NEXT:    scratch_load_ubyte v1, v0, off offset:2 sc0 sc1

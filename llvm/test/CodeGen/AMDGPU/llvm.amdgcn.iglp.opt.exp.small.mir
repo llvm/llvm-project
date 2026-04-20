@@ -25,6 +25,7 @@
   ; GCN-NEXT:    ; implicit-def: $vgpr79
   ; GCN-NEXT:    ; implicit-def: $vgpr80
   ; GCN-NEXT:    ; implicit-def: $vgpr91
+  ; GCN-NEXT:    ; kill: killed $sgpr16_sgpr17_sgpr18_sgpr19
   ; GCN-NEXT:    ; iglp_opt mask(0x00000002)
   ; GCN-NEXT:    s_nop 1
   ; GCN-NEXT:    v_lshl_add_u32 v2, s20, 4, v3
@@ -66,6 +67,8 @@
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[36:37], v[40:41], 0
+  ; GCN-NEXT:    ; kill: killed $vgpr1
+  ; GCN-NEXT:    ; kill: killed $vgpr0
   ; GCN-NEXT:    v_mul_lo_u32 v76, v76, s6
   ; GCN-NEXT:    v_add_lshl_u32 v76, v77, v76, 1
   ; GCN-NEXT:    v_lshl_add_u32 v77, v78, 1, v76
@@ -114,6 +117,8 @@
   ; GCN-NEXT:    ; implicit-def: $vgpr33
   ; GCN-NEXT:    v_add_u32_e32 v82, v32, v50
   ; GCN-NEXT:    v_add_u32_e32 v83, v33, v50
+  ; GCN-NEXT:    ; kill: killed $vgpr82
+  ; GCN-NEXT:    ; kill: killed $vgpr83
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[34:35], v[38:39], v[16:31]
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[40:41], v[36:37], v[0:15]
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[68:69], v[62:63], v[16:31]
@@ -398,12 +403,8 @@
   ; GCN-NEXT:    v_exp_f32_e32 v7, v7
   ; GCN-NEXT:    v_pack_b32_f16 v4, v28, v29
   ; GCN-NEXT:    v_pack_b32_f16 v5, v5, v69
-<<<<<<< HEAD
   ; GCN-NEXT:    v_mul_f32_e32 v8, 0x3fb8aa3b, v8
   ; GCN-NEXT:    v_mul_f32_e32 v9, 0x3fb8aa3b, v9
-=======
-  ; GCN-NEXT:    s_nop 1
->>>>>>> 99da2bc05f73 (Delete dead meta instructions)
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[48:63], v[0:1], v[4:5], v[48:63]
   ; GCN-NEXT:    v_add_f32_e32 v0, v85, v17
   ; GCN-NEXT:    v_cvt_f16_f32_e32 v17, v26

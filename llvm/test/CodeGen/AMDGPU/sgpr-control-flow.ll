@@ -31,7 +31,6 @@ define amdgpu_kernel void @sgpr_if_else_salu_br(ptr addrspace(1) %out, i32 %a, i
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB0_4:
-; SI-NEXT:    ; implicit-def: $sgpr3
 ; SI-NEXT:    s_branch .LBB0_2
 
 entry:

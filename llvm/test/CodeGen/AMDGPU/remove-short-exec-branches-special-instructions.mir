@@ -6,7 +6,6 @@
 ---
 
 name: need_skip_setreg_imm32_b32
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_setreg_imm32_b32
   ; CHECK: bb.0:
@@ -38,7 +37,6 @@ body: |
 ---
 
 name: need_skip_setreg_b32
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_setreg_b32
   ; CHECK: bb.0:
@@ -73,7 +71,6 @@ body: |
 ---
 
 name: need_skip_denorm_mode
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_denorm_mode
   ; CHECK: bb.0:
@@ -104,7 +101,6 @@ body: |
 ---
 
 name: need_skip_round_mode
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_round_mode
   ; CHECK: bb.0:
@@ -135,7 +131,6 @@ body: |
 ---
 
 name: need_skip_writelane_b32
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_writelane_b32
   ; CHECK: bb.0:
@@ -147,7 +142,6 @@ body: |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sgpr0 = IMPLICIT_DEF
-  ; CHECK-NEXT:   $vgpr0 = IMPLICIT_DEF
   ; CHECK-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -159,7 +153,6 @@ body: |
   bb.1:
     successors: %bb.2
     $sgpr0 = IMPLICIT_DEF
-    $vgpr0 = IMPLICIT_DEF
     $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0
 
   bb.2:
@@ -168,7 +161,6 @@ body: |
 
 ---
 name: need_skip_readlane_b32
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_readlane_b32
   ; CHECK: bb.0:

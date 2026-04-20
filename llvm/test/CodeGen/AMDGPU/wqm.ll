@@ -1521,6 +1521,7 @@ define amdgpu_ps <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i3
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-W64-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
+; GFX9-W64-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[14:15], vcc
 ; GFX9-W64-NEXT:    s_xor_b64 s[14:15], exec, s[14:15]
 ; GFX9-W64-NEXT:  ; %bb.1: ; %ELSE
@@ -1549,6 +1550,7 @@ define amdgpu_ps <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i3
 ; GFX10-W32-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, 0, v0
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; GFX10-W32-NEXT:    buffer_store_dword v4, v2, s[0:3], 0 idxen
+; GFX10-W32-NEXT:    ; implicit-def: $vgpr0
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s13, vcc_lo
 ; GFX10-W32-NEXT:    s_xor_b32 s13, exec_lo, s13
@@ -1949,7 +1951,6 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX9-W64-NEXT:    s_cbranch_vccz .LBB35_1
 ; GFX9-W64-NEXT:  ; %bb.3:
-; GFX9-W64-NEXT:    ; implicit-def: $vgpr8
 ; GFX9-W64-NEXT:  .LBB35_4: ; %break
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
@@ -1980,7 +1981,6 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-W32-NEXT:    s_cbranch_vccz .LBB35_1
 ; GFX10-W32-NEXT:  ; %bb.3:
-; GFX10-W32-NEXT:    ; implicit-def: $vgpr8
 ; GFX10-W32-NEXT:  .LBB35_4: ; %break
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
@@ -2946,6 +2946,7 @@ define amdgpu_ps float @test_strict_wqm_within_wqm_with_kill(<8 x i32> inreg %rs
 ; GFX9-W64-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GFX9-W64-NEXT:    s_branch .LBB51_3
 ; GFX9-W64-NEXT:  .LBB51_2:
@@ -2980,6 +2981,7 @@ define amdgpu_ps float @test_strict_wqm_within_wqm_with_kill(<8 x i32> inreg %rs
 ; GFX10-W32-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; GFX10-W32-NEXT:    s_branch .LBB51_3
 ; GFX10-W32-NEXT:  .LBB51_2:
@@ -3599,6 +3601,9 @@ define amdgpu_ps float @short_exact_regions_2(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX9-W64-NEXT:    global_load_dword v0, v[1:2], off
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-W64-NEXT:    image_sample v5, v3, s[0:7], s[8:11] dmask:0x4
+; GFX9-W64-NEXT:    ; kill: killed $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6 killed $sgpr7
+; GFX9-W64-NEXT:    ; kill: killed $vgpr3
+; GFX9-W64-NEXT:    ; kill: killed $vgpr1 killed $vgpr2
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-W64-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-W64-NEXT:    s_buffer_load_dword s0, s[8:11], s0 offset:0x0

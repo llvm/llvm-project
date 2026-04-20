@@ -14,6 +14,8 @@ define i64 @scalar_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
 ; CHECK-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dword v4, v[2:3]
+; CHECK-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; CHECK-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v4, v5

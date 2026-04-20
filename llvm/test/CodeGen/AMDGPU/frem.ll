@@ -39,6 +39,7 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; SI-NEXT:    s_cbranch_execz .LBB0_3
 ; SI-NEXT:    s_branch .LBB0_8
 ; SI-NEXT:  .LBB0_2:
+; SI-NEXT:    ; implicit-def: $vgpr3
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB0_3: ; %frem.compute
 ; SI-NEXT:    s_mov_b32 s3, 0x7f800000
@@ -2208,6 +2209,7 @@ define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; SI-NEXT:    s_cbranch_execz .LBB3_3
 ; SI-NEXT:    s_branch .LBB3_8
 ; SI-NEXT:  .LBB3_2:
+; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB3_3: ; %frem.compute
 ; SI-NEXT:    s_mov_b32 s6, 0x7f800000
@@ -2772,7 +2774,6 @@ define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1150-NEXT:    s_cbranch_execz .LBB3_3
 ; GFX1150-NEXT:    s_branch .LBB3_8
 ; GFX1150-NEXT:  .LBB3_2:
-; GFX1150-NEXT:    ; implicit-def: $vgpr3
 ; GFX1150-NEXT:  .LBB3_3: ; %frem.compute
 ; GFX1150-NEXT:    v_frexp_mant_f32_e64 v4, |v0|
 ; GFX1150-NEXT:    v_frexp_mant_f32_e64 v3, |v2|
@@ -2885,7 +2886,6 @@ define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1200-NEXT:    s_cbranch_execz .LBB3_3
 ; GFX1200-NEXT:    s_branch .LBB3_8
 ; GFX1200-NEXT:  .LBB3_2:
-; GFX1200-NEXT:    ; implicit-def: $vgpr3
 ; GFX1200-NEXT:  .LBB3_3: ; %frem.compute
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v4, |v0|
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v3, |v2|
@@ -3579,6 +3579,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    s_branch .LBB6_9
 ; SI-NEXT:  .LBB6_3:
+; SI-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB6_4: ; %frem.compute
 ; SI-NEXT:    s_brev_b32 s11, -2
@@ -4978,6 +4979,7 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_cbranch_execz .LBB9_3
 ; SI-NEXT:    s_branch .LBB9_8
 ; SI-NEXT:  .LBB9_2:
+; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB9_3: ; %frem.compute19
 ; SI-NEXT:    s_mov_b32 s3, 0x7f800000
@@ -5062,6 +5064,7 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_cbranch_execz .LBB9_11
 ; SI-NEXT:    s_branch .LBB9_16
 ; SI-NEXT:  .LBB9_10:
+; SI-NEXT:    ; implicit-def: $vgpr5
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB9_11: ; %frem.compute
 ; SI-NEXT:    s_mov_b32 s3, 0x7f800000
@@ -7244,6 +7247,7 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_mov_b32_e32 v3, s4
 ; SI-NEXT:    s_branch .LBB10_9
 ; SI-NEXT:  .LBB10_3:
+; SI-NEXT:    ; implicit-def: $sgpr4
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB10_4: ; %frem.compute85
 ; SI-NEXT:    s_mov_b32 s5, 0x7f800000
@@ -7334,6 +7338,7 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_mov_b32_e32 v5, s6
 ; SI-NEXT:    s_branch .LBB10_19
 ; SI-NEXT:  .LBB10_13:
+; SI-NEXT:    ; implicit-def: $sgpr6
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB10_14: ; %frem.compute52
 ; SI-NEXT:    s_mov_b32 s7, 0x7f800000
@@ -7419,6 +7424,7 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_mov_b32_e32 v6, s6
 ; SI-NEXT:    s_branch .LBB10_28
 ; SI-NEXT:  .LBB10_22:
+; SI-NEXT:    ; implicit-def: $sgpr6
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB10_23: ; %frem.compute19
 ; SI-NEXT:    s_mov_b32 s7, 0x7f800000
@@ -7504,6 +7510,7 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_mov_b32_e32 v7, s6
 ; SI-NEXT:    s_branch .LBB10_37
 ; SI-NEXT:  .LBB10_31:
+; SI-NEXT:    ; implicit-def: $sgpr6
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB10_32: ; %frem.compute
 ; SI-NEXT:    s_mov_b32 s7, 0x7f800000
@@ -11592,6 +11599,7 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_cbranch_execz .LBB11_3
 ; SI-NEXT:    s_branch .LBB11_8
 ; SI-NEXT:  .LBB11_2:
+; SI-NEXT:    ; implicit-def: $vgpr4
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB11_3: ; %frem.compute15
 ; SI-NEXT:    s_mov_b32 s6, 0x7f800000
@@ -11671,6 +11679,7 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_cbranch_execz .LBB11_11
 ; SI-NEXT:    s_branch .LBB11_16
 ; SI-NEXT:  .LBB11_10:
+; SI-NEXT:    ; implicit-def: $vgpr5
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB11_11: ; %frem.compute
 ; SI-NEXT:    s_mov_b32 s6, 0x7f800000
@@ -12839,7 +12848,6 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1200-NEXT:    v_mov_b32_e32 v0, s7
 ; GFX1200-NEXT:    s_branch .LBB11_9
 ; GFX1200-NEXT:  .LBB11_3:
-; GFX1200-NEXT:    ; implicit-def: $sgpr7
 ; GFX1200-NEXT:  .LBB11_4: ; %frem.compute15
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v1, |s4|
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v0, |s6|
@@ -12937,7 +12945,6 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1200-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX1200-NEXT:    s_branch .LBB11_18
 ; GFX1200-NEXT:  .LBB11_12:
-; GFX1200-NEXT:    ; implicit-def: $sgpr7
 ; GFX1200-NEXT:  .LBB11_13: ; %frem.compute
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v2, |s2|
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v1, |s5|
@@ -13076,6 +13083,7 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_cbranch_execz .LBB12_3
 ; SI-NEXT:    s_branch .LBB12_8
 ; SI-NEXT:  .LBB12_2:
+; SI-NEXT:    ; implicit-def: $vgpr8
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB12_3: ; %frem.compute77
 ; SI-NEXT:    s_mov_b32 s6, 0x7f800000
@@ -13155,6 +13163,7 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_cbranch_execz .LBB12_11
 ; SI-NEXT:    s_branch .LBB12_16
 ; SI-NEXT:  .LBB12_10:
+; SI-NEXT:    ; implicit-def: $vgpr9
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB12_11: ; %frem.compute46
 ; SI-NEXT:    s_mov_b32 s6, 0x7f800000
@@ -13234,6 +13243,7 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_cbranch_execz .LBB12_19
 ; SI-NEXT:    s_branch .LBB12_24
 ; SI-NEXT:  .LBB12_18:
+; SI-NEXT:    ; implicit-def: $vgpr10
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB12_19: ; %frem.compute15
 ; SI-NEXT:    s_mov_b32 s6, 0x7f800000
@@ -13313,6 +13323,7 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_cbranch_execz .LBB12_27
 ; SI-NEXT:    s_branch .LBB12_32
 ; SI-NEXT:  .LBB12_26:
+; SI-NEXT:    ; implicit-def: $vgpr11
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB12_27: ; %frem.compute
 ; SI-NEXT:    s_mov_b32 s6, 0x7f800000
@@ -15447,7 +15458,6 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1200-NEXT:    v_mov_b32_e32 v0, s11
 ; GFX1200-NEXT:    s_branch .LBB12_9
 ; GFX1200-NEXT:  .LBB12_3:
-; GFX1200-NEXT:    ; implicit-def: $sgpr11
 ; GFX1200-NEXT:  .LBB12_4: ; %frem.compute77
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v1, |s6|
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v0, |s8|
@@ -15544,7 +15554,6 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1200-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX1200-NEXT:    s_branch .LBB12_18
 ; GFX1200-NEXT:  .LBB12_12:
-; GFX1200-NEXT:    ; implicit-def: $sgpr11
 ; GFX1200-NEXT:  .LBB12_13: ; %frem.compute46
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v2, |s4|
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v1, |s10|
@@ -15644,7 +15653,6 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1200-NEXT:    v_mov_b32_e32 v2, s11
 ; GFX1200-NEXT:    s_branch .LBB12_27
 ; GFX1200-NEXT:  .LBB12_21:
-; GFX1200-NEXT:    ; implicit-def: $sgpr11
 ; GFX1200-NEXT:  .LBB12_22: ; %frem.compute15
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v3, |s3|
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v2, |s9|
@@ -15744,7 +15752,6 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1200-NEXT:    v_mov_b32_e32 v3, s11
 ; GFX1200-NEXT:    s_branch .LBB12_36
 ; GFX1200-NEXT:  .LBB12_30:
-; GFX1200-NEXT:    ; implicit-def: $sgpr11
 ; GFX1200-NEXT:  .LBB12_31: ; %frem.compute
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v4, |s2|
 ; GFX1200-NEXT:    v_frexp_mant_f32_e64 v3, |s7|
@@ -15917,6 +15924,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    s_branch .LBB13_9
 ; SI-NEXT:  .LBB13_3:
+; SI-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB13_4: ; %frem.compute15
 ; SI-NEXT:    s_brev_b32 s15, -2
@@ -16039,6 +16047,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_mov_b32_e32 v2, s0
 ; SI-NEXT:    s_branch .LBB13_18
 ; SI-NEXT:  .LBB13_12:
+; SI-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB13_13: ; %frem.compute
 ; SI-NEXT:    s_brev_b32 s15, -2
@@ -17648,6 +17657,7 @@ define amdgpu_kernel void @frem_v2f64_const_one_denum(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    v_mov_b32_e32 v1, s7
 ; SI-NEXT:    s_branch .LBB15_9
 ; SI-NEXT:  .LBB15_3:
+; SI-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB15_4: ; %frem.compute15
 ; SI-NEXT:    s_brev_b32 s8, -2
@@ -17732,6 +17742,7 @@ define amdgpu_kernel void @frem_v2f64_const_one_denum(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    v_mov_b32_e32 v3, s7
 ; SI-NEXT:    s_branch .LBB15_18
 ; SI-NEXT:  .LBB15_12:
+; SI-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; SI-NEXT:    s_mov_b64 vcc, 0
 ; SI-NEXT:  .LBB15_13: ; %frem.compute
 ; SI-NEXT:    s_brev_b32 s8, -2

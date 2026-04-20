@@ -98,8 +98,10 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr) {
 ; GFX942-NEXT:    global_load_ubyte v1, v0, s[2:3] sc0 sc1
 ; GFX942-NEXT:    global_load_ubyte v1, v0, s[4:5] offset:8 sc0 sc1
 ; GFX942-NEXT:    global_load_ubyte v1, v0, s[0:1] sc0 sc1
+; GFX942-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
+; GFX942-NEXT:    ; kill: killed $sgpr2_sgpr3
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1] sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)

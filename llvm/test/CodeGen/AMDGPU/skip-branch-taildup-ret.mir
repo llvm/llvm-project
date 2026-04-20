@@ -5,7 +5,6 @@
 name: skip_branch_taildup_endpgm
 machineFunctionInfo:
   isEntryFunction: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: skip_branch_taildup_endpgm
   ; CHECK: bb.0:
@@ -125,7 +124,6 @@ body:             |
 
 ---
 name: skip_branch_taildup_ret
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: skip_branch_taildup_ret
   ; CHECK: bb.0:

@@ -5,7 +5,6 @@
 ---
 
 name: skip_gws_init
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_gws_init
   ; CHECK: bb.0:
@@ -37,7 +36,6 @@ body: |
 ---
 
 name: skip_gws_barrier
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_gws_barrier
   ; CHECK: bb.0:

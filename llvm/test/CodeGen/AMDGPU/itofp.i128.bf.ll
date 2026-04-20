@@ -39,6 +39,7 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, v6, v2, vcc
 ; GCN-NEXT:    v_sub_u32_e32 v2, 0x80, v7
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 25, v2
+; GCN-NEXT:    ; implicit-def: $vgpr8
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:  ; %bb.2: ; %itofp-if-else
@@ -167,6 +168,7 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v6, v5, v4, vcc
 ; GCN-NEXT:    v_sub_u32_e32 v4, 0x80, v6
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 25, v4
+; GCN-NEXT:    ; implicit-def: $vgpr7
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:  ; %bb.2: ; %itofp-if-else

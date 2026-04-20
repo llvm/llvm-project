@@ -1571,6 +1571,7 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; SI-NEXT:    s_mov_b64 exec, 0
 ; SI-NEXT:  .LBB14_3: ; %Flow
 ; SI-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
+; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; SI-NEXT:  ; %bb.4: ; %live
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v1
@@ -1602,6 +1603,7 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX10-WAVE64-NEXT:    s_mov_b64 exec, 0
 ; GFX10-WAVE64-NEXT:  .LBB14_3: ; %Flow
 ; GFX10-WAVE64-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
+; GFX10-WAVE64-NEXT:    ; implicit-def: $vgpr2
 ; GFX10-WAVE64-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX10-WAVE64-NEXT:  ; %bb.4: ; %live
 ; GFX10-WAVE64-NEXT:    v_mul_f32_e32 v2, v0, v1
@@ -1633,6 +1635,7 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX10-WAVE32-NEXT:    s_mov_b32 exec_lo, 0
 ; GFX10-WAVE32-NEXT:  .LBB14_3: ; %Flow
 ; GFX10-WAVE32-NEXT:    s_or_saveexec_b32 s0, s1
+; GFX10-WAVE32-NEXT:    ; implicit-def: $vgpr2
 ; GFX10-WAVE32-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX10-WAVE32-NEXT:  ; %bb.4: ; %live
 ; GFX10-WAVE32-NEXT:    v_mul_f32_e32 v2, v0, v1
@@ -1664,6 +1667,7 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX11-NEXT:    s_mov_b64 exec, 0
 ; GFX11-NEXT:  .LBB14_3: ; %Flow
 ; GFX11-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
+; GFX11-NEXT:    ; implicit-def: $vgpr2
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:  ; %bb.4: ; %live

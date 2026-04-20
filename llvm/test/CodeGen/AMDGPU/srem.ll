@@ -1813,7 +1813,6 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; TAHITI-NEXT:    buffer_store_dwordx2 v[3:4], off, s[4:7], 0
 ; TAHITI-NEXT:    s_endpgm
 ; TAHITI-NEXT:  .LBB8_4:
-; TAHITI-NEXT:    ; implicit-def: $vgpr3_vgpr4
 ; TAHITI-NEXT:    s_branch .LBB8_2
 ;
 ; TONGA-LABEL: srem_i64:
