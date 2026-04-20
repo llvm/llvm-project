@@ -11586,7 +11586,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
                          DAG.getNode(ISD::SRL, SDLoc(N0), VT, X, N1), ZExtY);
   }
 
-  // fold (srl (bitcast (build_vector e0, ..., eN)), (N-1) * eltsize)
+  // fold (srl (bitcast (build_vector e1, ..., eN)), (N-1) * eltsize)
   //   -> (zext eN)
   if (N1C && VT.isScalarInteger() && DAG.getDataLayout().isLittleEndian()) {
     SDValue BV = peekThroughBitcasts(N0);
