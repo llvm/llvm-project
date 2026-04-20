@@ -5485,7 +5485,7 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
         Op.getOpcode(), DL, VT,
         DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Op->getOperand(0)),
         DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Op->getOperand(1)),
-        Op->getOperand(2), Op->getOperand(3));
+        DAG.getConstant(EltSizeInBytes, DL, MVT::i64), Op->getOperand(3));
   }
 
   // Expand if this mask needs splitting (this will produce a whilelo).

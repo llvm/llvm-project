@@ -1909,13 +1909,13 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
+  SDValue EltSizeInBytes = N->getOperand(2);
 
   // Note: The lane offset is scalable if the mask is scalable.
   ElementCount LaneOffsetEC =
       ElementCount::get(N->getConstantOperandVal(3), VT.isScalableVT());
 
   EVT AddrVT = SourceValue->getValueType(0);
-  SDValue EltSizeInBytes = DAG.getZExtOrTrunc(N->getOperand(2), DL, AddrVT);
   bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
 
   // Take the difference between the pointers and divided by the element size,

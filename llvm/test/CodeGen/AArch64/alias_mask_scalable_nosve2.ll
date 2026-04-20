@@ -26,6 +26,6 @@ define <vscale x 4 x i1> @whilewr_i32_addresses(i32 %a, i32 %b) {
 ; CHECK-NEXT:    whilelo p0.s, wzr, w8
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1.i32(i32 %a, i32 %b, i64 4)
+  %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1.i32(i32 %a, i32 %b, i32 4)
   ret <vscale x 4 x i1> %0
 }

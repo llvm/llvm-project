@@ -25170,9 +25170,9 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Given a vector load from %addrA followed by a vector store to %addrB, this
-instruction generates a mask where an active lane indicates that the
-write-after-read sequence can be performed safely for that lane, without the
+Given a vector load from address %addrA followed by a vector store to address
+%addrB, this instruction generates a mask where an active lane indicates that
+the write-after-read sequence can be performed safely for that lane, without the
 danger of a write-after-read hazard occurring.
 
 A write-after-read hazard occurs when a write-after-read sequence for a given
@@ -25259,8 +25259,8 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Given a vector store to %addrA followed by a vector load from %addrB, this
-instruction generates a mask where an active lane indicates that the
+Given a vector store to address %addrA followed by a vector load from address
+%addrB, this instruction generates a mask where an active lane indicates that the
 read-after-write sequence can be performed safely for that lane, without a
 read-after-write hazard or a store-to-load forwarding hazard being introduced.
 
