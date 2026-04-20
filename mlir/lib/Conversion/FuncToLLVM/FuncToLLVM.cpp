@@ -409,7 +409,7 @@ static SmallVector<NamedAttribute>
 convertArgumentAttributes(DictionaryAttr attrsDict,
                           ConversionPatternRewriter &rewriter,
                           const LLVMTypeConverter &converter) {
-  SmallVector<NamedAttribute, 4> convertedAttrs;
+  SmallVector<NamedAttribute> convertedAttrs;
   convertedAttrs.reserve(attrsDict.size());
   for (const NamedAttribute &attr : attrsDict) {
     const auto convert = [&](const NamedAttribute &attr) {
