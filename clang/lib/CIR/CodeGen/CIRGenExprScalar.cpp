@@ -415,9 +415,9 @@ public:
   mlir::Value VisitInitListExpr(InitListExpr *e);
 
   mlir::Value VisitArrayInitIndexExpr(ArrayInitIndexExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: array init index");
-    return {};
+    assert(cgf.getArrayInitIndex() &&
+           "ArrayInitIndexExpr not inside an ArrayInitLoopExpr?");
+    return cgf.getArrayInitIndex();
   }
 
   mlir::Value VisitImplicitValueInitExpr(const ImplicitValueInitExpr *e) {
