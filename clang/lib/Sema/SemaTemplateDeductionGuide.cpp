@@ -924,52 +924,13 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
     }
   }
 
-  // A list of template arguments for transforming the require-clause of F.
-  // It must contain the entire set of template argument lists.
-  MultiLevelTemplateArgumentList ArgsForBuildingRC;
+  auto ArgsForBuildingRC = SemaRef.getTemplateInstantiationArgs(
+      F, F->getLexicalDeclContext(),
+      /*Final=*/false, /*Innermost=*/TemplateArgsForBuildingRC,
+      /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr,
+      /*ForConstraintInstantiation=*/true);
   ArgsForBuildingRC.setKind(clang::TemplateSubstitutionKind::Rewrite);
-  ArgsForBuildingRC.addOuterTemplateArguments(TemplateArgsForBuildingRC);
-  // For 2), if the underlying deduction guide F is nested in a class template,
-  // we need the entire template argument list, as the constraint AST in the
-  // require-clause of F remains completely uninstantiated.
-  //
-  // For example:
-  //   template <typename T> // depth 0
-  //   struct Outer {
-  //      template <typename U>
-  //      struct Foo { Foo(U); };
-  //
-  //      template <typename U> // depth 1
-  //      requires C<U>
-  //      Foo(U) -> Foo<int>;
-  //   };
-  //   template <typename U>
-  //   using AFoo = Outer<int>::Foo<U>;
-  //
-  // In this scenario, the deduction guide for `Foo` inside `Outer<int>`:
-  //   - The occurrence of U in the require-expression is [depth:1, index:0]
-  //   - The occurrence of U in the function parameter is [depth:0, index:0]
-  //   - The template parameter of U is [depth:0, index:0]
-  //
-  // We add the outer template arguments which is [int] to the multi-level arg
-  // list to ensure that the occurrence U in `C<U>` will be replaced with int
-  // during the substitution.
-  //
-  // NOTE: The underlying deduction guide F is instantiated -- either from an
-  // explicitly-written deduction guide member, or from a constructor.
-  // getInstantiatedFromMemberTemplate() can only handle the former case, so we
-  // check the DeclContext kind.
-  if (F->getLexicalDeclContext()->getDeclKind() ==
-      clang::Decl::ClassTemplateSpecialization) {
-    auto OuterLevelArgs = SemaRef.getTemplateInstantiationArgs(
-        F, F->getLexicalDeclContext(),
-        /*Final=*/false, /*Innermost=*/std::nullopt,
-        /*RelativeToPrimary=*/true,
-        /*Pattern=*/nullptr,
-        /*ForConstraintInstantiation=*/true);
-    for (auto It : OuterLevelArgs)
-      ArgsForBuildingRC.addOuterTemplateArguments(It.Args);
-  }
 
   ExprResult E = SemaRef.SubstExpr(RC, ArgsForBuildingRC);
   if (E.isInvalid())
