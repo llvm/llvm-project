@@ -43,6 +43,7 @@ struct UnionLikeStruct1 {
 
 void fUnionLikeStruct1() {
   UnionLikeStruct1 t(UnionLikeStruct1::volume, 10);
+  new UnionLikeStruct1(UnionLikeStruct1::volume, 10);
 }
 
 // Only name contains "kind".
@@ -69,6 +70,7 @@ struct UnionLikeStruct2 {
 
 void fUnionLikeStruct2() {
   UnionLikeStruct2 t(UnionLikeStruct2::volume, 10);
+  new UnionLikeStruct2(UnionLikeStruct2::volume, 10);
 }
 
 // Only type contains "kind".
@@ -95,6 +97,7 @@ struct UnionLikeStruct3 {
 
 void fUnionLikeStruct3() {
   UnionLikeStruct3 t(UnionLikeStruct3::volume, 10);
+  new UnionLikeStruct3(UnionLikeStruct3::volume, 10);
 }
 
 // Only type contains "tag".
@@ -121,6 +124,7 @@ struct UnionLikeStruct4 {
 
 void fUnionLikeStruct4() {
   UnionLikeStruct4 t(UnionLikeStruct4::volume, 10);
+  new UnionLikeStruct4(UnionLikeStruct4::volume, 10);
 }
 
 // Both name and type name contains but does not equal to tag/kind.
@@ -147,4 +151,5 @@ struct UnionLikeStruct5 {
 
 void fUnionLikeStruct5() {
   UnionLikeStruct5 t(UnionLikeStruct5::volume, 10);
+  new UnionLikeStruct5(UnionLikeStruct5::volume, 10);
 }

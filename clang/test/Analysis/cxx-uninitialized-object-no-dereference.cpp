@@ -2,15 +2,16 @@
 // RUN:   -std=c++11 -DPEDANTIC -verify %s
 
 class UninitPointerTest {
-  int *ptr; // expected-note{{uninitialized pointer 'this->ptr'}}
+  int *ptr; // expected-note{{uninitialized pointer 'this->ptr'}} expected-note{{uninitialized pointer 'this->ptr'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
 public:
-  UninitPointerTest() {} // expected-warning{{1 uninitialized field}}
+  UninitPointerTest() {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
 };
 
 void fUninitPointerTest() {
   UninitPointerTest();
+  new UninitPointerTest();
 }
 
 class UninitPointeeTest {
@@ -24,4 +25,5 @@ public:
 void fUninitPointeeTest() {
   int a;
   UninitPointeeTest t(&a);
+  new UninitPointeeTest(&a);
 }

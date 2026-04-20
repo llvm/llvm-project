@@ -9,10 +9,11 @@ class NotesAsWarningsTest {
   int dontGetFilteredByNonPedanticMode = 0;
 
 public:
-  NotesAsWarningsTest() {} // expected-warning{{uninitialized field 'this->a'}}
-  // expected-warning@-1{{uninitialized field 'this->b'}}
+  NotesAsWarningsTest() {} // expected-warning{{uninitialized field 'this->a'}} expected-warning{{uninitialized field 'this->a'}}
+  // expected-warning@-1{{uninitialized field 'this->b'}} expected-warning@-1{{uninitialized field 'this->b'}}
 };
 
 void fNotesAsWarningsTest() {
   NotesAsWarningsTest();
+  new NotesAsWarningsTest();
 }

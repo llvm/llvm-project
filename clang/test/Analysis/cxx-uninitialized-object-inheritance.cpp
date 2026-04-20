@@ -32,10 +32,11 @@ public:
 
 void fNonPolymorphicInheritanceTest1() {
   NonPolymorphicInheritanceTest1();
+  new NonPolymorphicInheritanceTest1();
 }
 
 class NonPolymorphicBaseClass2 {
-  int x; // expected-note{{uninitialized field 'this->NonPolymorphicBaseClass2::x'}}
+  int x; // expected-note{{uninitialized field 'this->NonPolymorphicBaseClass2::x'}} expected-note{{uninitialized field 'this->NonPolymorphicBaseClass2::x'}}
 protected:
   int y;
 
@@ -50,19 +51,20 @@ class NonPolymorphicInheritanceTest2 : public NonPolymorphicBaseClass2 {
 public:
   NonPolymorphicInheritanceTest2() {
     y = 5;
-    z = 6; // expected-warning{{1 uninitialized field}}
+    z = 6; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fNonPolymorphicInheritanceTest2() {
   NonPolymorphicInheritanceTest2();
+  new NonPolymorphicInheritanceTest2();
 }
 
 class NonPolymorphicBaseClass3 {
   int x;
 
 protected:
-  int y; // expected-note{{uninitialized field 'this->NonPolymorphicBaseClass3::y'}}
+  int y; // expected-note{{uninitialized field 'this->NonPolymorphicBaseClass3::y'}} expected-note{{uninitialized field 'this->NonPolymorphicBaseClass3::y'}}
 public:
   NonPolymorphicBaseClass3() = default;
   NonPolymorphicBaseClass3(int) : x(7) {}
@@ -74,12 +76,13 @@ class NonPolymorphicInheritanceTest3 : public NonPolymorphicBaseClass3 {
 public:
   NonPolymorphicInheritanceTest3()
       : NonPolymorphicBaseClass3(int{}) {
-    z = 8; // expected-warning{{1 uninitialized field}}
+    z = 8; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fNonPolymorphicInheritanceTest3() {
   NonPolymorphicInheritanceTest3();
+  new NonPolymorphicInheritanceTest3();
 }
 
 class NonPolymorphicBaseClass4 {
@@ -94,17 +97,18 @@ public:
 };
 
 class NonPolymorphicInheritanceTest4 : public NonPolymorphicBaseClass4 {
-  int z; // expected-note{{uninitialized field 'this->z'}}
+  int z; // expected-note{{uninitialized field 'this->z'}} expected-note{{uninitialized field 'this->z'}}
 
 public:
   NonPolymorphicInheritanceTest4()
       : NonPolymorphicBaseClass4(int{}) {
-    y = 10; // expected-warning{{1 uninitialized field}}
+    y = 10; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fNonPolymorphicInheritanceTest4() {
   NonPolymorphicInheritanceTest4();
+  new NonPolymorphicInheritanceTest4();
 }
 
 //===----------------------------------------------------------------------===//
@@ -137,10 +141,11 @@ public:
 
 void fPolymorphicInheritanceTest1() {
   PolymorphicInheritanceTest1();
+  new PolymorphicInheritanceTest1();
 }
 
 class PolymorphicRight1 {
-  int x; // expected-note{{uninitialized field 'this->PolymorphicRight1::x'}}
+  int x; // expected-note{{uninitialized field 'this->PolymorphicRight1::x'}} expected-note{{uninitialized field 'this->PolymorphicRight1::x'}}
 protected:
   int y;
 
@@ -156,19 +161,20 @@ class PolymorphicInheritanceTest2 : public PolymorphicRight1 {
 public:
   PolymorphicInheritanceTest2() {
     y = 15;
-    z = 16; // expected-warning{{1 uninitialized field}}
+    z = 16; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fPolymorphicInheritanceTest2() {
   PolymorphicInheritanceTest2();
+  new PolymorphicInheritanceTest2();
 }
 
 class PolymorphicBaseClass3 {
   int x;
 
 protected:
-  int y; // expected-note{{uninitialized field 'this->PolymorphicBaseClass3::y'}}
+  int y; // expected-note{{uninitialized field 'this->PolymorphicBaseClass3::y'}} expected-note{{uninitialized field 'this->PolymorphicBaseClass3::y'}}
 public:
   virtual ~PolymorphicBaseClass3() = default;
   PolymorphicBaseClass3() = default;
@@ -181,12 +187,13 @@ class PolymorphicInheritanceTest3 : public PolymorphicBaseClass3 {
 public:
   PolymorphicInheritanceTest3()
       : PolymorphicBaseClass3(int{}) {
-    z = 18; // expected-warning{{1 uninitialized field}}
+    z = 18; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fPolymorphicInheritanceTest3() {
   PolymorphicInheritanceTest3();
+  new PolymorphicInheritanceTest3();
 }
 
 class PolymorphicBaseClass4 {
@@ -202,17 +209,18 @@ public:
 };
 
 class PolymorphicInheritanceTest4 : public PolymorphicBaseClass4 {
-  int z; // expected-note{{uninitialized field 'this->z'}}
+  int z; // expected-note{{uninitialized field 'this->z'}} expected-note{{uninitialized field 'this->z'}}
 
 public:
   PolymorphicInheritanceTest4()
       : PolymorphicBaseClass4(int{}) {
-    y = 20; // expected-warning{{1 uninitialized field}}
+    y = 20; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fPolymorphicInheritanceTest4() {
   PolymorphicInheritanceTest4();
+  new PolymorphicInheritanceTest4();
 }
 
 //===----------------------------------------------------------------------===//
@@ -245,10 +253,11 @@ public:
 
 void fVirtualInheritanceTest1() {
   VirtualInheritanceTest1();
+  new VirtualInheritanceTest1();
 }
 
 class VirtualPolymorphicRight1 {
-  int x; // expected-note{{uninitialized field 'this->VirtualPolymorphicRight1::x'}}
+  int x; // expected-note{{uninitialized field 'this->VirtualPolymorphicRight1::x'}} expected-note{{uninitialized field 'this->VirtualPolymorphicRight1::x'}}
 protected:
   int y;
 
@@ -264,19 +273,20 @@ class VirtualInheritanceTest2 : virtual public VirtualPolymorphicRight1 {
 public:
   VirtualInheritanceTest2() {
     y = 25;
-    z = 26; // expected-warning{{1 uninitialized field}}
+    z = 26; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fVirtualInheritanceTest2() {
   VirtualInheritanceTest2();
+  new VirtualInheritanceTest2();
 }
 
 class VirtualPolymorphicBaseClass3 {
   int x;
 
 protected:
-  int y; // expected-note{{uninitialized field 'this->VirtualPolymorphicBaseClass3::y'}}
+  int y; // expected-note{{uninitialized field 'this->VirtualPolymorphicBaseClass3::y'}} expected-note{{uninitialized field 'this->VirtualPolymorphicBaseClass3::y'}}
 public:
   virtual ~VirtualPolymorphicBaseClass3() = default;
   VirtualPolymorphicBaseClass3() = default;
@@ -289,12 +299,13 @@ class VirtualInheritanceTest3 : virtual public VirtualPolymorphicBaseClass3 {
 public:
   VirtualInheritanceTest3()
       : VirtualPolymorphicBaseClass3(int{}) {
-    z = 28; // expected-warning{{1 uninitialized field}}
+    z = 28; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fVirtualInheritanceTest3() {
   VirtualInheritanceTest3();
+  new VirtualInheritanceTest3();
 }
 
 //===----------------------------------------------------------------------===//
@@ -348,8 +359,11 @@ public:
 
 void fMultipleInheritanceTest1() {
   MultipleInheritanceTest1();
+  new MultipleInheritanceTest1();
   MultipleInheritanceTest1(int());
+  new MultipleInheritanceTest1(int());
   MultipleInheritanceTest1(int(), int());
+  new MultipleInheritanceTest1(int(), int());
 }
 
 struct Left2 {
@@ -358,7 +372,7 @@ struct Left2 {
   Left2(int) : x(36) {}
 };
 struct Right2 {
-  int y; // expected-note{{uninitialized field 'this->Right2::y'}}
+  int y; // expected-note{{uninitialized field 'this->Right2::y'}} expected-note{{uninitialized field 'this->Right2::y'}}
   Right2() = default;
   Right2(int) : y(37) {}
 };
@@ -369,16 +383,17 @@ class MultipleInheritanceTest2 : public Left2, public Right2 {
 public:
   MultipleInheritanceTest2()
       : Left2(int{}) {
-    z = 38; // expected-warning{{1 uninitialized field}}
+    z = 38; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fMultipleInheritanceTest2() {
   MultipleInheritanceTest2();
+  new MultipleInheritanceTest2();
 }
 
 struct Left3 {
-  int x; // expected-note{{uninitialized field 'this->Left3::x'}}
+  int x; // expected-note{{uninitialized field 'this->Left3::x'}} expected-note{{uninitialized field 'this->Left3::x'}}
   Left3() = default;
   Left3(int) : x(39) {}
 };
@@ -394,12 +409,13 @@ class MultipleInheritanceTest3 : public Left3, public Right3 {
 public:
   MultipleInheritanceTest3()
       : Right3(char{}) {
-    z = 41; // expected-warning{{1 uninitialized field}}
+    z = 41; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fMultipleInheritanceTest3() {
   MultipleInheritanceTest3();
+  new MultipleInheritanceTest3();
 }
 
 struct Left4 {
@@ -414,17 +430,18 @@ struct Right4 {
 };
 
 class MultipleInheritanceTest4 : public Left4, public Right4 {
-  int z; // expected-note{{uninitialized field 'this->z'}}
+  int z; // expected-note{{uninitialized field 'this->z'}} expected-note{{uninitialized field 'this->z'}}
 
 public:
   MultipleInheritanceTest4()
       : Left4(int{}),
-        Right4(char{}) { // expected-warning{{1 uninitialized field}}
+        Right4(char{}) { // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fMultipleInheritanceTest4() {
   MultipleInheritanceTest4();
+  new MultipleInheritanceTest4();
 }
 
 struct Left5 {
@@ -433,22 +450,23 @@ struct Left5 {
   Left5(int) : x(44) {}
 };
 struct Right5 {
-  int y; // expected-note{{uninitialized field 'this->Right5::y'}}
+  int y; // expected-note{{uninitialized field 'this->Right5::y'}} expected-note{{uninitialized field 'this->Right5::y'}}
   Right5() = default;
   Right5(int) : y(45) {}
 };
 
 class MultipleInheritanceTest5 : public Left5, public Right5 {
-  int z; // expected-note{{uninitialized field 'this->z'}}
+  int z; // expected-note{{uninitialized field 'this->z'}} expected-note{{uninitialized field 'this->z'}}
 
 public:
-  MultipleInheritanceTest5() // expected-warning{{2 uninitialized fields}}
+  MultipleInheritanceTest5() // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
       : Left5(int{}) {
   }
 };
 
 void fMultipleInheritanceTest5() {
   MultipleInheritanceTest5();
+  new MultipleInheritanceTest5();
 }
 
 //===----------------------------------------------------------------------===//
@@ -509,12 +527,15 @@ public:
 
 void fNonVirtualDiamondInheritanceTest1() {
   NonVirtualDiamondInheritanceTest1();
+  new NonVirtualDiamondInheritanceTest1();
   NonVirtualDiamondInheritanceTest1(int());
+  new NonVirtualDiamondInheritanceTest1(int());
   NonVirtualDiamondInheritanceTest1(int(), int());
+  new NonVirtualDiamondInheritanceTest1(int(), int());
 }
 
 struct NonVirtualBase2 {
-  int x; // expected-note{{uninitialized field 'this->NonVirtualBase2::x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase2::x'}} expected-note{{uninitialized field 'this->NonVirtualBase2::x'}}
   NonVirtualBase2() = default;
   NonVirtualBase2(int) : x(52) {}
 };
@@ -533,16 +554,17 @@ class NonVirtualDiamondInheritanceTest2 : public First2, public Second2 {
 public:
   NonVirtualDiamondInheritanceTest2()
       : First2(int{}) {
-    z = 53; // expected-warning{{1 uninitialized field}}
+    z = 53; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fNonVirtualDiamondInheritanceTest2() {
   NonVirtualDiamondInheritanceTest2();
+  new NonVirtualDiamondInheritanceTest2();
 }
 
 struct NonVirtualBase3 {
-  int x; // expected-note{{uninitialized field 'this->NonVirtualBase3::x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase3::x'}} expected-note{{uninitialized field 'this->NonVirtualBase3::x'}}
   NonVirtualBase3() = default;
   NonVirtualBase3(int) : x(54) {}
 };
@@ -561,17 +583,18 @@ class NonVirtualDiamondInheritanceTest3 : public First3, public Second3 {
 public:
   NonVirtualDiamondInheritanceTest3()
       : Second3(int{}) {
-    z = 55; // expected-warning{{1 uninitialized field}}
+    z = 55; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fNonVirtualDiamondInheritanceTest3() {
   NonVirtualDiamondInheritanceTest3();
+  new NonVirtualDiamondInheritanceTest3();
 }
 
 struct NonVirtualBase4 {
-  int x; // expected-note{{uninitialized field 'this->NonVirtualBase4::x'}}
-  // expected-note@-1{{uninitialized field 'this->NonVirtualBase4::x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase4::x'}} expected-note{{uninitialized field 'this->NonVirtualBase4::x'}}
+  // expected-note@-1{{uninitialized field 'this->NonVirtualBase4::x'}} expected-note@-1{{uninitialized field 'this->NonVirtualBase4::x'}}
   NonVirtualBase4() = default;
   NonVirtualBase4(int) : x(56) {}
 };
@@ -589,12 +612,13 @@ class NonVirtualDiamondInheritanceTest4 : public First4, public Second4 {
 
 public:
   NonVirtualDiamondInheritanceTest4() {
-    z = 57; // expected-warning{{2 uninitialized fields}}
+    z = 57; // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
   }
 };
 
 void fNonVirtualDiamondInheritanceTest4() {
   NonVirtualDiamondInheritanceTest4();
+  new NonVirtualDiamondInheritanceTest4();
 }
 
 struct NonVirtualBase5 {
@@ -612,21 +636,22 @@ struct Second5 : public NonVirtualBase5 {
 };
 
 class NonVirtualDiamondInheritanceTest5 : public First5, public Second5 {
-  int z; // expected-note{{uninitialized field 'this->z'}}
+  int z; // expected-note{{uninitialized field 'this->z'}} expected-note{{uninitialized field 'this->z'}}
 
 public:
   NonVirtualDiamondInheritanceTest5()
       : First5(int{}),
-        Second5(int{}) { // expected-warning{{1 uninitialized field}}
+        Second5(int{}) { // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
   }
 };
 
 void fNonVirtualDiamondInheritanceTest5() {
   NonVirtualDiamondInheritanceTest5();
+  new NonVirtualDiamondInheritanceTest5();
 }
 
 struct NonVirtualBase6 {
-  int x; // expected-note{{uninitialized field 'this->NonVirtualBase6::x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase6::x'}} expected-note{{uninitialized field 'this->NonVirtualBase6::x'}}
   NonVirtualBase6() = default;
   NonVirtualBase6(int) : x(59) {}
 };
@@ -640,10 +665,10 @@ struct Second6 : public NonVirtualBase6 {
 };
 
 class NonVirtualDiamondInheritanceTest6 : public First6, public Second6 {
-  int z; // expected-note{{uninitialized field 'this->z'}}
+  int z; // expected-note{{uninitialized field 'this->z'}} expected-note{{uninitialized field 'this->z'}}
 
 public:
-  NonVirtualDiamondInheritanceTest6() // expected-warning{{2 uninitialized fields}}
+  NonVirtualDiamondInheritanceTest6() // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
       : First6(int{}) {
     // 'z' and 'Second::x' uninitialized
   }
@@ -651,6 +676,7 @@ public:
 
 void fNonVirtualDiamondInheritanceTest6() {
   NonVirtualDiamondInheritanceTest6();
+  new NonVirtualDiamondInheritanceTest6();
 }
 
 //===----------------------------------------------------------------------===//
@@ -707,12 +733,15 @@ public:
 
 void fVirtualDiamondInheritanceTest1() {
   VirtualDiamondInheritanceTest1();
+  new VirtualDiamondInheritanceTest1();
   VirtualDiamondInheritanceTest1(int());
+  new VirtualDiamondInheritanceTest1(int());
   VirtualDiamondInheritanceTest1(int(), int());
+  new VirtualDiamondInheritanceTest1(int(), int());
 }
 
 struct VirtualBase2 {
-  int x; // expected-note{{uninitialized field 'this->VirtualBase2::x'}}
+  int x; // expected-note{{uninitialized field 'this->VirtualBase2::x'}} expected-note{{uninitialized field 'this->VirtualBase2::x'}}
   VirtualBase2() = default;
   VirtualBase2(int) : x(63) {}
 };
@@ -730,7 +759,7 @@ struct VirtualSecond2 : virtual public VirtualBase2 {
 class VirtualDiamondInheritanceTest2 : public VirtualFirst2, public VirtualSecond2 {
 
 public:
-  VirtualDiamondInheritanceTest2() // expected-warning{{1 uninitialized field}}
+  VirtualDiamondInheritanceTest2() // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
       : VirtualFirst2(int{}) {
     // From the N4659 C++ Standard Working Draft:
     //
@@ -748,10 +777,11 @@ public:
 
 void fVirtualDiamondInheritanceTest2() {
   VirtualDiamondInheritanceTest2();
+  new VirtualDiamondInheritanceTest2();
 }
 
 struct VirtualBase3 {
-  int x; // expected-note{{uninitialized field 'this->VirtualBase3::x'}}
+  int x; // expected-note{{uninitialized field 'this->VirtualBase3::x'}} expected-note{{uninitialized field 'this->VirtualBase3::x'}}
   VirtualBase3() = default;
   VirtualBase3(int) : x(66) {}
 };
@@ -769,12 +799,13 @@ struct VirtualSecond3 : virtual public VirtualBase3 {
 class VirtualDiamondInheritanceTest3 : public VirtualFirst3, public VirtualSecond3 {
 
 public:
-  VirtualDiamondInheritanceTest3() // expected-warning{{1 uninitialized field}}
+  VirtualDiamondInheritanceTest3() // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
       : VirtualFirst3(int{}) {}
 };
 
 void fVirtualDiamondInheritanceTest3() {
   VirtualDiamondInheritanceTest3();
+  new VirtualDiamondInheritanceTest3();
 }
 
 //===----------------------------------------------------------------------===//
@@ -783,38 +814,42 @@ void fVirtualDiamondInheritanceTest3() {
 
 struct DynTBase1 {};
 struct DynTDerived1 : DynTBase1 {
-  int y; // expected-note{{uninitialized field 'static_cast<DynTDerived1 *>(this->bptr)->y'}}
+  int y; // expected-note{{uninitialized field 'static_cast<DynTDerived1 *>(this->bptr)->y'}} expected-note{{uninitialized field 'static_cast<DynTDerived1 *>(this->bptr)->y'}}
 };
 
 struct DynamicTypeTest1 {
   DynTBase1 *bptr;
   int i = 0;
 
-  DynamicTypeTest1(DynTBase1 *bptr) : bptr(bptr) {} // expected-warning{{1 uninitialized field}}
+  DynamicTypeTest1(DynTBase1 *bptr) : bptr(bptr) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
 };
 
 void fDynamicTypeTest1() {
   DynTDerived1 d;
   DynamicTypeTest1 t(&d);
+  DynTDerived1 dp;
+  new DynamicTypeTest1(&dp);
 };
 
 struct DynTBase2 {
-  int x; // expected-note{{uninitialized field 'static_cast<DynTDerived2 *>(this->bptr)->DynTBase2::x'}}
+  int x; // expected-note{{uninitialized field 'static_cast<DynTDerived2 *>(this->bptr)->DynTBase2::x'}} expected-note{{uninitialized field 'static_cast<DynTDerived2 *>(this->bptr)->DynTBase2::x'}}
 };
 struct DynTDerived2 : DynTBase2 {
-  int y; // expected-note{{uninitialized field 'static_cast<DynTDerived2 *>(this->bptr)->y'}}
+  int y; // expected-note{{uninitialized field 'static_cast<DynTDerived2 *>(this->bptr)->y'}} expected-note{{uninitialized field 'static_cast<DynTDerived2 *>(this->bptr)->y'}}
 };
 
 struct DynamicTypeTest2 {
   DynTBase2 *bptr;
   int i = 0;
 
-  DynamicTypeTest2(DynTBase2 *bptr) : bptr(bptr) {} // expected-warning{{2 uninitialized fields}}
+  DynamicTypeTest2(DynTBase2 *bptr) : bptr(bptr) {} // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
 };
 
 void fDynamicTypeTest2() {
   DynTDerived2 d;
   DynamicTypeTest2 t(&d);
+  DynTDerived2 dp;
+  new DynamicTypeTest2(&dp);
 }
 
 struct SymbolicSuperRegionBase {
@@ -830,4 +865,5 @@ SymbolicSuperRegionDerived *getSymbolicRegion();
 
 void fSymbolicSuperRegionTest() {
   SymbolicSuperRegionDerived test(getSymbolicRegion());
+  new SymbolicSuperRegionDerived(getSymbolicRegion());
 }
