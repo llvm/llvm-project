@@ -8039,12 +8039,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // beginning of the dedicated latch block.
     auto *OrigExitingVPV = PhiR->getBackedgeValue();
     auto *NewExitingVPV = PhiR->getBackedgeValue();
-    // Don't output selects for partial reductions because they have an output
-    // with fewer lanes than the VF. So the operands of the select would have
-    // different numbers of lanes. Partial reductions mask the input instead.
-    auto *RR = dyn_cast<VPReductionRecipe>(OrigExitingVPV->getDefiningRecipe());
-    if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
-        (!RR || !RR->isPartialReduction())) {
+    if (!PhiR->isInLoop() && CM.foldTailByMasking()) {
       VPValue *Cond = vputils::findHeaderMask(*Plan);
       NewExitingVPV =
           Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", *PhiR);
