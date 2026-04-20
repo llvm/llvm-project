@@ -3,8 +3,10 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=postmisched,gcn-create-vopd %s -o - | FileCheck -check-prefix=GFX1200 %s
 
 # Test multi-cycle VOPD formation constraints
-# On gfx1250, when OpX is a DPMACC instruction (multi-cycle) and OpY writes to
-# OpX's source registers, VOPD formation is blocked. This applies to:
+# When OpX is a DPMACC instruction (multi-cycle) and OpX writes to
+# OpY's source registers, VOPD formation is blocked. OpX must come second in
+# original program order, or this would otherwise be a regular data dependency.
+# This applies to:
 # V_FMA_F64, V_ADD_F64, V_MUL_F64, V_MAX_NUM_F64, V_MIN_NUM_F64
 
 ---
@@ -17,17 +19,17 @@ body:             |
     ; GFX1250-LABEL: name: test_fma_f64_dpmacc_constraint
     ; GFX1250: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: $vgpr8 = V_ADD_F32_e32 $vgpr5, killed $vgpr7, implicit $mode, implicit $exec
+    ; GFX1250-NEXT: $vgpr8 = V_ADD_F32_e32 killed $vgpr6, killed $vgpr7, implicit $mode, implicit $exec
     ; GFX1250-NEXT: $vgpr6_vgpr7 = V_FMA_F64_e64 0, killed $vgpr0_vgpr1, 0, killed $vgpr2_vgpr3, 0, killed $vgpr4_vgpr5, 0, 0, implicit $mode, implicit $exec
     ; GFX1250-NEXT: S_ENDPGM 0
     ;
     ; GFX1200-LABEL: name: test_fma_f64_dpmacc_constraint
     ; GFX1200: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; GFX1200-NEXT: {{  $}}
-    ; GFX1200-NEXT: $vgpr8 = V_ADD_F32_e32 $vgpr5, killed $vgpr7, implicit $mode, implicit $exec
+    ; GFX1200-NEXT: $vgpr8 = V_ADD_F32_e32 killed $vgpr6, killed $vgpr7, implicit $mode, implicit $exec
     ; GFX1200-NEXT: $vgpr6_vgpr7 = V_FMA_F64_e64 0, killed $vgpr0_vgpr1, 0, killed $vgpr2_vgpr3, 0, killed $vgpr4_vgpr5, 0, 0, implicit $mode, implicit $exec
     ; GFX1200-NEXT: S_ENDPGM 0
-    $vgpr8 = V_ADD_F32_e32 $vgpr5, $vgpr7, implicit $mode, implicit $exec
+    $vgpr8 = V_ADD_F32_e32 $vgpr6, $vgpr7, implicit $mode, implicit $exec
     $vgpr6_vgpr7 = V_FMA_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, $vgpr4_vgpr5, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0
 

@@ -41,7 +41,7 @@ struct VOPDMatchInfo {
   bool IsVOPD3;
 };
 
-/// Check whether FirstMI and SecondMI (adjacent in program order) can be
+/// Check whether FirstMI and SecondMI can be
 /// combined into a VOPD instruction.  Returns the match info (X/Y assignment
 /// and encoding variant) on success, or std::nullopt if they cannot be paired.
 std::optional<VOPDMatchInfo> tryMatchVOPDPair(const SIInstrInfo &TII,
