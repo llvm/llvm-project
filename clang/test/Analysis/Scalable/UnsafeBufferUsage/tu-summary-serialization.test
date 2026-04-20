@@ -5,14 +5,22 @@
 // Negative tests:
 
 // RUN: not clang-ssaf-format -type=tu %S/Inputs/tu-summary-no-key.json 2>&1 \
-// RUN: | FileCheck %s --check-prefix=CHECK-NO-KEY
-// CHECK-NO-KEY: expected a json::Object with a key UnsafeBuffers
-
+// RUN: | FileCheck %s --check-prefix=CHECK-MISSING-KEY
+// CHECK-MISSING-KEY: saw {
+// CHECK-MISSING-KEY-NEXT:   "NotUnsafeBuffers": [
+// CHECK-MISSING-KEY-NEXT:     [
+// CHECK-MISSING-KEY-NEXT:       {
+// CHECK-MISSING-KEY-NEXT:         "@": 0
+// CHECK-MISSING-KEY-NEXT:       },
+// CHECK-MISSING-KEY-NEXT:       1
+// CHECK-MISSING-KEY-NEXT:     ]
+// CHECK-MISSING-KEY-NEXT:   ]
+// CHECK-MISSING-KEY-NEXT: } but expected an Object with a key UnsafeBuffers
 
 // RUN: not clang-ssaf-format -type=tu %S/Inputs/tu-summary-bad-element.json 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHECK-BAD-ELEMENT
-// CHECK-BAD-ELEMENT: expected a json::Array of size 2
+// CHECK-BAD-ELEMENT: saw 42 but expected an array with exactly two elements representing EntityId and PointerLevel, respectively 
 
 // RUN: not clang-ssaf-format -type=tu %S/Inputs/tu-summary-bad-ptr-level.json 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-BAD-PTR-LEVEL
-// CHECK-BAD-PTR-LEVEL: expected a json::Value of integer type
+// CHECK-BAD-PTR-LEVEL: saw "not-an-integer" but expected an integer representing PointerLevel
