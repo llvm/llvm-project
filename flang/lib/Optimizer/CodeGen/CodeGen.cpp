@@ -196,6 +196,22 @@ mlir::Value replaceWithAddrOfOrASCast(mlir::ConversionPatternRewriter &rewriter,
   return mlir::LLVM::AddressOfOp::create(rewriter, loc, type, symName);
 }
 
+static std::uint64_t getAddressSpace(fir::AddrOfOp addr,
+                                     mlir::ConversionPatternRewriter &rewriter,
+                                     std::uint64_t defaultAS) {
+  auto global = addr->getParentOfType<mlir::ModuleOp>()
+                    .lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
+  if (global)
+    return global.getAddrSpace();
+  auto firGlobal =
+      addr->getParentOfType<mlir::ModuleOp>().lookupSymbol<fir::GlobalOp>(
+          addr.getSymbol());
+  if (firGlobal && firGlobal.getDataAttr() &&
+      *firGlobal.getDataAttr() == cuf::DataAttribute::Constant)
+    return static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Constant);
+  return defaultAS;
+}
+
 /// Lower `fir.address_of` operation to `llvm.address_of` operation.
 struct AddrOfOpConversion : public fir::FIROpConversion<fir::AddrOfOp> {
   using FIROpConversion::FIROpConversion;
@@ -216,12 +232,12 @@ struct AddrOfOpConversion : public fir::FIROpConversion<fir::AddrOfOp> {
       return mlir::success();
     }
 
+    std::uint64_t globalAS =
+        getAddressSpace(addr, rewriter, getGlobalAddressSpace(rewriter));
     auto global = addr->getParentOfType<mlir::ModuleOp>()
                       .lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
     replaceWithAddrOfOrASCast(
-        rewriter, addr->getLoc(),
-        global ? global.getAddrSpace() : getGlobalAddressSpace(rewriter),
-        getProgramAddressSpace(rewriter),
+        rewriter, addr->getLoc(), globalAS, getProgramAddressSpace(rewriter),
         global ? global.getSymName()
                : addr.getSymbol().getRootReference().getValue(),
         convertType(addr.getType()), addr);
