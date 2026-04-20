@@ -279,7 +279,7 @@ Changes to LLDB
 ### Linux
 
 * On Arm Linux, the `tpidruro` register can now be read. Writing to this register is not supported.
-* Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
+* Thread local variables are now supported on Arm and RISC-V Linux if the program being debugged is using glibc.
 * LLDB now supports AArch64 Linux systems that only have SME (as opposed to
   SVE and SME). See the AArch64 Linux [documentation](https://lldb.llvm.org/use/aarch64-linux.html#sme-only-systems)
   for more details.
