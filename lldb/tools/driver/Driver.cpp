@@ -449,7 +449,6 @@ int Driver::MainLoop() {
     atexit(reset_stdin_termios);
   }
 
-
   ::setbuf(stdin, nullptr);
   ::setbuf(stdout, nullptr);
 
