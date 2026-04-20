@@ -4,100 +4,54 @@
 
 declare i32 @llvm.amdgcn.ds.bpermute(i32, i32) #0
 
-define amdgpu_kernel void @ds_bpermute(ptr addrspace(1) %out, i32 %index, i32 %src) nounwind {
+define void @ds_bpermute(ptr addrspace(1) %out, i32 %index, i32 %src) nounwind {
 ; CHECK-LABEL: ds_bpermute:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; CHECK-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; CHECK-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s2
-; CHECK-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-NEXT:    ds_bpermute_b32 v2, v0, v1
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ds_bpermute_b32 v2, v2, v3
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2
-; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %bpermute = call i32 @llvm.amdgcn.ds.bpermute(i32 %index, i32 %src) #0
   store i32 %bpermute, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @ds_bpermute_imm_offset(ptr addrspace(1) %out, i32 %base_index, i32 %src) nounwind {
+define void @ds_bpermute_imm_offset(ptr addrspace(1) %out, i32 %base_index, i32 %src) nounwind {
 ; CHECK-SDAG-LABEL: ds_bpermute_imm_offset:
 ; CHECK-SDAG:       ; %bb.0:
-; CHECK-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; CHECK-SDAG-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-SDAG-NEXT:    ds_bpermute_b32 v2, v0, v1 offset:4
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    ds_bpermute_b32 v2, v2, v3 offset:4
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    flat_store_dword v[0:1], v2
-; CHECK-SDAG-NEXT:    s_endpgm
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CHECK-GISEL-LABEL: ds_bpermute_imm_offset:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; CHECK-GISEL-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; CHECK-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-GISEL-NEXT:    s_add_i32 s2, s2, 4
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-GISEL-NEXT:    ds_bpermute_b32 v2, v0, v1
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_add_u32_e32 v2, vcc, 4, v2
+; CHECK-GISEL-NEXT:    ds_bpermute_b32 v2, v2, v3
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    flat_store_dword v[0:1], v2
-; CHECK-GISEL-NEXT:    s_endpgm
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %index = add i32 %base_index, 4
   %bpermute = call i32 @llvm.amdgcn.ds.bpermute(i32 %index, i32 %src) #0
   store i32 %bpermute, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @ds_bpermute_imm_index(ptr addrspace(1) %out, i32 %base_index, i32 %src) nounwind {
-; CHECK-SDAG-LABEL: ds_bpermute_imm_index:
-; CHECK-SDAG:       ; %bb.0:
-; CHECK-SDAG-NEXT:    s_load_dword s2, s[8:9], 0xc
-; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-SDAG-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; CHECK-SDAG-NEXT:    ds_bpermute_b32 v2, v0, v1 offset:64
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-SDAG-NEXT:    flat_store_dword v[0:1], v2
-; CHECK-SDAG-NEXT:    s_endpgm
-;
-; CHECK-GISEL-LABEL: ds_bpermute_imm_index:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    s_load_dword s2, s[8:9], 0xc
-; CHECK-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, 64
-; CHECK-GISEL-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; CHECK-GISEL-NEXT:    ds_bpermute_b32 v2, v0, v1
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-GISEL-NEXT:    flat_store_dword v[0:1], v2
-; CHECK-GISEL-NEXT:    s_endpgm
+define void @ds_bpermute_imm_index(ptr addrspace(1) %out, i32 %src) nounwind {
+; CHECK-LABEL: ds_bpermute_imm_index:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_readlane_b32 s4, v2, 16
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    flat_store_dword v[0:1], v2
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %bpermute = call i32 @llvm.amdgcn.ds.bpermute(i32 64, i32 %src) #0
   store i32 %bpermute, ptr addrspace(1) %out, align 4
   ret void
@@ -158,6 +112,50 @@ define void @ds_bpermute_or_shl(ptr addrspace(1) %out, i32 %base_index, i32 %src
   %index = or i32 %masked, 1
   %byte_index = shl i32 %index, 2
   %bpermute = call i32 @llvm.amdgcn.ds.bpermute(i32 %byte_index, i32 %src) #0
+  store i32 %bpermute, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @ds_bpermute_uniform_index_shl(ptr addrspace(1) %out, i32 inreg %lane, i32 %src) nounwind {
+; CHECK-LABEL: ds_bpermute_uniform_index_shl:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_readlane_b32 s4, v2, s16
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    flat_store_dword v[0:1], v2
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %byte_offset = shl i32 %lane, 2
+  %bpermute = call i32 @llvm.amdgcn.ds.bpermute(i32 %byte_offset, i32 %src) #0
+  store i32 %bpermute, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @ds_bpermute_uniform_offset(ptr addrspace(1) %out, i32 inreg %index, i32 %src) nounwind {
+; CHECK-LABEL: ds_bpermute_uniform_offset:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_lshr_b32 s4, s16, 2
+; CHECK-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    flat_store_dword v[0:1], v2
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %bpermute = call i32 @llvm.amdgcn.ds.bpermute(i32 %index, i32 %src) #0
+  store i32 %bpermute, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @ds_bpermute_uniform_index_uniform_src(ptr addrspace(1) %out, i32 inreg %lane, i32 inreg %src) nounwind {
+; CHECK-LABEL: ds_bpermute_uniform_index_uniform_src:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s17
+; CHECK-NEXT:    flat_store_dword v[0:1], v2
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %byte_offset = shl i32 %lane, 2
+  %bpermute = call i32 @llvm.amdgcn.ds.bpermute(i32 %byte_offset, i32 %src) #0
   store i32 %bpermute, ptr addrspace(1) %out, align 4
   ret void
 }

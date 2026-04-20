@@ -1721,7 +1721,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr32, Vgpr32}});
 
-  addRulesForIOpcs({amdgcn_ds_bpermute, amdgcn_ds_bpermute_fi_b32,
+  addRulesForIOpcs({amdgcn_ds_bpermute})
+      .Any({{DivS32, _, DivS32, S32}, {{Vgpr32}, {None, VgprB32, VgprB32}}})
+      .Any({{DivS32, _, UniS32, S32}, {{Sgpr32ToVgprDst}, {None, SgprB32, VgprB32}}})
+      .Any({{UniS32, _, UniS32, UniS32}, {{Sgpr32}, {None, SgprB32, SgprB32}}});
+
+  addRulesForIOpcs({amdgcn_ds_bpermute_fi_b32,
                     amdgcn_ds_permute, amdgcn_fmul_legacy, amdgcn_mulhi_i24,
                     amdgcn_mulhi_u24},
                    Standard)
