@@ -46,47 +46,8 @@ static uint16_t fold_64_to_16(const uint64_t Value) {
   return Res;
 }
 
-namespace {
-class MachineBlockHashInfoPrinter : public MachineFunctionPass {
-  raw_ostream &OS;
-
-public:
-  static char ID;
-  MachineBlockHashInfoPrinter() : MachineFunctionPass(ID), OS(errs()) {}
-  MachineBlockHashInfoPrinter(raw_ostream &OS)
-      : MachineFunctionPass(ID), OS(OS) {}
-
-  StringRef getPassName() const override {
-    return "Machine Block Hash Info Printer";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<MachineBlockHashInfo>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    MachineBlockHashInfo &MBHI = getAnalysis<MachineBlockHashInfo>();
-    OS << "Machine Block Hash Info for function: " << MF.getName() << "\n";
-    for (const auto &MBB : MF) {
-      OS << "  BB#" << MBB.getNumber() << ": "
-         << format_hex(MBHI.getMBBHash(MBB), 16) << "\n";
-    }
-    return false;
-  }
-};
-char MachineBlockHashInfoPrinter::ID = 0;
-} // end anonymous namespace
-
 INITIALIZE_PASS(MachineBlockHashInfo, "machine-block-hash",
                 "Machine Block Hash Analysis", true, true)
-
-INITIALIZE_PASS_BEGIN(MachineBlockHashInfoPrinter, "print-machine-block-hash",
-                      "Machine Block Hash Info Printer", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockHashInfo)
-INITIALIZE_PASS_END(MachineBlockHashInfoPrinter, "print-machine-block-hash",
-                    "Machine Block Hash Info Printer", true, true)
 
 char MachineBlockHashInfo::ID = 0;
 
@@ -104,7 +65,10 @@ struct CollectHashInfo {
   uint64_t NeighborHash;
 };
 
-bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
+MachineBlockHashInfoResult::MachineBlockHashInfoResult() = default;
+
+MachineBlockHashInfoResult::MachineBlockHashInfoResult(
+    const MachineFunction &F) {
   DenseMap<const MachineBasicBlock *, CollectHashInfo> HashInfos;
   uint16_t Offset = 0;
   // Initialize hash components
@@ -144,19 +108,43 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
                                  fold_64_to_16(HashInfo.NeighborHash));
     MBBHashInfo[&MBB] = BlendedHash.combine();
   }
+}
 
+uint64_t
+MachineBlockHashInfoResult::getMBBHash(const MachineBasicBlock &MBB) const {
+  auto it = MBBHashInfo.find(&MBB);
+  return it->second;
+}
+
+bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
+  Result = MachineBlockHashInfoResult{F};
   return false;
 }
 
-uint64_t MachineBlockHashInfo::getMBBHash(const MachineBasicBlock &MBB) {
-  return MBBHashInfo[&MBB];
+uint64_t MachineBlockHashInfo::getMBBHash(const MachineBasicBlock &MBB) const {
+  return Result.getMBBHash(MBB);
 }
 
 MachineFunctionPass *llvm::createMachineBlockHashInfoPass() {
   return new MachineBlockHashInfo();
 }
 
-MachineFunctionPass *
-llvm::createMachineBlockHashInfoPrinterPass(raw_ostream &OS) {
-  return new MachineBlockHashInfoPrinter(OS);
+AnalysisKey MachineBlockHashInfoAnalysis::Key;
+
+MachineBlockHashInfoResult
+MachineBlockHashInfoAnalysis::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  return MachineBlockHashInfoResult{MF};
+}
+
+PreservedAnalyses
+MachineBlockHashInfoPrinterPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  auto &MBHI = MFAM.getResult<MachineBlockHashInfoAnalysis>(MF);
+  OS << "Machine Block Hash Info for function: " << MF.getName() << "\n";
+  for (const auto &MBB : MF) {
+    OS << "  BB#" << MBB.getNumber() << ": "
+       << format_hex(MBHI.getMBBHash(MBB), 16) << "\n";
+  }
+  return PreservedAnalyses::all();
 }

@@ -65,7 +65,6 @@ LLVM_ABI void initializeBarrierNoopPass(PassRegistry &);
 LLVM_ABI void initializeBasicAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeBlockFrequencyInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineBlockHashInfoPass(PassRegistry &);
-LLVM_ABI void initializeMachineBlockHashInfoPrinterPass(PassRegistry &);
 LLVM_ABI void initializeBranchFolderLegacyPass(PassRegistry &);
 LLVM_ABI void initializeBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeBranchRelaxationLegacyPass(PassRegistry &);
