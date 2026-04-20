@@ -31,6 +31,11 @@ namespace clang::ssaf {
 /// together. It contains deduplicated entities with their linkage information
 /// and the merged entity summaries.
 class LUSummary {
+public:
+  explicit LUSummary(NestedBuildNamespace LUNamespace)
+      : LUNamespace(std::move(LUNamespace)) {}
+
+private:
   friend class AnalysisDriver;
   friend class LUSummaryConsumer;
   friend class SerializationFormat;
@@ -44,10 +49,6 @@ class LUSummary {
 
   std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>
       Data;
-
-public:
-  explicit LUSummary(NestedBuildNamespace LUNamespace)
-      : LUNamespace(std::move(LUNamespace)) {}
 };
 
 } // namespace clang::ssaf

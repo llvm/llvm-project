@@ -31,6 +31,11 @@ namespace clang::ssaf {
 /// translation units in a format-specific encoding. It is produced by the
 /// entity linker and contains deduplicated and patched entity summaries.
 class LUSummaryEncoding {
+public:
+  explicit LUSummaryEncoding(NestedBuildNamespace LUNamespace)
+      : LUNamespace(std::move(LUNamespace)) {}
+
+private:
   friend class EntityLinker;
   friend class SerializationFormat;
   friend class TestFixture;
@@ -48,10 +53,6 @@ class LUSummaryEncoding {
   std::map<SummaryName,
            std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
       Data;
-
-public:
-  explicit LUSummaryEncoding(NestedBuildNamespace LUNamespace)
-      : LUNamespace(std::move(LUNamespace)) {}
 };
 
 } // namespace clang::ssaf

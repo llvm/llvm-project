@@ -40,11 +40,6 @@ enum class BuildNamespaceKind : unsigned short { CompilationUnit, LinkUnit };
 /// hierarchical namespace structures that model how software is constructed
 /// from its components.
 class BuildNamespace {
-  BuildNamespaceKind Kind;
-  std::string Name;
-
-  auto asTuple() const { return std::tie(Kind, Name); }
-
 public:
   BuildNamespace(BuildNamespaceKind Kind, llvm::StringRef Name)
       : Kind(Kind), Name(Name.str()) {}
@@ -59,11 +54,17 @@ public:
   bool operator!=(const BuildNamespace &Other) const;
   bool operator<(const BuildNamespace &Other) const;
 
+private:
   friend class EntityLinker;
   friend class SerializationFormat;
   friend class TestFixture;
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const BuildNamespace &BN);
+
+  BuildNamespaceKind Kind;
+  std::string Name;
+
+  auto asTuple() const { return std::tie(Kind, Name); }
 };
 
 /// Represents a hierarchical sequence of build namespaces.
@@ -76,8 +77,6 @@ public:
 /// For example, an entity might be qualified by a compilation unit namespace
 /// followed by a shared library namespace.
 class NestedBuildNamespace {
-  std::vector<BuildNamespace> Namespaces;
-
 public:
   NestedBuildNamespace() = default;
 
@@ -113,10 +112,13 @@ public:
   bool operator!=(const NestedBuildNamespace &Other) const;
   bool operator<(const NestedBuildNamespace &Other) const;
 
+private:
   friend class SerializationFormat;
   friend class TestFixture;
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const NestedBuildNamespace &NBN);
+
+  std::vector<BuildNamespace> Namespaces;
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, BuildNamespaceKind BNK);

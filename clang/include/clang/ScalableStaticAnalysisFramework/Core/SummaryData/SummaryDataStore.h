@@ -29,10 +29,6 @@ class LUSummaryConsumer;
 /// Owns a collection of SummaryData objects keyed by SummaryName.
 /// Produced by LUSummaryConsumer::run() variants.
 class SummaryDataStore {
-  friend class LUSummaryConsumer;
-
-  std::map<SummaryName, std::unique_ptr<SummaryData>> Data;
-
 public:
   /// Returns true if data for \p Name is stored.
   [[nodiscard]] bool contains(const SummaryName &Name) const {
@@ -108,6 +104,11 @@ public:
     Data.erase(It);
     return std::move(Ptr);
   }
+
+private:
+  friend class LUSummaryConsumer;
+
+  std::map<SummaryName, std::unique_ptr<SummaryData>> Data;
 };
 
 } // namespace clang::ssaf

@@ -36,17 +36,17 @@ class AnalysisRegistry;
 /// LUSummary one at a time, accumulating whole-program data into an
 /// AnalysisResult.
 class SummaryAnalysisBase : public AnalysisBase {
-  friend class AnalysisDriver;
-
-protected:
-  SummaryAnalysisBase() : AnalysisBase(AnalysisBase::Kind::Summary) {}
-
 public:
   /// SummaryName of the EntitySummary type this analysis consumes.
   /// Used by the driver to route entities from the LUSummary.
   virtual SummaryName getSummaryName() const = 0;
 
+protected:
+  SummaryAnalysisBase() : AnalysisBase(AnalysisBase::Kind::Summary) {}
+
 private:
+  friend class AnalysisDriver;
+
   /// Called once before any add() calls. Default is a no-op.
   virtual llvm::Error initialize() { return llvm::Error::success(); }
 
@@ -68,18 +68,6 @@ private:
 /// getResult() & (mutable) within the analysis implementation.
 template <typename ResultT, typename EntitySummaryT>
 class SummaryAnalysis : public SummaryAnalysisBase {
-  static_assert(std::is_base_of_v<AnalysisResult, ResultT>,
-                "ResultT must derive from AnalysisResult");
-  static_assert(HasAnalysisName_v<ResultT>,
-                "ResultT must have a static analysisName() method");
-  static_assert(std::is_base_of_v<EntitySummary, EntitySummaryT>,
-                "EntitySummaryT must derive from EntitySummary");
-
-  friend class AnalysisRegistry;
-  using ResultType = ResultT;
-
-  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
-
 public:
   /// Used by AnalysisRegistry::Add to derive the registry entry name.
   AnalysisName getAnalysisName() const final { return ResultT::analysisName(); }
@@ -111,6 +99,18 @@ protected:
   ResultT &getResult() & { return *Result; }
 
 private:
+  static_assert(std::is_base_of_v<AnalysisResult, ResultT>,
+                "ResultT must derive from AnalysisResult");
+  static_assert(HasAnalysisName_v<ResultT>,
+                "ResultT must have a static analysisName() method");
+  static_assert(std::is_base_of_v<EntitySummary, EntitySummaryT>,
+                "EntitySummaryT must derive from EntitySummary");
+
+  friend class AnalysisRegistry;
+  using ResultType = ResultT;
+
+  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
+
   /// Seals the type-erased base overload, downcasts, and dispatches to the
   /// typed add().
   llvm::Error add(EntityId Id, const EntitySummary &Summary) final {

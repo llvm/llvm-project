@@ -51,8 +51,6 @@ namespace clang::ssaf {
 class AnalysisRegistry {
   using RegistryT = llvm::Registry<AnalysisBase>;
 
-  AnalysisRegistry() = delete;
-
 public:
   /// Registers AnalysisT with the unified registry.
   ///
@@ -96,6 +94,8 @@ public:
   instantiate(const AnalysisName &Name);
 
 private:
+  AnalysisRegistry() = delete;
+
   /// Returns the global list of registered analysis names.
   ///
   /// Uses a function-local static to avoid static initialization order

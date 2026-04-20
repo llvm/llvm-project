@@ -29,6 +29,12 @@ class EntityIdTable;
 ///
 /// \see EntityIdTable
 class EntityId {
+public:
+  bool operator==(const EntityId &Other) const { return Index == Other.Index; }
+  bool operator<(const EntityId &Other) const { return Index < Other.Index; }
+  bool operator!=(const EntityId &Other) const { return !(*this == Other); }
+
+private:
   friend class EntityIdTable;
   friend class SerializationFormat;
   friend class TestFixture;
@@ -40,11 +46,6 @@ class EntityId {
   explicit EntityId(size_t Index) : Index(Index) {}
 
   EntityId() = delete;
-
-public:
-  bool operator==(const EntityId &Other) const { return Index == Other.Index; }
-  bool operator<(const EntityId &Other) const { return Index < Other.Index; }
-  bool operator!=(const EntityId &Other) const { return !(*this == Other); }
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityId &Id);

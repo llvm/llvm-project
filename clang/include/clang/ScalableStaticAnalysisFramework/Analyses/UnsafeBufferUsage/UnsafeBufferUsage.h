@@ -21,17 +21,6 @@ namespace clang::ssaf {
 /// An UnsafeBufferUsageEntitySummary is an immutable set of unsafe buffers, in
 /// the form of EntityPointerLevel.
 class UnsafeBufferUsageEntitySummary final : public EntitySummary {
-  const EntityPointerLevelSet UnsafeBuffers;
-
-  friend class UnsafeBufferUsageTUSummaryExtractor;
-  friend UnsafeBufferUsageEntitySummary
-      buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet);
-  friend llvm::iterator_range<EntityPointerLevelSet::const_iterator>
-  getUnsafeBuffers(const UnsafeBufferUsageEntitySummary &);
-
-  explicit UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
-      : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
-
 public:
   static constexpr llvm::StringLiteral Name = "UnsafeBufferUsage";
 
@@ -48,6 +37,18 @@ public:
   bool empty() const { return UnsafeBuffers.empty(); }
 
   static SummaryName summaryName() { return SummaryName{Name.str()}; }
+
+private:
+  friend class UnsafeBufferUsageTUSummaryExtractor;
+  friend UnsafeBufferUsageEntitySummary
+      buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet);
+  friend llvm::iterator_range<EntityPointerLevelSet::const_iterator>
+  getUnsafeBuffers(const UnsafeBufferUsageEntitySummary &);
+
+  const EntityPointerLevelSet UnsafeBuffers;
+
+  explicit UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
+      : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
 };
 } // namespace clang::ssaf
 

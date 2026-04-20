@@ -35,15 +35,6 @@ class TestFixture;
 /// This is the natural unit of persistence: entity names and analysis results
 /// are self-contained in one object.
 class WPASuite {
-  friend class AnalysisDriver;
-  friend class SerializationFormat;
-  friend class TestFixture;
-
-  EntityIdTable IdTable;
-  std::map<AnalysisName, std::unique_ptr<AnalysisResult>> Data;
-
-  WPASuite() = default;
-
 public:
   /// Returns the EntityIdTable that maps EntityId values to their symbolic
   /// names.
@@ -92,6 +83,16 @@ public:
     }
     return *It->second;
   }
+
+private:
+  friend class AnalysisDriver;
+  friend class SerializationFormat;
+  friend class TestFixture;
+
+  EntityIdTable IdTable;
+  std::map<AnalysisName, std::unique_ptr<AnalysisResult>> Data;
+
+  WPASuite() = default;
 };
 
 } // namespace clang::ssaf

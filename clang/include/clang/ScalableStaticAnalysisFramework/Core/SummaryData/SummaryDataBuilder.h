@@ -32,12 +32,12 @@ class LUSummaryConsumer;
 /// time via \c addSummary(), is finalized via \c finalize(), and transfers
 /// ownership of the built data via \c takeData().
 class SummaryDataBuilderBase {
-  friend class LUSummaryConsumer;
-
 public:
   virtual ~SummaryDataBuilderBase() = default;
 
 private:
+  friend class LUSummaryConsumer;
+
   /// Called once per entity belonging to this builder's analysis.
   /// Takes ownership of the summary data.
   virtual void addSummary(EntityId Id,
@@ -58,15 +58,6 @@ private:
 /// \c finalize() for any post-processing needed after all entities are added.
 template <typename DataT, typename SummaryT>
 class SummaryDataBuilder : public SummaryDataBuilderBase {
-  static_assert(std::is_base_of_v<SummaryData, DataT>,
-                "DataT must derive from SummaryData");
-  static_assert(HasSummaryName_v<DataT>,
-                "DataT must have a static summaryName() method");
-  static_assert(std::is_base_of_v<EntitySummary, SummaryT>,
-                "SummaryT must derive from EntitySummary");
-
-  std::unique_ptr<DataT> Data;
-
 public:
   SummaryDataBuilder() : Data(std::make_unique<DataT>()) {}
 
@@ -81,6 +72,15 @@ protected:
   DataT &getData() & { return *Data; }
 
 private:
+  static_assert(std::is_base_of_v<SummaryData, DataT>,
+                "DataT must derive from SummaryData");
+  static_assert(HasSummaryName_v<DataT>,
+                "DataT must have a static summaryName() method");
+  static_assert(std::is_base_of_v<EntitySummary, SummaryT>,
+                "SummaryT must derive from EntitySummary");
+
+  std::unique_ptr<DataT> Data;
+
   std::unique_ptr<SummaryData> takeData() && override {
     return std::move(Data);
   }

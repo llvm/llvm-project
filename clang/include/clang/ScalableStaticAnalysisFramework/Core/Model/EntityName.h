@@ -26,18 +26,6 @@ namespace clang::ssaf {
 /// Client code should not make assumptions about the implementation details,
 /// such as USRs.
 class EntityName {
-  friend class EntityLinker;
-  friend class SerializationFormat;
-  friend class TestFixture;
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                       const EntityName &EN);
-
-  std::string USR;
-  llvm::SmallString<16> Suffix;
-  NestedBuildNamespace Namespace;
-
-  auto asTuple() const { return std::tie(USR, Suffix, Namespace); }
-
 public:
   /// Client code should not use this constructor directly.
   /// Use getEntityName and other functions in ASTEntityMapping.h to get
@@ -53,6 +41,19 @@ public:
   ///
   /// \param Namespace The namespace steps to append to this entity's namespace.
   EntityName makeQualified(NestedBuildNamespace Namespace) const;
+
+private:
+  friend class EntityLinker;
+  friend class SerializationFormat;
+  friend class TestFixture;
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                       const EntityName &EN);
+
+  std::string USR;
+  llvm::SmallString<16> Suffix;
+  NestedBuildNamespace Namespace;
+
+  auto asTuple() const { return std::tie(USR, Suffix, Namespace); }
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityName &EN);

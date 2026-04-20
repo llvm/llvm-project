@@ -21,11 +21,6 @@ namespace clang::ssaf {
 /// The table maps each unique EntityName to exactly one EntityId.
 /// Entities are never removed.
 class EntityIdTable {
-  friend class SerializationFormat;
-  friend class TestFixture;
-
-  std::map<EntityName, EntityId> Entities;
-
 public:
   EntityIdTable() = default;
 
@@ -46,6 +41,12 @@ public:
 
   /// Returns the number of unique entities in the table.
   size_t count() const { return Entities.size(); }
+
+private:
+  friend class SerializationFormat;
+  friend class TestFixture;
+
+  std::map<EntityName, EntityId> Entities;
 };
 
 } // namespace clang::ssaf
