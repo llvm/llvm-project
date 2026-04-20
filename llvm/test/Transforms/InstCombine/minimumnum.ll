@@ -108,9 +108,8 @@ define float @minimumnum4(float %x, float %y, float %z, float %w) {
 define float @minimumnum_common_op(float %x, float %y, float %z) {
 ; CHECK-LABEL: define float @minimumnum_common_op(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) {
-; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Z]])
-; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.minimumnum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.minimumnum.f32(float [[M2]], float [[Y]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.minimumnum.f32(float %x, float %y)
@@ -124,8 +123,7 @@ define float @minimumnum_reuse_lhs(float %x, float %y, float %z) {
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) {
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    call void @use.f32(float [[M1]])
-; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.minimumnum.f32(float [[Z]], float [[X]])
-; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.minimumnum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.minimumnum.f32(float [[M1]], float [[Z]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.minimumnum.f32(float %x, float %y)
@@ -138,10 +136,9 @@ define float @minimumnum_reuse_lhs(float %x, float %y, float %z) {
 define float @minimumnum_reuse_rhs(float %x, float %y, float %z) {
 ; CHECK-LABEL: define float @minimumnum_reuse_rhs(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) {
-; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.minimumnum.f32(float [[Y]], float [[X]])
 ; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.minimumnum.f32(float [[Z]], float [[X]])
 ; CHECK-NEXT:    call void @use.f32(float [[M2]])
-; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.minimumnum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.minimumnum.f32(float [[M2]], float [[Y]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.minimumnum.f32(float %y, float %x)
@@ -156,8 +153,7 @@ define float @minimumnum_reuse_lhs_nnan(float %x, float %y, float %z) {
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) {
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    call void @use.f32(float [[M1]])
-; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.minimumnum.f32(float [[Z]], float [[X]])
-; CHECK-NEXT:    [[M3:%.*]] = call nnan float @llvm.minimumnum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.minimumnum.f32(float [[M1]], float [[Z]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.minimumnum.f32(float %x, float %y)
@@ -172,8 +168,7 @@ define float @minimumnum_reuse_lhs_nnan_folded_only(float %x, float %y, float %z
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) {
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    call void @use.f32(float [[M1]])
-; CHECK-NEXT:    [[M2:%.*]] = call nnan float @llvm.minimumnum.f32(float [[Z]], float [[X]])
-; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.minimumnum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call nnan float @llvm.minimumnum.f32(float [[M1]], float [[Z]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.minimumnum.f32(float %x, float %y)
@@ -188,8 +183,7 @@ define float @minimumnum_reuse_lhs_fmf_intersection(float %x, float %y, float %z
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) {
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    call void @use.f32(float [[M1]])
-; CHECK-NEXT:    [[M2:%.*]] = call ninf afn float @llvm.minimumnum.f32(float [[Z]], float [[X]])
-; CHECK-NEXT:    [[M3:%.*]] = call ninf arcp float @llvm.minimumnum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call ninf float @llvm.minimumnum.f32(float [[M1]], float [[Z]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.minimumnum.f32(float %x, float %y)

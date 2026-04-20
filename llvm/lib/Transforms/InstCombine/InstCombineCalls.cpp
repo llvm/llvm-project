@@ -1481,7 +1481,23 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
   Module *Mod = II->getModule();
   Function *MinMax =
       Intrinsic::getOrInsertDeclaration(Mod, MinMaxID, II->getType());
-  return CallInst::Create(MinMax, { MinMaxOp, ThirdOp });
+  Instruction *RetI = CallInst::Create(MinMax, {MinMaxOp, ThirdOp});
+  if (isa<FPMathOperator>(II)) {
+    FastMathFlags IIFMF = II->getFastMathFlags();
+    FastMathFlags FoldedOpFMF =
+        (MinMaxOp == LHS ? RHS : LHS)->getFastMathFlags();
+    FastMathFlags RetFMF = IIFMF & FoldedOpFMF;
+    // Different intrinsics handle NaN propagation differently. For maximum and
+    // minimum, nnan does not rely on the folded instruction's flags. For the
+    // others, it does not rely on II's flags
+    if (MinMaxID == Intrinsic::maximum || MinMaxID == Intrinsic::minimum)
+      RetFMF.setNoNaNs(IIFMF.noNaNs());
+    if (MinMaxID == Intrinsic::maxnum || MinMaxID == Intrinsic::minnum ||
+        MinMaxID == Intrinsic::maximumnum || MinMaxID == Intrinsic::minimumnum)
+      RetFMF.setNoNaNs(FoldedOpFMF.noNaNs());
+    RetI->setFastMathFlags(RetFMF);
+  }
+  return RetI;
 }
 
 /// If all arguments of the intrinsic are unary shuffles with the same mask,
@@ -2860,6 +2876,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       FNeg->copyIRFlags(II);
       return FNeg;
     }
+
+    if (Instruction *NewMinMax = factorizeMinMaxTree(II))
+       return NewMinMax;
 
     // m(m(X, C2), C1) -> m(X, C)
     const APFloat *C1, *C2;

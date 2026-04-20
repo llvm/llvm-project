@@ -242,9 +242,8 @@ define float @maximum4(float %x, float %y, float %z, float %w) {
 
 define float @maximum_common_op(float %x, float %y, float %z) {
 ; CHECK-LABEL: @maximum_common_op(
-; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Z:%.*]])
-; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Z1:%.*]])
-; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M2]], float [[Y]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Z1:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[Y]], float [[Y1:%.*]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.maximum.f32(float %x, float %y)
@@ -257,8 +256,7 @@ define float @maximum_reuse_lhs(float %x, float %y, float %z) {
 ; CHECK-LABEL: @maximum_reuse_lhs(
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    call void @use(float [[M1]])
-; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximum.f32(float [[Z1:%.*]], float [[X]])
-; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M1]], float [[Z]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M1]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.maximum.f32(float %x, float %y)
@@ -270,10 +268,9 @@ define float @maximum_reuse_lhs(float %x, float %y, float %z) {
 
 define float @maximum_reuse_rhs(float %x, float %y, float %z) {
 ; CHECK-LABEL: @maximum_reuse_rhs(
-; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximum.f32(float [[Z:%.*]], float [[X:%.*]])
-; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximum.f32(float [[Z1:%.*]], float [[X]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximum.f32(float [[Z1:%.*]], float [[X:%.*]])
 ; CHECK-NEXT:    call void @use(float [[Y]])
-; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M2]], float [[Y]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[Y]], float [[Y1:%.*]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.maximum.f32(float %y, float %x)
@@ -287,8 +284,7 @@ define float @maximum_reuse_lhs_nnan(float %x, float %y, float %z) {
 ; CHECK-LABEL: @maximum_reuse_lhs_nnan(
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    call void @use(float [[M1]])
-; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximum.f32(float [[Z1:%.*]], float [[X]])
-; CHECK-NEXT:    [[M3:%.*]] = call nnan float @llvm.maximum.f32(float [[M1]], float [[Z]])
+; CHECK-NEXT:    [[M3:%.*]] = call nnan float @llvm.maximum.f32(float [[M1]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.maximum.f32(float %x, float %y)
@@ -302,8 +298,7 @@ define float @maximum_reuse_lhs_nnan_folded_only(float %x, float %y, float %z) {
 ; CHECK-LABEL: @maximum_reuse_lhs_nnan_folded_only(
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    call void @use(float [[M1]])
-; CHECK-NEXT:    [[Z:%.*]] = call nnan float @llvm.maximum.f32(float [[Z1:%.*]], float [[X]])
-; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M1]], float [[Z]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximum.f32(float [[M1]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.maximum.f32(float %x, float %y)
@@ -317,8 +312,7 @@ define float @maximum_reuse_lhs_fmf_intersection(float %x, float %y, float %z) {
 ; CHECK-LABEL: @maximum_reuse_lhs_fmf_intersection(
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    call void @use(float [[M1]])
-; CHECK-NEXT:    [[M2:%.*]] = call ninf afn float @llvm.maximum.f32(float [[Z:%.*]], float [[X]])
-; CHECK-NEXT:    [[M3:%.*]] = call ninf arcp float @llvm.maximum.f32(float [[M1]], float [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call ninf float @llvm.maximum.f32(float [[M1]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.maximum.f32(float %x, float %y)
