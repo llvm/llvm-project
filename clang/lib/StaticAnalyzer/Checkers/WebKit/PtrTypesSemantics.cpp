@@ -326,8 +326,8 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   assert(M);
 
   const CXXRecordDecl *calleeMethodsClass = M->getParent();
-  auto className = safeGetName(calleeMethodsClass);
-  auto method = safeGetName(M);
+  std::string className = safeGetName(calleeMethodsClass);
+  std::string method = safeGetName(M);
 
   if (isCheckedPtr(className) && (method == "get" || method == "ptr"))
     return true;
@@ -346,24 +346,24 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   // FIXME: Currently allowing any Ref<T> -> whatever cast.
   if (isRefType(className)) {
     if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
-      auto QT = maybeRefToRawOperator->getConversionType();
-      auto *T = QT.getTypePtrOrNull();
+      QualType QT = maybeRefToRawOperator->getConversionType();
+      const Type *T = QT.getTypePtrOrNull();
       return T && (T->isPointerType() || T->isReferenceType());
     }
   }
 
   if (isCheckedPtr(className)) {
     if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
-      auto QT = maybeRefToRawOperator->getConversionType();
-      auto *T = QT.getTypePtrOrNull();
+      QualType QT = maybeRefToRawOperator->getConversionType();
+      const Type *T = QT.getTypePtrOrNull();
       return T && (T->isPointerType() || T->isReferenceType());
     }
   }
 
   if (isRetainPtrOrOSPtr(className)) {
     if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
-      auto QT = maybeRefToRawOperator->getConversionType();
-      auto *T = QT.getTypePtrOrNull();
+      QualType QT = maybeRefToRawOperator->getConversionType();
+      const Type *T = QT.getTypePtrOrNull();
       return T && (T->isPointerType() || T->isReferenceType() ||
                    T->isObjCObjectPointerType());
     }
