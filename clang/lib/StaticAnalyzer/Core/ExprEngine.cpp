@@ -1641,13 +1641,13 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
                                                ExplodedNodeSet &Dst,
                                                const CFGBlock *DstT,
                                                const CFGBlock *DstF) {
-  BranchNodeBuilder TempDtorBuilder(Dst, *currBldrCtx, DstT, DstF);
   ProgramStateRef State = Pred->getState();
   const LocationContext *LC = Pred->getLocationContext();
-  if (getObjectUnderConstruction(State, BTE, LC)) {
-    TempDtorBuilder.generateNode(State, true, Pred);
-  } else {
-    TempDtorBuilder.generateNode(State, false, Pred);
+
+  std::optional<SVal> Obj = getObjectUnderConstruction(State, BTE, LC);
+  if (const CFGBlock *DstBlock = Obj ? DstT : DstF) {
+    BlockEdge BE(getCurrBlock(), DstBlock, LC);
+    Dst.insert(Engine.makeNode(BE, State, Pred));
   }
 }
 
@@ -2547,20 +2547,6 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
   return true;
 }
 
-/// Return the innermost location context which is inlined at `Node`, unless
-/// it's the top-level (entry point) location context.
-static const LocationContext *getInlinedLocationContext(ExplodedNode *Node,
-                                                        ExplodedGraph &G) {
-  const LocationContext *CalleeLC = Node->getLocation().getLocationContext();
-  const LocationContext *RootLC =
-      G.getRoot()->getLocation().getLocationContext();
-
-  if (CalleeLC->getStackFrame() == RootLC->getStackFrame())
-    return nullptr;
-
-  return CalleeLC;
-}
-
 /// Block entrance.  (Update counters).
 /// FIXME: `BlockEdge &L` is only used for debug statistics, consider removing
 /// it and using `BlockEntrance &BE` (where `BlockEntrance` is a subtype of
@@ -2620,7 +2606,8 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     const ExplodedNode *Sink =
         Builder.generateSink(TaggedLoc, Pred->getState(), Pred);
 
-    if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
+    const LocationContext *LC = Pred->getLocationContext();
+    if (!LC->inTopFrame()) {
       // FIXME: This will unconditionally prevent inlining this function (even
       // from other entry points), which is not a reasonable heuristic: even if
       // we reached max block count on this particular execution path, there
@@ -2846,10 +2833,17 @@ void ExprEngine::processBranch(
   assert((!Condition || !isa<CXXBindTemporaryExpr>(Condition)) &&
          "CXXBindTemporaryExprs are handled by processBindTemporary.");
 
+  const LocationContext *LC = Pred->getLocationContext();
+
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
-    BranchNodeBuilder NullCondBldr(Dst, *currBldrCtx, DstT, DstF);
-    NullCondBldr.generateNode(Pred->getState(), true, Pred);
+    if (!DstT) {
+      // I _hope_ that this "null condition + null transition to loop body"
+      // case is impossible, but I cannot prove this, so let's cover it.
+      return;
+    }
+    BlockEdge BE(getCurrBlock(), DstT, LC);
+    Dst.insert(Engine.makeNode(BE, Pred->getState(), Pred));
     return;
   }
 
@@ -2868,7 +2862,6 @@ void ExprEngine::processBranch(
   if (CheckersOutSet.empty())
     return;
 
-  BranchNodeBuilder Builder(Dst, *currBldrCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
     ProgramStateRef PrevState = PredN->getState();
 
@@ -2914,7 +2907,10 @@ void ExprEngine::processBranch(
       // default). If we intend to support and stabilize the loop widening,
       // we must ensure that it 'plays nicely' with this logic.
       if (!SkipTrueBranch || AMgr.options.ShouldWidenLoops) {
-        Builder.generateNode(StTrue, true, PredN);
+        if (DstT) {
+          BlockEdge BE(getCurrBlock(), DstT, LC);
+          Dst.insert(Engine.makeNode(BE, StTrue, PredN));
+        }
       } else if (!AMgr.options.InlineFunctionsWithAmbiguousLoops) {
         // FIXME: There is an ancient and arbitrary heuristic in
         // `ExprEngine::processCFGBlockEntrance` which prevents all further
@@ -2931,7 +2927,7 @@ void ExprEngine::processBranch(
         // (activates if the third iteration can be entered, and will not
         // recognize cases where the fourth iteration would't be completed), but
         // should be good enough for practical purposes.
-        if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
+        if (!LC->inTopFrame()) {
           Engine.FunctionSummaries->markShouldNotInline(
               LC->getStackFrame()->getDecl());
         }
@@ -2954,8 +2950,10 @@ void ExprEngine::processBranch(
       bool BeforeFirstIteration = IterationsCompletedInLoop == std::optional{0};
       bool SkipFalseBranch = BothFeasible && BeforeFirstIteration &&
                              AMgr.options.ShouldAssumeAtLeastOneIteration;
-      if (!SkipFalseBranch)
-        Builder.generateNode(StFalse, false, PredN);
+      if (!SkipFalseBranch && DstF) {
+        BlockEdge BE(getCurrBlock(), DstF, LC);
+        Dst.insert(Engine.makeNode(BE, StFalse, PredN));
+      }
     }
   }
 }
@@ -2971,15 +2969,15 @@ void ExprEngine::processStaticInitializer(const DeclStmt *DS,
                                           const CFGBlock *DstT,
                                           const CFGBlock *DstF) {
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
-  ProgramStateRef state = Pred->getState();
-  bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
-  BranchNodeBuilder Builder(Dst, *currBldrCtx, DstT, DstF);
+  ProgramStateRef State = Pred->getState();
+  bool InitHasRun = State->contains<InitializedGlobalsSet>(VD);
+  if (!InitHasRun)
+    State = State->add<InitializedGlobalsSet>(VD);
 
-  if (!initHasRun) {
-    state = state->add<InitializedGlobalsSet>(VD);
+  if (const CFGBlock *DstBlock = InitHasRun ? DstT : DstF) {
+    BlockEdge BE(getCurrBlock(), DstBlock, Pred->getLocationContext());
+    Dst.insert(Engine.makeNode(BE, State, Pred));
   }
-
-  Builder.generateNode(state, initHasRun, Pred);
 }
 
 /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
