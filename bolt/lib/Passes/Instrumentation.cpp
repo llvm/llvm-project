@@ -19,7 +19,6 @@
 #include "llvm/Support/RWMutex.h"
 #include <queue>
 #include <stack>
-#include <unordered_set>
 
 #define DEBUG_TYPE "bolt-instrumentation"
 
@@ -94,16 +93,16 @@ cl::opt<bool> InstrumentCalls("instrument-calls",
 namespace llvm {
 namespace bolt {
 
-static bool hasAArch64ExclusiveMemop(
-    BinaryFunction &Function,
-    std::unordered_set<const BinaryBasicBlock *> &BBToSkip) {
+static bool
+hasAArch64ExclusiveMemop(BinaryFunction &Function,
+                         DenseSet<const BinaryBasicBlock *> &BBToSkip) {
   // FIXME ARMv8-a architecture reference manual says that software must avoid
   // having any explicit memory accesses between exclusive load and associated
   // store instruction. So for now skip instrumentation for basic blocks that
   // have these instructions, since it might lead to runtime deadlock.
   BinaryContext &BC = Function.getBinaryContext();
   std::queue<std::pair<BinaryBasicBlock *, bool>> BBQueue; // {BB, isLoad}
-  std::unordered_set<BinaryBasicBlock *> Visited;
+  DenseSet<BinaryBasicBlock *> Visited;
 
   if (Function.getLayout().block_begin() == Function.getLayout().block_end())
     return 0;
@@ -381,7 +380,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (BC.isMachO() && Function.hasName("___GLOBAL_init_65535/1"))
     return;
 
-  std::unordered_set<const BinaryBasicBlock *> BBToSkip;
+  DenseSet<const BinaryBasicBlock *> BBToSkip;
   if (BC.isAArch64() && hasAArch64ExclusiveMemop(Function, BBToSkip))
     return;
 
@@ -399,12 +398,12 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   Function.disambiguateJumpTables(AllocId);
   Function.deleteConservativeEdges();
 
-  std::unordered_map<const BinaryBasicBlock *, uint32_t> BBToID;
+  DenseMap<const BinaryBasicBlock *, uint32_t> BBToID;
   uint32_t Id = 0;
   for (auto BBI = Function.begin(); BBI != Function.end(); ++BBI) {
     BBToID[&*BBI] = Id++;
   }
-  std::unordered_set<const BinaryBasicBlock *> VisitedSet;
+  DenseSet<const BinaryBasicBlock *> VisitedSet;
   // DFS to establish edges we will use for a spanning tree. Edges in the
   // spanning tree can be instrumentation-free since their count can be
   // inferred by solving flow equations on a bottom-up traversal of the tree.

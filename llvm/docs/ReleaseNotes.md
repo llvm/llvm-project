@@ -101,13 +101,6 @@ Changes to LLVM infrastructure
     this may fail if symlink permissions are not available.
   * Added ``readlink``, which reads the target of a symbolic link.
 
-* Bitcode libraries can now implement compiler-managed library functions
-  (libcalls) without causing incorrect API manipulation or undefined references
-  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
-  there are still issues with invalid compiler reasoning about some functions
-  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
-  distributed ThinLTO. 
-
 Changes to building LLVM
 ------------------------
 
@@ -286,7 +279,7 @@ Changes to LLDB
 ### Linux
 
 * On Arm Linux, the `tpidruro` register can now be read. Writing to this register is not supported.
-* Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
+* Thread local variables are now supported on Arm and RISC-V Linux if the program being debugged is using glibc.
 * LLDB now supports AArch64 Linux systems that only have SME (as opposed to
   SVE and SME). See the AArch64 Linux [documentation](https://lldb.llvm.org/use/aarch64-linux.html#sme-only-systems)
   for more details.
