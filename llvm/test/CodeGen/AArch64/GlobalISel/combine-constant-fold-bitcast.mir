@@ -7,8 +7,7 @@ name:            int_constant_to_float
 body:             |
   bb.0:
     ; CHECK-LABEL: name: int_constant_to_float
-    ; CHECK: %src:_(i32) = G_CONSTANT i32 1065353216
-    ; CHECK-NEXT: %dst:_(f32) = G_BITCAST %src(i32)
+    ; CHECK: %dst:_(f32) = G_FCONSTANT float 1.000000e+00
     ; CHECK-NEXT: $w0 = COPY %dst(f32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %src:_(i32) = G_CONSTANT i32 1065353216
@@ -22,8 +21,7 @@ name:            float_constant_to_int
 body:             |
   bb.0:
     ; CHECK-LABEL: name: float_constant_to_int
-    ; CHECK: %src:_(f32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: %dst:_(i32) = G_BITCAST %src(f32)
+    ; CHECK: %dst:_(i32) = G_CONSTANT i32 1065353216
     ; CHECK-NEXT: $w0 = COPY %dst(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %src:_(f32) = G_FCONSTANT float 1.000000e+00
@@ -38,8 +36,7 @@ name:            int64_constant_to_double
 body:             |
   bb.0:
     ; CHECK-LABEL: name: int64_constant_to_double
-    ; CHECK: %src:_(i64) = G_CONSTANT i64 4607182418800017408
-    ; CHECK-NEXT: %dst:_(f64) = G_BITCAST %src(i64)
+    ; CHECK: %dst:_(f64) = G_FCONSTANT double 1.000000e+00
     ; CHECK-NEXT: $x0 = COPY %dst(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %src:_(i64) = G_CONSTANT i64 4607182418800017408
@@ -53,8 +50,7 @@ name:            double_constant_to_int64
 body:             |
   bb.0:
     ; CHECK-LABEL: name: double_constant_to_int64
-    ; CHECK: %src:_(f64) = G_FCONSTANT double 1.000000e+00
-    ; CHECK-NEXT: %dst:_(i64) = G_BITCAST %src(f64)
+    ; CHECK: %dst:_(i64) = G_CONSTANT i64 4607182418800017408
     ; CHECK-NEXT: $x0 = COPY %dst(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %src:_(f64) = G_FCONSTANT double 1.000000e+00

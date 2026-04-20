@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements CombinerHelper for G_ANYEXT, G_SEXT, G_TRUNC, and
-// G_ZEXT
+// This file implements CombinerHelper for G_ANYEXT, G_SEXT, G_TRUNC,
+// G_ZEXT, and G_BITCAST
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -412,4 +412,43 @@ bool CombinerHelper::matchRedundantSextInReg(MachineInstr &Root,
   }
 
   return true;
+}
+
+bool CombinerHelper::matchConstantFoldBitcast(MachineInstr &MI,
+                                              BuildFnTy &MatchInfo) const {
+  assert(MI.getOpcode() == TargetOpcode::G_BITCAST);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (!DstTy.isScalar())
+    return false;
+
+  if (const auto Cst = getIConstantVRegVal(SrcReg, MRI)) {
+    if (DstTy.isFloat()) {
+      const fltSemantics &Sem =
+          APFloat::EnumToSemantics(DstTy.getFpSemantics());
+      APFloat FPVal(Sem, *Cst);
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildFConstant(DstReg, FPVal); };
+    } else {
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildConstant(DstReg, *Cst); };
+    }
+    return true;
+  }
+
+  if (const ConstantFP *CFP = getConstantFPVRegVal(SrcReg, MRI)) {
+    APInt Bits = CFP->getValueAPF().bitcastToAPInt();
+    if (DstTy.isFloat()) {
+      const fltSemantics &Sem =
+          APFloat::EnumToSemantics(DstTy.getFpSemantics());
+      APFloat FPVal(Sem, Bits);
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildFConstant(DstReg, FPVal); };
+    } else {
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildConstant(DstReg, Bits); };
+    }
+    return true;
+  }
+
+  return false;
 }
