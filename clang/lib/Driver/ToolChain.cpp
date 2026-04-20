@@ -1773,7 +1773,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       getTriple().getArch() == llvm::Triple::arm ||
       getTriple().getArch() == llvm::Triple::thumb || getTriple().isWasm() ||
       getTriple().isAArch64() || getTriple().isRISCV() ||
-      getTriple().isLoongArch64())
+      getTriple().isLoongArch64() ||
+      getTriple().getArch() == llvm::Triple::hexagon)
     Res |= SanitizerKind::CFIICall;
   if (getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().isAArch64(64) || getTriple().isRISCV())
