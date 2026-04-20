@@ -93,8 +93,6 @@ public:
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
-  void Enter(const parser::OpenMPInteropConstruct &);
-  void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OpenMPDeclarativeConstruct &);
   void Leave(const parser::OpenMPDeclarativeConstruct &);
 
@@ -112,6 +110,8 @@ public:
   void Leave(const parser::OpenMPAssumeConstruct &);
   void Enter(const parser::OpenMPDeclarativeAssumes &);
   void Leave(const parser::OpenMPDeclarativeAssumes &);
+  void Enter(const parser::OpenMPInteropConstruct &);
+  void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OmpBlockConstruct &);
   void Leave(const parser::OmpBlockConstruct &);
   void Leave(const parser::OmpBeginDirective &);
@@ -267,6 +267,7 @@ private:
       const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
 
   // check-omp-structure.cpp
+  bool IsAllowedClause(llvm::omp::Clause clauseId);
   bool CheckAllowedClause(llvmOmpClause clause);
   void CheckVariableListItem(const SymbolSourceMap &symbols);
   void CheckDirectiveSpelling(
@@ -404,6 +405,10 @@ private:
   std::vector<LoopConstruct> loopStack_;
   // Scopes for scoping units.
   std::vector<const Scope *> scopeStack_;
+  // Stack of directive specifications (except for SECTION).
+  // This is to allow visitor functions to see all specified clauses, since
+  // they are only recorded in DirContext as they are processed.
+  std::vector<const parser::OmpDirectiveSpecification *> dirStack_;
 
   enum class PartKind : int {
     // There are also other "parts", such as internal-subprogram-part, etc,
