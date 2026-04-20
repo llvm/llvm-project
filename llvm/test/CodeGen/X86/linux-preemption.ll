@@ -286,17 +286,24 @@ define dso_local ptr @comdat_any_local() comdat {
 
 ; COMMON:      .globl strong_default_alias
 ; COMMON-NEXT: strong_default_alias = aliasee
+; COMMON-NEXT: .size strong_default_alias, 4
 ; COMMON-NEXT: .globl strong_hidden_alias
 ; COMMON-NEXT: .hidden strong_hidden_alias
 ; COMMON-NEXT: strong_hidden_alias = aliasee
+; COMMON-NEXT: .size strong_hidden_alias, 4
 ; COMMON-NEXT: .weak weak_default_alias
 ; COMMON-NEXT: weak_default_alias = aliasee
+; COMMON-NEXT: .size weak_default_alias, 4
 ; COMMON-NEXT: .globl strong_local_alias
 ; COMMON-NEXT: strong_local_alias = aliasee
 ; CHECK-NEXT:  .Lstrong_local_alias$local = aliasee
+; COMMON-NEXT: .size strong_local_alias, 4
 ; COMMON-NEXT: .weak weak_local_alias
 ; COMMON-NEXT: weak_local_alias = aliasee
+; COMMON-NEXT: .size weak_local_alias, 4
 ; COMMON-NEXT: .globl strong_preemptable_alias
 ; COMMON-NEXT: strong_preemptable_alias = aliasee
+; COMMON-NEXT: .size strong_preemptable_alias, 4
 ; COMMON-NEXT: .weak weak_preemptable_alias
 ; COMMON-NEXT: weak_preemptable_alias = aliasee
+; COMMON-NEXT: .size weak_preemptable_alias, 4

@@ -33,6 +33,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -2704,11 +2705,28 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // size of the alias symbol from the type of the alias. We don't do this in
   // other situations as the alias and aliasee having differing types but same
   // size may be intentional.
+
+  int64_t Offset = 0;
+  const DataLayout &DL = M.getDataLayout();
   if (MAI->hasDotTypeDotSizeDirective() && GA.getValueType()->isSized() &&
       (!BaseObject || BaseObject->hasPrivateLinkage())) {
     const DataLayout &DL = M.getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GA.getValueType());
     OutStreamer->emitELFSize(Name, MCConstantExpr::create(Size, OutContext));
+  } else if (GetPointerBaseWithConstantOffset(GA.getAliasee(), Offset, DL,
+                                              false) == BaseObject) {
+    // If the base symbol has a defined ELF size and we are defining a simple
+    // alias (no non-zero GEPs), we also apply that size to the alias symbol.
+    // This is required for architectures that set bounds on globals (e.g.
+    // CHERI) and use the st_size information for those bounds.
+    const MCExpr *SizeExpr = nullptr;
+    if (TM.getTargetTriple().isOSBinFormatELF())
+      SizeExpr = static_cast<MCSymbolELF *>(getSymbol(BaseObject))->getSize();
+    if (SizeExpr && Offset != 0)
+      SizeExpr = MCBinaryExpr::createSub(
+          SizeExpr, MCConstantExpr::create(Offset, OutContext), OutContext);
+    if (SizeExpr)
+      OutStreamer->emitELFSize(Name, SizeExpr);
   }
 }
 

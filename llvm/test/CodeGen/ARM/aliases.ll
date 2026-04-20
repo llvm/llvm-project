@@ -7,22 +7,22 @@
 
 ; CHECK: .globl	foo1
 ; CHECK: foo1 = bar
-; CHECK-NOT: .size foo1
+; CHECK: .size foo1
 
 ; CHECK: .globl	foo2
 ; CHECK: foo2 = bar
-; CHECK-NOT: .size foo2
+; CHECK: .size foo2
 
 ; CHECK: .weak	bar_f
 ; CHECK: bar_f = foo_f
-; CHECK-NOT: .size bar_f
+; CHECK: .size bar_f
 
 ; CHECK: bar_i = bar
-; CHECK-NOT: .size bar_i
+; CHECK: .size bar_i
 
 ; CHECK: .globl	A
 ; CHECK: A = bar
-; CHECK-NOT: .size A
+; CHECK: .size A
 
 ; CHECK: .globl elem0
 ; CHECK: elem0 = .Lstructvar
