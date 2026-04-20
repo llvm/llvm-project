@@ -791,6 +791,7 @@ void Thread::DidStop() { SetState(eStateStopped); }
 
 bool Thread::ShouldStop(Event *event_ptr) {
   ThreadPlan *current_plan = GetCurrentPlan();
+
   bool should_stop = true;
 
   Log *log = GetLog(LLDBLog::Step);

@@ -359,8 +359,7 @@ bool ModuleListProperties::GetEnableLLDBIndexCache() const {
 }
 
 bool ModuleListProperties::SetEnableLLDBIndexCache(bool new_value) {
-  const uint32_t idx = ePropertyEnableLLDBIndexCache;
-  return SetPropertyAtIndex(idx, new_value);
+  return SetPropertyAtIndex(ePropertyEnableLLDBIndexCache, new_value);
 }
 
 uint64_t ModuleListProperties::GetLLDBIndexCacheMaxByteSize() {

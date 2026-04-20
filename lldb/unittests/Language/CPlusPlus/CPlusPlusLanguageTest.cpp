@@ -284,11 +284,11 @@ TEST(CPlusPlusLanguage, ContainsPath) {
   EXPECT_FALSE(reference_1.ContainsPath("::bar::func01"));
   EXPECT_FALSE(reference_1.ContainsPath("::foo::baz::func01"));
   EXPECT_FALSE(reference_1.ContainsPath("foo::bar::baz::func01"));
-
+  
   EXPECT_TRUE(reference_2.ContainsPath(""));
   EXPECT_TRUE(reference_2.ContainsPath("foofoo::bar::func01"));
   EXPECT_FALSE(reference_2.ContainsPath("foo::bar::func01"));
-
+  
   EXPECT_TRUE(reference_3.ContainsPath(""));
   EXPECT_TRUE(reference_3.ContainsPath("func01"));
   EXPECT_FALSE(reference_3.ContainsPath("func"));
@@ -368,8 +368,8 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       "selector:", context, basename));
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "selector:otherField:", context, basename));
-  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier("abc::", context,
-                                                              basename));
+  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
+      "abc::", context, basename));
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "f<A<B><C>>", context, basename));
 

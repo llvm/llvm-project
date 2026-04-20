@@ -839,7 +839,7 @@ void StackFrameList::SelectMostRelevantFrame() {
   }
   LLDB_LOG(log, "Frame #0 not recognized");
 
-  // If this thread has a non-trivial StopInof, then let it suggest
+  // If this thread has a non-trivial StopInfo, then let it suggest
   // a most relevant frame:
   StopInfoSP stop_info_sp = m_thread.GetStopInfo();
   uint32_t stack_idx = 0;

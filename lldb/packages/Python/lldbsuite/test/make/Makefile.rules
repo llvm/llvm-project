@@ -241,8 +241,8 @@ else
 	ifeq "$(ARCH)" "powerpc64"
 		override ARCH := $(subst powerpc64,64,$(ARCH))
 	endif
-	ifeq "$(ARCH)" "ppc64le"
-		override ARCH := $(subst ppc64le,64,$(ARCH))
+	ifeq "$(ARCH)" "powerpc64le"
+		override ARCH := $(subst powerpc64le,64,$(ARCH))
 	endif
 	ifeq "$(ARCH)" "aarch64"
 		override ARCH :=
@@ -394,6 +394,7 @@ LDFLAGS += $(ASAN_LDFLAGS)
 
 OBJECTS =
 EXE ?= a.out
+
 ifneq "$(FRAMEWORK)" ""
 	DYLIB_NAME ?= $(FRAMEWORK).framework/Versions/A/$(FRAMEWORK)
 	DYLIB_FILENAME ?= $(FRAMEWORK).framework/Versions/A/$(FRAMEWORK)
@@ -443,7 +444,7 @@ endif
 
 ifeq (1, $(USE_SYSTEM_STDLIB))
 	ifneq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP)),)
-		$(error Cannot use system standard library and a custom standard library together)
+		$(error Cannot use system's standard library and a custom standard library together)
 	endif
 endif
 

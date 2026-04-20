@@ -107,24 +107,21 @@ public:
   class EitherTypeScavenger : public TypeScavenger {
   public:
     EitherTypeScavenger() : TypeScavenger() {
-      for (std::shared_ptr<TypeScavenger> scavenger :
-           {std::shared_ptr<TypeScavenger>(new ScavengerTypes())...}) {
+      for (std::shared_ptr<TypeScavenger> scavenger : { std::shared_ptr<TypeScavenger>(new ScavengerTypes())... }) {
         if (scavenger)
           m_scavengers.push_back(scavenger);
       }
     }
-
   protected:
     bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
                    ResultSet &results) override {
       const bool append = false;
-      for (auto &scavenger : m_scavengers) {
+      for (auto& scavenger : m_scavengers) {
         if (scavenger && scavenger->Find(exe_scope, key, results, append))
           return true;
       }
       return false;
     }
-
   private:
     std::vector<std::shared_ptr<TypeScavenger>> m_scavengers;
   };
@@ -133,25 +130,22 @@ public:
   class UnionTypeScavenger : public TypeScavenger {
   public:
     UnionTypeScavenger() : TypeScavenger() {
-      for (std::shared_ptr<TypeScavenger> scavenger :
-           {std::shared_ptr<TypeScavenger>(new ScavengerTypes())...}) {
+      for (std::shared_ptr<TypeScavenger> scavenger : { std::shared_ptr<TypeScavenger>(new ScavengerTypes())... }) {
         if (scavenger)
           m_scavengers.push_back(scavenger);
       }
     }
-
   protected:
     bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
                    ResultSet &results) override {
       const bool append = true;
       bool success = false;
-      for (auto &scavenger : m_scavengers) {
+      for (auto& scavenger : m_scavengers) {
         if (scavenger)
           success = scavenger->Find(exe_scope, key, results, append) || success;
       }
       return success;
     }
-
   private:
     std::vector<std::shared_ptr<TypeScavenger>> m_scavengers;
   };

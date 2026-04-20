@@ -190,12 +190,11 @@ bool ValueObjectChild::UpdateValue() {
         } else if (addr == 0) {
           m_error = Status::FromErrorString("parent is NULL");
         } else {
-          // If a bitfield doesn't fit into the child_byte_size'd
-          // window at child_byte_offset, move the window forward
-          // until it fits.  The problem here is that Value has no
-          // notion of bitfields and thus the Value's DataExtractor
-          // is sized like the bitfields CompilerType; a sequence of
-          // bitfields, however, can be larger than their underlying
+          // If a bitfield doesn't fit into the child_byte_size'd window at
+          // child_byte_offset, move the window forward until it fits.  The
+          // problem here is that Value has no notion of bitfields and thus the
+          // Value's DataExtractor is sized like the bitfields CompilerType; a
+          // sequence of bitfields, however, can be larger than their underlying
           // type.
           if (m_bitfield_bit_offset) {
             const bool thread_and_frame_only_if_stopped = true;

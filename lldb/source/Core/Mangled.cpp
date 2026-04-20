@@ -560,21 +560,21 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
   m_demangled_info.reset();
   MangledEncoding encoding = (MangledEncoding)data.GetU8(offset_ptr);
   switch (encoding) {
-  case Empty:
-    return true;
+    case Empty:
+      return true;
 
-  case DemangledOnly:
-    m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
-    return true;
+    case DemangledOnly:
+      m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+      return true;
 
-  case MangledOnly:
-    m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
-    return true;
+    case MangledOnly:
+      m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+      return true;
 
-  case MangledAndDemangled:
-    m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
-    m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
-    return true;
+    case MangledAndDemangled:
+      m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+      m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+      return true;
   }
   return false;
 }
@@ -621,18 +621,18 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
   }
   file.AppendU8(encoding);
   switch (encoding) {
-  case Empty:
-    break;
-  case DemangledOnly:
-    file.AppendU32(strtab.Add(m_demangled));
-    break;
-  case MangledOnly:
-    file.AppendU32(strtab.Add(m_mangled));
-    break;
-  case MangledAndDemangled:
-    file.AppendU32(strtab.Add(m_mangled));
-    file.AppendU32(strtab.Add(m_demangled));
-    break;
+    case Empty:
+      break;
+    case DemangledOnly:
+      file.AppendU32(strtab.Add(m_demangled));
+      break;
+    case MangledOnly:
+      file.AppendU32(strtab.Add(m_mangled));
+      break;
+    case MangledAndDemangled:
+      file.AppendU32(strtab.Add(m_mangled));
+      file.AppendU32(strtab.Add(m_demangled));
+      break;
   }
 }
 

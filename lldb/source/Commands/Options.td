@@ -743,51 +743,44 @@ let Command = "expression" in {
         Groups<[1, 2]>,
         Arg<"Boolean">,
         Desc<"Clean up program state if the expression causes a crash, or "
-             "raises a "
-             "signal. Note, unlike gdb hitting a breakpoint is controlled by "
-             "another "
-             "option (-i).">;
+             "raises a signal. Note, unlike gdb hitting a breakpoint is "
+             "controlled by another option (-i).">;
   def expression_options_debug
       : Option<"debug", "g">,
         Groups<[1, 2]>,
-        Desc<
-            "When specified, debug the JIT code by setting a breakpoint on the "
-            "first instruction and forcing breakpoints to not be ignored (-i0) "
-            "and no "
-            "unwinding to happen on error (-u0).">;
+        Desc<"When specified, debug the JIT code by setting a breakpoint on "
+             "the first instruction and forcing breakpoints to not be ignored "
+             "(-i0) and no unwinding to happen on error (-u0).">;
   def expression_options_language
       : Option<"language", "l">,
         Groups<[1, 2, 3]>,
         Arg<"Language">,
-        Desc<"Specifies the Language to use when parsing the "
-             "expression.  If not set the target.language setting is used.">;
+        Desc<"Specifies the Language to use when parsing the expression.  If "
+             "not set the target.language setting is used.">;
   def expression_options_apply_fixits
       : Option<"apply-fixits", "X">,
         Groups<[1, 2]>,
         Arg<"Boolean">,
-        Desc<"If true, simple fix-it hints will be "
-             "automatically applied to the expression.">;
+        Desc<"If true, simple fix-it hints will be automatically applied to "
+             "the expression.">;
   def expression_options_description_verbosity
       : Option<"description-verbosity", "v">,
         Group<1>,
         OptionalEnumArg<"DescriptionVerbosity">,
         Desc<"How verbose should the output of this expression be, if the "
-             "object "
-             "description is asked for.">;
+             "object description is asked for.">;
   def expression_options_top_level
       : Option<"top-level", "p">,
         Groups<[1, 2]>,
         Desc<"Interpret the expression as a complete translation unit, without "
              "injecting it into the local context.  Allows declaration of "
-             "persistent, "
-             "top-level entities without a $ prefix.">;
+             "persistent, top-level entities without a $ prefix.">;
   def expression_options_allow_jit
       : Option<"allow-jit", "j">,
         Groups<[1, 2]>,
         Arg<"Boolean">,
         Desc<"Controls whether the expression can fall back to being JITted if "
-             "it's "
-             "not supported by the interpreter (defaults to true).">;
+             "it's not supported by the interpreter (defaults to true).">;
   def persistent_result
       : Option<"persistent-result", "\\x01">,
         Groups<[1, 2]>,

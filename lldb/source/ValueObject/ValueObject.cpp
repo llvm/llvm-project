@@ -285,7 +285,6 @@ CompilerType ValueObject::GetCompilerType() {
         return m_override_type;
     }
   }
-
   return compiler_type;
 }
 
