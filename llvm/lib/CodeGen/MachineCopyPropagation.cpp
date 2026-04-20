@@ -426,7 +426,7 @@ public:
 
   void clobberNonPreservedRegs(const BitVector &PreservedRegUnits,
                                const TargetRegisterInfo &TRI,
-                               const TargetInstrInfo &TII, bool UseCopyInstr) {
+                               const TargetInstrInfo &TII) {
     SmallVector<MCRegUnit, 8> UnitsToClobber;
     for (auto &[Unit, _] : Copies)
       if (!PreservedRegUnits.test(static_cast<unsigned>(Unit)))
@@ -441,11 +441,15 @@ public:
       if (RegUnitInfo == Copies.end())
         continue;
 
-      for (MCRegister DstReg : RegUnitInfo->second.DefRegs)
-        for (MCRegUnit DstUnit : TRI.regunits(DstReg))
-          if (!PreservedRegUnits.test(static_cast<unsigned>(DstUnit)))
-            if (auto CI = Copies.find(DstUnit); CI != Copies.end())
+      for (MCRegister DstReg : RegUnitInfo->second.DefRegs) {
+        for (MCRegUnit DstUnit : TRI.regunits(DstReg)) {
+          if (!PreservedRegUnits.test(static_cast<unsigned>(DstUnit))) {
+            if (auto CI = Copies.find(DstUnit); CI != Copies.end()) {
               CI->second.Avail = false;
+            }
+          }
+        }
+      }
       Copies.erase(RegUnitInfo);
     }
   }
@@ -1400,8 +1404,10 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
   auto IsSpillReloadPair = [&](const MachineInstr &Spill,
                                const MachineInstr &Reload) {
     std::optional<DestSourcePair> FoldableSpillCopy = GetFoldableCopy(Spill);
+    if (!FoldableSpillCopy)
+      return false;
     std::optional<DestSourcePair> FoldableReloadCopy = GetFoldableCopy(Reload);
-    if (!FoldableReloadCopy || !FoldableSpillCopy)
+    if (!FoldableSpillCopy)
       return false;
     return FoldableSpillCopy->Source->getReg() ==
                FoldableReloadCopy->Destination->getReg() &&
@@ -1412,9 +1418,11 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
   auto IsChainedCopy = [&](const MachineInstr &Prev,
                            const MachineInstr &Current) {
     std::optional<DestSourcePair> FoldablePrevCopy = GetFoldableCopy(Prev);
+    if (!FoldablePrevCopy)
+      return false;
     std::optional<DestSourcePair> FoldableCurrentCopy =
         GetFoldableCopy(Current);
-    if (!FoldablePrevCopy || !FoldableCurrentCopy)
+    if (!FoldableCurrentCopy)
       return false;
     return FoldablePrevCopy->Source->getReg() ==
            FoldableCurrentCopy->Destination->getReg();
@@ -1430,8 +1438,8 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
       for (const MachineOperand &MO : MI.operands()) {
         if (MO.isRegMask()) {
           BitVector &PreservedRegUnits = Tracker.getPreservedRegUnits(MO, *TRI);
-          Tracker.clobberNonPreservedRegs(PreservedRegUnits, *TRI, *TII,
-                                          UseCopyInstr);
+          Tracker.clobberNonPreservedRegs(PreservedRegUnits, *TRI, *TII);
+          continue;
         }
         if (!MO.isReg())
           continue;
