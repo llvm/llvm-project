@@ -12,7 +12,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
 
-namespace {
 template <typename... Ts>
 llvm::Error makeSawButExpectedError(const llvm::json::Value &Saw,
                                     llvm::StringRef Expected,
@@ -22,7 +21,6 @@ llvm::Error makeSawButExpectedError(const llvm::json::Value &Saw,
 
   return llvm::createStringError(Fmt.c_str(), SawStr.c_str(), ExpectedArgs...);
 }
-} // namespace
 
 namespace clang::ssaf {
 llvm::json::Value
