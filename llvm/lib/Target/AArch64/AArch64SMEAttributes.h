@@ -194,15 +194,6 @@ public:
            !callee().hasAgnosticZAInterface();
   }
 
-  bool requiresDisablingZABeforeCall() const {
-    return caller().hasZT0State() && !caller().hasZAState() &&
-           callee().hasPrivateZAInterface() && !callee().isSMEABIRoutine();
-  }
-
-  bool requiresEnablingZAAfterCall() const {
-    return requiresDisablingZABeforeCall();
-  }
-
   bool requiresPreservingAllZAState() const {
     return caller().hasAgnosticZAInterface() &&
            !callee().hasAgnosticZAInterface() && !callee().isSMEABIRoutine();
