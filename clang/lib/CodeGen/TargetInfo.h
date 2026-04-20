@@ -312,12 +312,18 @@ public:
   virtual llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const;
 
-  /// Get target favored AST address space of a global variable for languages
-  /// other than OpenCL and CUDA.
-  /// If \p D is nullptr, returns the default target favored address space
-  /// for global variable.
-  virtual LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                          const VarDecl *D) const;
+  /// Adjust the address space proposed by the code generator for \p D.
+  /// If \p AS is empty, it means language semantics did not specify any address
+  /// space for this \p D.
+  ///
+  /// Can be used by targets to further refine the chosen address space for a
+  /// declaration.
+  virtual LangAS adjustGlobalVarAddressSpace(CodeGenModule &CGM,
+                                             const VarDecl *D,
+                                             std::optional<LangAS> AS) const;
+
+  /// Get the AST address space for alloca.
+  virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
   /// Get the address space for an indirect (sret) return of the given type.
   /// The default falls back to the alloca AS.

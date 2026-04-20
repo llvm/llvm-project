@@ -136,12 +136,11 @@ llvm::Constant *TargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &
   return llvm::ConstantPointerNull::get(T);
 }
 
-LangAS TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                                   const VarDecl *D) const {
-  assert(!CGM.getLangOpts().OpenCL &&
-         !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
-         "Address space agnostic languages only");
-  return D ? D->getType().getAddressSpace() : LangAS::Default;
+LangAS TargetCodeGenInfo::adjustGlobalVarAddressSpace(
+    CodeGenModule &CGM, const VarDecl *D, std::optional<LangAS> AS) const {
+  if (!AS)
+    return D ? D->getType().getAddressSpace() : LangAS::Default;
+  return *AS;
 }
 
 StringRef
