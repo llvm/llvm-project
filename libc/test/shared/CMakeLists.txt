@@ -290,6 +290,12 @@ add_fp_unittest(
     libc.src.__support.math.copysignf128
     libc.src.__support.math.copysignf16
     libc.src.__support.math.copysignl
+    libc.src.__support.math.floor
+    libc.src.__support.math.floorbf16
+    libc.src.__support.math.floorf
+    libc.src.__support.math.floorf128
+    libc.src.__support.math.floorf16
+    libc.src.__support.math.floorl
     libc.src.__support.math.log
     libc.src.__support.math.logbbf16
 )
