@@ -283,6 +283,10 @@ class ProfiledBinary {
   std::set<uint64_t> UncondBranchAddrSet;
   // A set of branch instruction addresses.
   std::unordered_set<uint64_t> BranchAddressSet;
+  // A set of indirect branch instruction addresses.
+  std::unordered_set<uint64_t> IndirectBranchAddressSet;
+  // A set of branch target addresses (destinations of branches/calls).
+  std::unordered_set<uint64_t> BranchTargetAddressSet;
 
   // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;
@@ -479,6 +483,12 @@ public:
     return ProEpilogTracker.PrologEpilogSet.count(Address);
   }
 
+  bool addressIsBranchTarget(uint64_t Address) const {
+    return BranchTargetAddressSet.count(Address);
+  }
+  bool addressIsIndirectBranch(uint64_t Address) const {
+    return IndirectBranchAddressSet.count(Address);
+  }
   bool addressIsTransfer(uint64_t Address) {
     return BranchAddressSet.count(Address) || RetAddressSet.count(Address) ||
            CallAddressSet.count(Address);

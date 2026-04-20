@@ -645,6 +645,8 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       if (MCDesc.isCall()) {
         CallAddressSet.insert(Address);
         UncondBranchAddrSet.insert(Address);
+        // Record the instruction after call as the branch target of a ret
+        BranchTargetAddressSet.insert(Address + Size);
       } else if (MCDesc.isReturn()) {
         RetAddressSet.insert(Address);
         UncondBranchAddrSet.insert(Address);
@@ -652,6 +654,17 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
         if (MCDesc.isUnconditionalBranch())
           UncondBranchAddrSet.insert(Address);
         BranchAddressSet.insert(Address);
+      }
+
+      if (MCDesc.isIndirectBranch()) {
+        IndirectBranchAddressSet.insert(Address);
+      }
+
+      // Record branch target addresses for branches and calls.
+      if (MCDesc.isCall() || MCDesc.isBranch()) {
+        uint64_t Target = 0;
+        if (MIA->evaluateBranch(Inst, Address, Size, Target))
+          BranchTargetAddressSet.insert(Target);
       }
 
       // Record potential call targets for tail frame inference later-on.
