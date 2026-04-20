@@ -1,12 +1,12 @@
 # RUN: llvm-objdump --unwind-info %p/Inputs/compact-unwind.macho-x86_64 | FileCheck %s
 
-# CHECK: Contents of __compact_unwind section:
+# CHECK:      Contents of __compact_unwind section:
 # CHECK-NEXT:   Entry at offset 0x0:
 # CHECK-NEXT:     start:                0x1 __Z10test_throwv + 0x1
 # CHECK-NEXT:     length:               0x44
 # CHECK-NEXT:     compact encoding:     0x01000000
-# CHECK-NOT: personality function
-# CHECK-NOT: LSDA
+# CHECK-NOT:  personality function
+# CHECK-NOT:  LSDA
 # CHECK-NEXT:   Entry at offset 0x20:
 # CHECK-NEXT:     start:                0x50 __Z11test_catch1v
 # CHECK-NEXT:     length:               0x71
@@ -23,5 +23,5 @@
 # CHECK-NEXT:     start:                0x150 __Z3foov
 # CHECK-NEXT:     length:               0x25
 # CHECK-NEXT:     compact encoding:     0x01000000
-# CHECK-NOT: personality function
-# CHECK-NOT: LSDA
+# CHECK-NOT:  personality function
+# CHECK-NOT:  LSDA

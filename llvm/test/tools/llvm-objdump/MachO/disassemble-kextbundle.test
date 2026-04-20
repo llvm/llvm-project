@@ -1,6 +1,6 @@
 // RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/kextbundle.macho-x86_64 | FileCheck %s
 
-CHECK: (__TEXT,__text) section
+CHECK:      (__TEXT,__text) section
 CHECK-NEXT: _foo:
 CHECK-NEXT: 0000000000000fb0	pushq	%rbp
 CHECK-NEXT: 0000000000000fb1	movq	%rsp, %rbp

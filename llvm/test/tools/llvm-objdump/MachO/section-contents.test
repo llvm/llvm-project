@@ -1,6 +1,6 @@
 RUN: llvm-objdump --macho -s %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
-CHECK: Contents of section __TEXT,__text:
+CHECK:      Contents of section __TEXT,__text:
 CHECK-NEXT:  0000 554889e5 4883ec20 488d0500 000000c7  UH..H.. H.......
 CHECK-NEXT:  0010 45fc0000 0000897d f8488975 f0488955  E......}.H.u.H.U
 CHECK-NEXT:  0020 e84889c7 b000e800 000000b9 00000000  .H..............
