@@ -1390,14 +1390,15 @@ void mif::populateMIFOpConversionPatterns(
     mlir::RewritePatternSet &patterns) {
   patterns.insert<MIFAllocCoarrayOpConversion>(patterns.getContext(), &dl,
                                                &converter);
-  patterns.insert<
-      MIFInitOpConversion, MIFThisImageOpConversion, MIFNumImagesOpConversion,
-      MIFSyncAllOpConversion, MIFSyncImagesOpConversion,
-      MIFSyncMemoryOpConversion, MIFSyncTeamOpConversion,
-      MIFCoBroadcastOpConversion, MIFCoMaxOpConversion, MIFCoMinOpConversion,
-      MIFCoSumOpConversion, MIFFormTeamOpConversion, MIFChangeTeamOpConversion,
-      MIFGetTeamOpConversion, MIFTeamNumberOpConversion,
-      MIFDeallocCoarrayOpConversion, MIFCoshapeOpConversion,
-      MIFLcoboundOpConversion, MIFUcoboundOpConversion,
-      MIFImageIndexOpConversion>(patterns.getContext());
+  patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
+                  MIFNumImagesOpConversion, MIFSyncAllOpConversion,
+                  MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,
+                  MIFSyncTeamOpConversion, MIFCoBroadcastOpConversion,
+                  MIFCoMaxOpConversion, MIFCoMinOpConversion,
+                  MIFCoSumOpConversion, MIFFormTeamOpConversion,
+                  MIFChangeTeamOpConversion, MIFGetTeamOpConversion,
+                  MIFTeamNumberOpConversion, MIFDeallocCoarrayOpConversion,
+                  MIFCoshapeOpConversion, MIFLcoboundOpConversion,
+                  MIFUcoboundOpConversion, MIFImageIndexOpConversion>(
+      patterns.getContext());
 }
