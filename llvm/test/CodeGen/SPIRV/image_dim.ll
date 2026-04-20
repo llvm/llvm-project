@@ -5,6 +5,7 @@
 
 ;; OpenCL: 1D and Buffer sampled images require Sampled1D and SampledBuffer.
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %t/opencl.ll -o - | FileCheck %s --check-prefix=CHECK-OPENCL
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %t/opencl.ll -o - -filetype=obj | spirv-val %}
 
 ;; Vulkan: 2D multisampled storage images require StorageImageMultisample;
 ;;         2D multisampled arrayed images additionally require ImageMSArray.
