@@ -50,7 +50,6 @@ for.end:
   ret double %Sum.0
 }
 
-declare double @llvm.sin.f64(double) #0
 declare <2 x double> @__sind2_P8(<2 x double>) #0
 attributes #0 = { nounwind readnone speculatable willreturn }
 attributes #1 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(__sind2_P8)" }

@@ -56,6 +56,9 @@ def DestructiveTernaryCommWithRev : DestructiveInstTypeEnum<8>;
 def Destructive2xRegImmUnpred     : DestructiveInstTypeEnum<9>;
 
 def DestructiveUnaryPassthru      : DestructiveInstTypeEnum<10>;
+// Preferable to select a destination register that is distinct
+// from the governing predicate.
+def DestructivePredicate          : DestructiveInstTypeEnum<11>;
 
 class FalseLanesEnum<bits<2> val> {
   bits<2> Value = val;
@@ -1876,7 +1879,7 @@ class STSHHI
     : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
       Sched<[WriteHint]> {
   bits<3> policy;
-  let Inst{20-12} = 0b000011001;
+  let Inst{20-12} = 0b000110010;
   let Inst{11-8} = 0b0110;
   let Inst{7-5} = policy;
 }

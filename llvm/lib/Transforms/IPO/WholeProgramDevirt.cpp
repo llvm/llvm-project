@@ -2026,8 +2026,7 @@ bool DevirtModule::tryVirtualConstProp(
 
     if (CSByConstantArg.second.isExported()) {
       ResByArg->TheKind = WholeProgramDevirtResolution::ByArg::VirtualConstProp;
-      exportConstant(Slot, CSByConstantArg.first, "byte", OffsetByte,
-                     ResByArg->Byte);
+      ResByArg->Byte = OffsetByte;
       exportConstant(Slot, CSByConstantArg.first, "bit", 1ULL << OffsetBit,
                      ResByArg->Bit);
     }
@@ -2309,8 +2308,7 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
       break;
     }
     case WholeProgramDevirtResolution::ByArg::VirtualConstProp: {
-      Constant *Byte = importConstant(Slot, CSByConstantArg.first, "byte",
-                                      Int32Ty, ResByArg.Byte);
+      Constant *Byte = ConstantInt::get(Int32Ty, ResByArg.Byte);
       Constant *Bit = importConstant(Slot, CSByConstantArg.first, "bit", Int8Ty,
                                      ResByArg.Bit);
       applyVirtualConstProp(CSByConstantArg.second, "", Byte, Bit);

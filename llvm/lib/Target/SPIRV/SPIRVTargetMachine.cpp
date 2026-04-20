@@ -66,7 +66,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVEmitNonSemanticDIPass(PR);
   initializeSPIRVPrepareFunctionsPass(PR);
   initializeSPIRVPrepareGlobalsPass(PR);
-  initializeSPIRVStripConvergentIntrinsicsPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
 }
 
@@ -223,9 +222,13 @@ void SPIRVPassConfig::addISelPrepare() {
     // 5. Reduce the amount of variables required by pushing some operations
     // back to virtual registers.
     addPass(createPromoteMemoryToRegisterPass());
+  } else {
+    // Canonicalize loops so they have a single latch and preheader.
+    // This enables OpLoopMerge emission for non-shader targets.
+    addPass(createLoopSimplifyPass());
   }
   SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
-  addPass(createSPIRVStripConvergenceIntrinsicsPass());
+  addPass(createStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
   addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
@@ -261,14 +264,15 @@ bool SPIRVPassConfig::addRegBankSelect() {
 
 static cl::opt<bool> SPVEnableNonSemanticDI(
     "spv-emit-nonsemantic-debug-info",
-    cl::desc("Emit SPIR-V NonSemantic.Shader.DebugInfo.100 instructions"),
+    cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
+             "instructions"),
     cl::Optional, cl::init(false));
 
 void SPIRVPassConfig::addPreEmitPass() {
-  if (SPVEnableNonSemanticDI ||
-      getSPIRVTargetMachine().getTargetTriple().getVendor() == Triple::AMD) {
-    addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
-  }
+  // The SPIRVEmitNonSemanticDI pass self-activates when the module contains
+  // debug info (llvm.dbg.cu). --spv-emit-nonsemantic-debug-info is a
+  // deprecated synonym for -g.
+  addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
 }
 
 namespace {

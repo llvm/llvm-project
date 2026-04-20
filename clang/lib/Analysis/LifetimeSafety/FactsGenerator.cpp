@@ -37,6 +37,14 @@ OriginList *FactsGenerator::getOriginsList(const Expr &E) {
   return FactMgr.getOriginMgr().getOrCreateList(&E);
 }
 
+bool FactsGenerator::hasOrigins(QualType QT) const {
+  return FactMgr.getOriginMgr().hasOrigins(QT);
+}
+
+bool FactsGenerator::hasOrigins(const Expr *E) const {
+  return FactMgr.getOriginMgr().hasOrigins(E);
+}
+
 /// Propagates origin information from Src to Dst through all levels of
 /// indirection, creating OriginFlowFacts at each level.
 ///
@@ -95,6 +103,7 @@ void FactsGenerator::run() {
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
     EscapesInCurrentBlock.clear();
+    CurrentBlock = Block;
     if (Block == &Cfg.getEntry())
       CurrentBlockFacts.append(PlaceholderLoanFacts.begin(),
                                PlaceholderLoanFacts.end());
@@ -180,14 +189,22 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     handleGSLPointerConstruction(CCE);
     return;
   }
-  // Implicit copy/move constructors of lambda closures lack
-  // [[clang::lifetimebound]], so `handleFunctionCall` cannot propagate origins.
-  // Handle them directly to keep the origin chain intact (e.g., `return
-  // lambda;` copies the closure).
+  // For defaulted (implicit or `= default`) copy/move constructors, propagate
+  // origins directly. User-defined copy/move constructors are not handled here
+  // as they have opaque semantics.
+  if (CCE->getConstructor()->isCopyOrMoveConstructor() &&
+      CCE->getConstructor()->isDefaulted() && CCE->getNumArgs() == 1 &&
+      hasOrigins(CCE->getType())) {
+    const Expr *Arg = CCE->getArg(0);
+    if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
+      flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+      return;
+    }
+  }
+  // Standard library callable wrappers (e.g., std::function) propagate the
+  // stored lambda's origins.
   if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
-      RD && RD->isLambda() &&
-      CCE->getConstructor()->isCopyOrMoveConstructor() &&
-      CCE->getNumArgs() == 1) {
+      RD && isStdCallableWrapperType(RD) && CCE->getNumArgs() == 1) {
     const Expr *Arg = CCE->getArg(0);
     if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
       flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
@@ -197,6 +214,11 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
   handleFunctionCall(CCE, CCE->getConstructor(),
                      {CCE->getArgs(), CCE->getNumArgs()},
                      /*IsGslConstruction=*/false);
+}
+
+void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
+  if (const Expr *Init = DIE->getExpr())
+    killAndFlowOrigin(*DIE, *Init);
 }
 
 void FactsGenerator::handleCXXCtorInitializer(const CXXCtorInitializer *CII) {
@@ -257,17 +279,16 @@ void FactsGenerator::VisitCXXNullPtrLiteralExpr(
   getOriginsList(*N);
 }
 
-void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
-  OriginList *Dest = getOriginsList(*ICE);
+void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
+  OriginList *Dest = getOriginsList(*CE);
   if (!Dest)
     return;
-  const Expr *SubExpr = ICE->getSubExpr();
+  const Expr *SubExpr = CE->getSubExpr();
   OriginList *Src = getOriginsList(*SubExpr);
 
-  switch (ICE->getCastKind()) {
+  switch (CE->getCastKind()) {
   case CK_LValueToRValue:
-    // TODO: Decide what to do for x-values here.
-    if (!SubExpr->isLValue())
+    if (!SubExpr->isGLValue())
       return;
 
     assert(Src && "LValue being cast to RValue has no origin list");
@@ -275,11 +296,11 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     // `int *p, *q; p = q;`) should propagate the inner origin (what the pointer
     // points to), not the outer origin (the pointer's storage location). Strip
     // the outer lvalue origin.
-    flow(getOriginsList(*ICE), getRValueOrigins(SubExpr, Src),
+    flow(getOriginsList(*CE), getRValueOrigins(SubExpr, Src),
          /*Kill=*/true);
     return;
   case CK_NullToPointer:
-    getOriginsList(*ICE);
+    getOriginsList(*CE);
     // TODO: Flow into them a null origin.
     return;
   case CK_NoOp:
@@ -364,18 +385,59 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // assigned.
   RHSList = getRValueOrigins(RHSExpr, RHSList);
 
-  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
-    markUseAsWrite(DRE_LHS);
+  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
+    QualType QT = DRE_LHS->getDecl()->getType();
+    if (QT->isReferenceType()) {
+      if (hasOrigins(QT->getPointeeType())) {
+        // Writing through a reference uses the binding but overwrites the
+        // pointee. Model this as a Read of the outer origin (keeping the
+        // binding live) and a Write of the inner origins (killing the pointee's
+        // liveness).
+        if (UseFact *UF = UseFacts.lookup(DRE_LHS)) {
+          const OriginList *FullList = UF->getUsedOrigins();
+          assert(FullList);
+          UF->setUsedOrigins(FactMgr.getOriginMgr().createSingleOriginList(
+              FullList->getOuterOriginID()));
+          if (const OriginList *InnerList = FullList->peelOuterOrigin()) {
+            UseFact *WriteUF = FactMgr.createFact<UseFact>(DRE_LHS, InnerList);
+            WriteUF->markAsWritten();
+            CurrentBlockFacts.push_back(WriteUF);
+          }
+        }
+      }
+    } else
+      markUseAsWrite(DRE_LHS);
+  }
+  if (!RHSList) {
+    // RHS has no tracked origins (e.g., assigning a callable without origins
+    // to std::function). Clear loans of the destination.
+    for (OriginList *LHSInner = LHSList->peelOuterOrigin(); LHSInner;
+         LHSInner = LHSInner->peelOuterOrigin())
+      CurrentBlockFacts.push_back(
+          FactMgr.createFact<KillOriginFact>(LHSInner->getOuterOriginID()));
+    return;
+  }
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
 }
 
+void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
+  if (Expr *RHS = BO->getRHS(); RHS->getType()->isPointerType()) {
+    killAndFlowOrigin(*BO, *RHS);
+    return;
+  }
+  Expr *LHS = BO->getLHS();
+  assert(LHS->getType()->isPointerType() &&
+         "Pointer arithmetic must have a pointer operand");
+  killAndFlowOrigin(*BO, *LHS);
+}
+
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
-  // TODO: Handle pointer arithmetic (e.g., `p + 1` or `1 + p`) where the
-  // result should have the same loans as the pointer operand.
   if (BO->isCompoundAssignmentOp())
     return;
+  if (BO->getType()->isPointerType() && BO->isAdditiveOp())
+    handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());
@@ -383,12 +445,58 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
-  if (hasOrigins(CO)) {
-    // Merge origins from both branches of the conditional operator.
-    // We kill to clear the initial state and merge both origins into it.
-    killAndFlowOrigin(*CO, *CO->getTrueExpr());
-    flowOrigin(*CO, *CO->getFalseExpr());
+  if (!hasOrigins(CO))
+    return;
+
+  const Expr *TrueExpr = CO->getTrueExpr();
+  const Expr *FalseExpr = CO->getFalseExpr();
+
+  const auto Preds = CurrentBlock->preds();
+
+  // Skip origin flow from conditional operator arms that cannot produce the
+  // result value: throw arms and calls to noreturn functions.
+  bool TBHasEdge = true;
+  bool FBHasEdge = true;
+
+  switch (CurrentBlock->pred_size()) {
+  case 0:
+    return;
+  case 1: {
+    TBHasEdge = llvm::any_of(**Preds.begin(),
+                             [ExpectedStmt = TrueExpr->IgnoreParenImpCasts()](
+                                 const CFGElement &Elt) {
+                               if (auto CS = Elt.getAs<CFGStmt>())
+                                 return CS->getStmt() == ExpectedStmt;
+                               return false;
+                             });
+    FBHasEdge = !TBHasEdge;
+    break;
   }
+  case 2: {
+    const auto *It = Preds.begin();
+    TBHasEdge = It->isReachable();
+    FBHasEdge = (++It)->isReachable();
+    break;
+  }
+  default:
+    llvm_unreachable("expected at most 2 predecessors");
+    return;
+  }
+
+  bool FirstFlow = true;
+  auto HandleFlow = [&](const Expr *E) {
+    if (FirstFlow) {
+      killAndFlowOrigin(*CO, *E);
+      FirstFlow = false;
+    } else {
+      flowOrigin(*CO, *E);
+    }
+  };
+
+  if (TBHasEdge)
+    HandleFlow(TrueExpr);
+  if (FBHasEdge)
+    HandleFlow(FalseExpr);
 }
 
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
@@ -396,8 +504,28 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
   // and are handled separately.
   if (OCE->getOperator() == OO_Equal && OCE->getNumArgs() == 2 &&
       hasOrigins(OCE->getArg(0)->getType())) {
-    handleAssignment(OCE->getArg(0), OCE->getArg(1));
-    return;
+    // Pointer-like types: assignment inherently propagates origins.
+    QualType LHSTy = OCE->getArg(0)->getType();
+    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
+        isGslOwnerType(LHSTy)) {
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
+    // Standard library callable wrappers (e.g., std::function) can propagate
+    // the stored lambda's origins.
+    if (const auto *RD = LHSTy->getAsCXXRecordDecl();
+        RD && isStdCallableWrapperType(RD)) {
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
+    // Other tracked types: only defaulted operator= propagates origins.
+    // User-defined operator= has opaque semantics, so don't handle them now.
+    if (const auto *MD =
+            dyn_cast_or_null<CXXMethodDecl>(OCE->getDirectCallee());
+        MD && MD->isDefaulted()) {
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
   }
 
   ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
@@ -414,8 +542,7 @@ void FactsGenerator::VisitCXXFunctionalCastExpr(
   // expression.
   if (handleTestPoint(FCE))
     return;
-  if (isGslPointerType(FCE->getType()))
-    killAndFlowOrigin(*FCE, *FCE->getSubExpr());
+  VisitCastExpr(FCE);
 }
 
 void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
@@ -625,6 +752,38 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
         ThisList->getOuterOriginID(), Call));
 }
 
+void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
+                                                   const FunctionDecl *FD) {
+  const auto *MemberCall = dyn_cast_or_null<CXXMemberCallExpr>(Call);
+  if (!MemberCall)
+    return;
+
+  if (!isa_and_present<CXXThisExpr>(
+          MemberCall->getImplicitObjectArgument()->IgnoreImpCasts()))
+    return;
+
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  assert(MD && "Function must be a CXXMethodDecl for member calls");
+
+  const auto *ClassDecl = MD->getParent()->getDefinition();
+  if (!ClassDecl)
+    return;
+
+  const auto UseFields = [&](const CXXRecordDecl *RD) {
+    for (const auto *Field : RD->fields())
+      if (auto *FieldList = getOriginsList(*Field))
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<UseFact>(Call, FieldList));
+  };
+
+  UseFields(ClassDecl);
+
+  ClassDecl->forallBases([&](const CXXRecordDecl *Base) {
+    UseFields(Base);
+    return true;
+  });
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -639,12 +798,13 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     handleUse(Arg);
   handleInvalidatingCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
+  handleImplicitObjectFieldUses(Call, FD);
   if (!CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
     const ParmVarDecl *PVD = nullptr;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-        Method && Method->isInstance()) {
+        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
@@ -686,9 +846,23 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         ArgList = getRValueOrigins(Args[I], ArgList);
       }
       if (isGslOwnerType(Args[I]->getType())) {
-        // GSL construction creates a view that borrows from arguments.
-        // This implies flowing origins through the list structure.
-        flow(CallList, ArgList, KillSrc);
+        // The constructed gsl::Pointer borrows from the Owner's storage, not
+        // from what the Owner itself borrows, so only the outermost origin is
+        // needed.
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
+            KillSrc));
+        KillSrc = false;
+      } else if (IsArgLifetimeBound(I)) {
+        // Only flow the outer origin here. For lifetimebound args in
+        // gsl::Pointer construction, we do not have enough information to
+        // safely match inner origins, so the source and
+        // destination origin lists may have different lengths.
+        // FIXME: Handle origin-shape mismatches gracefully so we can also flow
+        // inner origins.
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
+            KillSrc));
         KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {

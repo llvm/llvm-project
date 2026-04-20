@@ -1416,9 +1416,16 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
     return;
 
   SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
-  if (const auto CandidateRPath = TC.getStdlibPath())
-    CandidateRPaths.emplace_back(*CandidateRPath);
-
+  if (const auto StdlibPath = TC.getStdlibPath()) {
+    for (const Multilib &M : llvm::reverse(TC.getSelectedMultilibs())) {
+      if (M.isDefault())
+        continue;
+      SmallString<128> P(*StdlibPath);
+      llvm::sys::path::append(P, M.gccSuffix());
+      CandidateRPaths.emplace_back(std::string(P));
+    }
+    CandidateRPaths.emplace_back(*StdlibPath);
+  }
   for (const auto &CandidateRPath : CandidateRPaths) {
     if (TC.getVFS().exists(CandidateRPath)) {
       CmdArgs.push_back("-rpath");
@@ -1490,7 +1497,7 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
   // information using -fopenmp-targets= option.
   constexpr llvm::StringLiteral Targets("--offload-targets=");
 
-  SmallVector<std::string> Triples;
+  SmallVector<StringRef> Triples;
   auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
   std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
                  [](auto TC) { return TC.second->getTripleString(); });

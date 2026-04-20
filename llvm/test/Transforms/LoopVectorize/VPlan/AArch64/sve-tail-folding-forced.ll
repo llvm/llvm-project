@@ -23,8 +23,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
+; VPLANS-NEXT:   vp<[[INDV:%[0-9]+]]> = CANONICAL-IV
+; VPLANS-EMPTY:
 ; VPLANS-NEXT:   vector.body:
-; VPLANS-NEXT:     EMIT vp<[[INDV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[LANEMASK_PHI:%[0-9]+]]> = phi vp<[[LANEMASK_ENTRY]]>, vp<[[LANEMASK_LOOP:%.+]]>
 ; VPLANS-NEXT:     vp<[[STEP:%[0-9]+]]>    = SCALAR-STEPS vp<[[INDV]]>, ir<1>, vp<[[VF]]>
 ; VPLANS-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEP]]>
@@ -68,7 +69,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep = getelementptr i32, ptr %ptr, i64 %index
   store i32 %val, ptr %gep
@@ -76,7 +77,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 

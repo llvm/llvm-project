@@ -4092,11 +4092,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = TLBI->NeedsReg;
-    bool hasTLBID = getSTI().hasFeature(AArch64::FeatureTLBID);
-    if (hasAll || hasTLBID) {
-      OptionalRegister = TLBI->OptionalReg;
-    }
+    ExpectRegister = TLBI->RegUse == REG_REQUIRED;
+    if (hasAll || hasTLBID)
+      OptionalRegister = TLBI->RegUse == REG_OPTIONAL;
     createSysAlias(TLBI->Encoding, Operands, S);
   } else if (Mnemonic == "mlbi") {
     const AArch64MLBI::MLBI *MLBI = AArch64MLBI::lookupMLBIByName(Op);
@@ -4140,10 +4138,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(PLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = PLBI->NeedsReg;
-    if (hasAll || hasTLBID) {
-      OptionalRegister = PLBI->OptionalReg;
-    }
+    ExpectRegister = PLBI->RegUse == REG_REQUIRED;
+    if (hasAll || hasTLBID)
+      OptionalRegister = PLBI->RegUse == REG_OPTIONAL;
     createSysAlias(PLBI->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" ||
              Mnemonic == "cosp") {
@@ -4264,12 +4261,10 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
     const AArch64TLBIP::TLBIP *TLBIP = AArch64TLBIP::lookupTLBIPByName(Op);
     if (!TLBIP)
       return TokError("invalid operand for TLBIP instruction");
-    if (!getSTI().hasFeature(AArch64::FeatureD128) &&
-        !getSTI().hasFeature(AArch64::FeatureAll))
-      return TokError("instruction requires: d128");
+
     if (!TLBIP->haveFeatures(getSTI().getFeatureBits())) {
       std::string Str("instruction requires: ");
-      setRequiredFeatureString(TLBIP->getRequiredFeatures(), Str);
+      Str += TLBIP->AllowWithTLBID ? "tlbid or d128" : "d128";
       return TokError(Str);
     }
     createSysAlias(TLBIP->Encoding, Operands, S);
@@ -5636,6 +5631,12 @@ static inline bool isMatchingOrAlias(MCRegister ZReg, MCRegister Reg) {
          (ZReg == ((Reg - AArch64::Z0) + AArch64::Z0));
 }
 
+static bool isMovPrfxable(unsigned TSFlags) {
+  unsigned Flags = TSFlags & AArch64::DestructiveInstTypeMask;
+  return Flags != AArch64::NotDestructive &&
+         Flags != AArch64::DestructivePredicate;
+}
+
 // FIXME: This entire function is a giant hack to provide us with decent
 // operand range validation/diagnostics until TableGen/MC can be extended
 // to support autogeneration of this kind of validation.
@@ -5659,8 +5660,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
       (Inst.getOpcode() != AArch64::HLT)) {
 
     // Prefixed instructions must have a destructive operand.
-    if ((MCID.TSFlags & AArch64::DestructiveInstTypeMask) ==
-        AArch64::NotDestructive)
+    if (!isMovPrfxable(MCID.TSFlags))
       return Error(IDLoc, "instruction is unpredictable when following a"
                    " movprfx, suggest replacing movprfx with mov");
 

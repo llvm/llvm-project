@@ -96,7 +96,7 @@ bool Variable::NameMatches(ConstString name) const {
   return m_mangled.NameMatches(name);
 }
 bool Variable::NameMatches(const RegularExpression &regex) const {
-  if (regex.Execute(m_name.AsCString()))
+  if (regex.Execute(m_name.AsCString(nullptr)))
     return true;
   if (m_mangled)
     return m_mangled.NameMatches(regex);
@@ -578,7 +578,7 @@ static void PrivateAutoComplete(
       case eTypeClassObjCObjectPointer:
       case eTypeClassPointer: {
         bool omit_empty_base_classes = true;
-        if (llvm::expectedToStdOptional(
+        if (llvm::expectedToOptional(
                 compiler_type.GetNumChildren(omit_empty_base_classes, nullptr))
                 .value_or(0))
           request.AddCompletion((prefix_path + "->").str());
@@ -596,7 +596,7 @@ static void PrivateAutoComplete(
 
         if (variable_list) {
           for (const VariableSP &var_sp : *variable_list)
-            request.AddCompletion(var_sp->GetName().AsCString());
+            request.AddCompletion(var_sp->GetName());
         }
       }
     }

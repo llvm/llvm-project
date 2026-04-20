@@ -255,11 +255,7 @@ public:
   /// Prefer using LLDB_LOGF whenever possible.
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
-  void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
   void Verbose(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
-  void Warning(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   const Flags GetOptions() const;
 
@@ -268,7 +264,6 @@ public:
   bool GetVerbose() const;
 
   void VAPrintf(const char *format, va_list args);
-  void VAError(const char *format, va_list args);
   void VAFormatf(llvm::StringRef file, llvm::StringRef function,
                  const char *format, va_list args);
 

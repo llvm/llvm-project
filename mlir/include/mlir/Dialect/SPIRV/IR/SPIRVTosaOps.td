@@ -150,7 +150,7 @@ class SPIRV_TosaBoolElementwiseBinaryOp<string mnemonic, int opcode, list<Trait>
 }
 
 class SPIRV_TosaConvolutionOp<string mnemonic, int opcode, list<Trait> traits = []> :
-  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [Pure,
+  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [NoMemoryEffect,
     TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
     TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
     TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
@@ -273,7 +273,7 @@ def SPIRV_TosaArgMaxOp : SPIRV_TosaOpWithResult<"ArgMax", 0, [Pure,
 }
 
 
-def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [Pure,
+def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [NoMemoryEffect,
   TypeImpliesAccType<"input", I8, ["INT32"]>,
   TypeImpliesAccType<"input", I16, ["INT32"]>,
   TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
@@ -287,7 +287,8 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [Pure,
     window of size given by <kernel size> is passed over the input tensor, with
     the mean value being placed in the output tensor. When calculating the
     average, only the number of valid input tensor values, but not padding, are
-    used to calculate the divisor.
+    used to calculate the divisor. The behaviour is undefined if the accumulated
+    result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_avg_pool2d
@@ -343,6 +344,8 @@ def SPIRV_TosaConv2DOp : SPIRV_TosaConvolutionOp<"Conv2D", 2> {
 
     Input and weight have respective zero point values provided in input_zp and weight_zp.
 
+    The behaviour is undefined if the accumulated result overflows or underflows.
+
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_conv2d
       * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_conv2d
@@ -395,6 +398,8 @@ def SPIRV_TosaConv3DOp : SPIRV_TosaConvolutionOp<"Conv3D", 3> {
     may choose to skip calculation of multiplies in the padding area.
 
     Input and weight have respective zero point values provided in input_zp and weight_zp.
+
+    The behaviour is undefined if the accumulated result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_conv3d
@@ -449,6 +454,8 @@ def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4> 
     calculation of multiplies in the padding area.
 
     Input and weight have respective zero point values provided in input_zp and weight_zp.
+
+    The behaviour is undefined if the accumulated result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_depthwise_conv2d
@@ -546,7 +553,7 @@ def SPIRV_TosaFFT2DOp : SPIRV_TosaOpWithComplexResult<"FFT2D", 5, [Pure]> {
 }
 
 
-def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [Pure,
+def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [NoMemoryEffect,
   TypeConstraintImplicationOn<"A", I8, "output", [I32]>,
   TypeConstraintImplicationOn<"A", I16, "output", [I64]>,
   TypeConstraintImplicationOn<"A", BF16, "output", [F32]>,
@@ -557,7 +564,10 @@ def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [Pure,
 
   let description = [{
     Performs two dimensional matrix multiplications.
+
     A, B are the inputs with respective zero point values in A_zp, B_zp.
+
+    The behaviour is undefined if the accumulated result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_matmul
@@ -707,6 +717,8 @@ def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9> 
     by zero at fractional input positions.
 
     Input and weight have respective zero point values provided in input_zp and weight_zp.
+
+    The behaviour is undefined if the accumulated result overflows or underflows.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_transpose_conv2d
@@ -2643,6 +2655,185 @@ def SPIRV_TosaResizeOp : SPIRV_TosaOpWithResult<"Resize", 63, [Pure,
     }
     ::mlir::spirv::TensorArmType getBorderType() {
       return cast<::mlir::spirv::TensorArmType>(getBorder().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaCastOp : SPIRV_TosaOpWithResult<"Cast", 64, [Pure,
+  AllShapesMatch<["input", "output"]>,
+  TypeConstraintImplicationOn<"input", F16, "output", [F32, I16, I32, I8]>,
+  TypeConstraintImplicationOn<"input", F32, "output", [F16, I16, I32, I8, BF16]>,
+  TypeConstraintImplicationOn<"input", I16, "output", [F16, F32, I32, I8, SPIRV_Bool, BF16]>,
+  TypeConstraintImplicationOn<"input", I32, "output", [F16, F32, I16, I8, SPIRV_Bool, BF16]>,
+  TypeConstraintImplicationOn<"input", I8, "output", [F16, F32, I16, I32, SPIRV_Bool, BF16]>,
+  TypeConstraintImplicationOn<"input", SPIRV_Bool, "output", [I16, I32, I8]>,
+  TypeConstraintImplicationOn<"input", BF16, "output", [F32, I16, I32, I8]>]> {
+  let summary = "Cast operation.";
+
+  let description = [{
+    Casts a tensor from one data type to another.
+
+    Valid casting combinations are defined in the following table:
+
+    | From    | To      |
+    |---------|---------|
+    | float16 | float32 |
+    | float16 | int16   |
+    | float16 | int32   |
+    | float16 | int8    |
+    | float32 | float16 |
+    | float32 | int16   |
+    | float32 | int32   |
+    | float32 | int8    |
+    | int16   | float16 |
+    | int16   | float32 |
+    | int32   | float16 |
+    | int32   | float32 |
+    | int8    | float16 |
+    | int8    | float32 |
+    | Boolean | int16   |
+    | Boolean | int32   |
+    | Boolean | int8    |
+    | int16   | Boolean |
+    | int16   | int32   |
+    | int16   | int8    |
+    | int32   | Boolean |
+    | int32   | int16   |
+    | int32   | int8    |
+    | int8    | Boolean |
+    | int8    | int16   |
+    | int8    | int32   |
+    | bf16    | float32 |
+    | bf16    | int16   |
+    | bf16    | int32   |
+    | bf16    | int8    |
+    | float32 | bf16    |
+    | int16   | bf16    |
+    | int32   | bf16    |
+    | int8    | bf16    |
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_cast
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_cast
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Cast %arg0 : !spirv.arm.tensor<1x65538x1x2xi8> -> !spirv.arm.tensor<1x65538x1x2xi32>
+    %0 = spirv.Tosa.Cast %arg0 : !spirv.arm.tensor<11x5x14x4xf32> -> !spirv.arm.tensor<11x5x14x4xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaAny_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaAny_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaRescaleOp : SPIRV_TosaOpWithResult<"Rescale", 65, [NoMemoryEffect,
+  AllShapesMatch<["input", "output"]>,
+  AllElementTypesMatch<["input", "input_zp"]>,
+  AllElementTypesMatch<["output", "output_zp"]>,
+  ElementTypeMatchesScale32<"multiplier">,
+  TensorLengthMatchesPerChannel<"multiplier">,
+  TensorLengthMatchesPerChannel<"shift">,
+  TypeConstraintImplicationOn<"input", I8, "output", [I8, I16, I32]>,
+  TypeConstraintImplicationOn<"input", I16, "output", [I8, I16, I32]>,
+  TypeConstraintImplicationOn<"input", I32, "output", [I8, I16, I32]>,
+  TypeConstraintImplicationOn<"input", I64, "output", [I8, I16, I32]>,
+  BoolAttrTypeConstraintImplicationOn<"input_unsigned", "input", [I8, I16]>,
+  BoolAttrTypeConstraintImplicationOn<"output_unsigned", "input", [I8, I16]>,
+  BoolAttrTypeConstraintImplicationOn<"input_unsigned", "output", [I8, I16]>,
+  BoolAttrTypeConstraintImplicationOn<"output_unsigned", "output", [I8, I16]>]> {
+  let summary = "Rescale operator.";
+
+  let description = [{
+    Rescale is defined using an integer multiply, add, and shift.
+
+    Rescale supports two precisions of multiplier: 16-bit and 32-bit. The
+    32-bit multiplier version supports two rounding modes to enable simpler
+    lowering of existing frameworks that use two stage rounding. All arithmetic
+    is designed so that it does not overflow a 64-bit accumulator and that the
+    result fits in 32 bits. In particular, a 48-bit value (represented as a
+    64-bit value in SPIR-V) cannot be scaled with the 32-bit multiplier because
+    the accumulator would need to have 80 bits.
+
+    The shift and value range are limited to allow a variety of implementations.
+    The limit of 62 on shift allows the shift to be decomposed as two right
+    shifts of 31.
+
+    Unsigned 8- and 16-bit values are only allowed in the Rescale operation,
+    to allow for compatibility with networks which expect unsigned 8-bit or
+    16-bit tensors for input and output.
+
+    Undefined behaviour may occur if the calculated result underflows or overflows
+    their integer ranges.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_rescale
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_rescale
+
+    #### Example:
+    ```mlir
+    %9 = spirv.Tosa.Rescale scale32 = true, rounding_mode = <DoubleRound>, per_channel = false, input_unsigned = false, output_unsigned = true, %arg0, %multiplier, %shift, %input_zp, %output_zp : !spirv.arm.tensor<17x29x19xi16>, !spirv.arm.tensor<1xi32>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<17x29x19xi16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_BoolConstAttr: $scale32,
+    SPIRV_TosaExtRoundingModeAttr: $rounding_mode,
+    SPIRV_BoolConstAttr: $per_channel,
+    SPIRV_BoolConstAttr: $input_unsigned,
+    SPIRV_BoolConstAttr: $output_unsigned,
+    SPIRV_TosaInteger_TensorArm: $input,
+    SPIRV_Int16OrInt32_TensorArm1D: $multiplier,
+    SPIRV_Int8_TensorArm1D: $shift,
+    SPIRV_TosaInteger_1DTensorArmOfLength1: $input_zp,
+    SPIRV_TosaInteger_1DTensorArmOfLength1: $output_zp
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `scale32` `=` $scale32 `,`
+    `rounding_mode` `=` $rounding_mode `,`
+    `per_channel` `=` $per_channel `,`
+    `input_unsigned` `=` $input_unsigned `,`
+    `output_unsigned` `=` $output_unsigned `,`
+    $input `,`
+    $multiplier `,`
+    $shift `,`
+    $input_zp `,`
+    $output_zp
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+    ::mlir::spirv::TensorArmType getMultiplierType() {
+      return cast<::mlir::spirv::TensorArmType>(getMultiplier().getType());
+    }
+    ::mlir::spirv::TensorArmType getShiftType() {
+      return cast<::mlir::spirv::TensorArmType>(getShift().getType());
     }
   }];
 }
