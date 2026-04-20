@@ -2019,11 +2019,10 @@ define i32 @test_pli_b_remat(ptr %p) nounwind {
 ; CHECK-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    pli.b a1, -8
-; CHECK-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    pli.b a0, -8
 ; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
@@ -2065,11 +2064,10 @@ define i32 @test_pli_h_remat(ptr %p) nounwind {
 ; CHECK-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    pli.h a1, -64
-; CHECK-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    pli.h a0, -64
 ; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
@@ -2111,11 +2109,10 @@ define i32 @test_plui_h_remat(ptr %p) nounwind {
 ; CHECK-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    plui.h a1, 511
-; CHECK-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    plui.h a0, 511
 ; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload

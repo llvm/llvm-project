@@ -1569,11 +1569,10 @@ define i64 @test_pli_b_remat(ptr %p) nounwind {
 ; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    pli.b a1, 37
-; CHECK-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    pli.b a0, 37
 ; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
@@ -1615,11 +1614,10 @@ define i64 @test_pli_h_remat(ptr %p) nounwind {
 ; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    pli.h a1, 291
-; CHECK-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    pli.h a0, 291
 ; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
@@ -1661,11 +1659,10 @@ define i64 @test_plui_h_remat(ptr %p) nounwind {
 ; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    plui.h a1, -9
-; CHECK-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    plui.h a0, -9
 ; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
@@ -1707,11 +1704,10 @@ define i64 @test_pli_w_remat(ptr %p) nounwind {
 ; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    pli.w a1, -292
-; CHECK-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    pli.w a0, -292
 ; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
@@ -1753,11 +1749,10 @@ define i64 @test_plui_w_remat(ptr %p) nounwind {
 ; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    plui.w a1, 473
-; CHECK-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    plui.w a0, 473
 ; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
