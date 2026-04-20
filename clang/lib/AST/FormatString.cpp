@@ -286,7 +286,34 @@ clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
       lmKind = LengthModifier::AsInt3264;
       break;
     case 'w':
-      lmKind = LengthModifier::AsWide; ++I; break;
+      ++I;
+      if (I == E) return false;
+      if (*I == 'f') {
+        lmKind = LengthModifier::AsWideFast;
+        ++I;
+      } else {
+        lmKind = LengthModifier::AsWide;
+      }
+
+      if (I == E) return false;
+      int s = 0;
+      bool MSVCRT = true;
+      while (unsigned(*I - '0') <= 9) {
+        MSVCRT = false;
+        s = 10 * s + unsigned(*I - '0');
+        ++I;
+      }
+
+      // MSVCRT == true is MSVCRT case, like l but only for c, C, s, S, or Z on windows
+      // MSVCRT == false for b, d, i, o, u, x, or X when a size followed(like 8, 16, 32 or 64)
+      if (!MSVCRT) {
+        std::set<int> supported_list {8, 16, 32, 64};
+        if (supported_list.count(s) == 0)
+          FS.setExplicitlyFixedSizeValid(false);
+        FS.setExplicitlyFixedSize(s);
+      }
+
+      break;
   }
   LengthModifier lm(lmPosition, lmKind);
   FS.setLengthModifier(lm);
@@ -881,6 +908,8 @@ analyze_format_string::LengthModifier::toString() const {
     return "m";
   case AsWide:
     return "w";
+  case AsWideFast:
+    return "wf";
   case None:
     return "";
   }
@@ -1164,6 +1193,27 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
         case ConversionSpecifier::SArg:
         case ConversionSpecifier::ZArg:
           return Target.getTriple().isOSMSVCRT();
+        case ConversionSpecifier::bArg:
+        case ConversionSpecifier::dArg:
+        case ConversionSpecifier::iArg:
+        case ConversionSpecifier::oArg:
+        case ConversionSpecifier::uArg:
+        case ConversionSpecifier::xArg:
+        case ConversionSpecifier::XArg:
+          return true;
+        default:
+          return false;
+      }
+    case LengthModifier::AsWideFast:
+      switch (CS.getKind()) {
+        case ConversionSpecifier::bArg:
+        case ConversionSpecifier::dArg:
+        case ConversionSpecifier::iArg:
+        case ConversionSpecifier::oArg:
+        case ConversionSpecifier::uArg:
+        case ConversionSpecifier::xArg:
+        case ConversionSpecifier::XArg:
+          return true;
         default:
           return false;
       }
@@ -1190,6 +1240,7 @@ bool FormatSpecifier::hasStandardLengthModifier() const {
     case LengthModifier::AsInt3264:
     case LengthModifier::AsInt64:
     case LengthModifier::AsWide:
+    case LengthModifier::AsWideFast:
     case LengthModifier::AsShortLong: // ???
       return false;
   }
