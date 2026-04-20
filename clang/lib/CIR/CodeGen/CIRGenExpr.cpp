@@ -188,76 +188,10 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
                                    ce->getExprLoc());
     }
 
-    case CK_AnyPointerToBlockPointerCast:
-    case CK_BaseToDerived:
-    case CK_BaseToDerivedMemberPointer:
-    case CK_BlockPointerToObjCPointerCast:
-    case CK_BuiltinFnToFnPtr:
-    case CK_CPointerToObjCPointerCast:
-    case CK_DerivedToBaseMemberPointer:
-    case CK_Dynamic:
-    case CK_FunctionToPointerDecay:
-    case CK_IntegralToPointer:
-    case CK_LValueToRValue:
-    case CK_LValueToRValueBitCast:
-    case CK_NullToMemberPointer:
-    case CK_NullToPointer:
-    case CK_ReinterpretMemberPointer:
-      // Common pointer conversions, nothing to do here.
-      // TODO: Is there any reason to treat base-to-derived conversions
-      // specially?
+    // TODO: Is there any reason to treat base-to-derived conversions
+    // specially?
+    default:
       break;
-
-    case CK_ARCConsumeObject:
-    case CK_ARCExtendBlockObject:
-    case CK_ARCProduceObject:
-    case CK_ARCReclaimReturnedObject:
-    case CK_AtomicToNonAtomic:
-    case CK_BooleanToSignedIntegral:
-    case CK_ConstructorConversion:
-    case CK_CopyAndAutoreleaseBlockObject:
-    case CK_Dependent:
-    case CK_FixedPointCast:
-    case CK_FixedPointToBoolean:
-    case CK_FixedPointToFloating:
-    case CK_FixedPointToIntegral:
-    case CK_FloatingCast:
-    case CK_FloatingComplexCast:
-    case CK_FloatingComplexToBoolean:
-    case CK_FloatingComplexToIntegralComplex:
-    case CK_FloatingComplexToReal:
-    case CK_FloatingRealToComplex:
-    case CK_FloatingToBoolean:
-    case CK_FloatingToFixedPoint:
-    case CK_FloatingToIntegral:
-    case CK_HLSLAggregateSplatCast:
-    case CK_HLSLArrayRValue:
-    case CK_HLSLElementwiseCast:
-    case CK_HLSLVectorTruncation:
-    case CK_HLSLMatrixTruncation:
-    case CK_IntToOCLSampler:
-    case CK_IntegralCast:
-    case CK_IntegralComplexCast:
-    case CK_IntegralComplexToBoolean:
-    case CK_IntegralComplexToFloatingComplex:
-    case CK_IntegralComplexToReal:
-    case CK_IntegralRealToComplex:
-    case CK_IntegralToBoolean:
-    case CK_IntegralToFixedPoint:
-    case CK_IntegralToFloating:
-    case CK_LValueBitCast:
-    case CK_MatrixCast:
-    case CK_MemberPointerToBoolean:
-    case CK_NonAtomicToAtomic:
-    case CK_ObjCObjectLValueCast:
-    case CK_PointerToBoolean:
-    case CK_PointerToIntegral:
-    case CK_ToUnion:
-    case CK_ToVoid:
-    case CK_UserDefinedConversion:
-    case CK_VectorSplat:
-    case CK_ZeroToOCLOpaqueType:
-      llvm_unreachable("unexpected cast for emitPointerWithAlignment");
     }
   }
 
