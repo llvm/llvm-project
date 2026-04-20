@@ -405,5 +405,241 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
 bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                         CallLoweringInfo &Info) const {
-  return false;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  LLVMContext &Ctx = MIRBuilder.getContext();
+  const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
+  const Function &F = MF.getFunction();
+
+  CallingConv::ID CallConv = Info.CallConv;
+  if (!callingConvSupported(CallConv))
+    return false;
+
+  // TODO: tail calls
+  if (Info.CB->isMustTailCall())
+    return false;
+
+  // TODO: varargs
+  if (Info.IsVarArg)
+    return false;
+
+  // TODO: swiftcc
+  if (CallConv == CallingConv::Swift)
+    return false;
+
+  MachineInstrBuilder CallInst;
+
+  // TODO: indirect calls
+  if (Info.Callee.isReg())
+    return false;
+
+  CallInst = MIRBuilder.buildInstrNoInsert(WebAssembly::CALL);
+
+  if (Info.Callee.isGlobal()) {
+    CallInst.addGlobalAddress(Info.Callee.getGlobal());
+  } else if (Info.Callee.isSymbol()) {
+    CallInst.addExternalSymbol(Info.Callee.getSymbolName());
+  } else {
+    reportFatalInternalError(
+        "Trying to lower call with a callee other than reg, "
+        "global, or a symbol.");
+  }
+
+  SmallVector<ArgInfo, 8> SplitArgs;
+
+  for (const ArgInfo &Arg : Info.OrigArgs) {
+    if (Arg.Flags[0].isNest()) {
+      return false;
+    }
+    if (Arg.Flags[0].isInAlloca()) {
+      return false;
+    }
+    if (Arg.Flags[0].isInConsecutiveRegs()) {
+      return false;
+    }
+    if (Arg.Flags[0].isInConsecutiveRegsLast()) {
+      return false;
+    }
+
+    // TODO: bulk memory, then byval
+    if (Arg.Flags[0].isByVal() && Arg.Flags[0].getByValSize() != 0) {
+      return false;
+    }
+
+    splitToValueTypes(Arg, SplitArgs, DL, CallConv);
+  }
+
+  for (ArgInfo &Arg : SplitArgs) {
+    const EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
+    const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+    const LLT OrigLLT =
+        getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+    const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+
+    const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
+
+    // If we need to split the type over multiple regs, check it's a scenario
+    // we currently support.
+    const unsigned NumParts =
+        TLI.getNumRegistersForCallingConv(Ctx, CallConv, OrigVT);
+
+    const ISD::ArgFlagsTy OrigFlags = Arg.Flags[0];
+    Arg.Flags.clear();
+
+    for (unsigned Part = 0; Part < NumParts; ++Part) {
+      ISD::ArgFlagsTy Flags = OrigFlags;
+      if (Part == 0) {
+        Flags.setSplit();
+      } else {
+        Flags.setOrigAlign(Align(1));
+        if (Part == NumParts - 1)
+          Flags.setSplitEnd();
+      }
+
+      Arg.Flags.push_back(Flags);
+    }
+
+    Arg.OrigRegs.assign(Arg.Regs.begin(), Arg.Regs.end());
+    if (NumParts != 1 || OrigLLT != NewLLT) {
+      // If we can't directly assign the register, we need one or more
+      // intermediate values.
+      Arg.Regs.resize(NumParts);
+
+      // For each split register, create and assign a vreg that will store
+      // the incoming component of the larger value. These will later be
+      // merged to form the final vreg.
+      for (unsigned Part = 0; Part < NumParts; ++Part) {
+        Register NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
+
+        if (!RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI))
+          reportFatalInternalError("Couldn't constrain brand-new register?");
+
+        CallInst.addUse(NewOutReg);
+
+        Arg.Regs[Part] = NewOutReg;
+      }
+
+      buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
+                      extendOpFromFlags(Arg.Flags[0]));
+    } else {
+      CallInst.addUse(Arg.Regs[0]);
+    }
+  }
+
+  // Analyze operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, Info.IsVarArg, MF, ArgLocs, Ctx);
+
+  MIRBuilder.insertInstr(CallInst);
+
+  if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy()) {
+    SmallVector<EVT, 4> SplitEVTs;
+    ComputeValueVTs(TLI, DL, Info.OrigRet.Ty, SplitEVTs);
+    assert(Info.OrigRet.Regs.size() == SplitEVTs.size() &&
+           "For each split Type there should be exactly one VReg.");
+
+    SmallVector<ArgInfo, 8> SplitRets;
+
+    unsigned RetIdx = 0;
+    for (EVT SplitEVT : SplitEVTs) {
+      Register CurVReg = Info.OrigRet.Regs[RetIdx];
+      ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVT.getTypeForEVT(Ctx), 0};
+
+      if (Info.CB) {
+        setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, *Info.CB);
+      } else {
+        // we don't have a call base, so chances are we're looking at a
+        // libcall (external symbol).
+
+        // TODO: figure out how to get ALL the correct attributes
+        ISD::ArgFlagsTy &Flags = CurArgInfo.Flags[0];
+        PointerType *PtrTy =
+            dyn_cast<PointerType>(CurArgInfo.Ty->getScalarType());
+        if (PtrTy) {
+          Flags.setPointer();
+          Flags.setPointerAddrSpace(PtrTy->getPointerAddressSpace());
+        }
+        Align MemAlign = DL.getABITypeAlign(CurArgInfo.Ty);
+        Flags.setMemAlign(MemAlign);
+        Flags.setOrigAlign(MemAlign);
+      }
+
+      splitToValueTypes(CurArgInfo, SplitRets, DL, CallConv);
+      ++RetIdx;
+    }
+
+    for (ArgInfo &Ret : SplitRets) {
+      const EVT OrigVT = TLI.getValueType(DL, Ret.Ty);
+      const MVT NewVT =
+          TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+      const LLT OrigLLT =
+          getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+      const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+
+      const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
+
+      // If we need to split the type over multiple regs, check it's a scenario
+      // we currently support.
+      const unsigned NumParts =
+          TLI.getNumRegistersForCallingConv(Ctx, CallConv, OrigVT);
+
+      const ISD::ArgFlagsTy OrigFlags = Ret.Flags[0];
+      Ret.Flags.clear();
+
+      for (unsigned Part = 0; Part < NumParts; ++Part) {
+        ISD::ArgFlagsTy Flags = OrigFlags;
+        if (Part == 0) {
+          Flags.setSplit();
+        } else {
+          Flags.setOrigAlign(Align(1));
+          if (Part == NumParts - 1)
+            Flags.setSplitEnd();
+        }
+
+        Ret.Flags.push_back(Flags);
+      }
+
+      Ret.OrigRegs.assign(Ret.Regs.begin(), Ret.Regs.end());
+
+      if (NumParts != 1 || OrigLLT != NewLLT) {
+        // If we can't directly assign the register, we need one or more
+        // intermediate values.
+        Ret.Regs.resize(NumParts);
+
+        // For each split register, create and assign a vreg that will store
+        // the incoming component of the larger value. These will later be
+        // merged to form the final vreg.
+        for (unsigned Part = 0; Part < NumParts; ++Part) {
+          Ret.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
+        }
+      }
+
+      for (unsigned Part = 0; Part < NumParts; ++Part) {
+        Register NewRetReg = Ret.Regs[Part];
+        if (!RBI.constrainGenericRegister(NewRetReg, NewRegClass, MRI)) {
+          NewRetReg = MRI.createGenericVirtualRegister(NewLLT);
+          assert(RBI.constrainGenericRegister(NewRetReg, NewRegClass, MRI) &&
+                 "Couldn't constrain brand-new register?");
+          MIRBuilder.buildCopy(NewRetReg, Ret.Regs[Part]);
+        }
+        CallInst.addDef(Ret.Regs[Part]);
+      }
+
+      if (OrigVT != NewVT) {
+        buildCopyFromRegs(MIRBuilder, Ret.OrigRegs, Ret.Regs, OrigLLT, NewLLT,
+                          Ret.Flags[0]);
+      }
+    }
+  }
+
+  if (!Info.CanLowerReturn) {
+    insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
+                    Info.DemoteRegister, Info.DemoteStackIndex);
+  }
+
+  return true;
 }
