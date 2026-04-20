@@ -694,7 +694,7 @@ bool SwitchMatcher::addMatcher(Matcher &Candidate) {
 
 void SwitchMatcher::finalize() {
   assert(Condition == nullptr && "Already finalized");
-  unsigned NumBucketedMatchers = 0;
+  [[maybe_unused]] unsigned NumBucketedMatchers = 0;
   for (const auto &Entry : Buckets)
     NumBucketedMatchers += Entry.second.Matchers.size();
   assert(NumBucketedMatchers == Matchers.size() && "Broken SwitchMatcher");
@@ -748,7 +748,7 @@ void SwitchMatcher::emitPredicateSpecificOpcodes(const PredicateMatcher &P,
 }
 
 void SwitchMatcher::emit(MatchTable &Table) {
-  unsigned NumBucketedMatchers = 0;
+  [[maybe_unused]] unsigned NumBucketedMatchers = 0;
   for (const auto &Entry : Buckets)
     NumBucketedMatchers += Entry.second.Matchers.size();
   assert(NumBucketedMatchers == Matchers.size() && "Broken SwitchMatcher");

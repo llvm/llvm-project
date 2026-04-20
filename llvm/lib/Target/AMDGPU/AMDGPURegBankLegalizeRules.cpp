@@ -1542,6 +1542,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_wait_storecnt,
                     amdgcn_s_wait_tensorcnt,
                     amdgcn_s_waitcnt,
+                    amdgcn_unreachable,
                     amdgcn_wait_asyncmark,
                     amdgcn_wave_barrier})
       .Any({{}, {{}, {}}});
@@ -1566,6 +1567,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs(
       {amdgcn_s_get_named_barrier_state, amdgcn_s_get_barrier_state}, Standard)
       .Uni(S32, {{Sgpr32}, {IntrId, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_flat_prefetch}).Any({{}, {{}, {IntrId, VgprP0}}});
+
+  addRulesForIOpcs({amdgcn_global_prefetch}).Any({{}, {{}, {IntrId, VgprP1}}});
 
   addRulesForIOpcs({amdgcn_s_prefetch_data})
       .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
