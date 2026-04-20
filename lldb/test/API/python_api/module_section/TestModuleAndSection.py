@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbutil import symbol_type_to_str
 
 
+@skipIfTargetDoesNotSupportThreads()
 class ModuleAndSectionAPIsTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 

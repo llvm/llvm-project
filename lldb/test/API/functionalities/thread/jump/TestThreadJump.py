@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class ThreadJumpTestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)

@@ -9,6 +9,7 @@ import lldbdap_testcase
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
     @expectedFailureAll(oslist=["windows"])
     @skipIf(archs=no_match(["x86_64"]))
