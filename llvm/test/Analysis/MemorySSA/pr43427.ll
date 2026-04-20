@@ -2,9 +2,13 @@
 
 ; CHECK-LABEL: @f(i1 %arg)
 
+; CHECK: entry:
+; CHECK:      ; [[NO1:.*]] = MemoryDef(liveOnEntry)
+; CHECK-NEXT:  store i16 undef, ptr %e, align 1
+
 ; CHECK: lbl1:
-; CHECK-NEXT: ; [[NO4:.*]] = MemoryPhi({entry,liveOnEntry},{lbl1.backedge,[[NO9:.*]]})
-; CHECK-NEXT: ; [[NO2:.*]] = MemoryDef([[NO4]])
+; CHECK-NEXT: ; [[NO4:.*]] = MemoryPhi({entry,[[NO1]]},{lbl1.backedge,[[NO2:.*]]})
+; CHECK-NEXT: ; [[NO2]] = MemoryDef([[NO4]])
 ; CHECK-NEXT:  call void @g()
 ; CHECK-NEXT:  br i1 %arg, label %for.end, label %if.else
 
@@ -12,24 +16,20 @@
 ; CHECK-NEXT:  br i1 %arg, label %lbl3, label %lbl2
 
 ; CHECK: lbl2:
-; CHECK-NEXT: ; [[NO8:.*]] = MemoryPhi({lbl3,[[NO7:.*]]},{for.end,[[NO2]]})
 ; CHECK-NEXT:  br label %lbl3
 
 ; CHECK: lbl3:
-; CHECK-NEXT: [[NO7]] = MemoryPhi({lbl2,[[NO8]]},{for.end,2})
+; CHECK-NEXT:  br i1 %arg, label %lbl2, label %cleanup
 
 ; CHECK: cleanup:
 ; CHECK-NEXT: MemoryUse([[NO2]])
 ; CHECK-NEXT:  %cleanup.dest = load i32, ptr undef, align 1
 
 ; CHECK: lbl1.backedge:
-; CHECK-NEXT:  [[NO9]] = MemoryPhi({cleanup,[[NO7]]},{if.else,2})
 ; CHECK-NEXT:   br label %lbl1
 
 ; CHECK: cleanup.cont:
-; CHECK-NEXT: ; [[NO6:.*]] = MemoryDef([[NO7]])
-; CHECK-NEXT:   store i16 undef, ptr %e, align 1
-; CHECK-NEXT:  3 = MemoryDef([[NO6]])
+; CHECK-NEXT: ; [[NO3:.*]] = MemoryDef([[NO2]])
 ; CHECK-NEXT:   call void @g()
 
 define void @f(i1 %arg) {
