@@ -29,6 +29,8 @@ from lldbsuite.test import lldbutil, lldbplatformutil
 class LldbGdbServerTestCase(
     gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser
 ):
+    SHARED_BUILD_TESTCASE = False
+
     def test_thread_suffix_supported(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)

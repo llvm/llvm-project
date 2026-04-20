@@ -26,6 +26,7 @@
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -319,6 +320,15 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
 
   RemarksSection = Ctx->getMachOSection(
       "__LLVM", "__remarks", MachO::S_ATTR_DEBUG, SectionKind::getMetadata());
+
+  PseudoProbeSection =
+      Ctx->getMachOSection("__PSEUDO_PROBE", "__probes",
+                           MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
+                           SectionKind::getMetadata());
+  PseudoProbeDescSection =
+      Ctx->getMachOSection("__PSEUDO_PROBE", "__probe_descs",
+                           MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
+                           SectionKind::getMetadata());
 
   // The architecture of dsymutil makes it very difficult to copy the Swift
   // reflection metadata sections into the __TEXT segment, so dsymutil creates

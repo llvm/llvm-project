@@ -33,9 +33,8 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, const Function *Func)
     : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),
-      Stk(Stk), Ctx(Ctx),
-      BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
-      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =

@@ -324,7 +324,7 @@ defm SPV_EXT_shader_atomic_float_add
     : ExtensionOperand<68, [EnvVulkan, EnvOpenCL]>;
 defm SPV_KHR_terminate_invocation : ExtensionOperand<69, [EnvVulkan]>;
 defm SPV_KHR_fragment_shading_rate : ExtensionOperand<70, [EnvVulkan]>;
-defm SPV_EXT_shader_image_int64 : ExtensionOperand<71, [EnvVulkan]>;
+defm SPV_EXT_shader_image_int64 : ExtensionOperand<71, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_fp_fast_math_mode : ExtensionOperand<72, [EnvOpenCL]>;
 defm SPV_INTEL_fpga_cluster_attributes : ExtensionOperand<73, [EnvOpenCL]>;
 defm SPV_INTEL_loop_fuse : ExtensionOperand<74, [EnvOpenCL]>;
@@ -517,6 +517,7 @@ defm ImageGatherBiasLodAMD : CapabilityOperand<5009, 0, 0, [], [Shader]>;
 defm FragmentMaskAMD : CapabilityOperand<5010, 0, 0, [], [Shader]>;
 defm StencilExportEXT : CapabilityOperand<5013, 0, 0, [], [Shader]>;
 defm ImageReadWriteLodAMD : CapabilityOperand<5015, 0, 0, [], [Shader]>;
+defm Int64ImageEXT : CapabilityOperand<5016, 0, 0, [SPV_EXT_shader_image_int64], [Int64]>;
 defm ShaderClockKHR : CapabilityOperand<5055, 0, 0, [SPV_KHR_shader_clock], []>;
 defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm SampleMaskOverrideCoverageNV : CapabilityOperand<5249, 0, 0, [], [SampleRateShading]>;
@@ -662,6 +663,7 @@ defm GLSL : SourceLanguageOperand<2>;
 defm OpenCL_C : SourceLanguageOperand<3>;
 defm OpenCL_CPP : SourceLanguageOperand<4>;
 defm HLSL : SourceLanguageOperand<5>;
+defm CPP_for_OpenCL : SourceLanguageOperand<6>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define AddressingModel enum values and at the same time

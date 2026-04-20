@@ -22,5 +22,6 @@ unittest("AMDGPUTests") {
     "ExecMayBeModifiedBeforeAnyUse.cpp",
     "LiveRegUnits.cpp",
     "PALMetadata.cpp",
+    "UniformityAnalysisTest.cpp",
   ]
 }

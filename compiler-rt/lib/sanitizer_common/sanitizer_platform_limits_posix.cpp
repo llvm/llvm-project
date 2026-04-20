@@ -76,6 +76,7 @@
 #include <sys/vt.h>
 #include <linux/cdrom.h>
 #include <linux/fd.h>
+#include <linux/filter.h>
 #if SANITIZER_ANDROID
 #include <linux/fs.h>
 #endif
@@ -305,9 +306,12 @@ namespace __sanitizer {
   unsigned struct_ustat_sz = SIZEOF_STRUCT_USTAT;
   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
-#endif // SANITIZER_GLIBC
+#  elif SANITIZER_MUSL
+  // On musl, rlimit64 is an alias for rlimit.
+  unsigned struct_rlimit64_sz = sizeof(struct rlimit);
+#  endif  // SANITIZER_GLIBC
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_timex_sz = sizeof(struct timex);
   unsigned struct_msqid_ds_sz = sizeof(struct msqid_ds);
   unsigned struct_mq_attr_sz = sizeof(struct mq_attr);
@@ -516,6 +520,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_seq_event_rec_sz = sizeof(struct seq_event_rec);
   unsigned struct_synth_info_sz = sizeof(struct synth_info);
   unsigned struct_vt_mode_sz = sizeof(struct vt_mode);
+  unsigned struct_sock_fprog_sz = sizeof(struct sock_fprog);
 #endif // SANITIZER_LINUX
 
 #if SANITIZER_GLIBC
@@ -543,7 +548,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 
   unsigned struct_audio_buf_info_sz = sizeof(struct audio_buf_info);
   unsigned struct_ppp_stats_sz = sizeof(struct ppp_stats);
-  unsigned struct_sock_fprog_sz = sizeof(struct sock_fprog);
 #  endif  // SANITIZER_GLIBC
 
 #  if !SANITIZER_ANDROID && !SANITIZER_APPLE && !SANITIZER_HAIKU

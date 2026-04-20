@@ -1950,12 +1950,8 @@ static Value *simplifyAndOrWithICmpEq(unsigned Opcode, Value *Op0, Value *Op1,
          "Must be and/or");
   CmpPredicate Pred;
   Value *A, *B;
-  if (Op0->getType()->isIntOrIntVectorTy(1) &&
-      match(Op0, m_NUWTrunc(m_Value(A)))) {
-    B = ConstantInt::getNullValue(A->getType());
-    Pred = ICmpInst::ICMP_NE;
-  } else if (!match(Op0, m_ICmp(Pred, m_Value(A), m_Value(B))) ||
-             !ICmpInst::isEquality(Pred))
+  if (!match(Op0, m_ICmpLike(Pred, m_Value(A), m_Value(B))) ||
+      !ICmpInst::isEquality(Pred))
     return nullptr;
 
   auto Simplify = [&](Value *Res) -> Value * {
@@ -5455,8 +5451,13 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
 
   // extractvalue x, (insertvalue y, elt, n), n -> elt
   unsigned NumIdxs = Idxs.size();
+  SmallPtrSet<InsertValueInst *, 8> VisitedSet;
   for (auto *IVI = dyn_cast<InsertValueInst>(Agg); IVI != nullptr;
        IVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand())) {
+    // Protect against insertvalue cycles in unreachable code.
+    if (!VisitedSet.insert(IVI).second)
+      break;
+
     ArrayRef<unsigned> InsertValueIdxs = IVI->getIndices();
     unsigned NumInsertValueIdxs = InsertValueIdxs.size();
     unsigned NumCommonIdxs = std::min(NumInsertValueIdxs, NumIdxs);
@@ -6530,7 +6531,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // round (ceil x) -> ceil x
     auto *II = dyn_cast<IntrinsicInst>(Op0);
     if ((II && removesFPFraction(II->getIntrinsicID())) ||
-        match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
+        match(Op0, m_IToFP(m_Value())))
       return Op0;
   }
 

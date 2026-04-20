@@ -135,8 +135,8 @@ public:
   }
 
   /// Update which module that is being actively traversed.
-  void visitModuleFile(StringRef Filename,
-                       serialization::ModuleKind Kind) override {
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override {
     // If the CurrentFile is not
     // considered stable, update any of it's transitive dependents.
     auto PrebuiltEntryIt = PrebuiltModulesASTMap.find(CurrentFile);
@@ -144,7 +144,7 @@ public:
         !PrebuiltEntryIt->second.isInStableDir())
       PrebuiltEntryIt->second.updateDependentsNotInStableDirs(
           PrebuiltModulesASTMap);
-    CurrentFile = Filename;
+    CurrentFile = Filename.str();
   }
 
   /// Check the header search options for a given module when considering
@@ -206,8 +206,9 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                   CI.getHeaderSearchOpts(), CI.getLangOpts(),
                                   Diags, StableDirs);
 
-  Listener.visitModuleFile(PrebuiltModuleFilename,
-                           serialization::MK_ExplicitModule);
+  Listener.visitModuleFile(ModuleFileName::makeExplicit(PrebuiltModuleFilename),
+                           serialization::MK_ExplicitModule,
+                           /*DirectlyImported=*/true);
   if (ASTReader::readASTFileControlBlock(
           PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
           CI.getPCHContainerReader(),
@@ -216,7 +217,14 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
     return true;
 
   while (!Worklist.empty()) {
-    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
+    // FIXME: This is assuming the PCH only refers to explicitly-built modules,
+    // which technically is not guaranteed. To remove the assumption, we'd need
+    // to also rework how the module files are handled to the scan, specifically
+    // change the values of HeaderSearchOptions::PrebuiltModuleFiles from plain
+    // paths to ModuleFileName.
+    Listener.visitModuleFile(ModuleFileName::makeExplicit(Worklist.back()),
+                             serialization::MK_ExplicitModule,
+                             /*DirectlyImported=*/false);
     if (ASTReader::readASTFileControlBlock(
             Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
             CI.getPCHContainerReader(),
@@ -412,6 +420,8 @@ void dependencies::initializeScanCompilerInstance(
   ScanInstance.setBuildingModule(false);
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
+    ScanInstance.getDiagnostics().setIgnoreAllWarnings(true);
   ScanInstance.createFileManager();
   ScanInstance.createSourceManager();
 
@@ -649,7 +659,6 @@ struct AsyncModuleCompile : PPCallbacks {
       return;
     }
 
-    ModCache.prepareForGetLock(ModuleFileName);
     auto Lock = ModCache.getLock(ModuleFileName);
     bool Owned;
     llvm::Error LockErr = Lock->tryLock().moveInto(Owned);

@@ -751,6 +751,41 @@ func.func @test_truncf_rounding_mode(%arg0 : f64) -> (f32, f32, f32, f32, f32) {
   return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
 }
 
+// CHECK-LABEL: test_convertf
+func.func @test_convertf(%arg0 : f16) -> bf16 {
+  // CHECK: arith.convertf %arg0 : f16 to bf16
+  %0 = arith.convertf %arg0 : f16 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: test_convertf_vector
+func.func @test_convertf_vector(%arg0 : vector<8xf16>) -> vector<8xbf16> {
+  // CHECK: arith.convertf %arg0 : vector<8xf16> to vector<8xbf16>
+  %0 = arith.convertf %arg0 : vector<8xf16> to vector<8xbf16>
+  return %0 : vector<8xbf16>
+}
+
+// CHECK-LABEL: test_convertf_scalable_vector
+func.func @test_convertf_scalable_vector(%arg0 : vector<[8]xbf16>) -> vector<[8]xf16> {
+  // CHECK: arith.convertf %arg0 : vector<[8]xbf16> to vector<[8]xf16>
+  %0 = arith.convertf %arg0 : vector<[8]xbf16> to vector<[8]xf16>
+  return %0 : vector<[8]xf16>
+}
+
+// CHECK-LABEL: test_convertf_tensor
+func.func @test_convertf_tensor(%arg0 : tensor<8x8xf16>) -> tensor<8x8xbf16> {
+  // CHECK: arith.convertf %arg0 : tensor<8x8xf16> to tensor<8x8xbf16>
+  %0 = arith.convertf %arg0 : tensor<8x8xf16> to tensor<8x8xbf16>
+  return %0 : tensor<8x8xbf16>
+}
+
+// CHECK-LABEL: test_convertf_rounding_mode
+func.func @test_convertf_rounding_mode(%arg0 : bf16) -> f16 {
+  // CHECK: arith.convertf %arg0 to_nearest_even : bf16 to f16
+  %0 = arith.convertf %arg0 to_nearest_even : bf16 to f16
+  return %0 : f16
+}
+
 // CHECK-LABEL: test_uitofp
 func.func @test_uitofp(%arg0 : i32) -> f32 {
   %0 = arith.uitofp %arg0 : i32 to f32
@@ -1199,6 +1234,21 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
   return
 }
 
+// CHECK-LABEL: @roundingmode
+func.func @roundingmode(%arg0: f32, %arg1: f32) {
+// CHECK: {{.*}} = arith.addf %arg0, %arg1 to_nearest_even : f32
+  %0 = arith.addf %arg0, %arg1 to_nearest_even : f32
+// CHECK: {{.*}} = arith.subf %arg0, %arg1 downward : f32
+  %1 = arith.subf %arg0, %arg1 downward : f32
+// CHECK: {{.*}} = arith.mulf %arg0, %arg1 upward : f32
+  %2 = arith.mulf %arg0, %arg1 upward : f32
+// CHECK: {{.*}} = arith.divf %arg0, %arg1 toward_zero : f32
+  %3 = arith.divf %arg0, %arg1 toward_zero : f32
+// CHECK: {{.*}} = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f32
+  %4 = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f32
+  return
+}
+
 // CHECK-LABEL: @select_tensor
 func.func @select_tensor(%arg0 : tensor<8xi1>, %arg1 : tensor<8xi32>, %arg2 : tensor<8xi32>) -> tensor<8xi32> {
   // CHECK: = arith.select %{{.*}}, %{{.*}}, %{{.*}} : tensor<8xi1>, tensor<8xi32>
@@ -1228,3 +1278,4 @@ func.func @intflags_func(%arg0: i64, %arg1: i64) {
   %4 = arith.trunci %arg0 overflow<nsw, nuw> : i64 to i32
   return
 }
+

@@ -1457,10 +1457,11 @@ Currently, only the following parameter attributes are defined:
     present and assign it particular semantics. This will be documented on
     individual intrinsics.
 
-    The attribute may only be applied to pointer typed arguments of intrinsic
-    calls. It cannot be applied to non-intrinsic calls, and cannot be applied
-    to parameters on function declarations. For non-opaque pointers, the type
-    passed to ``elementtype`` must match the pointer element type.
+    The attribute may only be applied to pointer typed arguments or return
+    values of intrinsic calls. It cannot be applied to non-intrinsic calls,
+    and cannot be applied to parameters on function declarations.
+    For non-opaque pointers, the type passed to ``elementtype`` must match
+    the pointer element type.
 
 .. _attr_align:
 
@@ -7873,13 +7874,15 @@ This metadata selectively enables or disables creating predicated instructions
 for the loop, which can enable folding of the scalar epilogue loop into the
 main loop. The first operand is the string
 ``llvm.loop.vectorize.predicate.enable`` and the second operand is a bit. If
-the bit operand value is 1 vectorization is enabled. A value of 0 disables
-vectorization:
+the bit operand value is 1 predication is enabled. A value of 0 disables
+predication:
 
 .. code-block:: llvm
 
    !0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
    !1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
+
+Additionally, enabling predication implicitly enables vectorization.
 
 '``llvm.loop.vectorize.scalable.enable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8851,6 +8854,25 @@ Example:
     !0 = !{ptr @a}
     !1 = !{ptr @b}
 
+'``inline_history``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``inline_history`` metadata may be attached to a call instruction. It
+indicates that the call instruction has been inlined from the referenced
+functions. The call itself should not be inlined if it is a call to any of the
+referenced functions since that could result in infinite inlining as we
+continually inline through mutually recursive functions.
+
+This is intended to be added by and used by inliner passes.
+
+The metadata operands must all be function pointers or ``null``. ``null`` can
+appear when the referenced function is erased from the module, e.g. an internal
+function that has had all calls to it inlined.
+
+.. code-block:: text
+
+    call void @foo(), !inline_history !0
+
+    !0 = !{ptr @bar, null, ptr @baz}
 
 Module Flags Metadata
 =====================
@@ -9100,6 +9122,36 @@ For example:
     !0 = !{i32 1, !"override-stack-alignment", i32 8}
 
 This will change the stack alignment to 8B.
+
+Windows Control Flow Guard Metadata
+-----------------------------------
+
+Controls what Control Flow Guard (CFG) checks are performed, how they are
+performed, and what metadata is emitted. There are multiple flags that can be
+used to control different aspects of CFG. Using two different values for the
+same flag will raise a warning when linking.
+
+To pass this information to the backend, these options are encoded in module
+flags metadata, using the following key-value pairs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Key
+     - Value
+
+   * - cfguard
+     - * 0 --- CFG is completely disabled.
+       * 1 --- The CFG table is emitted, but no checks are performed.
+       * 2 --- The CFG table is emitted and checks are performed.
+
+   * - cfguard-mechanism
+     - * 0 --- CFG uses the default mechanism for the architecture.
+       * 1 --- CFG uses the "check" mechanism. This will result in a separate
+         call to the checker function and then one to the target.
+       * 2 --- CFG uses the "dispatch" mechanism. This calls a dispatcher
+         function which both checks and then calls the target.
 
 Embedded Objects Names Metadata
 ===============================
@@ -14012,8 +14064,9 @@ ensures that each ``catchpad`` has exactly one predecessor block, and it always
 terminates in a ``catchswitch``.
 
 The ``args`` correspond to whatever information the personality routine
-requires to determine if this is an appropriate handler for the exception. Control
-will transfer to the ``catchpad`` if this is the first appropriate handler for
+requires to determine if this is an appropriate handler for the exception.
+Each operand must be an alloca or a constant.
+Control will transfer to the ``catchpad`` if this is the first appropriate handler for
 the exception.
 
 The ``resultval`` has the type :ref:`token <t_token>` and is used to match the
@@ -15324,6 +15377,86 @@ Or:
 
 This is, however, dependent on context that codegen has an insight on. The
 fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
+
+
+.. _i_structured_alloca:
+
+'``llvm.structured.alloca``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare elementtype(<allocated_type>) ptr
+      @llvm.structured.alloca()
+
+Overview:
+"""""""""
+
+The '``llvm.structured.alloca``' intrinsic allocates uninitialized memory on
+the stack for a logical type, such as an aggregate, an array, or a scalar.
+
+Unlike the standard :ref:`alloca <i_alloca>` instruction, the physical memory
+layout of a ``llvm.structured.alloca`` is completely opaque to the IR.
+Exact padding, size, alignment and subtype offsets is target-dependent and
+may differ from the standard ``DataLayout``.
+
+Arguments:
+""""""""""
+
+The intrinsic must be annotated with an :ref:`elementtype <attr_elementtype>`
+attribute at the call-site on the return value. This attribute specifies the
+type of the allocated element.
+
+Semantics:
+""""""""""
+
+The ``llvm.structured.alloca`` intrinsic allocates uninitialized memory for a
+logical type. Loading from uninitialized memory produces an undefined value.
+This intrinsic does not guarantee that the allocated memory will store a value
+of the given type, only that it allocates enough space for it on the destination
+target. While the type's size and layout are constant (independent of location),
+the exact padding and offsets between subtypes are opaque to the IR and are
+determined by the target's backend.
+
+The resulting pointer is in the :ref:`alloca address space <alloca_addrspace>`
+defined in the :ref:`datalayout string <langref_datalayout>`.
+
+Standard pointer arithmetic (``getelementptr``, ``ptradd``) and lifetime
+intrinsics (:ref:`llvm.lifetime.start <int_lifestart>`,
+:ref:`llvm.lifetime.end <int_lifeend>`) are permitted on the returned pointer.
+However, because the physical layout is opaque, using physical pointer
+arithmetic requires the frontend or emitting pass to have explicit knowledge of
+the backend's layout rules.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+    %S = type { i32, i32, i32, i32 }
+
+    ; Allocate one instance of %S on the stack
+    %ptr = call elementtype(%S) ptr @llvm.structured.alloca()
+
+    ; Access the second field of the allocated struct
+    %field_ptr = call ptr @llvm.structured.gep(ptr elementtype(%S) %ptr, i32 1)
+    %val = load i32, ptr %field_ptr
+
+    ; Allocate an array of 10 i32s on the stack
+    %array_ptr = call elementtype([10 x i32]) ptr @llvm.structured.alloca()
+
+    ; Allocate a single i32 on the stack
+    %scalar_ptr = call elementtype(i32) ptr @llvm.structured.alloca()
+
+    ; Although the exact size of 'i32' or '%S' is opaque, it is constant
+    ; for the duration of the module. This allows, for example, reusing
+    ; an allocation slot for two different values of the same type.
+    %a = call elementtype(float) ptr @llvm.structured.alloca()
+    %b = call elementtype(float) ptr @llvm.structured.alloca()
+    ; %a and %b are guaranteed to have the same allocation size.
 
 
 .. _int_get_dynamic_area_offset:
@@ -27813,6 +27946,116 @@ The '``llvm.masked.compressstore``' intrinsic is designed for compressing data i
 
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
+Masked Vector Arithmetic Intrinsics
+-----------------------------------
+
+'``llvm.masked.udiv.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
+      declare <vscale x 2 x i64> @llvm.masked.udiv.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Performs unsigned division (:ref:`udiv <i_udiv>`) of two vectors of integers, but only on enabled lanes.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+
+Semantics:
+""""""""""
+
+Follows the same semantics as :ref:`udiv <i_udiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+
+'``llvm.masked.sdiv.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <8 x i32> @llvm.masked.sdiv.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
+      declare <vscale x 2 x i64> @llvm.masked.sdiv.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Performs signed division (:ref:`sdiv <i_sdiv>`) of two vectors of integers, but only on enabled lanes.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+
+Semantics:
+""""""""""
+
+Follows the same semantics as :ref:`sdiv <i_sdiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+
+'``llvm.masked.urem.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <8 x i32> @llvm.masked.urem.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
+      declare <vscale x 2 x i64> @llvm.masked.urem.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Computes the remainder from the unsigned division (:ref:`urem <i_urem>`) of two vectors of integers, but only on enabled lanes.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+
+Semantics:
+""""""""""
+
+Follows the same semantics as :ref:`urem <i_urem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+
+'``llvm.masked.srem.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <8 x i32> @llvm.masked.srem.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
+      declare <vscale x 2 x i64> @llvm.masked.srem.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Computes the remainder from the signed division (:ref:`srem <i_srem>`) of two vectors of integers, but only on enabled lanes.
+
+Arguments:
+""""""""""
+
+The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+
+Semantics:
+""""""""""
+
+Follows the same semantics as :ref:`srem <i_srem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
 
 Memory Use Markers
 ------------------
@@ -27842,8 +28085,8 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
-value.
+The argument is either a pointer to an ``alloca`` instruction or an
+``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
@@ -27854,8 +28097,8 @@ Otherwise, the stack-allocated object that ``ptr`` points to is initially
 marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
 alive and has an uninitialized value.
 The stack object is marked as dead when either
-:ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
-function returns.
+:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is
+executed or the function returns.
 
 After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
@@ -27883,8 +28126,8 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
-value.
+The argument is either a pointer to an ``alloca`` instruction or an
+``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
@@ -27894,7 +28137,8 @@ If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
 Otherwise, the stack-allocated object that ``ptr`` points to becomes dead after
 the call to this intrinsic.
 
-Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
+Calling ``llvm.lifetime.end`` on an already dead alloca/structured.alloca is
+no-op.
 
 '``llvm.invariant.start``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

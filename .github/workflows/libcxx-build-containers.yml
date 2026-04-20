@@ -31,6 +31,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+        persist-credentials: false
 
     # The default Docker storage location for GitHub Actions doesn't have
     # enough disk space, so change it to /mnt, which has more disk space.
@@ -67,18 +69,3 @@ jobs:
       run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml push libcxx-linux-builder-base libcxx-linux-builder libcxx-android-builder
       env:
         TAG: ${{ github.sha }}
-
-    # We create tarballs with the images and upload them as artifacts, since that's useful for testing
-    # the images when making changes.
-    - name: Create image tarballs
-      run: |
-        docker image save ghcr.io/llvm/libcxx-linux-builder-base:${{ github.sha }} | gzip > libcxx-linux-builder-base.tar.gz
-        docker image save ghcr.io/llvm/libcxx-linux-builder:${{ github.sha }} | gzip > libcxx-linux-builder.tar.gz
-        docker image save ghcr.io/llvm/libcxx-android-builder:${{ github.sha }} | gzip > libcxx-android-builder.tar.gz
-    - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-      with:
-          name: libcxx-docker-images
-          path: |
-            libcxx-linux-builder-base.tar.gz
-            libcxx-linux-builder.tar.gz
-            libcxx-android-builder.tar.gz
