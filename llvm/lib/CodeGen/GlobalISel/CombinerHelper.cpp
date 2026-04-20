@@ -2358,22 +2358,9 @@ void CombinerHelper::applyCombineUnmergeConstant(
   assert((MI.getNumOperands() - 1 == Csts.size()) &&
          "Not enough operands to replace all defs");
   unsigned NumElems = MI.getNumOperands() - 1;
-
-  Register SrcReg = MI.getOperand(NumElems).getReg();
-
-  if (MRI.getType(SrcReg).isFloat()) {
-    APFloat Val(getFltSemanticForLLT(MRI.getType(MI.getOperand(0).getReg())));
-
-    for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-      Register DstReg = MI.getOperand(Idx).getReg();
-      Val.convertFromAPInt(Csts[Idx], false, detail::rmTowardZero);
-      Builder.buildFConstant(DstReg, Val);
-    }
-  } else {
-    for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-      Register DstReg = MI.getOperand(Idx).getReg();
-      Builder.buildConstant(DstReg, Csts[Idx]);
-    }
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    Register DstReg = MI.getOperand(Idx).getReg();
+    Builder.buildConstant(DstReg, Csts[Idx]);
   }
 
   MI.eraseFromParent();
@@ -5445,7 +5432,7 @@ bool CombinerHelper::matchNarrowBinopFeedingAnd(
   unsigned NarrowWidth = Mask.countr_one();
   if (NarrowWidth == WideTy.getSizeInBits())
     return false;
-  LLT NarrowTy = LLT::scalar(NarrowWidth);
+  LLT NarrowTy = LLT::integer(NarrowWidth);
 
   // Check if adding the zext + truncates could be harmful.
   auto &MF = *MI.getMF();
@@ -5746,7 +5733,8 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   auto One = MIB.buildConstant(Ty, 1);
   auto IsOne = MIB.buildICmp(
       CmpInst::Predicate::ICMP_EQ,
-      Ty.isScalar() ? LLT::scalar(1) : Ty.changeElementSize(1), RHS, One);
+      Ty.isScalar() ? LLT::integer(1) : Ty.changeElementType(LLT::integer(1)),
+      RHS, One);
   auto ret = MIB.buildSelect(Ty, IsOne, LHS, Q);
 
   if (Opcode == TargetOpcode::G_UREM) {
@@ -6033,8 +6021,8 @@ void CombinerHelper::applySDivByPow2(MachineInstr &MI) const {
   Register RHS = SDiv.getReg(2);
   LLT Ty = MRI.getType(Dst);
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
-  LLT CCVT =
-      Ty.isVector() ? LLT::vector(Ty.getElementCount(), 1) : LLT::scalar(1);
+  LLT CCVT = Ty.isVector() ? LLT::vector(Ty.getElementCount(), LLT::integer(1))
+                           : LLT::integer(1);
 
   // Effectively we want to lower G_SDIV %lhs, %rhs, where %rhs is a power of 2,
   // to the following version:
