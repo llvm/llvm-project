@@ -347,7 +347,7 @@ const Symbol *FindExternallyVisibleObject(
   } else if (&GetProgramUnitContaining(ultimate) !=
       &GetProgramUnitContaining(scope)) {
     return &object;
-  } else if (const Symbol * block{FindCommonBlockContaining(ultimate)}) {
+  } else if (const Symbol *block{FindCommonBlockContaining(ultimate)}) {
     return block;
   }
   return nullptr;
