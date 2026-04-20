@@ -7,7 +7,7 @@
 # CHECK: name: iglp_cache_creation_small_gemm
 # CHECK: mfmaSmallGemmSingleWaveCaches:
 # CHECK-NEXT: - mbb:             0
-# CHECK-NEXT:   strategyId:      1
+# CHECK-NEXT:   iglpOptOrdinal:  0
 # CHECK-NEXT:   dswCount:        2
 # CHECK-NEXT:   dswWithPermCount: 0
 # CHECK-NEXT:   dswWithSharedVMEMCount: 0
@@ -15,7 +15,7 @@
 # CHECK: name: iglp_cache_creation_exp_interleave
 # CHECK: mfmaExpInterleaveCaches:
 # CHECK-NEXT: - mbb:             0
-# CHECK-NEXT:   strategyId:      2
+# CHECK-NEXT:   iglpOptOrdinal:  0
 # CHECK-NEXT:   transPipeCount:  1
 # CHECK-NEXT:   mfmaPipeCount:   1
 # CHECK-NEXT:   addPipeCount:    0
@@ -32,7 +32,7 @@
 # CHECK: name: iglp_cache_creation_exp_interleave_failed
 # CHECK: mfmaExpInterleaveCaches:
 # CHECK-NEXT: - mbb:             0
-# CHECK-NEXT:   strategyId:      2
+# CHECK-NEXT:   iglpOptOrdinal:  0
 # CHECK-NEXT:   transPipeCount:  0
 # CHECK-NEXT:   mfmaPipeCount:   0
 # CHECK-NEXT:   addPipeCount:    0

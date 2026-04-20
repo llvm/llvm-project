@@ -12,6 +12,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -773,17 +774,41 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
   if (SFI)
     ScavengeFI = yaml::FrameIndex(*SFI, MF.getFrameInfo());
 
+  // Build a lookup table of IGLP_OPT MachineInstrs to their ordinal within
+  // their MBB.
+  DenseMap<const MachineInstr *, unsigned> IGLPOptOrdinalLookup;
+  for (const MachineBasicBlock &MBB : MF) {
+    unsigned IGLPOptOrdinal = 0;
+    for (const MachineInstr &MI : MBB) {
+      if (MI.getOpcode() != AMDGPU::IGLP_OPT)
+        continue;
+      IGLPOptOrdinalLookup.try_emplace(&MI, IGLPOptOrdinal++);
+    }
+  }
+
   for (const auto &[MI, C] : MFI.getMFMASmallGemmSingleWaveCaches()) {
     MFMASmallGemmSingleWaveCaches.push_back(
         {static_cast<unsigned>(MI->getParent()->getNumber()),
-         static_cast<unsigned>(MI->getOperand(0).getImm()), C});
+         IGLPOptOrdinalLookup[MI], C});
   }
 
   for (const auto &[MI, C] : MFI.getMFMAExpInterleaveCaches()) {
     MFMAExpInterleaveCaches.push_back(
         {static_cast<unsigned>(MI->getParent()->getNumber()),
-         static_cast<unsigned>(MI->getOperand(0).getImm()), C});
+         IGLPOptOrdinalLookup[MI], C});
   }
+
+  // DenseMap iteration order is not deterministic and may vary across
+  // processes. Sort by (MBBNum, IGLPOptOrdinal) to make MIR output
+  // deterministic.
+  auto ByMBBAndOrdinal = [](const auto &A, const auto &B) {
+    return A.MBBNum < B.MBBNum ||
+           (A.MBBNum == B.MBBNum && A.IGLPOptOrdinal < B.IGLPOptOrdinal);
+  };
+  llvm::sort(MFMASmallGemmSingleWaveCaches.begin(),
+             MFMASmallGemmSingleWaveCaches.end(), ByMBBAndOrdinal);
+  llvm::sort(MFMAExpInterleaveCaches.begin(), MFMAExpInterleaveCaches.end(),
+             ByMBBAndOrdinal);
 }
 
 void yaml::SIMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
@@ -837,15 +862,15 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   if (!YamlMFI.MFMASmallGemmSingleWaveCaches.empty() ||
       !YamlMFI.MFMAExpInterleaveCaches.empty()) {
     for (const MachineBasicBlock &MBB : MF) {
+      unsigned IGLPOptOrdinal = 0;
       for (const MachineInstr &MI : MBB) {
         if (MI.getOpcode() != AMDGPU::IGLP_OPT)
           continue;
         unsigned MBBNum = MBB.getNumber();
-        unsigned StrategyId = static_cast<unsigned>(MI.getOperand(0).getImm());
 
         for (const yaml::MFMASmallGemmSingleWaveCacheEntry &E :
              YamlMFI.MFMASmallGemmSingleWaveCaches) {
-          if (E.MBBNum == MBBNum && E.StrategyId == StrategyId) {
+          if (E.MBBNum == MBBNum && E.IGLPOptOrdinal == IGLPOptOrdinal) {
             MFMASmallGemmSingleWaveCaches[&MI] = E.Cache;
             break;
           }
@@ -853,11 +878,12 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
 
         for (const yaml::MFMAExpInterleaveCacheEntry &E :
              YamlMFI.MFMAExpInterleaveCaches) {
-          if (E.MBBNum == MBBNum && E.StrategyId == StrategyId) {
+          if (E.MBBNum == MBBNum && E.IGLPOptOrdinal == IGLPOptOrdinal) {
             MFMAExpInterleaveCaches[&MI] = E.Cache;
             break;
           }
         }
+        ++IGLPOptOrdinal;
       }
     }
   }

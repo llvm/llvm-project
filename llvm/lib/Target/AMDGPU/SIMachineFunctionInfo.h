@@ -88,21 +88,37 @@ public:
   }
 };
 
+/// Cache for the MFMASmallGemmSingleWaveOpt IGLPStrategy.
 struct MFMASmallGemmSingleWaveCache {
+  // The count of DS_WRITES in the pipeline
   unsigned DSWCount = 0;
+  // The count of DS_WRITES with V_PERM predecessors
   unsigned DSWWithPermCount = 0;
+  // The count of DS_WRITES with shared VMEM_READs (see
+  // MFMASmallGemmSingleWaveOpt::applyIGLPStrategy)
   unsigned DSWWithSharedVMEMCount = 0;
 };
 
+/// Cache for the MFMAExpInterleaveOpt IGLPStrategy.
 struct MFMAExpInterleaveCache {
+  // The count of TRANS SUs involved in the interleaved pipeline
   unsigned TransPipeCount = 0;
+  // The count of MFMA SUs involved in the interleaved pipeline
   unsigned MFMAPipeCount = 0;
+  // The count of Add SUs involved in the interleaved pipeline
   unsigned AddPipeCount = 0;
+  // The number of transitive MFMA successors for each TRANS SU
   unsigned MFMAEnablement = 0;
+  // The number of transitive TRANS predecessors for each MFMA SU
   unsigned ExpRequirement = 0;
+  // The count of independent "chains" of MFMA instructions in the pipeline
   unsigned MFMAChains = 0;
+  // Whether or not the pipeline has V_CVT instructions
   bool HasCvt = false;
+  // Whether or not there are instructions between the TRANS instruction and
+  // V_CVT
   bool HasChainBetweenCvt = false;
+  // Whether the pipeline analysis succeeded
   bool AnalysisResult = false;
 };
 
@@ -280,15 +296,17 @@ template <> struct MappingTraits<SIMode> {
 };
 
 struct MFMASmallGemmSingleWaveCacheEntry {
+  // Replace the IGLP_OPT MachineInstr with its MBB number and its ordinal among
+  // IGLP_OPT instructions in that MBB to serialize the cache.
   unsigned MBBNum = 0;
-  unsigned StrategyId = 0;
+  unsigned IGLPOptOrdinal = 0;
   MFMASmallGemmSingleWaveCache Cache;
 };
 
 template <> struct MappingTraits<MFMASmallGemmSingleWaveCacheEntry> {
   static void mapping(IO &YamlIO, MFMASmallGemmSingleWaveCacheEntry &E) {
     YamlIO.mapRequired("mbb", E.MBBNum);
-    YamlIO.mapRequired("strategyId", E.StrategyId);
+    YamlIO.mapRequired("iglpOptOrdinal", E.IGLPOptOrdinal);
     YamlIO.mapRequired("dswCount", E.Cache.DSWCount);
     YamlIO.mapRequired("dswWithPermCount", E.Cache.DSWWithPermCount);
     YamlIO.mapRequired("dswWithSharedVMEMCount",
@@ -297,15 +315,17 @@ template <> struct MappingTraits<MFMASmallGemmSingleWaveCacheEntry> {
 };
 
 struct MFMAExpInterleaveCacheEntry {
+  // Replace the IGLP_OPT MachineInstr with its MBB number and its ordinal among
+  // IGLP_OPT instructions in that MBB to serialize the cache.
   unsigned MBBNum = 0;
-  unsigned StrategyId = 0;
+  unsigned IGLPOptOrdinal = 0;
   MFMAExpInterleaveCache Cache;
 };
 
 template <> struct MappingTraits<MFMAExpInterleaveCacheEntry> {
   static void mapping(IO &YamlIO, MFMAExpInterleaveCacheEntry &E) {
     YamlIO.mapRequired("mbb", E.MBBNum);
-    YamlIO.mapRequired("strategyId", E.StrategyId);
+    YamlIO.mapRequired("iglpOptOrdinal", E.IGLPOptOrdinal);
     YamlIO.mapRequired("transPipeCount", E.Cache.TransPipeCount);
     YamlIO.mapRequired("mfmaPipeCount", E.Cache.MFMAPipeCount);
     YamlIO.mapRequired("addPipeCount", E.Cache.AddPipeCount);
@@ -679,8 +699,12 @@ private:
   // load/store is enabled.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
 
+  // Cached heuristics for the MFMASmallGemmSingleWaveOpt IGLPStrategy, keyed by
+  // the IGLP_OPT MachineInstr that triggered the analysis.
   DenseMap<const MachineInstr *, MFMASmallGemmSingleWaveCache>
       MFMASmallGemmSingleWaveCaches;
+  // Cached heuristics for the MFMAExpInterleaveOpt IGLPStrategy, keyed by the
+  // IGLP_OPT MachineInstr that triggered the analysis.
   DenseMap<const MachineInstr *, MFMAExpInterleaveCache>
       MFMAExpInterleaveCaches;
 

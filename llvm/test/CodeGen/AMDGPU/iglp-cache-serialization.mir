@@ -7,13 +7,13 @@
 # Verify round-trip of the serialized cache fields.
 # ROUNDTRIP: mfmaSmallGemmSingleWaveCaches:
 # ROUNDTRIP-NEXT: - mbb:             0
-# ROUNDTRIP-NEXT:   strategyId:      1
+# ROUNDTRIP-NEXT:   iglpOptOrdinal:  0
 # ROUNDTRIP-NEXT:   dswCount:        42
 # ROUNDTRIP-NEXT:   dswWithPermCount: 43
 # ROUNDTRIP-NEXT:   dswWithSharedVMEMCount: 44
 # ROUNDTRIP: mfmaExpInterleaveCaches:
 # ROUNDTRIP-NEXT: - mbb:             1
-# ROUNDTRIP-NEXT:   strategyId:      2
+# ROUNDTRIP-NEXT:   iglpOptOrdinal:  0
 # ROUNDTRIP-NEXT:   transPipeCount:  42
 # ROUNDTRIP-NEXT:   mfmaPipeCount:   43
 # ROUNDTRIP-NEXT:   addPipeCount:    44
@@ -39,7 +39,7 @@ noVRegs:         true
 machineFunctionInfo:
   mfmaExpInterleaveCaches:
     - mbb:             1
-      strategyId:      2
+      iglpOptOrdinal:  0
       transPipeCount:  42
       mfmaPipeCount:   43
       addPipeCount:    44
@@ -51,7 +51,7 @@ machineFunctionInfo:
       analysisResult:  true
   mfmaSmallGemmSingleWaveCaches:
     - mbb:             0
-      strategyId:      1
+      iglpOptOrdinal:  0
       dswCount:        42
       dswWithPermCount: 43
       dswWithSharedVMEMCount: 44

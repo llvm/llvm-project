@@ -903,16 +903,7 @@ bool MFMASmallGemmOpt::applyIGLPStrategy(
 
 class MFMAExpInterleaveOpt final : public IGLPStrategy {
 private:
-  // The heuristics for the pipeline:
-  // TransPipeCount: Number of TRANS SUs involved in the interleaved pipeline
-  // MFMAPipeCount:  Number of MFMA SUs involved in the interleaved pipeline
-  // AddPipeCount:   Number of Add SUs involved in the interleaved pipeline
-  // MFMAEnablement: Number of transitive MFMA successors for each TRANS SU
-  // ExpRequirement: Number of transitive TRANS predecessors for each MFMA SU
-  // MFMAChains:     Number of independent "chains" of MFMA instructions in the
-  // pipeline HasCvt:         Whether or not the pipeline has V_CVT instructions
-  // HasChainBetweenCvt: Whether or not there are instructions between the TRANS
-  //                     instruction and V_CVT
+  // Cached heuristics for the pipeline
   const MFMAExpInterleaveCache *Cache = nullptr;
   // The first occuring DS_READ which feeds an MFMA chain
   std::optional<unsigned> FirstPipeDSR = std::nullopt;
