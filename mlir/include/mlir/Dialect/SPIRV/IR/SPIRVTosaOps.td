@@ -77,11 +77,11 @@ class SPIRV_TosaFloatElementwiseUnaryOp<string mnemonic, int opcode, list<Trait>
   SPIRV_TosaElementwiseUnaryOp<mnemonic, opcode, !listconcat(traits, [Pure])> {
 
   let arguments = (ins
-    SPIRV_TosaFloat_TensorArm: $input1
+    SPIRV_F16OrF32OrBF16_TensorArm: $input1
   );
 
   let results = (outs
-    SPIRV_TosaFloat_TensorArm: $output
+    SPIRV_F16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -115,12 +115,12 @@ class SPIRV_TosaIntegerElementwiseBinaryOp<string mnemonic, int opcode, list<Tra
   SPIRV_TosaElementwiseBinaryOp<mnemonic, opcode, traits> {
 
   let arguments = (ins
-    SPIRV_TosaInteger_TensorArm: $input1,
-    SPIRV_TosaInteger_TensorArm: $input2
+    SPIRV_I8OrI16OrI32_TensorArm: $input1,
+    SPIRV_I8OrI16OrI32_TensorArm: $input2
   );
 
   let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
+    SPIRV_I8OrI16OrI32_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -159,8 +159,6 @@ class SPIRV_TosaConvolutionOp<string mnemonic, int opcode, list<Trait> traits = 
     TypeConstraintImplicationOn<"input", BF16, "weight", [BF16]>,
     TypeConstraintImplicationOn<"input", F16, "weight", [F16]>,
     TypeConstraintImplicationOn<"input", F32, "weight", [F32]>,
-    TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
-    TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
     TypeImpliesAccType<"input", I8, ["INT32"]>,
     TypeImpliesAccType<"input", I16, ["INT48"]>,
     TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
@@ -189,8 +187,8 @@ class SPIRV_TosaComparisonOp<string mnemonic, int opcode, list<Trait> traits = [
   MatchBroadcastableShapes<"input1", "input2", "output">])> {
 
   let arguments = (ins
-    SPIRV_TosaNumerical_TensorArm: $input1,
-    SPIRV_TosaNumerical_TensorArm: $input2
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input2
   );
 
   let results = (outs
@@ -251,11 +249,11 @@ def SPIRV_TosaArgMaxOp : SPIRV_TosaOpWithResult<"ArgMax", 0, [Pure,
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
-    SPIRV_TosaNumerical_TensorArm: $input
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_Int32_TensorArmUpTo5D: $output
+    SPIRV_I32_TensorArmUpTo5D: $output
   );
 
   let assemblyFormat = [{
@@ -302,17 +300,17 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [NoMemoryEffe
   }];
 
   let arguments = (ins
-    SPIRV_Int32_1DTensorArmOfLength2Attr: $kernel,
-    SPIRV_Int32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_Int32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_I32_1DTensorArmOfLength2Attr: $kernel,
+    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
-    SPIRV_TosaNumerical_TensorArm4D: $input,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $input_zp,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $output_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input,
+    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $output_zp
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm4D: $output
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $output
   );
 
   let assemblyFormat = [{
@@ -358,20 +356,20 @@ def SPIRV_TosaConv2DOp : SPIRV_TosaConvolutionOp<"Conv2D", 2> {
   }];
 
   let arguments = (ins
-    SPIRV_Int32_1DTensorArmOfLength4Attr: $pad,
-    SPIRV_Int32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_Int32_1DTensorArmOfLength2Attr: $dilation,
+    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_I32_1DTensorArmOfLength2Attr: $dilation,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_TosaNumerical_TensorArm4D: $input,
-    SPIRV_TosaNumerical_TensorArm4D: $weight,
-    SPIRV_TosaNumerical_TensorArm1D: $bias,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $input_zp,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $weight_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input,
+    SPIRV_I8OrF16OrF32OrBF16_TensorArm4D: $weight,
+    SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm1D: $bias,
+    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrF16OrF32OrBF16_1DTensorArmOfLength1: $weight_zp
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm4D: $output
+    SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm4D: $output
   );
 
   let assemblyFormat = [{
@@ -413,20 +411,20 @@ def SPIRV_TosaConv3DOp : SPIRV_TosaConvolutionOp<"Conv3D", 3> {
   }];
 
   let arguments = (ins
-    SPIRV_Int32_1DTensorArmOfLength6Attr: $pad,
-    SPIRV_Int32_1DTensorArmOfLength3Attr: $stride,
-    SPIRV_Int32_1DTensorArmOfLength3Attr: $dilation,
+    SPIRV_I32_1DTensorArmOfLength6Attr: $pad,
+    SPIRV_I32_1DTensorArmOfLength3Attr: $stride,
+    SPIRV_I32_1DTensorArmOfLength3Attr: $dilation,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_TosaNumerical_TensorArm5D: $input,
-    SPIRV_TosaNumerical_TensorArm5D: $weight,
-    SPIRV_TosaNumerical_TensorArm1D: $bias,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $input_zp,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $weight_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm5D: $input,
+    SPIRV_I8OrF16OrF32OrBF16_TensorArm5D: $weight,
+    SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm1D: $bias,
+    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrF16OrF32OrBF16_1DTensorArmOfLength1: $weight_zp
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm5D: $output
+    SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm5D: $output
   );
 
   let assemblyFormat = [{
@@ -469,20 +467,20 @@ def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4> 
   }];
 
   let arguments = (ins
-    SPIRV_Int32_1DTensorArmOfLength4Attr: $pad,
-    SPIRV_Int32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_Int32_1DTensorArmOfLength2Attr: $dilation,
+    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_I32_1DTensorArmOfLength2Attr: $dilation,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_TosaNumerical_TensorArm4D: $input,
-    SPIRV_TosaNumerical_TensorArm4D: $weight,
-    SPIRV_TosaNumerical_TensorArm1D: $bias,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $input_zp,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $weight_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input,
+    SPIRV_I8OrF16OrF32OrBF16_TensorArm4D: $weight,
+    SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm1D: $bias,
+    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrF16OrF32OrBF16_1DTensorArmOfLength1: $weight_zp
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm4D: $output
+    SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm4D: $output
   );
 
   let assemblyFormat = [{
@@ -526,12 +524,12 @@ def SPIRV_TosaFFT2DOp : SPIRV_TosaOpWithComplexResult<"FFT2D", 5, [Pure]> {
   let arguments = (ins
     SPIRV_BoolConstAttr: $inverse,
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_Float32_TensorArm3D: $input_real,
-    SPIRV_Float32_TensorArm3D: $input_imag
+    SPIRV_F32_TensorArm3D: $input_real,
+    SPIRV_F32_TensorArm3D: $input_imag
   );
 
   let results = (outs
-    SPIRV_Struct_2_Float32_TensorArm3D: $output
+    SPIRV_Struct_2_F32_TensorArm3D: $output
   );
 
   let assemblyFormat = [{
@@ -581,14 +579,14 @@ def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [NoMemoryEffect,
   }];
 
   let arguments = (ins
-    SPIRV_TosaNumerical_TensorArm3D: $A,
-    SPIRV_TosaNumerical_TensorArm3D: $B,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $A_zp,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $B_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm3D: $A,
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm3D: $B,
+    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $A_zp,
+    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $B_zp
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm3D: $output
+    SPIRV_I32OrI64OrF16OrF32_TensorArm3D: $output
   );
 
   let assemblyFormat = [{
@@ -632,15 +630,15 @@ def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_Int32_1DTensorArmOfLength2Attr: $kernel,
-    SPIRV_Int32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_Int32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_I32_1DTensorArmOfLength2Attr: $kernel,
+    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
-    SPIRV_TosaNumerical_TensorArm4D: $input
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm4D: $output
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $output
   );
 
   let assemblyFormat = [{
@@ -687,11 +685,11 @@ def SPIRV_TosaRFFT2DOp : SPIRV_TosaOpWithComplexResult<"RFFT2D", 8, [Pure]> {
 
   let arguments = (ins
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_Float32_TensorArm3D: $input_real
+    SPIRV_F32_TensorArm3D: $input_real
   );
 
   let results = (outs
-    SPIRV_Struct_2_Float32_TensorArm3D: $output
+    SPIRV_Struct_2_F32_TensorArm3D: $output
   );
 
   let assemblyFormat = [{
@@ -732,19 +730,19 @@ def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9> 
   }];
 
   let arguments = (ins
-    SPIRV_Int32_1DTensorArmOfLength4Attr: $out_pad,
-    SPIRV_Int32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_I32_1DTensorArmOfLength4Attr: $out_pad,
+    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_TosaNumerical_TensorArm4D: $input,
-    SPIRV_TosaNumerical_TensorArm4D: $weight,
-    SPIRV_TosaNumerical_TensorArm1D: $bias,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $input_zp,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $weight_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input,
+    SPIRV_I8OrF16OrF32OrBF16_TensorArm4D: $weight,
+    SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm1D: $bias,
+    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrF16OrF32OrBF16_1DTensorArmOfLength1: $weight_zp
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm4D: $output
+    SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm4D: $output
   );
 
   let assemblyFormat = [{
@@ -787,14 +785,14 @@ def SPIRV_TosaClampOp : SPIRV_TosaOpWithResult<"Clamp", 10, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_TosaNumericalAttr: $min_val,
-    SPIRV_TosaNumericalAttr: $max_val,
+    SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr: $min_val,
+    SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr: $max_val,
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
-    SPIRV_TosaNumerical_TensorArm: $input
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -832,11 +830,11 @@ def SPIRV_TosaErfOp : SPIRV_TosaOpWithResult<"Erf", 11, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_TosaFloat_TensorArm: $input
+    SPIRV_F16OrF32OrBF16_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_TosaFloat_TensorArm: $output
+    SPIRV_F16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -873,11 +871,11 @@ def SPIRV_TosaSigmoidOp : SPIRV_TosaOpWithResult<"Sigmoid", 12, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_TosaFloat_TensorArm: $input
+    SPIRV_F16OrF32OrBF16_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_TosaFloat_TensorArm: $output
+    SPIRV_F16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -913,11 +911,11 @@ def SPIRV_TosaTanhOp : SPIRV_TosaOpWithResult<"Tanh", 13, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_TosaFloat_TensorArm: $input
+    SPIRV_F16OrF32OrBF16_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_TosaFloat_TensorArm: $output
+    SPIRV_F16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -954,12 +952,12 @@ def SPIRV_TosaAddOp : SPIRV_TosaElementwiseBinaryOp<"Add", 14, [NoMemoryEffect]>
   }];
 
   let arguments = (ins
-    SPIRV_TosaNumerical_TensorArm: $input1,
-    SPIRV_TosaNumerical_TensorArm: $input2
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input2
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -996,12 +994,12 @@ def SPIRV_TosaArithmeticRightShiftOp : SPIRV_TosaElementwiseBinaryOp<"Arithmetic
 
   let arguments = (ins
     SPIRV_BoolConstAttr: $round,
-    SPIRV_TosaInteger_TensorArm: $input1,
-    SPIRV_TosaInteger_TensorArm: $input2
+    SPIRV_I8OrI16OrI32_TensorArm: $input1,
+    SPIRV_I8OrI16OrI32_TensorArm: $input2
   );
 
   let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
+    SPIRV_I8OrI16OrI32_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1099,12 +1097,12 @@ def SPIRV_TosaIntDivOp : SPIRV_TosaElementwiseBinaryOp<"IntDiv", 19, [NoMemoryEf
   }];
 
   let arguments = (ins
-    SPIRV_Int32_TensorArm: $input1,
-    SPIRV_Int32_TensorArm: $input2
+    SPIRV_I32_TensorArm: $input1,
+    SPIRV_I32_TensorArm: $input2
   );
 
   let results = (outs
-    SPIRV_Int32_TensorArm: $output
+    SPIRV_I32_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1222,10 +1220,7 @@ def SPIRV_TosaLogicalXorOp : SPIRV_TosaBoolElementwiseBinaryOp<"LogicalXor", 24>
 }
 
 
-def SPIRV_TosaMaximumOp : SPIRV_TosaElementwiseBinaryOp<"Maximum", 25, [Pure,
-  TypeConstraintImplicationOn<"input1", AnyInteger, "input1", [I32]>,
-  TypeConstraintImplicationOn<"input2", AnyInteger, "input2", [I32]>,
-  TypeConstraintImplicationOn<"output", AnyInteger, "output", [I32]>]> {
+def SPIRV_TosaMaximumOp : SPIRV_TosaElementwiseBinaryOp<"Maximum", 25, [Pure]> {
   let summary = "Maximum.";
 
   let description = [{
@@ -1247,12 +1242,12 @@ def SPIRV_TosaMaximumOp : SPIRV_TosaElementwiseBinaryOp<"Maximum", 25, [Pure,
 
   let arguments = (ins
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
-    SPIRV_TosaNumerical_TensorArm: $input1,
-    SPIRV_TosaNumerical_TensorArm: $input2
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input2
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1264,10 +1259,7 @@ def SPIRV_TosaMaximumOp : SPIRV_TosaElementwiseBinaryOp<"Maximum", 25, [Pure,
 }
 
 
-def SPIRV_TosaMinimumOp : SPIRV_TosaElementwiseBinaryOp<"Minimum", 26, [Pure,
-  TypeConstraintImplicationOn<"input1", AnyInteger, "input1", [I32]>,
-  TypeConstraintImplicationOn<"input2", AnyInteger, "input2", [I32]>,
-  TypeConstraintImplicationOn<"output", AnyInteger, "output", [I32]>]> {
+def SPIRV_TosaMinimumOp : SPIRV_TosaElementwiseBinaryOp<"Minimum", 26, [Pure]> {
   let summary = "Minimum.";
 
   let description = [{
@@ -1289,12 +1281,12 @@ def SPIRV_TosaMinimumOp : SPIRV_TosaElementwiseBinaryOp<"Minimum", 26, [Pure,
 
   let arguments = (ins
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
-    SPIRV_TosaNumerical_TensorArm: $input1,
-    SPIRV_TosaNumerical_TensorArm: $input2
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input2
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1341,13 +1333,13 @@ def SPIRV_TosaMulOp : SPIRV_TosaBinaryOp<"Mul", 27, [NoMemoryEffect,
   }];
 
   let arguments = (ins
-    SPIRV_TosaNumerical_TensorArm: $input1,
-    SPIRV_TosaNumerical_TensorArm: $input2,
-    SPIRV_Int8_1DTensorArmOfLength1: $shift
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input2,
+    SPIRV_I8_1DTensorArmOfLength1: $shift
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1380,12 +1372,12 @@ def SPIRV_TosaPowOp : SPIRV_TosaElementwiseBinaryOp<"Pow", 28, [NoMemoryEffect]>
   }];
 
   let arguments = (ins
-    SPIRV_TosaFloat_TensorArm: $input1,
-    SPIRV_TosaFloat_TensorArm: $input2
+    SPIRV_F16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_F16OrF32OrBF16_TensorArm: $input2
   );
 
   let results = (outs
-    SPIRV_TosaFloat_TensorArm: $output
+    SPIRV_F16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1396,10 +1388,7 @@ def SPIRV_TosaPowOp : SPIRV_TosaElementwiseBinaryOp<"Pow", 28, [NoMemoryEffect]>
 }
 
 
-def SPIRV_TosaSubOp : SPIRV_TosaElementwiseBinaryOp<"Sub", 29, [NoMemoryEffect,
-  TypeConstraintImplicationOn<"input1", AnyInteger, "input1", [I32]>,
-  TypeConstraintImplicationOn<"input2", AnyInteger, "input2", [I32]>,
-  TypeConstraintImplicationOn<"output", AnyInteger, "output", [I32]>]> {
+def SPIRV_TosaSubOp : SPIRV_TosaElementwiseBinaryOp<"Sub", 29, [NoMemoryEffect]> {
   let summary = "Subtraction operator.";
 
   let description = [{
@@ -1420,12 +1409,12 @@ def SPIRV_TosaSubOp : SPIRV_TosaElementwiseBinaryOp<"Sub", 29, [NoMemoryEffect,
   }];
 
   let arguments = (ins
-    SPIRV_TosaNumerical_TensorArm: $input1,
-    SPIRV_TosaNumerical_TensorArm: $input2
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input2
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1478,12 +1467,12 @@ def SPIRV_TosaTableOp : SPIRV_TosaOpWithResult<"Table", 30, [NoMemoryEffect,
   }];
 
   let arguments = (ins
-    SPIRV_TosaInteger_TensorArm: $input1,
-    SPIRV_TosaInteger_TensorArm1D: $table
+    SPIRV_I8OrI16_TensorArm: $input1,
+    SPIRV_I8OrI16_TensorArm1D: $table
   );
 
   let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
+    SPIRV_I8OrI32_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1520,11 +1509,11 @@ def SPIRV_TosaAbsOp : SPIRV_TosaElementwiseUnaryOp<"Abs", 31, [NoMemoryEffect]> 
   }];
 
   let arguments = (ins
-    SPIRV_TosaNumerical_TensorArm: $input1
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input1
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1551,11 +1540,11 @@ def SPIRV_TosaBitwiseNotOp : SPIRV_TosaElementwiseUnaryOp<"BitwiseNot", 32, [Pur
   }];
 
   let arguments = (ins
-    SPIRV_TosaInteger_TensorArm: $input1
+    SPIRV_I8OrI16OrI32_TensorArm: $input1
   );
 
   let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
+    SPIRV_I8OrI16OrI32_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1600,11 +1589,11 @@ def SPIRV_TosaClzOp : SPIRV_TosaElementwiseUnaryOp<"Clz", 34, [Pure]> {
   }];
 
   let arguments = (ins
-    SPIRV_Int32_TensorArm: $input1
+    SPIRV_I32_TensorArm: $input1
   );
 
   let results = (outs
-    SPIRV_Int32_TensorArm: $output
+    SPIRV_I32_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1738,13 +1727,13 @@ def SPIRV_TosaNegateOp : SPIRV_TosaElementwiseUnaryOp<"Negate", 40, [NoMemoryEff
   }];
 
   let arguments = (ins
-    SPIRV_TosaNumerical_TensorArm: $input1,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $input1_zp,
-    SPIRV_TosaNumerical_1DTensorArmOfLength1: $output_zp
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_1DTensorArmOfLength1: $input1_zp,
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_1DTensorArmOfLength1: $output_zp
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -1835,12 +1824,12 @@ def SPIRV_TosaSelectOp : SPIRV_TosaOpWithResult<"Select", 44, [Pure,
 
   let arguments = (ins
     SPIRV_Bool_TensorArm: $condition,
-    SPIRV_TosaAny_TensorArm: $true_value,
-    SPIRV_TosaAny_TensorArm: $false_value
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $true_value,
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $false_value
   );
 
   let results = (outs
-    SPIRV_TosaAny_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let hasVerifier = 1;
@@ -2031,11 +2020,11 @@ def SPIRV_TosaReduceMaxOp : SPIRV_TosaReductionOp<"ReduceMax", 50, [Pure]> {
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
-    SPIRV_TosaNumerical_TensorArm: $input
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2068,11 +2057,11 @@ def SPIRV_TosaReduceMinOp : SPIRV_TosaReductionOp<"ReduceMin", 51, [Pure]> {
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
-    SPIRV_TosaNumerical_TensorArm: $input
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2102,11 +2091,11 @@ def SPIRV_TosaReduceProductOp : SPIRV_TosaReductionOp<"ReduceProduct", 52, [Pure
 
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
-    SPIRV_TosaFloat_TensorArm: $input
+    SPIRV_F16OrF32OrBF16_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_TosaFloat_TensorArm: $output
+    SPIRV_F16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2139,11 +2128,11 @@ def SPIRV_TosaReduceSumOp : SPIRV_TosaReductionOp<"ReduceSum", 53, [NoMemoryEffe
 
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
-    SPIRV_TosaNumerical_TensorArm: $input
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm: $output
+    SPIRV_I32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2178,11 +2167,11 @@ def SPIRV_TosaConcatOp : SPIRV_TosaOpWithResult<"Concat", 54, [Pure,
 
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
-    Variadic<SPIRV_TosaAny_TensorArm>: $input1
+    Variadic<SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm>: $input1
   );
 
   let results = (outs
-    SPIRV_TosaAny_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2225,13 +2214,13 @@ def SPIRV_TosaPadOp : SPIRV_TosaOpWithResult<"Pad", 55, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_TosaAny_TensorArm: $input1,
-    SPIRV_Int32_1DTensorArmOfEvenLength2To12: $padding,
-    SPIRV_TosaAny_1DTensorArmOfLength1: $pad_const
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I32_1DTensorArmOfEvenLength2To12: $padding,
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_1DTensorArmOfLength1: $pad_const
   );
 
   let results = (outs
-    SPIRV_TosaAny_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2278,12 +2267,12 @@ def SPIRV_TosaReshapeOp : SPIRV_TosaOpWithResult<"Reshape", 56, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_TosaAny_TensorArm: $input1,
-    SPIRV_Int32_1DTensorArmOfLength1To6: $shape
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I32_1DTensorArmOfLength1To6: $shape
   );
 
   let results = (outs
-    SPIRV_TosaAny_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2326,11 +2315,11 @@ def SPIRV_TosaReverseOp : SPIRV_TosaOpWithResult<"Reverse", 57, [Pure,
 
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
-    SPIRV_TosaAny_TensorArm: $input1
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1
   );
 
   let results = (outs
-    SPIRV_TosaAny_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2373,13 +2362,13 @@ def SPIRV_TosaSliceOp : SPIRV_TosaOpWithResult<"Slice", 58, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_TosaAny_TensorArm: $input1,
-    SPIRV_Int32_1DTensorArmOfLength1To6: $start,
-    SPIRV_Int32_1DTensorArmOfLength1To6: $size
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I32_1DTensorArmOfLength1To6: $start,
+    SPIRV_I32_1DTensorArmOfLength1To6: $size
   );
 
   let results = (outs
-    SPIRV_TosaAny_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2427,12 +2416,12 @@ def SPIRV_TosaTileOp : SPIRV_TosaOpWithResult<"Tile", 59, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_TosaAny_TensorArm: $input1,
-    SPIRV_Int32_1DTensorArmOfLength1To6: $multiples
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_I32_1DTensorArmOfLength1To6: $multiples
   );
 
   let results = (outs
-    SPIRV_TosaAny_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2476,12 +2465,12 @@ def SPIRV_TosaTransposeOp : SPIRV_TosaOpWithResult<"Transpose", 60, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_Int32_1DTensorArmOfLength1To6Attr: $perms,
-    SPIRV_TosaAny_TensorArm: $input1
+    SPIRV_I32_1DTensorArmOfLength1To6Attr: $perms,
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1
   );
 
   let results = (outs
-    SPIRV_TosaAny_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2523,12 +2512,12 @@ def SPIRV_TosaGatherOp : SPIRV_TosaOpWithResult<"Gather", 61, [NoMemoryEffect,
   }];
 
   let arguments = (ins
-    SPIRV_TosaNumerical_TensorArm3D: $values,
-    SPIRV_Int32_TensorArm2D: $indices
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $values,
+    SPIRV_I32_TensorArm2D: $indices
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm3D: $output
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $output
   );
 
   let assemblyFormat = [{
@@ -2577,13 +2566,13 @@ def SPIRV_TosaScatterOp : SPIRV_TosaOpWithResult<"Scatter", 62, [NoMemoryEffect,
   }];
 
   let arguments = (ins
-    SPIRV_TosaNumerical_TensorArm3D: $values_in,
-    SPIRV_Int32_TensorArm2D: $indices,
-    SPIRV_TosaNumerical_TensorArm3D: $input
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $values_in,
+    SPIRV_I32_TensorArm2D: $indices,
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $input
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm3D: $values_out
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $values_out
   );
 
   let assemblyFormat = [{
@@ -2660,14 +2649,14 @@ def SPIRV_TosaResizeOp : SPIRV_TosaOpWithResult<"Resize", 63, [Pure,
 
   let arguments = (ins
     SPIRV_TosaExtResizeModeAttr: $mode,
-    SPIRV_TosaNumerical_TensorArm4D: $input,
-    SPIRV_Int32_1DTensorArmOfLength4: $scale,
-    SPIRV_Int32_1DTensorArmOfLength2: $offset,
-    SPIRV_Int32_1DTensorArmOfLength2: $border
+    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input,
+    SPIRV_I32_1DTensorArmOfLength4: $scale,
+    SPIRV_I32_1DTensorArmOfLength2: $offset,
+    SPIRV_I32_1DTensorArmOfLength2: $border
   );
 
   let results = (outs
-    SPIRV_TosaNumerical_TensorArm4D: $output
+    SPIRV_I32OrI8OrI64OrI16OrF16OrF32OrBF16_TensorArm4D: $output
   );
 
   let assemblyFormat = [{
@@ -2761,11 +2750,11 @@ def SPIRV_TosaCastOp : SPIRV_TosaOpWithResult<"Cast", 64, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_TosaAny_TensorArm: $input
+    SPIRV_BoolOrI8OrI16OrI32OrBF16OrF16OrF32_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_TosaAny_TensorArm: $output
+    SPIRV_I8OrI16OrI32OrBoolOrF16OrF32OrBF16_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2788,10 +2777,6 @@ def SPIRV_TosaRescaleOp : SPIRV_TosaOpWithResult<"Rescale", 65, [NoMemoryEffect,
   ElementTypeMatchesScale32<"multiplier">,
   TensorLengthMatchesPerChannel<"multiplier">,
   TensorLengthMatchesPerChannel<"shift">,
-  TypeConstraintImplicationOn<"input", I8, "output", [I8, I16, I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I8, I16, I32]>,
-  TypeConstraintImplicationOn<"input", I32, "output", [I8, I16, I32]>,
-  TypeConstraintImplicationOn<"input", I64, "output", [I8, I16, I32]>,
   BoolAttrTypeConstraintImplicationOn<"input_unsigned", "input", [I8, I16]>,
   BoolAttrTypeConstraintImplicationOn<"output_unsigned", "input", [I8, I16]>,
   BoolAttrTypeConstraintImplicationOn<"input_unsigned", "output", [I8, I16]>,
@@ -2843,15 +2828,15 @@ def SPIRV_TosaRescaleOp : SPIRV_TosaOpWithResult<"Rescale", 65, [NoMemoryEffect,
     SPIRV_BoolConstAttr: $per_channel,
     SPIRV_BoolConstAttr: $input_unsigned,
     SPIRV_BoolConstAttr: $output_unsigned,
-    SPIRV_TosaInteger_TensorArm: $input,
-    SPIRV_Int16OrInt32_TensorArm1D: $multiplier,
-    SPIRV_Int8_TensorArm1D: $shift,
-    SPIRV_TosaInteger_1DTensorArmOfLength1: $input_zp,
-    SPIRV_TosaInteger_1DTensorArmOfLength1: $output_zp
+    SPIRV_I8OrI16OrI32OrI64_TensorArm: $input,
+    SPIRV_I16OrI32_TensorArm1D: $multiplier,
+    SPIRV_I8_TensorArm1D: $shift,
+    SPIRV_I8OrI16OrI32OrI64_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrI16OrI32_1DTensorArmOfLength1: $output_zp
   );
 
   let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
+    SPIRV_I8OrI16OrI32_TensorArm: $output
   );
 
   let assemblyFormat = [{
