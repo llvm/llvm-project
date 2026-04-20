@@ -187,13 +187,35 @@ public:
     }
   }
 
-  template <typename OriginFact, typename Predicate>
+  /// Records warnings for live loans whose access paths match loan invalidated
+  /// by `InvalidatingExpr`.
+  ///
+  /// \param InvalidatingExpr The invalidating expression.
+  /// \param InvalidatedOrigin The origin being invalidated.
+  /// \param OF The fact where the invalidation happens.
+  template <typename OriginFact>
   void recordWarningsForMatchingLoans(const Expr *InvalidatingExpr,
-                                      OriginFact OF, Predicate Pred) {
+                                      OriginID InvalidatedOrigin,
+                                      OriginFact OF) {
+
+    LoanSet DirectlyInvalidatedLoans =
+        LoanPropagation.getLoans(InvalidatedOrigin, OF);
+
+    auto IsInvalidated = [&](const LoanID LID) {
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      for (LoanID InvalidID : DirectlyInvalidatedLoans) {
+        const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
+
+        if (InvalidL->getAccessPath() == L->getAccessPath())
+          return true;
+      }
+      return false;
+    };
+
     for (auto &[OID, LiveInfo] : LiveOrigins.getLiveOriginsAt(OF)) {
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, OF);
       for (LoanID HeldLoan : HeldLoans) {
-        if (!Pred(HeldLoan))
+        if (!IsInvalidated(HeldLoan))
           continue;
 
         bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
@@ -217,44 +239,13 @@ public:
   /// and checks if they hold loans that are invalidated by the operation
   /// (e.g., iterators into a vector that is being pushed to).
   void checkInvalidation(const InvalidateOriginFact *IOF) {
-    OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
-    /// Get loans directly pointing to the invalidated container
-    LoanSet DirectlyInvalidatedLoans =
-        LoanPropagation.getLoans(InvalidatedOrigin, IOF);
-    auto IsInvalidated = [&](const LoanID LID) {
-      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      for (LoanID InvalidID : DirectlyInvalidatedLoans) {
-        const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-
-        if (InvalidL->getAccessPath() == L->getAccessPath())
-          return true;
-      }
-      return false;
-    };
-    // For each live origin, check if it holds an invalidated loan and report.
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
-    recordWarningsForMatchingLoans(IOF->getInvalidationExpr(), IOF,
-                                   IsInvalidated);
+    recordWarningsForMatchingLoans(IOF->getInvalidationExpr(),
+                                   IOF->getInvalidatedOrigin(), IOF);
   }
 
   void checkDestroyed(const DestroyOriginFact *DOF) {
-    OriginID DestroyedOrigin = DOF->getDestroyedOrigin();
-    LoanSet DirectlyDestroyedLoans =
-        LoanPropagation.getLoans(DestroyedOrigin, DOF);
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(DOF);
-
-    auto IsDestroyed = [&](const LoanID LID) {
-      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      for (LoanID InvalidID : DirectlyDestroyedLoans) {
-        const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-
-        if (InvalidL->getAccessPath() == L->getAccessPath())
-          return true;
-      }
-      return false;
-    };
-
-    recordWarningsForMatchingLoans(DOF->getDestroyExpr(), DOF, IsDestroyed);
+    recordWarningsForMatchingLoans(DOF->getDestroyExpr(),
+                                   DOF->getDestroyedOrigin(), DOF);
   }
 
   void issuePendingWarnings() {

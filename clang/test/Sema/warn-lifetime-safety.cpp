@@ -2865,15 +2865,16 @@ void delete_through_pointer_field() {
 
 void delete_stack_object() {
   MyObj obj;
-  delete &obj;
-  (void)obj.id;
+  MyObj* p = &obj; // expected-warning {{object whose reference is captured is later invalidated}}
+  delete &obj;     // expected-note {{invalidated here}}
+  (void)p->id;     // expected-note {{later used here}}
 }
 
 void delete_stack_object_int() {
   int obj;
-  int* p = &obj;
-  delete &obj;
-  (void)p;
+  int* p = &obj;  // expected-warning {{object whose reference is captured is later invalidated}}
+  delete &obj;    // expected-note {{invalidated here}}
+  (void)*p;       // expected-note {{later used here}}
 }
 
 } // namespace new_allocation
