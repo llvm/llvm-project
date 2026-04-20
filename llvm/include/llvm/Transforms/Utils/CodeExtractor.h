@@ -142,6 +142,13 @@ class LLVM_ABI CodeExtractor {
   /// space.
   bool ArgsInZeroAddressSpace;
 
+  // If true, the outlined function always return void even when there is only
+  // one output.
+  bool VoidReturnWithSingleOutput;
+
+  // If set, the return value of the outline function.
+  Value *FuncRetVal = nullptr;
+
 public:
   /// Create a code extractor for a sequence of blocks.
   ///
@@ -159,14 +166,17 @@ public:
   /// allocations will be placed, if needed, in all blocks in DeallocationBlocks
   /// or the end of the replacement block. If ArgsInZeroAddressSpace param is
   /// set to true, then the aggregate param pointer of the outlined function is
-  /// declared in zero address space.
+  /// declared in zero address space. If VoidReturnWithSingleOutput is set to
+  /// true, then the return type of the outlined function is set void even if
+  /// there is only one output.
   CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                 bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                 BranchProbabilityInfo *BPI = nullptr,
                 AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                 bool AllowAlloca = false, BasicBlock *AllocationBlock = nullptr,
                 ArrayRef<BasicBlock *> DeallocationBlocks = {},
-                std::string Suffix = "", bool ArgsInZeroAddressSpace = false);
+                std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
+                bool VoidReturnWithSingleOutput = true);
 
   virtual ~CodeExtractor() = default;
 
@@ -216,7 +226,7 @@ public:
   /// on the cost however.
   void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
                          const ValueSet &Allocas,
-                         bool CollectGlobalInputs = false) const;
+                         bool CollectGlobalInputs = false);
 
   /// Check if life time marker nodes can be hoisted/sunk into the outline
   /// region.
@@ -326,7 +336,7 @@ private:
   /// into the original function's control flow.
   void
   insertReplacerCall(Function *oldFunction, BasicBlock *header,
-                     BasicBlock *codeReplacer, const ValueSet &outputs,
+                     CallInst *ReplacerCall, const ValueSet &outputs,
                      ArrayRef<Value *> Reloads,
                      const DenseMap<BasicBlock *, BlockFrequency> &ExitWeights);
 };
