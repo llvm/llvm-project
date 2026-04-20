@@ -1507,6 +1507,8 @@ public:
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
 
+  LValue emitPseudoObjectLValue(const PseudoObjectExpr *E);
+
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack
   /// objects, globals depending on target.
