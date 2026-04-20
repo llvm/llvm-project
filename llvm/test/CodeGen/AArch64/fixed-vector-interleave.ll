@@ -580,3 +580,45 @@ define <48 x i8> @interleave3_v48i8(ptr %p, ptr %p0, <16 x i8> %vec0, <16 x i8> 
   %retval = call <48 x i8> @llvm.vector.interleave3.v48i8(<16 x i8> %vec0, <16 x i8> %vec1, <16 x i8> %vec2)
   ret <48 x i8> %retval
 }
+
+define <12 x i16> @interleave3_v12i16(ptr %p, ptr %p0, <4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2) {
+; CHECK-LABEL: interleave3_v12i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    add x9, sp, #8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    st3 { v0.4h, v1.4h, v2.4h }, [x9]
+; CHECK-NEXT:    ldp d1, d0, [sp, #8]
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    ldr d0, [sp, #24]
+; CHECK-NEXT:    str d0, [x8, #16]
+; CHECK-NEXT:    str q1, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %retval = call <12 x i16> @llvm.vector.interleave3.v12i16(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2)
+  ret <12 x i16> %retval
+}
+
+define <24 x i8> @interleave3_v24i8(ptr %p, ptr %p0, <8 x i8> %vec0, <8 x i8> %vec1, <8 x i8> %vec2) {
+; CHECK-LABEL: interleave3_v24i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    add x9, sp, #8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-NEXT:    st3 { v0.8b, v1.8b, v2.8b }, [x9]
+; CHECK-NEXT:    ldp d1, d0, [sp, #8]
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    ldr d0, [sp, #24]
+; CHECK-NEXT:    str d0, [x8, #16]
+; CHECK-NEXT:    str q1, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %retval = call <24 x i8> @llvm.vector.interleave3.v24i8(<8 x i8> %vec0, <8 x i8> %vec1, <8 x i8> %vec2)
+  ret <24 x i8> %retval
+}
