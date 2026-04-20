@@ -581,16 +581,13 @@ class CombiningDirIterImpl : public llvm::vfs::detail::DirIterImpl {
 
   /// Sets \c CurrentDirIter to the next iterator in the list, or leaves it as
   /// is (at its end position) if we've already gone through them all.
-  std::error_code incrementIter(bool IsFirstTime) {
+  std::error_code incrementIter() {
     while (!IterList.empty()) {
       CurrentDirIter = IterList.back();
       IterList.pop_back();
       if (CurrentDirIter != directory_iterator())
         break; // found
     }
-
-    if (IsFirstTime && CurrentDirIter == directory_iterator())
-      return errc::no_such_file_or_directory;
     return {};
   }
 
@@ -598,10 +595,15 @@ class CombiningDirIterImpl : public llvm::vfs::detail::DirIterImpl {
     assert((IsFirstTime || CurrentDirIter != directory_iterator()) &&
            "incrementing past end");
     std::error_code EC;
-    if (!IsFirstTime)
+    if (IsFirstTime) {
+      // If the list of iterators is empty then this mmust mean that none of the
+      // overlays have this directory.
+      if (IterList.empty())
+        EC = errc::no_such_file_or_directory;
+    } else
       CurrentDirIter.increment(EC);
     if (!EC && CurrentDirIter == directory_iterator())
-      EC = incrementIter(IsFirstTime);
+      EC = incrementIter();
     return EC;
   }
 
