@@ -205,11 +205,11 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
     cl::desc("Assume the target supports masked memory operations (used for "
              "testing)."));
 
-// Option tail-folding-policy indicates that an epilogue is undesired, that
-// tail folding is preferred, and this lists all options. I.e., the vectorizer
-// will try to fold the tail-loop (epilogue) into the vector body and predicate
-// the instructions accordingly. If tail-folding fails, there are different
-// fallback strategies depending on these values:
+/// Option tail-folding-policy indicates that an epilogue is undesired, that
+/// tail folding is preferred, and this lists all options. I.e., the vectorizer
+/// will try to fold the tail-loop (epilogue) into the vector body and predicate
+/// the instructions accordingly. If tail-folding fails, there are different
+/// fallback strategies depending on these values:
 enum class TailFoldingPolicyTy { None = 0, PreferFoldTail, MustFoldTail };
 
 static cl::opt<TailFoldingPolicyTy> TailFoldingPolicy(
