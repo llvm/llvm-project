@@ -1133,7 +1133,15 @@ PdbTypeSymId lldb_private::npdb::GetBestPossibleDecl(PdbTypeSymId id,
   if (!IsForwardRefUdt(cvt))
     return id;
 
-  return llvm::cantFail(tpi.findFullDeclForForwardRef(id.index));
+  llvm::SmallVector<TypeIndex, 2> tis;
+  llvm::Error err = tpi.findFullDeclsForForwardRef(id.index, tis);
+  if (err)
+    llvm::consumeError(std::move(err));
+  if (tis.empty())
+    return id;
+
+  // FIXME: Find correct type if `tis` has more than one type index.
+  return tis.front();
 }
 
 template <typename RecordType> static size_t GetSizeOfTypeInternal(CVType cvt) {
@@ -1162,8 +1170,16 @@ size_t lldb_private::npdb::GetSizeOfType(PdbTypeSymId id,
   }
 
   TypeIndex index = id.index;
-  if (IsForwardRefUdt(index, tpi))
-    index = llvm::cantFail(tpi.findFullDeclForForwardRef(index));
+  if (IsForwardRefUdt(index, tpi)) {
+    llvm::SmallVector<TypeIndex, 2> ids;
+    llvm::Error err = tpi.findFullDeclsForForwardRef(index, ids);
+    if (err)
+      llvm::consumeError(std::move(err));
+    if (!ids.empty()) {
+      // FIXME: Find correct type if `tis` has more than one type index.
+      index = ids.front();
+    }
+  }
 
   CVType cvt = tpi.getType(index);
   switch (cvt.kind()) {

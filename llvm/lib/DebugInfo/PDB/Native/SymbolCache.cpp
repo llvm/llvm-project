@@ -179,13 +179,15 @@ SymIndexId SymbolCache::findSymbolByTypeIndex(codeview::TypeIndex Index) const {
   codeview::CVType CVT = Types.getType(Index);
 
   if (isUdtForwardRef(CVT)) {
-    Expected<TypeIndex> EFD = Tpi->findFullDeclForForwardRef(Index);
+    llvm::SmallVector<TypeIndex, 2> TIs;
+    Error Err = Tpi->findFullDeclsForForwardRef(Index, TIs);
 
-    if (!EFD)
-      consumeError(EFD.takeError());
-    else if (*EFD != Index) {
-      assert(!isUdtForwardRef(Types.getType(*EFD)));
-      SymIndexId Result = findSymbolByTypeIndex(*EFD);
+    if (Err)
+      consumeError(std::move(Err));
+    else if (!TIs.empty()) {
+      assert(!isUdtForwardRef(Types.getType(TIs.front())));
+      // FIXME: Find correct type if `TIs` has more than one type index.
+      SymIndexId Result = findSymbolByTypeIndex(TIs.front());
       // Record a mapping from ForwardRef -> SymIndex of complete type so that
       // we'll take the fast path next time.
       assert(TypeIndexToSymbolId.count(Index) == 0);

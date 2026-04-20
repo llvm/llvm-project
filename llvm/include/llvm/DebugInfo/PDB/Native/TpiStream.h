@@ -61,8 +61,21 @@ public:
 
   codeview::LazyRandomTypeCollection &typeCollection() { return *Types; }
 
-  LLVM_ABI Expected<codeview::TypeIndex>
-  findFullDeclForForwardRef(codeview::TypeIndex ForwardRefTI) const;
+  /// Find all possible declarations this \p ForwardRefTI is a forward reference
+  /// for and add them to \p Decls.
+  ///
+  /// This method uses the TPI hash table to find the referenced types.
+  ///
+  /// In most cases, this should return at most one declaration. However, in
+  /// incrementally linked PDBs, there might be multiple possible records \p
+  /// ForwardRefTI could reference. From the TPI stream alone, it's not known
+  /// which record is the "real" one.
+  ///
+  /// If no type could be found, \p Decls will remain unmodified and success is
+  /// returned.
+  LLVM_ABI Error
+  findFullDeclsForForwardRef(codeview::TypeIndex ForwardRefTI,
+                             SmallVectorImpl<codeview::TypeIndex> &Decls) const;
 
   LLVM_ABI std::vector<codeview::TypeIndex>
   findRecordsByName(StringRef Name) const;

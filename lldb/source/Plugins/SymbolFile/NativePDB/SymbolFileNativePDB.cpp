@@ -959,12 +959,14 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
   // decl and just map the forward ref uid to the full decl record.
   std::optional<PdbTypeSymId> full_decl_uid;
   if (IsForwardRefUdt(type_id, m_index->tpi())) {
-    auto expected_full_ti =
-        m_index->tpi().findFullDeclForForwardRef(type_id.index);
-    if (!expected_full_ti)
-      llvm::consumeError(expected_full_ti.takeError());
-    else if (*expected_full_ti != type_id.index) {
-      full_decl_uid = PdbTypeSymId(*expected_full_ti, false);
+    llvm::SmallVector<TypeIndex, 2> full_tis;
+    llvm::Error err =
+        m_index->tpi().findFullDeclsForForwardRef(type_id.index, full_tis);
+    if (err)
+      llvm::consumeError(std::move(err));
+    else if (!full_tis.empty()) {
+      // FIXME: Find correct type if `full_tis` has more than one type index.
+      full_decl_uid = PdbTypeSymId(full_tis.front(), false);
 
       // It's possible that a lookup would occur for the full decl causing it
       // to be cached, then a second lookup would occur for the forward decl.
