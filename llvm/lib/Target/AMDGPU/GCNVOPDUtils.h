@@ -23,8 +23,10 @@ namespace llvm {
 class MachineInstr;
 class SIInstrInfo;
 
-bool dataDependencyForVOPD(const MachineInstr &FirstMI,
-                           const MachineInstr &SecondMI);
+namespace AMDGPU {
+bool hasDataDependencyForVOPD(const MachineInstr &FirstMI,
+                              const MachineInstr &SecondMI);
+} // namespace AMDGPU
 
 bool checkVOPDRegConstraints(const SIInstrInfo &TII,
                              const MachineInstr &FirstMI,

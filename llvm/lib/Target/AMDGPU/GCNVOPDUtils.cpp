@@ -34,8 +34,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "gcn-vopd-utils"
 
-bool llvm::dataDependencyForVOPD(const MachineInstr &FirstMI,
-                                 const MachineInstr &SecondMI) {
+bool AMDGPU::hasDataDependencyForVOPD(const MachineInstr &FirstMI,
+                                      const MachineInstr &SecondMI) {
   const GCNSubtarget &ST = FirstMI.getMF()->getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   for (const auto &Use : SecondMI.all_uses()) {
@@ -192,12 +192,12 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, IsVOPD3);
 
   // If SecondMI depends on FirstMI they cannot execute at the same time.
-  if (dataDependencyForVOPD(FirstMI, SecondMI))
+  if (AMDGPU::hasDataDependencyForVOPD(FirstMI, SecondMI))
     return std::nullopt;
 
-  bool IsAntiDep = dataDependencyForVOPD(SecondMI, FirstMI);
+  bool IsAntiDep = AMDGPU::hasDataDependencyForVOPD(SecondMI, FirstMI);
   // AllowSameVGPR relaxes the VGPR bank overlap check for source operands.
-  // Only enable it for VOPD3 and when there is no antidependency.
+  // Only enable it when there is no antidependency.
   const GCNSubtarget &ST = TII.getSubtarget();
   bool AllowSameVGPR = ST.hasGFX1250Insts() && !IsAntiDep;
 
@@ -223,11 +223,11 @@ llvm::tryMatchVOPDPair(const SIInstrInfo &TII, const MachineInstr &FirstMI,
   const GCNSubtarget &ST = TII.getSubtarget();
   unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
   if (auto Match = tryMatchVOPDPairVariant(TII, EncodingFamily, FirstMI,
-                                           SecondMI, false))
+                                           SecondMI, /*IsVOPD3=*/false))
     return Match;
   if (ST.hasVOPD3())
     return tryMatchVOPDPairVariant(TII, EncodingFamily, FirstMI, SecondMI,
-                                   true);
+                                   /*IsVOPD3=*/true);
   return std::nullopt;
 }
 
