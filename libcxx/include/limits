@@ -177,6 +177,21 @@ protected:
   static _LIBCPP_CONSTEXPR const float_round_style round_style = round_toward_zero;
 };
 
+// Maps an integer type _Tp to its unsigned counterpart. Used by the digits
+// computation below so it can apply __builtin_popcountg uniformly regardless
+// of signedness. __make_unsigned isn't used directly because it rejects
+// already-unsigned types.
+#  if __has_builtin(__builtin_popcountg) && __has_builtin(__make_unsigned)
+template <class _Tp, bool _IsSigned = (_Tp(-1) < _Tp(0))>
+struct __numeric_limits_unsigned_type {
+  using type = _Tp;
+};
+template <class _Tp>
+struct __numeric_limits_unsigned_type<_Tp, true> {
+  using type = __make_unsigned(_Tp);
+};
+#  endif
+
 template <class _Tp>
 class __libcpp_numeric_limits<_Tp, true> {
 protected:
@@ -184,9 +199,24 @@ protected:
 
   static _LIBCPP_CONSTEXPR const bool is_specialized = true;
 
-  static _LIBCPP_CONSTEXPR const bool is_signed   = type(-1) < type(0);
-  static _LIBCPP_CONSTEXPR const int digits       = static_cast<int>(sizeof(type) * __CHAR_BIT__ - is_signed);
-  static _LIBCPP_CONSTEXPR const int digits10     = digits * 3 / 10;
+  static _LIBCPP_CONSTEXPR const bool is_signed = type(-1) < type(0);
+  // For _BitInt(N), sizeof(type) * CHAR_BIT may exceed N due to padding
+  // bits. Count the actual value bits: ~unsigned_type(0) leaves padding
+  // zero, so popcount yields the value-bit width. Standard integer types
+  // have no padding, so the result matches sizeof * CHAR_BIT.
+#  if __has_builtin(__builtin_popcountg) && __has_builtin(__make_unsigned)
+  using __unsigned_type = typename __numeric_limits_unsigned_type<type>::type;
+  static _LIBCPP_CONSTEXPR const int digits =
+      __builtin_popcountg(static_cast<__unsigned_type>(~__unsigned_type(0))) - is_signed;
+#  else
+  static _LIBCPP_CONSTEXPR const int digits = static_cast<int>(sizeof(type) * __CHAR_BIT__ - is_signed);
+#  endif
+  // digits10 = floor(digits * log10(2)). The rational 1936274/6432163 is a
+  // continued-fraction convergent of log10(2) and matches floor(d*log10(2))
+  // exactly for every d in [1, 8388608], i.e. up to __BITINT_MAXWIDTH__ on
+  // x86. The old digits*3/10 was wrong for digits >= 256 (gave 76 instead
+  // of 77); 643/2136 would have broken again at digits=15437.
+  static _LIBCPP_CONSTEXPR const int digits10     = static_cast<int>((digits * 1936274LL) / 6432163);
   static _LIBCPP_CONSTEXPR const int max_digits10 = 0;
   static _LIBCPP_CONSTEXPR const type __min       = is_signed ? _Tp(_Tp(1) << digits) : 0;
   static _LIBCPP_CONSTEXPR const type __max       = is_signed ? type(type(~0) ^ __min) : type(~0);
