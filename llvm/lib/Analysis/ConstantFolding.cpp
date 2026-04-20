@@ -348,6 +348,15 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
   return true;
 }
 
+static bool shouldPreserveLargeStringLoad(Constant *C,
+                                                 uint64_t LoadBytes) {
+  if (LoadBytes <= 32)
+    return false;
+
+  auto *CDS = dyn_cast<ConstantDataSequential>(C);
+  return CDS && CDS->isString();
+}
+
 Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
                                                const DataLayout &DL) {
   do {
@@ -365,6 +374,10 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
     if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy, DL))
       return Res;
 
+    if (SrcTy != DestTy && !DestSize.isScalable() &&
+        shouldPreserveLargeStringLoad(C, DestSize.getFixedValue() / 8))
+      return nullptr;
+
     // If the type sizes are the same and a cast is legal, just directly
     // cast the constant.
     // But be careful not to coerce non-integral pointers illegally.
@@ -381,21 +394,6 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
 
       if (CastInst::castIsValid(Cast, C, DestTy))
         return ConstantFoldCastOperand(Cast, C, DestTy, DL);
-
-      // Fold [N x T] array to <N x T> vector.
-      auto *FVTy = dyn_cast<FixedVectorType>(DestTy);
-      auto *ArrTy = dyn_cast<ArrayType>(SrcTy);
-      if (FVTy && ArrTy && ArrTy->getNumElements() == FVTy->getNumElements() &&
-          ArrTy->getElementType() == FVTy->getElementType()) {
-        SmallVector<Constant *, 16> Elems;
-        for (unsigned I = 0, E = ArrTy->getNumElements(); I != E; ++I) {
-          Constant *Elt = C->getAggregateElement(I);
-          if (!Elt)
-            return nullptr;
-          Elems.push_back(Elt);
-        }
-        return ConstantVector::get(Elems);
-      }
     }
 
     // If this isn't an aggregate type, there is nothing we can do to drill down
@@ -613,7 +611,10 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
   }
 
   unsigned BytesLoaded = (IntType->getBitWidth() + 7) / 8;
-  if (BytesLoaded > 32 || BytesLoaded == 0)
+  if (BytesLoaded > 128 || BytesLoaded == 0)
+    return nullptr;
+
+  if (shouldPreserveLargeStringLoad(C, BytesLoaded))
     return nullptr;
 
   // If we're not accessing anything in this constant, the result is undefined.
@@ -629,8 +630,8 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
   if (Offset >= (int64_t)InitializerSize.getFixedValue())
     return PoisonValue::get(IntType);
 
-  unsigned char RawBytes[32] = {0};
-  unsigned char *CurPtr = RawBytes;
+  SmallVector<unsigned char, 64> RawBytes(BytesLoaded);
+  unsigned char *CurPtr = RawBytes.data();
   unsigned BytesLeft = BytesLoaded;
 
   // If we're loading off the beginning of the global, some bytes may be valid.
