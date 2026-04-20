@@ -170,7 +170,10 @@ LLVM_LIBC_HEADERS = [
     libc_header_info("stdckdint"),
     libc_header_info("stdint"),
     libc_header_info("stdio"),
-    libc_header_info("string"),
+    libc_header_info(
+        "string",
+        has_def_template = True,
+    ),
     libc_header_info("strings"),
     libc_header_info("sys/auxv"),
     libc_header_info("sys/epoll"),
@@ -5439,6 +5442,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_logbbf16",
+    hdrs = ["src/__support/math/logbbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_logbf",
     hdrs = ["src/__support/math/logbf.h"],
     deps = [
@@ -8195,6 +8209,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "logbbf16",
+    additional_deps = [":__support_math_logbbf16"],
+)
+
+libc_math_function(
     name = "logbf",
     additional_deps = [":__support_math_logbf"],
 )
@@ -9789,6 +9808,7 @@ libc_function(
         ":__support_common",
         ":__support_ctype_utils",
         ":__support_macros_config",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )
@@ -9801,6 +9821,7 @@ libc_function(
         ":__support_common",
         ":__support_ctype_utils",
         ":__support_macros_config",
+        ":__support_macros_null_check",
         ":string_memory_utils",
     ],
 )

@@ -60,7 +60,8 @@ private:
   /// \param Linkage The linkage determining namespace resolution strategy.
   /// \returns The resolved LU EntityId.
   EntityId resolveEntity(const EntityName &OldName,
-                         const EntityLinkage &Linkage);
+                         const EntityLinkage &Linkage,
+                         const NestedBuildNamespace &TUNamespace);
 
   /// Resolves each TU EntityId to its corresponding LU EntityId.
   ///
