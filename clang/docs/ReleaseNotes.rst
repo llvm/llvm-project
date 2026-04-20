@@ -639,6 +639,11 @@ clang-format
 ------------
 - Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
   '-'/'+' and the return type in Objective-C method declarations
+- Deprecate the ``BinPackParameters`` and ``BinPackArguments`` options and replace 
+  them with the ``PackParameters`` and ``PackArguments`` structs (respectively) to 
+  unify packing behavior. Add the ``BreakAfter`` option to the structs, allowing 
+  parameter and argument lists to be formatted with one parameter/argument on each 
+  line if they exceed the specified count.
 - Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
   constructor initializers after commas, keeping the colon on the same line.
 - Extend ``BreakBinaryOperations`` to accept a structured configuration with
