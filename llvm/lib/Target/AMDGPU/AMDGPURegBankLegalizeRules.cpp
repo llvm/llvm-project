@@ -1947,6 +1947,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Imm, Vgpr32, Imm, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Imm, Vgpr32, Imm, Vgpr32, Vgpr32}});
 
+  addRulesForIOpcs({amdgcn_s_alloc_vgpr})
+      .Any({{UniS1}, {{Sgpr32Trunc}, {IntrId, SgprB32_ReadFirstLane}}});
+
   // WMMA/SWMMAC intrinsics: all register operands map to VGPR.
   addRulesForIOpcs(
       {// WMMA GFX11+
