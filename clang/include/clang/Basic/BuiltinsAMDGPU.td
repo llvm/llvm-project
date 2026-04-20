@@ -213,6 +213,10 @@ def __builtin_amdgcn_ds_permute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_ds_bpermute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_readfirstlane : AMDGPUBuiltin<"int(int)", [Const]>;
 def __builtin_amdgcn_readlane : AMDGPUBuiltin<"int(int, int)", [Const]>;
+def __builtin_amdgcn_wave_shuffle : AMDGPUBuiltin<"int(int, int)", [Const]> {
+  let Documentation = [DocWaveShuffle];
+  let ArgNames = ["src", "idx"];
+}
 def __builtin_amdgcn_fmed3f : AMDGPUBuiltin<"float(float, float, float)", [Const]>;
 def __builtin_amdgcn_ds_faddf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">;
 def __builtin_amdgcn_ds_fminf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">;
