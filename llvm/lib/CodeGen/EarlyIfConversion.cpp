@@ -205,6 +205,13 @@ public:
   /// speculatively execute it.
   bool canConvertIf(MachineBasicBlock *MBB, bool Predicate = false);
 
+  /// isProfitableToConvertIf - Apply the target heuristic to decide if the
+  /// transformation is profitable. Branch probabilities are considered
+  /// currently.
+  bool isProfitableToConvertIf(const MachineBranchProbabilityInfo *MBPI,
+                               TargetSchedModel SchedModel,
+                               bool Predicate = false);
+
   /// convertIf - If-convert the last block passed to canConvertIf(), assuming
   /// it is possible. Add any blocks that are to be erased to RemoveBlocks.
   void convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
@@ -583,6 +590,46 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
   else
     ++NumDiamondsSeen;
   return true;
+}
+
+/// Apply the target heuristic to decide if the transformation is profitable.
+bool SSAIfConv::isProfitableToConvertIf(
+    const MachineBranchProbabilityInfo *MBPI, TargetSchedModel SchedModel,
+    bool Predicate) {
+  auto TrueProbability = MBPI->getEdgeProbability(Head, TBB);
+  if (isTriangle()) {
+    MachineBasicBlock &IfBlock = (TBB == Tail) ? *FBB : *TBB;
+
+    unsigned ExtraPredCost = 0;
+    unsigned Cycles = 0;
+    for (MachineInstr &I : IfBlock) {
+      unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
+      if (NumCycles > 1)
+        Cycles += NumCycles - 1;
+      ExtraPredCost += TII->getPredicationCost(I);
+    }
+
+    return TII->isProfitableToIfCvt(IfBlock, Cycles, ExtraPredCost,
+                                    TrueProbability);
+  }
+  unsigned TExtra = 0;
+  unsigned FExtra = 0;
+  unsigned TCycle = 0;
+  unsigned FCycle = 0;
+  for (MachineInstr &I : *TBB) {
+    unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
+    if (NumCycles > 1)
+      TCycle += NumCycles - 1;
+    TExtra += TII->getPredicationCost(I);
+  }
+  for (MachineInstr &I : *FBB) {
+    unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
+    if (NumCycles > 1)
+      FCycle += NumCycles - 1;
+    FExtra += TII->getPredicationCost(I);
+  }
+  return TII->isProfitableToIfCvt(*TBB, TCycle, TExtra, *FBB, FCycle, FExtra,
+                                  TrueProbability);
 }
 
 /// \return true iff the two registers are known to have the same value.
@@ -1391,43 +1438,8 @@ void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-/// Apply the target heuristic to decide if the transformation is profitable.
 bool EarlyIfPredicator::shouldConvertIf() {
-  auto TrueProbability = MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
-  if (IfConv.isTriangle()) {
-    MachineBasicBlock &IfBlock =
-        (IfConv.TBB == IfConv.Tail) ? *IfConv.FBB : *IfConv.TBB;
-
-    unsigned ExtraPredCost = 0;
-    unsigned Cycles = 0;
-    for (MachineInstr &I : IfBlock) {
-      unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
-      if (NumCycles > 1)
-        Cycles += NumCycles - 1;
-      ExtraPredCost += TII->getPredicationCost(I);
-    }
-
-    return TII->isProfitableToIfCvt(IfBlock, Cycles, ExtraPredCost,
-                                    TrueProbability);
-  }
-  unsigned TExtra = 0;
-  unsigned FExtra = 0;
-  unsigned TCycle = 0;
-  unsigned FCycle = 0;
-  for (MachineInstr &I : *IfConv.TBB) {
-    unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
-    if (NumCycles > 1)
-      TCycle += NumCycles - 1;
-    TExtra += TII->getPredicationCost(I);
-  }
-  for (MachineInstr &I : *IfConv.FBB) {
-    unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
-    if (NumCycles > 1)
-      FCycle += NumCycles - 1;
-    FExtra += TII->getPredicationCost(I);
-  }
-  return TII->isProfitableToIfCvt(*IfConv.TBB, TCycle, TExtra, *IfConv.FBB,
-                                  FCycle, FExtra, TrueProbability);
+  return IfConv.isProfitableToConvertIf(MBPI, SchedModel, /*Predicate=*/true);
 }
 
 /// Attempt repeated if-conversion on MBB, return true if successful.
