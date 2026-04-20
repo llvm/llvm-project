@@ -11327,7 +11327,7 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
   const auto *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
   auto &AFL = *static_cast<const AArch64FrameLowering *>(
       MF.getSubtarget().getFrameLowering());
-  if (int64_t FPDiff = AFL.getArgumentStackToRestore(MF, MBB)) {
+  if (AFL.getArgumentStackToRestore(MF, MBB)) {
     Builder.addReg(AArch64::X17, RegState::ImplicitDefine);
     Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
     if (Subtarget.hasPAuthLR())
