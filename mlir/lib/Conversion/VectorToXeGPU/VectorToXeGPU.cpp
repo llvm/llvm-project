@@ -560,14 +560,13 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (chip != "pvc" && chip != "bmg" && !isSharedMemory) {
 
       // TODO: add support for OutOfBound access
-      if (readOp.hasOutOfBoundsDim())
+      if (isOutOfBounds)
         return failure();
       return lowerToScatteredLoadOp(readOp, rewriter);
     }
 
     // Handle the 1D non-SLM case using load.gather.
-    if (loadedVecTy.getRank() == 1 && !readOp.hasOutOfBoundsDim() &&
-        !isSharedMemory)
+    if (loadedVecTy.getRank() == 1 && !isOutOfBounds && !isSharedMemory)
       return lowerToScatteredLoadOp(readOp, rewriter);
 
     // Perform common data transfer checks.
