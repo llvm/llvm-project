@@ -3617,12 +3617,12 @@ bool SPIRVInstructionSelector::selectBitreverse64(Register ResVReg,
     return false;
 
   // ---- Stage 2: bitreverse per 32-bit lane ----
-  Register Pop32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectBitreverseNative(Pop32, VecI32Type, I, Vec32))
+  Register Reverse32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectBitreverseNative(Reverse32, VecI32Type, I, Vec32))
     return false;
 
   // ---- Stage 3: split even (low) / odd (high) lanes ----
-  auto MaybeParts = splitEvenOddLanes(Pop32, ComponentCount, I, I32Type);
+  auto MaybeParts = splitEvenOddLanes(Reverse32, ComponentCount, I, I32Type);
   if (!MaybeParts)
     return false;
   SplitParts &Parts = *MaybeParts;
