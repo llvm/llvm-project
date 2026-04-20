@@ -6,8 +6,6 @@ LLDB_LAUNCH_FLAG_USE_PIPES, which the test suite sets globally to avoid
 ConPTY VT-sequence pollution in unrelated tests.
 """
 
-import os
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -20,12 +18,16 @@ class ConPTYTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
+        import os
+
         TestBase.setUp(self)
         # Clear LLDB_LAUNCH_FLAG_USE_PIPES so LLDB uses ConPTY instead of
         # anonymous pipes. Restored in tearDown.
         self._saved_pipes_flag = os.environ.pop("LLDB_LAUNCH_FLAG_USE_PIPES", None)
 
     def tearDown(self):
+        import os
+
         if self._saved_pipes_flag is not None:
             os.environ["LLDB_LAUNCH_FLAG_USE_PIPES"] = self._saved_pipes_flag
         TestBase.tearDown(self)
@@ -48,12 +50,14 @@ class ConPTYTestCase(TestBase):
         return process.GetSTDOUT(1 << 20)
 
     @skipUnlessWindows
+    @skipUnlessWindowsConPTY2022
     def test_stdout_delivery(self):
         """ConPTY delivers the inferior's stdout to LLDB."""
         output = self._run_to_exit("basic")
         self.assertEqual("Hello from ConPTY\r\n", output)
 
     @skipUnlessWindows
+    @skipUnlessWindowsConPTY2022
     def test_vt_init_stripped(self):
         """ConPTY VT initialization sequences are stripped from GetSTDOUT."""
         # Sequences emitted by conhost.exe at attach time, defined in
@@ -66,6 +70,7 @@ class ConPTYTestCase(TestBase):
         self.assertNotIn(VT_INIT, output)
 
     @skipUnlessWindows
+    @skipUnlessWindowsConPTY2022
     def test_large_output(self):
         """ConPTY delivers all output lines when output spans multiple reads."""
         output = self._run_to_exit("large")
@@ -77,3 +82,20 @@ class ConPTYTestCase(TestBase):
 
         for i, line in enumerate(output_lines):
             self.assertEqual("line %04d" % i, line)
+
+    @skipUnlessWindows
+    @skipUnlessWindowsConPTY
+    def test_basic_output_without_vt_check(self):
+        """ConPTY delivers the inferior's stdout on all supported Windows versions.
+
+        Unlike test_stdout_delivery and test_vt_init_stripped, this test strips
+        VT escape sequences before asserting, so it passes on older Windows
+        versions (e.g. Windows Server 2019) where ConPTY emits different init
+        sequences that LLDB does not strip.
+        """
+
+        import re
+
+        output = self._run_to_exit("basic")
+        stripped = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", output)
+        self.assertIn("Hello from ConPTY", stripped)
