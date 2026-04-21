@@ -18,6 +18,17 @@
 
 namespace lldb_private::dil {
 
+enum class AssignConvertType {
+  None,
+  DoubleToFloat,
+  DoubleToInt,
+  FloatToDouble,
+  FloatToInt,
+  IntToDouble,
+  IntToFloat,
+  UnrecognizedType,
+};
+
 /// Given the name of an identifier (variable name, member name, type name,
 /// etc.), find the ValueObject for that name (if it exists), excluding global
 /// variables, and create and return an IdentifierInfo object containing all

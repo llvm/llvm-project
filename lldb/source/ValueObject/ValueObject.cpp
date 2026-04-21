@@ -1278,14 +1278,15 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
 
   // Verify the proposed new value is the right type.
   CompilerType new_val_type = new_val_sp->GetCompilerType();
-  if (!new_val_type.IsInteger() && !HasFloatingRepresentation(new_val_type) &&
+  if (!new_val_type.IsInteger() && !new_val_type.IsUnscopedEnumerationType() &&
+      !HasFloatingRepresentation(new_val_type) &&
       !new_val_type.IsPointerType()) {
     error = Status::FromErrorString(
-        "illegal argument: new value should be of the same size");
+        "illegal argument: new value is not a scalar object");
     return;
   }
 
-  if (new_val_type.IsInteger()) {
+  if (new_val_type.IsInteger() || new_val_type.IsUnscopedEnumerationType()) {
     auto value_or_err = new_val_sp->GetValueAsAPSInt();
     if (value_or_err)
       SetValueFromInteger(*value_or_err, error, can_update_var);

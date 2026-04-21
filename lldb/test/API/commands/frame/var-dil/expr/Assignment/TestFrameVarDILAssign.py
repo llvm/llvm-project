@@ -69,24 +69,25 @@ class TestFrameVarDILAssignment(TestBase):
         # Assigning to an enum
         self.expect("frame variable 'i = eOne'", substrs=["0"])
         self.expect("frame variable 'eOne = 1'", substrs=["eOne = TWO"])
+        self.expect("frame variable 'eOne = 0'", substrs=["eOne = ONE"])
 
         # Assigning to a pointer
         self.expect(
             "frame variable 'p = 1'",
             error=True,
-            substrs=["Invalid assignment: Can only assign pointers to pointers"],
+            substrs=["Illegal type for assignment: Cannot assign/convert rhs to lhs"],
         )
 
         self.expect(
             "frame variable 'p = i + s'",
             error=True,
-            substrs=["Invalid assignment: Can only assign pointers to pointers"],
+            substrs=["Illegal type for assignment: Cannot assign/convert rhs to lhs"],
         )
 
         self.expect(
             "frame variable 'i = p'",
             error=True,
-            substrs=["Invalid assignment: Can only assign pointers to pointers"],
+            substrs=["Illegal type for assignment: Cannot assign/convert rhs to lhs"],
         )
 
         if Is32Bit:
@@ -102,9 +103,6 @@ class TestFrameVarDILAssignment(TestBase):
             self.expect(
                 "frame variable 'p = (int *)0'", substrs=["p = 0x0000000000000000"]
             )
-
-        # Just verify the result value prefix is an address.
-        self.expect("frame variable 'p = farr'", substrs=["(int *) p = 0x0000"])
 
         # Assigning to a bool
         self.expect_var_path("b", value="false")
@@ -123,3 +121,31 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect("frame variable 'arr[0] = 37'", substrs=["arr[0] = 37"])
         self.expect("frame variable 'arr[1] = j'", substrs=["arr[1] = j = -4"])
         self.expect("frame variable 'arr'", substrs=["([0] = 37, [1] = -4)"])
+
+        # Test assignment conversions.
+        # int = enum
+        self.expect("frame variable 'i = eOne'", substrs=["i = 0"])
+        # int = bool
+        self.expect("frame variable 'i = true'", substrs=["i = 1"])
+        # int = double
+        self.expect("frame variable 'i = d2'", substrs=["i = 16"])
+        # int = float
+        self.expect("frame variable 'i = pi'", substrs=["i = 3"])
+
+        # float = int
+        self.expect("frame variable 'f = 8'", substrs=["f = 8"])
+        # float = double
+        self.expect("frame variable 'f = d2'", substrs=["f = 15.7799997"])
+
+        # double = double
+        self.expect("frame variable 'd = d2'", substrs=["d = 15.779999999999999"])
+        self.expect("frame variable 'd = 1.25'", substrs=["d = 1.25"])
+        # double = float
+        self.expect("frame variable 'd = pi'", substrs=["d = 3.1415901184082031"])
+        # double = int
+        self.expect("frame variable 'd = 17'", substrs=["d = 17"])
+
+        # bool = int
+        self.expect("frame variable 'b = 0'", substrs=["b = false"])
+        self.expect("frame variable 'b = 1'", substrs=["b = true"])
+        self.expect("frame variable 'b = 32'", substrs=["b = true"])

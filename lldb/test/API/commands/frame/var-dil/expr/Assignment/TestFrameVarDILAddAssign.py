@@ -38,7 +38,7 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable 'i += p'",  # Try assigning pointer to int.
             error=True,
-            substrs=["Invalid assignment: Can only assign pointers to pointers"],
+            substrs=["Illegal type for assignment: Cannot assign/convert rhs to lhs"],
         )
 
         if Is32Bit:
