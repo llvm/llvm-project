@@ -1868,11 +1868,11 @@ struct CIEKey {
   CIEKey() = default;
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame, bool IsEH)
-      : Personality(IsEH ? Frame.Personality : nullptr),
-        PersonalityEncoding(IsEH ? Frame.PersonalityEncoding : 0),
-        LsdaEncoding(IsEH ? Frame.LsdaEncoding : 0),
-        IsSignalFrame(Frame.IsSignalFrame), IsSimple(Frame.IsSimple),
-        RAReg(Frame.RAReg), IsBKeyFrame(Frame.IsBKeyFrame),
+      : Personality(Frame.Personality),
+        PersonalityEncoding(Frame.PersonalityEncoding),
+        LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
+        IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
+        IsBKeyFrame(Frame.IsBKeyFrame),
         IsMTETaggedFrame(Frame.IsMTETaggedFrame), IsEH(IsEH) {}
 
   StringRef PersonalityName() const {
