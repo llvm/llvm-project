@@ -344,7 +344,7 @@ void ScriptParser::addFile(StringRef s) {
       SmallString<0> path(directory);
       sys::path::append(path, s);
       if (sys::fs::exists(path)) {
-        ctx.driver.addFile(path, /*withLOption=*/false);
+        ctx.driver.addFile(ctx.saver.save(path.str()), /*withLOption=*/false);
         return;
       }
     }
