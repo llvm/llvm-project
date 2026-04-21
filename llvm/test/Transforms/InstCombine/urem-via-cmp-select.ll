@@ -8,7 +8,7 @@ define i8 @urem_assume(i8 %x, i8 %n) !prof !0 {
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X_FR]], [[N]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X_FR]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X_FR]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[ADD]], [[N]]
 ; CHECK-NEXT:    [[OUT:%.*]] = select i1 [[TMP1]], i8 0, i8 [[ADD]], !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    ret i8 [[OUT]]
@@ -27,7 +27,7 @@ define i8 @urem_assume_without_nuw(i8 %x, i8 %n) {
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X_FR]], [[N]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X_FR]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X_FR]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[ADD]], [[N]]
 ; CHECK-NEXT:    [[OUT:%.*]] = select i1 [[TMP1]], i8 0, i8 [[ADD]]
 ; CHECK-NEXT:    ret i8 [[OUT]]

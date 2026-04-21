@@ -164,7 +164,7 @@ body: |
     ; CHECK-LABEL: name: defaultMapping1Repair
     ; CHECK:           %0:fpr(s32) = COPY $s0
     ; CHECK-NEXT:      %1:gpr(s32) = COPY $w0
-    ; CHECK-NEXT:      %3:gpr(s32) = COPY %0
+    ; CHECK-NEXT:      %3:gpr(i32) = COPY %0
     ; CHECK-NEXT:      %2:gpr(s32) = G_ADD %3, %1
     %0(s32) = COPY $s0
     %1(s32) = COPY $w0
@@ -182,8 +182,8 @@ body: |
     liveins: $s0, $x0
     ; CHECK-LABEL: name: defaultMapping2Repairs
     ; CHECK:           %0:fpr(s32) = COPY $s0
-    ; CHECK-NEXT:      %2:gpr(s32) = COPY %0
-    ; CHECK-NEXT:      %3:gpr(s32) = COPY %0
+    ; CHECK-NEXT:      %2:gpr(i32) = COPY %0
+    ; CHECK-NEXT:      %3:gpr(i32) = COPY %0
     ; CHECK-NEXT:      %1:gpr(s32) = G_ADD %2, %3
     %0(s32) = COPY $s0
     %1(s32) = G_ADD %0, %0
@@ -204,7 +204,7 @@ body: |
     liveins: $w0
     ; CHECK-LABEL: name: defaultMappingDefRepair
     ; CHECK:           %0:gpr(s32) = COPY $w0
-    ; CHECK-NEXT:      %2:gpr(s32) = G_ADD %0, %0
+    ; CHECK-NEXT:      %2:gpr(i32) = G_ADD %0, %0
     ; CHECK-NEXT:      %1:fpr(s32) = COPY %2
     %0(s32) = COPY $w0
     %1(s32) = G_ADD %0, %0
@@ -263,7 +263,7 @@ body: |
     ; CHECK-LABEL: name: defaultMappingUseRepairPhysReg
     ; CHECK:           %0:gpr(s32) = COPY $w0
     ; CHECK-NEXT:      %1:fpr(s32) = COPY $s0
-    ; CHECK-NEXT:      %3:gpr(s32) = COPY %1
+    ; CHECK-NEXT:      %3:gpr(i32) = COPY %1
     ; CHECK-NEXT:      %2:gpr(s32) = G_ADD %0, %3
     %0(s32) = COPY $w0
     %1(s32) = COPY $s0
@@ -730,7 +730,7 @@ registers:
 # CHECK-NEXT:    %1:gpr(p0) = COPY $x1
 # CHECK-NEXT:    %2:fpr(s64) = G_LOAD %1(p0) :: (load (s64) from %ir.addr)
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %4:fpr(s64) = COPY %0
+# CHECK-NEXT:    %4:fpr(i64) = COPY %0
 # CHECK-NEXT:    %3:fpr(s64) = G_FADD %4, %2
 # CHECK-NEXT:    $x0 = COPY %3(s64)
 # CHECK-NEXT:    RET_ReallyLR implicit $x0
@@ -769,8 +769,8 @@ registers:
 # CHECK:         %0:gpr(s64) = COPY $x0
 # CHECK-NEXT:    %1:gpr(p0) = COPY $x1
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %3:fpr(s64) = COPY %0
-# CHECK-NEXT:    %4:fpr(s64) = COPY %0
+# CHECK-NEXT:    %3:fpr(i64) = COPY %0
+# CHECK-NEXT:    %4:fpr(i64) = COPY %0
 # CHECK-NEXT:    %2:fpr(s64) = G_FADD %3, %4
 # CHECK-NEXT:    G_STORE %2(s64), %1(p0) :: (store (s64) into %ir.addr)
 # CHECK-NEXT:    RET_ReallyLR
@@ -805,7 +805,7 @@ registers:
 # CHECK:         %1:gpr(s32) = COPY $w0
 # CHECK-NEXT:    %0:gpr(s16) = G_TRUNC %1
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %3:fpr(s16) = COPY %0
+# CHECK-NEXT:    %3:fpr(i16) = COPY %0
 # CHECK-NEXT:    %2:fpr(s32) = G_FPEXT %3
 # CHECK-NEXT:    $s0 = COPY %2
 # CHECK-NEXT:    RET_ReallyLR
@@ -840,7 +840,7 @@ registers:
 # CHECK:         %1:gpr(s32) = COPY $w0
 # CHECK-NEXT:    %0:gpr(s16) = G_TRUNC %1
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %3:fpr(s16) = COPY %0
+# CHECK-NEXT:    %3:fpr(i16) = COPY %0
 # CHECK-NEXT:    %2:fpr(s64) = G_FPEXT %3
 # CHECK-NEXT:    $d0 = COPY %2
 # CHECK-NEXT:    RET_ReallyLR
@@ -872,7 +872,7 @@ registers:
   - { id: 1, class: _ }
 # CHECK:         %0:gpr(s32) = COPY $w0
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %2:fpr(s32) = COPY %0
+# CHECK-NEXT:    %2:fpr(i32) = COPY %0
 # CHECK-NEXT:    %1:fpr(s64) = G_FPEXT %2
 # CHECK-NEXT:    $d0 = COPY %1
 # CHECK-NEXT:    RET_ReallyLR
