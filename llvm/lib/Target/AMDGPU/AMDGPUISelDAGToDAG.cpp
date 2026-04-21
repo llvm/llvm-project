@@ -901,9 +901,6 @@ bool AMDGPUDAGToDAGISel::isSDWAOperand(const SDNode *N) const {
   if (!Subtarget->hasSDWA())
     return false;
 
-  if (N->getValueType(0) != MVT::i32)
-    return false;
-
   if (N->getOpcode() == ISD::SIGN_EXTEND_INREG) {
     EVT VT = cast<VTSDNode>(N->getOperand(1))->getVT();
     return VT.getScalarSizeInBits() == 8 || VT.getScalarSizeInBits() == 16;
