@@ -28,11 +28,11 @@
 ## (Register-quoting logic is identical across all X86 MCAsmInfo subclasses,
 ## so exercising it on 64-bit targets suffices.)
 .ifndef I386
-# X64: call "rsi"
-# X64: call "Rax"
-# X64: call "EAX"
-# X64: call "ah"
-# X64: call "dil"
+# X64:      call "rsi"
+# X64-NEXT: call "Rax"
+# X64-NEXT: call "EAX"
+# X64-NEXT: call "ah"
+# X64-NEXT: call "dil"
 callq rsi
 callq Rax
 callq EAX
@@ -41,17 +41,17 @@ callq dil
 .endif
 
 ## Size/type keywords (gas treats these as size constants: byte=1, word=2, etc.)
-# CHECK: call "byte"
-# CHECK: call "word"
-# CHECK: call "dword"
-# CHECK: call "fword"
-# CHECK: call "qword"
-# CHECK: call "mmword"
-# CHECK: call "tbyte"
-# CHECK: call "oword"
-# CHECK: call "xmmword"
-# CHECK: call "ymmword"
-# CHECK: call "zmmword"
+# CHECK:      call "byte"
+# CHECK-NEXT: call "word"
+# CHECK-NEXT: call "dword"
+# CHECK-NEXT: call "fword"
+# CHECK-NEXT: call "qword"
+# CHECK-NEXT: call "mmword"
+# CHECK-NEXT: call "tbyte"
+# CHECK-NEXT: call "oword"
+# CHECK-NEXT: call "xmmword"
+# CHECK-NEXT: call "ymmword"
+# CHECK-NEXT: call "zmmword"
 call byte
 call word
 call dword
@@ -65,11 +65,11 @@ call ymmword
 call zmmword
 
 ## Other keywords
-# CHECK: call "offset"
-# CHECK: call "flat"
-# CHECK: call "near"
-# CHECK: call "far"
-# CHECK: call "short"
+# CHECK:      call "offset"
+# CHECK-NEXT: call "flat"
+# CHECK-NEXT: call "near"
+# CHECK-NEXT: call "far"
+# CHECK-NEXT: call "short"
 call offset
 call flat
 call near
@@ -77,19 +77,19 @@ call far
 call short
 
 ## Expression operator keywords
-# CHECK: call "and"
-# CHECK: call "eq"
-# CHECK: call "ge"
-# CHECK: call "gt"
-# CHECK: call "le"
-# CHECK: call "lt"
-# CHECK: call "mod"
-# CHECK: call "ne"
-# CHECK: call "not"
-# CHECK: call "or"
-# CHECK: call "shl"
-# CHECK: call "shr"
-# CHECK: call "xor"
+# CHECK:      call "and"
+# CHECK-NEXT: call "eq"
+# CHECK-NEXT: call "ge"
+# CHECK-NEXT: call "gt"
+# CHECK-NEXT: call "le"
+# CHECK-NEXT: call "lt"
+# CHECK-NEXT: call "mod"
+# CHECK-NEXT: call "ne"
+# CHECK-NEXT: call "not"
+# CHECK-NEXT: call "or"
+# CHECK-NEXT: call "shl"
+# CHECK-NEXT: call "shr"
+# CHECK-NEXT: call "xor"
 call and
 call eq
 call ge
@@ -105,14 +105,16 @@ call shr
 call xor
 
 ## Symbols that don't need quoting (gas handles these correctly).
-# CHECK: call ptr
-# CHECK: call bar
+# CHECK:      call ptr
+# CHECK-NEXT: call bar
 call ptr
 call bar
 
-# ATT: callq rsi
-# ATT: callq byte
-# ATT: callq and
+## Intel-syntax input with quoted identifiers round-trips to AT&T output with
+## the quotes stripped.
+# ATT:      callq rsi
+# ATT-NEXT: callq byte
+# ATT-NEXT: callq and
 .intel_syntax noprefix
 call "rsi"
 call "byte"
