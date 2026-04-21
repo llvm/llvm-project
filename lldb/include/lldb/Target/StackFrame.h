@@ -264,6 +264,12 @@ public:
   ///     that are visible to the entire compilation unit (e.g. file
   ///     static in C, globals that are homed in this CU).
   ///
+  /// \param[in] include_synthetic_vars
+  ///     Whether to also include synthetic variables from other
+  ///     sources. For example, synthetic frames can produce
+  ///     variables that aren't strictly 'variables', but can still
+  ///     be displayed with their values.
+  ///
   /// \param [out] error_ptr
   ///   If there is an error in the debug information that prevents variables
   ///   from being fetched. \see SymbolFile::GetFrameVariableError() for full
@@ -272,6 +278,7 @@ public:
   /// \return
   ///     A pointer to a list of variables.
   virtual VariableList *GetVariableList(bool get_file_globals,
+                                        bool include_synthetic_vars,
                                         Status *error_ptr);
 
   /// Retrieve the list of variables that are in scope at this StackFrame's
@@ -286,6 +293,14 @@ public:
   ///     that are visible to the entire compilation unit (e.g. file
   ///     static in C, globals that are homed in this CU).
   ///
+  /// \param[in] include_synthetic_vars
+  ///     Whether to also include synthetic variables from other
+  ///     sources. For example, synthetic frames can produce
+  ///     variables that aren't strictly 'variables', but can still
+  ///     be displayed with their values. Defaults to `true` because
+  ///     we are assuming that if a user's context has synthetic variables,
+  ///     they want them shown.
+  ///
   /// \param[in] must_have_valid_location
   ///     Whether to filter variables whose location is not available at this
   ///     StackFrame's pc.
@@ -293,6 +308,7 @@ public:
   ///     A pointer to a list of variables.
   virtual lldb::VariableListSP
   GetInScopeVariableList(bool get_file_globals,
+                         bool include_synthetic_vars = true,
                          bool must_have_valid_location = false);
 
   /// Create a ValueObject for a variable name / pathname, possibly including
