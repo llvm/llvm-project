@@ -1562,10 +1562,9 @@ void SIRegisterInfo::buildSpillLoadStore(
         IsRegMisaligned = true;
     }
   }
-  if (IsRegMisaligned) {
-    // The first sub-register will be spilled as a 32-bit value
+  // The first sub-register will be spilled as a 32-bit value
+  if (IsRegMisaligned)
     RegWidth -= 4u;
-  }
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
   // If we're using a block operation, the element should be the whole block.
@@ -1576,10 +1575,9 @@ void SIRegisterInfo::buildSpillLoadStore(
   unsigned Size = NumSubRegs * EltSize;
   unsigned RemSize = RegWidth - Size;
   unsigned NumRemSubRegs = RemSize ? 1 : 0;
-  if (IsRegMisaligned) {
-    // An additional sub-register is needed to spill the misaligned register.
+  // An additional sub-register is needed to spill the misaligned component.
+  if (IsRegMisaligned)
     NumSubRegs += 1;
-  }
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
   int64_t MaterializedOffset = Offset;
 
