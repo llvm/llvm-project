@@ -1427,7 +1427,8 @@ def ROCDL_wmma_scale16_f32_32x16x128_f4     : ROCDL_WMMA_Scale_F4_IntrOp<"wmma.s
 
 //===---------------------------------------------------------------------===//
 // Dot product intrinsics (v_dot*)
-class ROCDL_Dot_IntrOp<string mnemonic, Type A, Type B, Type C> :
+class ROCDL_Dot_IntrOp<string mnemonic, ROCDL_NamedType A, ROCDL_NamedType B,
+                       ROCDL_NamedType C> :
     ROCDL_ConcreteNonMemIntrOp<mnemonic, [Pure], 1, [3], ["clamp"]>,
   Arguments<(ins A:$a, B:$b, C:$c,
                  DefaultValuedAttr<I1Attr, "0">:$clamp)> {
@@ -1442,13 +1443,15 @@ class ROCDL_Dot_IntrOp<string mnemonic, Type A, Type B, Type C> :
 
     Example:
     ```mlir
-    %r = rocdl.fdot2 %a, %b, %c {clamp = true} :
-         (vector<2xf16>, vector<2xf16>, f32) -> f32
+    %r = rocdl.}] # mnemonic # [{ %a, %b, %c {clamp = true} :
+         (}] # A.typeName # [{, }] # B.typeName # [{, }] # C.typeName # [{) -> }]
+         # C.typeName # [{
     ```
   }];
 }
 
-class ROCDL_Dot_NoClamp_IntrOp<string mnemonic, Type A, Type B, Type C> :
+class ROCDL_Dot_NoClamp_IntrOp<string mnemonic, ROCDL_NamedType A,
+                               ROCDL_NamedType B, ROCDL_NamedType C> :
     ROCDL_ConcreteNonMemIntrOp<mnemonic, [Pure], 1, [], []>,
   Arguments<(ins A:$a, B:$b, C:$c)> {
   let results = (outs C:$res);
@@ -1464,7 +1467,8 @@ class ROCDL_Dot_NoClamp_IntrOp<string mnemonic, Type A, Type B, Type C> :
 
     Example:
     ```mlir
-    %r = rocdl.dot4.f32.fp8.fp8 %a, %b, %c : (i32, i32, f32) -> f32
+    %r = rocdl.}] # mnemonic # [{ %a, %b, %c : (}] # A.typeName # [{, }]
+         # B.typeName # [{, }] # C.typeName # [{) -> }] # C.typeName # [{
     ```
   }];
 }
@@ -1494,7 +1498,7 @@ class ROCDL_Sudot_IntrOp<string mnemonic> :
 
     Example:
     ```mlir
-    %r = rocdl.sudot4 %a, %b, %c
+    %r = rocdl.}] # mnemonic # [{ %a, %b, %c
            {signA = true, signB = false, clamp = true} :
          (i32, i32, i32) -> i32
     ```
@@ -1503,37 +1507,41 @@ class ROCDL_Sudot_IntrOp<string mnemonic> :
 
 // Available from gfx906.
 def ROCDL_fdot2 : ROCDL_Dot_IntrOp<"fdot2",
-    ROCDL_V2F16Type, ROCDL_V2F16Type, F32>;
+    ROCDL_V2F16Type, ROCDL_V2F16Type, ROCDL_Scalar<F32>>;
 def ROCDL_sdot2 : ROCDL_Dot_IntrOp<"sdot2",
-    ROCDL_V2I16Type, ROCDL_V2I16Type, I32>;
+    ROCDL_V2I16Type, ROCDL_V2I16Type, ROCDL_Scalar<I32>>;
 def ROCDL_udot2 : ROCDL_Dot_IntrOp<"udot2",
-    ROCDL_V2I16Type, ROCDL_V2I16Type, I32>;
-def ROCDL_sdot4 : ROCDL_Dot_IntrOp<"sdot4", I32, I32, I32>;
-def ROCDL_udot4 : ROCDL_Dot_IntrOp<"udot4", I32, I32, I32>;
-def ROCDL_sdot8 : ROCDL_Dot_IntrOp<"sdot8", I32, I32, I32>;
-def ROCDL_udot8 : ROCDL_Dot_IntrOp<"udot8", I32, I32, I32>;
+    ROCDL_V2I16Type, ROCDL_V2I16Type, ROCDL_Scalar<I32>>;
+def ROCDL_sdot4 : ROCDL_Dot_IntrOp<"sdot4",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+def ROCDL_udot4 : ROCDL_Dot_IntrOp<"udot4",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+def ROCDL_sdot8 : ROCDL_Dot_IntrOp<"sdot8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+def ROCDL_udot8 : ROCDL_Dot_IntrOp<"udot8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
 
 // Available from gfx11.
 def ROCDL_fdot2_f16_f16   : ROCDL_Dot_NoClamp_IntrOp<"fdot2.f16.f16",
-    ROCDL_V2F16Type,  ROCDL_V2F16Type,  F16>;
+    ROCDL_V2F16Type,  ROCDL_V2F16Type,  ROCDL_Scalar<F16>>;
 def ROCDL_fdot2_bf16_bf16 : ROCDL_Dot_NoClamp_IntrOp<"fdot2.bf16.bf16",
-    ROCDL_V2BF16Type, ROCDL_V2BF16Type, BF16>;
+    ROCDL_V2BF16Type, ROCDL_V2BF16Type, ROCDL_Scalar<BF16>>;
 def ROCDL_sudot4 : ROCDL_Sudot_IntrOp<"sudot4">;
 def ROCDL_sudot8 : ROCDL_Sudot_IntrOp<"sudot8">;
 
 // Available from gfx11 and gfx950.
 def ROCDL_fdot2_f32_bf16 : ROCDL_Dot_IntrOp<"fdot2.f32.bf16",
-    ROCDL_V2BF16Type, ROCDL_V2BF16Type, F32>;
+    ROCDL_V2BF16Type, ROCDL_V2BF16Type, ROCDL_Scalar<F32>>;
 
 // Available from gfx12.
 def ROCDL_dot4_f32_fp8_fp8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.fp8.fp8",
-    I32, I32, F32>;
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
 def ROCDL_dot4_f32_fp8_bf8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.fp8.bf8",
-    I32, I32, F32>;
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
 def ROCDL_dot4_f32_bf8_fp8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.bf8.fp8",
-    I32, I32, F32>;
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
 def ROCDL_dot4_f32_bf8_bf8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.bf8.bf8",
-    I32, I32, F32>;
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
 
 
 //===---------------------------------------------------------------------===//
