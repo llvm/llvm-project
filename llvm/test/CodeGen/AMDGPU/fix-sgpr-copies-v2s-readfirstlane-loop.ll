@@ -19,8 +19,6 @@
 ; CHECK-NOT:   v_readfirstlane_b32
 ; CHECK:       s_endpgm
 
-target triple = "amdgcn-amd-amdhsa"
-
 @a = internal unnamed_addr addrspace(3) global [2048 x i8] poison, align 16
 
 declare void @llvm.amdgcn.load.to.lds.p1(ptr addrspace(1), ptr addrspace(3), i32, i32, i32)

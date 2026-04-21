@@ -1457,7 +1457,7 @@ public:
   /// Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
-  /// Returns the source operand index that would need a readlane insertion
+  /// Returns the source operand index that would need a readfirstlane insertion
   /// if this instruction were reached via VALU conversion, or std::nullopt
   /// if the instruction has a proper VALU equivalent.
   std::optional<unsigned> getReadlaneOperandOnVALUConversion(const MachineInstr &MI) const;
