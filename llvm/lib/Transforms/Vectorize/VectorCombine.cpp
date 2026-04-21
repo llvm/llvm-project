@@ -5532,46 +5532,47 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   return true;
 }
 
+/// Given this sequence:
+/// ```
+/// %d = llvm.vector.deinterleave2 <vscale x 16 x i32> %v
+/// %f0 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 0
+/// %f1 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 1
+///
+/// %low0 = and <vscale x 8 x i32> %f0, splat (i32 65535)
+/// %low1 = shl <vscale x 8 x i32> %f1, splat (i32 16)
+/// %merge0 = or disjoint <vscale x 8 x i32> %low0, %low1
+///
+/// %high0 = and <vscale x 8 x i32> %f1, splat (i32 -65536)
+/// %high1 = lshr <vscale x 8 x i32> %f0, splat (i32 16)
+/// %merge1 = or disjoint <vscale x 8 x i32> %high0, %high1
+/// ```
+/// It is actually just de-interleaving a 16-bit vector with double the
+/// vector length. More generally speaking, it's de-interleaving on a vector
+/// with half the element width as the original vector.
+///
+/// Therefore, we can turn it into:
+/// ```
+/// %narrow.v = bitcast <vscale x 16 x i32> %v to <vscale x 32 x i16>
+/// %d = llvm.vector.deinterleave2 <vscale x 32 x i16> %narrow.v
+/// %f0 = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } %d, 0
+/// %f1 = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } %d, 1
+///
+/// %merge0 = bitcast <vscale x 16 x i16> %f0 to <vscale x 8 x i32>
+/// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
+/// ```
 bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   using namespace PatternMatch;
   Value *DeinterleavedVal;
   if (!match(&I, m_Deinterleave2(m_Value(DeinterleavedVal))))
     return false;
 
-  // Given this sequence:
-  // ```
-  // %d = llvm.vector.deinterleave2 <vscale x 16 x i32> %v
-  // %f0 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 0
-  // %f1 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 1
-  //
-  // %low0 = and <vscale x 8 x i32> %f0, splat (i32 65535)
-  // %low1 = shl <vscale x 8 x i32> %f1, splat (i32 16)
-  // %merge0 = or disjoint <vscale x 8 x i32> %low0, %low1
-  //
-  // %high0 = and <vscale x 8 x i32> %f1, splat (i32 -65536)
-  // %high1 = lshr <vscale x 8 x i32> %f0, splat (i32 16)
-  // %merge1 = or disjoint <vscale x 8 x i32> %high0, %high1
-  // ```
-  // It is actually just de-interleaving a 16-bit vector with double the
-  // vector length. More generally speaking, it's de-interleaving on a vector
-  // with half the element width as the original vector.
-  //
-  // Therefore, we can turn it into:
-  // ```
-  // %narrow.v = bitcast <vscale x 16 x i32> %v to <vscale x 32 x i16>
-  // %d = llvm.vector.deinterleave2 <vscale x 32 x i16> %narrow.v
-  // %f0 = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } %d, 0
-  // %f1 = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } %d, 1
-  //
-  // %merge0 = bitcast <vscale x 16 x i16> %f0 to <vscale x 8 x i32>
-  // %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
-  // ```
   VectorType *VecTy = cast<VectorType>(DeinterleavedVal->getType());
   IntegerType *ElementTy = dyn_cast<IntegerType>(VecTy->getElementType());
   if (!ElementTy)
     return false;
   unsigned ElementWidth = ElementTy->getBitWidth();
-  assert(isPowerOf2_32(ElementWidth));
+  assert(isPowerOf2_32(ElementWidth) &&
+         "expect element bitwidth to be power-of-two");
   unsigned HalfElementWidth = ElementWidth / 2;
   APInt LoMask(ElementWidth, 0);
   LoMask.setLowBits(HalfElementWidth);
@@ -5622,7 +5623,7 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
       return false;
   }
 
-  // Profitibility check.
+  // Profitability check.
   InstructionCost OldCost =
       TTI.getInstructionCost(MergeInsts[0], CostKind) +
       TTI.getInstructionCost(cast<Instruction>(MergeInsts[0]->getOperand(0)),
