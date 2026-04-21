@@ -1305,8 +1305,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   }
 
   // Set CIR's linkage type as appropriate.
-  cir::GlobalLinkageKind linkage =
-      getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
+  cir::GlobalLinkageKind linkage = getCIRLinkageVarDefinition(vd);
 
   // CUDA B.2.1 "The __device__ qualifier declares a variable that resides on
   // the device. [...]"
@@ -1692,16 +1691,14 @@ static bool isVarDeclStrongDefinition(const ASTContext &astContext,
   return false;
 }
 
-cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
-    const DeclaratorDecl *dd, GVALinkage linkage, bool isConstantVariable) {
+cir::GlobalLinkageKind
+CIRGenModule::getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
+                                         GVALinkage linkage) {
   if (linkage == GVA_Internal)
     return cir::GlobalLinkageKind::InternalLinkage;
 
-  if (dd->hasAttr<WeakAttr>()) {
-    if (isConstantVariable)
-      return cir::GlobalLinkageKind::WeakODRLinkage;
+  if (dd->hasAttr<WeakAttr>())
     return cir::GlobalLinkageKind::WeakAnyLinkage;
-  }
 
   if (const auto *fd = dd->getAsFunction())
     if (fd->isMultiVersion() && linkage == GVA_AvailableExternally)
@@ -1827,10 +1824,9 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
 }
 
 cir::GlobalLinkageKind
-CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd, bool isConstant) {
-  assert(!isConstant && "constant variables NYI");
+CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd) {
   GVALinkage linkage = astContext.GetGVALinkageForVariable(vd);
-  return getCIRLinkageForDeclarator(vd, linkage, isConstant);
+  return getCIRLinkageForDeclarator(vd, linkage);
 }
 
 cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl gd) {
@@ -1841,7 +1837,7 @@ cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl gd) {
   if (const auto *dtor = dyn_cast<CXXDestructorDecl>(d))
     return getCXXABI().getCXXDestructorLinkage(linkage, dtor, gd.getDtorType());
 
-  return getCIRLinkageForDeclarator(d, linkage, /*isConstantVariable=*/false);
+  return getCIRLinkageForDeclarator(d, linkage);
 }
 
 static cir::GlobalOp
@@ -3460,8 +3456,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   }
 
   // Create a global variable for this lifetime-extended temporary.
-  cir::GlobalLinkageKind linkage =
-      getCIRLinkageVarDefinition(varDecl, /*isConstant=*/false);
+  cir::GlobalLinkageKind linkage = getCIRLinkageVarDefinition(varDecl);
   if (linkage == cir::GlobalLinkageKind::ExternalLinkage) {
     const VarDecl *initVD;
     if (varDecl->isStaticDataMember() && varDecl->getAnyInitializer(initVD) &&
