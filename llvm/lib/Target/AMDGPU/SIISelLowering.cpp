@@ -1769,6 +1769,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   }
   case Intrinsic::amdgcn_s_prefetch_data:
   case Intrinsic::amdgcn_flat_prefetch:
+  case Intrinsic::amdgcn_global_prefetch_masked:
   case Intrinsic::amdgcn_global_prefetch: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), 8);
@@ -7825,6 +7826,50 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
       DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
 }
 
+static SDValue lowerGlobalPrefetchMaskedIntrinsic(const SITargetLowering &TLI,
+                                                  SDNode *N,
+                                                  SelectionDAG &DAG) {
+  SDLoc SL(N);
+  SDValue Ptr = N->getOperand(2);
+  SDValue Cpol = N->getOperand(3);
+  SDValue Pred = N->getOperand(4);
+
+  // generate a new EXEC mask based on the predicate value
+  SmallVector<SDValue, 8> Operands;
+  Operands.push_back(
+      DAG.getTargetConstant(Intrinsic::amdgcn_ballot, SL, MVT::i32));
+  Operands.push_back(Pred);
+  SDValue Mask = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32, Operands);
+
+  // save the original EXEC mask
+  const GCNSubtarget *ST = TLI.getSubtarget();
+  EVT ExecVT = ST->isWave32() ? MVT::i32 : MVT::i64;
+  Register Exec = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+  SDValue OrigMask = DAG.getCopyFromReg(DAG.getEntryNode(), SL, Exec, ExecVT);
+  SDValue Chain = OrigMask.getValue(1);
+
+  // change the EXEC mask
+  SDValue ToExec = DAG.getCopyToReg(Chain, SL, Exec, Mask, SDValue());
+  Chain = ToExec.getValue(0);
+
+  // issue prefetch
+  Operands.clear();
+  Operands.push_back(Chain);
+  Operands.push_back(
+      DAG.getTargetConstant(Intrinsic::amdgcn_global_prefetch, SL, MVT::i32));
+  Operands.push_back(Ptr);
+  Operands.push_back(Cpol);
+
+  auto *M = cast<MemIntrinsicSDNode>(N);
+  SDValue Prefetch = DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_VOID, SL, DAG.getVTList(MVT::Other), Operands,
+      M->getMemoryVT(), M->getMemOperand());
+  Chain = Prefetch.getValue(0);
+
+  // restore the original mask
+  return DAG.getCopyToReg(Chain, SL, Exec, OrigMask.getValue(0), SDValue());
+}
+
 static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                            SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
@@ -12424,6 +12469,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue Val = Op->getOperand(3);
     return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MII->getMemoryVT(), Chain, Val,
                          Ptr, MII->getMemOperand());
+  }
+  case Intrinsic::amdgcn_global_prefetch_masked: {
+    return lowerGlobalPrefetchMaskedIntrinsic(*this, Op.getNode(), DAG);
   }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
