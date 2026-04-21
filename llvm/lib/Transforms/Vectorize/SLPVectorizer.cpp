@@ -12037,65 +12037,94 @@ public:
           isCommutative(MainOp) && MainOp->getNumOperands() == 2;
       Operands.assign(MainOp->getNumOperands(),
                       BoUpSLP::ValueList(VL.size(), nullptr));
-      // Build operands and simultaneously count (ID0, ID1) pair
-      // frequencies for commutative operand normalization. Pairs and
-      // their inverses are tracked under a canonical key so that
-      // (Load, Add) and (Add, Load) contribute to the same bucket.
-      struct PairInfo {
-        unsigned FwdCount = 0;
-        unsigned RevCount = 0;
-      };
-      SmallMapVector<std::pair<unsigned, unsigned>, PairInfo, 8> PairCounts;
-      unsigned MajID0 = 0, MajID1 = 0;
+      // Populate operands for every lane.
       for (auto [Idx, V] : enumerate(VL)) {
         SmallVector<Value *> OperandsForValue = getOperands(S, V);
         for (auto [OperandIdx, Operand] : enumerate(OperandsForValue))
           Operands[OperandIdx][Idx] = Operand;
-        if (!IsCommutative || S.isCopyableElement(V) || isa<PoisonValue>(V))
-          continue;
-        unsigned ID0 = OperandsForValue[0]->getValueID();
-        unsigned ID1 = OperandsForValue[1]->getValueID();
-        if (ID0 == ID1)
-          continue;
-        unsigned MinID = std::min(ID0, ID1);
-        unsigned MaxID = std::max(ID0, ID1);
-        auto [It, Inserted] =
-            PairCounts.try_emplace(std::make_pair(MinID, MaxID));
-        PairInfo &Info = It->second;
-        if (ID0 < ID1)
-          ++Info.FwdCount;
-        else
-          ++Info.RevCount;
       }
-      // Find the most frequent (ID0, ID1) pair across non-copyable
-      // lanes. Select the orientation (original or inverse) that has
-      // more votes as the majority pattern.
-      unsigned BestCount = 0;
-      for (const auto &P : PairCounts) {
-        const PairInfo &Info = P.second;
-        unsigned Total = Info.FwdCount + Info.RevCount;
-        if (Total > BestCount) {
-          BestCount = Total;
-          if (Info.FwdCount >= Info.RevCount) {
-            MajID0 = P.first.first;
-            MajID1 = P.first.second;
-          } else {
-            MajID0 = P.first.second;
-            MajID1 = P.first.first;
-          }
-        }
-      }
-      // For commutative ops, swap lanes whose operand types are the
-      // exact inverse of the majority pattern, making the non-copyable
-      // lanes consistent.
-      if (BestCount > 0) {
+      // Operand-order normalization below swaps OpIdx 0 and OpIdx 1
+      // of non-copyable lanes. That is only safe when the main op is
+      // commutative (e.g. 0 - X is not X - 0, so `sub` must be
+      // excluded).
+      if (IsCommutative) {
+        // Count (ID0, ID1) pair frequencies for operand normalization.
+        // Pairs and their inverses are tracked under a canonical key
+        // so that (Load, Add) and (Add, Load) contribute to the same
+        // bucket.
+        struct PairInfo {
+          unsigned FwdCount = 0;
+          unsigned RevCount = 0;
+        };
+        SmallMapVector<std::pair<unsigned, unsigned>, PairInfo, 8> PairCounts;
+        unsigned MajID0 = 0, MajID1 = 0;
         for (auto [Idx, V] : enumerate(VL)) {
           if (S.isCopyableElement(V) || isa<PoisonValue>(V))
             continue;
           unsigned ID0 = Operands[0][Idx]->getValueID();
           unsigned ID1 = Operands[1][Idx]->getValueID();
-          if (ID0 == MajID1 && ID1 == MajID0)
-            std::swap(Operands[0][Idx], Operands[1][Idx]);
+          if (ID0 == ID1)
+            continue;
+          unsigned MinID = std::min(ID0, ID1);
+          unsigned MaxID = std::max(ID0, ID1);
+          auto [It, Inserted] =
+              PairCounts.try_emplace(std::make_pair(MinID, MaxID));
+          PairInfo &Info = It->second;
+          if (ID0 < ID1)
+            ++Info.FwdCount;
+          else
+            ++Info.RevCount;
+        }
+        // Find the most frequent (ID0, ID1) pair across non-copyable
+        // lanes. Select the orientation (original or inverse) that
+        // has more votes as the majority pattern.
+        unsigned BestCount = 0;
+        for (const auto &P : PairCounts) {
+          const PairInfo &Info = P.second;
+          unsigned Total = Info.FwdCount + Info.RevCount;
+          if (Total > BestCount) {
+            BestCount = Total;
+            if (Info.FwdCount >= Info.RevCount) {
+              MajID0 = P.first.first;
+              MajID1 = P.first.second;
+            } else {
+              MajID0 = P.first.second;
+              MajID1 = P.first.first;
+            }
+          }
+        }
+        // Normalize non-copyable lanes in two steps:
+        // 1) Swap lanes whose operand types are the exact inverse of
+        //    the majority pattern, making the non-copyable lanes
+        //    consistent.
+        // 2) Independently, if a strict majority of non-copyable lanes
+        //    have loads at OpIdx 1, swap those lanes to put loads at
+        //    OpIdx 0 for better downstream vectorization.
+        unsigned LAt0 = 0, LAt1 = 0, TotalNC = 0;
+        for (auto [Idx, V] : enumerate(VL)) {
+          if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+            continue;
+          // Step 1: swap exact-inverse lanes.
+          if (BestCount > 0) {
+            unsigned ID0 = Operands[0][Idx]->getValueID();
+            unsigned ID1 = Operands[1][Idx]->getValueID();
+            if (ID0 == MajID1 && ID1 == MajID0)
+              std::swap(Operands[0][Idx], Operands[1][Idx]);
+          }
+          ++TotalNC;
+          LAt0 += isa<LoadInst>(Operands[0][Idx]);
+          LAt1 += isa<LoadInst>(Operands[1][Idx]);
+        }
+        // Step 2: if most non-copyable lanes have loads at OpIdx 1,
+        // swap those lanes to put loads at OpIdx 0.
+        if (TotalNC > 1 && LAt1 > LAt0 && LAt1 * 2 > TotalNC) {
+          for (auto [Idx, V] : enumerate(VL)) {
+            if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+              continue;
+            if (!isa<LoadInst>(Operands[0][Idx]) &&
+                isa<LoadInst>(Operands[1][Idx]))
+              std::swap(Operands[0][Idx], Operands[1][Idx]);
+          }
         }
       }
     } else {
@@ -24727,6 +24756,17 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
     if (!Bundles.empty()) {
       for (ScheduleBundle *Bundle : Bundles) {
         Bundle->setSchedulingPriority(Idx++);
+        if (const TreeEntry *TE = Bundle->getTreeEntry();
+            TE && Bundle->hasValidDependencies() && TE->UserTreeIndex &&
+            TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+            TE->UserTreeIndex.UserTE->doesNotNeedToSchedule() &&
+            any_of(TE->UserTreeIndex.UserTE->Scalars, [&](Value *V) {
+              return TE->UserTreeIndex.UserTE->isExpandedBinOp(V);
+            })) {
+          for (ScheduleEntity *SE : Bundle->getBundle())
+            if (auto *SD = dyn_cast<ScheduleData>(SE))
+              SD->clearDirectDependencies();
+        }
         if (!Bundle->hasValidDependencies()) {
           SmallPtrSet<Value *, 4> ExpandedOps;
           BS->calculateDependencies(*Bundle, /*InsertInReadyList=*/false, this,

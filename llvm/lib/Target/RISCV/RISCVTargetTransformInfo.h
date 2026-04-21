@@ -381,7 +381,6 @@ public:
         Intrinsic::vp_cttz_elts,
         Intrinsic::vp_fcmp,
         Intrinsic::vp_fptrunc,
-        Intrinsic::vp_frem,
         Intrinsic::vp_fshl,
         Intrinsic::vp_fshr,
         Intrinsic::vp_gather,
