@@ -106,3 +106,8 @@ int test11_alias(int x, ...) __attribute__((alias("test11")));
 typedef int Integer;
 Integer test12(int x) { return x; }
 int test12_alias(Integer) __attribute__((alias("test12")));
+
+// Compiler-generated variables are not valid alias targets.
+char *test13 = "asdf";
+extern char test13_alias[5] __attribute__((alias(".str")));
+// expected-error@-1 {{alias must point to a defined variable or function}}
