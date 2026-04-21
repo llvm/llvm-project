@@ -1713,8 +1713,7 @@ define <2 x i16> @test_ne_h(<2 x i16> %a, <2 x i16> %b) {
 define <2 x i16> @test_nez_h(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: test_nez_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmseqz.h a0, a0
-; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    pmsnez.h a0, a0
 ; CHECK-NEXT:    ret
   %cmp = icmp ne <2 x i16> %a, splat (i16 0)
   %res = sext <2 x i1> %cmp to <2 x i16>
@@ -1766,8 +1765,8 @@ define <2 x i16> @test_sge_h(<2 x i16> %a, <2 x i16> %b) {
 define <2 x i16> @test_sgez_h(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: test_sgez_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    pmslt.h a0, a1, a0
+; CHECK-NEXT:    pmsltz.h a0, a0
+; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt <2 x i16> %a, splat (i16 -1);
   %res = sext <2 x i1> %cmp to <2 x i16>
