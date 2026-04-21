@@ -223,6 +223,10 @@ static mlir::Value emitNeonCall(CIRGenModule &cgm, CIRGenBuilderTy &builder,
       isConstrainedFPIntrinsic, shift, rightshift);
 }
 
+// Computes the input vector type for a NEON pairwise widening operation (e.g.
+// vpaddl/vpadal). Given a result vector type, it derives the corresponding
+// input type by halving the element bit width and doubling the number of lanes,
+// while setting the signedness based on usgn.
 static cir::VectorType getNeonPairwiseWidenInputType(cir::VectorType resType,
                                                      bool usgn) {
   mlir::Type elemTy = resType.getElementType();
@@ -2486,13 +2490,13 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v: {
     intrName = usgn ? "aarch64.neon.uaddlp" : "aarch64.neon.saddlp";
-    llvm::SmallVector<mlir::Value> vsrc{ops[1]};
-    mlir::Type mTy = ty;
-    mlir::Value pw =
+    llvm::SmallVector<mlir::Value> inputs{ops[1]};
+    mlir::Type resultTy = ty;
+    mlir::Value pairwiseSum =
         emitNeonCall(cgm, builder, {getNeonPairwiseWidenInputType(ty, usgn)},
-                     vsrc, intrName, mTy, loc);
-    mlir::Value accum = ops[0] = builder.createBitcast(loc, ops[0], ty);
-    return cir::AddOp::create(builder, loc, ty, pw, accum);
+                     inputs, intrName, resultTy, loc);
+    mlir::Value accumValue = ops[0] = builder.createBitcast(loc, ops[0], ty);
+    return cir::AddOp::create(builder, loc, ty, pairwiseSum, accumValue);
   }
   case NEON::BI__builtin_neon_vpmin_v:
   case NEON::BI__builtin_neon_vpminq_v:
