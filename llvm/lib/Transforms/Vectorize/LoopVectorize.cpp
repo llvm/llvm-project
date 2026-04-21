@@ -7391,47 +7391,6 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
   return CM_EpilogueAllowed;
 }
 
-/// Check if we can apply tail folding to the vectorized epilogue loop,
-/// enabling an unpredicated main vector loop with a tail-folded epilogue
-/// vector loop.
-static bool isEpilogueTailFoldingAllowed(const LoopVectorizationCostModel &CM,
-                                         const LoopVectorizationLegality &LVL) {
-  // Epilogue TF is only enabled when explicitly requested via command line.
-  if (!TailFoldingPolicy.getNumOccurrences() ||
-      TailFoldingPolicy != TailFoldingPolicyTy::FoldEpilogueTail)
-    return false;
-
-  if (!EnableEpilogueVectorization) {
-    LLVM_DEBUG(dbgs() << "LV: Options conflict, epilogue vectorization is "
-                         "disallowed while epilogue tail-folding allowed!\n");
-    LLVM_DEBUG(dbgs() << "LV: Disallow epilogue tail-folding\n");
-    return false;
-  }
-
-  // If scalar epilogue is explicitly required, we can't apply TF.
-  if (CM.requiresScalarEpilogue(/*IsVectorizing*/ true)) {
-    LLVM_DEBUG(dbgs() << "LV: Epilogue tail-folding can't be applied because "
-                         "scalar epilogue is required\n");
-    return false;
-  }
-
-  // If having epilogue is NOT allowed, then no epilogue to apply TF for.
-  if (!CM.isEpilogueAllowed()) {
-    LLVM_DEBUG(dbgs() << "LV: No epilogue to apply tail folding for.\n");
-    return false;
-  }
-
-  // TF is not supported for reductions right now.
-  if (!LVL.getReductionVars().empty()) {
-    LLVM_DEBUG(dbgs() << "LV: Epilogue tail-folding is not supported for "
-                         "reductions\n");
-    return false;
-  }
-
-  // We can apply TF on the scalar loop of the vectorized epilogue.
-  return true;
-}
-
 // Emit a remark if there are stores to floats that required a floating point
 // extension. If the vectorized loop was generated with floating point there
 // will be a performance penalty from the conversion overhead and the change in
@@ -8236,7 +8195,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, Config, IAI, PSE,
                                Hints, ORE);
 
-  if (isEpilogueTailFoldingAllowed(CM, LVL)) {
+  if (TailFoldingPolicy.getNumOccurrences() &&
+      TailFoldingPolicy == TailFoldingPolicyTy::FoldEpilogueTail) {
     // TODO: Apply tail folding on the vectorized epilogue loop.
     LLVM_DEBUG(dbgs() << "LV: epilogue tail-folding is not supported yet\n");
     reportVectorizationInfo("FoldEpilogueTail flag is not supported yet, we "
