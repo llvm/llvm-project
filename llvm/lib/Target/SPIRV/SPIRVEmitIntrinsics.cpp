@@ -752,8 +752,10 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
   Value *Operand = *GEP.idx_begin();
   ConstantInt *CI = dyn_cast<ConstantInt>(Operand);
   if (!CI) {
-    // If we have dynamic indexing, we might need to drill through structs
-    // to reach the array.
+    // Dynamic indexing into a struct is not possible.
+    // We know that we must be accessing the first element
+    // of the struct if the current type is a struct.
+    // Try to find the first array type that is at offset 0 in the struct.
     while (CurType && !CurType->isArrayTy()) {
       if (auto *ST = dyn_cast<StructType>(CurType)) {
         if (ST->getNumElements() > 0) {
@@ -765,6 +767,7 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
       break;
     }
 
+    assert(CurType);
     ArrayType *AT = dyn_cast<ArrayType>(CurType);
     // Operand is not constant. Either we have an array and accept it, or we
     // give up.
