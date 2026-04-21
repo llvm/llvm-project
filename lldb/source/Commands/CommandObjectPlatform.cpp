@@ -297,7 +297,7 @@ protected:
           result.AppendError(error.AsCString());
         }
       } else {
-        result.AppendErrorWithFormat("%s\n", error.AsCString());
+        result.AppendErrorWithFormat("%s", error.AsCString());
       }
     } else {
       result.AppendError("no platform is currently selected\n");
@@ -1243,7 +1243,7 @@ protected:
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           result.AppendErrorWithFormat(
-              "no process found with pid = %" PRIu64 "\n", pid);
+              "no process found with pid = %" PRIu64, pid);
         }
       } else {
         ProcessInstanceInfoList proc_infos;
