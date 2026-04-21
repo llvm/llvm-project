@@ -470,10 +470,12 @@ bool formatters::LibStdcppVariantSummaryProvider(
   if (!index_obj || !data_obj)
     return false;
 
-  auto index_bytes = index_obj->GetByteSize();
-  if (!index_bytes)
+  auto index_bytes_or_err = index_obj->GetByteSize();
+  if (!index_bytes_or_err) {
+    llvm::consumeError(index_bytes_or_err.takeError());
     return false;
-  auto npos_value = LibStdcppVariantNposValue(*index_bytes);
+  }
+  auto npos_value = LibStdcppVariantNposValue(*index_bytes_or_err);
   auto index = index_obj->GetValueAsUnsigned(0);
   if (index == npos_value) {
     stream.Printf(" No Value");

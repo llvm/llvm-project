@@ -515,10 +515,11 @@ SymbolFileOnDemand::GetParameterStackSize(const Symbol &symbol) {
     if (log) {
       llvm::Expected<lldb::addr_t> stack_size =
           m_sym_file_impl->GetParameterStackSize(symbol);
-      if (stack_size) {
+      if (stack_size)
         LLDB_LOG(log, "{0} stack size would return for symbol {1} if hydrated.",
                  *stack_size, symbol.GetName());
-      }
+      else
+        llvm::consumeError(stack_size.takeError());
     }
     return SymbolFile::GetParameterStackSize(symbol);
   }

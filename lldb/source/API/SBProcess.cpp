@@ -1041,8 +1041,10 @@ SBStructuredData SBProcess::GetExtendedCrashInformation() {
   auto expected_data =
       platform_sp->FetchExtendedCrashInformation(*process_sp.get());
 
-  if (!expected_data)
+  if (!expected_data) {
+    llvm::consumeError(expected_data.takeError());
     return data;
+  }
 
   StructuredData::ObjectSP fetched_data = *expected_data;
   data.m_impl_up->SetObjectSP(fetched_data);

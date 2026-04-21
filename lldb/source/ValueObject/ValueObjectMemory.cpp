@@ -149,6 +149,8 @@ llvm::Expected<uint64_t> ValueObjectMemory::GetByteSize() {
     if (auto size =
             m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope()))
       return *size;
+    else
+      llvm::consumeError(size.takeError());
     return llvm::createStringError("could not get byte size of memory object");
   }
   return m_compiler_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());

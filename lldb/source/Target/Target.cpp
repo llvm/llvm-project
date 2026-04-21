@@ -4203,8 +4203,10 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
   output_sp->PutCString(
       reinterpret_cast<StreamString *>(stream.get())->GetData());
-  if (!should_stop_or_err)
+  if (!should_stop_or_err) {
+    llvm::consumeError(should_stop_or_err.takeError());
     return StopHookResult::KeepStopped;
+  }
 
   return *should_stop_or_err ? StopHookResult::KeepStopped
                              : StopHookResult::RequestContinue;

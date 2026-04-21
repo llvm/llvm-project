@@ -507,6 +507,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       if (auto json_transcript = llvm::json::parse(buffer))
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
+      else
+        llvm::consumeError(json_transcript.takeError());
     }
   }
 

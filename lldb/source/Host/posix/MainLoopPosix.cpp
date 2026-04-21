@@ -392,6 +392,10 @@ bool MainLoopPosix::Interrupt() {
     return true;
 
   char c = '.';
-  llvm::Expected<size_t> result = m_interrupt_pipe.Write(&c, 1);
-  return result && *result != 0;
+  llvm::Expected<size_t> result_or_err = m_interrupt_pipe.Write(&c, 1);
+  if (!result_or_err) {
+    llvm::consumeError(result_or_err.takeError());
+    return false;
+  }
+  return *result_or_err != 0;
 }

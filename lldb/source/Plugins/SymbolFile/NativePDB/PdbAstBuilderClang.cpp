@@ -908,6 +908,8 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
           index.tpi().findFullDeclForForwardRef(class_index);
       if (eti) {
         tag_record = CVTagRecord::create(index.tpi().getType(*eti)).asTag();
+      } else {
+        llvm::consumeError(eti.takeError());
       }
     }
 

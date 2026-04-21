@@ -1497,8 +1497,10 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     for (const LineColumnEntry &group : lines) {
       llvm::Expected<uint32_t> file_index_or_err =
           GetFileIndex(*cii, group.NameIndex);
-      if (!file_index_or_err)
+      if (!file_index_or_err) {
+        llvm::consumeError(file_index_or_err.takeError());
         continue;
+      }
       uint32_t file_index = file_index_or_err.get();
       lldbassert(!group.LineNumbers.empty());
       CompilandIndexItem::GlobalLineTable::Entry line_entry(
@@ -1701,8 +1703,10 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   FileSpec decl_file;
   llvm::Expected<uint32_t> file_index_or_err =
       GetFileIndex(*cii, inlinee_line.Header->FileID);
-  if (!file_index_or_err)
+  if (!file_index_or_err) {
+    llvm::consumeError(file_index_or_err.takeError());
     return;
+  }
   uint32_t file_offset = file_index_or_err.get();
   decl_file = files.GetFileSpecAtIndex(file_offset);
   uint32_t decl_line = inlinee_line.Header->SourceLineNum;
@@ -1937,8 +1941,10 @@ size_t SymbolFileNativePDB::ParseSymbolArrayInScope(
 void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter,
                                        bool show_color) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
-  if (!ts_or_err)
+  if (!ts_or_err) {
+    llvm::consumeError(ts_or_err.takeError());
     return;
+  }
   auto ts = *ts_or_err;
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)

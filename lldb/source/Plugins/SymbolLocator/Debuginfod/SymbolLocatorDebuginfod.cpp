@@ -173,8 +173,10 @@ GetFileForModule(const ModuleSpec &module_spec,
   PluginProperties &plugin_props = GetGlobalPluginProperties();
   llvm::Expected<std::string> cache_path_or_err = plugin_props.GetCachePath();
   // A cache location is *required*.
-  if (!cache_path_or_err)
+  if (!cache_path_or_err) {
+    llvm::consumeError(cache_path_or_err.takeError());
     return {};
+  }
   std::string cache_path = *cache_path_or_err;
   llvm::SmallVector<llvm::StringRef> debuginfod_urls =
       llvm::getDefaultDebuginfodUrls();
