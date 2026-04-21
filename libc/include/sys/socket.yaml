@@ -123,6 +123,13 @@ functions:
       - type: int
       - type: const void *
       - type: socklen_t
+  - name: shutdown
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
   - name: socket
     standards:
       - POSIX

@@ -43,4 +43,8 @@
 #define SO_BSDCOMPAT 14
 #define SO_REUSEPORT 15
 
+#define SHUT_RD 0
+#define SHUT_WR 1
+#define SHUT_RDWR 2
+
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H
