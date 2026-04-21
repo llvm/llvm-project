@@ -2215,7 +2215,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
                                               ParsedTemplateInfo &TemplateInfo,
                                               SourceLocation *DeclEnd,
                                               ForRangeInit *FRI,
-                                              // TO_UPSTREAM(BoundsSafety) 
+                                              // TO_UPSTREAM(BoundsSafety)
                                               LateParsedAttrList *BoundsSafetyLateAttrs) {
   // Parse the first declarator.
   // Consume all of the attributes from `Attrs` by moving them to our own local
@@ -2851,7 +2851,7 @@ void Parser::ParseSpecifierQualifierList(
               ? LateAttrs->lateAttrParseExperimentalExtOnly()
               : true) &&
          "Experimental late parsing must be enabled for BoundsSafety");
-  /*TO_UPSTREAM(BoundsSafety) OFF*/ 
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   ParsedTemplateInfo TemplateInfo;
   // TO_UPSTREAM(BoundsSafety): Pass LateAttrs
@@ -3281,18 +3281,20 @@ void Parser::DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
     unsigned Index = 0;
   } FuncInfo;
   std::unique_ptr<ParseScope> ProtoScope;
-  LateParsedAttrList ProtoLateAttrs(true);
+  LateParsedAttrList ProtoLateAttrs(/*ParseSoon=*/true);
 
   for (unsigned i = 0; i < D.getNumTypeObjects(); ++i) {
     DeclaratorChunk &DC = D.getTypeObject(i);
 
-    ArrayRef<DeclaratorChunk::LateParsedAttrInfo *> LPAI;
+    LateParsedAttrList DCLateAttrs(/*ParseSoon=*/true);
     switch (DC.Kind) {
     case DeclaratorChunk::Pointer:
-      LPAI = DC.Ptr.getLateParsedAttrInfos();
+      DCLateAttrs.append(DC.LateAttrList);
+      DC.LateAttrList.clear();
       break;
     case DeclaratorChunk::Array:
-      LPAI = DC.Arr.getLateParsedAttrInfos();
+      DCLateAttrs.append(DC.LateAttrList);
+      DC.LateAttrList.clear();
       break;
     case DeclaratorChunk::Function:
       FuncInfo.Index = i;
@@ -3302,7 +3304,7 @@ void Parser::DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
       continue;
     }
 
-    if (!LPAI.empty() && FuncInfo.Valid && !ProtoScope) {
+    if (!DCLateAttrs.empty() && FuncInfo.Valid && !ProtoScope) {
       const DeclaratorChunk &FuncChunk = D.getTypeObject(FuncInfo.Index);
       ProtoScope.reset(new ParseScope(this, Scope::FunctionPrototypeScope |
                                             Scope::DeclScope));
@@ -3313,15 +3315,12 @@ void Parser::DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
       }
       LateAttrs = &ProtoLateAttrs;
     }
-    for (const auto *LI : LPAI) {
-      LateParsedAttribute *LA = new LateParsedAttribute(
-          this, LI->AttrName, LI->AttrNameLoc, NestedLevel);
-      LA->MacroII = std::move(LI->MacroII);
-      LA->Toks = std::move(LI->Toks);
+    for (LateParsedAttribute *LA : DCLateAttrs) {
+      LA->NestedTypeLevel = NestedLevel;
       if (Dcl)
         LA->addDecl(Dcl);
-      LateAttrs->push_back(LA);
     }
+    LateAttrs->append(DCLateAttrs);
     NestedLevel++;
   }
   ParseLexedCAttributeList(ProtoLateAttrs, false);
@@ -6802,7 +6801,6 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
         D.getBeginLoc(), [&] { ParseDeclaratorInternal(D, DirectDeclParser); });
     if (Kind == tok::star) {
       /* TO_UPSTREAM(BoundsSafety) ON */
-      SmallVector<DeclaratorChunk::LateParsedAttrInfo *, 0> LateAttrInfos;
       // We parse '__counted_by' or '__ended_by' attributes immediately
       // if this is a function declarator. We need these attributes to be
       // parsed early so we can construct the full function type before Sema
@@ -6840,15 +6838,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
             }
           }
           ParseLexedCAttributeList(LateAttrs, false, &D.getAttributes());
-        } else {
-          for (auto LA : LateAttrs) {
-            auto LI = new DeclaratorChunk::LateParsedAttrInfo(
-                LA->Toks, LA->AttrName, LA->MacroII, LA->AttrNameLoc);
-            LateAttrInfos.push_back(LI);
-            delete LA;
-          }
+          LateAttrs.clear();
         }
-        LateAttrs.clear();
       }
       /* TO_UPSTREAM(BoundsSafety) OFF */
       // Remember that we parsed a pointer type, and remember the type-quals.
@@ -6856,10 +6847,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                         DS.getTypeQualifiers(), Loc, DS.getConstSpecLoc(),
                         DS.getVolatileSpecLoc(), DS.getRestrictSpecLoc(),
                         DS.getAtomicSpecLoc(), DS.getUnalignedSpecLoc(),
-                        DS.getOverflowBehaviorLoc(), DS.isWrapSpecified(),
-                        // TO_UPSTREAM(BoundsSafety)
-                        LateAttrInfos),
-                    std::move(DS.getAttributes()), SourceLocation());
+                        DS.getOverflowBehaviorLoc(), DS.isWrapSpecified()),
+                    std::move(DS.getAttributes()), SourceLocation(),
+                    std::move(LateAttrs));
     } else
       // Remember that we parsed a Block type, and remember the type-quals.
       D.AddTypeInfo(
@@ -8255,24 +8245,12 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
 
   MaybeParseCXX11Attributes(DS.getAttributes());
 
-  /* TO_UPSTREAM(BoundsSafety) ON */
-  SmallVector<clang::DeclaratorChunk::LateParsedAttrInfo *, 0> LateAttrInfos;
-  for (auto LA : LateAttrs) {
-    auto LI = new DeclaratorChunk::LateParsedAttrInfo(
-        LA->Toks, LA->AttrName, LA->MacroII, LA->AttrNameLoc);
-    LateAttrInfos.push_back(LI);
-    delete LA;
-  }
-  /* TO_UPSTREAM(BoundsSafety) OFF */
-
   // Remember that we parsed a array type, and remember its features.
   D.AddTypeInfo(
       DeclaratorChunk::getArray(DS.getTypeQualifiers(), StaticLoc.isValid(),
                                 isStar, NumElements.get(), T.getOpenLocation(),
-                                T.getCloseLocation(),
-                                // TO_UPSTREAM(BoundsSafety)
-                                LateAttrInfos),
-      std::move(DS.getAttributes()), T.getCloseLocation());
+                                T.getCloseLocation()),
+      std::move(DS.getAttributes()), T.getCloseLocation(), std::move(LateAttrs));
 }
 
 void Parser::ParseMisplacedBracketDeclarator(Declarator &D) {
@@ -8330,15 +8308,10 @@ void Parser::ParseMisplacedBracketDeclarator(Declarator &D) {
   }
 
   // Adding back the bracket info to the end of the Declarator.
-  /* TO_UPSTREAM(BoundsSafety) ON*/
-  if (getLangOpts().BoundsSafetyAttributes)
-    D.TakeTypeObjects(TempDeclarator);
-  else
-  /* TO_UPSTREAM(BoundsSafety) OFF*/
-    for (unsigned i = 0, e = TempDeclarator.getNumTypeObjects(); i < e; ++i) {
-      const DeclaratorChunk &Chunk = TempDeclarator.getTypeObject(i);
-      D.AddTypeInfo(Chunk, TempDeclarator.getAttributePool(), SourceLocation());
-    }
+  for (unsigned i = 0, e = TempDeclarator.getNumTypeObjects(); i < e; ++i) {
+    const DeclaratorChunk &Chunk = TempDeclarator.getTypeObject(i);
+    D.AddTypeInfo(Chunk, TempDeclarator.getAttributePool(), SourceLocation());
+  }
 
   // The missing name would have been diagnosed in ParseDirectDeclarator.
   // If parentheses are required, always suggest them.

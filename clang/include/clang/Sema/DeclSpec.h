@@ -50,166 +50,167 @@ namespace clang {
   class Declarator;
   class OverflowBehaviorType;
   struct TemplateIdAnnotation;
+  struct LateParsedAttribute;
 
-/// Represents a C++ nested-name-specifier or a global scope specifier.
-///
-/// These can be in 3 states:
-///   1) Not present, identified by isEmpty()
-///   2) Present, identified by isNotEmpty()
-///      2.a) Valid, identified by isValid()
-///      2.b) Invalid, identified by isInvalid().
-///
-/// isSet() is deprecated because it mostly corresponded to "valid" but was
-/// often used as if it meant "present".
-///
-/// The actual scope is described by getScopeRep().
-///
-/// If the kind of getScopeRep() is TypeSpec then TemplateParamLists may be empty
-/// or contain the template parameter lists attached to the current declaration.
-/// Consider the following example:
-/// template <class T> void SomeType<T>::some_method() {}
-/// If CXXScopeSpec refers to SomeType<T> then TemplateParamLists will contain
-/// a single element referring to template <class T>.
-
-class CXXScopeSpec {
-  SourceRange Range;
-  NestedNameSpecifierLocBuilder Builder;
-  ArrayRef<TemplateParameterList *> TemplateParamLists;
-
-public:
-  SourceRange getRange() const { return Range; }
-  void setRange(SourceRange R) { Range = R; }
-  void setBeginLoc(SourceLocation Loc) { Range.setBegin(Loc); }
-  void setEndLoc(SourceLocation Loc) { Range.setEnd(Loc); }
-  SourceLocation getBeginLoc() const { return Range.getBegin(); }
-  SourceLocation getEndLoc() const { return Range.getEnd(); }
-
-  void setTemplateParamLists(ArrayRef<TemplateParameterList *> L) {
-    TemplateParamLists = L;
-  }
-  ArrayRef<TemplateParameterList *> getTemplateParamLists() const {
-    return TemplateParamLists;
-  }
-
-  /// Retrieve the representation of the nested-name-specifier.
-  NestedNameSpecifier getScopeRep() const {
-    return Builder.getRepresentation();
-  }
-
-  /// Make a nested-name-specifier of the form 'type::'.
+  /// Represents a C++ nested-name-specifier or a global scope specifier.
   ///
-  /// \param Context The AST context in which this nested-name-specifier
-  /// resides.
+  /// These can be in 3 states:
+  ///   1) Not present, identified by isEmpty()
+  ///   2) Present, identified by isNotEmpty()
+  ///      2.a) Valid, identified by isValid()
+  ///      2.b) Invalid, identified by isInvalid().
   ///
-  /// \param TemplateKWLoc The location of the 'template' keyword, if present.
+  /// isSet() is deprecated because it mostly corresponded to "valid" but was
+  /// often used as if it meant "present".
   ///
-  /// \param TL The TypeLoc that describes the type preceding the '::'.
+  /// The actual scope is described by getScopeRep().
   ///
-  /// \param ColonColonLoc The location of the trailing '::'.
-  void Make(ASTContext &Context, TypeLoc TL, SourceLocation ColonColonLoc);
+  /// If the kind of getScopeRep() is TypeSpec then TemplateParamLists may be
+  /// empty or contain the template parameter lists attached to the current
+  /// declaration. Consider the following example: template <class T> void
+  /// SomeType<T>::some_method() {} If CXXScopeSpec refers to SomeType<T> then
+  /// TemplateParamLists will contain a single element referring to template
+  /// <class T>.
 
-  /// Extend the current nested-name-specifier by another
-  /// nested-name-specifier component of the form 'namespace::'.
-  ///
-  /// \param Context The AST context in which this nested-name-specifier
-  /// resides.
-  ///
-  /// \param Namespace The namespace or the namespace alias.
-  ///
-  /// \param NamespaceLoc The location of the namespace name or the namespace
-  /// alias.
-  ///
-  /// \param ColonColonLoc The location of the trailing '::'.
-  void Extend(ASTContext &Context, NamespaceBaseDecl *Namespace,
-              SourceLocation NamespaceLoc, SourceLocation ColonColonLoc);
+  class CXXScopeSpec {
+    SourceRange Range;
+    NestedNameSpecifierLocBuilder Builder;
+    ArrayRef<TemplateParameterList *> TemplateParamLists;
 
-  /// Turn this (empty) nested-name-specifier into the global
-  /// nested-name-specifier '::'.
-  void MakeGlobal(ASTContext &Context, SourceLocation ColonColonLoc);
+  public:
+    SourceRange getRange() const { return Range; }
+    void setRange(SourceRange R) { Range = R; }
+    void setBeginLoc(SourceLocation Loc) { Range.setBegin(Loc); }
+    void setEndLoc(SourceLocation Loc) { Range.setEnd(Loc); }
+    SourceLocation getBeginLoc() const { return Range.getBegin(); }
+    SourceLocation getEndLoc() const { return Range.getEnd(); }
 
-  /// Turns this (empty) nested-name-specifier into '__super'
-  /// nested-name-specifier.
-  ///
-  /// \param Context The AST context in which this nested-name-specifier
-  /// resides.
-  ///
-  /// \param RD The declaration of the class in which nested-name-specifier
-  /// appeared.
-  ///
-  /// \param SuperLoc The location of the '__super' keyword.
-  /// name.
-  ///
-  /// \param ColonColonLoc The location of the trailing '::'.
-  void MakeMicrosoftSuper(ASTContext &Context, CXXRecordDecl *RD,
-                          SourceLocation SuperLoc,
-                          SourceLocation ColonColonLoc);
+    void setTemplateParamLists(ArrayRef<TemplateParameterList *> L) {
+      TemplateParamLists = L;
+    }
+    ArrayRef<TemplateParameterList *> getTemplateParamLists() const {
+      return TemplateParamLists;
+    }
 
-  /// Make a new nested-name-specifier from incomplete source-location
-  /// information.
-  ///
-  /// FIXME: This routine should be used very, very rarely, in cases where we
-  /// need to synthesize a nested-name-specifier. Most code should instead use
-  /// \c Adopt() with a proper \c NestedNameSpecifierLoc.
-  void MakeTrivial(ASTContext &Context, NestedNameSpecifier Qualifier,
-                   SourceRange R);
+    /// Retrieve the representation of the nested-name-specifier.
+    NestedNameSpecifier getScopeRep() const {
+      return Builder.getRepresentation();
+    }
 
-  /// Adopt an existing nested-name-specifier (with source-range
-  /// information).
-  void Adopt(NestedNameSpecifierLoc Other);
+    /// Make a nested-name-specifier of the form 'type::'.
+    ///
+    /// \param Context The AST context in which this nested-name-specifier
+    /// resides.
+    ///
+    /// \param TemplateKWLoc The location of the 'template' keyword, if present.
+    ///
+    /// \param TL The TypeLoc that describes the type preceding the '::'.
+    ///
+    /// \param ColonColonLoc The location of the trailing '::'.
+    void Make(ASTContext &Context, TypeLoc TL, SourceLocation ColonColonLoc);
 
-  /// Retrieve a nested-name-specifier with location information, copied
-  /// into the given AST context.
-  ///
-  /// \param Context The context into which this nested-name-specifier will be
-  /// copied.
-  NestedNameSpecifierLoc getWithLocInContext(ASTContext &Context) const;
+    /// Extend the current nested-name-specifier by another
+    /// nested-name-specifier component of the form 'namespace::'.
+    ///
+    /// \param Context The AST context in which this nested-name-specifier
+    /// resides.
+    ///
+    /// \param Namespace The namespace or the namespace alias.
+    ///
+    /// \param NamespaceLoc The location of the namespace name or the namespace
+    /// alias.
+    ///
+    /// \param ColonColonLoc The location of the trailing '::'.
+    void Extend(ASTContext &Context, NamespaceBaseDecl *Namespace,
+                SourceLocation NamespaceLoc, SourceLocation ColonColonLoc);
 
-  /// Retrieve the location of the name in the last qualifier
-  /// in this nested name specifier.
-  ///
-  /// For example, the location of \c bar
-  /// in
-  /// \verbatim
-  ///   \::foo::bar<0>::
-  ///           ^~~
-  /// \endverbatim
-  SourceLocation getLastQualifierNameLoc() const;
+    /// Turn this (empty) nested-name-specifier into the global
+    /// nested-name-specifier '::'.
+    void MakeGlobal(ASTContext &Context, SourceLocation ColonColonLoc);
 
-  /// No scope specifier.
-  bool isEmpty() const { return Range.isInvalid() && !getScopeRep(); }
-  /// A scope specifier is present, but may be valid or invalid.
-  bool isNotEmpty() const { return !isEmpty(); }
+    /// Turns this (empty) nested-name-specifier into '__super'
+    /// nested-name-specifier.
+    ///
+    /// \param Context The AST context in which this nested-name-specifier
+    /// resides.
+    ///
+    /// \param RD The declaration of the class in which nested-name-specifier
+    /// appeared.
+    ///
+    /// \param SuperLoc The location of the '__super' keyword.
+    /// name.
+    ///
+    /// \param ColonColonLoc The location of the trailing '::'.
+    void MakeMicrosoftSuper(ASTContext &Context, CXXRecordDecl *RD,
+                            SourceLocation SuperLoc,
+                            SourceLocation ColonColonLoc);
 
-  /// An error occurred during parsing of the scope specifier.
-  bool isInvalid() const { return Range.isValid() && !getScopeRep(); }
-  /// A scope specifier is present, and it refers to a real scope.
-  bool isValid() const { return bool(getScopeRep()); }
+    /// Make a new nested-name-specifier from incomplete source-location
+    /// information.
+    ///
+    /// FIXME: This routine should be used very, very rarely, in cases where we
+    /// need to synthesize a nested-name-specifier. Most code should instead use
+    /// \c Adopt() with a proper \c NestedNameSpecifierLoc.
+    void MakeTrivial(ASTContext &Context, NestedNameSpecifier Qualifier,
+                     SourceRange R);
 
-  /// Indicate that this nested-name-specifier is invalid.
-  void SetInvalid(SourceRange R) {
-    assert(R.isValid() && "Must have a valid source range");
-    if (Range.getBegin().isInvalid())
-      Range.setBegin(R.getBegin());
-    Range.setEnd(R.getEnd());
-    Builder.Clear();
-  }
+    /// Adopt an existing nested-name-specifier (with source-range
+    /// information).
+    void Adopt(NestedNameSpecifierLoc Other);
 
-  /// Deprecated.  Some call sites intend isNotEmpty() while others intend
-  /// isValid().
-  bool isSet() const { return bool(getScopeRep()); }
+    /// Retrieve a nested-name-specifier with location information, copied
+    /// into the given AST context.
+    ///
+    /// \param Context The context into which this nested-name-specifier will be
+    /// copied.
+    NestedNameSpecifierLoc getWithLocInContext(ASTContext &Context) const;
 
-  void clear() {
-    Range = SourceRange();
-    Builder.Clear();
-  }
+    /// Retrieve the location of the name in the last qualifier
+    /// in this nested name specifier.
+    ///
+    /// For example, the location of \c bar
+    /// in
+    /// \verbatim
+    ///   \::foo::bar<0>::
+    ///           ^~~
+    /// \endverbatim
+    SourceLocation getLastQualifierNameLoc() const;
 
-  /// Retrieve the data associated with the source-location information.
-  char *location_data() const { return Builder.getBuffer().first; }
+    /// No scope specifier.
+    bool isEmpty() const { return Range.isInvalid() && !getScopeRep(); }
+    /// A scope specifier is present, but may be valid or invalid.
+    bool isNotEmpty() const { return !isEmpty(); }
 
-  /// Retrieve the size of the data associated with source-location
-  /// information.
-  unsigned location_size() const { return Builder.getBuffer().second; }
-};
+    /// An error occurred during parsing of the scope specifier.
+    bool isInvalid() const { return Range.isValid() && !getScopeRep(); }
+    /// A scope specifier is present, and it refers to a real scope.
+    bool isValid() const { return bool(getScopeRep()); }
+
+    /// Indicate that this nested-name-specifier is invalid.
+    void SetInvalid(SourceRange R) {
+      assert(R.isValid() && "Must have a valid source range");
+      if (Range.getBegin().isInvalid())
+        Range.setBegin(R.getBegin());
+      Range.setEnd(R.getEnd());
+      Builder.Clear();
+    }
+
+    /// Deprecated.  Some call sites intend isNotEmpty() while others intend
+    /// isValid().
+    bool isSet() const { return bool(getScopeRep()); }
+
+    void clear() {
+      Range = SourceRange();
+      Builder.Clear();
+    }
+
+    /// Retrieve the data associated with the source-location information.
+    char *location_data() const { return Builder.getBuffer().first; }
+
+    /// Retrieve the size of the data associated with source-location
+    /// information.
+    unsigned location_size() const { return Builder.getBuffer().second; }
+  };
 
 /// Captures information about "declaration specifiers".
 ///
@@ -1249,12 +1250,34 @@ public:
 /// A set of tokens that has been cached for later parsing.
 typedef SmallVector<Token, 4> CachedTokens;
 
+// A list of late-parsed attributes.  Used by ParseGNUAttributes.
+class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
+public:
+  LateParsedAttrList(bool PSoon = false,
+                     bool LateAttrParseExperimentalExtOnly = false)
+      : ParseSoon(PSoon),
+        LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly) {}
+
+  bool parseSoon() { return ParseSoon; }
+  /// returns true iff the attribute to be parsed should only be late parsed
+  /// if it is annotated with `LateAttrParseExperimentalExt`
+  bool lateAttrParseExperimentalExtOnly() {
+    return LateAttrParseExperimentalExtOnly;
+  }
+
+private:
+  bool ParseSoon; // Are we planning to parse these shortly after creation?
+  bool LateAttrParseExperimentalExtOnly;
+};
+
 /// One instance of this struct is used for each type in a
 /// declarator that is parsed.
 ///
 /// This is intended to be a small value object.
 struct DeclaratorChunk {
-  DeclaratorChunk() {};
+  DeclaratorChunk()
+      : LateAttrList(/*PSoon=*/true,
+                     /*LateAttrParseExperimentalExtOnly=*/true) {};
 
   enum {
     Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren, Pipe
@@ -1272,20 +1295,7 @@ struct DeclaratorChunk {
   }
 
   ParsedAttributesView AttrList;
-
-  /* TO_UPSTREAM(BoundsSafety) ON */
-  struct LateParsedAttrInfo {
-    CachedTokens Toks;
-    IdentifierInfo &AttrName;
-    IdentifierInfo *MacroII = nullptr;
-    SourceLocation AttrNameLoc;
-
-    explicit LateParsedAttrInfo(CachedTokens Toks, IdentifierInfo &AttrName,
-                                IdentifierInfo *MacroII,
-                                SourceLocation AttrNameLoc)
-        : Toks(Toks), AttrName(AttrName), MacroII(MacroII), AttrNameLoc(AttrNameLoc) {}
-  };
-  /* TO_UPSTREAM(BoundsSafety) OFF */
+  LateParsedAttrList LateAttrList;
 
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
@@ -1315,26 +1325,8 @@ struct DeclaratorChunk {
     LLVM_PREFERRED_TYPE(bool)
     unsigned OverflowBehaviorIsWrap : 1;
 
-    /* TO_UPSTREAM(BoundsSafety) ON */
-    // LateParsedAttrInfo objects and their count.
-    unsigned NumLateParsedAttrs;
-    LateParsedAttrInfo **LateAttrInfos;
-    /* TO_UPSTREAM(BoundsSafety) OFF */
-
     void destroy() {
-      /* TO_UPSTREAM(BoundsSafety) ON */
-      for (unsigned i = 0; i < NumLateParsedAttrs; ++i)
-        delete LateAttrInfos[i];
-      if (NumLateParsedAttrs != 0)
-        delete[] LateAttrInfos;
-      /* TO_UPSTREAM(BoundsSafety) OFF */
     }
-
-    /* TO_UPSTREAM(BoundsSafety) ON */
-    ArrayRef<LateParsedAttrInfo *> getLateParsedAttrInfos() const {
-      return {LateAttrInfos, NumLateParsedAttrs};
-    }
-    /* TO_UPSTREAM(BoundsSafety) OFF */
   };
 
   struct ReferenceTypeInfo {
@@ -1365,26 +1357,7 @@ struct DeclaratorChunk {
     /// expression class on all clients, NumElts is untyped.
     Expr *NumElts;
 
-    /* TO_UPSTREAM(BoundsSafety) ON */
-    // LateParsedAttrInfo objects and their count.
-    unsigned NumLateParsedAttrs;
-    LateParsedAttrInfo **LateAttrInfos;
-    /* TO_UPSTREAM(BoundsSafety) OFF */
-
-    void destroy() {
-      /* TO_UPSTREAM(BoundsSafety) ON */
-      for (unsigned i = 0; i < NumLateParsedAttrs; ++i)
-        delete LateAttrInfos[i];
-      if (NumLateParsedAttrs != 0)
-        delete[] LateAttrInfos;
-      /* TO_UPSTREAM(BoundsSafety) OFF */
-    }
-
-    /* TO_UPSTREAM(BoundsSafety) ON */
-    ArrayRef<LateParsedAttrInfo *> getLateParsedAttrInfos() const {
-      return {LateAttrInfos, NumLateParsedAttrs};
-    }
-    /* TO_UPSTREAM(BoundsSafety) OFF */
+    void destroy() {}
   };
 
   /// ParamInfo - An array of paraminfo objects is allocated whenever a function
@@ -1735,9 +1708,7 @@ struct DeclaratorChunk {
                                     SourceLocation AtomicQualLoc,
                                     SourceLocation UnalignedQualLoc,
                                     SourceLocation OverflowBehaviorLoc = {},
-                                    bool OverflowBehaviorIsWrap = false,
-                                    // TO_UPSTREAM(BoundsSafety)
-                                    ArrayRef<LateParsedAttrInfo*> LateAttrInfos = {}) {
+                                    bool OverflowBehaviorIsWrap = false) {
     DeclaratorChunk I;
     I.Kind                = Pointer;
     I.Loc                 = Loc;
@@ -1750,14 +1721,6 @@ struct DeclaratorChunk {
     I.Ptr.UnalignedQualLoc = UnalignedQualLoc;
     I.Ptr.OverflowBehaviorLoc = OverflowBehaviorLoc;
     I.Ptr.OverflowBehaviorIsWrap = OverflowBehaviorIsWrap;
-    /* TO_UPSTREAM(BoundsSafety) ON */
-    I.Ptr.NumLateParsedAttrs = LateAttrInfos.size();
-    if (!LateAttrInfos.empty()) {
-      I.Ptr.LateAttrInfos = new LateParsedAttrInfo *[LateAttrInfos.size()];
-      for (size_t J = 0; J < LateAttrInfos.size(); ++J)
-        I.Ptr.LateAttrInfos[J] = LateAttrInfos[J];
-    }
-    /* TO_UPSTREAM(BoundsSafety) OFF */
     return I;
   }
 
@@ -1775,9 +1738,7 @@ struct DeclaratorChunk {
   /// Return a DeclaratorChunk for an array.
   static DeclaratorChunk getArray(unsigned TypeQuals,
                                   bool isStatic, bool isStar, Expr *NumElts,
-                                  SourceLocation LBLoc, SourceLocation RBLoc,
-                                  // TO_UPSTREAM(BoundsSafety)
-                                  ArrayRef<LateParsedAttrInfo*> LateAttrInfos = {}) {
+                                  SourceLocation LBLoc, SourceLocation RBLoc) {
     DeclaratorChunk I;
     I.Kind          = Array;
     I.Loc           = LBLoc;
@@ -1786,14 +1747,6 @@ struct DeclaratorChunk {
     I.Arr.hasStatic = isStatic;
     I.Arr.isStar    = isStar;
     I.Arr.NumElts   = NumElts;
-    /* TO_UPSTREAM(BoundsSafety) ON */
-    I.Arr.NumLateParsedAttrs = LateAttrInfos.size();
-    if (!LateAttrInfos.empty()) {
-      I.Arr.LateAttrInfos = new LateParsedAttrInfo *[LateAttrInfos.size()];
-      for (size_t J = 0; J < LateAttrInfos.size(); ++J)
-        I.Arr.LateAttrInfos[J] = LateAttrInfos[J];
-    }
-    /* TO_UPSTREAM(BoundsSafety) OFF */
     return I;
   }
 
@@ -2443,13 +2396,16 @@ public:
   /// This function takes attrs by R-Value reference because it takes ownership
   /// of those attributes from the parameter.
   void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
-                   SourceLocation EndLoc) {
+                   SourceLocation EndLoc,
+                   const LateParsedAttrList &LateAttrs = {}) {
     DeclTypeInfo.push_back(TI);
     DeclTypeInfo.back().getAttrs().prepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
 
     if (!EndLoc.isInvalid())
       SetRangeEnd(EndLoc);
+
+    DeclTypeInfo.back().LateAttrList.append(LateAttrs);
   }
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
@@ -2495,21 +2451,6 @@ public:
     assert(i < DeclTypeInfo.size() && "Invalid type chunk");
     return DeclTypeInfo[i];
   }
-
-  /*TO_UPSTREAM(BoundsSafety) ON*/
-  /// Add all DeclaratorChunks from Other to the end of this declarator, and
-  /// remove them from Other. This transfers ownership of the DeclaratorChunks
-  /// and their attributes to this object.
-  void TakeTypeObjects(Declarator &Other) {
-    DeclTypeInfo.append(Other.DeclTypeInfo); // Keep the ordering
-    while (!Other.DeclTypeInfo.empty()) {
-      // Remove without calling destroy(), so it won't be destroyed when
-      // calling the destructor on Other
-      DeclaratorChunk Removed = Other.DeclTypeInfo.pop_back_val();
-      getAttributePool().takeFrom(Removed.getAttrs(), Other.getAttributePool());
-    }
-  }
-  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   typedef SmallVectorImpl<DeclaratorChunk>::const_iterator type_object_iterator;
   typedef llvm::iterator_range<type_object_iterator> type_object_range;
