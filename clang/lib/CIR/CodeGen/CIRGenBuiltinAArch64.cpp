@@ -2657,6 +2657,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vrsra_n_v:
   case NEON::BI__builtin_neon_vrsraq_n_v: {
     intrName = usgn ? "aarch64.neon.urshl" : "aarch64.neon.srshl";
+    // The llvm intrinsic is expecting negative shift amount for right shift.
+    // Thus we have to make shift amount vec type to be signed.
     cir::VectorType shiftAmtVecTy =
         usgn ? getSignChangedVectorType(builder, ty) : ty;
     llvm::SmallVector<mlir::Value, 2> tmpOps = {ops[1], ops[2]};
