@@ -4,6 +4,14 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN:   --xcoff-inline-glue-code=false < %s | FileCheck --check-prefixes=CHECK,CHECK64 %s
 
+; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
+; RUN:   -mtriple powerpc-ibm-aix-xcoff --xcoff-inline-glue-code=false < %s | \
+; RUN:   FileCheck --check-prefix=MIR32 %s
+
+; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
+; RUN:   -mtriple powerpc64-ibm-aix-xcoff --xcoff-inline-glue-code=false < %s | \
+; RUN:   FileCheck --check-prefix=MIR64 %s
+
 @a = dso_local global i32 55, align 4
 @d = dso_local local_unnamed_addr global double 3.141590e+00, align 8
 @fp = dso_local local_unnamed_addr global ptr null, align 8
@@ -23,6 +31,20 @@ entry:
 ; CHECK32-NEXT: lwz 2, 20(1)
 ; CHECK64-NEXT: ld 2, 40(1)
 
+; MIR32: name:            caller1
+; MIR32:   %0:gprc = COPY $r3
+; MIR32:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
+; MIR32:   $r11 = COPY %0
+; MIR32:   BL_RESTORE &".__ptrgl[PR]", csr_aix32, implicit-def dead $lr, implicit-def dead $r2, implicit $rm, implicit $r1, implicit $r11, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; MIR32:  ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
+
+; MIR64: name:            caller1
+; MIR64:   %0:g8rc = COPY $x3
+; MIR64:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
+; MIR64:   $x11 = COPY %0
+; MIR64:   BL8_RESTORE &".__ptrgl[PR]", csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $rm, implicit $x1, implicit $x11, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; MIR64:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+
 define dso_local zeroext i1 @caller2() local_unnamed_addr {
 entry:
   %0 = load ptr, ptr @fp
@@ -39,5 +61,21 @@ entry:
 ; CHECK: bl .__ptrgl[PR]
 ; CHECK32-NEXT: lwz 2, 20(1)
 ; CHECK64-NEXT: ld 2, 40(1)
+
+; MIR32: name:            caller2
+; MIR32:   %0:gprc_and_gprc_nor0 = LWZtoc @fp, $r2 :: (load (s32) from got)
+; MIR32:   %1:gprc = LWZ 0, killed %0 :: (dereferenceable load (s32) from @fp, align 8)
+; MIR32:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
+; MIR32:   $r11 = COPY %1
+; MIR32:   BL_RESTORE &".__ptrgl[PR]", csr_aix32, implicit-def dead $lr, implicit-def dead $r2, implicit $rm, implicit $r1, implicit $r11, implicit $r3, implicit $f1, implicit $r6, implicit $r2, implicit-def $r1, implicit-def $r3
+; MIR32:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
+
+; MIR64: name:            caller2
+; MIR64:   %0:g8rc_and_g8rc_nox0 = LDtoc @fp, $x2 :: (load (s64) from got)
+; MIR64:   %1:g8rc = LD 0, killed %0 :: (dereferenceable load (s64) from @fp)
+; MIR64:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
+; MIR64:   $x11 = COPY %1
+; MIR64:   BL8_RESTORE &".__ptrgl[PR]", csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $rm, implicit $x1, implicit $x11, implicit $x3, implicit $f1, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; MIR64:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECK: .extern .__ptrgl[PR]
