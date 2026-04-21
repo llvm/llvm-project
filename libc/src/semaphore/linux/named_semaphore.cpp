@@ -25,9 +25,9 @@
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+#include "src/sys/mman/linux/shm_common.h"
 
-#include <linux/limits.h> // NAME_MAX
-#include <linux/mman.h>   // PROT_READ, PROT_WRITE, MAP_SHARED
+#include <linux/mman.h> // PROT_READ, PROT_WRITE, MAP_SHARED
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -50,41 +50,13 @@ constexpr cpp::string_view SEM_TMP_PREFIX = "/dev/shm/sem.tmp_";
 constexpr size_t RANDOM_SUFFIX_BYTES = 8;
 constexpr size_t RANDOM_SUFFIX_HEX_LEN = RANDOM_SUFFIX_BYTES * 2;
 
-// fixed-size buffers for semaphore paths. SemPath holds the final path
-// and TmpPath holds the temp path.
-using SemPath = cpp::array<char, NAME_MAX + SEM_PREFIX.size() + 1>;
+// fixed-size buffer for the temp path.
 using TmpPath =
     cpp::array<char, SEM_TMP_PREFIX.size() + RANDOM_SUFFIX_HEX_LEN + 1>;
 
 // O_NOFOLLOW prevents symlink attacks to /dev/shm/. O_CLOEXEC ensures the
 // fd is not leaked to child processes across exec.
 constexpr int DEFAULT_OFLAGS = O_NOFOLLOW | O_CLOEXEC;
-
-ErrorOr<SemPath> translate_name(const char *name) {
-  cpp::string_view sv(name);
-
-  // name must start with '/'.
-  if (sv.empty() || sv.front() != '/')
-    return Error(EINVAL);
-
-  // remove leading '/'.
-  sv = sv.substr(1);
-
-  // name must not be empty, must not contain '/', and must not be "." or "..".
-  if (sv.empty() || sv.contains('/') || sv == "." || sv == "..")
-    return Error(EINVAL);
-
-  // name lenghth must in range.
-  if (sv.size() > NAME_MAX)
-    return Error(ENAMETOOLONG);
-
-  // copy the prefix and name into final name buffer.
-  SemPath buffer;
-  inline_memcpy(buffer.data(), SEM_PREFIX.data(), SEM_PREFIX.size());
-  inline_memcpy(buffer.data() + SEM_PREFIX.size(), sv.data(), sv.size());
-  buffer[SEM_PREFIX.size() + sv.size()] = '\0';
-  return buffer;
-}
 
 ErrorOr<TmpPath> generate_tmp_path() {
   // fill out 8 random bytes.
@@ -131,7 +103,7 @@ ErrorOr<Semaphore *> open_existing(const char *path) {
 
 ErrorOr<Semaphore *> Semaphore::open(const char *name, int oflag, mode_t mode,
                                      unsigned int value) {
-  auto path_or = translate_name(name);
+  auto path_or = shm_common::translate_name<SEM_PREFIX>(name);
   if (!path_or.has_value())
     return Error(path_or.error());
 
@@ -210,7 +182,7 @@ int Semaphore::close(Semaphore *sem) {
 }
 
 int Semaphore::unlink(const char *name) {
-  auto path_or = translate_name(name);
+  auto path_or = shm_common::translate_name<SEM_PREFIX>(name);
   if (!path_or.has_value())
     return path_or.error();
 

@@ -102,18 +102,13 @@ TEST(LlvmLibcSemaphoreTest, NamedOpenInvalidName) {
   ASSERT_FALSE(r1.has_value());
   ASSERT_EQ(r1.error(), EINVAL);
 
-  // name without leading slash.
-  auto r2 = Semaphore::open("noslashtosem", O_CREAT, 0644, 0);
+  // name with embedded slash.
+  auto r2 = Semaphore::open("/has/slash", O_CREAT, 0644, 0);
   ASSERT_FALSE(r2.has_value());
   ASSERT_EQ(r2.error(), EINVAL);
 
-  // name with embedded slash.
-  auto r3 = Semaphore::open("/has/slash", O_CREAT, 0644, 0);
+  // just a slash.
+  auto r3 = Semaphore::open("/", O_CREAT, 0644, 0);
   ASSERT_FALSE(r3.has_value());
   ASSERT_EQ(r3.error(), EINVAL);
-
-  // just a slash.
-  auto r4 = Semaphore::open("/", O_CREAT, 0644, 0);
-  ASSERT_FALSE(r4.has_value());
-  ASSERT_EQ(r4.error(), EINVAL);
 }

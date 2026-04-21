@@ -33,4 +33,5 @@ add_object_library(
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.OSUtil.linux.syscall_wrappers.unlink
     libc.src.string.memory_utils.inline_memcpy
+    libc.src.sys.mman.linux.shm_common
 )
