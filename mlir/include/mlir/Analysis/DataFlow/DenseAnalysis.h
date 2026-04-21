@@ -229,8 +229,7 @@ class DenseForwardDataFlowAnalysis
 
 public:
   explicit DenseForwardDataFlowAnalysis(DataFlowSolver &solver)
-      : AbstractDenseForwardDataFlowAnalysis(solver,
-                                             TypeID::get<LatticeT>()) {}
+      : AbstractDenseForwardDataFlowAnalysis(solver, TypeID::get<LatticeT>()) {}
 
   /// Visit an operation with the dense lattice before its execution. This
   /// function is expected to set the dense lattice after its execution and
