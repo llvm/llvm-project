@@ -152,9 +152,9 @@ def vpaire_vl  : RVSDNode<"VPAIRE_VL", SDT_RISCVVecBinOp_VL>;
 def vpairo_vl  : RVSDNode<"VPAIRO_VL", SDT_RISCVVecBinOp_VL>;
 } // HasPassthruOp = true, HasMaskOp = true
 
-defm : VPatBinaryVL_VV<vpaire_vl, "PseudoVPAIRE", AllVectors, 0,
+defm : VPatBinaryVL_VV<vpaire_vl, "PseudoVPAIRE", AllVectors,
                        ExtraPreds = [HasStdExtZvzip],
                        requireMinimal = true>;
-defm : VPatBinaryVL_VV<vpairo_vl, "PseudoVPAIRO", AllVectors, 0,
+defm : VPatBinaryVL_VV<vpairo_vl, "PseudoVPAIRO", AllVectors,
                        ExtraPreds = [HasStdExtZvzip],
                        requireMinimal = true>;
