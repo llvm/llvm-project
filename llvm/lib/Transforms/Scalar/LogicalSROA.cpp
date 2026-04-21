@@ -59,7 +59,7 @@ collectPerFieldSGEP(StructuredAllocaInst &SAI) {
     if (II && II->isLifetimeStartOrEnd())
       continue;
 
-    auto SGEP = dyn_cast<StructuredGEPInst>(U);
+    auto *SGEP = dyn_cast<StructuredGEPInst>(U);
     if (!SGEP)
       return {};
 
@@ -125,7 +125,7 @@ static bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
       continue;
 
     B.SetInsertPoint(&SAI);
-    StructuredAllocaInst *FieldAlloca = cast<StructuredAllocaInst>(
+    auto *FieldAlloca = cast<StructuredAllocaInst>(
         B.CreateStructuredAlloca(ST->getElementType(FieldIndex)));
 
     for (auto II : LifetimeIntrinsics)
@@ -143,11 +143,11 @@ static bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
 
 static bool runLogicalSROA(Function &F) {
   SmallVector<StructuredAllocaInst *> Worklist;
-  for (auto &BB : F) {
-    for (auto &I : BB) {
-      if (StructuredAllocaInst *SAI = dyn_cast<StructuredAllocaInst>(&I))
-        Worklist.push_back(SAI);
-    }
+  BasicBlock &EntryBB = F.getEntryBlock();
+  for (BasicBlock::iterator I = EntryBB.begin(), E = std::prev(EntryBB.end());
+       I != E; ++I) {
+    if (StructuredAllocaInst *SAI = dyn_cast<StructuredAllocaInst>(&*I))
+      Worklist.push_back(SAI);
   }
 
   bool Changed = false;
