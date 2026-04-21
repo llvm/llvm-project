@@ -585,7 +585,7 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
     addGlobalDtor(funcOp, getPriority(da));
 
   if (funcDecl->getAttr<AnnotateAttr>())
-    deferredAnnotations[getMangledName(gd)] = cast<ValueDecl>(funcDecl);
+    deferredAnnotations[getMangledName(gd)] = funcDecl;
 }
 
 /// Track functions to be called before main() runs.
@@ -3412,10 +3412,13 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 // Annotations
 //===----------------------------------------------------------------------===//
 
-mlir::ArrayAttr CIRGenModule::emitAnnotationArgs(const AnnotateAttr *attr) {
+mlir::ArrayAttr
+CIRGenModule::getOrCreateAnnotationArgs(const AnnotateAttr *attr) {
   ArrayRef<Expr *> exprs = {attr->args_begin(), attr->args_size()};
+  // Return a null attr for no-args annotations so OptionalParameter omits
+  // the args portion entirely from the printed IR.
   if (exprs.empty())
-    return mlir::ArrayAttr::get(&getMLIRContext(), {});
+    return {};
 
   llvm::FoldingSetNodeID id;
   for (Expr *e : exprs)
@@ -3432,22 +3435,19 @@ mlir::ArrayAttr CIRGenModule::emitAnnotationArgs(const AnnotateAttr *attr) {
       args.push_back(builder.getStringAttr(strE->getString()));
     } else if (auto *intE =
                    dyn_cast<clang::IntegerLiteral>(e->IgnoreParenCasts())) {
-      args.push_back(mlir::IntegerAttr::get(
-          mlir::IntegerType::get(&getMLIRContext(),
-                                 intE->getValue().getBitWidth()),
-          intE->getValue()));
+      auto intTy = builder.getIntegerType(intE->getValue().getBitWidth());
+      args.push_back(builder.getIntegerAttr(intTy, intE->getValue()));
     } else {
       errorNYI(e->getExprLoc(), "annotation argument expression");
     }
   }
 
-  lookup = builder.getArrayAttr(args);
-  return lookup;
+  return lookup = builder.getArrayAttr(args);
 }
 
 cir::AnnotationAttr CIRGenModule::emitAnnotateAttr(const AnnotateAttr *aa) {
   mlir::StringAttr annoGV = builder.getStringAttr(aa->getAnnotation());
-  mlir::ArrayAttr args = emitAnnotationArgs(aa);
+  mlir::ArrayAttr args = getOrCreateAnnotationArgs(aa);
   return cir::AnnotationAttr::get(&getMLIRContext(), annoGV, args);
 }
 

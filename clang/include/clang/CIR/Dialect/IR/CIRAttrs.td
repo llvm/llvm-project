@@ -1611,15 +1611,21 @@ def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
 
     In CIR, the attribute for above annotation looks like:
     ```
-    [#cir.annotation<name = "testptr", args = ["21", 12 : i32]>]
+    [#cir.annotation<"testptr", ["21", 12 : i32]>]
     ```
   }];
 
   let parameters = (ins "::mlir::StringAttr":$name,
-                        "::mlir::ArrayAttr":$args);
+                        OptionalParameter<"mlir::ArrayAttr">:$args);
 
-  let assemblyFormat = "`<` struct($name, $args) `>`";
+  let assemblyFormat = "`<` $name (`,` $args^)? `>`";
+
+  let genVerifyDecl = 1;
 }
+
+def CIR_AnnotationArrayAttr
+    : TypedArrayAttrBase<CIR_AnnotationAttr,
+                         "array of cir.annotation attributes">;
 
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 

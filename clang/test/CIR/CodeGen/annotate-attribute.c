@@ -22,8 +22,8 @@ int annotated_var = 42;
 // All globals (including static locals) are emitted before functions in CIR;
 // check them all together up here so subsequent function CHECKs can rely on
 // strict-order matching for the function section.
-// CIR-DAG: cir.global external @annotated_var = #cir.int<42> : !s32i [#cir.annotation<name = "introduced_in=29", args = []>]
-// CIR-DAG: cir.global "private" internal{{.*}} @{{.*counter.*}} = #cir.int<0> : !s32i [#cir.annotation<name = "static_local", args = []>]
+// CIR-DAG: cir.global external @annotated_var = #cir.int<42> : !s32i [#cir.annotation<"introduced_in=29">]
+// CIR-DAG: cir.global "private" internal{{.*}} @{{.*counter.*}} = #cir.int<0> : !s32i [#cir.annotation<"static_local">]
 // LLVM-DAG: @annotated_var = global i32 42
 // LLVM-DAG: @{{.*counter.*}} = internal{{.*}} global i32 0
 // OGCG-DAG: @annotated_var = global i32 42
@@ -80,7 +80,7 @@ int annotated_var = 42;
 __attribute__((annotate("test_annotation")))
 void annotated_func(void) {}
 
-// CIR: cir.func {{.*}} @annotated_func() [#cir.annotation<name = "test_annotation", args = []>]
+// CIR: cir.func {{.*}} @annotated_func() [#cir.annotation<"test_annotation">]
 // LLVM: define{{.*}} void @annotated_func()
 // OGCG: define{{.*}} void @annotated_func()
 
@@ -96,7 +96,7 @@ void caller(void) {
 __attribute__((annotate("api_level=29")))
 void deferred_annotated(void) {}
 
-// CIR: cir.func {{.*}} @deferred_annotated() [#cir.annotation<name = "api_level=29", args = []>]
+// CIR: cir.func {{.*}} @deferred_annotated() [#cir.annotation<"api_level=29">]
 // LLVM: define{{.*}} void @deferred_annotated()
 // OGCG: define{{.*}} void @deferred_annotated()
 
@@ -105,7 +105,7 @@ __attribute__((annotate("ann1")))
 __attribute__((annotate("ann2")))
 void multi_annotated(void) {}
 
-// CIR: cir.func {{.*}} @multi_annotated() [#cir.annotation<name = "ann1", args = []>, #cir.annotation<name = "ann2", args = []>]
+// CIR: cir.func {{.*}} @multi_annotated() [#cir.annotation<"ann1">, #cir.annotation<"ann2">]
 // LLVM: define{{.*}} void @multi_annotated()
 // OGCG: define{{.*}} void @multi_annotated()
 
@@ -113,7 +113,7 @@ void multi_annotated(void) {}
 __attribute__((annotate("with_args", "str_arg", 42)))
 void annotated_with_args(void) {}
 
-// CIR: cir.func {{.*}} @annotated_with_args() [#cir.annotation<name = "with_args", args = ["str_arg", 42 : i32]>]
+// CIR: cir.func {{.*}} @annotated_with_args() [#cir.annotation<"with_args", ["str_arg", 42 : i32]>]
 // LLVM: define{{.*}} void @annotated_with_args()
 // OGCG: define{{.*}} void @annotated_with_args()
 
@@ -136,8 +136,8 @@ void uniq_a(void) {}
 __attribute__((annotate("uniq", "shared", 7)))
 void uniq_b(void) {}
 
-// CIR: cir.func {{.*}} @uniq_a() [#cir.annotation<name = "uniq", args = ["shared", 7 : i32]>]
-// CIR: cir.func {{.*}} @uniq_b() [#cir.annotation<name = "uniq", args = ["shared", 7 : i32]>]
+// CIR: cir.func {{.*}} @uniq_a() [#cir.annotation<"uniq", ["shared", 7 : i32]>]
+// CIR: cir.func {{.*}} @uniq_b() [#cir.annotation<"uniq", ["shared", 7 : i32]>]
 // OGCG: define{{.*}} void @uniq_a()
 // OGCG: define{{.*}} void @uniq_b()
 
@@ -156,5 +156,5 @@ __attribute__((annotate("inherited_def_ann")))
 void inherited(void) {}
 
 // Both annotations should appear (decl + def).
-// CIR: cir.func {{.*}} @inherited() [#cir.annotation<name = "inherited_decl_ann", args = []>, #cir.annotation<name = "inherited_def_ann", args = []>]
+// CIR: cir.func {{.*}} @inherited() [#cir.annotation<"inherited_decl_ann">, #cir.annotation<"inherited_def_ann">]
 // OGCG: define{{.*}} void @inherited()

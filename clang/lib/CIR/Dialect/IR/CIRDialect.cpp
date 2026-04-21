@@ -2140,6 +2140,23 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
       GlobalLinkageKindAttr::get(builder.getContext(), linkage));
 }
 
+//===----------------------------------------------------------------------===//
+// AnnotationAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::AnnotationAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            mlir::StringAttr name, mlir::ArrayAttr args) {
+  if (!args)
+    return success();
+  for (mlir::Attribute arg : args) {
+    if (!isa<mlir::StringAttr, mlir::IntegerAttr>(arg))
+      return emitError() << "annotation args must be StringAttr or IntegerAttr,"
+                         << " got " << arg;
+  }
+  return success();
+}
+
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
@@ -2342,11 +2359,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   // Parse optional annotations attribute (an ArrayAttr of AnnotationAttr).
   mlir::StringAttr annotationsNameAttr = getAnnotationsAttrName(state.name);
   mlir::ArrayAttr annotationsAttr;
-  if (!parser.parseOptionalAttribute(annotationsAttr).has_value()) {
-    // No annotations array present, that's fine.
-  } else if (annotationsAttr) {
+  if (parser.parseOptionalAttribute(annotationsAttr).has_value() &&
+      annotationsAttr)
     state.addAttribute(annotationsNameAttr, annotationsAttr);
-  }
 
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;

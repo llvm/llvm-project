@@ -3411,11 +3411,11 @@ constexpr StringRef llvmMetadataSectionName = "llvm.metadata";
 
 /// Get-or-create a private constant string global in the llvm.metadata
 /// section, deduplicated by string content.
-mlir::LLVM::GlobalOp getOrCreateAnnotationStringGlobal(
-    mlir::OpBuilder &builder, mlir::Location loc, mlir::ModuleOp module,
-    mlir::StringAttr strAttr, llvm::StringMap<mlir::LLVM::GlobalOp> &cache,
-    bool isArg) {
-  llvm::StringRef str = strAttr.getValue();
+mlir::LLVM::GlobalOp
+getOrCreateAnnotationStringGlobal(mlir::OpBuilder &builder, mlir::Location loc,
+                                  mlir::ModuleOp module, llvm::StringRef str,
+                                  llvm::StringMap<mlir::LLVM::GlobalOp> &cache,
+                                  bool isArg) {
   auto it = cache.find(str);
   if (it != cache.end())
     return it->second;
@@ -3488,7 +3488,8 @@ mlir::LLVM::GlobalOp getOrCreateAnnotationArgsVar(
   for (auto [idx, arg] : llvm::enumerate(argsAttr)) {
     if (auto strArg = mlir::dyn_cast<mlir::StringAttr>(arg)) {
       auto strGlobal = getOrCreateAnnotationStringGlobal(
-          builder, loc, module, strArg, argStringCache, /*isArg=*/true);
+          builder, loc, module, strArg.getValue(), argStringCache,
+          /*isArg=*/true);
       auto strAddr = mlir::LLVM::AddressOfOp::create(initBuilder, loc, ptrTy,
                                                      strGlobal.getSymName());
       structInit = mlir::LLVM::InsertValueOp::create(initBuilder, loc,
@@ -3600,7 +3601,7 @@ void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar(mlir::ModuleOp module) {
 
     // Field 1: ptr to the annotation name string.
     auto nameGlobal = getOrCreateAnnotationStringGlobal(
-        constsBuilder, moduleLoc, module, entry.annotation.getName(),
+        constsBuilder, moduleLoc, module, entry.annotation.getName().getValue(),
         stringCache, /*isArg=*/false);
     auto nameAddr = mlir::LLVM::AddressOfOp::create(
         initBuilder, moduleLoc, ptrTy, nameGlobal.getSymName());
@@ -3609,9 +3610,8 @@ void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar(mlir::ModuleOp module) {
 
     // Fields 2 and 3: ptr to filename string and line number.
     auto [filename, line] = extractFileLine(entry.loc);
-    auto fileNameAttr = mlir::StringAttr::get(ctx, filename);
     auto fileGlobal = getOrCreateAnnotationStringGlobal(
-        constsBuilder, moduleLoc, module, fileNameAttr, stringCache,
+        constsBuilder, moduleLoc, module, filename, stringCache,
         /*isArg=*/false);
     auto fileAddr = mlir::LLVM::AddressOfOp::create(
         initBuilder, moduleLoc, ptrTy, fileGlobal.getSymName());

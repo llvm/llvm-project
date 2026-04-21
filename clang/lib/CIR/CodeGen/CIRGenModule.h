@@ -835,8 +835,9 @@ private:
   /// Emit all the global annotations.
   void emitGlobalAnnotations();
 
-  /// Emit additional args of the annotation.
-  mlir::ArrayAttr emitAnnotationArgs(const clang::AnnotateAttr *attr);
+  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
+  /// annotation. Returns the empty ArrayAttr when the annotation has none.
+  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
 
   /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
   cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);

@@ -16,7 +16,7 @@
 // All globals are emitted before any function in CIR/LLVM/OGCG output;
 // collect global-section checks up here so subsequent function CHECKs can
 // rely on strict-order matching for the function section.
-// CIR-DAG: cir.global external @{{.*ns.*g.*}} = #cir.int<5> : !s32i [#cir.annotation<name = "ns_global_ann", args = []>]
+// CIR-DAG: cir.global external @{{.*ns.*g.*}} = #cir.int<5> : !s32i [#cir.annotation<"ns_global_ann">]
 // LLVM-DAG: @{{.*ns.*g.*}} = global i32 5
 // OGCG-DAG: @{{.*ns.*g.*}} = {{.*}}global i32 5
 // OGCG-DAG: @llvm.global.annotations = appending global
@@ -33,8 +33,8 @@ struct __attribute__((annotate("type_ann"))) Tagged {
   static int sget() { return 7; }
 };
 
-// CIR: cir.func {{.*}} @{{.*Tagged.*get.*}}({{.*}}) {{.*}}[#cir.annotation<name = "method_ann", args = []>]
-// CIR: cir.func {{.*}} @{{.*Tagged.*sget.*}}() {{.*}}[#cir.annotation<name = "static_method_ann", args = []>]
+// CIR: cir.func {{.*}} @{{.*Tagged.*get.*}}({{.*}}) {{.*}}[#cir.annotation<"method_ann">]
+// CIR: cir.func {{.*}} @{{.*Tagged.*sget.*}}() {{.*}}[#cir.annotation<"static_method_ann">]
 
 // LLVM: define{{.*}} i32 @{{.*Tagged.*get.*}}
 // LLVM: define{{.*}} i32 @{{.*Tagged.*sget.*}}
@@ -47,7 +47,7 @@ int use_tagged(Tagged *t) {
   return t->get() + Tagged::sget();
 }
 
-// CIR: cir.func {{.*}} @{{.*use_tagged.*}}({{.*}}) {{.*}}[#cir.annotation<name = "free_fn_ann", args = []>]
+// CIR: cir.func {{.*}} @{{.*use_tagged.*}}({{.*}}) {{.*}}[#cir.annotation<"free_fn_ann">]
 // LLVM: define{{.*}} i32 @{{.*use_tagged.*}}
 // OGCG-DAG: define{{.*}} i32 @{{.*use_tagged.*}}
 
