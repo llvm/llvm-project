@@ -681,6 +681,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{SgprBRC}, {SgprBRC}}})
       .Any({{DivBRC}, {{VgprBRC}, {VgprBRC}}});
 
+  addRulesForGOpcs({G_BITCAST})
+      .Any({{UniBRC}, {{SgprBRC}, {SgprBRC}}})
+      .Any({{DivBRC}, {{VgprBRC}, {VgprBRC}}});
+
   addRulesForGOpcs({G_UNMERGE_VALUES})
       .Any({{UniS16}, {{}, {}, UnmergeToShiftTrunc}})
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
