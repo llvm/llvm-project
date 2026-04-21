@@ -288,7 +288,7 @@ struct FrontendOptions {
 
   // The column after which characters are ignored in free form lines in the
   // source file.
-  // In 6.3.2.1, in free source form a line shall contain at most ten thousand
+  // In 6.3.2.1, in free form source a line shall contain at most ten thousand
   // characters.
   int freeFormColumns = 10000;
 
