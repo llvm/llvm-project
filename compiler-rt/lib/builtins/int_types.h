@@ -75,6 +75,7 @@ typedef union {
 #undef CRT_HAS_128BIT
 #endif
 
+// The core SPIR-V specification does not support 128-bit integers.
 #if defined(__SPIRV__)
 #undef CRT_HAS_128BIT
 #endif
