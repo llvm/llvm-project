@@ -25,3 +25,38 @@ entry:
   store i8 %sum, ptr addrspace(1) %p0
   ret void
 }
+
+; Test scalarization with a 4-element vector.
+; CHECK: OpFunction
+; CHECK: OpConvertUToPtr %[[#PTR]]
+; CHECK: OpConvertUToPtr %[[#PTR]]
+; CHECK: OpConvertUToPtr %[[#PTR]]
+; CHECK: OpConvertUToPtr %[[#PTR]]
+; CHECK: OpFunctionEnd
+
+define spir_kernel void @test_inttoptr_v4(<4 x i64> %addr) {
+entry:
+  %ptrs = inttoptr <4 x i64> %addr to <4 x ptr addrspace(1)>
+  %p0 = extractelement <4 x ptr addrspace(1)> %ptrs, i32 0
+  %p1 = extractelement <4 x ptr addrspace(1)> %ptrs, i32 1
+  %p2 = extractelement <4 x ptr addrspace(1)> %ptrs, i32 2
+  %p3 = extractelement <4 x ptr addrspace(1)> %ptrs, i32 3
+  store i8 1, ptr addrspace(1) %p0
+  store i8 2, ptr addrspace(1) %p1
+  store i8 3, ptr addrspace(1) %p2
+  store i8 4, ptr addrspace(1) %p3
+  ret void
+}
+
+; CHECK: OpFunction
+; CHECK: OpConvertUToPtr %[[#PTR]]
+; CHECK-NOT: OpConvertUToPtr
+; CHECK: OpFunctionEnd
+
+define spir_kernel void @test_inttoptr_partial_use(<2 x i64> %addr) {
+entry:
+  %ptrs = inttoptr <2 x i64> %addr to <2 x ptr addrspace(1)>
+  %p0 = extractelement <2 x ptr addrspace(1)> %ptrs, i32 0
+  store i8 42, ptr addrspace(1) %p0
+  ret void
+}

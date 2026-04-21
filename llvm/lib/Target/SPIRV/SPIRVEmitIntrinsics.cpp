@@ -2182,10 +2182,11 @@ void SPIRVEmitIntrinsics::scalarizeVectorPtrCasts(Function &F) {
       // Only scalarize if all users are extractelement with constant index.
       // Other uses (e.g. masked.gather) need the vector-of-pointers and
       // should be handled by extension-specific lowering.
-      bool AllUsersExtract = llvm::all_of(ITP->users(), [&](User *U) {
-        auto *EE = dyn_cast<ExtractElementInst>(U);
-        return EE && isa<ConstantInt>(EE->getIndexOperand());
-      });
+      bool AllUsersExtract =
+          !ITP->use_empty() && llvm::all_of(ITP->users(), [&](User *U) {
+            auto *EE = dyn_cast<ExtractElementInst>(U);
+            return EE && isa<ConstantInt>(EE->getIndexOperand());
+          });
       if (!AllUsersExtract)
         continue;
 
