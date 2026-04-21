@@ -1438,8 +1438,7 @@ class ROCDL_Dot_IntrOp<string mnemonic, Type A, Type B, Type C> :
   let description = [{
     Packed intra-lane dot-product with optional result clamping (`clamp`).
     Computes `res = sum_i a[i]*b[i] + c`, where `a` and `b` hold packed
-    16-bit lanes (for `dot2`) or 4/8 packed 8- or 4-bit lanes inside
-    an `i32` (for `dot4`/`dot8`).
+    4/8/16-bit data (for `dot2`,`dot4`,`dot8`).
 
     Example:
     ```mlir
