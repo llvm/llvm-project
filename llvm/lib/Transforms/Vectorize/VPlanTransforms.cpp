@@ -1478,6 +1478,19 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
                           Def->getDebugLoc(), "", NW));
   }
 
+  if (CanCreateNewRecipe &&
+      match(Def, m_c_Add(m_VPValue(X), m_Sub(m_ZeroInt(), m_VPValue(Y))))) {
+    // Preserve nsw from the Add and the Sub, if it's present on both, on the
+    // new Sub.
+    VPIRFlags::WrapFlagsTy NW = {
+        false,
+        cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap() &&
+            cast<VPRecipeWithIRFlags>(Def->getOperand(Def->getOperand(0) == X))
+                ->hasNoSignedWrap()};
+    return Def->replaceAllUsesWith(
+        Builder.createSub(X, Y, Def->getDebugLoc(), "", NW));
+  }
+
   const APInt *APC;
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
       APC->isPowerOf2())
@@ -6333,11 +6346,6 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
 
   if (!Op->hasOneUse())
     return std::nullopt;
-
-  // Handle neg(...) pattern (aka sub(0, ...)).
-  VPValue *NegatedOp = nullptr;
-  if (match(Op, m_Sub(m_ZeroInt(), m_VPValue(NegatedOp))))
-    Op = NegatedOp;
 
   VPWidenRecipe *BinOp = dyn_cast<VPWidenRecipe>(Op);
   if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
