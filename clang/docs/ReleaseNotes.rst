@@ -70,6 +70,8 @@ AST Dumping Potentially Breaking Changes
   ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
   ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
   fields were missing from the JSON output.
+- Colons that appear at the end of a ParamCommentCommand name are not serialized
+  as part of the name.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -152,6 +154,12 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
+
+- Clang now diagnoses the use of the same identifier with both internal and
+  external linkage within a translation unit, as made ill-formed by
+  `N3410 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf>`_.
+  This is also diagnosed in older C language modes as the behavior was
+  undefined prior to C2y. (#GH54215)
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -293,6 +301,15 @@ Attribute Changes in Clang
   exclusively, while *reading* requires at least one to be held.  This is
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
+
+- The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
+  notes. For example:
+  
+  .. code-block:: yaml
+
+    Functions:
+      - Name: myUnsafeFunction
+        UnsafeBufferUsage: true
 
 - Added support for ``[[msvc::forceinline]]`` for functions and
   ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to
