@@ -32,6 +32,26 @@ AST_MATCHER(ParenExpr, isInMacro) {
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
 }
 
+// Returns true if this ParenExpr is the base object of a member access
+// (.field or ->field), possibly through implicit casts or temporary
+// materialization that Clang inserts (e.g. qualification casts for const
+// methods, MaterializeTemporaryExpr for prvalue bases).
+AST_MATCHER(ParenExpr, isBaseOfMemberAccess) {
+  ASTContext &Ctx = Finder->getASTContext();
+  DynTypedNodeList Parents = Ctx.getParents(Node);
+  while (!Parents.empty()) {
+    const auto *E = Parents[0].get<Expr>();
+    if (!E)
+      break;
+    if (isa<MemberExpr>(E))
+      return true;
+    if (!isa<ImplicitCastExpr>(E) && !isa<MaterializeTemporaryExpr>(E))
+      break;
+    Parents = Ctx.getParents(*E);
+  }
+  return false;
+}
+
 } // namespace
 
 RedundantParenthesesCheck::RedundantParenthesesCheck(StringRef Name,
@@ -61,7 +81,7 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                              hasParent(unaryExprOrTypeTraitExpr()),
                              // Don't warn when parens are the object of a
                              // member access: (expr).foo or (expr)->foo.
-                             hasParent(memberExpr()))))
+                             isBaseOfMemberAccess())))
           .bind("dup"),
       this);
 }
