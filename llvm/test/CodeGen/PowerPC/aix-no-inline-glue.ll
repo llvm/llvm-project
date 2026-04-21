@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:   --xcoff-inline-glue-code=false < %s | FileCheck --check-prefixes=CHECK,CHECK32 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN:   --xcoff-inline-glue-code=false < %s | FileCheck --check-prefixes=CHECK,CHECK64 %s
 
 @a = dso_local global i32 55, align 4
@@ -19,9 +19,9 @@ entry:
 ; CHECK-DAG:    li 3, 1
 ; CHECK-DAG:    li 4, 2
 ; CHECK-DAG:    li 5, 3
-; CHECK: bl .__ptrgl[PR]A
-; CHECK32-NEXT: ld 2  28(r1)
-; CHECK64-NEXT: ld 2, 40(r1)
+; CHECK: bl .__ptrgl[PR]
+; CHECK32-NEXT: lwz 2, 20(1)
+; CHECK64-NEXT: ld 2, 40(1)
 
 define dso_local zeroext i1 @caller2() local_unnamed_addr {
 entry:
@@ -33,9 +33,11 @@ entry:
 }
 
 ; CHECK-LABEL: .caller2
-; CHECK: ld , L..C{{.*}}(2)                          # @fp
-; CHECK: ld 11, 0([[REG]])
-; CHECK: lwa 3, 0(5)
+; CHECK64: ld [[REG:[0-9]+]], L..C{{[0-9]+}}(2)  # @fp
+; CHECK32: lwz [[REG:[0-9]+]], L..C{{[0-9]+}}(2) # @fp
+; CHECK32: lwz 11, 0([[REG]])
 ; CHECK: bl .__ptrgl[PR]
-; CHECK32-NEXT: ld 2, 28(r1)
-; CHECK64-NEXT: ld 2, 40(r1)
+; CHECK32-NEXT: lwz 2, 20(1)
+; CHECK64-NEXT: ld 2, 40(1)
+
+; CHECK: .extern .__ptrgl[PR]
