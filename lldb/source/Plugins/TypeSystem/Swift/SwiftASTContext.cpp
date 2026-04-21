@@ -261,7 +261,7 @@ SwiftASTContext::GetCanonicalSwiftType(CompilerType compiler_type) {
 
 swift::CanType
 SwiftASTContext::GetCanonicalSwiftType(opaque_compiler_type_t opaque_type) {
-  assert(!opaque_type || *reinterpret_cast<const char *>(opaque_type) != '$' &&
+  assert(opaque_type && *reinterpret_cast<const char *>(opaque_type) != '$' &&
          "wrong type system");
   return GetCanonicalSwiftType(CompilerType(weak_from_this(), opaque_type));
 }

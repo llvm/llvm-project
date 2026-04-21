@@ -55,14 +55,6 @@ struct SwiftASTContextTester : public SwiftASTContext {
   TypeSystemSwiftTypeRefSP m_typeref_typesystem;
 };
 
-TEST_F(TestSwiftASTContext, IsNonTriviallyManagedReferenceType) {
-#ifndef NDEBUG
-  // The mock constructor is only available in asserts mode.
-  auto context = std::make_shared<SwiftASTContextTester>();
-  EXPECT_FALSE(context->GetNonTriviallyManagedReferenceKind(nullptr));
-#endif
-}
-
 TEST_F(TestSwiftASTContext, SwiftFriendlyTriple) {
   EXPECT_EQ(SwiftASTContext::GetSwiftFriendlyTriple(
                 llvm::Triple("x86_64-apple-macosx")),
