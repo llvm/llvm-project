@@ -651,17 +651,17 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 // Return nullptr if UseOpIdx either doesn't point to src0/1/2 or if there is no
 // operand for the corresponding source modifier.
 static const MachineOperand *
-getVOP3PSourceModifierFromOpIdx(const MachineInstr *UseI, int UseOpIdx,
+getVOP3PSourceModifierFromOpIdx(const MachineInstr &UseI, int UseOpIdx,
                                 const SIInstrInfo &InstrInfo) {
   AMDGPU::OpName UseName =
-      AMDGPU::getOperandIdxName(UseI->getOpcode(), UseOpIdx);
+      AMDGPU::getOperandIdxName(UseI.getOpcode(), UseOpIdx);
   switch (UseName) {
   case AMDGPU::OpName::src0:
-    return InstrInfo.getNamedOperand(*UseI, AMDGPU::OpName::src0_modifiers);
+    return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src0_modifiers);
   case AMDGPU::OpName::src1:
-    return InstrInfo.getNamedOperand(*UseI, AMDGPU::OpName::src1_modifiers);
+    return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src1_modifiers);
   case AMDGPU::OpName::src2:
-    return InstrInfo.getNamedOperand(*UseI, AMDGPU::OpName::src2_modifiers);
+    return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src2_modifiers);
   default:
     return nullptr;
   }
@@ -672,9 +672,9 @@ getVOP3PSourceModifierFromOpIdx(const MachineInstr *UseI, int UseOpIdx,
 // Return 0 if the whole register is used or as a conservative fallback.
 static unsigned getEffectiveSubRegIdx(const SIRegisterInfo &TRI,
                                       const SIInstrInfo &InstrInfo,
+                                      const MachineInstr &I,
                                       const MachineOperand &Op) {
-  const MachineInstr *I = Op.getParent();
-  if (!InstrInfo.isVOP3P(*I) || InstrInfo.isWMMA(*I) || InstrInfo.isSWMMAC(*I))
+  if (!InstrInfo.isVOP3P(I) || InstrInfo.isWMMA(I) || InstrInfo.isSWMMAC(I))
     return AMDGPU::NoSubRegister;
 
   const MachineOperand *OpMod =
@@ -699,12 +699,12 @@ static unsigned getEffectiveSubRegIdx(const SIRegisterInfo &TRI,
   // Check if all parts of the register are being used (= op_sel and op_sel_hi
   // differ for VOP3P or op_sel_hi=0 for VOP3PMix). In that case we can return
   // early.
-  if ((!InstrInfo.isVOP3PMix(*I) && (!OpSel || !OpSelHi) &&
+  if ((!InstrInfo.isVOP3PMix(I) && (!OpSel || !OpSelHi) &&
        (OpSel || OpSelHi)) ||
-      (InstrInfo.isVOP3PMix(*I) && !OpSelHi))
+      (InstrInfo.isVOP3PMix(I) && !OpSelHi))
     return AMDGPU::NoSubRegister;
 
-  const MachineRegisterInfo &MRI = I->getParent()->getParent()->getRegInfo();
+  const MachineRegisterInfo &MRI = I.getParent()->getParent()->getRegInfo();
   const TargetRegisterClass *RC = TRI.getRegClassForOperandReg(MRI, Op);
 
   if (unsigned SubRegIdx = OpSel ? AMDGPU::sub1 : AMDGPU::sub0;
@@ -717,13 +717,13 @@ static unsigned getEffectiveSubRegIdx(const SIRegisterInfo &TRI,
   return AMDGPU::NoSubRegister;
 }
 
-Register GCNSubtarget::getRealSchedDependency(const MachineInstr *DefI,
+Register GCNSubtarget::getRealSchedDependency(const MachineInstr &DefI,
                                               int DefOpIdx,
-                                              const MachineInstr *UseI,
+                                              const MachineInstr &UseI,
                                               int UseOpIdx) const {
   const SIRegisterInfo *TRI = getRegisterInfo();
-  const MachineOperand &DefOp = DefI->getOperand(DefOpIdx);
-  const MachineOperand &UseOp = UseI->getOperand(UseOpIdx);
+  const MachineOperand &DefOp = DefI.getOperand(DefOpIdx);
+  const MachineOperand &UseOp = UseI.getOperand(UseOpIdx);
   Register DefReg = DefOp.getReg();
   Register UseReg = UseOp.getReg();
 
@@ -735,7 +735,7 @@ Register GCNSubtarget::getRealSchedDependency(const MachineInstr *DefI,
   unsigned DefSubRegIdx = DefOp.getSubReg();
   if (DefReg.isVirtual() && !DefSubRegIdx)
     return DefReg;
-  unsigned UseSubRegIdx = getEffectiveSubRegIdx(*TRI, InstrInfo, UseOp);
+  unsigned UseSubRegIdx = getEffectiveSubRegIdx(*TRI, InstrInfo, UseI, UseOp);
   if (UseReg.isVirtual() && !UseSubRegIdx)
     return DefReg;
 
@@ -764,7 +764,7 @@ void GCNSubtarget::adjustSchedDependency(
   MachineInstr *DefI = Def->getInstr();
   MachineInstr *UseI = Use->getInstr();
 
-  if (Register Reg = getRealSchedDependency(DefI, DefOpIdx, UseI, UseOpIdx)) {
+  if (Register Reg = getRealSchedDependency(*DefI, DefOpIdx, *UseI, UseOpIdx)) {
     Dep.setReg(Reg);
   } else {
     Dep = SDep(Def, SDep::Artificial);

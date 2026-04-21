@@ -94,8 +94,8 @@ private:
   /// Note: Currently supports VOP3P instructions (without WMMA an SWMMAC).
   /// Returns the definition register if there is a real dependency and no
   /// better match is found.
-  Register getRealSchedDependency(const MachineInstr *DefI, int DefOpIdx,
-                                  const MachineInstr *UseI, int UseOpIdx) const;
+  Register getRealSchedDependency(const MachineInstr &DefI, int DefOpIdx,
+                                  const MachineInstr &UseI, int UseOpIdx) const;
 
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,

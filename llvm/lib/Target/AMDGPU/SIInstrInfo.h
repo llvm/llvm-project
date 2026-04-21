@@ -941,8 +941,6 @@ public:
   }
 
   bool isVOP3PMix(uint16_t Opcode) const {
-    if (!isVOP3P(Opcode))
-      return false;
     switch (Opcode) {
     case AMDGPU::V_FMA_MIXHI_F16:
     case AMDGPU::V_FMA_MIXLO_F16:
