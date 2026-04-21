@@ -60,17 +60,9 @@ static cl::opt<int> LoopInterchangeCostThreshold(
     "loop-interchange-threshold", cl::init(0), cl::Hidden,
     cl::desc("Interchange if you gain more than this number"));
 
-// Maximum number of load-stores that can be handled in the dependency matrix.
-static cl::opt<unsigned int> MaxMemInstrCount(
-    "loop-interchange-max-meminstr-count", cl::init(20), cl::Hidden,
-    cl::desc(
-        "Maximum number of load-store instructions that should be handled "
-        "in the dependency matrix. Higher value may lead to more interchanges "
-        "at the cost of compile-time"));
-
-static cl::opt<unsigned int> MaxMemSquaredRatio(
-    "loop-interchange-max-meminstr-squared-ratio", cl::init(4), cl::Hidden,
-    cl::desc("Maximum number of load-store instructions squared in relation to "
+static cl::opt<unsigned int> MaxMemInstrRatio(
+    "loop-interchange-max-mem-instr-ratio", cl::init(4), cl::Hidden,
+    cl::desc("Maximum number of load/store instructions squared in relation to "
              "the total number of instructions. Higher value may lead to more "
              "interchanges at the cost of compile-time"));
 
@@ -175,24 +167,6 @@ static bool inThisOrder(const Instruction *Src, const Instruction *Dst) {
 }
 #endif
 
-/// Test if the number of memory instructions is too many so that the analysis
-/// will be too expensive.
-static bool tooManyMemInstr(unsigned NumMemInstr, unsigned NumInsts) {
-  if (NumMemInstr <= MaxMemInstrCount)
-    return false;
-
-  // To populate the dependence matrix, we perform dependence test for each pair
-  // of memory instructions, which has O(NumMemInstr^2) complexity. This implies
-  // that even if the number of memory instructions is small, the analysis can
-  // still be expensive if the most of the instructions in the loop are memory
-  // instructions. On the other hand, if the number of memory instructions is
-  // not small, but the loop is large (i.e., it contains many non-memory
-  // instructions), the analysis can still be affordable.
-  if (NumMemInstr * NumMemInstr <= MaxMemSquaredRatio * NumInsts)
-    return false;
-  return true;
-}
-
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE,
@@ -221,15 +195,22 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
     }
   }
 
-  LLVM_DEBUG(dbgs() << "Found " << MemInstr.size()
+  // To populate the dependence matrix, we perform dependence test for each pair
+  // of memory instructions, which has O(NumMemInstr^2) complexity. This implies
+  // that even if the number of memory instructions is small, the analysis can
+  // still be expensive if the most of the instructions in the loop are memory
+  // instructions. On the other hand, if the number of memory instructions is
+  // not small, but the loop is large (i.e., it contains many non-memory
+  // instructions), the analysis can still be affordable.
+  unsigned NumMemInstr = MemInstr.size();
+  LLVM_DEBUG(dbgs() << "Found " << NumMemInstr
                     << " Loads and Stores to analyze\n");
-  if (tooManyMemInstr(MemInstr.size(), NumInsts)) {
+  if (MaxMemInstrRatio * NumInsts < NumMemInstr * NumMemInstr) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoop",
                                       L->getStartLoc(), L->getHeader())
              << "Number of loads/stores exceeded, the supported maximum can be "
-                "increased with option -loop-interchange-maxmeminstr-count or "
-                "-loop-interchange-max-meminstr-squared-ratio.";
+                "increased with option -loop-interchange-max-mem-instr-ratio.";
     });
     return false;
   }
@@ -2435,10 +2416,6 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   Function &F = *LN.getParent();
   SmallVector<Loop *, 8> LoopList(LN.getLoops());
 
-  if (MaxMemInstrCount < 1) {
-    LLVM_DEBUG(dbgs() << "MaxMemInstrCount should be at least 1");
-    return PreservedAnalyses::all();
-  }
   OptimizationRemarkEmitter ORE(&F);
 
   // Ensure minimum depth of the loop nest to do the interchange.
