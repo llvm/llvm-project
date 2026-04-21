@@ -756,8 +756,7 @@ public:
   cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
-                                                    GVALinkage linkage,
-                                                    bool isConstantVariable);
+                                                    GVALinkage linkage);
   void setFunctionLinkage(GlobalDecl gd, cir::FuncOp f) {
     cir::GlobalLinkageKind l = getFunctionLinkage(gd);
     f.setLinkageAttr(cir::GlobalLinkageKindAttr::get(&getMLIRContext(), l));
@@ -765,8 +764,7 @@ public:
                                            getMLIRVisibilityFromCIRLinkage(l));
   }
 
-  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
-                                                    bool isConstant);
+  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd);
 
   void addReplacement(llvm::StringRef name, mlir::Operation *op);
 

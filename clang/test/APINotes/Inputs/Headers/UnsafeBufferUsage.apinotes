@@ -1,0 +1,10 @@
+---
+Name: UnsafeBufferUsage
+Functions:
+  - Name: unsafeFunc
+    UnsafeBufferUsage: true
+  - Name: annotatedUnsafeFunc
+    UnsafeBufferUsage: true
+  - Name: falseAPINotesButAnnotatedUnsafeFunc
+    UnsafeBufferUsage: false
+...
