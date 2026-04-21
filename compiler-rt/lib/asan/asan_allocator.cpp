@@ -36,9 +36,10 @@
 
 #if SANITIZER_WINDOWS64
 namespace __sanitizer {
+// Set by InitializeMemintrinsicInterceptors(). True when the CRT exposes
+// memcpy and memmove as separate functions (newer vcruntime140.dll).
 extern bool win64_memcpy_memmove_are_disjoint;
-}
-using __sanitizer::win64_memcpy_memmove_are_disjoint;
+}  // namespace __sanitizer
 #endif
 
 namespace __asan {
@@ -815,12 +816,19 @@ struct Allocator {
       // If realloc() races with free(), we may start copying freed memory.
       // However, we will report racy double-free later anyway.
 #if SANITIZER_WINDOWS64
-      // When memcpy/memmove are aliased, REAL(memcpy) may re-enter the
-      // interceptor. Zero-size allocations upgraded to 1 byte keep that byte
-      // shadow-poisoned (from_zero_alloc / asan_mark_zero_allocation); copying
-      // it via intercepted libc hits a spurious READ error. Use internal_memcpy
-      // in those cases, otherwise REAL(memcpy) is typically faster.
-      if (memcpy_size && win64_memcpy_memmove_are_disjoint &&
+      // On Win64, REAL(memcpy) only points at a distinct non-interceptor
+      // function when memcpy and memmove are separate CRT entry points. When
+      // they are aliased we keep REAL(memcpy) == REAL(memmove), and both may
+      // dispatch back through the intercepted libc routine, which performs
+      // shadow-checked reads. That is a problem for chunks upgraded from
+      // malloc(0) / HeapReAlloc(..., 0): the single live byte is still
+      // shadow-poisoned (from_zero_alloc / asan_mark_zero_allocation), so a
+      // shadow-checked copy of Min(new_size, UsedSize()) bytes reports a
+      // spurious heap-buffer-overflow (see ReallocTest,
+      // heaprealloc_alloc_zero). Fall back to internal_memcpy (which bypasses
+      // the interceptor) for the poisoned or aliased cases, and only use
+      // REAL(memcpy) on the fast path.
+      if (memcpy_size && __sanitizer::win64_memcpy_memmove_are_disjoint &&
           !m->from_zero_alloc)
         REAL(memcpy)(new_ptr, old_ptr, memcpy_size);
       else
