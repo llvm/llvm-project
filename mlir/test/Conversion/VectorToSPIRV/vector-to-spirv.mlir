@@ -955,6 +955,52 @@ func.func @reduction_xor_acc(%v : vector<3xi32>, %s: i32) -> i32 {
 
 // -----
 
+// CHECK-LABEL: func @reduction_or_bool
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi1>)
+//       CHECK:   %[[R:.+]] = spirv.Any %[[V]] : vector<4xi1>
+//       CHECK:   return %[[R]]
+func.func @reduction_or_bool(%v : vector<4xi1>) -> i1 {
+  %reduce = vector.reduction <or>, %v : vector<4xi1> into i1
+  return %reduce : i1
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_and_bool
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi1>)
+//       CHECK:   %[[R:.+]] = spirv.All %[[V]] : vector<4xi1>
+//       CHECK:   return %[[R]]
+func.func @reduction_and_bool(%v : vector<4xi1>) -> i1 {
+  %reduce = vector.reduction <and>, %v : vector<4xi1> into i1
+  return %reduce : i1
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_or_bool_acc
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi1>, %[[S:.+]]: i1)
+//       CHECK:   %[[R:.+]] = spirv.Any %[[V]] : vector<4xi1>
+//       CHECK:   %[[A:.+]] = spirv.LogicalOr %[[R]], %[[S]]
+//       CHECK:   return %[[A]]
+func.func @reduction_or_bool_acc(%v : vector<4xi1>, %s: i1) -> i1 {
+  %reduce = vector.reduction <or>, %v, %s : vector<4xi1> into i1
+  return %reduce : i1
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_and_bool_acc
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi1>, %[[S:.+]]: i1)
+//       CHECK:   %[[R:.+]] = spirv.All %[[V]] : vector<4xi1>
+//       CHECK:   %[[A:.+]] = spirv.LogicalAnd %[[R]], %[[S]]
+//       CHECK:   return %[[A]]
+func.func @reduction_and_bool_acc(%v : vector<4xi1>, %s: i1) -> i1 {
+  %reduce = vector.reduction <and>, %v, %s : vector<4xi1> into i1
+  return %reduce : i1
+}
+
+// -----
+
 module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [BFloat16DotProductKHR], [SPV_KHR_bfloat16]>, #spirv.resource_limits<>> } {
 
 // CHECK-LABEL: func @reduction_bf16_addf_mulf

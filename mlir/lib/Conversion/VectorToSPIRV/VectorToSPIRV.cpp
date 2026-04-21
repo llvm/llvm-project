@@ -416,6 +416,32 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 
     auto [resultType, extractedElements] = *reductionInfo;
     Location loc = reduceOp->getLoc();
+
+    // Handle boolean reductions with spirv.Any / spirv.All.
+    if (resultType.isInteger(1)) {
+      vector::CombiningKind kind = reduceOp.getKind();
+
+      if (kind == vector::CombiningKind::OR) {
+        Value result = spirv::AnyOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalOrOp::create(rewriter, loc, resultType, result,
+                                              acc);
+        rewriter.replaceOp(reduceOp, result);
+        return success();
+      }
+
+      if (kind == vector::CombiningKind::AND) {
+        Value result = spirv::AllOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalAndOp::create(rewriter, loc, resultType,
+                                               result, acc);
+        rewriter.replaceOp(reduceOp, result);
+        return success();
+      }
+    }
+
     Value result = extractedElements.front();
     for (Value next : llvm::drop_begin(extractedElements)) {
       switch (reduceOp.getKind()) {
