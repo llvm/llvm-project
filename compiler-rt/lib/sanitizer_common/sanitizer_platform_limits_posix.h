@@ -1062,7 +1062,7 @@ struct __sanitizer_cookie_io_functions_t {
 #  define IOC_NRBITS 8
 #  define IOC_TYPEBITS 8
 #  if defined(__powerpc__) || defined(__powerpc64__) || defined(__mips__) || \
-      defined(__sparc__)
+      defined(__sparc__) || defined(__alpha__)
 #    define IOC_SIZEBITS 13
 #    define IOC_DIRBITS 3
 #    define IOC_NONE 1U
