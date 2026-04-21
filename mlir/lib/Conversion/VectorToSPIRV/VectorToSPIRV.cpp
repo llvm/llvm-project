@@ -425,8 +425,8 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
         Value result = spirv::AnyOp::create(rewriter, loc, resultType,
                                             adaptor.getVector());
         if (Value acc = adaptor.getAcc())
-          result = spirv::LogicalOrOp::create(rewriter, loc, resultType,
-                                              result, acc);
+          result = spirv::LogicalOrOp::create(rewriter, loc, resultType, result,
+                                              acc);
         rewriter.replaceOp(reduceOp, result);
         return success();
       }
