@@ -109,8 +109,6 @@ private:
   friend class AnalysisRegistry;
   using ResultType = ResultT;
 
-  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
-
   /// Seals the type-erased base overload, downcasts, and dispatches to the
   /// typed add().
   llvm::Error add(EntityId Id, const EntitySummary &Summary) final {
@@ -121,6 +119,8 @@ private:
   std::unique_ptr<AnalysisResult> takeResult() && final {
     return std::move(Result);
   }
+
+  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
 };
 
 } // namespace clang::ssaf

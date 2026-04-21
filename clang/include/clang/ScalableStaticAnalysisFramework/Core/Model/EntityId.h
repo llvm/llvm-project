@@ -41,11 +41,11 @@ private:
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const EntityId &Id);
 
-  size_t Index;
-
   explicit EntityId(size_t Index) : Index(Index) {}
 
   EntityId() = delete;
+
+  size_t Index;
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityId &Id);

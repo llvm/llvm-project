@@ -72,11 +72,11 @@ private:
   friend class EntityPointerLevelTranslator;
   friend EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
 
-  EntityId Entity;
-  unsigned PointerLevel;
-
   EntityPointerLevel(EntityId Entity, unsigned PointerLevel)
       : Entity(Entity), PointerLevel(PointerLevel) {}
+
+  EntityId Entity;
+  unsigned PointerLevel;
 };
 
 using EntityPointerLevelSet =

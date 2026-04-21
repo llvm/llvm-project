@@ -49,11 +49,11 @@ private:
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const EntityName &EN);
 
+  auto asTuple() const { return std::tie(USR, Suffix, Namespace); }
+
   std::string USR;
   llvm::SmallString<16> Suffix;
   NestedBuildNamespace Namespace;
-
-  auto asTuple() const { return std::tie(USR, Suffix, Namespace); }
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityName &EN);

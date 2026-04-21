@@ -89,10 +89,10 @@ private:
   friend class SerializationFormat;
   friend class TestFixture;
 
+  WPASuite() = default;
+
   EntityIdTable IdTable;
   std::map<AnalysisName, std::unique_ptr<AnalysisResult>> Data;
-
-  WPASuite() = default;
 };
 
 } // namespace clang::ssaf

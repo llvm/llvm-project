@@ -184,9 +184,6 @@ public:
   }
 
 private:
-  std::error_code Code;
-  std::vector<std::string> ContextStack;
-
   explicit ErrorBuilder(std::error_code EC) : Code(EC) {}
 
   void pushContext(std::string Msg) {
@@ -204,6 +201,9 @@ private:
   void addFormattedContext(const char *Fmt, Args &&...ArgVals) {
     pushContext(formatErrorMessage(Fmt, std::forward<Args>(ArgVals)...));
   }
+
+  std::error_code Code;
+  std::vector<std::string> ContextStack;
 };
 
 } // namespace clang::ssaf

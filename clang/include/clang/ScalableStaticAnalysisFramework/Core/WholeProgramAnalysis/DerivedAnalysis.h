@@ -110,8 +110,6 @@ private:
   friend class AnalysisRegistry;
   using ResultType = ResultT;
 
-  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
-
   /// Seals the type-erased base overload, downcasts, and dispatches to the
   /// typed initialize(). All dependencies are guaranteed present by the driver.
   llvm::Error
@@ -133,6 +131,8 @@ private:
   std::unique_ptr<AnalysisResult> takeResult() && final {
     return std::move(Result);
   }
+
+  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
 };
 
 } // namespace clang::ssaf

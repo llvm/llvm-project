@@ -45,10 +45,10 @@ private:
   friend llvm::iterator_range<EntityPointerLevelSet::const_iterator>
   getUnsafeBuffers(const UnsafeBufferUsageEntitySummary &);
 
-  const EntityPointerLevelSet UnsafeBuffers;
-
   explicit UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
       : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
+
+  const EntityPointerLevelSet UnsafeBuffers;
 };
 } // namespace clang::ssaf
 

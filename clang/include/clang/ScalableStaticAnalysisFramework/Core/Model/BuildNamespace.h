@@ -61,10 +61,10 @@ private:
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const BuildNamespace &BN);
 
+  auto asTuple() const { return std::tie(Kind, Name); }
+
   BuildNamespaceKind Kind;
   std::string Name;
-
-  auto asTuple() const { return std::tie(Kind, Name); }
 };
 
 /// Represents a hierarchical sequence of build namespaces.

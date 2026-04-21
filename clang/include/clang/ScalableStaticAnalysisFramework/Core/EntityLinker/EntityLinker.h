@@ -51,9 +51,6 @@ public:
   LUSummaryEncoding takeOutput() && { return std::move(Output); }
 
 private:
-  LUSummaryEncoding Output;
-  std::set<BuildNamespace> ProcessedTUNamespaces;
-
   /// Resolves a TU entity name to an LU entity name and ID.
   ///
   /// \param OldName The entity name in the TU namespace.
@@ -85,6 +82,9 @@ private:
   /// \returns Error if patching any encoding fails, success otherwise.
   llvm::Error patch(const std::vector<EntitySummaryEncoding *> &PatchTargets,
                     const std::map<EntityId, EntityId> &EntityResolutionTable);
+
+  LUSummaryEncoding Output;
+  std::set<BuildNamespace> ProcessedTUNamespaces;
 };
 
 } // namespace clang::ssaf
