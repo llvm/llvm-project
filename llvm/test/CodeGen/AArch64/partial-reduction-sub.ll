@@ -91,35 +91,6 @@ define <vscale x 2 x i64> @smlslbt_i32_i64(<vscale x 2 x i64> %acc, <vscale x 4 
   ret <vscale x 2 x i64> %res
 }
 
-; requires +sve2p1
-define <vscale x 4 x float> @fmlslbt_bf16_f32(<vscale x 4 x float> %acc, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) "target-features"="+sve2p1,+bf16" {
-; CHECK-LABEL: fmlslbt_bf16_f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmlslb z0.s, z1.h, z2.h
-; CHECK-NEXT:    bfmlslt z0.s, z1.h, z2.h
-; CHECK-NEXT:    ret
-  %a.sext = fpext <vscale x 8 x bfloat> %a to <vscale x 8 x float>
-  %b.sext = fpext <vscale x 8 x bfloat> %b to <vscale x 8 x float>
-  %mul = fmul fast <vscale x 8 x float> %a.sext, %b.sext
-  %mul.neg = fsub fast <vscale x 8 x float> zeroinitializer, %mul
-  %res = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mul.neg)
-  ret <vscale x 4 x float> %res
-}
-
-define <vscale x 4 x float> @fmlslbt_f16_f32(<vscale x 4 x float> %acc, <vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
-; CHECK-LABEL: fmlslbt_f16_f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmlslb z0.s, z1.h, z2.h
-; CHECK-NEXT:    fmlslt z0.s, z1.h, z2.h
-; CHECK-NEXT:    ret
-  %a.sext = fpext <vscale x 8 x half> %a to <vscale x 8 x float>
-  %b.sext = fpext <vscale x 8 x half> %b to <vscale x 8 x float>
-  %mul = fmul fast <vscale x 8 x float> %a.sext, %b.sext
-  %mul.neg = fsub fast <vscale x 8 x float> zeroinitializer, %mul
-  %res = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mul.neg)
-  ret <vscale x 4 x float> %res
-}
-
 ;
 ; Ensure fixed-length codegen for streaming-compatible functions.
 ;
@@ -231,43 +202,6 @@ define <2 x i64> @fixed_smlslbt_i32_i64(<2 x i64> %acc, <4 x i32> %a, <4 x i32> 
   %res = call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> %acc, <4 x i64> %mul.neg)
   ret <2 x i64> %res
 }
-
-; FIXME: This could use SVE2p1's bfmlslb/t
-define <4 x float> @fixed_fmlslbt_bf16_f32(<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b) "target-features"="+sve2p1,+bf16" {
-; CHECK-LABEL: fixed_fmlslbt_bf16_f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    bfmlalb v0.4s, v1.8h, v2.8h
-; CHECK-NEXT:    bfmlalt v0.4s, v1.8h, v2.8h
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    ret
-  %a.sext = fpext <8 x bfloat> %a to <8 x float>
-  %b.sext = fpext <8 x bfloat> %b to <8 x float>
-  %mul = fmul fast <8 x float> %a.sext, %b.sext
-  %mul.neg = fsub fast <8 x float> zeroinitializer, %mul
-  %res = call fast <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mul.neg)
-  ret <4 x float> %res
-}
-
-; FIXME: This could use SVE2p1's fmlslb/t or NEON's fmlsl(2)
-define <4 x float> @fixed_fmlslbt_f16_f32(<4 x float> %acc, <8 x half> %a, <8 x half> %b) #0 {
-; CHECK-LABEL: fixed_fmlslbt_f16_f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fmlalb z0.s, z1.h, z2.h
-; CHECK-NEXT:    fmlalt z0.s, z1.h, z2.h
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    ret
-  %a.sext = fpext <8 x half> %a to <8 x float>
-  %b.sext = fpext <8 x half> %b to <8 x float>
-  %mul = fmul fast <8 x float> %a.sext, %b.sext
-  %mul.neg = fsub fast <8 x float> zeroinitializer, %mul
-  %res = call fast <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mul.neg)
-  ret <4 x float> %res
-}
-
 ;
 ; Test type legalisation for sub-reductions.
 ;

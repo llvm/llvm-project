@@ -13479,8 +13479,8 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 
   bool IsMLS = false;
   if ((Opc == ISD::SUB && isZeroOrZeroSplat(Op1->getOperand(0))) ||
-      (Opc == ISD::FSUB && isZeroOrZeroSplatFP(Op1->getOperand(0)))) {
-    Op1 = Op1->getOperand(1);
+      Opc == ISD::FNEG) {
+    Op1 = Op1->getOperand(Opc == ISD::FNEG ? 0 : 1);
     Opc = Op1->getOpcode();
     IsMLS = true;
   }
@@ -13532,24 +13532,12 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     }
   };
 
-  // Generate an MLA but invert the result/accumulator if this is a partial
-  // sub-reduction.
+  // Generate an MLA or MLS.
   auto GetMLA = [&](unsigned Opc, SDValue Acc, SDValue LHS,
                     SDValue RHS) -> SDValue {
     EVT AccVT = Acc.getValueType();
-    if (!IsMLS)
-      return DAG.getNode(Opc, DL, AccVT, Acc, LHS, RHS);
-
-    if (AccVT.isFloatingPoint()) {
-      SDValue NewAcc = DAG.getNode(ISD::FNEG, DL, AccVT, Acc);
-      SDValue MLA = DAG.getNode(Opc, DL, AccVT, NewAcc, LHS, RHS);
-      return DAG.getNode(ISD::FNEG, DL, AccVT, MLA);
-    }
-
-    SDValue Zero = DAG.getConstant(0, DL, AccVT);
-    SDValue NewAcc = DAG.getNode(ISD::SUB, DL, AccVT, Zero, Acc);
-    SDValue MLA = DAG.getNode(Opc, DL, AccVT, NewAcc, LHS, RHS);
-    return DAG.getNode(ISD::SUB, DL, AccVT, Zero, MLA);
+    return IsMLS ? DAG.getPartialReduceMLS(Opc, DL, Acc, LHS, RHS)
+                 : DAG.getNode(Opc, DL, AccVT, Acc, LHS, RHS);
   };
 
   // partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
@@ -13566,6 +13554,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     unsigned NewOpcode = LHSOpcode == ISD::SIGN_EXTEND
                              ? ISD::PARTIAL_REDUCE_SMLA
                              : ISD::PARTIAL_REDUCE_UMLA;
+
     // Only perform these combines if the target supports folding
     // the extends into the operation.
     if (!TLI.isPartialReduceMLALegalOrCustom(
@@ -13600,7 +13589,6 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     NewOpc = ISD::PARTIAL_REDUCE_FMLA;
   } else
     return SDValue();
-
   // For a 2-stage extend the signedness of both of the extends must match
   // If the mul has the same type, there is no outer extend, and thus we
   // can simply use the inner extends to pick the result node.
@@ -13648,8 +13636,8 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
 
   bool IsMLS = false;
   if ((Op1Opcode == ISD::SUB && isZeroOrZeroSplat(Op1->getOperand(0))) ||
-      (Op1Opcode == ISD::FSUB && isZeroOrZeroSplatFP(Op1->getOperand(0)))) {
-    Op1 = Op1->getOperand(1);
+      Op1Opcode == ISD::FNEG) {
+    Op1 = Op1->getOperand(Op1Opcode == ISD::FNEG ? 0 : 1);
     Op1Opcode = Op1->getOpcode();
     IsMLS = true;
   }
@@ -13689,19 +13677,8 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
     Constant = DAG.getSelect(DL, UnextOp1VT, Pred, Constant, Zero);
   }
   EVT AccVT = Acc.getValueType();
-  if (!IsMLS)
-    return DAG.getNode(NewOpcode, DL, AccVT, Acc, UnextOp1, Constant);
-
-  if (AccVT.isFloatingPoint()) {
-    SDValue NegAcc = DAG.getNode(ISD::FNEG, DL, AccVT, Acc);
-    SDValue MLA = DAG.getNode(NewOpcode, DL, AccVT, NegAcc, UnextOp1, Constant);
-    return DAG.getNode(ISD::FNEG, DL, AccVT, MLA);
-  }
-
-  SDValue Zero = DAG.getConstant(0, DL, AccVT);
-  SDValue NegAcc = DAG.getNode(ISD::SUB, DL, AccVT, Zero, Acc);
-  SDValue MLA = DAG.getNode(NewOpcode, DL, AccVT, NegAcc, UnextOp1, Constant);
-  return DAG.getNode(ISD::SUB, DL, AccVT, Zero, MLA);
+  return IsMLS ? DAG.getPartialReduceMLS(NewOpcode, DL, Acc, UnextOp1, Constant)
+               : DAG.getNode(NewOpcode, DL, AccVT, Acc, UnextOp1, Constant);
 }
 
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
