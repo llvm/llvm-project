@@ -20,7 +20,7 @@ template <class T> LIBC_INLINE T *start_lifetime_as(void *ptr) noexcept {
                 "T must be an implicitly lifetime type");
 #endif
 #if __has_builtin(__builtin_start_lifetime_as)
-  // MSVC' STL is using this builtin, upstream clang does not have it yet as of
+  // MSVC STL is using this builtin, upstream clang does not have it yet as of
   // April, 2026
   return __builtin_start_lifetime_as<T>(ptr);
 #elif defined(__GNUC__)
