@@ -1283,7 +1283,7 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
         ElfSec.getUniqueID(),
         static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
   } else if (Ctx->getObjectFileType() == MCContext::IsCOFF) {
-    StringRef COMDATSymName = "";
+    StringRef COMDATSymName;
     int Selection = 0;
     unsigned Characteristics = COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                COFF::IMAGE_SCN_MEM_DISCARDABLE |

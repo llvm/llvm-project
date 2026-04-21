@@ -3,6 +3,10 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc -function-sections -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,COFF-FS
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,COFF-NOFS
 
+;; GNU COFF (MinGW) does not support associative COMDAT.
+; RUN: not --crash llc < %s -mtriple=x86_64-w64-mingw32 -function-sections -basic-block-address-map 2>&1 | FileCheck %s --check-prefix=MINGW-ERR
+; MINGW-ERR: BB address map requires associative COMDAT support for COMDAT functions
+
 $_Z4fooTIiET_v = comdat any
 
 define dso_local i32 @_Z3barv() {
