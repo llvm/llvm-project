@@ -1587,10 +1587,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{Sgpr64}, {IntrId, Vcc, Sgpr64}})
       .Uni(S32, {{Sgpr32}, {IntrId, Vcc, Sgpr32}});
 
-  addRulesForIOpcs({amdgcn_ballot}, Standard)
-      .Uni(S64, {{Sgpr64}, {IntrId, Vcc}})
-      .Uni(S32, {{Sgpr32}, {IntrId, Vcc}});
-
   addRulesForIOpcs({amdgcn_exp})
       .Any({{_, _, _, S32, S32, S32, S32},
             {{}, {IntrId, Imm, Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32}}});
@@ -1806,6 +1802,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
 
   addRulesForIOpcs({amdgcn_wqm_demote}).Any({{}, {{}, {IntrId, Vcc}}});
+
+  addRulesForIOpcs({amdgcn_ballot}, Standard)
+      .Uni(S64, {{Sgpr64}, {IntrId, Vcc}})
+      .Uni(S32, {{Sgpr32}, {IntrId, Vcc}});
 
   addRulesForIOpcs({amdgcn_inverse_ballot})
       .Any({{DivS1, _, S32}, {{Vcc}, {IntrId, SgprB32_ReadFirstLane}}})
