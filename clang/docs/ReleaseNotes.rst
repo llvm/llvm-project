@@ -498,6 +498,7 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
+- Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
