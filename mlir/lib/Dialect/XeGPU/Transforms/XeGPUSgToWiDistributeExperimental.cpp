@@ -1609,6 +1609,8 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
       }
     });
   }
+
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
 }
 
 void xegpu::populateXeGPUSgToWiDistributeTypeConversions(

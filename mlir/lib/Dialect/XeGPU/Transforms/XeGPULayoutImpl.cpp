@@ -18,12 +18,15 @@
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -80,30 +83,225 @@ xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
   return out;
 }
 
-// Attach layout attributes to all vector-type operands of operations within
-// the given operation's region. Reports an error if any vector operand lacks
-// a layout attribute.
-bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
-  auto result = rootOp->walk([&](Operation *op) {
-    for (OpOperand &operand : op->getOpOperands()) {
-      // Layouts are needed for vector type only.
-      if (!isa<VectorType>(operand.get().getType()))
-        continue;
-      // Skip block arguments since they don't have defining ops to attach
-      // layout attributes to.
-      if (isa<BlockArgument>(operand.get()))
-        continue;
-      auto layout = xegpu::getDistributeLayoutAttr(operand.get());
-      if (!layout) {
-        op->emitWarning("Could not find layout attribute for operand ")
-            << operand.getOperandNumber() << " of operation " << op->getName();
-        continue;
-      }
-      xegpu::setTemporaryLayout(operand, layout);
+// the walkRegionBackward() is a recursive function
+// the input rootOp is the function operation, which is also a region op.
+// it recursively processes the region op in reverse topological order.
+static void walkRegionBackward(Region &region,
+                               llvm::function_ref<void(Operation *)> visit) {
+
+  // Use post-order traversal to process blocks in reverse topological order.
+  // This ensures that use blocks are visited before def blocks, which is
+  // required for backward layout propagation.
+  if (region.empty())
+    return;
+  llvm::ReversePostOrderTraversal<Region *> rpot(&region);
+  SmallVector<Block *> blocks(rpot.begin(), rpot.end());
+  for (Block *block : llvm::reverse(blocks)) {
+    // ops: back -> front
+    for (Operation &op : llvm::reverse(*block)) {
+      // make sure we first visit inside the region op (so yield op first)
+      // and then move to region op itself
+      // Regions are iterated in forward order so that for multi-region ops
+      // like scf.while, earlier regions (e.g., "before/cond") are processed
+      // first. This ensures that when a later region's terminator (e.g., "do"
+      // yield) needs the layout of an earlier region's block args, those
+      // layouts are already available from use points.
+      for (Region &nested : op.getRegions())
+        walkRegionBackward(nested, visit);
+
+      visit(&op);
     }
-    return WalkResult::advance();
+  }
+}
+
+static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
+  xegpu::DistributeLayoutAttr layout = nullptr;
+  for (OpOperand &use : result.getUses()) {
+    if (auto tmpLayout = xegpu::getDistributeLayoutAttr(use)) {
+      if (!layout)
+        layout = tmpLayout;
+      break;
+    }
+  }
+  return layout;
+}
+
+// For regular operations: First the result layouts are propagated from uses.
+// Then the result layouts are propagated to uses (operands).
+static void propagateResultsToRegularOperands(Operation *op) {
+  if (op->getNumResults() == 0 || op->getNumResults() > 1)
+    return;
+
+  OpResult result = op->getResult(0);
+  xegpu::DistributeLayoutAttr resLayout = getLayoutFromUsePoints(result);
+  Type resultType = result.getType();
+
+  // recover layout for tensor Descriptor type, which is a special case since
+  // its layout is not stored as an attribute but encoded in the type itself.
+  // For vector type, we attach the layout as an attribute to op.
+  if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
+    auto layout = tensorDescTy.getLayoutAttr();
+    if (!layout) {
+      auto typeWithLayout = xegpu::TensorDescType::get(
+          tensorDescTy.getContext(), tensorDescTy.getShape(),
+          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), resLayout);
+      result.setType(typeWithLayout);
+    }
+  }
+  if (isa<VectorType>(resultType) && resLayout)
+    xegpu::setTemporaryLayout(result, resLayout);
+
+  for (OpOperand &opr : op->getOpOperands()) {
+    xegpu::DistributeLayoutAttr operandLayout =
+        xegpu::inferSourceLayoutFromResult(opr, resLayout);
+    if (isa<VectorType>(opr.get().getType()) && operandLayout)
+      xegpu::setTemporaryLayout(opr, operandLayout);
+  }
+}
+
+// Propagate layout from region op results and sibling region block args
+// to yield/condition operands. For each successor of this terminator:
+// - Parent successor: propagate from parent op's result layouts (use points).
+// - Region successor: propagate from target region's block arg layouts (use
+//   points), e.g., scf.yield in "after/do" region propagates to "before/cond"
+//   block args.
+static void propagateRegionResultsToYieldOperands(
+    mlir::RegionBranchTerminatorOpInterface yieldOp) {
+  auto regionBranchOp =
+      dyn_cast<RegionBranchOpInterface>(yieldOp->getParentOp());
+  if (!regionBranchOp)
+    return;
+
+  SmallVector<RegionSuccessor> successors;
+  SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
+  yieldOp.getSuccessorRegions(operandAttrs, successors);
+
+  for (const RegionSuccessor &successor : successors) {
+    OperandRange succOps = yieldOp.getSuccessorOperands(successor);
+    if (succOps.empty())
+      continue;
+    unsigned beginIdx = succOps.getBeginOperandIndex();
+    ValueRange successorInputs = regionBranchOp.getSuccessorInputs(successor);
+    unsigned count = std::min<unsigned>(succOps.size(), successorInputs.size());
+
+    for (unsigned i = 0; i < count; ++i) {
+      xegpu::DistributeLayoutAttr layout;
+      if (successor.isParent()) {
+        // For parent successor, get layout from external use points of the
+        // parent op's results.
+        layout = getLayoutFromUsePoints(regionBranchOp->getResult(i));
+        if (layout)
+          xegpu::setTemporaryLayout(regionBranchOp->getResult(i), layout);
+      } else {
+        // For region successor, get layout from the target region's block
+        // arg use points (e.g., "before/cond" region args for scf.while
+        // "after/do" yield).
+        layout = getLayoutFromUsePoints(successorInputs[i]);
+      }
+      if (!layout)
+        continue;
+      if (isa<VectorType>(succOps[i].getType()))
+        xegpu::setTemporaryLayout(yieldOp->getOpOperand(beginIdx + i), layout);
+    }
+  }
+}
+
+// Propagate layout from region arguments to region op's init operands. This
+// sets the temporary layout for region arguments and init operands.
+static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
+  // Iterate all regions of the region op. For each block argument that has a
+  // layout (determined from its use points), trace back to find the
+  // corresponding init operand of the regionOp and set the layout on it.
+  // This works generically for scf.for, scf.while, and other
+  // RegionBranchOpInterface ops.
+  for (Region &region : regionOp->getRegions()) {
+    RegionSuccessor regionSuccessor(&region);
+    // Use getSuccessorInputs to get the block arguments that correspond to
+    // predecessor operands. This correctly handles ops like scf.for where
+    // the induction variable is a block arg but not a successor input.
+    ValueRange successorInputs = regionOp.getSuccessorInputs(regionSuccessor);
+    for (auto [inputIdx, regionArg] : llvm::enumerate(successorInputs)) {
+      auto layout = getLayoutFromUsePoints(regionArg);
+      if (!layout)
+        continue;
+
+      // Recover layout for tensor_desc block args by updating the type.
+      if (auto tensorDescTy =
+              dyn_cast<xegpu::TensorDescType>(regionArg.getType())) {
+        if (!tensorDescTy.getLayoutAttr()) {
+          auto typeWithLayout = xegpu::TensorDescType::get(
+              tensorDescTy.getContext(), tensorDescTy.getShape(),
+              tensorDescTy.getElementType(), tensorDescTy.getEncoding(),
+              layout);
+          regionArg.setType(typeWithLayout);
+        }
+      }
+
+      // Find all predecessor values that flow into this block argument.
+      SmallVector<Value> predValues;
+      regionOp.getPredecessorValues(regionSuccessor, inputIdx, predValues);
+      for (Value predVal : predValues) {
+        // Match predecessor value to an operand of the regionOp.
+        for (OpOperand &operand : regionOp->getOpOperands()) {
+          if (operand.get() == predVal)
+            xegpu::setTemporaryLayout(operand, layout);
+        }
+      }
+    }
+  }
+}
+
+// Prerequisite for Layout Recovery
+// It relies on the following invariant:
+// 1. there is no layout conflict between different uses of the same definition.
+// 2. each definition has a well-defined layout requirement at its use point.
+//     - Every definition must have at least one use that appears after it in
+//     topological order.
+//     - TODO: If a definition has no such use (e.g., a loop result or region
+//     output), an explicit convert_layout operation is inserted to create a
+//     use.
+//     - Only the result of convert_layout is permitted to have no subsequent
+//     use.
+//
+// The recovery proceeds by scanning the operation in reverse topological order
+// as follows:
+//    For regular operations: First the result layouts are propagated from uses.
+//      Then the result layouts are propagated to operands.
+//
+//    For region operations (e.g., loops):
+//       - When backward propagation reaches a region op, it sets the layout of
+//       the region op’s results according to use points like regular ops.
+//       - Then, the result layouts (such as a loop output) are propagated to
+//       their corresponding operands in the yield.
+//       - When backward propagation reaches the first operation inside the
+//       region, the pass examines the region op’s initialization list,
+//       propagating from region arguments to the corresponding initialization
+//       operands.
+//       - This ensures that layouts are consistently propagated
+//       across region boundaries while preserving a single well-defined use for
+//       each definition at the region-op level.
+bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
+  auto processFunc = [&](Region &body, StringRef funcName) {
+    walkRegionBackward(body, [&](Operation *op) {
+      if (auto regionOp = dyn_cast<mlir::RegionBranchOpInterface>(op)) {
+        propagateRegionArgsToInits(regionOp);
+      } else if (auto yieldOp =
+                     dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
+        propagateRegionResultsToYieldOperands(yieldOp);
+      } else if (!dyn_cast<xegpu::AnchorLayoutInterface>(op)) {
+        propagateResultsToRegularOperands(op);
+      }
+    });
+  };
+
+  rootOp->walk([&](func::FuncOp func) {
+    processFunc(func.getBody(), func.getSymName());
   });
-  return !result.wasInterrupted();
+  rootOp->walk([&](gpu::GPUFuncOp func) {
+    processFunc(func.getBody(), func.getName());
+  });
+
+  return true;
 }
 
 template <typename T, typename>
@@ -132,6 +330,18 @@ void xegpu::removeLayoutAttrs(Operation *op) {
     }
     for (auto attrName : attrsToRemove)
       nestOp->removeAttr(attrName);
+  });
+}
+
+void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
+  op->walk([&](Operation *nestOp) {
+    SmallVector<StringAttr> attrsToRemove;
+    for (auto namedAttr : nestOp->getDiscardableAttrs()) {
+      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
+        attrsToRemove.push_back(namedAttr.getName());
+    }
+    for (auto attrName : attrsToRemove)
+      nestOp->removeDiscardableAttr(attrName);
   });
 }
 
@@ -1122,20 +1332,19 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
   return std::nullopt;
 }
 
-xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
+xegpu::DistributeLayoutAttr
+xegpu::inferSourceLayoutFromResult(OpOperand &operand,
+                                   xegpu::DistributeLayoutAttr resLayout) {
+  if (!resLayout)
+    return nullptr;
   Operation *op = operand.getOwner();
   unsigned idx = operand.getOperandNumber();
-  xegpu::DistributeLayoutAttr resLayout;
-  if (op->getNumResults() == 1)
-    resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
 
   // For vector::BroadcastOp, infer the source layout from the result layout.
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     auto srcTy = dyn_cast<VectorType>(broadcast.getSourceType());
     if (!srcTy)
-      return xegpu::DistributeLayoutAttr();
+      return nullptr;
     return xegpu::inferBroadcastSourceLayout(
         resLayout, broadcast.getResultVectorType().getShape(),
         srcTy.getShape());
@@ -1145,8 +1354,6 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // using reduction dims. Acc operand is expected to have the same layout as
   // the result.
   if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     if (idx == 0) {
       SmallVector<int64_t> reductionDims(reduction.getReductionDims());
       return xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
@@ -1155,17 +1362,12 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
       return resLayout;
   }
 
-  if (auto reduction = dyn_cast<vector::ReductionOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
+  if (auto reduction = dyn_cast<vector::ReductionOp>(op))
     return xegpu::inferReductionSourceLayout(resLayout);
-  }
 
   // For vector::BitCastOp, infer source layout from result layout using
   // element type bitwidths.
   if (auto bitcast = dyn_cast<vector::BitCastOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     int resElemBitWidth =
         bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
     int srcElemBitWidth =
@@ -1177,8 +1379,6 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // For vector::ShapeCastOp, infer source layout from result layout using
   // shapes.
   if (auto shapeCast = dyn_cast<vector::ShapeCastOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     return xegpu::inferShapeCastSourceLayout(
         resLayout, shapeCast.getResultVectorType().getShape(),
         shapeCast.getSourceVectorType().getShape());
@@ -1187,12 +1387,11 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // For vector::InsertStridedSliceOp, infer source layout from result layout.
   // Dest vector must have the same layout as the result.
   if (auto insertSlice = dyn_cast<vector::InsertStridedSliceOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
-    if (idx == 0)
+    if (idx == 0) {
       return xegpu::inferInsertStridedSliceSourceLayout(
           resLayout, insertSlice.getDestVectorType().getShape(),
           insertSlice.getSourceVectorType().getShape());
+    }
     if (idx == 1)
       return resLayout;
   }
@@ -1200,20 +1399,29 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // For vector::TransposeOp, infer source layout from result layout using
   // permutation.
   if (auto transpose = dyn_cast<vector::TransposeOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     return xegpu::inferTransposeSourceLayout(resLayout,
                                              transpose.getPermutation());
   }
 
+  // For vector::ExtractStridedSliceOp, simply return result layout
+  if (dyn_cast<vector::ExtractStridedSliceOp>(op))
+    return resLayout;
   // For elementwise operations, all operands must have the same layout as the
   // result.
-  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
     return resLayout;
-  }
-  // TODO: Handle more cases as needed here.
+
+  return nullptr;
+}
+
+xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
+  Operation *op = operand.getOwner();
+  xegpu::DistributeLayoutAttr resLayout;
+  if (op->getNumResults() == 1)
+    resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
+  auto inferredOperandLayout = inferSourceLayoutFromResult(operand, resLayout);
+  if (inferredOperandLayout)
+    return inferredOperandLayout;
   // By default, assume no layout conflict and return the current layout of
   // the operand.
   return xegpu::getDistributeLayoutAttr(operand.get());
