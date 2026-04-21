@@ -607,7 +607,7 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     return nullptr;
 
   // For scalar integer load, use smaller limit to avoid regression when loading
-  // from string literal. Codegen may generate inefficient string operations.
+  // during memcmp expansion. Codegen may generate inefficient string operations.
   if (BytesLoaded > 32 && OrigLoadTy->isIntegerTy())
     return nullptr;
 
