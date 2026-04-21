@@ -474,7 +474,7 @@ void DynamicLoaderMacOS::AddBinaries(
     StructuredData::ObjectSP expedited_binary_infos) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   ImageInfo::collection image_infos;
-  if (load_addresses.size() == 0)
+  if (load_addresses.empty())
     return;
 
   // If the expedited detailed binaries information covers
