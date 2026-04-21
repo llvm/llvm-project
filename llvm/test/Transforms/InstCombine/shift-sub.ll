@@ -5,8 +5,7 @@ declare void @use(i8)
 
 define i8 @shl_sub(i8 %x) {
 ; CHECK-LABEL: @shl_sub(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 4, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl i8 2, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 32, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 4, %x
@@ -16,8 +15,7 @@ define i8 @shl_sub(i8 %x) {
 
 define i8 @shl_sub_maxlzero(i8 %x) {
 ; CHECK-LABEL: @shl_sub_maxlzero(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 6, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl i8 3, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 -64, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 6, %x
@@ -27,8 +25,7 @@ define i8 @shl_sub_maxlzero(i8 %x) {
 
 define i8 @shl_sub_maxlone(i8 %x) {
 ; CHECK-LABEL: @shl_sub_maxlone(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 6, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl i8 -2, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 6, %x
@@ -40,7 +37,7 @@ define i8 @shl_sub_multiuse(i8 %x) {
 ; CHECK-LABEL: @shl_sub_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 3, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i8 2, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 16, [[X]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 3, %x
@@ -51,8 +48,7 @@ define i8 @shl_sub_multiuse(i8 %x) {
 
 define <2 x i8> @shl_sub_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_sub_vec_splat(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw <2 x i8> splat (i8 4), [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> splat (i8 3), [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> splat (i8 48), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub nuw <2 x i8> <i8 4, i8 4>, %x
@@ -118,8 +114,7 @@ define i8 @shl_sub_negative_nolone(i8 %x) {
 define i8 @shl_xor(i8 %x) {
 ; CHECK-LABEL: @shl_xor(
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[S:%.*]] = xor i8 [[M]], 3
-; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i8 2, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 16, [[M]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = and i8 %x, 3
@@ -131,8 +126,7 @@ define i8 @shl_xor(i8 %x) {
 define i16 @shl_xor_i2(i2 %x) {
 ; CHECK-LABEL: @shl_xor_i2(
 ; CHECK-NEXT:    [[M:%.*]] = zext i2 [[X:%.*]] to i16
-; CHECK-NEXT:    [[S:%.*]] = xor i16 [[M]], 7
-; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i16 2, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i16 256, [[M]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %m = zext i2 %x to i16
@@ -146,7 +140,7 @@ define i8 @shl_xor_multiuse(i8 %x) {
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 3
 ; CHECK-NEXT:    [[S:%.*]] = xor i8 [[M]], 3
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i8 2, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 16, [[M]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = and i8 %x, 3
@@ -159,8 +153,7 @@ define i8 @shl_xor_multiuse(i8 %x) {
 define <2 x i8> @shl_xor_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_xor_vec_splat(
 ; CHECK-NEXT:    [[M:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 3)
-; CHECK-NEXT:    [[S:%.*]] = xor <2 x i8> [[M]], splat (i8 3)
-; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i8> splat (i8 5), [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> splat (i8 40), [[M]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %m = and <2 x i8> <i8 3, i8 3>, %x
@@ -221,8 +214,7 @@ define i8 @shl_xor_negative_abovemask(i8 %x) {
 
 define i8 @lshr_sub(i8 %x) {
 ; CHECK-LABEL: @lshr_sub(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 3, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 48, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 6, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 3, %x
@@ -232,8 +224,7 @@ define i8 @lshr_sub(i8 %x) {
 
 define i8 @lshr_sub_maxtzero(i8 %x) {
 ; CHECK-LABEL: @lshr_sub_maxtzero(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 5, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 32, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 5, %x
@@ -245,7 +236,7 @@ define i8 @lshr_sub_multiuse(i8 %x) {
 ; CHECK-LABEL: @lshr_sub_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 3, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 32, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 4, [[X]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 3, %x
@@ -256,8 +247,7 @@ define i8 @lshr_sub_multiuse(i8 %x) {
 
 define <2 x i8> @lshr_sub_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_sub_vec_splat(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw <2 x i8> splat (i8 4), [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> splat (i8 64), [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> splat (i8 4), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub nuw <2 x i8> <i8 4, i8 4>, %x
@@ -312,8 +302,7 @@ define i8 @lshr_sub_negative_notrzero(i8 %x) {
 define i8 @lshr_xor(i8 %x) {
 ; CHECK-LABEL: @lshr_xor(
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[S:%.*]] = xor i8 [[M]], 7
-; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 -128, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i8 1, [[M]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = and i8 %x, 6
@@ -327,7 +316,7 @@ define i8 @lshr_xor_multiuse(i8 %x) {
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 6
 ; CHECK-NEXT:    [[S:%.*]] = xor i8 [[M]], 7
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 -128, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i8 1, [[M]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = and i8 %x, 6
@@ -340,8 +329,7 @@ define i8 @lshr_xor_multiuse(i8 %x) {
 define <2 x i8> @lshr_xor_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_xor_vec_splat(
 ; CHECK-NEXT:    [[M:%.*]] = and <2 x i8> [[X:%.*]], <i8 2, i8 3>
-; CHECK-NEXT:    [[S:%.*]] = xor <2 x i8> [[M]], splat (i8 3)
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> splat (i8 16), [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i8> splat (i8 2), [[M]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %m = and <2 x i8> <i8 2, i8 3>, %x
@@ -404,8 +392,7 @@ define i8 @lshr_xor_negative_notrzero(i8 %x) {
 
 define i8 @ashr_sub(i8 %x) {
 ; CHECK-LABEL: @ashr_sub(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 3, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 -64, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 -8, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 3, %x
@@ -415,8 +402,7 @@ define i8 @ashr_sub(i8 %x) {
 
 define i8 @ashr_sub_maxtzero(i8 %x) {
 ; CHECK-LABEL: @ashr_sub_maxtzero(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 6, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = ashr i8 -64, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i8 -1, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 6, %x
@@ -428,7 +414,7 @@ define i8 @ashr_sub_multiuse(i8 %x) {
 ; CHECK-LABEL: @ashr_sub_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 3, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 96, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 12, [[X]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub nuw i8 3, %x
@@ -439,8 +425,7 @@ define i8 @ashr_sub_multiuse(i8 %x) {
 
 define <2 x i8> @ashr_sub_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @ashr_sub_vec_splat(
-; CHECK-NEXT:    [[S:%.*]] = sub nuw <2 x i8> splat (i8 4), [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = ashr <2 x i8> splat (i8 -64), [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> splat (i8 -4), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub nuw <2 x i8> <i8 4, i8 4>, %x
