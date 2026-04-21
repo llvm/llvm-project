@@ -136,8 +136,7 @@ entry:
 define <8 x i16> @nor_u_v8i16_1(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: nor_u_v8i16_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr1, 1
-; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnori.b $vr0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = or <8 x i16> %a, splat (i16 257)
@@ -148,8 +147,7 @@ entry:
 define <4 x i32> @nor_u_v4i32_1(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: nor_u_v4i32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr1, 1
-; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnori.b $vr0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = or <4 x i32> %a, splat (i32 16843009)
@@ -160,8 +158,7 @@ entry:
 define <2 x i64> @nor_u_v2i64_1(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: nor_u_v2i64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr1, 1
-; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnori.b $vr0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = or <2 x i64> %a, splat (i64 72340172838076673)
