@@ -1533,7 +1533,7 @@ float64x1_t test_vsub_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.fptosi.sat.v1i64.v1f64(<1 x double> [[TMP2]]) #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> [[TMP2]]) #[[ATTR3]]
 // CONSTRAINED-NEXT:    ret <1 x i64> [[VCVTZ_I]]
 //
 int64x1_t test_vcvt_s64_f64(float64x1_t a) {
@@ -1557,7 +1557,7 @@ int64x1_t test_vcvt_s64_f64(float64x1_t a) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.fptoui.sat.v1i64.v1f64(<1 x double> [[TMP2]]) #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> [[TMP2]]) #[[ATTR3]]
 // CONSTRAINED-NEXT:    ret <1 x i64> [[VCVTZ_I]]
 //
 uint64x1_t test_vcvt_u64_f64(float64x1_t a) {

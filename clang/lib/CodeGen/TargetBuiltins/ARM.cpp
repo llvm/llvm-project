@@ -1140,9 +1140,16 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
     break;
   }
 
-  // Determine the type(s) of this overloaded AArch64 intrinsic.
+  // Use fptosi.sat/fptoui.sat unless under strict FP.
+  unsigned LLVMIntrinsic = SISDInfo.LLVMIntrinsic;
+  if (!CGF.Builder.getIsFPConstrained()) {
+    if (LLVMIntrinsic == Intrinsic::aarch64_neon_fcvtzs)
+      LLVMIntrinsic = Intrinsic::fptosi_sat;
+    else if (LLVMIntrinsic == Intrinsic::aarch64_neon_fcvtzu)
+      LLVMIntrinsic = Intrinsic::fptoui_sat;
+  }
   llvm::Type *ArgTy = CGF.ConvertType(E->getArg(0)->getType());
-  Function *F = CGF.LookupNeonLLVMIntrinsic(SISDInfo.LLVMIntrinsic,
+  Function *F = CGF.LookupNeonLLVMIntrinsic(LLVMIntrinsic,
                                             SISDInfo.TypeModifier, ArgTy, E);
 
   int j = 0;
@@ -1384,12 +1391,15 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vcvtq_s16_f16:
   case NEON::BI__builtin_neon_vcvtq_u16_f16: {
     Ops[0] = Builder.CreateBitCast(Ops[0], GetFloatNeonType(this, Type));
-    // AArch64 uses saturating FP-to-int intrinsics; ARM uses plain
-    // fptoui/fptosi.
     if (Int) {
+      // AArch64: use fptosi.sat/fptoui.sat unless under strict FP.
+      if (!Builder.getIsFPConstrained())
+        Int = Usgn ? Intrinsic::fptoui_sat : Intrinsic::fptosi_sat;
       llvm::Type *Tys[2] = {Ty, Ops[0]->getType()};
       return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vcvtz");
     }
+    // FIXME: ARM uses plain fptoui/fptosi which have UB on out-of-range
+    // values. These should also use saturating intrinsics.
     return Usgn ? Builder.CreateFPToUI(Ops[0], Ty, "vcvt")
                 : Builder.CreateFPToSI(Ops[0], Ty, "vcvt");
   }
