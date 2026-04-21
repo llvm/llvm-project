@@ -18,3 +18,6 @@ ubsan issues
 Reapply "[compiler-rt] Enable minimal ubsan for GPU targets (#188289)"
 [Clang] Correctly handle UBSan libraries for the GPU 
 ---
+needs merge help
+[Extractor] Use function return for the one and only
+---
