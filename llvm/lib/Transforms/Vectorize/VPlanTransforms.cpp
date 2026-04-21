@@ -5185,6 +5185,16 @@ void VPlanTransforms::materializeVectorTripCount(
   }
   VPBuilder Builder(VectorPHVPBB, InsertPt);
 
+  // For scalable steps, if TC is a constant and is divisible by the maximum
+  // possible runtime step, then TC % Step == 0 for all valid vscale values
+  // and the vector trip count equals TC directly.
+  const APInt *TCVal;
+  if (!RequiresScalarEpilogue && match(TC, m_APInt(TCVal)) && MaxRuntimeStep &&
+      TCVal->getZExtValue() % *MaxRuntimeStep == 0) {
+    VectorTC.replaceAllUsesWith(TC);
+    return;
+  }
+
   // If the tail is to be folded by masking, round the number of iterations N
   // up to a multiple of Step instead of rounding down. This is done by first
   // adding Step-1 and then rounding down. Note that it's ok if this addition
@@ -5202,16 +5212,6 @@ void VPlanTransforms::materializeVectorTripCount(
   // iterations are not required for correctness, or N - Step, otherwise. Step
   // is equal to the vectorization factor (number of SIMD elements) times the
   // unroll factor (number of SIMD instructions).
-
-  // For scalable steps, if TC is a constant and is divisible by the maximum
-  // possible runtime step, then TC % Step == 0 for all valid vscale values
-  // and the vector trip count equals TC directly.
-  const APInt *TCVal;
-  if (!TailByMasking && !RequiresScalarEpilogue && match(TC, m_APInt(TCVal)) &&
-      MaxRuntimeStep && TCVal->getZExtValue() % *MaxRuntimeStep == 0) {
-    VectorTC.replaceAllUsesWith(TC);
-    return;
-  }
 
   VPValue *R =
       Builder.createNaryOp(Instruction::URem, {TC, Step},
