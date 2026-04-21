@@ -421,6 +421,16 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vqdmulh_laneq_v:
   case NEON::BI__builtin_neon_vqrdmulhq_laneq_v:
   case NEON::BI__builtin_neon_vqrdmulh_laneq_v:
+  case NEON::BI__builtin_neon_vqshl_v:
+  case NEON::BI__builtin_neon_vqshlq_v: {
+    llvm::StringRef llvmIntrName =
+        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
+            usgn ? llvmIntrinsic : altLLVMIntrinsic));
+    return emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(), {vTy, vTy},
+                        ops, llvmIntrName, vTy, loc);
+          )
+      )
+  }
   case NEON::BI__builtin_neon_vqshl_n_v:
   case NEON::BI__builtin_neon_vqshlq_n_v:
   case NEON::BI__builtin_neon_vqshlu_n_v:
