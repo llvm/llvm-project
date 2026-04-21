@@ -16,7 +16,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar/LSROA.h"
+#include "llvm/Transforms/Scalar/LogicalSROA.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/IRBuilder.h"
@@ -111,7 +111,7 @@ void rewriteSGEPChain(IRBuilder<> &B, StructuredGEPInst *SGEP,
 }
 
 bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
-  // For now, LSROA only handles SGEP on structs.
+  // For now, LogicalSROA only handles SGEP on structs.
   StructType *ST = dyn_cast<StructType>(SAI.getAllocationType());
   if (!ST)
     return false;
@@ -143,7 +143,7 @@ bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
   return true;
 }
 
-bool runLSROA(Function &F) {
+bool runLogicalSROA(Function &F) {
   SmallVector<StructuredAllocaInst *> Worklist;
   for (auto &BB : F) {
     for (auto &I : BB) {
@@ -160,8 +160,9 @@ bool runLSROA(Function &F) {
 
 } // end anonymous namespace
 
-PreservedAnalyses LSROAPass::run(Function &F, FunctionAnalysisManager &AM) {
-  if (!runLSROA(F))
+PreservedAnalyses LogicalSROAPass::run(Function &F,
+                                       FunctionAnalysisManager &AM) {
+  if (!runLogicalSROA(F))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -169,39 +170,41 @@ PreservedAnalyses LSROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   return PA;
 }
 
-LSROAPass::LSROAPass() {}
+LogicalSROAPass::LogicalSROAPass() {}
 
 namespace {
 
-/// A legacy pass for the legacy pass manager that wraps the LSROA pass.
-class LSROALegacyPass : public FunctionPass {
+/// A legacy pass for the legacy pass manager that wraps the LogicalSROA pass.
+class LogicalSROALegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  LSROALegacyPass() : FunctionPass(ID) {
-    initializeLSROALegacyPassPass(*PassRegistry::getPassRegistry());
+  LogicalSROALegacyPass() : FunctionPass(ID) {
+    initializeLogicalSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
-    return runLSROA(F);
+    return runLogicalSROA(F);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
-  StringRef getPassName() const override { return "LSROA"; }
+  StringRef getPassName() const override { return "LogicalSROA"; }
 };
 
 } // end anonymous namespace
 
-char LSROALegacyPass::ID = 0;
+char LogicalSROALegacyPass::ID = 0;
 
-FunctionPass *llvm::createLSROAPass() { return new LSROALegacyPass(); }
+FunctionPass *llvm::createLogicalSROAPass() {
+  return new LogicalSROALegacyPass();
+}
 
-INITIALIZE_PASS_BEGIN(LSROALegacyPass, "logical-sroa",
+INITIALIZE_PASS_BEGIN(LogicalSROALegacyPass, "logical-sroa",
                       "Logical Scalar Replacement Of Aggregates", false, false)
-INITIALIZE_PASS_END(LSROALegacyPass, "logical-sroa",
+INITIALIZE_PASS_END(LogicalSROALegacyPass, "logical-sroa",
                     "Logical Scalar Replacement Of Aggregates", false, false)

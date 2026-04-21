@@ -29,6 +29,7 @@ add_llvm_component_library(LLVMScalarOpts
   JumpThreading.cpp
   JumpTableToSwitch.cpp
   LICM.cpp
+  LogicalSROA.cpp
   LoopAccessAnalysisPrinter.cpp
   LoopBoundSplit.cpp
   LoopSink.cpp
@@ -69,7 +70,6 @@ add_llvm_component_library(LLVMScalarOpts
   RewriteStatepointsForGC.cpp
   SCCP.cpp
   SROA.cpp
-  LSROA.cpp
   Scalar.cpp
   Scalarizer.cpp
   ScalarizeMaskedMemIntrin.cpp

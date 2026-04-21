@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_LSROA_H
-#define LLVM_TRANSFORMS_SCALAR_LSROA_H
+#ifndef LLVM_TRANSFORMS_SCALAR_LOGICALSROA_H
+#define LLVM_TRANSFORMS_SCALAR_LOGICALSROA_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -22,9 +22,9 @@ namespace llvm {
 
 class Function;
 
-class LSROAPass : public PassInfoMixin<LSROAPass> {
+class LogicalSROAPass : public PassInfoMixin<LogicalSROAPass> {
 public:
-  LSROAPass();
+  LogicalSROAPass();
 
   /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -32,4 +32,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_SCALAR_LSROA_H
+#endif // LLVM_TRANSFORMS_SCALAR_LOGICALSROA_H
