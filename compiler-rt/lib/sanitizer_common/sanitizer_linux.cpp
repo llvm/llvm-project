@@ -2781,6 +2781,11 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = ucontext->uc_mcontext.__pc;
   *bp = ucontext->uc_mcontext.__gregs[22];
   *sp = ucontext->uc_mcontext.__gregs[3];
+#  elif defined(__alpha__)
+  ucontext_t* ucontext = (ucontext_t*)context;
+  *pc = ucontext->uc_mcontext.sc_pc;
+  *bp = ucontext->uc_mcontext.sc_regs[15];  // $fp / $s6
+  *sp = ucontext->uc_mcontext.sc_regs[30];  // $sp
 #  else
 #    error "Unsupported arch"
 #  endif
