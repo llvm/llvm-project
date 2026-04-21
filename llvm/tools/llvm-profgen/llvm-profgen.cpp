@@ -201,49 +201,45 @@ int main(int argc, const char *argv[]) {
     if (ProcessId.getNumOccurrences())
       PIDFilter = ProcessId;
     InputFile File = getInputFile();
+    const ContextSampleCounterMap *Counters = nullptr;
+    bool ProfileIsCS = false;
+    std::unique_ptr<ETMReader> EtmReader;
+    std::unique_ptr<PerfReaderBase> PerfReader;
+
     if (File.Format == InputFormat::ETMFormat) {
-      ETMReader Reader(Binary.get(), File.InputFile);
-      Reader.parseETMTraces();
+      EtmReader = std::make_unique<ETMReader>(Binary.get(), File.InputFile);
+      EtmReader->parseETMTraces();
+      Counters = &EtmReader->getSampleCounters();
+    } else {
+      PerfReader = PerfReaderBase::create(Binary.get(), File, PIDFilter);
+      // Parse perf events and samples
+      PerfReader->parsePerfTraces();
 
-      if (SkipSymbolization)
-        return EXIT_SUCCESS;
-
-      std::unique_ptr<ProfileGeneratorBase> Generator =
-          ProfileGeneratorBase::create(Binary.get(), &Reader.getTraceCounters(),
-                                       false);
-      Generator->generateProfile();
-      Generator->write();
-      return EXIT_SUCCESS;
-    }
-
-    std::unique_ptr<PerfReaderBase> Reader =
-        PerfReaderBase::create(Binary.get(), File, PIDFilter);
-    // Parse perf events and samples
-    Reader->parsePerfTraces();
-
-    if (!DataAccessProfileFilename.empty()) {
-      if (Reader->profileIsCS() || Binary->usePseudoProbes()) {
-        exitWithError("Symbolizing vtables from data access profiles is not "
-                      "yet supported for context-sensitive perf traces or "
-                      "when pseudo-probe based mapping is enabled. ");
+      if (!DataAccessProfileFilename.empty()) {
+        if (PerfReader->profileIsCS() || Binary->usePseudoProbes()) {
+          exitWithError("Symbolizing vtables from data access profiles is not "
+                        "yet supported for context-sensitive perf traces or "
+                        "when pseudo-probe based mapping is enabled. ");
+        }
+        // Parse the data access perf traces into <ip, data-addr> pairs, symbolize
+        // the data-addr to data-symbol. If the data-addr is a vtable, increment
+        // counters for the <ip, data-symbol> pair.
+        if (Error E = PerfReader->parseDataAccessPerfTraces(DataAccessProfileFilename,
+                                                        PIDFilter)) {
+          handleAllErrors(std::move(E), [&](const StringError &SE) {
+            exitWithError(SE.getMessage());
+          });
+        }
       }
-      // Parse the data access perf traces into <ip, data-addr> pairs, symbolize
-      // the data-addr to data-symbol. If the data-addr is a vtable, increment
-      // counters for the <ip, data-symbol> pair.
-      if (Error E = Reader->parseDataAccessPerfTraces(DataAccessProfileFilename,
-                                                      PIDFilter)) {
-        handleAllErrors(std::move(E), [&](const StringError &SE) {
-          exitWithError(SE.getMessage());
-        });
-      }
+      Counters = &PerfReader->getSampleCounters();
+      ProfileIsCS = PerfReader->profileIsCS();
     }
 
     if (SkipSymbolization)
       return EXIT_SUCCESS;
 
     std::unique_ptr<ProfileGeneratorBase> Generator =
-        ProfileGeneratorBase::create(Binary.get(), &Reader->getSampleCounters(),
-                                     Reader->profileIsCS());
+        ProfileGeneratorBase::create(Binary.get(), Counters, ProfileIsCS);
     Generator->generateProfile();
     Generator->write();
   }

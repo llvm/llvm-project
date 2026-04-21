@@ -754,7 +754,7 @@ public:
       : Binary(Binary), TraceFile(TraceFile) {}
   void parseETMTraces();
   void recordProcessedRange(uint64_t Start, uint64_t End, uint64_t Count);
-  const ContextSampleCounterMap &getTraceCounters() const { return Counters; }
+  const ContextSampleCounterMap &getSampleCounters() const { return Counters; }
 
 private:
   ProfiledBinary *Binary = nullptr;

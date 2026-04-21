@@ -19,6 +19,48 @@
 namespace llvm {
 
 namespace {
+
+class HardwareTraceConfig {
+public:
+  virtual ~HardwareTraceConfig() = default;
+};
+
+class ETMTraceConfig : public HardwareTraceConfig {
+public:
+  ocsd_etmv4_cfg Cfg{};
+  uint8_t CSID = 0x10;
+
+  ETMTraceConfig(const Triple &TargetTriple) {
+    ocsd_arch_version_t ArchVer = ARCH_UNKNOWN;
+    if (TargetTriple.isArmMClass()) {
+      unsigned ArchVersion = ARM::parseArchVersion(TargetTriple.getArchName());
+      if (ArchVersion >= 8)
+        ArchVer = ARCH_V8;
+      else if (ArchVersion == 7)
+        ArchVer = ARCH_V7;
+      else
+        ArchVer = ARCH_UNKNOWN; // For version 6 (Cortex-M0) and others.
+    }
+    // Initialize the decoder for microcontroller-class targets.
+    Cfg.arch_ver = ArchVer;
+    Cfg.core_prof = profile_CortexM;
+
+    // The CoreSight Trace ID (CSID) is a hardware-assigned 7-bit identifier
+    // used to route trace data. 0x10 is the most common default value for the
+    // ETM.
+    Cfg.reg_traceidr = CSID;
+  }
+
+  Error validate() const {
+    if (Cfg.arch_ver == ARCH_UNKNOWN)
+      return createStringError(
+          inconvertibleErrorCode(),
+          "OpenCSD: Unsupported processor architecture. Only Arm M-profile "
+          "(Cortex-M) with ETM support is currently supported.");
+    return Error::success();
+  }
+};
+
 class ETMDecoderImpl : public ETMDecoder {
   dcd_tree_handle_t DcdTree = 0;
   const object::Binary &Binary;
@@ -115,33 +157,14 @@ public:
                                "Failed to create OpenCSD decoder tree.");
 
     // Configure and initialize the instruction-level decoder.
-    ocsd_arch_version_t ArchVer = ARCH_UNKNOWN;
-    if (TargetTriple.isArmMClass()) {
-      if (ARM::parseArchVersion(TargetTriple.getArchName()) >= 8)
-        ArchVer = ARCH_V8;
-      else
-        ArchVer = ARCH_V7;
-    }
-    if (ArchVer == ARCH_UNKNOWN)
-      return createStringError(
-          inconvertibleErrorCode(),
-          "OpenCSD: Unsupported processor architecture. Only "
-          "microcontroller-class (Cortex-M) is currently supported.");
+    ETMTraceConfig Config(TargetTriple);
+    if (Error E = Config.validate())
+      return E;
 
-    ocsd_etmv4_cfg Config{};
-    // Initialize the decoder for microcontroller-class targets.
-    Config.arch_ver = ArchVer;
-    Config.core_prof = profile_CortexM;
-
-    // The CoreSight Trace ID (CSID) is a hardware-assigned 7-bit identifier
-    // used to route trace data. 0x10 is the most common default value for the
-    // ETM.
-    uint8_t CSID = 0x10;
-    Config.reg_traceidr = CSID;
     uint32_t Flags =
         OCSD_CREATE_FLG_FULL_DECODER | OCSD_OPFLG_CHK_RANGE_CONTINUE;
     if (ocsd_dt_create_decoder(DcdTree, OCSD_BUILTIN_DCD_ETMV4I, Flags,
-                               (void *)&Config, &CSID) != 0)
+                               (void *)&Config.Cfg, &Config.CSID) != 0)
       return createStringError(
           inconvertibleErrorCode(),
           "OpenCSD: Failed to initialize the instruction decoder.");
