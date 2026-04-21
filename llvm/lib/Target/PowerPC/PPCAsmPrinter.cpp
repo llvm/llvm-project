@@ -3041,6 +3041,15 @@ void PPCAIXAsmPrinter::emitGCOVRefs() {
 }
 
 void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
+  // If we are using out of line pointer glue we have to emit the
+  // linkage for it.
+  if (OutContext.hasXCOFFSection(
+          ".__ptrgl", XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER))) {
+    MCSymbol *PtrGlueSym = OutContext.getOrCreateSymbol(".__ptrgl[PR]");
+    OutStreamer->emitXCOFFSymbolLinkageWithVisibility(PtrGlueSym, MCSA_Extern,
+                                                      MCSA_Invalid);
+  }
+
   // If there are no functions and there are no toc-data definitions in this
   // module, we will never need to reference the TOC base.
   if (M.empty() && TOCDataGlobalVars.empty())
