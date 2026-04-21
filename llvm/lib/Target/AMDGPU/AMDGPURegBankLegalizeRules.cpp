@@ -1899,8 +1899,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{}, {{}, {IntrId, VgprP3}}});
 
   addRulesForIOpcs({amdgcn_ds_atomic_barrier_arrive_rtn_b64}, Standard)
-      // TODO: Remove the Uni rule below after marking as source of divergence.
-      .Uni(S64, {{UniInVgprS64}, {IntrId, VgprP3, Vgpr64}})
       .Div(S64, {{Vgpr64}, {IntrId, VgprP3, Vgpr64}});
 
   addRulesForIOpcs({amdgcn_ds_add_gs_reg_rtn, amdgcn_ds_sub_gs_reg_rtn},
