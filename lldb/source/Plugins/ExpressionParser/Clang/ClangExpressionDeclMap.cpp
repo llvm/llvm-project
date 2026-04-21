@@ -620,7 +620,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(ConstString name,
   assert(m_parser_vars.get());
 
   if (!m_parser_vars->m_exe_ctx.GetTargetPtr())
-    return false;
+    return LLDB_INVALID_ADDRESS;
 
   return GetSymbolAddress(m_parser_vars->m_exe_ctx.GetTargetRef(),
                           m_parser_vars->m_exe_ctx.GetProcessPtr(), name,
