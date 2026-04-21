@@ -200,7 +200,11 @@ public:
   // If pattern is given it will be used to filter the plugins that are
   // are returned. The pattern filters the plugin names using the
   // PluginManager::MatchPluginName() function.
-  static llvm::json::Object GetJSON(llvm::StringRef pattern = "");
+  static llvm::json::Object
+  GetJSON(llvm::StringRef pattern = "",
+          lldb::DebuggerSP requesting_debugger = nullptr,
+          lldb::PluginDomainKind domain =
+              lldb::PluginDomainKind::ePluginDomainKindGlobal);
 
   // Return true if the pattern matches the plugin name.
   //
@@ -810,6 +814,10 @@ public:
   SetInstrumentationRuntimePluginEnabled(llvm::StringRef name, bool enable,
                                          Debugger &requesting_debugger,
                                          lldb::PluginDomainKind domain);
+  static llvm::Expected<bool>
+  IsInstrumentationRuntimePluginEnabled(llvm::StringRef name,
+                                        lldb::TargetSP target,
+                                        lldb::PluginDomainKind domain);
 
   static llvm::SmallVector<RegisteredPluginInfo> GetJITLoaderPluginInfo();
   static bool SetJITLoaderPluginEnabled(llvm::StringRef name, bool enable);
