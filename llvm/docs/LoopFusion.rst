@@ -19,7 +19,7 @@ allocation.
 LLVM's implementation resides in
 ``llvm/lib/Transforms/Scalar/LoopFuse.cpp`` and is based on
 Christopher Barton's MSc thesis, *"Code Transformations to Augment the
-Scope of Loop Fusion in a Production Compiler"*. The pass operates one
+Scope of Loop Fusion in a Production Compiler"*. The pass operates on
 LLVM IR, leveraging several core analysis frameworks -- 
 Scalar Evolution (SCEV), Dependence Analysis
 (DA), and Dominator/Post-Dominator Trees -- to determine legality and
@@ -28,73 +28,13 @@ perform the CFG rewiring that fuses two loops into one.
 2. Prerequisite Concepts
 ========================
 
-Before describing the algorithm, we define the terms and LLVM IR
-concepts it relies on.
-
-2.1 Loop Canonical Form (Simplified Form)
-------------------------------------------
-
-A loop in LLVM is said to be in *simplified form*
-(``Loop::isLoopSimplifyForm()``) when it satisfies three structural
-properties:
-
-1. **Preheader**: A single basic block that is the sole predecessor
-   of the loop header from outside the loop. It serves as the "entry
-   gate" and is a convenient place to hoist loop-invariant
-   computations.
-2. **Dedicated exit blocks**: Every exit block (a block outside the
-   loop reached from inside) has all its predecessors inside the loop.
-3. **Single latch**: Exactly one back-edge targets the header. The
-   block that contains this back-edge is called the *latch*.
-
-2.2 Rotated Form
------------------
-
-A loop is in *rotated form* (``Loop::isRotatedForm()``) when the
-latch block is a conditional branch that decides whether to re-enter
-the header or exit the loop. In source-level terms, this corresponds
-to a do-while style loop. Loop rotation transforms a while-loop
-(guard-test-at-top) into a do-while (test-at-bottom), which is the
-form the loop fusion pass requires.
-
-2.3 Loop Guard
---------------
-
-Some loops are preceded by a *guard branch* -- a conditional branch
-that checks whether the loop should execute at all (e.g., when the
-trip count might be zero). The guard branch sits before the preheader
-and either jumps to the preheader (entering the loop) or to a
-*non-loop block* that bypasses the loop entirely. The pass must handle
-both guarded and unguarded loops.
-
-2.4 Dominator and Post-Dominator Trees
----------------------------------------
-
-The *dominator tree* (DT) encodes the dominance relation: basic block
-A *dominates* B if every path from the function entry to B must pass
-through A. The *post-dominator tree* (PDT) is the dual: A
-*post-dominates* B if every path from B to the function exit must pass
-through A.
-
-Two blocks are *control-flow equivalent* if each dominates and
-post-dominates the other. If loop L0 dominates loop L1 and L1
-post-dominates L0, then whenever one executes, the other is guaranteed
-to execute as well. This is a necessary condition for fusion.
-
-2.5 Scalar Evolution (SCEV)
-----------------------------
-
-SCEV is LLVM's framework for symbolically analyzing how scalar
-expressions evolve across loop iterations. It can express induction
-variables, trip counts, and pointer access functions as closed-form
-recurrences. The fusion pass uses SCEV to:
-
-- Compute and compare loop trip counts (backedge-taken counts).
-- Rewrite access functions from one loop into the iteration space of
-  another to compare memory addresses.
-
-2.6 Dependence Analysis (DA)
------------------------------
+The fusion pass relies on several standard LLVM loop concepts that
+are documented elsewhere: simplified loop form, rotated loop form,
+loop guard branches, dominator and post-dominator trees, Scalar
+Evolution (SCEV), and trip count with peeling. The analysis that
+drives the most involved legality check -- Dependence Analysis (DA)
+-- is summarized below, because later sections refer directly to its
+dependence kinds and direction vectors.
 
 DA determines the dependence relation between pairs of memory
 accesses. A dependence from instruction S1 to S2 is characterized by:
@@ -112,15 +52,6 @@ represents a *backward loop-carried dependence* (also called a
 negative-distance dependence). Such dependences are the critical
 hazard that loop fusion must respect.
 
-2.7 Trip Count and Peeling
----------------------------
-
-The *trip count* is the number of times the loop body executes. Two
-loops can only be fused if they iterate the same number of times. When
-trip counts differ by a small constant, the pass can *peel* iterations
-from the first loop -- extracting leading iterations into
-straight-line code before the loop -- to equalize the counts.
-
 
 3. High-Level Algorithm
 =======================
@@ -128,15 +59,15 @@ straight-line code before the loop -- to equalize the counts.
 The pass operates in a top-down, level-by-level fashion over the loop
 nest tree. At each nesting depth, it:
 
-1. **Collects fusion candidates**: Wraps each eligible loop in a
-   ``FusionCandidate`` structure, then groups candidates into lists of
+1. **Collects fusion candidates**: Identifies each eligible loop and
+   partitions the eligible loops into ordered chains of
    *control-flow equivalent, strictly adjacent* loops sorted in
    dominance order.
-2. **Attempts pairwise fusion**: Walks each candidate list linearly,
-   testing every consecutive pair ``(FC0, FC1)`` against the four
-   legality conditions. If all conditions hold, the pair is fused and
-   replaced by a single new candidate in the list, which is then
-   considered for further fusion with its neighbor.
+2. **Attempts pairwise fusion**: Walks each chain linearly, testing
+   every consecutive pair ``(FC0, FC1)`` against the four legality
+   conditions. If all conditions hold, the pair is fused and replaced
+   by the fused loop in the chain, which is then considered for
+   further fusion with its successor.
 3. **Descends to inner loops**: After processing all sibling groups at
    the current depth, the pass descends one level and repeats.
 
@@ -144,101 +75,45 @@ This strategy means outermost loops are fused first. Fusing inner
 loops is handled in subsequent iterations of the outer while-loop.
 
 
-4. Data Structures
-==================
-
-4.1 FusionCandidate
---------------------
-
-This is the central abstraction. It caches loop components that are
-queried repeatedly:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 25 75
-
-   * - Field
-     - Description
-   * - ``Preheader``
-     - The single entry block into the loop
-   * - ``Header``
-     - The loop header (target of the back-edge)
-   * - ``ExitingBlock``
-     - The block inside the loop that branches out
-   * - ``ExitBlock``
-     - The first block outside the loop after exit
-   * - ``Latch``
-     - The block containing the back-edge
-   * - ``GuardBranch``
-     - The conditional branch guarding the loop, if any
-   * - ``MemReads`` / ``MemWrites``
-     - All memory-accessing instructions in the loop
-   * - ``PP`` / ``AbleToPeel`` / ``Peeled``
-     - Peeling metadata from ``TargetTransformInfo``
-
-During construction, the candidate scans every block and every
-instruction. If it encounters a block whose address is taken, an
-instruction that may throw, or a volatile memory access, it marks
-itself invalid immediately. These are hard blockers: the pass cannot
-reason about exception-based control flow or volatile ordering.
-
-4.2 FusionCandidateList and FusionCandidateCollection
-------------------------------------------------------
-
-A ``FusionCandidateList`` is a ``std::list<FusionCandidate>``
-representing an ordered sequence of strictly adjacent, control-flow
-equivalent candidates. The list is used (rather than a vector) because
-fusion replaces two adjacent elements with one, and ``std::list``
-supports O(1) insertion and erasure without invalidating other
-iterators.
-
-A ``FusionCandidateCollection`` is a ``SmallVector`` of such lists --
-one list per group of mutually adjacent candidates at the current
-nesting level.
-
-4.3 LoopDepthTree
-------------------
-
-This structure organizes the function's loops by nesting depth. It
-starts with the outermost loops (depth 1) and supports a ``descend()``
-operation that replaces the current level with the children of all
-non-removed loops. It also tracks which loops have been removed due to
-fusion (via ``RemovedLoops``), preventing the pass from operating on
-stale loop objects.
-
-
-5. Phase 1: Candidate Collection
+4. Phase 1: Candidate Collection
 =================================
 
-The entry point is ``LoopFuser::fuseLoops()``. For each group of
-sibling loops (loops sharing a parent) at the current depth, it calls
-``collectFusionCandidates()``.
+For each group of sibling loops (loops sharing a parent) at the
+current depth, the pass gathers the loops that are eligible for
+fusion.
 
-5.1 Eligibility Check
+4.1 Eligibility Check
 ----------------------
 
-Each loop is first wrapped in a ``FusionCandidate``. The
-``isEligibleForFusion()`` method checks:
+Each loop is first scanned for disqualifying properties. A loop is
+rejected immediately if any of its blocks has its address taken, if
+any instruction in the loop may throw, or if the loop contains a
+volatile memory access. The pass cannot reason about exception-based
+control flow or volatile ordering, so these are hard blockers.
 
-1. **Structural validity**: Preheader, header, exiting block, exit
+Surviving loops must additionally satisfy four structural
+requirements:
+
+1. **Structural validity**: preheader, header, exiting block, exit
    block, and latch all exist. This implicitly requires simplified
    form.
 2. **Computable trip count**: SCEV must be able to compute a
    loop-invariant backedge-taken count. If not, the pass cannot
    compare trip counts.
-3. **Simplified form**: ``Loop::isLoopSimplifyForm()`` must hold.
-4. **Rotated form**: ``Loop::isRotatedForm()`` must hold. The exiting
-   block must be the latch.
+3. **Simplified form**: the loop must be in simplified form (single
+   preheader, dedicated exit blocks, single latch).
+4. **Rotated form**: the loop must be in rotated form (do-while
+   shape, with the exit test at the latch). The exiting block must
+   be the latch.
 
-If any check fails, the candidate is discarded and an optimization
-remark is emitted explaining why.
+If any check fails, the loop is discarded and an optimization remark
+is emitted explaining why.
 
-5.2 Grouping by Adjacency
+4.2 Grouping by Adjacency
 ---------------------------
 
-Eligible candidates are grouped into ``FusionCandidateList`` instances
-based on *strict adjacency*. Two candidates FC0 and FC1 are strictly
-adjacent if:
+Eligible loops are partitioned into ordered chains based on *strict
+adjacency*. Two loops FC0 and FC1 are strictly adjacent if:
 
 - **Unguarded loops**: FC0's exit block is exactly FC1's preheader
   (i.e., there is no intervening code between the two loops).
@@ -246,48 +121,46 @@ adjacent if:
   and FC0's exit block has a unique successor that is FC1's entry
   block.
 
-The algorithm appends each new candidate to the first existing list
-whose last element is strictly adjacent to it. If no such list exists,
-a new list is created. Because the input loops are already sorted in
-dominance order (they come from ``LoopInfo`` which provides them in
-program order), this single-pass grouping correctly partitions
-candidates into maximal chains of adjacent loops.
+The algorithm appends each new loop to the first existing chain whose
+last element is strictly adjacent to it. If no such chain exists, a
+new chain is started. Because the input loops are already supplied in
+dominance (program) order, this single-pass grouping correctly
+partitions eligible loops into maximal chains of adjacent loops.
 
 
-6. Phase 2: Pairwise Fusion Attempts
+5. Phase 2: Pairwise Fusion Attempts
 =====================================
 
-``fuseCandidates()`` iterates over each candidate list and attempts to
-fuse consecutive pairs ``(FC0, FC1)``. The following legality
-conditions are checked in order, with early exit on failure.
+The pass iterates over each chain and attempts to fuse consecutive
+pairs ``(FC0, FC1)``. The following legality conditions are checked
+in order, with early exit on failure.
 
-6.1 Condition 1: Identical Trip Counts (Conformance)
+5.1 Condition 1: Identical Trip Counts (Conformance)
 ------------------------------------------------------
 
-``haveIdenticalTripCounts()`` uses SCEV to retrieve the
-backedge-taken count of both loops. If the SCEV expressions are
-identical (pointer equality after canonicalization), the loops are
-conforming.
+The conformance check uses SCEV to retrieve the backedge-taken count
+of both loops. If the SCEV expressions are identical (pointer equality
+after canonicalization), the loops are conforming.
 
 If they differ but both are small constants, the pass computes the
 arithmetic difference. If the first loop has more iterations than the
-second, and the difference does not exceed ``FusionPeelMaxCount`` (a
-command-line parameter, default 0), the pass marks the pair as
-eligible for peeling. Peeling the first loop by the difference will
-equalize the trip counts.
+second, and the difference does not exceed the command-line limit
+``-loop-fusion-peel-max-count`` (default 0), the pass marks the pair
+as eligible for peeling. Peeling the first loop by the difference
+will equalize the trip counts.
 
 The current implementation does not support the case where the second
 loop has more iterations than the first.
 
-6.2 Condition 2: Compatible Guard Structure
+5.2 Condition 2: Compatible Guard Structure
 --------------------------------------------
 
 Both loops must be either both guarded or both unguarded. If one is
 guarded and the other is not, fusion is rejected. When both are
-guarded, ``haveIdenticalGuards()`` checks that:
+guarded, the guard-comparison check ensures that:
 
-1. The guard condition instructions are identical
-   (``Instruction::isIdenticalTo``).
+1. The guard condition instructions are structurally identical
+   (same opcode, same operands).
 2. The true/false successors have the same polarity relative to the
    loop (i.e., both guards branch to the preheader on the same
    condition outcome).
@@ -295,15 +168,14 @@ guarded, ``haveIdenticalGuards()`` checks that:
 Additionally, for guarded loops, the pass verifies that instructions
 in FC0's exit block can be safely moved before FC1's exit block, and
 that FC1's guard block instructions can be safely moved before FC0's
-guard block terminator. This uses ``isSafeToMoveBefore()`` from
-``CodeMoverUtils``.
+guard block terminator. These moves reuse LLVM's generic code-motion
+safety helpers.
 
-6.3 Condition 3: No Negative-Distance Dependencies
+5.3 Condition 3: No Negative-Distance Dependencies
 ----------------------------------------------------
 
-``dependencesAllowFusion()`` performs the most involved legality
-analysis. It checks all pairs of memory accesses where at least one is
-a write:
+The dependence check is the most involved legality analysis. It
+examines all pairs of memory accesses where at least one is a write:
 
 - (FC0 writes) x (FC1 writes) -- output dependences
 - (FC0 writes) x (FC1 reads) -- flow dependences
@@ -320,16 +192,15 @@ For each memory pair, the pass invokes one of three dependence
 analysis strategies (selectable via
 ``--loop-fusion-dependence-analysis``):
 
-**SCEV-based analysis** (``accessDiffIsPositive``):
+**SCEV-based analysis**:
 Rewrites the access function of FC0's instruction into FC1's loop
-iteration space using ``AddRecLoopReplacer`` (a
-``SCEVRewriteVisitor`` that substitutes the loop in
-``SCEVAddRecExpr`` nodes). Then uses ``SE.isKnownPredicate()`` to
-prove that FC0's address is always >= FC1's address. A non-negative
-difference means no backward dependence.
+iteration space by substituting FC0's loop with FC1's loop inside
+every add-recurrence subexpression. The pass then asks SCEV whether
+FC0's address is known to be greater than or equal to FC1's address.
+A non-negative difference means no backward dependence.
 
 **DA-based analysis**:
-Invokes ``DependenceInfo::depends()`` on the pair. If no dependence
+Queries LLVM's dependence analysis on the pair. If no dependence
 exists, fusion is safe. If a dependence exists, the pass examines its
 direction vector:
 
@@ -345,18 +216,17 @@ direction vector:
 3. Loop-invariant (scalar) non-anti dependences at the current level
    are also safe.
 
-**Combined analysis** (``FUSION_DEPENDENCE_ANALYSIS_ALL``):
+**Combined analysis**:
 Accepts the pair if either SCEV-based or DA-based analysis approves
 it.
 
-6.4 Condition 4: Empty or Movable Preheader
+5.4 Condition 4: Empty or Movable Preheader
 ---------------------------------------------
 
 FC1's preheader must be empty (containing only the terminator branch)
-or all its instructions must be safely movable.
-``collectMovablePreheaderInsts()`` classifies each preheader
-instruction as either hoistable (to FC0's preheader) or sinkable
-(into FC1's body after the fused loop):
+or all its instructions must be safely movable. The preheader-motion
+check classifies each preheader instruction as either hoistable (to
+FC0's preheader) or sinkable (into FC1's body after the fused loop):
 
 - **Hoisting**: An instruction can be hoisted if all its operands
   either dominate FC0's preheader target or have already been
@@ -372,43 +242,39 @@ instruction as either hoistable (to FC0's preheader) or sinkable
 If any instruction is neither hoistable nor sinkable, fusion is
 abandoned for this pair.
 
-6.5 Profitability
+5.5 Profitability
 ------------------
 
-``isBeneficialFusion()`` currently always returns ``true``. The
-comment notes this is intentional for testing coverage and will evolve
-to include cost-model heuristics (e.g., register pressure estimation,
-cache footprint analysis) in the future.
+The profitability check currently always reports that fusion is
+beneficial. This is intentional for testing coverage and is expected
+to evolve to include cost-model heuristics (e.g., register pressure
+estimation, cache footprint analysis) in the future.
 
 
-7. Phase 3: The Fusion Transformation
+6. Phase 3: The Fusion Transformation
 ======================================
 
 Once all legality checks pass, the transformation proceeds in two
 stages: an optional peeling step and the actual CFG rewiring.
 
-7.1 Loop Peeling (Optional)
+6.1 Loop Peeling (Optional)
 -----------------------------
 
-If the trip counts differ by a constant ``d``,
-``peelFusionCandidate()`` peels ``d`` iterations from FC0. This
-extracts the first ``d`` iterations as straight-line code before the
-loop, so the remaining loop has the same trip count as FC1. After
-peeling:
+If the trip counts differ by a constant ``d``, the pass peels ``d``
+iterations from FC0. This extracts the first ``d`` iterations as
+straight-line code before the loop, so the remaining loop has the
+same trip count as FC1. After peeling:
 
-1. The post-dominator tree is recalculated (peeling does not update
-   it).
-2. FC0's cached block pointers are refreshed via
-   ``updateAfterPeeling()``.
+1. The post-dominator tree is recalculated. 
+2. FC0's cached block pointers are refreshed.
 3. The peeled iteration blocks' branches are rewritten to remove edges
    to FC1's preheader, ensuring FC0's entry block still dominates
    FC1's entry block.
 
-7.2 CFG Rewiring (Non-Guarded Loops)
+6.2 CFG Rewiring (Non-Guarded Loops)
 --------------------------------------
 
-The ``performFusion()`` method for non-guarded loops performs these
-steps:
+For non-guarded loops, the CFG transformation performs these steps:
 
 1. **Merge preheaders**: Move all instructions from FC1's preheader
    into FC0's preheader (before the terminator).
@@ -440,17 +306,15 @@ steps:
      are now FC1's header).
 
 7. **Transfer loop blocks**: All basic blocks belonging to FC1 are
-   moved into FC0's ``Loop`` object. All child loops of FC1 are
-   re-parented under FC0.
+   moved into FC0. All child loops of FC1 are re-parented under FC0.
 
 8. **Merge latches**: Instructions from FC0's old latch are moved to
    FC1's latch (which is now the single latch of the fused loop). If
    FC0's latch has a unique successor, the blocks are merged.
 
-9. **Cleanup**: FC1's ``Loop`` object is erased from ``LoopInfo``.
-   SCEV caches for both loops are invalidated. The dominator and
-   post-dominator trees are updated via batched ``DomTreeUpdater``
-   operations.
+9. **Cleanup**: FC1 is erased from the function's loop information.
+   SCEV caches for both loops are invalidated, and the dominator and
+   post-dominator trees are updated in a single batched transaction.
 
 The resulting fused loop has:
 
@@ -460,11 +324,11 @@ The resulting fused loop has:
 - FC1's latch as its latch.
 - FC1's exit block as its exit block.
 
-7.3 CFG Rewiring (Guarded Loops)
+6.3 CFG Rewiring (Guarded Loops)
 ----------------------------------
 
-``fuseGuardedLoops()`` handles the additional complexity of guard
-branches and exit blocks:
+The guarded-loop fusion path handles the additional complexity of
+guard branches and exit blocks:
 
 1. FC0's guard is updated to use FC1's non-loop block as its bypass
    target, effectively making FC0's guard protect both loops.
@@ -474,18 +338,91 @@ branches and exit blocks:
 5. The latch rewiring and block transfer proceed identically to the
    non-guarded case.
 
-7.4 Post-Fusion Bookkeeping
+6.4 Post-Fusion Bookkeeping
 -----------------------------
 
-After fusion, the fused loop is wrapped in a new
-``FusionCandidate``. The two original candidates are removed from the
-candidate list, and the fused candidate is inserted in their place.
-The iteration variable ``NextIt`` is set to point at this new
-candidate, so the next iteration will attempt to fuse it with its
-successor in the list. This enables *cascading fusion*: if three
-adjacent loops A, B, C are all fusible, A+B is fused first, then
-(A+B)+C is attempted.
+After fusion, the fused loop replaces the original pair in the chain
+and becomes the new left operand for the next pairwise attempt. This
+enables *cascading fusion*: if three adjacent loops A, B, C are all
+fusible, A+B is fused first, then (A+B)+C is attempted.
 
-FC1's loop is recorded in ``LoopDepthTree::RemovedLoops`` to prevent
-it from being processed when the pass descends to inner nesting
-levels.
+FC1's loop is also recorded as removed so that it is skipped when the
+pass descends to inner nesting levels.
+
+
+7. Limitations
+===============
+
+The current implementation is purely opportunistic: it fuses only
+loop pairs that already satisfy the four legality conditions. It does
+not reshape the surrounding code to create new fusion opportunities,
+and several legality checks are intentionally conservative.
+
+7.1 Algorithmic Scope
+----------------------
+
+- **No loop reshaping to enable fusion.** The pass does not insert
+  guards, rotate loops, run loop-simplify, or otherwise modify loops
+  that miss a legality condition. Loops that are not already in
+  rotated, simplified form with a computable trip count are discarded
+  as ineligible.
+- **No profitability cost model.** The profitability check
+  unconditionally reports every legal pair as beneficial. Fusion
+  proceeds regardless of cache footprint, register pressure, or any
+  interaction with downstream vectorization.
+- **Cross-loop def-use chains are always rejected.** If any
+  instruction in FC1 uses a value produced inside FC0, the pair is
+  rejected outright. Patterns such as a reduction whose result is
+  consumed by the next loop are blocked even when the producing value
+  is loop-invariant and could legally be hoisted.
+
+7.2 Trip-Count Equalization
+----------------------------
+
+- **Peeling is disabled by default.** The maximum number of
+  iterations the pass may peel is controlled by the command-line
+  option ``-loop-fusion-peel-max-count``, which defaults to ``0``.
+  Peeling therefore never fires unless the user opts in explicitly.
+- **Peeling shrinks only the first loop.** If the second loop has
+  more iterations than the first, fusion is rejected. There is no
+  attempt to peel the second loop or extend the first.
+- **Peeling requires constant trip counts with a single exit.** Both
+  loops must have a small constant trip count for the peel distance
+  to be computed. Symbolic trip-count differences are not handled.
+
+
+7.4 Preheader and Block Handling
+---------------------------------
+
+- **Volatile or atomic preheader instructions block fusion.** Such
+  instructions cannot be moved, so a non-empty preheader that
+  contains them prevents fusion.
+- **Memory-reading preheader instructions are handled
+  conservatively.** The pass does try to move memory-reading
+  preheader instructions, but only when dependence checks prove
+  hoisting or sinking is safe. This conservative filtering can still
+  reject fusible-looking cases.
+- **FC1's preheader must reduce to a single terminator.** After
+  hoisting and sinking, the simple (non-guarded) fusion path requires
+  FC1's preheader to contain exactly one instruction -- its branch.
+  Any instruction that is neither hoistable nor sinkable prevents
+  fusion rather than being preserved by block merging.
+- **Blocks are rewired, not merged.** Preheaders, latches, and exit
+  blocks are reconnected to new successors during fusion, but never
+  merged with their neighbors. The fused Control-Flow Graph (CFG)
+  therefore retains more basic blocks than strictly necessary.
+
+7.5 Eligibility Blockers
+-------------------------
+
+A loop is rejected during candidate construction if any of the
+following properties holds:
+
+- A block in the loop has its address taken (for example, used as a
+  ``blockaddress`` operand).
+- Any instruction in the loop may throw.
+- The loop contains a volatile ``load`` or ``store``.
+
+These conditions are hard blockers, not soft preferences: the pass
+never attempts to work around them.
+
