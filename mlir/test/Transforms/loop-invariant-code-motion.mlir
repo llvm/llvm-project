@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s  -split-input-file -loop-invariant-code-motion | FileCheck %s
+// RUN: mlir-opt %s  -split-input-file -loop-invariant-code-motion | FileCheck %s --check-prefixes=CHECK,NOAA
+// RUN: mlir-opt %s  -split-input-file -loop-invariant-code-motion="use-aa=true" | FileCheck %s --check-prefixes=CHECK,USEAA
 
 func.func @nested_loops_both_having_invariant_code() {
   %m = memref.alloc() : memref<10xf32>
@@ -1581,4 +1582,111 @@ func.func @do_not_hoist_vector_transfer_ops_memref(
     scf.yield %out : vector<4x4xf32>
   }
   func.return %final : vector<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @do_not_hoist_load_ops_mayalias
+// CHECK: scf.for
+// CHECK: scf.for
+// CHECK: scf.for
+// CHECK: memref.load
+// CHECK: memref.load
+// CHECK: memref.load
+// CHECK: memref.store
+func.func @do_not_hoist_load_ops_mayalias(%A : memref<128x128xf32>,
+                                          %B : memref<128x128xf32>,
+                                          %C : memref<128x128xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  scf.for %i = %c0 to %c128 step %c1 {
+    scf.for %k = %c0 to %c128 step %c1 {
+      scf.for %j = %c0 to %c128 step %c1 {
+        %a_ik = memref.load %A[%i, %k] : memref<128x128xf32>
+        %b_kj = memref.load %B[%k, %j] : memref<128x128xf32>
+        %c_ij = memref.load %C[%i, %j] : memref<128x128xf32>
+        %prod = arith.mulf %a_ik, %b_kj : f32
+        %sum = arith.addf %c_ij, %prod : f32
+        memref.store %sum, %C[%i, %j] : memref<128x128xf32>
+      }
+    }
+  }
+  func.return
+}
+
+// -----
+
+// NOAA-LABEL: func @hoist_load_ops_noalias
+// NOAA: scf.for
+// NOAA: scf.for
+// NOAA: scf.for
+// NOAA: memref.load
+// NOAA: memref.load
+// NOAA: memref.load
+// NOAA: memref.store
+
+// USEAA-LABEL: func @hoist_load_ops_noalias
+// USEAA: scf.for
+// USEAA: scf.for
+// USEAA: memref.load
+// USEAA: scf.for
+// USEAA: memref.load
+// USEAA: memref.load
+// USEAA: memref.store
+func.func @hoist_load_ops_noalias(%A : memref<128x128xf32>,
+                                  %B : memref<128x128xf32>,
+                                  %C : memref<128x128xf32>) {
+  %AA, %CC = memref.distinct_objects %A, %C : memref<128x128xf32>, memref<128x128xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  scf.for %i = %c0 to %c128 step %c1 {
+    scf.for %k = %c0 to %c128 step %c1 {
+      scf.for %j = %c0 to %c128 step %c1 {
+        %a_ik = memref.load %AA[%i, %k] : memref<128x128xf32>
+        %b_kj = memref.load %B[%k, %j] : memref<128x128xf32>
+        %c_ij = memref.load %CC[%i, %j] : memref<128x128xf32>
+        %prod = arith.mulf %a_ik, %b_kj : f32
+        %sum = arith.addf %c_ij, %prod : f32
+        memref.store %sum, %CC[%i, %j] : memref<128x128xf32>
+      }
+    }
+  }
+  func.return
+}
+
+
+// -----
+
+// CHECK-LABEL: func @do_not_hoist_load_ops_unknown_tripcount
+// CHECK: scf.for
+// CHECK: scf.for
+// CHECK: scf.for
+// CHECK: memref.load
+// CHECK: memref.load
+// CHECK: memref.load
+// CHECK: memref.store
+func.func @do_not_hoist_load_ops_unknown_tripcount(%A : memref<?x?xf32>,
+                                                   %B : memref<?x?xf32>,
+                                                   %C : memref<?x?xf32>) {
+  %AA, %CC = memref.distinct_objects %A, %C : memref<?x?xf32>, memref<?x?xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %M = memref.dim %A, %c0 : memref<?x?xf32>
+  %K = memref.dim %A, %c1 : memref<?x?xf32>
+  %N = memref.dim %B, %c1 : memref<?x?xf32>
+  scf.for %i = %c0 to %M step %c1 {
+    scf.for %k = %c0 to %K step %c1 {
+      scf.for %j = %c0 to %N step %c1 {
+        %a_ik = memref.load %AA[%i, %k] : memref<?x?xf32>
+        %b_kj = memref.load %B[%k, %j] : memref<?x?xf32>
+        %c_ij = memref.load %CC[%i, %j] : memref<?x?xf32>
+        %prod = arith.mulf %a_ik, %b_kj : f32
+        %sum = arith.addf %c_ij, %prod : f32
+        memref.store %sum, %CC[%i, %j] : memref<?x?xf32>
+      }
+    }
+  }
+  func.return
 }
