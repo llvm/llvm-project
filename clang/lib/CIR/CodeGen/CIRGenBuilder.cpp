@@ -21,7 +21,8 @@ mlir::Value CIRGenBuilderTy::maybeBuildArrayDecay(mlir::Location loc,
   const auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
 
   if (arrayTy) {
-    const cir::PointerType flatPtrTy = getPointerTo(arrayTy.getElementType());
+    const cir::PointerType flatPtrTy =
+        getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());
     return cir::CastOp::create(*this, loc, flatPtrTy,
                                cir::CastKind::array_to_ptrdecay, arrayPtr);
   }

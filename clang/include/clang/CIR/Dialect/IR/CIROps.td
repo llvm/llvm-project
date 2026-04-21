@@ -3547,8 +3547,9 @@ def CIR_InsertMemberOp : CIR_Op<"insert_member", [
 def CIR_GetElementOp : CIR_Op<"get_element", [
   TypesMatchWith<
       "type of 'result' matches element type of 'base'", "base", "result",
-      "cir::PointerType::get(mlir::cast<cir::ArrayType>(mlir::cast<cir::"
-      "PointerType>($_self).getPointee()).getElementType())">
+      "cir::PointerType::get("
+      "mlir::cast<cir::ArrayType>(mlir::cast<cir::PointerType>($_self).getPointee()).getElementType(), "
+      "mlir::cast<cir::PointerType>($_self).getAddrSpace())">
 ]> {
   let summary = "Get the address of an array element";
 
@@ -3557,6 +3558,7 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
     from the `base` array.
 
     It expects a pointer to the `base` array and the `index` of the element.
+    The result pointer preserves the address space of the base pointer.
 
     Example:
     ```
@@ -3570,6 +3572,11 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
     // Get the address of the element at index %i.
     %i = ...
     %elem_i = cir.get_element %0[%i : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+
+    // With address space (e.g., GPU private memory):
+    %elem_gpu = cir.get_element %gpu_arr[%i : !s32i] :
+      !cir.ptr<!cir.array<!s32i x 10>, target_address_space(5)> ->
+      !cir.ptr<!s32i, target_address_space(5)>
 
     ```
   }];
