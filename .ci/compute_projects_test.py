@@ -455,7 +455,8 @@ class TestComputeProjects(unittest.TestCase):
             ["cross-project-tests/CMakeLists.txt"], "Linux"
         )
         self.assertEqual(
-            env_variables["projects_to_build"], "clang;cross-project-tests;lldb;llvm"
+            env_variables["projects_to_build"],
+            "clang;cross-project-tests;lld;lldb;llvm",
         )
         self.assertEqual(env_variables["project_check_targets"], "check-cross-project")
         self.assertEqual(env_variables["runtimes_to_build"], "")
