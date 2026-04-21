@@ -160,13 +160,13 @@ static Error extractBinary(const OffloadBinary *Binary, StringRef InputFile,
   }
 
   // Base case: extract the actual device image.
-  std::string Filename =
-      sys::path::stem(InputFile).str() + "-" + Binary->getTriple().str();
+  std::string Filename;
+  raw_string_ostream SS(Filename);
+  SS << sys::path::stem(InputFile) << "-" << Binary->getTriple();
   StringRef Arch = Binary->getArch();
   if (!Arch.empty())
-    Filename += "-" + Arch.str();
-  Filename += "." + std::to_string(Idx++) + "." +
-              getImageKindName(Binary->getImageKind()).str();
+    SS << "-" << Arch;
+  SS << "." << Idx++ << "." << getImageKindName(Binary->getImageKind());
 
   if (Error E = writeFile(Saver.save(Filename), ImageData))
     return E;
