@@ -123,6 +123,7 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -6037,10 +6038,29 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
+  case Intrinsic::coro_begin:
+  case Intrinsic::coro_begin_custom_abi:
+    Check(isa<AnyCoroIdInst>(Call.getArgOperand(0)),
+          "id argument of llvm.coro.begin must refer to coro.id");
+    break;
   case Intrinsic::coro_id: {
-    auto *InfoArg = Call.getArgOperand(3)->stripPointerCasts();
-    if (isa<ConstantPointerNull>(InfoArg))
+    Check(isa<ConstantInt>(Call.getArgOperand(0)),
+          "align argument only accepts constants");
+    auto *Promise = Call.getArgOperand(1);
+    Check(isa<ConstantPointerNull>(Promise) || isa<AllocaInst>(Promise),
+          "promise argument must refer to an alloca");
+
+    auto *CoroAddr = Call.getArgOperand(2)->stripPointerCasts();
+    bool BeforeCoroEarly = isa<ConstantPointerNull>(CoroAddr);
+    Check(BeforeCoroEarly || isa<Function>(CoroAddr),
+          "coro argument must refer to a function");
+
+    auto *InfoArg = Call.getArgOperand(3);
+    bool BeforeCoroSplit = isa<ConstantPointerNull>(InfoArg);
+    if (BeforeCoroSplit)
       break;
+
+    Check(!BeforeCoroEarly, "cannot run CoroSplit before CoroEarly");
     auto *GV = dyn_cast<GlobalVariable>(InfoArg);
     Check(GV && GV->isConstant() && GV->hasDefinitiveInitializer(),
           "info argument of llvm.coro.id must refer to an initialized "

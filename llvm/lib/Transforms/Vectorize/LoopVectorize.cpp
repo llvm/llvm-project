@@ -3787,6 +3787,12 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
 
+  // When there is a hint to always prefer scalable vectors, honour that hint.
+  if (Hints.isScalableVectorizationAlwaysPreferred())
+    if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable() &&
+        !B.Width.isScalar())
+      return true;
+
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
   unsigned EstimatedWidthB = B.Width.getKnownMinValue();
@@ -4119,7 +4125,7 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
           assert(RdxResult &&
                  "FindIV reduction must have ComputeReductionResult");
           return any_of(RdxResult->users(),
-                        [](VPUser *U) { return !isa<VPInstruction>(U); });
+                        std::not_fn(IsaPred<VPInstruction>));
         }
         return false;
       });
@@ -4142,21 +4148,6 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   // handling and are currently not supported for epilogue vectorization.
   if (hasUnsupportedHeaderPhiRecipe(MainPlan))
     return false;
-
-  // Phis with uses outside of the loop require special handling and are
-  // currently unsupported.
-  for (const auto &Entry : Legal->getInductionVars()) {
-    // Look for uses of the value of the induction at the last iteration.
-    Value *PostInc =
-        Entry.first->getIncomingValueForBlock(OrigLoop->getLoopLatch());
-    for (User *U : PostInc->users())
-      if (!OrigLoop->contains(cast<Instruction>(U)))
-        return false;
-    // Look for uses of penultimate value of the induction.
-    for (User *U : Entry.first->users())
-      if (!OrigLoop->contains(cast<Instruction>(U)))
-        return false;
-  }
 
   // Epilogue vectorization code has not been auditted to ensure it handles
   // non-latch exits properly.  It may be fine, but it needs auditted and
@@ -8633,8 +8624,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   // be dead.
   if (!EPI.VectorTripCount) {
     assert(EPResumeVal->getNumIncomingValues() > 0 &&
-           all_of(EPResumeVal->incoming_values(),
-                  [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
+           all_of(EPResumeVal->incoming_values(), match_fn(m_SpecificInt(0))) &&
            "all incoming values must be 0");
     EPI.VectorTripCount = EPResumeVal->getOperand(0);
   }
@@ -9030,8 +9020,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (LVL.hasUncountableEarlyExit()) {
     BasicBlock *LoopLatch = L->getLoopLatch();
     if (IAI.requiresScalarEpilogue() ||
-        any_of(LVL.getCountableExitingBlocks(),
-               [LoopLatch](BasicBlock *BB) { return BB != LoopLatch; })) {
+        any_of(LVL.getCountableExitingBlocks(), not_equal_to(LoopLatch))) {
       reportVectorizationFailure("Auto-vectorization of early exit loops "
                                  "requiring a scalar epilogue is unsupported",
                                  "UncountableEarlyExitUnsupported", ORE, L);

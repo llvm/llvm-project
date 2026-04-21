@@ -108,8 +108,8 @@ void clang::ssaf::findContributors(
 
 void clang::ssaf::findMatchesIn(
     const NamedDecl *Contributor,
-    llvm::function_ref<void(const DynTypedNode &)> MatchAction) {
-  ContributorFactFinder{MatchAction}.findMatches(Contributor);
+    llvm::function_ref<void(const DynTypedNode &)> MatchActionRef) {
+  ContributorFactFinder{MatchActionRef}.findMatches(Contributor);
 }
 
 llvm::Error clang::ssaf::makeEntityNameErr(clang::ASTContext &Ctx,
