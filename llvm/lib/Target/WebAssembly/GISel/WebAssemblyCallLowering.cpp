@@ -25,7 +25,10 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Value.h"
@@ -59,19 +62,17 @@ static unsigned extendOpFromFlags(ISD::ArgFlagsTy Flags) {
 }
 
 static LLT getLLTForWasmMVT(MVT Ty, const DataLayout &DL) {
-  if (Ty == MVT::externref) {
+  if (Ty == MVT::externref)
     return LLT::pointer(
         WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF,
         DL.getPointerSizeInBits(
             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF));
-  }
 
-  if (Ty == MVT::funcref) {
+  if (Ty == MVT::funcref)
     return LLT::pointer(
         WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF,
         DL.getPointerSizeInBits(
             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF));
-  }
 
   return llvm::getLLTForMVT(Ty);
 }
@@ -94,9 +95,6 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                           FunctionLoweringInfo &FLI,
                                           Register SwiftErrorVReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
-  const WebAssemblySubtarget &Subtarget =
-      MF.getSubtarget<WebAssemblySubtarget>();
-  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
@@ -173,15 +171,10 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
           // the incoming component of the larger value. These will later be
           // merged to form the final vreg.
           for (unsigned Part = 0; Part < NumParts; ++Part) {
-            Register NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
-
-            if (!RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI))
-              reportFatalInternalError(
-                  "Couldn't constrain brand-new register?");
-
-            MIB.addUse(NewOutReg);
-
-            Ret.Regs[Part] = NewOutReg;
+            Register NewReg = MRI.createVirtualRegister(&NewRegClass);
+            MRI.setType(NewReg, NewLLT);
+            MIB.addUse(NewReg);
+            Ret.Regs[Part] = NewReg;
           }
 
           buildCopyToRegs(MIRBuilder, Ret.Regs, Ret.OrigRegs[0], OrigLLT,
@@ -203,42 +196,101 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-static unsigned getWasmArgumentOpcode(MVT ArgType) {
-  switch (ArgType.SimpleTy) {
+static Register buildWasmArgument(unsigned Idx, MVT ArgVT, LLT ArgLLT,
+                                  MachineIRBuilder &MIRBuilder,
+                                  Register Def = Register()) {
+  unsigned Op;
+  const TargetRegisterClass *RegClass;
+
+  switch (ArgVT.SimpleTy) {
   case MVT::i32:
-    return WebAssembly::ARGUMENT_i32;
+    Op = WebAssembly::ARGUMENT_i32;
+    RegClass = &WebAssembly::I32RegClass;
+    break;
   case MVT::i64:
-    return WebAssembly::ARGUMENT_i64;
+    Op = WebAssembly::ARGUMENT_i64;
+    RegClass = &WebAssembly::I64RegClass;
+    break;
   case MVT::f32:
-    return WebAssembly::ARGUMENT_f32;
+    Op = WebAssembly::ARGUMENT_f32;
+    RegClass = &WebAssembly::F32RegClass;
+    break;
   case MVT::f64:
-    return WebAssembly::ARGUMENT_f64;
+    Op = WebAssembly::ARGUMENT_f64;
+    RegClass = &WebAssembly::F64RegClass;
+    break;
 
   case MVT::funcref:
-    return WebAssembly::ARGUMENT_funcref;
+    Op = WebAssembly::ARGUMENT_funcref;
+    RegClass = &WebAssembly::FUNCREFRegClass;
+    break;
   case MVT::externref:
-    return WebAssembly::ARGUMENT_externref;
+    Op = WebAssembly::ARGUMENT_externref;
+    RegClass = &WebAssembly::EXTERNREFRegClass;
+    break;
   case MVT::exnref:
-    return WebAssembly::ARGUMENT_exnref;
+    Op = WebAssembly::ARGUMENT_exnref;
+    RegClass = &WebAssembly::EXNREFRegClass;
+    break;
 
   case MVT::v16i8:
-    return WebAssembly::ARGUMENT_v16i8;
+    Op = WebAssembly::ARGUMENT_v16i8;
+    RegClass = &WebAssembly::V128RegClass;
+    break;
   case MVT::v8i16:
-    return WebAssembly::ARGUMENT_v8i16;
+    Op = WebAssembly::ARGUMENT_v8i16;
+    RegClass = &WebAssembly::V128RegClass;
+    break;
   case MVT::v4i32:
-    return WebAssembly::ARGUMENT_v4i32;
+    Op = WebAssembly::ARGUMENT_v4i32;
+    RegClass = &WebAssembly::V128RegClass;
+    break;
   case MVT::v2i64:
-    return WebAssembly::ARGUMENT_v2i64;
+    Op = WebAssembly::ARGUMENT_v2i64;
+    RegClass = &WebAssembly::V128RegClass;
+    break;
   case MVT::v8f16:
-    return WebAssembly::ARGUMENT_v8f16;
+    Op = WebAssembly::ARGUMENT_v8f16;
+    RegClass = &WebAssembly::V128RegClass;
+    break;
   case MVT::v4f32:
-    return WebAssembly::ARGUMENT_v4f32;
+    Op = WebAssembly::ARGUMENT_v4f32;
+    RegClass = &WebAssembly::V128RegClass;
+    break;
   case MVT::v2f64:
-    return WebAssembly::ARGUMENT_v2f64;
+    Op = WebAssembly::ARGUMENT_v2f64;
+    RegClass = &WebAssembly::V128RegClass;
+    break;
   default:
+    llvm_unreachable("Found unexpected type for Wasm argument");
     break;
   }
-  llvm_unreachable("Found unexpected type for Wasm argument");
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
+
+  Register NewReg;
+
+  if (Def.isValid()) {
+    NewReg = Def;
+
+    if (!RBI.constrainGenericRegister(Def, *RegClass, MRI)) {
+      NewReg = MRI.createVirtualRegister(RegClass);
+      MRI.setType(NewReg, ArgLLT);
+
+      MIRBuilder.buildCopy(NewReg, Def);
+    }
+  } else {
+    NewReg = MRI.createVirtualRegister(RegClass);
+    MRI.setType(NewReg, ArgLLT);
+  }
+
+  MIRBuilder.buildInstr(Op).addDef(NewReg).addImm(Idx);
+
+  return NewReg;
 }
 
 bool WebAssemblyCallLowering::lowerFormalArguments(
@@ -249,27 +301,20 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   WebAssemblyFunctionInfo *MFI = MF.getInfo<WebAssemblyFunctionInfo>();
   const DataLayout &DL = F.getDataLayout();
   const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
-  const WebAssemblySubtarget &Subtarget =
-      MF.getSubtarget<WebAssemblySubtarget>();
-  const WebAssemblyRegisterInfo &TRI = *Subtarget.getRegisterInfo();
-  const WebAssemblyInstrInfo &TII = *Subtarget.getInstrInfo();
-  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
 
   LLVMContext &Ctx = MIRBuilder.getContext();
   const CallingConv::ID CallConv = F.getCallingConv();
 
-  if (!callingConvSupported(CallConv)) {
+  if (!callingConvSupported(CallConv))
     return false;
-  }
 
   MF.getRegInfo().addLiveIn(WebAssembly::ARGUMENTS);
   MF.front().addLiveIn(WebAssembly::ARGUMENTS);
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
-  if (!FLI.CanLowerReturn) {
+  if (!FLI.CanLowerReturn)
     insertSRetIncomingArgument(F, SplitArgs, FLI.DemoteRegister, MRI, DL);
-  }
 
   unsigned ArgIdx = 0;
   bool HasSwiftErrorArg = false;
@@ -280,12 +325,11 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
     HasSwiftSelfArg |= Arg.hasSwiftSelfAttr();
     HasSwiftErrorArg |= Arg.hasSwiftErrorAttr();
-    if (Arg.hasInAllocaAttr()) {
+    if (Arg.hasInAllocaAttr())
       return false;
-    }
-    if (Arg.hasNestAttr()) {
+    if (Arg.hasNestAttr())
       return false;
-    }
+
     splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
     ++ArgIdx;
   }
@@ -329,25 +373,16 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
       // the incoming component of the larger value. These will later be
       // merged to form the final vreg.
       for (unsigned Part = 0; Part < NumParts; ++Part) {
-        Arg.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
+        Arg.Regs[Part] =
+            buildWasmArgument(FinalArgIdx++, NewVT, NewLLT, MIRBuilder);
+        MFI->addParam(NewVT);
       }
-    }
 
-    for (unsigned Part = 0; Part < NumParts; ++Part) {
-      MachineInstrBuilder ArgInst =
-          MIRBuilder.buildInstr(getWasmArgumentOpcode(NewVT))
-              .addDef(Arg.Regs[Part])
-              .addImm(FinalArgIdx);
-
-      constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *ArgInst,
-                               ArgInst->getDesc(), ArgInst->getOperand(0), 0);
-      MFI->addParam(NewVT);
-      ++FinalArgIdx;
-    }
-
-    if (OrigVT != NewVT) {
       buildCopyFromRegs(MIRBuilder, Arg.OrigRegs, Arg.Regs, OrigLLT, NewLLT,
                         Arg.Flags[0]);
+    } else {
+      buildWasmArgument(FinalArgIdx++, NewVT, NewLLT, MIRBuilder, Arg.Regs[0]);
+      MFI->addParam(NewVT);
     }
   }
 
@@ -358,12 +393,10 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   if (CallConv == CallingConv::Swift) {
     const MVT PtrVT = TLI.getPointerTy(DL);
 
-    if (!HasSwiftSelfArg) {
+    if (!HasSwiftSelfArg)
       MFI->addParam(PtrVT);
-    }
-    if (!HasSwiftErrorArg) {
+    if (!HasSwiftErrorArg)
       MFI->addParam(PtrVT);
-    }
   }
 
   // Varargs are copied into a buffer allocated by the caller, and a pointer to
@@ -371,17 +404,10 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   if (F.isVarArg()) {
     const MVT PtrVT = TLI.getPointerTy(DL, 0);
     const LLT PtrLLT = LLT::pointer(0, DL.getPointerSizeInBits(0));
-    Register VarargVreg = MF.getRegInfo().createGenericVirtualRegister(PtrLLT);
 
+    Register VarargVreg =
+        buildWasmArgument(FinalArgIdx++, PtrVT, PtrLLT, MIRBuilder);
     MFI->setVarargBufferVreg(VarargVreg);
-
-    MachineInstrBuilder ArgInst =
-        MIRBuilder.buildInstr(getWasmArgumentOpcode(PtrVT))
-            .addDef(VarargVreg)
-            .addImm(FinalArgIdx);
-
-    constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *ArgInst,
-                             ArgInst->getDesc(), ArgInst->getOperand(0), 0);
 
     MFI->addParam(PtrVT);
     ++FinalArgIdx;
@@ -410,9 +436,6 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   LLVMContext &Ctx = MIRBuilder.getContext();
   const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  const WebAssemblySubtarget &Subtarget =
-      MF.getSubtarget<WebAssemblySubtarget>();
-  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
   const Function &F = MF.getFunction();
 
   CallingConv::ID CallConv = Info.CallConv;
@@ -444,31 +467,24 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   } else if (Info.Callee.isSymbol()) {
     CallInst.addExternalSymbol(Info.Callee.getSymbolName());
   } else {
-    reportFatalInternalError(
-        "Trying to lower call with a callee other than reg, "
-        "global, or a symbol.");
+    return false;
   }
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
   for (const ArgInfo &Arg : Info.OrigArgs) {
-    if (Arg.Flags[0].isNest()) {
+    if (Arg.Flags[0].isNest())
       return false;
-    }
-    if (Arg.Flags[0].isInAlloca()) {
+    if (Arg.Flags[0].isInAlloca())
       return false;
-    }
-    if (Arg.Flags[0].isInConsecutiveRegs()) {
+    if (Arg.Flags[0].isInConsecutiveRegs())
       return false;
-    }
-    if (Arg.Flags[0].isInConsecutiveRegsLast()) {
+    if (Arg.Flags[0].isInConsecutiveRegsLast())
       return false;
-    }
 
     // TODO: bulk memory, then byval
-    if (Arg.Flags[0].isByVal() && Arg.Flags[0].getByValSize() != 0) {
+    if (Arg.Flags[0].isByVal() && Arg.Flags[0].getByValSize() != 0)
       return false;
-    }
 
     splitToValueTypes(Arg, SplitArgs, DL, CallConv);
   }
@@ -513,14 +529,10 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       // the incoming component of the larger value. These will later be
       // merged to form the final vreg.
       for (unsigned Part = 0; Part < NumParts; ++Part) {
-        Register NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
-
-        if (!RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI))
-          reportFatalInternalError("Couldn't constrain brand-new register?");
-
-        CallInst.addUse(NewOutReg);
-
-        Arg.Regs[Part] = NewOutReg;
+        Register NewReg = MRI.createVirtualRegister(&NewRegClass);
+        MRI.setType(NewReg, NewLLT);
+        CallInst.addUse(NewReg);
+        Arg.Regs[Part] = NewReg;
       }
 
       buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
@@ -614,24 +626,16 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         // the incoming component of the larger value. These will later be
         // merged to form the final vreg.
         for (unsigned Part = 0; Part < NumParts; ++Part) {
-          Ret.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
+          Register NewReg = MRI.createVirtualRegister(&NewRegClass);
+          MRI.setType(NewReg, NewLLT);
+          CallInst.addDef(NewReg);
+          Ret.Regs[Part] = NewReg;
         }
-      }
 
-      for (unsigned Part = 0; Part < NumParts; ++Part) {
-        Register NewRetReg = Ret.Regs[Part];
-        if (!RBI.constrainGenericRegister(NewRetReg, NewRegClass, MRI)) {
-          NewRetReg = MRI.createGenericVirtualRegister(NewLLT);
-          assert(RBI.constrainGenericRegister(NewRetReg, NewRegClass, MRI) &&
-                 "Couldn't constrain brand-new register?");
-          MIRBuilder.buildCopy(NewRetReg, Ret.Regs[Part]);
-        }
-        CallInst.addDef(Ret.Regs[Part]);
-      }
-
-      if (OrigVT != NewVT) {
         buildCopyFromRegs(MIRBuilder, Ret.OrigRegs, Ret.Regs, OrigLLT, NewLLT,
                           Ret.Flags[0]);
+      } else {
+        CallInst.addDef(Ret.Regs[0]);
       }
     }
   }
