@@ -1,7 +1,7 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_AMD_weak_linkage %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV-EXT
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_AMD_weak_linkage %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV-EXT
 ; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_AMD_weak_linkage %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-EXT: Capability Linkage
@@ -23,10 +23,6 @@ entry:
 
 define weak dso_local spir_func i32 @square(i32 %in) {
 entry:
-  %in.addr = alloca i32, align 4
-  store i32 %in, ptr %in.addr, align 4
-  %0 = load i32, ptr %in.addr, align 4
-  %1 = load i32, ptr %in.addr, align 4
-  %mul = mul nsw i32 %0, %1
+  %mul = mul nsw i32 %in, %in
   ret i32 %mul
 }
