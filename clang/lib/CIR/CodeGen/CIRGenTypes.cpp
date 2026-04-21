@@ -153,6 +153,12 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   if (cgt.isRecordLayoutComplete(key))
     return true;
 
+  // Check the cross-call cache. This avoids redundant recursive field walks
+  // for the same record types across different convertRecordDeclType calls
+  // during a single layout phase.
+  if (cgt.isCachedSafeToConvert(key))
+    return true;
+
   // If this type is currently being laid out, we can't recursively compile it.
   if (cgt.isRecordBeingLaidOut(key))
     return false;
@@ -176,6 +182,10 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   for (const FieldDecl *field : rd->fields())
     if (!isSafeToConvert(field->getType(), cgt, alreadyChecked))
       return false;
+
+  // Cache the positive result. This will be cleared when recordsBeingLaidOut
+  // changes.
+  cgt.cacheSafeToConvert(key);
 
   // If there are no problems, lets do it.
   return true;
@@ -247,6 +257,9 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   (void)insertResult;
   assert(insertResult && "isSafeToCovert() should have caught this.");
 
+  // Invalidate the safety cache since recordsBeingLaidOut changed.
+  safeToConvertCache.clear();
+
   // Force conversion of non-virtual base classes recursively.
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
     for (const auto &base : cxxRecordDecl->bases()) {
@@ -265,6 +278,9 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   bool eraseResult = recordsBeingLaidOut.erase(key);
   (void)eraseResult;
   assert(eraseResult && "record not in RecordsBeingLaidOut set?");
+
+  // Invalidate the safety cache since recordsBeingLaidOut changed.
+  safeToConvertCache.clear();
 
   // If we're done converting the outer-most record, then convert any deferred
   // records as well.
