@@ -42,6 +42,10 @@ void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
 }
 
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
+  // Do not let debug instructions affect liveness calculations.
+  if (MI.isDebugInstr())
+    return;
+
   // Remove defined registers and regmask kills from the set.
   for (const MachineOperand &MOP : MI.operands()) {
     if (MOP.isReg()) {
