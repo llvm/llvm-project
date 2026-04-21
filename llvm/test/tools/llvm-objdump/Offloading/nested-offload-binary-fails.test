@@ -15,3 +15,5 @@ Members:
     Content:        10ff10ad
 
 # CHECK: warning: '[[FILENAME]]': failed to extract nested OffloadBinary: Invalid data was encountered while parsing the file
+## Check no information about the nested image is printed
+# CHECK-NOT: OFFLOADING IMAGE [0.0]:
