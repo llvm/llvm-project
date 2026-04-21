@@ -463,21 +463,9 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     // Opcodes that support pretty much all combinations of reg banks and LLTs
     // (except S1). There is no point in writing rules for them.
     if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_MERGE_VALUES ||
-        Opc == AMDGPU::G_CONCAT_VECTORS || Opc == AMDGPU::G_BITCAST) {
+        Opc == AMDGPU::G_CONCAT_VECTORS) {
       RBLHelper.applyMappingTrivial(*MI);
       continue;
-    }
-
-    if ((Opc == AMDGPU::G_CONSTANT || Opc == AMDGPU::G_FCONSTANT ||
-         Opc == AMDGPU::G_IMPLICIT_DEF)) {
-      Register Dst = MI->getOperand(0).getReg();
-      // Non S1 types are trivially accepted.
-      if (MRI.getType(Dst) != LLT::scalar(1)) {
-        assert(MRI.getRegBank(Dst)->getID() == AMDGPU::SGPRRegBankID);
-        continue;
-      }
-
-      // S1 rules are in RegBankLegalizeRules.
     }
 
     if (!RBLHelper.findRuleAndApplyMapping(*MI))

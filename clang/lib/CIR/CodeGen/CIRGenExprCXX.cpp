@@ -20,6 +20,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/TrailingObjects.h"
 
 using namespace clang;
@@ -802,12 +803,12 @@ class CallDeleteDuringNew final
 
   PlacementArg<Traits> *getPlacementArgs() { return getTrailingObjects(); }
 
+public:
   void setPlacementArg(unsigned i, RValueTy argValue, QualType argType) {
     assert(i < numPlacementArgs && "index out of range");
     getPlacementArgs()[i] = {argValue, argType};
   }
 
-public:
   static size_t getExtraSize(size_t numPlacementArgs) {
     return TrailingObj::template additionalSizeToAlloc<PlacementArg<Traits>>(
         numPlacementArgs);
@@ -817,18 +818,11 @@ public:
                       const FunctionDecl *operatorDelete, ValueTy ptr,
                       ValueTy allocSize,
                       const ImplicitAllocationParameters &iap,
-                      CharUnits allocAlign, const CallArgList *newArgs,
-                      unsigned numNonPlacementArgs, CIRGenFunction *cgf,
-                      mlir::Location loc)
+                      CharUnits allocAlign)
       : numPlacementArgs(numPlacementArgs),
         passAlignmentToPlacementDelete(isAlignedAllocation(iap.PassAlignment)),
         operatorDelete(operatorDelete), ptr(ptr), allocSize(allocSize),
-        allocAlign(allocAlign) {
-    for (unsigned i = 0, n = numPlacementArgs; i != n; ++i) {
-      const CallArg &arg = (*newArgs)[i + numNonPlacementArgs];
-      setPlacementArg(i, arg.getRValue(*cgf, loc), arg.ty);
-    }
-  }
+        allocAlign(allocAlign) {}
 
   void emit(CIRGenFunction &cgf, Flags flags) override {
     const auto *fpt = operatorDelete->getType()->castAs<FunctionProtoType>();
@@ -905,17 +899,60 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
     typedef CallDeleteDuringNew<DirectCleanupTraits> DirectCleanup;
 
     assert(!cir::MissingFeatures::typeAwareAllocation());
-    cgf.ehStack.pushCleanupWithExtra<DirectCleanup>(
+    DirectCleanup *cleanup = cgf.ehStack.pushCleanupWithExtra<DirectCleanup>(
         EHCleanup, e->getNumPlacementArgs(), e->getOperatorDelete(),
         newPtr.getPointer(), allocSize, e->implicitAllocationParameters(),
-        allocAlign, &newArgs, numNonPlacementArgs, &cgf,
-        cgf.getLoc(e->getSourceRange()));
+        allocAlign);
+    for (auto i : llvm::seq<unsigned>(0, e->getNumPlacementArgs())) {
+      const CallArg &arg = newArgs[i + numNonPlacementArgs];
+      cleanup->setPlacementArg(
+          i, arg.getRValue(cgf, cgf.getLoc(e->getSourceRange())), arg.ty);
+    }
 
     return;
   }
 
-  cgf.cgm.errorNYI(e->getSourceRange(),
-                   "enterNewDeleteCleanup: conditional branch");
+  // Otherwise, we need to save all this stuff.
+  auto saveValue = [&](mlir::Value value) -> mlir::Value {
+    CharUnits align = CharUnits::fromQuantity(
+        cgf.cgm.getDataLayout().getABITypeAlign(value.getType()));
+    Address alloca = cgf.createTempAlloca(value.getType(), align,
+                                          value.getLoc(), "cond-cleanup.save");
+    cgf.getBuilder().createStore(value.getLoc(), value, alloca);
+    return alloca.emitRawPointer();
+  };
+
+  mlir::Value savedNewPtr = saveValue(newPtr.getPointer());
+  mlir::Value savedAllocSize = saveValue(allocSize);
+
+  struct ConditionalCleanupTraits {
+    typedef mlir::Value ValueTy;
+    typedef mlir::Value RValueTy;
+    static RValue get(CIRGenFunction &cgf, ValueTy v) {
+      auto alloca = v.getDefiningOp<cir::AllocaOp>();
+      return RValue::get(cgf.getBuilder().createAlignedLoad(
+          alloca.getLoc(), alloca.getAllocaType(), alloca,
+          llvm::MaybeAlign(alloca.getAlignment())));
+    }
+  };
+  typedef CallDeleteDuringNew<ConditionalCleanupTraits> ConditionalCleanup;
+
+  assert(!cir::MissingFeatures::typeAwareAllocation());
+  ConditionalCleanup *cleanup =
+      cgf.ehStack.pushCleanupWithExtra<ConditionalCleanup>(
+          EHCleanup, e->getNumPlacementArgs(), e->getOperatorDelete(),
+          savedNewPtr, savedAllocSize, e->implicitAllocationParameters(),
+          allocAlign);
+  for (auto i : llvm::seq<unsigned>(0, e->getNumPlacementArgs())) {
+    const CallArg &arg = newArgs[i + numNonPlacementArgs];
+    cleanup->setPlacementArg(
+        i,
+        saveValue(
+            arg.getRValue(cgf, cgf.getLoc(e->getSourceRange())).getValue()),
+        arg.ty);
+  }
+
+  cgf.initFullExprCleanup();
 }
 
 static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,

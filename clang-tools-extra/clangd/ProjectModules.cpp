@@ -1,4 +1,4 @@
-//===------------------ ProjectModules.h -------------------------*- C++-*-===//
+//===------------------ ProjectModules.cpp ---------  ------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,26 @@
 
 namespace clang::clangd {
 namespace {
+
+std::optional<tooling::CompileCommand>
+getCompileCommandForFile(const clang::tooling::CompilationDatabase &CDB,
+                         PathRef FilePath,
+                         const ProjectModules::CommandMangler &Mangler) {
+  auto Candidates = CDB.getCompileCommands(FilePath);
+  if (Candidates.empty())
+    return std::nullopt;
+
+  // Choose the first candidates as the compile commands as the file.
+  // Following the same logic with
+  // DirectoryBasedGlobalCompilationDatabase::getCompileCommand.
+  tooling::CompileCommand Cmd = std::move(Candidates.front());
+
+  if (Mangler)
+    Mangler(Cmd, FilePath);
+
+  return Cmd;
+}
+
 /// A scanner to query the dependency information for C++20 Modules.
 ///
 /// The scanner can scan a single file with `scan(PathRef)` member function
@@ -95,17 +115,9 @@ private:
 std::optional<ModuleDependencyScanner::ModuleDependencyInfo>
 ModuleDependencyScanner::scan(PathRef FilePath,
                               const ProjectModules::CommandMangler &Mangler) {
-  auto Candidates = CDB->getCompileCommands(FilePath);
-  if (Candidates.empty())
+  auto Cmd = getCompileCommandForFile(*CDB, FilePath, Mangler);
+  if (!Cmd)
     return std::nullopt;
-
-  // Choose the first candidates as the compile commands as the file.
-  // Following the same logic with
-  // DirectoryBasedGlobalCompilationDatabase::getCompileCommand.
-  tooling::CompileCommand Cmd = std::move(Candidates.front());
-
-  if (Mangler)
-    Mangler(Cmd, FilePath);
 
   using namespace clang::tooling;
 
@@ -118,13 +130,13 @@ ModuleDependencyScanner::scan(PathRef FilePath,
   TextDiagnosticPrinter DiagConsumer(OS, DiagOpts);
 
   std::optional<P1689Rule> ScanningResult =
-      ScanningTool.getP1689ModuleDependencyFile(Cmd, Cmd.Directory,
+      ScanningTool.getP1689ModuleDependencyFile(*Cmd, Cmd->Directory,
                                                 DiagConsumer);
 
   if (!ScanningResult) {
     elog("Scanning modules dependencies for {0} failed: {1}", FilePath, S);
     std::string Cmdline;
-    for (auto &Arg : Cmd.CommandLine)
+    for (auto &Arg : Cmd->CommandLine)
       Cmdline += Arg + " ";
     elog("The command line the scanning tool use is: {0}", Cmdline);
     return std::nullopt;
@@ -226,12 +238,19 @@ public:
     return *ScanningResult->ModuleName;
   }
 
+  // Determining Unique/Multiple needs a global scan; return Unknown for cost
+  // reasons. We will have other ProjectModules implementations can determine
+  // this more efficiently.
+  ModuleNameState getModuleNameState(llvm::StringRef /*ModuleName*/) override {
+    return ModuleNameState::Unknown;
+  }
+
 private:
   ModuleDependencyScanner Scanner;
   CommandMangler Mangler;
 };
 
-std::unique_ptr<ProjectModules> scanningProjectModules(
+std::unique_ptr<ProjectModules> getProjectModules(
     std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
     const ThreadsafeFS &TFS) {
   return std::make_unique<ScanningAllProjectModules>(CDB, TFS);
