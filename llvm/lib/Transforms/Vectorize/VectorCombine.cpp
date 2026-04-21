@@ -1443,10 +1443,22 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
 
   Scalar->setName(I.getName() + ".scalar");
 
-  // All IR flags are safe to back-propagate. There is no potential for extra
-  // poison to be created by the scalar instruction.
-  if (auto *ScalarInst = dyn_cast<Instruction>(Scalar))
-    ScalarInst->copyIRFlags(&I);
+  if (auto *ScalarInst = dyn_cast<Instruction>(Scalar)) {
+    bool IsFoldOp = false;
+    for (auto Op: ScalarOps) {
+      if (Op == Scalar) {
+        IsFoldOp = true;
+        break;
+      }
+    }
+
+    // If the scalar operand is not the result of folding the original vector
+    // operation, then it must be an original operand of the vector operation.
+    // In that case, we can safely copy IR flags from the original vector
+    // operation to the new scalar.
+    if (!IsFoldOp)
+      ScalarInst->copyIRFlags(&I);
+  }
 
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);
