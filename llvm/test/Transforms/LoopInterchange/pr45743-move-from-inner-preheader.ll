@@ -5,6 +5,18 @@
 
 ; We need to move %mul from the inner loop pre header to the outer loop header
 ; before interchanging.
+;
+; outer_red = 0;
+; for (i = 0; i < 40; i++) {
+;   mul = i * 9;
+;   inner_red = outer_red;
+;   for (j = 0; j < 400; j++) {
+;     global[j][mul] = 0;
+;     inner_red |= 20;
+;   }
+;   outer_red = inner_red;
+; }
+;
 define void @test1() local_unnamed_addr #0 {
 ; CHECK-LABEL: define void @test1() local_unnamed_addr {
 ; CHECK-NEXT:  [[BB:.*:]]
@@ -77,6 +89,19 @@ declare void @side_effect()
 
 ; Cannot interchange, as the inner loop preheader contains a call to a function
 ; with side effects.
+;
+; outer_red = 0;
+; for (i = 0; i < 40; i++) {
+;   mul = i * 9;
+;   side_effect();
+;   inner_red = outer_red;
+;   for (j = 0; j < 400; j++) {
+;     global[j][mul] = 0;
+;     inner_red |= 20;
+;   }
+;   outer_red = inner_red;
+; }
+;
 
 define void @test2() {
 ; CHECK-LABEL: define void @test2() {
