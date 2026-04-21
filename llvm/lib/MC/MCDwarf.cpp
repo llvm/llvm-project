@@ -1867,7 +1867,7 @@ namespace {
 struct CIEKey {
   CIEKey() = default;
 
-  CIEKey(const MCDwarfFrameInfo &Frame, bool IsEH)
+  explicit CIEKey(const MCDwarfFrameInfo &Frame, bool IsEH)
       : Personality(IsEH ? Frame.Personality : nullptr),
         PersonalityEncoding(IsEH ? Frame.PersonalityEncoding : 0),
         LsdaEncoding(IsEH ? Frame.LsdaEncoding : 0),
