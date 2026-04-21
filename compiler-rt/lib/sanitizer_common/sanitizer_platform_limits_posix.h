@@ -133,6 +133,9 @@ const unsigned struct_kernel_stat64_sz = 0;
 #    elif defined(__loongarch__)
 const unsigned struct_kernel_stat_sz = 128;
 const unsigned struct_kernel_stat64_sz = 0;
+#    elif defined(__alpha__)
+const unsigned struct_kernel_stat_sz = 80;
+const unsigned struct_kernel_stat64_sz = 136;
 #    endif
 struct __sanitizer_perf_event_attr {
   unsigned type;

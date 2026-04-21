@@ -308,7 +308,7 @@ namespace __sanitizer {
 #define SIZEOF_STRUCT_USTAT 32
 #    elif defined(__arm__) || defined(__i386__) || defined(__mips__) ||    \
         defined(__powerpc__) || defined(__s390__) || defined(__sparc__) || \
-        defined(__hexagon__)
+        defined(__hexagon__) || defined(__alpha__)
 #      define SIZEOF_STRUCT_USTAT 20
 #    elif defined(__loongarch__)
   // Not used. The minimum Glibc version available for LoongArch is 2.36
