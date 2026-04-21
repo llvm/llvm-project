@@ -5077,7 +5077,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                           CanBeOpaqueEnumDeclaration);
 
   // We use a temporary scope when parsing the name specifier for a
-  // declaration with additional invalid type specifiers
+  // declaration with additional invalid type specifiers.
   CXXScopeSpec InvalidDeclScope;
   CXXScopeSpec &SS =
       DS.hasTypeSpecifier() ? InvalidDeclScope : DS.getTypeSpecScope();
