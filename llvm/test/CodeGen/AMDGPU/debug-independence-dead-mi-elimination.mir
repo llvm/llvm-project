@@ -3,7 +3,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass dead-mi-elimination -o - %s -debugify-and-strip-all-safe | FileCheck %s
 
 # Ensure that references in debug instructions to register results in dead
-# instructions does not prevent DCE.
+# instructions do not prevent DCE.
 
 ---
 name:            func
