@@ -148,7 +148,7 @@ def ffixed_line_length_EQ : Joined<["-"], "ffixed-line-length=">, Group<f_Group>
 file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
 def ffree_line_length_EQ : Joined<["-"], "ffree-line-length=">, Group<f_Group>,
-  HelpText<"Use <value> as character line width in free mode">,
+  HelpText<"Use <value> as the maximum line width in free-form mode">,
   DocBrief<[{Set column after which characters are ignored in typical free-form lines in the source
 file}]>;
 def ffree_line_length_VALUE : Joined<["-"], "ffree-line-length-">, Group<f_Group>, Alias<ffree_line_length_EQ>;
