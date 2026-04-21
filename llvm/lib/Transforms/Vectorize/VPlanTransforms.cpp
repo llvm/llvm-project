@@ -6128,8 +6128,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
       // optimizeExtendsForPartialReduction.
       Op = CastSource;
     } else if (UpdateR->getOpcode() == Instruction::Add ||
-               UpdateR->getOpcode() == Instruction::FAdd ||
-               UpdateR->getOpcode() == Instruction::FSub) {
+               UpdateR->getOpcode() == Instruction::FAdd) {
       // Match: UpdateR(PrevValue, ext(...))
       // TODO: Remove the add/fadd restriction (we should be able to handle this
       // case for sub reductions too).
