@@ -269,7 +269,8 @@ public:
                        // operations; used by X86.
     Expand,            // Generic expansion in terms of other atomic operations.
     CustomExpand,      // Custom target-specific expansion using TLI hooks.
-    Elementwise,   // Expand an elementwise vector atomicrmw into per-lane scalar atomicrmw instructions.
+    Elementwise, // Expand an elementwise vector atomicrmw into per-lane scalar
+                 // atomicrmw instructions.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
