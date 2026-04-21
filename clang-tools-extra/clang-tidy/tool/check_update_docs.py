@@ -26,13 +26,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import Sequence
+from typing import Final, Sequence
 
 
-EXTRA_DIR = os.path.join(os.path.dirname(__file__), "../..")
-CLANG_TIDY_DIR = os.path.join(EXTRA_DIR, "clang-tidy")
-DOCS_DIR = os.path.join(EXTRA_DIR, "docs")
-LIST_DOC = os.path.join(DOCS_DIR, "clang-tidy", "checks", "list.rst")
+EXTRA_DIR: Final = os.path.join(os.path.dirname(__file__), "../..")
+CLANG_TIDY_DIR: Final = os.path.join(EXTRA_DIR, "clang-tidy")
+DOCS_DIR: Final = os.path.join(EXTRA_DIR, "docs")
+LIST_DOC: Final = os.path.join(DOCS_DIR, "clang-tidy", "checks", "list.rst")
 
 
 def read_text(path: str) -> str:
