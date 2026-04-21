@@ -29,7 +29,7 @@ class UnsafeBufferUsageEntitySummary final : public EntitySummary {
   friend llvm::iterator_range<EntityPointerLevelSet::const_iterator>
   getUnsafeBuffers(const UnsafeBufferUsageEntitySummary &);
 
-  UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
+  explicit UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
       : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
 
 public:

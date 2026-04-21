@@ -1472,9 +1472,10 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   if (NeedsFrameMoves)
     emitPrologueEntryCFI(MBB, MBBI, DL);
 
-  // Chain functions never return, so there's no need to save and restore the FP
-  // or BP.
-  bool SavesStackRegs = !FuncInfo->isChainFunction();
+  // Functions that never return don't need to save and restore the FP or BP.
+  const Function &F = MF.getFunction();
+  bool SavesStackRegs =
+      !F.hasFnAttribute(Attribute::NoReturn) && !FuncInfo->isChainFunction();
 
   if (TRI.hasStackRealignment(MF))
     HasFP = true;
@@ -1910,9 +1911,11 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
                                    /*IncludeScratchCopy=*/false);
   }
 
-  // Chain functions don't return to the caller, so they don't need to preserve
+  // Functions that don't return to the caller don't need to preserve
   // the FP and BP.
-  if (MFI->isChainFunction())
+  const Function &F = MF.getFunction();
+  if (F.hasFnAttribute(Attribute::NoReturn) ||
+      AMDGPU::isChainCC(F.getCallingConv()))
     return;
 
   // hasFP only knows about stack objects that already exist. We're now
