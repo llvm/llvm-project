@@ -31,7 +31,6 @@ STATISTIC(NumDeletes,          "Number of dead instructions deleted");
 namespace {
 class DeadMachineInstructionElimImpl {
   const MachineRegisterInfo *MRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
   LiveRegUnits LivePhysRegs;
 
 public:
@@ -80,13 +79,8 @@ bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
 
   const TargetSubtargetInfo &ST = MF.getSubtarget();
-  TII = ST.getInstrInfo();
   LivePhysRegs.init(*ST.getRegisterInfo());
-
-  bool AnyChanges = eliminateDeadMI(MF);
-  while (AnyChanges && eliminateDeadMI(MF))
-    ;
-  return AnyChanges;
+  return eliminateDeadMI(MF);
 }
 
 bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
