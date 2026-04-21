@@ -95,9 +95,6 @@ public:
 
   bool findRuleAndApplyMapping(MachineInstr &MI);
 
-  // Manual apply helpers.
-  void applyMappingTrivial(MachineInstr &MI);
-
 private:
   bool executeInWaterfallLoop(MachineIRBuilder &B, const WaterfallInfo &WFI);
 
