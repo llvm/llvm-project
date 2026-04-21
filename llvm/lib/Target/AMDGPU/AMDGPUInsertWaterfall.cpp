@@ -1,4 +1,4 @@
-//===- AMDGPUInsertWaterfall.cpp - insert waterfall loops at intrinsic markers -===//
+//===- AMDGPUInsertWaterfall.cpp - insert waterfall loops around markers -====//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Replace 3 intrinsics used to mark waterfall regions with actual waterfall
+/// Replace intrinsics used to mark waterfall regions with actual waterfall
 /// loops. This is done at MachineIR level rather than LLVM-IR due to the use of
 /// exec mask in this operation.
 ///
