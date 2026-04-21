@@ -23,7 +23,8 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 TEST_F(LlvmLibcExp10Bf16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x, LIBC_NAMESPACE::exp10bf16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
+                                   LIBC_NAMESPACE::exp10bf16(x), 0.5);
   }
 }
 
@@ -34,6 +35,7 @@ static constexpr uint16_t NEG_STOP = 0xff80U;
 TEST_F(LlvmLibcExp10Bf16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x, LIBC_NAMESPACE::exp10bf16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
+                                   LIBC_NAMESPACE::exp10bf16(x), 0.5);
   }
 }

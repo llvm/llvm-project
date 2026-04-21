@@ -36,4 +36,3 @@ TEST_F(LlvmLibcExp10Bf16Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(1.0), LIBC_NAMESPACE::exp10bf16(neg_zero));
   EXPECT_MATH_ERRNO(0);
 }
-
