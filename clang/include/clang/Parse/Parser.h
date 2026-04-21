@@ -164,6 +164,48 @@ enum class CXX11AttributeKind {
   InvalidAttributeSpecifier
 };
 
+/// [class.mem]p1: "... the class is regarded as complete within
+/// - function bodies
+/// - default arguments
+/// - exception-specifications (TODO: C++0x)
+/// - and brace-or-equal-initializers for non-static data members
+/// (including such things in nested classes)."
+/// LateParsedDeclarations build the tree of those elements so they can
+/// be parsed after parsing the top-level class.
+class LateParsedDeclaration {
+public:
+  virtual ~LateParsedDeclaration();
+
+  virtual void ParseLexedMethodDeclarations();
+  virtual void ParseLexedMemberInitializers();
+  virtual void ParseLexedMethodDefs();
+  virtual void ParseLexedAttributes();
+  virtual void ParseLexedPragmas();
+};
+
+/// Contains the lexed tokens of an attribute with arguments that
+/// may reference member variables and so need to be parsed at the
+/// end of the class declaration after parsing all other member
+/// member declarations.
+/// FIXME: Perhaps we should change the name of LateParsedDeclaration to
+/// LateParsedTokens.
+struct LateParsedAttribute : public LateParsedDeclaration {
+  Parser *Self;
+  CachedTokens Toks;
+  IdentifierInfo &AttrName;
+  IdentifierInfo *MacroII = nullptr;
+  SourceLocation AttrNameLoc;
+  SmallVector<Decl *, 2> Decls;
+
+  explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
+                               SourceLocation Loc)
+      : Self(P), AttrName(Name), AttrNameLoc(Loc) {}
+
+  void ParseLexedAttributes() override;
+
+  void addDecl(Decl *D) { Decls.push_back(D); }
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -955,7 +997,6 @@ private:
   void SkipFunctionBody();
 
   struct ParsedTemplateInfo;
-  class LateParsedAttrList;
 
   /// ParseFunctionDefinition - We parsed and verified that the specified
   /// Declarator is well formed.  If this is a K&R-style function, read the
@@ -1123,26 +1164,9 @@ private:
   ///@{
 
 private:
+  friend struct LateParsedAttribute;
+
   struct ParsingClass;
-
-  /// [class.mem]p1: "... the class is regarded as complete within
-  /// - function bodies
-  /// - default arguments
-  /// - exception-specifications (TODO: C++0x)
-  /// - and brace-or-equal-initializers for non-static data members
-  /// (including such things in nested classes)."
-  /// LateParsedDeclarations build the tree of those elements so they can
-  /// be parsed after parsing the top-level class.
-  class LateParsedDeclaration {
-  public:
-    virtual ~LateParsedDeclaration();
-
-    virtual void ParseLexedMethodDeclarations();
-    virtual void ParseLexedMemberInitializers();
-    virtual void ParseLexedMethodDefs();
-    virtual void ParseLexedAttributes();
-    virtual void ParseLexedPragmas();
-  };
 
   /// Inner node of the LateParsedDeclaration tree that parses
   /// all its members recursively.
@@ -1166,29 +1190,6 @@ private:
     ParsingClass *Class;
   };
 
-  /// Contains the lexed tokens of an attribute with arguments that
-  /// may reference member variables and so need to be parsed at the
-  /// end of the class declaration after parsing all other member
-  /// member declarations.
-  /// FIXME: Perhaps we should change the name of LateParsedDeclaration to
-  /// LateParsedTokens.
-  struct LateParsedAttribute : public LateParsedDeclaration {
-    Parser *Self;
-    CachedTokens Toks;
-    IdentifierInfo &AttrName;
-    IdentifierInfo *MacroII = nullptr;
-    SourceLocation AttrNameLoc;
-    SmallVector<Decl *, 2> Decls;
-
-    explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
-                                 SourceLocation Loc)
-        : Self(P), AttrName(Name), AttrNameLoc(Loc) {}
-
-    void ParseLexedAttributes() override;
-
-    void addDecl(Decl *D) { Decls.push_back(D); }
-  };
-
   /// Contains the lexed tokens of a pragma with arguments that
   /// may reference member variables and so need to be parsed at the
   /// end of the class declaration after parsing all other member
@@ -1207,26 +1208,6 @@ private:
     AccessSpecifier getAccessSpecifier() const { return AS; }
 
     void ParseLexedPragmas() override;
-  };
-
-  // A list of late-parsed attributes.  Used by ParseGNUAttributes.
-  class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
-  public:
-    LateParsedAttrList(bool PSoon = false,
-                       bool LateAttrParseExperimentalExtOnly = false)
-        : ParseSoon(PSoon),
-          LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly) {}
-
-    bool parseSoon() { return ParseSoon; }
-    /// returns true iff the attribute to be parsed should only be late parsed
-    /// if it is annotated with `LateAttrParseExperimentalExt`
-    bool lateAttrParseExperimentalExtOnly() {
-      return LateAttrParseExperimentalExtOnly;
-    }
-
-  private:
-    bool ParseSoon; // Are we planning to parse these shortly after creation?
-    bool LateAttrParseExperimentalExtOnly;
   };
 
   /// Contains the lexed tokens of a member function definition
