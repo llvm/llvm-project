@@ -258,13 +258,6 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
 
-  // If the operation is already trivially dead just add it to the erase list.
-  if (isOpTriviallyDead(op)) {
-    opsToErase.push_back(op);
-    ++numDCE;
-    return success();
-  }
-
   // Don't simplify operations with regions that have multiple blocks.
   // TODO: We need additional tests to verify that we handle such IR correctly.
   if (!llvm::all_of(op->getRegions(),
@@ -308,7 +301,16 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
-  for (auto &op : *bb) {
+  for (auto &op : llvm::make_early_inc_range(*bb)) {
+    // If the operation is already trivially dead just add it to the erase list.
+    // This also avoids calling `simplifyRegion` on dead region ops
+    // unnecessarily.
+    if (isOpTriviallyDead(&op)) {
+      opsToErase.push_back(&op);
+      ++numDCE;
+      continue;
+    }
+
     // Most operations don't have regions, so fast path that case.
     if (op.getNumRegions() != 0) {
       // If this operation is isolated above, we can't process nested regions
