@@ -82,6 +82,12 @@ static cl::opt<bool> NoDiscriminators(
     "no-discriminators", cl::init(false),
     cl::desc("Disable generation of discriminator information."));
 
+namespace llvm {
+cl::opt<bool> EnableNonUniqueDiscriminatorStart(
+    "enable-non-unique-discriminator-start", cl::init(false), cl::Hidden,
+    cl::desc("If a location is non-unique, start its discriminator from 1."));
+} // namespace llvm
+
 static bool shouldHaveDiscriminator(const Instruction *I) {
   return !isa<IntrinsicInst>(I) || isa<MemIntrinsic>(I);
 }
@@ -98,18 +104,18 @@ static bool shouldHaveDiscriminator(const Instruction *I) {
 ///
 ///     entry:
 ///       br i1 %cmp, label %if.then, label %if.end, !dbg !10
+///
 ///     if.then:
-///       %1 = load i32* %i.addr, align 4, !dbg !10
-///       store i32 %1, i32* %x, align 4, !dbg !10
+///       %0 = load i32* %i, align 4, !dbg !10
+///       store i32 %0, i32* %x, align 4, !dbg !10
 ///       br label %if.end, !dbg !10
+///
 ///     if.end:
-///       ret void, !dbg !12
+///       ...
 ///
-/// Notice how the branch instruction in block 'entry' and all the
-/// instructions in block 'if.then' have the exact same debug location
-/// information (!dbg !10).
-///
-/// To distinguish instructions in block 'entry' from instructions in
+/// All instructions in blocks 'entry' and 'if.then' have the same debug
+/// information !10. This is because they are all generated from the same line
+/// of code. To distinguish instructions in block 'entry' from instructions in
 /// block 'if.then', we generate a new lexical block for all the
 /// instruction in block 'if.then' that share the same file and line
 /// location with the last instruction of block 'entry'.
@@ -159,83 +165,163 @@ static bool addDiscriminators(Function &F) {
   LocationBBMap LBM;
   LocationDiscriminatorMap LDM;
 
-  // Traverse all instructions in the function. If the source line location
-  // of the instruction appears in other basic block, assign a new
-  // discriminator for this instruction.
-  for (BasicBlock &B : F) {
-    for (auto &I : B) {
-      // Not all intrinsic calls should have a discriminator.
-      // We want to avoid a non-deterministic assignment of discriminators at
-      // different debug levels. We still allow discriminators on memory
-      // intrinsic calls because those can be early expanded by SROA into
-      // pairs of loads and stores, and the expanded load/store instructions
-      // should have a valid discriminator.
-      if (!shouldHaveDiscriminator(&I))
-        continue;
-      const DILocation *DIL = I.getDebugLoc();
-      if (!DIL)
-        continue;
-      Location L = std::make_pair(DIL->getFilename(), DIL->getLine());
-      auto &BBMap = LBM[L];
-      auto R = BBMap.insert(&B);
-      if (BBMap.size() == 1)
-        continue;
-      // If we could insert more than one block with the same line+file, a
-      // discriminator is needed to distinguish both instructions.
-      // Only the lowest 7 bits are used to represent a discriminator to fit
-      // it in 1 byte ULEB128 representation.
-      unsigned Discriminator = R.second ? ++LDM[L] : LDM[L];
-      auto NewDIL = DIL->cloneWithBaseDiscriminator(Discriminator);
-      if (!NewDIL) {
-        LLVM_DEBUG(dbgs() << "Could not encode discriminator: "
-                          << DIL->getFilename() << ":" << DIL->getLine() << ":"
-                          << DIL->getColumn() << ":" << Discriminator << " "
-                          << I << "\n");
-      } else {
-        I.setDebugLoc(*NewDIL);
-        LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
-                   << DIL->getColumn() << ":" << Discriminator << " " << I
-                   << "\n");
+  if (EnableNonUniqueDiscriminatorStart) {
+    LocationSet LocationWithMultiBBs;
+
+    // First pass: identify locations that appear in multiple basic blocks.
+    for (BasicBlock &B : F) {
+      for (auto &I : B) {
+        if (!shouldHaveDiscriminator(&I))
+          continue;
+        const DILocation *DIL = I.getDebugLoc();
+        if (!DIL)
+          continue;
+        Location L = std::make_pair(DIL->getFilename(), DIL->getLine());
+        if (LBM[L].insert(&B).second && LBM[L].size() > 1)
+          LocationWithMultiBBs.insert(L);
       }
-      Changed = true;
+    }
+
+    LocationBBMap LBM_BB_Seen;
+
+    // Second pass: assign discriminators to instructions in non-unique locations.
+    for (BasicBlock &B : F) {
+      for (auto &I : B) {
+        if (!shouldHaveDiscriminator(&I))
+          continue;
+        const DILocation *DIL = I.getDebugLoc();
+        if (!DIL)
+          continue;
+        Location L = std::make_pair(DIL->getFilename(), DIL->getLine());
+        if (!LocationWithMultiBBs.count(L))
+          continue;
+
+        unsigned Discriminator = LBM_BB_Seen[L].insert(&B).second ? ++LDM[L] : LDM[L];
+        auto NewDIL = DIL->cloneWithBaseDiscriminator(Discriminator);
+        if (!NewDIL) {
+          LLVM_DEBUG(dbgs() << "Could not encode discriminator: "
+                            << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                            << DIL->getColumn() << ":" << Discriminator << " "
+                            << I << "\n");
+        } else {
+          I.setDebugLoc(*NewDIL);
+          LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                     << DIL->getColumn() << ":" << Discriminator << " " << I
+                     << "\n");
+        }
+        Changed = true;
+      }
+    }
+  } else {
+    // Traverse all instructions in the function. If the source line location
+    // of the instruction appears in other basic block, assign a new
+    // discriminator for this instruction.
+    for (BasicBlock &B : F) {
+      for (auto &I : B) {
+        if (!shouldHaveDiscriminator(&I))
+          continue;
+        const DILocation *DIL = I.getDebugLoc();
+        if (!DIL)
+          continue;
+        Location L = std::make_pair(DIL->getFilename(), DIL->getLine());
+        auto &BBMap = LBM[L];
+        auto R = BBMap.insert(&B);
+        if (BBMap.size() == 1)
+          continue;
+        unsigned Discriminator = R.second ? ++LDM[L] : LDM[L];
+        auto NewDIL = DIL->cloneWithBaseDiscriminator(Discriminator);
+        if (!NewDIL) {
+          LLVM_DEBUG(dbgs() << "Could not encode discriminator: "
+                            << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                            << DIL->getColumn() << ":" << Discriminator << " "
+                            << I << "\n");
+        } else {
+          I.setDebugLoc(*NewDIL);
+          LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                     << DIL->getColumn() << ":" << Discriminator << " " << I
+                     << "\n");
+        }
+        Changed = true;
+      }
     }
   }
 
-  // Traverse all instructions and assign new discriminators to call
-  // instructions with the same lineno that are in the same basic block.
-  // Sample base profile needs to distinguish different function calls within
-  // a same source line for correct profile annotation.
-  for (BasicBlock &B : F) {
-    LocationSet CallLocations;
-    for (auto &I : B) {
-      // We bypass intrinsic calls for the following two reasons:
-      //  1) We want to avoid a non-deterministic assignment of
-      //     discriminators.
-      //  2) We want to minimize the number of base discriminators used.
-      if (!isa<InvokeInst>(I) && (!isa<CallInst>(I) || isa<IntrinsicInst>(I)))  
-        continue;
+  // Handle call instructions
+  if (EnableNonUniqueDiscriminatorStart) {
+    LocationBBMap CallLocationsWithMultiCalls;
+    for (BasicBlock &B : F) {
+      LocationDiscriminatorMap CallLocationCounts;
+      for (auto &I : B) {
+        if (!isa<InvokeInst>(I) && (!isa<CallInst>(I) || isa<IntrinsicInst>(I)))
+          continue;
 
-      DILocation *CurrentDIL = I.getDebugLoc();
-      if (!CurrentDIL)
-        continue;
-      Location L =
-          std::make_pair(CurrentDIL->getFilename(), CurrentDIL->getLine());
-      if (!CallLocations.insert(L).second) {
+        DILocation *CurrentDIL = I.getDebugLoc();
+        if (!CurrentDIL)
+          continue;
+        Location L =
+            std::make_pair(CurrentDIL->getFilename(), CurrentDIL->getLine());
+        if (++CallLocationCounts[L] > 1)
+          CallLocationsWithMultiCalls[L].insert(&B);
+      }
+    }
+
+    for (BasicBlock &B : F) {
+      for (auto &I : B) {
+        if (!isa<InvokeInst>(I) && (!isa<CallInst>(I) || isa<IntrinsicInst>(I)))
+          continue;
+
+        DILocation *CurrentDIL = I.getDebugLoc();
+        if (!CurrentDIL)
+          continue;
+        Location L =
+            std::make_pair(CurrentDIL->getFilename(), CurrentDIL->getLine());
+        if (!CallLocationsWithMultiCalls[L].count(&B))
+          continue;
+
         unsigned Discriminator = ++LDM[L];
         auto NewDIL = CurrentDIL->cloneWithBaseDiscriminator(Discriminator);
         if (!NewDIL) {
           LLVM_DEBUG(dbgs()
-                     << "Could not encode discriminator: "
-                     << CurrentDIL->getFilename() << ":"
-                     << CurrentDIL->getLine() << ":" << CurrentDIL->getColumn()
-                     << ":" << Discriminator << " " << I << "\n");
+                       << "Could not encode discriminator: "
+                       << CurrentDIL->getFilename() << ":"
+                       << CurrentDIL->getLine() << ":" << CurrentDIL->getColumn()
+                       << ":" << Discriminator << " " << I << "\n");
         } else {
           I.setDebugLoc(*NewDIL);
           Changed = true;
         }
       }
     }
+  } else {
+    for (BasicBlock &B : F) {
+      LocationSet CallLocations;
+      for (auto &I : B) {
+        if (!isa<InvokeInst>(I) && (!isa<CallInst>(I) || isa<IntrinsicInst>(I)))
+          continue;
+
+        DILocation *CurrentDIL = I.getDebugLoc();
+        if (!CurrentDIL)
+          continue;
+        Location L =
+            std::make_pair(CurrentDIL->getFilename(), CurrentDIL->getLine());
+        if (!CallLocations.insert(L).second) {
+          unsigned Discriminator = ++LDM[L];
+          auto NewDIL = CurrentDIL->cloneWithBaseDiscriminator(Discriminator);
+          if (!NewDIL) {
+            LLVM_DEBUG(dbgs()
+                       << "Could not encode discriminator: "
+                       << CurrentDIL->getFilename() << ":"
+                       << CurrentDIL->getLine() << ":" << CurrentDIL->getColumn()
+                       << ":" << Discriminator << " " << I << "\n");
+          } else {
+            I.setDebugLoc(*NewDIL);
+            Changed = true;
+          }
+        }
+      }
+    }
   }
+
   return Changed;
 }
 

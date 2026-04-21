@@ -78,6 +78,13 @@ template <> struct IRTraits<BasicBlock> {
   }
   static pred_range getPredecessors(BasicBlock *BB) { return predecessors(BB); }
   static succ_range getSuccessors(BasicBlock *BB) { return successors(BB); }
+  static const Function &getFunctionFromInst(const Instruction &I) {
+    return *I.getFunction();
+  }
+  static const BasicBlock *getBasicBlockFromInst(const Instruction &I) {
+    return I.getParent();
+  }
+  static uint64_t getID(const BasicBlock *BB) { return BB->getNumber(); }
 };
 
 } // end namespace afdo_detail
@@ -166,6 +173,7 @@ public:
 
 
 extern cl::opt<bool> SampleProfileUseProfi;
+extern cl::opt<std::string> SampleProfileProfiDebugFunc;
 
 static inline bool skipProfileForFunction(const Function &F) {
   return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
@@ -239,6 +247,15 @@ protected:
   }
   SuccRangeT getSuccessors(BasicBlockT *BB) {
     return afdo_detail::IRTraits<BT>::getSuccessors(BB);
+  }
+  uint64_t getID(const BasicBlockT *BB) const {
+    return afdo_detail::IRTraits<BT>::getID(BB);
+  }
+  const Function &getFunctionFromInst(const InstructionT &Inst) const {
+    return afdo_detail::IRTraits<BT>::getFunctionFromInst(Inst);
+  }
+  const BasicBlockT *getBasicBlockFromInst(const InstructionT &Inst) const {
+    return afdo_detail::IRTraits<BT>::getBasicBlockFromInst(Inst);
   }
 
   unsigned getFunctionLoc(FunctionT &Func);
@@ -345,6 +362,9 @@ protected:
 
   /// Optimization Remark Emitter used to emit diagnostic remarks.
   OptRemarkEmitterT *ORE = nullptr;
+
+  /// Whether to print debug information for the current function.
+  bool ShouldPrint = false;
 };
 
 /// Clear all the per-function data used to load samples and propagate weights.
@@ -433,33 +453,59 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
 
   const DILocation *DIL = DLoc;
   uint32_t LineOffset = FunctionSamples::getOffset(DIL);
-  uint32_t Discriminator;
-  if (EnableFSDiscriminator)
-    Discriminator = DIL->getDiscriminator();
-  else
-    Discriminator = DIL->getBaseDiscriminator();
+  uint32_t FullDiscriminator =
+      EnableFSDiscriminator ? DIL->getDiscriminator() : DIL->getBaseDiscriminator();
 
-  ErrorOr<uint64_t> R = FS->findSamplesAt(LineOffset, Discriminator);
+  ErrorOr<uint64_t> R = std::error_code();
+  std::optional<unsigned> MatchingPass;
+  std::optional<uint32_t> ProfileDiscriminator;
+  for (int i = getNumFSPasses(); i >= 0; i--) {
+    uint32_t Mask = getN1Bits(getFSPassBitEnd(static_cast<FSDiscriminatorPass>(i)));
+    uint32_t MaskedDiscriminator = FullDiscriminator & Mask;
+    LineLocation IRLoc(LineOffset, MaskedDiscriminator);
+    auto it = FS->getBodySamples().find(FS->mapIRLocToProfileLoc(IRLoc));
+    if (it != FS->getBodySamples().end()) {
+      R = it->second.getSamples();
+      MatchingPass = i;
+      ProfileDiscriminator = it->first.Discriminator;
+      break;
+    }
+  }
+
+  if (ShouldPrint) {
+    dbgs() << "DEBUG: getInstWeightImpl: " << Inst;
+    dbgs() << "DEBUG:   LineOffset=" << LineOffset
+           << " FullDiscriminator=" << FullDiscriminator << " (0x"
+           << Twine::utohexstr(FullDiscriminator) << ")\n";
+    if (MatchingPass) {
+      dbgs() << "DEBUG:   findSamplesAt matched Pass " << *MatchingPass
+             << " with weight " << R.get();
+      if (ProfileDiscriminator)
+        dbgs() << " (Profile Discriminator=0x"
+               << Twine::utohexstr(*ProfileDiscriminator) << ")";
+      dbgs() << "\n";
+    } else {
+      dbgs() << "DEBUG:   findSamplesAt returned no samples for any pass.\n";
+    }
+  }
+
   if (R) {
     bool FirstMark =
-        CoverageTracker.markSamplesUsed(FS, LineOffset, Discriminator, R.get());
+        CoverageTracker.markSamplesUsed(FS, LineOffset, 0 /* Discriminator */, R.get());
     if (FirstMark) {
       ORE->emit([&]() {
         OptRemarkAnalysisT Remark(DEBUG_TYPE, "AppliedSamples", &Inst);
         Remark << "Applied " << ore::NV("NumSamples", *R);
         Remark << " samples from profile (offset: ";
         Remark << ore::NV("LineOffset", LineOffset);
-        if (Discriminator) {
+        if (MatchingPass) {
           Remark << ".";
-          Remark << ore::NV("Discriminator", Discriminator);
+          Remark << ore::NV("MatchingPass", *MatchingPass);
         }
         Remark << ")";
         return Remark;
       });
     }
-    LLVM_DEBUG(dbgs() << "    " << DLoc.getLine() << "." << Discriminator << ":"
-                      << Inst << " (line offset: " << LineOffset << "."
-                      << Discriminator << " - weight: " << R.get() << ")\n");
   }
   return R;
 }
@@ -529,6 +575,9 @@ ErrorOr<uint64_t>
 SampleProfileLoaderBaseImpl<BT>::getBlockWeight(const BasicBlockT *BB) {
   uint64_t Max = 0;
   bool HasWeight = false;
+  if (ShouldPrint) {
+    dbgs() << "getting block weight for BB: " << getID(BB) << "\n";
+  }
   for (auto &I : *BB) {
     const ErrorOr<uint64_t> &R = getInstWeight(I);
     if (R) {
@@ -945,7 +994,33 @@ void SampleProfileLoaderBaseImpl<BT>::propagateWeights(FunctionT &F) {
         SampleBlockWeights[&BI] = Weight.get();
     }
     // Fill in BlockWeights and EdgeWeights using an inference algorithm.
+    if (ShouldPrint) {
+      dbgs() << "\n--- Profi debug for " << getFunction(F).getName() << " ---\n";
+      dbgs() << "Weights BEFORE profi for " << getFunction(F).getName()
+             << ":\n";
+      for (auto &I : BlockWeights) {
+        dbgs() << "  Block " << getID(I.first) << " weight: " << I.second
+               << "\n";
+      }
+      for (auto &I : EdgeWeights) {
+        dbgs() << "  Edge " << getID(I.first.first) << "->"
+               << getID(I.first.second) << " weight: " << I.second << "\n";
+      }
+    }
+
     applyProfi(F, Successors, SampleBlockWeights, BlockWeights, EdgeWeights);
+
+    if (ShouldPrint) {
+      dbgs() << "Weights AFTER profi for " << getFunction(F).getName() << ":\n";
+      for (auto &I : BlockWeights) {
+        dbgs() << "  Block " << getID(I.first) << " weight: " << I.second
+               << "\n";
+      }
+      for (auto &I : EdgeWeights) {
+        dbgs() << "  Edge " << getID(I.first.first) << "->"
+               << getID(I.first.second) << " weight: " << I.second << "\n";
+      }
+    }
   } else {
     bool Changed = true;
     unsigned I = 0;
@@ -1044,6 +1119,8 @@ void SampleProfileLoaderBaseImpl<FT>::applyProfi(
 template <typename BT>
 bool SampleProfileLoaderBaseImpl<BT>::computeAndPropagateWeights(
     FunctionT &F, const DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
+  ShouldPrint = !SampleProfileProfiDebugFunc.empty() &&
+                getFunction(F).getName() == SampleProfileProfiDebugFunc;
   bool Changed = (InlinedGUIDs.size() != 0);
 
   // Compute basic block weights.

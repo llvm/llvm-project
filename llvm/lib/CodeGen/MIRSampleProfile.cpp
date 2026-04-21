@@ -139,6 +139,17 @@ template <> struct IRTraits<MachineBasicBlock> {
   static SuccRangeT getSuccessors(MachineBasicBlock *BB) {
     return BB->successors();
   }
+  static const Function &getFunctionFromInst(const MachineInstr &I) {
+    return I.getMF()->getFunction();
+  }
+  static const MachineBasicBlock *getBasicBlockFromInst(const MachineInstr &I) {
+    return I.getParent();
+  }
+  static uint64_t getID(const MachineBasicBlock *BB) {
+    if (auto BBID = BB->getBBID())
+      return BBID->BaseID;
+    return BB->getNumber();
+  }
 };
 } // namespace afdo_detail
 
@@ -193,6 +204,30 @@ protected:
       return getProbeWeight(MI);
     if (ImprovedFSDiscriminator && MI.isMetaInstruction())
       return std::error_code();
+
+    if (ShouldPrint) {
+      if (const DILocation *DIL = MI.getDebugLoc()) {
+        const FunctionSamples *FS = findFunctionSamples(MI);
+        uint32_t LineOffset = FunctionSamples::getOffset(DIL);
+        uint32_t Discriminator = DIL->getDiscriminator();
+        dbgs() << "DEBUG: MI: " << MI;
+        dbgs() << "DEBUG:   DIL: " << DIL->getLine() << ":" << DIL->getColumn()
+               << " LineOffset=" << LineOffset
+               << " Discriminator=" << Discriminator << "\n";
+        if (FS) {
+          dbgs() << "DEBUG:   In FS: " << FS->getFunction().stringRef() << "\n";
+          auto it = FS->getBodySamples().find(
+              LineLocation(LineOffset, Discriminator));
+          if (it != FS->getBodySamples().end()) {
+            dbgs() << "DEBUG:   Exact match in profile with weight "
+                   << it->second.getSamples() << "\n";
+          } else {
+            dbgs() << "DEBUG:   No exact match in profile.\n";
+          }
+        }
+      }
+    }
+
     return getInstWeightImpl(MI);
   }
 };
@@ -311,7 +346,6 @@ bool MIRProfileLoader::doInitialization(Module &M) {
 }
 
 bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
-  // Do not load non-FS profiles. A line or probe can get a zero-valued
   // discriminator at certain pass which could result in accidentally loading
   // the corresponding base counter in the non-FS profile, while a non-zero
   // discriminator would end up getting zero samples. This could in turn undo
@@ -319,6 +353,7 @@ bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
   // probe distribution factor work for pseudo probes.
   if (!Reader->profileIsFS())
     return false;
+
 
   Function &Func = MF.getFunction();
   clearFunctionData(false);
@@ -336,6 +371,10 @@ bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
 
   DenseSet<GlobalValue::GUID> InlinedGUIDs;
   bool Changed = computeAndPropagateWeights(MF, InlinedGUIDs);
+
+  if (ShouldPrint)
+    dbgs() << "MIRProfileLoader: runOnFunction " << MF.getFunction().getName()
+           << " (Pass " << static_cast<unsigned>(P) << ")\n";
 
   // Set the new BPI, BFI.
   setBranchProbs(MF);

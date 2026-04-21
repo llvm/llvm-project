@@ -42,6 +42,10 @@ cl::opt<bool> SampleProfileUseProfi(
     "sample-profile-use-profi", cl::Hidden,
     cl::desc("Use profi to infer block and edge counts."));
 
+cl::opt<std::string> SampleProfileProfiDebugFunc(
+    "sample-profile-profi-debug-func", cl::Hidden, cl::init(""),
+    cl::desc("Print profi debug information for the specified function."));
+
 namespace sampleprofutil {
 
 /// Return true if the given callsite is hot wrt to hot cutoff threshold.
