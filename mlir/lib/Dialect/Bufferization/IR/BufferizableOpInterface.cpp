@@ -161,6 +161,8 @@ Operation *bufferization::getOwnerOfValue(Value value) {
   return llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
 }
 
+// TODO: Properly support with options, for now it is hardcoded to builtin
+// Tensor/MemRef types based approach
 /// Create an AllocTensorOp for the given shaped value. If `copy` is set, the
 /// shaped value is copied. Otherwise, a tensor with undefined contents is
 /// allocated.
@@ -229,6 +231,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   return allocTensorOp.getResult();
 }
 
+// TODO: Properly support with options, for now it is hardcoded to builtin
+// Tensor/MemRef types based approach
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
     RewriterBase &rewriter, const AnalysisState &analysisState,
     const BufferizationState &bufferizationState) {
@@ -508,7 +512,8 @@ bool AnalysisState::bufferizesToMemoryWrite(Value value) const {
 /// read. Also takes into account ops that create an alias but do not read by
 /// themselves (e.g., ExtractSliceOp).
 bool AnalysisState::isValueRead(Value value) const {
-  assert(llvm::isa<TensorType>(value.getType()) && "expected TensorType");
+  assert(llvm::isa<TensorLikeType>(value.getType()) &&
+         "expected TensorLikeType");
   SmallVector<OpOperand *> workingSet;
   DenseSet<OpOperand *> visited;
   for (OpOperand &use : value.getUses())
@@ -948,7 +953,7 @@ AliasingOpOperandList bufferization::detail::defaultGetAliasingOpOperands(
   Operation *op = getOwnerOfValue(value);
   SmallVector<AliasingOpOperand> result;
   for (OpOperand &opOperand : op->getOpOperands()) {
-    if (!llvm::isa<TensorType>(opOperand.get().getType()))
+    if (!llvm::isa<TensorLikeType>(opOperand.get().getType()))
       continue;
     AliasingValueList aliasingValues = state.getAliasingValues(opOperand);
     for (const auto &it : aliasingValues)
@@ -1027,7 +1032,7 @@ bufferization::detail::unknownGetAliasingOpOperands(Value value) {
   // with every OpOperand.
   AliasingOpOperandList r;
   for (OpOperand &operand : value.getDefiningOp()->getOpOperands())
-    if (isa<TensorType>(operand.get().getType()))
+    if (isa<TensorLikeType>(operand.get().getType()))
       r.addAlias({&operand, BufferRelation::Unknown, /*isDefinite=*/false});
   return r;
 }
@@ -1040,12 +1045,12 @@ bufferization::detail::unknownGetAliasingValues(OpOperand &opOperand) {
   // with every OpOperand.
   AliasingValueList r;
   for (OpResult result : opOperand.getOwner()->getOpResults())
-    if (llvm::isa<TensorType>(result.getType()))
+    if (llvm::isa<TensorLikeType>(result.getType()))
       r.addAlias({result, BufferRelation::Unknown, /*isDefinite=*/false});
   for (Region &region : opOperand.getOwner()->getRegions())
     if (!region.getBlocks().empty())
       for (BlockArgument bbArg : region.getBlocks().front().getArguments())
-        if (isa<TensorType>(bbArg.getType()))
+        if (isa<TensorLikeType>(bbArg.getType()))
           r.addAlias({bbArg, BufferRelation::Unknown, /*isDefinite=*/false});
   return r;
 }
