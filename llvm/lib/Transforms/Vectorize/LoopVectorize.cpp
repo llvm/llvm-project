@@ -7287,10 +7287,13 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
     Ptr = VectorPtr;
   }
 
+  if (Reverse && Mask)
+    Mask = Builder.createNaryOp(VPInstruction::Reverse, Mask, I->getDebugLoc());
+
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    auto *LoadR = new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                        *VPI, Load->getDebugLoc());
+    auto *LoadR = new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, *VPI,
+                                        Load->getDebugLoc());
     if (Reverse) {
       Builder.insert(LoadR);
       return new VPInstruction(VPInstruction::Reverse, LoadR, {}, {},
@@ -7304,8 +7307,8 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (Reverse)
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
-  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
-                                Reverse, *VPI, Store->getDebugLoc());
+  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive, *VPI,
+                                Store->getDebugLoc());
 }
 
 VPWidenIntOrFpInductionRecipe *
