@@ -74,7 +74,7 @@
 #endif
 
 #ifndef RVV_VECTOR_TYPE_OFP8
-#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)                \
+#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
   RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, 8, 1, false)
 #endif
 
