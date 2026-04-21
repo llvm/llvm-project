@@ -1353,10 +1353,11 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
   AccPhi->addIncoming(Acc, EntryBB);
 
   Value *Elt = Builder.CreateExtractElement(Vec, IV);
-  Value *Res = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode,
-                                   AccPhi, Elt, "rdx.op");
+  Value *Res = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, AccPhi,
+                                   Elt, "rdx.op");
 
-  Value *NextIV = Builder.CreateNUWAdd(IV, ConstantInt::get(IdxTy, 1), "rdx.next");
+  Value *NextIV =
+      Builder.CreateNUWAdd(IV, ConstantInt::get(IdxTy, 1), "rdx.next");
   IV->addIncoming(NextIV, LoopBB);
   AccPhi->addIncoming(Res, LoopBB);
 
