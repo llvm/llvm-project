@@ -919,7 +919,7 @@ static bool canEmitSpuriousReferenceToVariable(CIRGenFunction &cgf,
   // We can emit a spurious reference only if the linkage implies that we'll
   // be emitting a non-interposable symbol that will be retained until link
   // time.
-  switch (cgf.cgm.getCIRLinkageVarDefinition(vd, /*IsConstant=*/false)) {
+  switch (cgf.cgm.getCIRLinkageVarDefinition(vd)) {
   case cir::GlobalLinkageKind::ExternalLinkage:
   case cir::GlobalLinkageKind::LinkOnceODRLinkage:
   case cir::GlobalLinkageKind::WeakODRLinkage:
