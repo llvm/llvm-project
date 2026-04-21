@@ -26,6 +26,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -82,41 +83,12 @@ xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
   return out;
 }
 
-// Prerequisite for Layout Recovery
-// It relies on the following invariant:
-// 1. there is no layout conflict between different uses of the same definition.
-// 2. each definition has a well-defined layout requirement at its use point.
-//     - Every definition must have at least one use that appears after it in
-//     topological order.
-//     - If a definition has no such use (e.g., a loop result or region output),
-//     an explicit convert_layout operation is inserted to create a use.
-//     - Only the result of convert_layout is permitted to have no subsequent
-//     use.
-
-// The recovery proceeds by scanning the operation in reverse topological order
-// as follows:
-//    For regular operations: First the result layouts are propagated from uses.
-//      Then the result layouts are propagated to operands.
-//
-//    For region operations (e.g., loops):
-//       - When backward propagation reaches a region op, it sets the layout of
-//       the region op’s results according to use points like regular ops.
-//       - Then, the result layouts (such as a loop output) are propagated to
-//       their corresponding operands in the yield.
-//       - When backward propagation reaches the first operation inside the
-//       region, the pass examines the region op’s initialization list,
-//       propagating from region arguments to the corresponding initialization
-//       operands.
-//       - This ensures that layouts are consistently propagated
-//       across region boundaries while preserving a single well-defined use for
-//       each definition at the region-op level.
-
-// the inner function for recoverTemporaryLayouts is a recursive function
+// the walkRegionBackward() is a recursive function
 // the input rootOp is the function operation, which is also a region op.
-// it recursivley process the region op in reverse topological order.
-
+// it recursively processes the region op in reverse topological order.
 static void walkRegionBackward(Region &region,
                                llvm::function_ref<void(Operation *)> visit) {
+
   // blocks: back -> front
   for (Block &block : llvm::reverse(region)) {
     // ops: back -> front, early-inc so visit() may erase current op safely
@@ -129,6 +101,42 @@ static void walkRegionBackward(Region &region,
       visit(&op);
     }
   }
+  // // Process blocks in post-order (reverse topological order: dominated
+  // before dominators)
+  // // For single-block regions, this is just that block
+  // // For control flow, this ensures dominated blocks are processed before
+  // dominators
+
+  // // Step 1: Get reverse post-order traversal
+  // llvm::ReversePostOrderTraversal<Region *> rpot(&region);
+  // // Step 2: Collect into vector
+  // llvm::SmallVector<Block *> blocks(rpot.begin(), rpot.end());
+  // // Step 3: Reverse it to get post-order (reverse topological order)
+  // for (Block *block : llvm::reverse(blocks)) {
+  //   // ops: back -> front, with early-inc so visit() may erase current op
+  //   safely
+  //   // We need to collect operations first because nested region walks might
+  //   modify the block llvm::SmallVector<Operation *> ops; for (Operation &op :
+  //   llvm::reverse(*block))
+  //     ops.push_back(&op);
+
+  //   for (Operation *op : ops) {
+  //     // Check if op is still alive (might have been erased by nested walk)
+  //     if (!op->isRegistered())
+  //       continue;
+
+  //     // make sure we first visit inside the region op (so yield op first)
+  //     // and then move to region op itself
+  //     // Note: Region iteration order doesn't affect correctness since each
+  //     // region is processed in reverse topological order independently
+  //     for (Region &nested : op->getRegions())
+  //       walkRegionBackward(nested, visit);
+
+  //     // Check again if op is still alive before visiting
+  //     if (op->isRegistered())
+  //       visit(op);  // Can safely erase op now
+  //   }
+  // }
 }
 
 static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
@@ -137,6 +145,7 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
     if (auto tmpLayout = xegpu::getDistributeLayoutAttr(use)) {
       if (!layout)
         layout = tmpLayout;
+      break;
     }
   }
   return layout;
@@ -145,7 +154,7 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
 // For regular operations: First the result layouts are propagated from uses.
 // Then the result layouts are propagated to uses (operands).
 static void propagateResultsToRegularOperands(Operation *op) {
-  if (op->getNumResults() == 0)
+  if (op->getNumResults() == 0 || op->getNumResults() > 1)
     return;
 
   OpResult result = op->getResult(0);
@@ -157,9 +166,6 @@ static void propagateResultsToRegularOperands(Operation *op) {
   // For vector type, we attach the layout as an attribute to op.
   if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
     auto layout = tensorDescTy.getLayoutAttr();
-    // TODO: remove the layout check. The tensorDescType's layout is treated as
-    // temporary layout, which needs to be set by layout recovery.
-    // allow it now to pass some legacy test case
     if (!layout) {
       auto typeWithLayout = xegpu::TensorDescType::get(
           tensorDescTy.getContext(), tensorDescTy.getShape(),
@@ -167,25 +173,21 @@ static void propagateResultsToRegularOperands(Operation *op) {
       result.setType(typeWithLayout);
     }
   }
-
-  xegpu::setTemporaryLayout(result, resLayout);
+  if (isa<VectorType>(resultType) && resLayout)
+    xegpu::setTemporaryLayout(result, resLayout);
 
   for (OpOperand &opr : op->getOpOperands()) {
-    // Layouts are needed for vector type only.
     xegpu::DistributeLayoutAttr operandLayout =
         xegpu::inferSourceLayoutFromResult(opr, resLayout);
-    if (!isa<VectorType>(opr.get().getType()))
-      continue;
-
-    xegpu::setTemporaryLayout(opr, operandLayout);
+    if (isa<VectorType>(opr.get().getType()) && operandLayout)
+      xegpu::setTemporaryLayout(opr, operandLayout);
   }
 }
 
+// propagate layout from region results to yield operands. This set the
+// temproary layout for reguion results and yield operands.
 static void propagateRegionResultsToYieldOperands(
     mlir::RegionBranchTerminatorOpInterface yieldOp) {
-  if (isa<func::FuncOp>(yieldOp->getParentOp()))
-    return;
-
   auto regionBranchOp =
       dyn_cast<RegionBranchOpInterface>(yieldOp->getParentOp());
   if (!regionBranchOp)
@@ -205,10 +207,22 @@ static void propagateRegionResultsToYieldOperands(
       xegpu::setTemporaryLayout(result, resultLayouts[i]);
   }
 
-  // Use getSuccessorOperands to find which operands of the terminator
-  // flow to a successor. This handles index offsets automatically (e.g.,
-  // scf.condition's predicate at operand #0 is excluded).
-  // Pick the first successor to determine the operand range.
+  // We are interested in the parent successor, i.e., the branch that exits
+  // the region and forwards operands to the parent op's results. This handles
+  // index offsets automatically (e.g., scf.condition's predicate at operand #0
+  // is excluded).
+  // SmallVector<RegionSuccessor> successors;
+  // SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
+  // yieldOp.getSuccessorRegions(operandAttrs, successors);
+  // auto *parentSuccessor = llvm::find_if(
+  //     successors, [](const RegionSuccessor &s) { return s.isParent(); });
+  // assert(parentSuccessor != successors.end() &&
+  //        "terminator must have the parent op as a successor");
+
+  // OperandRange succOps = yieldOp.getSuccessorOperands(*parentSuccessor);
+  // unsigned beginIdx = succOps.getBeginOperandIndex();
+  // unsigned count = std::min(static_cast<unsigned>(succOps.size()), numResults);
+
   SmallVector<RegionSuccessor> successors;
   SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
   yieldOp.getSuccessorRegions(operandAttrs, successors);
@@ -226,6 +240,10 @@ static void propagateRegionResultsToYieldOperands(
   }
 }
 
+// propagate layout from region arguments to region op's init operands. This set
+// the temproary layout for region arguments and init operands.
+// For while op containing multipel regions, different segements of init
+// operands might mapped to diferent region arguments.
 static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
   // Iterate all regions of the region op. For each block argument that has a
   // layout (determined from its use points), trace back to find the
@@ -253,6 +271,35 @@ static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
   }
 }
 
+// Prerequisite for Layout Recovery
+// It relies on the following invariant:
+// 1. there is no layout conflict between different uses of the same definition.
+// 2. each definition has a well-defined layout requirement at its use point.
+//     - Every definition must have at least one use that appears after it in
+//     topological order.
+//     - TODO: If a definition has no such use (e.g., a loop result or region
+//     output), an explicit convert_layout operation is inserted to create a
+//     use.
+//     - Only the result of convert_layout is permitted to have no subsequent
+//     use.
+//
+// The recovery proceeds by scanning the operation in reverse topological order
+// as follows:
+//    For regular operations: First the result layouts are propagated from uses.
+//      Then the result layouts are propagated to operands.
+//
+//    For region operations (e.g., loops):
+//       - When backward propagation reaches a region op, it sets the layout of
+//       the region op’s results according to use points like regular ops.
+//       - Then, the result layouts (such as a loop output) are propagated to
+//       their corresponding operands in the yield.
+//       - When backward propagation reaches the first operation inside the
+//       region, the pass examines the region op’s initialization list,
+//       propagating from region arguments to the corresponding initialization
+//       operands.
+//       - This ensures that layouts are consistently propagated
+//       across region boundaries while preserving a single well-defined use for
+//       each definition at the region-op level.
 bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
   auto processFunc = [&](Region &body, StringRef funcName) {
     walkRegionBackward(body, [&](Operation *op) {
@@ -1309,7 +1356,7 @@ xegpu::DistributeLayoutAttr
 xegpu::inferSourceLayoutFromResult(OpOperand &operand,
                                    xegpu::DistributeLayoutAttr resLayout) {
   if (!resLayout)
-    return xegpu::DistributeLayoutAttr();
+    return nullptr;
   Operation *op = operand.getOwner();
   unsigned idx = operand.getOperandNumber();
 
@@ -1317,7 +1364,7 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op)) {
     auto srcTy = dyn_cast<VectorType>(broadcast.getSourceType());
     if (!srcTy)
-      return xegpu::DistributeLayoutAttr();
+      return nullptr;
     return xegpu::inferBroadcastSourceLayout(
         resLayout, broadcast.getResultVectorType().getShape(),
         srcTy.getShape());
@@ -1376,15 +1423,15 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
                                              transpose.getPermutation());
   }
 
-  if (isa<VectorType>(operand.get().getType()) &&
-      !dyn_cast<xegpu::AnchorLayoutInterface>(op)) {
-    // For elementwise operations, all operands must have the same layout as the
-    // result.
-    // if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() ==
-    // 1) {
+  // For vector::ExtractStridedSliceOp, simply return result layout
+  if (dyn_cast<vector::ExtractStridedSliceOp>(op))
     return resLayout;
-  }
-  return xegpu::DistributeLayoutAttr();
+  // For elementwise operations, all operands must have the same layout as the
+  // result.
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
+    return resLayout;
+
+  return nullptr;
 }
 
 xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
