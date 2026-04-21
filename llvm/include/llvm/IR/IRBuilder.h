@@ -1011,10 +1011,11 @@ public:
                                         Value *RHS, FMFSource FMFSource = {},
                                         const Twine &Name = "");
 
-  /// Create a call to intrinsic \p ID with \p Args, mangled using \p Types. If
-  /// \p FMFSource is provided, copy fast-math-flags from that instruction to
-  /// the intrinsic.
-  LLVM_ABI CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Type *> Types,
+  /// Create a call to intrinsic \p ID with \p Args, mangled using
+  /// \p OverloadTypes. If \p FMFSource is provided, copy fast-math-flags from
+  /// that instruction to the intrinsic.
+  LLVM_ABI CallInst *CreateIntrinsic(Intrinsic::ID ID,
+                                     ArrayRef<Type *> OverloadTypes,
                                      ArrayRef<Value *> Args,
                                      FMFSource FMFSource = {},
                                      const Twine &Name = "");
@@ -1870,6 +1871,16 @@ public:
     Align AllocaAlign = DL.getPrefTypeAlign(Ty);
     unsigned AddrSpace = DL.getAllocaAddrSpace();
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
+  }
+
+  CallInst *CreateStructuredAlloca(Type *BaseType, const Twine &Name = "") {
+    const DataLayout &DL = BB->getDataLayout();
+    PointerType *PtrTy = DL.getAllocaPtrType(Context);
+    CallInst *Output =
+        CreateIntrinsic(Intrinsic::structured_alloca, {PtrTy}, {}, {}, Name);
+    Output->addRetAttr(
+        Attribute::get(getContext(), Attribute::ElementType, BaseType));
+    return Output;
   }
 
   /// Provided to resolve 'CreateLoad(Ty, Ptr, "...")' correctly, instead of

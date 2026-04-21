@@ -19,7 +19,7 @@ target create -l "cat" /bin/cat
 # CHECK: Cannot use label 'cat' since it's set in target #1.
 
 target create -l 42 /bin/cat
-# CHECK: error: Cannot use integer as target label.
+# CHECK: error: cannot use integer as target label
 
 target select 0
 # CHECK: * target #0: [[LS_PATH]]

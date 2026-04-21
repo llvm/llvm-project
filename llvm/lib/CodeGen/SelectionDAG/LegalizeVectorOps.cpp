@@ -139,6 +139,7 @@ class VectorLegalizer {
   SDValue ExpandVP_FABS(SDNode *Node);
   SDValue ExpandVP_FCOPYSIGN(SDNode *Node);
   SDValue ExpandLOOP_DEPENDENCE_MASK(SDNode *N);
+  SDValue ExpandMaskedBinOp(SDNode *N);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
@@ -482,6 +483,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UCMP:
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UREM:
+  case ISD::MASKED_SREM:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -775,6 +780,7 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     PromoteSTRICT(Node, Results);
     return;
   case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
     PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/false);
     return;
   case ISD::VECREDUCE_FMAX:
@@ -1404,6 +1410,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UREM:
+  case ISD::MASKED_SREM:
+    Results.push_back(ExpandMaskedBinOp(Node));
+    return;
   }
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);
@@ -1929,6 +1941,18 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
       DAG.getSelect(DL, PtrVT, Cmp, DAG.getConstant(-1, DL, PtrVT), Diff);
 
   return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT, LaneOffset, MaskN);
+}
+
+SDValue VectorLegalizer::ExpandMaskedBinOp(SDNode *N) {
+  // Masked bin ops don't have undefined behaviour when dividing by zero
+  // on disabled lanes and produce poison instead. Replace the divisor on the
+  // disabled lanes with 1 to avoid division by zero or overflow.
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDValue SafeDivisor = DAG.getSelect(
+      dl, VT, N->getOperand(2), N->getOperand(1), DAG.getConstant(1, dl, VT));
+  return DAG.getNode(ISD::getUnmaskedBinOpOpcode(N->getOpcode()), dl, VT,
+                     N->getOperand(0), SafeDivisor);
 }
 
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,

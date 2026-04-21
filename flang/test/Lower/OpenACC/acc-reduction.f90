@@ -23,11 +23,8 @@
 ! CHECK:           %[[BOX_ADDR_1:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
 ! CHECK:           %[[LOAD_2:.*]] = fir.load %[[BOX_ADDR_0]] : !fir.heap<!fir.logical<4>>
 ! CHECK:           %[[LOAD_3:.*]] = fir.load %[[BOX_ADDR_1]] : !fir.heap<!fir.logical<4>>
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_3]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[LOAD_2]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[ORI_0:.*]] = arith.ori %[[CONVERT_0]], %[[CONVERT_1]] : i1
-! CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[ORI_0]] : (i1) -> !fir.logical<4>
-! CHECK:           hlfir.assign %[[CONVERT_2]] to %[[BOX_ADDR_1]] : !fir.logical<4>, !fir.heap<!fir.logical<4>>
+! CHECK:           %[[ORI_0:.*]] = fir.logical_or %[[LOAD_3]], %[[LOAD_2]] : !fir.logical<4>
+! CHECK:           hlfir.assign %[[ORI_0]] to %[[BOX_ADDR_1]] : !fir.logical<4>, !fir.heap<!fir.logical<4>>
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
 
 ! CHECK-LABEL:   } destroy {
@@ -710,11 +707,8 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>, %[[VAL_1:.*]]: !fir.ref<!fir.logical<4>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.logical<4>>
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_1]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[LOAD_0]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[CMPI_0:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONVERT_1]] : i1
-! CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[CMPI_0]] : (i1) -> !fir.logical<4>
-! CHECK:           hlfir.assign %[[CONVERT_2]] to %[[VAL_0]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:           %[[CMPI_0:.*]] = fir.neqv %[[LOAD_1]], %[[LOAD_0]] : !fir.logical<4>
+! CHECK:           hlfir.assign %[[CMPI_0]] to %[[VAL_0]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:         }
 
@@ -729,11 +723,8 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>, %[[VAL_1:.*]]: !fir.ref<!fir.logical<4>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.logical<4>>
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_1]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[LOAD_0]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[CMPI_0:.*]] = arith.cmpi eq, %[[CONVERT_0]], %[[CONVERT_1]] : i1
-! CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[CMPI_0]] : (i1) -> !fir.logical<4>
-! CHECK:           hlfir.assign %[[CONVERT_2]] to %[[VAL_0]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:           %[[CMPI_0:.*]] = fir.eqv %[[LOAD_1]], %[[LOAD_0]] : !fir.logical<4>
+! CHECK:           hlfir.assign %[[CMPI_0]] to %[[VAL_0]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:         }
 
@@ -748,11 +739,8 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>, %[[VAL_1:.*]]: !fir.ref<!fir.logical<4>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.logical<4>>
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_1]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[LOAD_0]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[ORI_0:.*]] = arith.ori %[[CONVERT_0]], %[[CONVERT_1]] : i1
-! CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[ORI_0]] : (i1) -> !fir.logical<4>
-! CHECK:           hlfir.assign %[[CONVERT_2]] to %[[VAL_0]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:           %[[ORI_0:.*]] = fir.logical_or %[[LOAD_1]], %[[LOAD_0]] : !fir.logical<4>
+! CHECK:           hlfir.assign %[[ORI_0]] to %[[VAL_0]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:         }
 
@@ -767,11 +755,8 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>, %[[VAL_1:.*]]: !fir.ref<!fir.logical<4>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.logical<4>>
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_1]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[LOAD_0]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[ANDI_0:.*]] = arith.andi %[[CONVERT_0]], %[[CONVERT_1]] : i1
-! CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[ANDI_0]] : (i1) -> !fir.logical<4>
-! CHECK:           hlfir.assign %[[CONVERT_2]] to %[[VAL_0]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:           %[[ANDI_0:.*]] = fir.logical_and %[[LOAD_1]], %[[LOAD_0]] : !fir.logical<4>
+! CHECK:           hlfir.assign %[[ANDI_0]] to %[[VAL_0]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:         }
 

@@ -57,6 +57,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
+        .Case<SamplerType>([](auto) { /* no extensions */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -107,6 +108,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
+        .Case<SamplerType>([](auto) { /* no capabilities */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -188,7 +190,8 @@ bool CompositeType::classof(Type type) {
 bool CompositeType::isValid(VectorType type) {
   return type.getRank() == 1 &&
          llvm::is_contained({2, 3, 4, 8, 16}, type.getNumElements()) &&
-         isa<ScalarType>(type.getElementType());
+         (isa<ScalarType>(type.getElementType()) ||
+          isa<PointerType>(type.getElementType()));
 }
 
 Type CompositeType::getElementType(unsigned index) const {
@@ -538,6 +541,8 @@ bool ScalarType::classof(Type type) {
 }
 
 bool ScalarType::isValid(FloatType type) {
+  if (type.isF8E4M3FN() || type.isF8E5M2())
+    return true;
   return llvm::is_contained({16u, 32u, 64u}, type.getWidth());
 }
 
@@ -792,6 +797,14 @@ SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "Dim must not be SubpassData or Buffer";
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SamplerType
+//===----------------------------------------------------------------------===//
+
+SamplerType SamplerType::get(MLIRContext *context) {
+  return Base::get(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1331,5 +1344,6 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 
 void SPIRVDialect::registerTypes() {
   addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, StructType, TensorArmType>();
+           RuntimeArrayType, SampledImageType, SamplerType, StructType,
+           TensorArmType>();
 }

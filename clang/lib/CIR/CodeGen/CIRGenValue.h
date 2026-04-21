@@ -377,7 +377,7 @@ public:
   enum IsDestructed_t { IsNotDestructed, IsDestructed };
   enum IsZeroed_t { IsNotZeroed, IsZeroed };
   enum IsAliased_t { IsNotAliased, IsAliased };
-  enum Overlap_t { MayOverlap, DoesNotOverlap };
+  enum Overlap_t { DoesNotOverlap, MayOverlap };
 
   /// Returns an aggregate value slot indicating that the aggregate
   /// value is being ignored.

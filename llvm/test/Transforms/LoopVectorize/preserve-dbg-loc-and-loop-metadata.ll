@@ -53,7 +53,7 @@ define void @_Z3fooPf(ptr %a) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %p = load float, ptr %arrayidx, align 4
@@ -63,7 +63,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

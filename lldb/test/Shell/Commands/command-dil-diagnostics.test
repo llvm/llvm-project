@@ -1,5 +1,5 @@
 ## Check DIL error diagnostics output.
-# XFAIL: target-windows
+# UNSUPPORTED: target-windows
 # RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t
 # RUN: %lldb %t -o "command source -e 0 %s" -o exit 2>&1 | FileCheck %s --strict-whitespace
 settings set target.experimental.use-DIL true
