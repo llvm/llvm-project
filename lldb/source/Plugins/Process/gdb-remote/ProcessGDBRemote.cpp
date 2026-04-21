@@ -2509,7 +2509,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       } else if (key == "detailed-binaries-info") {
         StringExtractor json_extractor(value);
         std::string json;
-        // Now convert the HEX bytes into a string value
+        // Now convert the HEX bytes into a string value.
         json_extractor.GetHexByteString(json);
 
         // This JSON contains detailed information about binares.
