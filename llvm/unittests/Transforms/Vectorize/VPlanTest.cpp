@@ -277,7 +277,8 @@ TEST_F(VPBasicBlockTest, getPlan) {
     // VPBasicBlock is the entry into the VPlan, followed by a region.
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB2);
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB2);
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
 
     VPBlockUtils::connectBlocks(VPBB1, R1);
@@ -294,12 +295,14 @@ TEST_F(VPBasicBlockTest, getPlan) {
     VPlan &Plan = getPlan();
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB2);
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB2);
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB2);
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -377,7 +380,8 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB4 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB4);
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB4);
     R1BB2->setParent(R1);
     R1BB3->setParent(R1);
     VPBlockUtils::connectBlocks(VPBB0, R1);
@@ -390,7 +394,8 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB2);
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R1, R2);
 
@@ -506,12 +511,14 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB3);
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB3);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
     VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB3");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB3);
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB3);
     R2BB2->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB2, R2BB1);
@@ -576,10 +583,12 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPlan &Plan = getPlan();
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB2);
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
 
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R2, R2);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R2, R2);
     R2->setParent(R1);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -629,14 +638,17 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     //
     VPlan &Plan = getPlan();
     VPBasicBlock *R3BB1 = Plan.createVPBasicBlock("R3BB1");
-    VPRegionBlock *R3 = Plan.createLoopRegion("R3", R3BB1, R3BB1);
+    VPRegionBlock *R3 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R3", R3BB1, R3BB1);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R3);
+    VPRegionBlock *R2 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R2", R2BB1, R3);
     R3->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R3);
 
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R2, R2);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R2, R2);
     R2->setParent(R1);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -727,7 +739,8 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
     VPlan &Plan = getPlan();
     VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
     VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", VPBB2, VPBB2);
     VPBlockUtils::connectBlocks(VPBB1, R1);
 
     auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
@@ -1454,13 +1467,6 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPPredInstPHIRecipe Recipe(Op1, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
-    EXPECT_FALSE(Recipe.mayReadFromMemory());
-    EXPECT_FALSE(Recipe.mayWriteToMemory());
-    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
-  }
-  {
-    VPIRValue *StartV = Plan.getZero(Int32);
-    VPCanonicalIVPHIRecipe Recipe(StartV, {});
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
