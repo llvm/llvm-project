@@ -1120,7 +1120,7 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
     bool KeepNSW = false;
     bool KeepNUW = false;
 
-    BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
     if (auto *OrigCmp = dyn_cast<ICmpInst>(BI->getCondition())) {
       // Check if the chosen IV is actually used in the original comparison.
       bool IVUsedInOriginalCmp = (OrigCmp->getOperand(0) == IndVar ||
