@@ -2017,9 +2017,6 @@ bool DNBDyldNotificationFunctionAddr(nub_process_t pid,
     // the shared cache VM region.
     nub_addr_t dyld_all_image_infos =
         DNBProcessGetSharedLibraryInfoAddress(pid);
-    if (dyld_all_image_infos == INVALID_NUB_ADDRESS ||
-        dyld_all_image_infos == 0)
-      return false;
     if (dyld_all_image_infos < sc_vmaddr ||
         dyld_all_image_infos > sc_vmaddr + sc_size)
       return false;
@@ -2033,9 +2030,11 @@ bool DNBDyldNotificationFunctionAddr(nub_process_t pid,
       return false;
 
     g_notifier_breakpoint_addr = DNBFixAddress(notifier_fptr, pid);
+    if (g_notifier_breakpoint_addr < sc_vmaddr ||
+        g_notifier_breakpoint_addr > sc_vmaddr + sc_size)
+      g_notifier_breakpoint_addr = 0;
   }
-  if (g_notifier_breakpoint_addr == 0 ||
-      g_notifier_breakpoint_addr == INVALID_NUB_ADDRESS)
+  if (g_notifier_breakpoint_addr == 0)
     return false;
 
   lldb_image_notifier = g_notifier_breakpoint_addr;
