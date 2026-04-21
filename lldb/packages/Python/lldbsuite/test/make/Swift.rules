@@ -25,9 +25,10 @@ else
 endif
 
 ifeq "$(MAKE_PDB)" "YES"
-	# Use lld until https://github.com/swiftlang/swift/issues/88566
-	# is resolved.
-	SWIFT_DEBUG_INFO_FLAG ?= -g -debug-info-format=codeview -use-ld=lld
+	# Need to disable incremental linking to keep Edit-and-Continue padding
+	# from breaking metadata sections.
+	# See https://github.com/swiftlang/swift/issues/88566 for details.
+	SWIFT_DEBUG_INFO_FLAG ?= -g -debug-info-format=codeview -Xlinker /INCREMENTAL:NO
 else ifeq "$(OS)" "Windows_NT"
 	SWIFT_DEBUG_INFO_FLAG ?= -g -use-ld=lld -Xlinker -debug:dwarf
 else
