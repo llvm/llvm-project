@@ -1044,10 +1044,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (IsThinLTOPostLink)
       PB.registerPipelineStartEPCallback(
           [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(LowerTypeTestsPass(
-                /*ExportSummary=*/nullptr,
-                /*ImportSummary=*/nullptr,
-                /*DropTypeTests=*/lowertypetests::DropTestKind::Assume));
+            MPM.addPass(DropTypeTestsPass());
           });
 
     // Register callbacks to schedule sanitizer passes at the appropriate part
