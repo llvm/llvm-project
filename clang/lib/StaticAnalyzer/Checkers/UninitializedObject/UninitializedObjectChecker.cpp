@@ -472,14 +472,14 @@ getConstructedRegion(const CXXConstructorDecl *CtorDecl,
     return TVR->getValueType()->getAsCXXRecordDecl() ? TVR : nullptr;
   }
 
-  QualType DynType = CtorDecl->getThisType()->getPointeeType();
-  if (!DynType->getAsCXXRecordDecl())
+  QualType ThisPointeeTy = CtorDecl->getThisType()->getPointeeType();
+  if (!ThisPointeeTy->getAsCXXRecordDecl())
     return nullptr;
 
   auto &MemMgr = Context.getState()->getStateManager().getRegionManager();
   auto &SVB = Context.getSValBuilder();
 
-  const auto *ElemR = MemMgr.getElementRegion(DynType, SVB.makeZeroArrayIndex(),
+  const auto *ElemR = MemMgr.getElementRegion(ThisPointeeTy, SVB.makeZeroArrayIndex(),
                                               SR, Context.getASTContext());
 
   return ElemR;
