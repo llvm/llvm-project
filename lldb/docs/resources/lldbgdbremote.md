@@ -157,7 +157,7 @@ argument that is one of `address-only`, `address-name`,
 `address-name-uuid`, `full`.
 
 `"report_load_commands":false` is equivalent to
-`"information-level":"address-only" or so.
+`"information-level":"address-only"` or so.
 
 `information-level` allows the caller to limit the amount of data
 being returned to one of (address, address+name, address+name+uuid,
