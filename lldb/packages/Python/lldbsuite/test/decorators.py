@@ -994,23 +994,26 @@ def skipUnlessTargetAndroid(func):
 def swiftTest(func):
     """Decorate the item as a Swift test (Darwin/Linux only, no i386)."""
 
+    func.__swift_test__ = True
+
+    # The OS check is static and can be evaluated at decoration time.
+    # Using unittest.skip (which sets __unittest_skip__ on the method) causes
+    # Python's TestCase.run() to skip setUp() before it is called.
+    if sys.platform not in ["darwin", "linux"]:
+        return unittest.skip(
+            "skipping Swift test because only Darwin and Linux are supported OSes"
+        )(func)
+
     def is_not_swift_compatible(self):
         if not _get_bool_config("swift", fail_value=False):
             return "Swift plugin not enabled"
         if self.getDebugInfo() == "gmodules":
             return "skipping (gmodules only makes sense for clang tests)"
-
         if "i386" == self.getArchitecture():
             return "skipping Swift test because i386 is not a supported architecture"
-        elif sys.platform not in ["darwin", "linux"]:
-            return (
-                "skipping Swift test because only Darwin and Linux are supported OSes"
-            )
-        else:
-            # This configuration is Swift-compatible
-            return None
+        # This configuration is Swift-compatible
+        return None
 
-    func.__swift_test__ = True
     return skipTestIfFn(is_not_swift_compatible)(func)
 
 
