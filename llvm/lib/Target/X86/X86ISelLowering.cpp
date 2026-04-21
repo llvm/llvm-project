@@ -13305,6 +13305,12 @@ static bool isSoftF16(T VT, const X86Subtarget &Subtarget) {
          (EltVT == MVT::f16 && !Subtarget.hasFP16());
 }
 
+template<typename T>
+static bool isBF16orSoftF16(T VT, const X86Subtarget &Subtarget) {
+  T EltVT = VT.getScalarType();
+  return EltVT == MVT::bf16 || (EltVT == MVT::f16 && !Subtarget.hasFP16());
+}
+
 /// Try to lower insertion of a single element into a zero vector.
 ///
 /// This is a common pattern that we have especially efficient patterns to lower
@@ -20786,7 +20792,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (isSoftF16(VT, Subtarget))
+  if (isBF16orSoftF16(VT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, VT, true, Subtarget))
     return Op;
@@ -21296,7 +21302,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (DstVT == MVT::f128)
     return SDValue();
 
-  if (isSoftF16(DstVT, Subtarget))
+  if (isBF16orSoftF16(DstVT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
@@ -22315,7 +22321,7 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
   SDValue Res;
-  if (isSoftF16(SrcVT, Subtarget)) {
+  if (isBF16orSoftF16(SrcVT, Subtarget)) {
     MVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
     if (IsStrict)
       return DAG.getNode(Op.getOpcode(), dl, {VT, MVT::Other},
@@ -22762,7 +22768,7 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
 
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
-  if (!isScalarFPTypeInSSEReg(SrcVT) || isSoftF16(SrcVT, Subtarget))
+  if (!isScalarFPTypeInSSEReg(SrcVT) || isBF16orSoftF16(SrcVT, Subtarget))
     return SDValue();
 
   EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
@@ -29606,6 +29612,11 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
   bool NonZeroSrc = DAG.isKnownNeverZero(N0);
 
+  // Default to expansion if CTPOP is legal.
+  if (VT.isVector() &&
+      DAG.getTargetLoweringInfo().isOperationLegal(ISD::CTPOP, VT))
+    return SDValue();
+
   // GFNI - isolate LSB and perform GF2P8AFFINEQB lookup.
   if (Subtarget.hasGFNI() && VT.isVector() &&
       VT.getVectorElementType() == MVT::i8) {
@@ -35133,7 +35144,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT SrcVT = Src.getValueType();
 
     SDValue Res;
-    if (isSoftF16(SrcVT, Subtarget)) {
+    if (isBF16orSoftF16(SrcVT, Subtarget)) {
       EVT NVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
       if (IsStrict) {
         Res =
@@ -37064,7 +37075,7 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
 
   BuildMI(testMBB, MIMD, TII->get(X86::JCC_1))
       .addMBB(tailMBB)
-      .addImm(X86::COND_GE);
+      .addImm(X86::COND_AE);
   testMBB->addSuccessor(blockMBB);
   testMBB->addSuccessor(tailMBB);
 
@@ -53171,6 +53182,35 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+static SDValue combineOrWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
+                                          SelectionDAG &DAG, EVT VT) {
+  using namespace SDPatternMatch;
+  assert(N->getOpcode() == ISD::OR && "Expected OR node");
+
+  if (!N->getFlags().hasDisjoint() &&
+      !DAG.haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1)))
+    return SDValue();
+
+  SDValue X, Y, SplatOp;
+  APInt Imm, SplatVal;
+
+  // Fold: (GF2P8AFFINEQB(X, Y, Imm) or_disjoint SplatVal)
+  //     -> GF2P8AFFINEQB(X, Y, Imm ^ SplatVal)
+  // When OR is disjoint (no common bits), the splat constant can be folded
+  //  directly into the GF2P8AFFINEQB immediate via XOR.
+
+  if (sd_match(N, m_Or(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X),
+                                            m_Value(Y), m_ConstInt(Imm))),
+                       m_Value(SplatOp))) &&
+      X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false)) {
+    uint64_t NewImm = (Imm.getZExtValue() ^ SplatVal.getZExtValue()) & 0xFF;
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, Y,
+                       DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  }
+
+  return SDValue();
+}
+
 static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
                                      SDValue N0, SDValue N1,
                                      SelectionDAG &DAG) {
@@ -53262,6 +53302,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue FPLogic = convertIntLogicToFPLogic(N->getOpcode(), dl, VT, N0, N1,
                                                  DAG, DCI, Subtarget))
     return FPLogic;
+
+  if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
+    return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -60898,6 +60941,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   MVT SubVecVT = SubVec.getSimpleValueType();
   int VecNumElts = OpVT.getVectorNumElements();
   int SubVecNumElts = SubVecVT.getVectorNumElements();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (Vec.isUndef() && SubVec.isUndef())
     return DAG.getUNDEF(OpVT);
@@ -60934,6 +60978,19 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
           return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
                              getZeroVector(OpVT, Subtarget, DAG, dl),
                              Ins.getOperand(1), N->getOperand(2));
+    }
+
+    // See if were inserting into a zero vXi1 vector and the subvector was
+    // bitcast from a gpr that could be zero-extended directly.
+    if (IsI1Vector && TLI.isTypeLegal(OpVT)) {
+      SDValue SubInt = peekThroughBitcasts(SubVec);
+      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VecNumElts);
+      if (TLI.isTypeLegal(IntVT) && SubInt.getValueType().isScalarInteger()) {
+        SubInt = DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, SubInt);
+        SubInt = DAG.getNode(ISD::SHL, dl, IntVT, SubInt,
+                             DAG.getShiftAmountConstant(IdxVal, IntVT, dl));
+        return DAG.getBitcast(OpVT, SubInt);
+      }
     }
   }
 

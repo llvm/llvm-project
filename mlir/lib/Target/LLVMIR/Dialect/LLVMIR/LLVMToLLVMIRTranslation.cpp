@@ -311,6 +311,15 @@ convertModuleFlagValue(StringRef key, ArrayAttr arrayAttr,
     }
     return llvm::MDTuple::getDistinct(context, nodes);
   }
+  // Handle ArrayAttr of StringAttrs (e.g. "riscv-isa") by converting back to
+  // an MDTuple of MDStrings for a lossless round-trip.
+  if (llvm::all_of(arrayAttr, [](Attribute a) { return isa<StringAttr>(a); })) {
+    assert(!arrayAttr.empty() &&
+           "empty string-array is invalid per ModuleFlagAttr::verify");
+    for (StringAttr strAttr : arrayAttr.getAsRange<StringAttr>())
+      nodes.push_back(llvm::MDString::get(context, strAttr.getValue()));
+    return llvm::MDTuple::get(context, nodes);
+  }
   return nullptr;
 }
 

@@ -36,6 +36,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
@@ -1047,19 +1048,23 @@ void AsmPrinter::emitFunctionHeader() {
 
   emitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment()) {
-    // Make sure that the preferred alignment directive (.prefalign) is
-    // supported before using it. The preferred alignment directive will not
-    // have the intended effect unless function sections are enabled, so check
-    // for that as well.
-    if (MAI->useIntegratedAssembler() && MAI->hasPreferredAlignment() &&
-        TM.getFunctionSections()) {
-      Align Alignment = MF->getAlignment();
-      Align PrefAlignment = MF->getPreferredAlignment();
-      emitAlignment(Alignment, &F);
-      if (Alignment != PrefAlignment)
-        OutStreamer->emitPrefAlign(PrefAlignment);
+    Align PrefAlign = MF->getPreferredAlignment();
+    if (MAI->useIntegratedAssembler() && MAI->hasPreferredAlignment()) {
+      // Emit .p2align for the effective minimum alignment (which accounts for
+      // F's own align attribute via getGVAlignment), then emit .prefalign only
+      // when the preferred alignment is greater. The end symbol must be
+      // created here, before the function body, so that .prefalign can
+      // reference it; emitFunctionBody will emit the label at the function
+      // end.
+      Align MinAlign = emitAlignment(MF->getAlignment(), &F);
+      if (MinAlign < PrefAlign) {
+        CurrentFnEnd = createTempSymbol("func_end");
+        OutStreamer->emitPrefAlign(PrefAlign, *CurrentFnEnd,
+                                   /*EmitNops=*/true, /*Fill=*/0,
+                                   getSubtargetInfo());
+      }
     } else {
-      emitAlignment(MF->getPreferredAlignment(), &F);
+      emitAlignment(PrefAlign, &F);
     }
   }
 
@@ -2466,9 +2471,11 @@ void AsmPrinter::emitFunctionBody() {
   // SPIR-V supports label instructions only inside a block, not after the
   // function body.
   if (TT.getObjectFormat() != Triple::SPIRV &&
-      (EmitFunctionSize || needFuncLabels(*MF, *this))) {
-    // Create a symbol for the end of function.
-    CurrentFnEnd = createTempSymbol("func_end");
+      (EmitFunctionSize || needFuncLabels(*MF, *this) || CurrentFnEnd)) {
+    // Create a symbol for the end of function, if not already pre-created
+    // (e.g. for .prefalign directive).
+    if (!CurrentFnEnd)
+      CurrentFnEnd = createTempSymbol("func_end");
     OutStreamer->emitLabel(CurrentFnEnd);
   }
 
@@ -3222,6 +3229,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnSymForSize = CurrentFnSym;
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
+  CurrentFnEnd = nullptr;
   CurrentSectionBeginSym = nullptr;
   CurrentFnCallsiteEndSymbols.clear();
   MBBSectionRanges.clear();
@@ -3835,13 +3843,13 @@ void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
 // two boundary.  If a global value is specified, and if that global has
 // an explicit alignment requested, it will override the alignment request
 // if required for correctness.
-void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
-                               unsigned MaxBytesToEmit) const {
+Align AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
+                                unsigned MaxBytesToEmit) const {
   if (GV)
     Alignment = getGVAlignment(GV, GV->getDataLayout(), Alignment);
 
   if (Alignment == Align(1))
-    return; // 1-byte aligned: no need to emit alignment.
+    return Alignment; // 1-byte aligned: no need to emit alignment.
 
   if (getCurrentSection()->isText()) {
     const MCSubtargetInfo *STI = nullptr;
@@ -3852,6 +3860,7 @@ void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
     OutStreamer->emitCodeAlignment(Alignment, STI, MaxBytesToEmit);
   } else
     OutStreamer->emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
+  return Alignment;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5349,5 +5358,7 @@ void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
   AsmPrinter.EmitStackMaps = [](Module &M) {};
   AsmPrinter.AssertDebugEHFinalized = []() {};
 }
+
+AnalysisKey AsmPrinterAnalysis::Key;
 
 } // namespace llvm

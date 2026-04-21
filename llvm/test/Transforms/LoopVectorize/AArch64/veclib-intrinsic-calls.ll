@@ -4,9 +4,9 @@
 ; RUN: opt -mattr=+neon -vector-library=LIBMVEC -passes=inject-tli-mappings,loop-vectorize,simplifycfg -force-vector-interleave=1 -force-vector-width=2 -S < %s | FileCheck %s --check-prefix=LIBMVEC-NEON-WIDTH-2
 ; RUN: opt -mattr=+sve -vector-library=LIBMVEC -passes=inject-tli-mappings,loop-vectorize,simplifycfg -force-vector-interleave=1 -S < %s | FileCheck %s --check-prefix=LIBMVEC-SVE
 ; RUN: opt -mattr=+neon -vector-library=sleefgnuabi -passes=inject-tli-mappings,loop-vectorize,simplifycfg -force-vector-interleave=1 -S < %s | FileCheck %s --check-prefix=SLEEF-NEON
-; RUN: opt -mattr=+sve -vector-library=sleefgnuabi -passes=inject-tli-mappings,loop-vectorize,simplifycfg -force-vector-interleave=1 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | FileCheck %s --check-prefix=SLEEF-SVE
+; RUN: opt -mattr=+sve -vector-library=sleefgnuabi -passes=inject-tli-mappings,loop-vectorize,simplifycfg -force-vector-interleave=1 -tail-folding-policy=must-fold-tail -S < %s | FileCheck %s --check-prefix=SLEEF-SVE
 ; RUN: opt -mattr=+neon -vector-library=ArmPL -passes=inject-tli-mappings,loop-vectorize,simplifycfg -force-vector-interleave=1 -S < %s | FileCheck %s --check-prefix=ARMPL-NEON
-; RUN: opt -mattr=+sve -vector-library=ArmPL -passes=inject-tli-mappings,loop-vectorize,simplifycfg -force-vector-interleave=1 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | FileCheck %s --check-prefix=ARMPL-SVE
+; RUN: opt -mattr=+sve -vector-library=ArmPL -passes=inject-tli-mappings,loop-vectorize,simplifycfg -force-vector-interleave=1 -tail-folding-policy=must-fold-tail -S < %s | FileCheck %s --check-prefix=ARMPL-SVE
 
 target triple = "aarch64-unknown-linux-gnu"
 
