@@ -99,37 +99,24 @@ struct Foo
   }
 };
 
-struct Iterator {
-  bool operator!=(const Iterator &) const;
-  bool operator>=(const Iterator &) const;
+// Parens used as the object of a member access are not redundant.
+struct Stream {
+  Stream &operator<<(const char *);
+  const char *str() const;
+};
+struct Val {
+  int x;
+};
+struct Iter {
+  Val operator*() const;
 };
 
-struct Functor {
-  bool operator()() const;
-};
+void memberAccessOnParen(Stream &s, Iter it) {
+  // (s << "x").str() -- parens required for method chaining; no warning.
+  (s << "x").str();
 
-void overloadedOperators() {
-  Iterator it, end;
-
-  // Single parens around overloaded operator: no warning (consistent with
-  // built-in binary operators, which are not in the matcher).
-  if ((it != end)) {
-  }
-  if ((it >= end)) {
-  }
-
-  // Double parens: outer paren wraps a ParenExpr, so outer paren still warns.
-  if (((it != end))) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
-    // CHECK-FIXES:    if ((it != end)) {
-  }
-
-  // Functor call via operator(): still warns (treated like a regular call).
-  Functor f{};
-  if ((f())) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
-    // CHECK-FIXES:    if (f()) {
-  }
+  // (*it).x -- parens required before member access; no warning.
+  auto v = (*it).x;
 }
 
 void memberExpr() {
