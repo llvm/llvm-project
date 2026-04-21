@@ -6,16 +6,19 @@
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=0 -DIMM=0
 # RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=256 -DIMM=0
 # RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model --keep-nops
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=BEYOND-1KB
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=256 -DIMM=63
 # RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model --keep-nops
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=BEYOND-1KB-IRREVERSIBLE
 
@@ -47,10 +50,8 @@ reorder_blocks:
 
 # CHECK:      <reorder_blocks>:
 # CHECK-NEXT:           {{.*}} cbgt x0, #0x0, 0x[[ADDR:[0-9a-f]+]] <{{.*}}>
-# CHECK:      <.hot_exit>:
 # CHECK-NEXT:           {{.*}} mov  x0, #0x2 // =2
 # CHECK-NEXT:           {{.*}} ret
-# CHECK:      <.cold_exit>:
 # CHECK-NEXT: [[ADDR]]: {{.*}} mov  x0, #0x1 // =1
 # CHECK-NEXT:           {{.*}} ret
 
@@ -59,11 +60,9 @@ reorder_blocks:
 # BEYOND-1KB:      <reorder_blocks>:
 # BEYOND-1KB-NEXT:            {{.*}} cblt x0, #0x1, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
 # BEYOND-1KB-NEXT:            {{.*}} b              0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
-# BEYOND-1KB:      <.hot_exit>:
 # BEYOND-1KB-NEXT: [[ADDR0]]: {{.*}} nop
 # BEYOND-1KB:                 {{.*}} mov  x0, #0x2 // =2
 # BEYOND-1KB-NEXT:            {{.*}} ret
-# BEYOND-1KB:      <.cold_exit>:
 # BEYOND-1KB-NEXT: [[ADDR1]]: {{.*}} mov  x0, #0x1 // =1
 # BEYOND-1KB-NEXT:            {{.*}} ret
 
@@ -73,10 +72,8 @@ reorder_blocks:
 # BEYOND-1KB-IRREVERSIBLE-NEXT:            {{.*}} cbgt x0, #0x3f, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
 # BEYOND-1KB-IRREVERSIBLE-NEXT:            {{.*}} b               0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
 # BEYOND-1KB-IRREVERSIBLE-NEXT: [[ADDR0]]: {{.*}} b               0x[[ADDR2:[0-9a-f]+]] <{{.*}}>
-# BEYOND-1KB-IRREVERSIBLE:      <.hot_exit>:
 # BEYOND-1KB-IRREVERSIBLE-NEXT: [[ADDR1]]: {{.*}} nop
 # BEYOND-1KB-IRREVERSIBLE:                 {{.*}} mov  x0, #0x2 // =2
 # BEYOND-1KB-IRREVERSIBLE-NEXT:            {{.*}} ret
-# BEYOND-1KB-IRREVERSIBLE:      <.cold_exit>:
 # BEYOND-1KB-IRREVERSIBLE-NEXT: [[ADDR2]]: {{.*}} mov  x0, #0x1 // =1
 # BEYOND-1KB-IRREVERSIBLE-NEXT:            {{.*}} ret

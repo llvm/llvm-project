@@ -643,6 +643,9 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     // No longer need old terminator.
     InsertPt->eraseFromParent();
     CGF.Builder.SetInsertPoint(AfterFreeBB);
+
+    auto *CoroDeadFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_dead);
+    CGF.Builder.CreateCall(CoroDeadFn, {CGF.CurCoro.Data->CoroBegin});
   }
   explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
 };

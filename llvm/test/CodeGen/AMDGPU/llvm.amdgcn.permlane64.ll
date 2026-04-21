@@ -129,8 +129,8 @@ define amdgpu_kernel void @test_i_i64(ptr addrspace(1) %out) {
 ; GFX11-GISEL-LABEL: test_i_i64:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 0x63
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, 0x63 :: v_dual_mov_b32 v1, 0
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -151,8 +151,8 @@ define amdgpu_kernel void @test_i_f64(ptr addrspace(1) %out) {
 ; GFX11-GISEL-LABEL: test_i_f64:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0x40934a00 :: v_dual_mov_b32 v2, 0
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x40934a00
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm

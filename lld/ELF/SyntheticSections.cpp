@@ -3809,6 +3809,26 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
       else if (auto *eh = dyn_cast<EhInputSection>(sec))
         eh->split<ELFT>();
     }
+
+    // For non-section Defined symbols in merge sections, pre-resolve the piece
+    // index to avoid potentially repeated binary search (MarkLive, RelocScan,
+    // includeInSymtab). Encode each non-section Defined symbol's value as
+    // ((pieceIdx + 1) << mergeValueShift) | intraPieceOffset.
+    auto resolve = [](Defined *d) {
+      auto *ms = dyn_cast_or_null<MergeInputSection>(d->section);
+      if (!ms || d->isSection())
+        return;
+      SectionPiece &piece = ms->getSectionPiece(d->value);
+      uint32_t idx = &piece - ms->pieces.data();
+      uint64_t off = d->value - piece.inputOff;
+      d->value = ((uint64_t)(idx + 1) << mergeValueShift) | off;
+    };
+    for (Symbol *sym : file->getLocalSymbols())
+      if (auto *d = dyn_cast<Defined>(sym))
+        resolve(d);
+    for (Symbol *sym : file->getGlobalSymbols())
+      if (auto *d = dyn_cast<Defined>(sym); d && d->file == file)
+        resolve(d);
   });
 }
 
@@ -4544,7 +4564,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
           ctx, relaDynName, threadCount);
     else
       part.relaDyn = std::make_unique<RelocationSection<ELFT>>(
-          ctx, relaDynName, ctx.arg.zCombreloc, threadCount);
+          ctx, relaDynName, /*combreloc=*/true, threadCount);
 
     if (ctx.hasDynsym) {
       add(*part.dynSymTab);

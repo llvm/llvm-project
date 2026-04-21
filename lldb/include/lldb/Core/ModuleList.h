@@ -559,6 +559,11 @@ protected:
   /// An orphaned module that lives only in the ModuleList has a count of 1.
   static constexpr long kUseCountModuleListOrphaned = 1;
 
+private:
+  static bool LoadScriptingResourceInTargetForModule(Module &module,
+                                                     Target &target,
+                                                     Status &error);
+
 public:
   typedef LockingAdaptedIterable<std::recursive_mutex, collection>
       ModuleIterable;

@@ -114,7 +114,6 @@ LLVM_ABI void initializeEarlyTailDuplicateLegacyPass(PassRegistry &);
 LLVM_ABI void initializeEdgeBundlesWrapperLegacyPass(PassRegistry &);
 LLVM_ABI void initializeEHContGuardTargetsPass(PassRegistry &);
 LLVM_ABI void initializeExpandIRInstsLegacyPassPass(PassRegistry &);
-LLVM_ABI void initializeExpandMemCmpLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeExpandPostRALegacyPass(PassRegistry &);
 LLVM_ABI void initializeExpandReductionsPass(PassRegistry &);
 LLVM_ABI void initializeExpandVariadicsPass(PassRegistry &);
@@ -234,7 +233,6 @@ LLVM_ABI void initializeMachineUniformityAnalysisPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineVerifierLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeMemoryDependenceWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMemorySSAWrapperPassPass(PassRegistry &);
-LLVM_ABI void initializeMergeICmpsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeModuleSummaryIndexWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeModuloScheduleTestPass(PassRegistry &);
 LLVM_ABI void initializeNaryReassociateLegacyPassPass(PassRegistry &);
@@ -324,6 +322,8 @@ LLVM_ABI void initializeStackSafetyInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeStackSlotColoringLegacyPass(PassRegistry &);
 LLVM_ABI void
 initializeStraightLineStrengthReduceLegacyPassPass(PassRegistry &);
+LLVM_ABI void
+initializeStripConvergenceIntrinsicsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeStripDebugMachineModulePass(PassRegistry &);
 LLVM_ABI void initializeStructurizeCFGLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeTailCallElimPass(PassRegistry &);

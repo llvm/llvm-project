@@ -1,5 +1,6 @@
 #include "CIRGenTypes.h"
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -408,6 +409,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::BFloat16:
       resultType = cgm.bFloat16Ty;
       break;
+    case BuiltinType::MFloat8:
+      resultType = cgm.uInt8Ty;
+      break;
     case BuiltinType::Float:
       assert(&astContext.getFloatTypeSemantics(type) ==
                  &llvm::APFloat::IEEEsingle() &&
@@ -559,13 +563,12 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::BitInt: {
     const auto *bitIntTy = cast<BitIntType>(type);
-    if (bitIntTy->getNumBits() > cir::IntType::maxBitwidth()) {
-      cgm.errorNYI(SourceLocation(), "large _BitInt type", type);
-      resultType = cgm.sInt32Ty;
-    } else {
-      resultType = cir::IntType::get(&getMLIRContext(), bitIntTy->getNumBits(),
-                                     bitIntTy->isSigned());
-    }
+    unsigned numBits = bitIntTy->getNumBits();
+    assert(numBits <= cir::IntType::maxBitwidth() &&
+           "_BitInt width exceeds CIR IntType maximum");
+    resultType =
+        cir::IntType::get(&getMLIRContext(), numBits, bitIntTy->isSigned(),
+                          /*isBitInt=*/true);
     break;
   }
 
@@ -652,11 +655,12 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   if (const auto *rd = t->getAsRecordDecl())
     return isZeroInitializable(rd);
 
-  if (t->getAs<MemberPointerType>()) {
-    cgm.errorNYI(SourceLocation(), "isZeroInitializable for MemberPointerType",
-                 t);
-    return false;
-  }
+  if (const auto *mpt = t->getAs<MemberPointerType>())
+    return theCXXABI.isZeroInitializable(mpt);
+
+  if (t->getAs<HLSLInlineSpirvType>())
+    cgm.errorNYI(SourceLocation(),
+                 "isZeroInitializable for HLSLInlineSpirvType");
 
   return true;
 }

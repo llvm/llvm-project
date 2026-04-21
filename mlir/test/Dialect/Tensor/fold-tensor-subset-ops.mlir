@@ -305,6 +305,25 @@ func.func @insert_slice_of_insert_slice(%t: tensor<f32>, %r0: tensor<1xf32>, %r1
 
 // -----
 
+// CHECK-LABEL:   func.func @insert_slice_of_insert_slice_non_unit_stride(
+// CHECK-SAME:      %[[t:.*]]: tensor<f32>,
+// CHECK-SAME:      %[[r0:.*]]: tensor<1xf32>,
+// CHECK-SAME:      %[[r1:.*]]: tensor<1x14xf32>,
+// CHECK-SAME:      %[[pos:.*]]: index) -> tensor<1x14xf32> {
+// CHECK:           tensor.insert_slice %[[t]] into %[[r1]][0, %[[pos]]] [1, 1] [1, 2] : tensor<f32> into tensor<1x14xf32>
+func.func @insert_slice_of_insert_slice_non_unit_stride(
+  %t: tensor<f32>, %r0: tensor<1xf32>, %r1: tensor<1x14xf32>, %pos: index)
+    -> tensor<1x14xf32> 
+{
+  %0 = tensor.insert_slice %t into %r0[0] [1] [1] 
+    : tensor<f32> into tensor<1xf32>
+  %1 = tensor.insert_slice %0 into %r1[0, %pos] [1, 1] [1, 2] 
+    : tensor<1xf32> into tensor<1x14xf32>
+  return %1 : tensor<1x14xf32>
+}
+
+// -----
+
 // This test fails to fold because the size `4` and `%pos` do not match: 
 // this requires a copy
 // CHECK-LABEL: func @fail_insert_slice_of_insert_slice(
@@ -324,49 +343,24 @@ func.func @fail_insert_slice_of_insert_slice(
 // -----
 
 // Here the sizes are the same and the folding occurs properly.
-//       CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 * 2)>
+//       CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 + s0 * s0)>
 // CHECK-LABEL: func @insert_slice_of_insert_slice_dynamic(
 //  CHECK-SAME:     %[[t:[0-9a-z]*]]: tensor<?xf32>
 //  CHECK-SAME:     %[[r0:[0-9a-z]*]]: tensor<?xf32>
 //  CHECK-SAME:     %[[r1:[0-9a-z]*]]: tensor<?x?xf32>
 //  CHECK-SAME:     %[[pos:[0-9a-z]*]]: index
-//       CHECK:   %[[add:.*]] = affine.apply #[[$map]]()[%[[pos]]]
-//       CHECK:   tensor.insert_slice %[[t]] into %[[r1]][%[[add]], 423] [%[[pos]], 1] [1, 1] : tensor<?xf32> into tensor<?x?xf32>
+//       CHECK:   %[[offset:.*]] = affine.apply #[[$map]]()[%[[pos]]]
+//       CHECK:   tensor.insert_slice %[[t]] into %[[r1]][%[[offset]], 423] [%[[pos]], 1] [%[[pos]], 1] : tensor<?xf32> into tensor<?x?xf32>
 func.func @insert_slice_of_insert_slice_dynamic(
   %t: tensor<?xf32>, %r0: tensor<?xf32>, %r1: tensor<?x?xf32>, %pos: index)
     -> tensor<?x?xf32> 
 {
   %0 = tensor.insert_slice %t into %r0[%pos] [%pos] [1] 
     : tensor<?xf32> into tensor<?xf32>
-  %1 = tensor.insert_slice %0 into %r1[%pos, 423] [%pos, 1] [1, 1] 
+  %1 = tensor.insert_slice %0 into %r1[%pos, 423] [%pos, 1] [%pos, 1] 
     : tensor<?xf32> into tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
-
-// -----
-
-// CHECK-LABEL: func.func @forward_concat_insert_slice_dest
-// CHECK-SAME: (%[[ARG0:.*]]: tensor<4xf32>)
-func.func @forward_concat_insert_slice_dest(%arg0: tensor<4xf32>)
-    -> tensor<8xf32> {
-  %cst = arith.constant 1.000000e+00 : f32
-  %small = tensor.empty() : tensor<4xf32>
-  %fill = linalg.fill ins(%cst : f32) outs(%small : tensor<4xf32>)
-      -> tensor<4xf32>
-  %init = tensor.empty() : tensor<8xf32>
-  %insert0 = tensor.insert_slice %fill into %init[0] [4] [1]
-      : tensor<4xf32> into tensor<8xf32>
-  %insert1 = tensor.insert_slice %arg0 into %insert0[4] [4] [1]
-      : tensor<4xf32> into tensor<8xf32>
-  return %insert1 : tensor<8xf32>
-}
-// CHECK-DAG: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
-// CHECK: %[[INIT:.*]] = tensor.empty() : tensor<8xf32>
-// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[INIT]][0] [4] [1] : tensor<8xf32> to tensor<4xf32>
-// CHECK: %[[FILL:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[SLICE]] : tensor<4xf32>) -> tensor<4xf32>
-// CHECK: %[[INSERT0:.*]] = tensor.insert_slice %[[FILL]] into %[[INIT]][0] [4] [1] : tensor<4xf32> into tensor<8xf32>
-// CHECK: %[[INSERT1:.*]] = tensor.insert_slice %[[ARG0]] into %[[INSERT0]][4] [4] [1] : tensor<4xf32> into tensor<8xf32>
-// CHECK: return %[[INSERT1]] : tensor<8xf32>
 
 // -----
 
@@ -410,7 +404,7 @@ func.func @parallel_insert_slice_of_insert_slice_dynamic(
     %tt2 = "make_me_another_tensor"() : () -> tensor<?x?xf32>
     %inserted_slice = tensor.insert_slice %tt into %tt2[%o1, 0] [%sz0, %sz1] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
-    //      CHECK: %[[add:.*]] = affine.apply #[[$map]]()[%[[o0]], %[[o1]]]
+    //      CHECK: %[[add:.*]] = affine.apply #[[$map]]()[%[[o1]], %[[o0]]]
     //      CHECK: scf.forall.in_parallel
     //      CHECK:   tensor.parallel_insert_slice %[[tt]] into %[[out]][%[[add]], %[[o1]]] [%[[sz0]], %[[sz1]]] [1, 1]
     // CHECK-SAME:     : tensor<?x?xf32> into tensor<12x34xf32>

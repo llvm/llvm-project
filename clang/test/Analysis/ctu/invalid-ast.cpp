@@ -21,6 +21,5 @@
 void external();
 
 void trigger() {
-  // expected-no-diagnostics
-  external(); // no-warning
+  external(); // expected-error{{import of an external symbol for CTU failed: Failed to load external AST source.}}
 }
