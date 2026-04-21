@@ -962,37 +962,60 @@ module attributes {
   // CHECK-SAME: %arg3: i8
   // CHECK-SAME: %arg4: i8
   // CHECK-SAME: %arg5: i8
-  // CHECK-SAME: %arg6: i8
-  // CHECK-SAME: %arg7: i8
-  // CHECK-SAME: %arg8: vector<4xi8>
-  // CHECK-SAME: %arg9: !spirv.ptr<!spirv.struct<(!spirv.array<8 x i8, stride=1> [0])>, StorageBuffer>
-  // CHECK-SAME: %arg10: !spirv.array<4 x i8>
+  // CHECK-SAME: %arg6: vector<4xi8>
+  // CHECK-SAME: %arg7: !spirv.ptr<!spirv.struct<(!spirv.array<8 x i8, stride=1> [0])>, StorageBuffer>
+  // CHECK-SAME: %arg8: !spirv.array<4 x i8>
   // UNSUPPORTED_FLOAT-LABEL: func.func @float8_to_integer8
-  // UNSUPPORTED_FLOAT-SAME: (%arg0: f8E5M2
-  // UNSUPPORTED_FLOAT-SAME: %arg1: f8E4M3
-  // UNSUPPORTED_FLOAT-SAME: %arg2: f8E4M3FN
-  // UNSUPPORTED_FLOAT-SAME: %arg3: f8E5M2FNUZ
-  // UNSUPPORTED_FLOAT-SAME: %arg4: f8E4M3FNUZ
-  // UNSUPPORTED_FLOAT-SAME: %arg5: f8E4M3B11FNUZ
-  // UNSUPPORTED_FLOAT-SAME: %arg6: f8E3M4
-  // UNSUPPORTED_FLOAT-SAME: %arg7: f8E8M0FNU
-  // UNSUPPORTED_FLOAT-SAME: %arg8: vector<4xf8E4M3B11FNUZ>
-  // UNSUPPORTED_FLOAT-SAME: %arg9: memref<8xf8E4M3, #spirv.storage_class<StorageBuffer>>
-  // UNSUPPORTED_FLOAT-SAME: %arg10: tensor<4xf8E5M2>
+  // UNSUPPORTED_FLOAT-SAME: (%arg0: f8E4M3
+  // UNSUPPORTED_FLOAT-SAME: %arg1: f8E5M2FNUZ
+  // UNSUPPORTED_FLOAT-SAME: %arg2: f8E4M3FNUZ
+  // UNSUPPORTED_FLOAT-SAME: %arg3: f8E4M3B11FNUZ
+  // UNSUPPORTED_FLOAT-SAME: %arg4: f8E3M4
+  // UNSUPPORTED_FLOAT-SAME: %arg5: f8E8M0FNU
+  // UNSUPPORTED_FLOAT-SAME: %arg6: vector<4xf8E4M3B11FNUZ>
+  // UNSUPPORTED_FLOAT-SAME: %arg7: memref<8xf8E4M3, #spirv.storage_class<StorageBuffer>>
+  // UNSUPPORTED_FLOAT-SAME: %arg8: tensor<4xf8E4M3>
   // UNSUPPORTED_FLOAT-SAME: ) {
 
   func.func @float8_to_integer8(
-    %arg0: f8E5M2,                   // CHECK-NOT: f8E5M2
-    %arg1: f8E4M3,                   // CHECK-NOT: f8E4M3
-    %arg2: f8E4M3FN,                // CHECK-NOT: f8E4M3FN
-    %arg3: f8E5M2FNUZ,              // CHECK-NOT: f8E5M2FNUZ
-    %arg4: f8E4M3FNUZ,              // CHECK-NOT: f8E4M3FNUZ
-    %arg5: f8E4M3B11FNUZ,           // CHECK-NOT: f8E4M3B11FNUZ
-    %arg6: f8E3M4,                  // CHECK-NOT: f8E3M4
-    %arg7: f8E8M0FNU,               // CHECK-NOT: f8E8M0FNU
-    %arg8: vector<4xf8E4M3B11FNUZ>, // CHECK-NOT: vector<4xf8E4M3B11FNUZ>
-    %arg9: memref<8xf8E4M3, #spirv.storage_class<StorageBuffer>>, // CHECK-NOT: memref
-    %arg10: tensor<4xf8E5M2>        // CHECK-NOT: tensor
+    %arg0: f8E4M3,                  // CHECK-NOT: f8E4M3
+    %arg1: f8E5M2FNUZ,              // CHECK-NOT: f8E5M2FNUZ
+    %arg2: f8E4M3FNUZ,              // CHECK-NOT: f8E4M3FNUZ
+    %arg3: f8E4M3B11FNUZ,           // CHECK-NOT: f8E4M3B11FNUZ
+    %arg4: f8E3M4,                  // CHECK-NOT: f8E3M4
+    %arg5: f8E8M0FNU,               // CHECK-NOT: f8E8M0FNU
+    %arg6: vector<4xf8E4M3B11FNUZ>, // CHECK-NOT: vector<4xf8E4M3B11FNUZ>
+    %arg7: memref<8xf8E4M3, #spirv.storage_class<StorageBuffer>>, // CHECK-NOT: memref
+    %arg8: tensor<4xf8E4M3>        // CHECK-NOT: tensor
+  ) {
+    // CHECK: spirv.Return
+    return
+  }
+}
+
+// -----
+
+// Check that supported Float8EXT types remain legal SPIR-V scalar types when
+// float emulation is disabled.
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Float8EXT], [SPV_EXT_float8]>, #spirv.resource_limits<>>
+} {
+
+  // CHECK-LABEL: spirv.func @supported_float8_types
+  // CHECK-SAME: (%arg0: vector<4xi32>
+  // CHECK-SAME: %arg1: vector<4xi32>
+  // CHECK-SAME: %arg2: !spirv.array<4 x i32>
+  // CHECK-SAME: %arg3: !spirv.array<4 x i32>
+  // UNSUPPORTED_FLOAT-LABEL: spirv.func @supported_float8_types
+  // UNSUPPORTED_FLOAT-SAME: (%arg0: vector<4xf8E5M2>
+  // UNSUPPORTED_FLOAT-SAME: %arg1: vector<4xf8E4M3FN>
+  // UNSUPPORTED_FLOAT-SAME: %arg2: !spirv.array<4 x f8E5M2>
+  // UNSUPPORTED_FLOAT-SAME: %arg3: !spirv.array<4 x f8E4M3FN>
+  func.func @supported_float8_types(
+    %arg0: vector<4xf8E5M2>,
+    %arg1: vector<4xf8E4M3FN>,
+    %arg2: tensor<4xf8E5M2>,
+    %arg3: tensor<4xf8E4M3FN>
   ) {
     // CHECK: spirv.Return
     return
