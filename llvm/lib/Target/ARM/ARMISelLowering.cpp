@@ -529,14 +529,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     addRegisterClass(MVT::f32, &ARM::SPRRegClass);
     addRegisterClass(MVT::f64, &ARM::DPRRegClass);
 
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
-
     if (!Subtarget->hasVFP2Base()) {
       setAllExpand(MVT::f32);
     } else {
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Custom);
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Custom);
+
       for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
                       ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
         setOperationAction(Op, MVT::f32, Legal);
@@ -544,6 +542,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     if (!Subtarget->hasFP64()) {
       setAllExpand(MVT::f64);
     } else {
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
+
       for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
                       ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
         setOperationAction(Op, MVT::f64, Legal);
