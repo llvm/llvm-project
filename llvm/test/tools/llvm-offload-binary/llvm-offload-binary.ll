@@ -27,12 +27,12 @@
 ; RUN: llvm-objdump --offloading %t6 | FileCheck %s --check-prefix=NESTED
 
 ; NESTED: OFFLOADING IMAGE [0]:
-; NESTED: arch            nested
-; NESTED: nested images   2
-; NESTED:   OFFLOADING IMAGE [0.0]:
-; NESTED:   arch            abc
-; NESTED:   OFFLOADING IMAGE [0.1]:
-; NESTED:   arch            def
+; NESTED-DAG: arch            nested
+; NESTED-DAG: nested images   2
+; NESTED-DAG:   OFFLOADING IMAGE [0.0]:
+; NESTED-DAG:   arch            abc
+; NESTED-DAG:   OFFLOADING IMAGE [0.1]:
+; NESTED-DAG:   arch            def
 
 ; Test complex nested OffloadBinary construction with multiple levels.
 ; RUN: llvm-offload-binary -o %t7 --image=file=%s,arch=abc,triple=x-y-z --image=file=%t5,arch=nested,triple=x-y-z
@@ -40,38 +40,38 @@
 ; RUN: llvm-objdump --offloading %t8 | FileCheck %s --check-prefix=NESTED2
 
 ; NESTED2: OFFLOADING IMAGE [0]:
-; NESTED2: arch            nested
-; NESTED2: nested images   2
-; NESTED2:   OFFLOADING IMAGE [0.0]:
-; NESTED2:   arch            abc
-; NESTED2:   OFFLOADING IMAGE [0.1]:
-; NESTED2:   arch            nested
-; NESTED2:   nested images   2
-; NESTED2:     OFFLOADING IMAGE [0.1.0]:
-; NESTED2:     arch            abc
-; NESTED2:     OFFLOADING IMAGE [0.1.1]:
-; NESTED2:     arch            def
-; NESTED2: OFFLOADING IMAGE [1]:
-; NESTED2: arch            nested2
-; NESTED2: nested images   2
-; NESTED2:   OFFLOADING IMAGE [1.0]:
-; NESTED2:   arch            abc
-; NESTED2:   OFFLOADING IMAGE [1.1]:
-; NESTED2:   arch            def
+; NESTED2-DAG: arch            nested
+; NESTED2-DAG: nested images   2
+; NESTED2-DAG:   OFFLOADING IMAGE [0.0]:
+; NESTED2-DAG:   arch            abc
+; NESTED2-DAG:   OFFLOADING IMAGE [0.1]:
+; NESTED2-DAG:   arch            nested
+; NESTED2-DAG:   nested images   2
+; NESTED2-DAG:     OFFLOADING IMAGE [0.1.0]:
+; NESTED2-DAG:     arch            abc
+; NESTED2-DAG:     OFFLOADING IMAGE [0.1.1]:
+; NESTED2-DAG:     arch            def
+; NESTED2-DAG: OFFLOADING IMAGE [1]:
+; NESTED2-DAG: arch            nested2
+; NESTED2-DAG: nested images   2
+; NESTED2-DAG:   OFFLOADING IMAGE [1.0]:
+; NESTED2-DAG:   arch            abc
+; NESTED2-DAG:   OFFLOADING IMAGE [1.1]:
+; NESTED2-DAG:   arch            def
 
 ; Test extracting nested images.
 ; RUN: llvm-offload-binary %t6 | FileCheck --check-prefix=EXTRACT-NESTED %s
 
 ; EXTRACT-NESTED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
-; EXTRACT-NESTED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-def.1.
+; EXTRACT-NESTED-NEXT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-def.1.
 
 ; Test mixed nested and non-nested images.
 ; RUN: llvm-offload-binary -o %t7 --image=file=%t5,arch=nested,triple=x-y-z --image=file=%s,arch=ghi,triple=x-y-z
 ; RUN: llvm-offload-binary %t7 | FileCheck --check-prefix=EXTRACT-MIXED %s
 
 ; EXTRACT-MIXED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
-; EXTRACT-MIXED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-def.1.
-; EXTRACT-MIXED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-ghi.2.
+; EXTRACT-MIXED-NEXT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-def.1.
+; EXTRACT-MIXED-NEXT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-ghi.2.
 
 ; Test extracting inner OffloadBinary with --image filter.
 ; RUN: llvm-offload-binary %t7 --image=file=%t8,arch=nested,triple=x-y-z
