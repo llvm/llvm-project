@@ -34,6 +34,8 @@ namespace object {
 const char ArchiveMagic[] = "!<arch>\n";
 const char ThinArchiveMagic[] = "!<thin>\n";
 const char BigArchiveMagic[] = "<bigaf>\n";
+const char ZOSArchiveMagic[] =
+    "\x5A\x4C\x81\x99\x83\x88\x6E\x15"; // "!<arch>\n" in EBCDIC
 
 class Archive;
 

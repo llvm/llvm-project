@@ -26,6 +26,7 @@
 // CHECK-NEXT:         "[[PREFIX]]{{.*}}Mod{{.*}}.pcm"
 // CHECK:              "-dependency-file"
 // CHECK-NEXT:         "[[PREFIX]]{{.*}}Mod{{.*}}.d"
+// CHECK:              "-module-file-deps=direct"
 // CHECK:            ],
 
 // DEPS_MT1:      "-MT"
@@ -45,6 +46,12 @@
 // WITHOUT-NOT:          "-dependency-file"
 // WITHOUT-NOT:          "-MT"
 // WITHOUT:            ],
+
+// Check that -module-file-deps=direct is present in the TU command.
+// CHECK:      "translation-units":
+// CHECK:          "command-line": [
+// CHECK:            "-module-file-deps=direct"
+// CHECK:          ]
 
 //--- cdb.json.template
 [{

@@ -44,6 +44,7 @@
 #include "ExceptionRecord.h"
 #include "ForwardDecl.h"
 #include "LocalDebugDelegate.h"
+#include "MSVCRTCFrameRecognizer.h"
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
 
@@ -102,17 +103,15 @@ static bool ShouldUseLLDBServer() {
 
 void ProcessWindows::Initialize() {
   if (!ShouldUseLLDBServer()) {
-    static llvm::once_flag g_once_flag;
-
-    llvm::call_once(g_once_flag, []() {
-      PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                    GetPluginDescriptionStatic(),
-                                    CreateInstance);
-    });
+    PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                  GetPluginDescriptionStatic(), CreateInstance);
   }
 }
 
-void ProcessWindows::Terminate() {}
+void ProcessWindows::Terminate() {
+  if (!ShouldUseLLDBServer())
+    PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef ProcessWindows::GetPluginDescriptionStatic() {
   return "Process plugin for Windows";
@@ -304,6 +303,8 @@ void ProcessWindows::DidLaunch() {
 
 void ProcessWindows::DidAttach(ArchSpec &arch_spec) {
   llvm::sys::ScopedLock lock(m_mutex);
+
+  RegisterMSVCRTCFrameRecognizer(*this);
 
   // The initial stop won't broadcast the state change event, so account for
   // that here.
@@ -555,10 +556,11 @@ bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
       new_thread_list.AddThread(old_thread);
       ++new_size;
       ++continued_threads;
-      LLDB_LOGV(log, "Thread {0} was running and is still running.",
-                old_thread_id);
+      LLDB_LOG_VERBOSE(log, "Thread {0} was running and is still running.",
+                       old_thread_id);
     } else {
-      LLDB_LOGV(log, "Thread {0} was running and has exited.", old_thread_id);
+      LLDB_LOG_VERBOSE(log, "Thread {0} was running and has exited.",
+                       old_thread_id);
       ++exited_threads;
     }
   }
@@ -569,7 +571,8 @@ bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
     new_thread_list.AddThread(thread_info.second);
     ++new_size;
     ++new_threads;
-    LLDB_LOGV(log, "Thread {0} is new since last update.", thread_info.first);
+    LLDB_LOG_VERBOSE(log, "Thread {0} is new since last update.",
+                     thread_info.first);
   }
 
   LLDB_LOG(log, "{0} new threads, {1} old threads, {2} exited threads.",
@@ -863,6 +866,15 @@ std::optional<uint32_t> ProcessWindows::GetWatchpointSlotCount() {
   return RegisterContextWindows::GetNumHardwareBreakpointSlots();
 }
 
+std::optional<DWORD> ProcessWindows::GetActiveExceptionCode() const {
+  if (!m_session_data || !m_session_data->m_debugger)
+    return std::nullopt;
+  auto exc = m_session_data->m_debugger->GetActiveException().lock();
+  if (!exc)
+    return std::nullopt;
+  return exc->GetExceptionCode();
+}
+
 Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
 
@@ -998,7 +1010,7 @@ public:
       INPUT_RECORD inputRecord;
       DWORD numRead = 0;
       if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead))
-        return llvm::createStringError("Failed to peek standard input.");
+        return llvm::createStringError("failed to peek standard input");
 
       if (numRead == 0)
         return false;
@@ -1009,7 +1021,7 @@ public:
         return true;
 
       if (!ReadConsoleInput(hStdin, &inputRecord, 1, &numRead))
-        return llvm::createStringError("Failed to read standard input.");
+        return llvm::createStringError("failed to read standard input");
     }
   }
 

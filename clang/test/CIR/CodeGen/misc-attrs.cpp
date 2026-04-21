@@ -6,47 +6,47 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 extern "C" {
-  // CIR: cir.func{{.*}}@returns_twice() attributes {returns_twice} {
+  // CIR: cir.func{{.*}}@returns_twice() attributes {nothrow, returns_twice} {
   // LLVM: Function Attrs:{{.*}}returns_twice
   // LLVM-NEXT: define{{.*}}@returns_twice() #[[RT_ATTR:.*]] {
   __attribute__((returns_twice))
   void returns_twice() {}
-  // CIR: cir.func{{.*}}@cold() attributes {cold} {
+  // CIR: cir.func{{.*}}@cold() attributes {cold, nothrow} {
   // LLVM: Function Attrs:{{.*}}cold
   // LLVM-NEXT: define{{.*}}@cold() #[[COLD_ATTR:.*]] {
   __attribute__((cold))
   void cold() {}
-  // CIR: cir.func{{.*}}@hot() attributes {hot} {
+  // CIR: cir.func{{.*}}@hot() attributes {hot, nothrow} {
   // LLVM: Function Attrs:{{.*}}hot
   // LLVM-NEXT: define{{.*}}@hot() #[[HOT_ATTR:.*]] {
   __attribute__((hot))
   void hot() {}
-  // CIR: cir.func{{.*}}@nodupes() attributes {noduplicate} {
+  // CIR: cir.func{{.*}}@nodupes() attributes {noduplicate, nothrow} {
   // LLVM: Function Attrs:{{.*}}noduplicate
   // LLVM-NEXT: define{{.*}}@nodupes() #[[ND_ATTR:.*]] {
   __attribute__((noduplicate))
   void nodupes() {}
-  // CIR: cir.func{{.*}}@convergent() attributes {convergent} {
+  // CIR: cir.func{{.*}}@convergent() attributes {convergent, nothrow} {
   // LLVM: Function Attrs:{{.*}}convergent
   // LLVM-NEXT: define{{.*}}@convergent() #[[CONV_ATTR:.*]] {
   __attribute__((convergent))
   void convergent() {}
 
-  // CIR: cir.func{{.*}}@no_caller_saved_registers() attributes {no_caller_saved_registers} {
+  // CIR: cir.func{{.*}}@no_caller_saved_registers() attributes {no_caller_saved_registers, nothrow} {
   // LLVM: Function Attrs:
   // LLVM-NOT: no_caller_saved_registers
   // LLVM-NEXT: define{{.*}}@no_caller_saved_registers() #[[NCSR_ATTR:.*]] {
   __attribute__((no_caller_saved_registers))
   void no_caller_saved_registers() {}
 
-  // CIR: cir.func{{.*}}@leaf() attributes {nocallback} {
+  // CIR: cir.func{{.*}}@leaf() attributes {nocallback, nothrow} {
   // LLVM: Function Attrs:
   // LLVM-NOT: leaf
   // LLVM-NEXT: define{{.*}}@leaf() #[[LEAF_ATTR:.*]] {
   __attribute__((leaf))
   void leaf() {}
 
-  // CIR: cir.func{{.*}}@modular_format({{.*}}) attributes {modular_format = "kprintf,1,2,someIdent,someStr,aspect,aspect2"} {
+  // CIR: cir.func{{.*}}@modular_format({{.*}}) attributes {modular_format = "kprintf,1,2,someIdent,someStr,aspect,aspect2", nothrow} {
   // LLVM: Function Attrs:
   // LLVM-NOT:modular_format
   // LLVM-NEXT: define{{.*}}@modular_format({{.*}}) #[[MOD_FORMAT_ATTR:.*]] {

@@ -101,6 +101,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (startswith(Magic, "CPCH"))
       return file_magic::clang_ast;
     break;
+  case 0x5A:
+    if (startswith(Magic,
+                   "\x5A\x4C\x81\x99\x83\x88\x6E\x15")) // "!<arch>\n" in EBCDIC
+      return file_magic::archive;
+    break;
   case '!':
     if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))
       return file_magic::archive;

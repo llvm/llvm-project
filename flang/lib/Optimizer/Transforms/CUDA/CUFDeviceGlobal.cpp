@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Support/Fortran.h"
@@ -31,10 +32,14 @@ namespace {
 static void processAddrOfOp(fir::AddrOfOp addrOfOp,
                             mlir::SymbolTable &symbolTable,
                             llvm::DenseSet<fir::GlobalOp> &candidates,
-                            bool recurseInGlobal) {
+                            bool recurseInGlobal,
+                            bool skipDeadDeclares = true) {
 
-  // Check if there is a real use of the global.
-  if (addrOfOp.getOperation()->hasOneUse()) {
+  // Skip globals whose only reference is a dead fir.declare (no real uses).
+  // This is disabled when fir.declare ops are preserved for debug info,
+  // because later passes will copy the entire function body (including dead
+  // references) into GPU kernels.
+  if (skipDeadDeclares && addrOfOp.getOperation()->hasOneUse()) {
     mlir::OpOperand &addrUse = *addrOfOp.getOperation()->getUses().begin();
     if (mlir::isa<fir::DeclareOp>(addrUse.getOwner()) &&
         addrUse.getOwner()->use_empty())
@@ -68,6 +73,13 @@ static void processTypeDescriptor(fir::RecordType recTy,
   }
 }
 
+static void processAllocaOp(fir::AllocaOp allocaOp,
+                            mlir::SymbolTable &symbolTable,
+                            llvm::DenseSet<fir::GlobalOp> &candidates) {
+  if (auto recTy = mlir::dyn_cast<fir::RecordType>(allocaOp.getInType()))
+    processTypeDescriptor(recTy, symbolTable, candidates);
+}
+
 static void processEmboxOp(fir::EmboxOp emboxOp, mlir::SymbolTable &symbolTable,
                            llvm::DenseSet<fir::GlobalOp> &candidates) {
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(
@@ -75,18 +87,21 @@ static void processEmboxOp(fir::EmboxOp emboxOp, mlir::SymbolTable &symbolTable,
     processTypeDescriptor(recTy, symbolTable, candidates);
 }
 
-static void
-prepareImplicitDeviceGlobals(mlir::func::FuncOp funcOp,
-                             mlir::SymbolTable &symbolTable,
-                             llvm::DenseSet<fir::GlobalOp> &candidates) {
+static void prepareImplicitDeviceGlobals(
+    mlir::func::FuncOp funcOp, mlir::SymbolTable &symbolTable,
+    llvm::DenseSet<fir::GlobalOp> &candidates, bool skipDeadDeclares) {
   auto cudaProcAttr{
       funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName())};
   if (cudaProcAttr && cudaProcAttr.getValue() != cuf::ProcAttribute::Host) {
     funcOp.walk([&](fir::AddrOfOp op) {
-      processAddrOfOp(op, symbolTable, candidates, /*recurseInGlobal=*/false);
+      processAddrOfOp(op, symbolTable, candidates, /*recurseInGlobal=*/false,
+                      skipDeadDeclares);
     });
     funcOp.walk(
         [&](fir::EmboxOp op) { processEmboxOp(op, symbolTable, candidates); });
+    funcOp.walk([&](fir::AllocaOp op) {
+      processAllocaOp(op, symbolTable, candidates);
+    });
   }
 }
 
@@ -103,6 +118,8 @@ processPotentialTypeDescriptor(mlir::Type candidateType,
 
 class CUFDeviceGlobal : public fir::impl::CUFDeviceGlobalBase<CUFDeviceGlobal> {
 public:
+  using CUFDeviceGlobalBase::CUFDeviceGlobalBase;
+
   void runOnOperation() override {
     mlir::Operation *op = getOperation();
     mlir::ModuleOp mod = mlir::dyn_cast<mlir::ModuleOp>(op);
@@ -112,13 +129,14 @@ public:
     llvm::DenseSet<fir::GlobalOp> candidates;
     mlir::SymbolTable symTable(mod);
     mod.walk([&](mlir::func::FuncOp funcOp) {
-      prepareImplicitDeviceGlobals(funcOp, symTable, candidates);
+      prepareImplicitDeviceGlobals(funcOp, symTable, candidates,
+                                   skipDeadDeclares);
       return mlir::WalkResult::advance();
     });
     mod.walk([&](cuf::KernelOp kernelOp) {
       kernelOp.walk([&](fir::AddrOfOp addrOfOp) {
         processAddrOfOp(addrOfOp, symTable, candidates,
-                        /*recurseInGlobal=*/false);
+                        /*recurseInGlobal=*/false, skipDeadDeclares);
       });
     });
 

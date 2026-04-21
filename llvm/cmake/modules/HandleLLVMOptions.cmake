@@ -429,14 +429,20 @@ if( LLVM_ENABLE_LLD )
 endif()
 
 if( LLVM_USE_LINKER )
+  check_cxx_source_compiles("int main() { return 0; }" _CAN_LINK_EXECUTABLE)
+  mark_as_advanced(_CAN_LINK_EXECUTABLE)
   append("-fuse-ld=${LLVM_USE_LINKER}"
     CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
-  if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
-    message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'. "
-                        "Please make sure that '${LLVM_USE_LINKER}' is installed and "
-                        "that your host compiler can compile a simple program when "
-                        "given the option '-fuse-ld=${LLVM_USE_LINKER}'.")
+  if(_CAN_LINK_EXECUTABLE)
+    check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
+    if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
+      message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'. "
+                          "Please make sure that '${LLVM_USE_LINKER}' is installed and "
+                          "that your host compiler can compile a simple program when "
+                          "given the option '-fuse-ld=${LLVM_USE_LINKER}'.")
+    endif()
+  else()
+    message(STATUS "Skipping custom linker check: offload target cannot link executable")
   endif()
 endif()
 
@@ -580,6 +586,7 @@ elseif(MINGW OR CYGWIN)
 endif()
 
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
+option(LLVM_ENABLE_WARNING_SUPPRESSIONS "Suppress compiler warnings." ON)
 
 if( MSVC )
 
@@ -784,6 +791,9 @@ if (MSVC)
       # Promoted warnings to errors.
       -we4238 # Promote 'nonstandard extension used : class rvalue used as lvalue' to error.
       )
+    if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS)
+      list(FILTER msvc_warning_flags EXCLUDE REGEX "^-wd")
+    endif()
   endif(NOT CLANG_CL)
 
   # Enable warnings
@@ -808,6 +818,12 @@ if (MSVC)
     append("${flag}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endforeach(flag)
 endif (MSVC)
+
+if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+  # Keep track of the flags before LLVM appends its default warnings
+  set(PRE_CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+  set(PRE_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()
 
 if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
@@ -961,6 +977,19 @@ endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
   append("-w" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+endif()
+
+if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+  # Strip the -Wno- flags from the substring of flags added by LLVM in this block
+  string(LENGTH "${PRE_CMAKE_C_FLAGS}" PRE_CMAKE_C_LEN)
+  string(SUBSTRING "${CMAKE_C_FLAGS}" ${PRE_CMAKE_C_LEN} -1 ADDED_CMAKE_C_FLAGS)
+  string(REGEX REPLACE "(^| +)-Wno-[a-zA-Z0-9_-]+" "" ADDED_CMAKE_C_FLAGS "${ADDED_CMAKE_C_FLAGS}")
+  set(CMAKE_C_FLAGS "${PRE_CMAKE_C_FLAGS}${ADDED_CMAKE_C_FLAGS}")
+
+  string(LENGTH "${PRE_CMAKE_CXX_FLAGS}" PRE_CMAKE_CXX_LEN)
+  string(SUBSTRING "${CMAKE_CXX_FLAGS}" ${PRE_CMAKE_CXX_LEN} -1 ADDED_CMAKE_CXX_FLAGS)
+  string(REGEX REPLACE "(^| +)-Wno-[a-zA-Z0-9_-]+" "" ADDED_CMAKE_CXX_FLAGS "${ADDED_CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${PRE_CMAKE_CXX_FLAGS}${ADDED_CMAKE_CXX_FLAGS}")
 endif()
 
 macro(append_common_sanitizer_flags)
@@ -1136,7 +1165,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx64")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"
@@ -1319,6 +1348,13 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
     # debugging such cases rather difficult. Therefore, disable PCH on AIX by
     # default.
     message(NOTICE "Precompiled headers are disabled by default on AIX. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "OS390")
+    # There are occasional issues with PCH on z/OS, therefore disable PCH by
+    # default.
+    message(NOTICE "Precompiled headers are disabled by default on z/OS. "
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   endif()

@@ -733,6 +733,10 @@ def nzFPImmExactInti5 : PatLeaf<(fpimm), [{
   return IsExact && IntResult <= 15 && IntResult >= -16 && !FloatValue.isZero();
 }]>;
 
+// Floating point zero immediates (positive and negative)
+def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+
 def getFPAs5BitExactInt : SDNodeXForm<fpimm, [{
   APFloat FloatValue = N->getValueAPF();
   bool IsExact;
@@ -2126,7 +2130,7 @@ def : Pat<(PPCatomicCmpSwap_16 ForceXForm:$ptr, i32:$old, i32:$new),
         (ATOMIC_CMP_SWAP_I16 ForceXForm:$ptr, i32:$old, i32:$new)>;
 
 // Instructions to support atomic operations
-let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
+let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
 def LBARX : XForm_1_memOp<31,  52, (outs gprc:$RST), (ins (memrr $RA, $RB):$addr),
                     "lbarx $RST, $addr", IIC_LdStLWARX, []>,
                     Requires<[HasPartwordAtomics]>;
@@ -2160,6 +2164,12 @@ def LWAT : X_RD5_RS5_IM5<31, 582, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
            Requires<[IsISA3_0]>,
            RegConstraint<"$RSTi = $RST">;
 
+let hasExtraSrcRegAllocReq = 1, mayLoad = 1,
+       mayStore = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
+def LWAT_CSNE : X_RD5_RS5_IM5<31, 582, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
+                         "lwat $RST, $RA, $RB", IIC_LdStLoad>,
+           Requires<[IsISA3_0]>;
+
 def LWAT_PSEUDO : PPCCustomInserterPseudo<
     (outs gprc:$dst),
     (ins ptr_rc_nor0:$ptr, gprc:$val, u5imm:$fc),
@@ -2172,7 +2182,14 @@ def LWAT_COND_PSEUDO : PPCCustomInserterPseudo <
     "#LWAT_COND_PSEUDO",
     [(set i32:$dst, (int_ppc_amo_lwat_cond ptr_rc_nor0:$ptr, u5imm_timm:$fc))]>;
 
-let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
+let Defs = [R8, R9, R10], Uses = [R9, R10] in
+def LWAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
+    (outs gprc:$dst),
+    (ins ptr_rc_nor0:$ptr),
+    "#LWAT_CSNE_PSEUDO",
+    [(set i32:$dst, (int_ppc_amo_lwat_csne ptr_rc_nor0:$ptr, R9, R10))]>;
+
+let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
 def STBCX : XForm_1_memOp<31, 694, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),
                     "stbcx. $RST, $addr", IIC_LdStSTWCX, []>,
                     isRecordForm, Requires<[HasPartwordAtomics]>;
@@ -2547,7 +2564,7 @@ def : Pat<(int_ppc_iospace_eieio),  (PseudoEIEIO)>;
 let PPC970_Unit = 1 in {  // FXU Operations.
 def ADDI   : DForm_2<14, (outs gprc:$RST), (ins gprc_nor0:$RA, s16imm:$D),
                      "addi $RST, $RA, $D", IIC_IntSimple,
-                     [(set i32:$RST, (add i32:$RA, imm32SExt16:$D))]>;
+                     [(set i32:$RST, (add_like i32:$RA, imm32SExt16:$D))]>;
 let BaseName = "addic" in {
 let Defs = [CARRY] in
 def ADDIC  : DForm_2<12, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
@@ -2561,7 +2578,7 @@ def ADDIC_rec : DForm_2<13, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
 }
 def ADDIS  : DForm_2<15, (outs gprc:$RST), (ins gprc_nor0:$RA, s17imm:$D),
                      "addis $RST, $RA, $D", IIC_IntSimple,
-                     [(set i32:$RST, (add i32:$RA, imm16ShiftedSExt:$D))]>;
+                     [(set i32:$RST, (add_like i32:$RA, imm16ShiftedSExt:$D))]>;
 let isCodeGenOnly = 1 in
 def LA     : DForm_2<14, (outs gprc:$RST), (ins gprc_nor0:$RA, s16imm:$D),
                      "la $RST, $D($RA)", IIC_IntGeneral,
@@ -3396,7 +3413,7 @@ def        : Pat<(not i32:$in),
                  (i32not $in)>;
 
 // ADD an arbitrary immediate.
-def : Pat<(add i32:$in, imm:$imm),
+def : Pat<(add_like i32:$in, imm:$imm),
           (ADDIS (ADDI $in, (LO16 imm:$imm)), (HA16 imm:$imm))>;
 // OR an arbitrary immediate.
 def : Pat<(or i32:$in, imm:$imm),

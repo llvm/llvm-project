@@ -458,7 +458,7 @@ llvm::Error Host::OpenURL(llvm::StringRef url) {
       std::error_code(ENOTSUP, std::system_category()));
 #else  // !TARGET_OS_OSX
   if (url.empty())
-    return llvm::createStringError("Cannot open empty URL.");
+    return llvm::createStringError("cannot open empty URL");
 
   LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
 
@@ -1530,10 +1530,11 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       }
     }
     bool run_in_shell = true;
-    bool hide_stderr = true;
+    std::string error_output; // Pass stderr string arg so it is not mixed with
+                              // stdout.
     Status e =
         RunShellCommand(expand_command, cwd, &status, nullptr, &output,
-                        std::chrono::seconds(10), run_in_shell, hide_stderr);
+                        &error_output, std::chrono::seconds(10), run_in_shell);
 
     if (e.Fail())
       return e;

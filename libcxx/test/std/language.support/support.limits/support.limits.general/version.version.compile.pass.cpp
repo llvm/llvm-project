@@ -3532,7 +3532,7 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
-#  if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
+#  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #    ifndef __cpp_lib_destroying_delete
 #      error "__cpp_lib_destroying_delete should be defined in c++20"
 #    endif
@@ -3541,7 +3541,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_destroying_delete
-#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
+#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
 #    endif
 #  endif
 
@@ -5020,7 +5020,7 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
-#  if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
+#  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #    ifndef __cpp_lib_destroying_delete
 #      error "__cpp_lib_destroying_delete should be defined in c++23"
 #    endif
@@ -5029,7 +5029,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_destroying_delete
-#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
+#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
 #    endif
 #  endif
 
@@ -6364,8 +6364,8 @@
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++26"
 #  endif
-#  if __cpp_lib_atomic_ref != 202411L
-#    error "__cpp_lib_atomic_ref should have the value 202411L in c++26"
+#  if __cpp_lib_atomic_ref != 202603L
+#    error "__cpp_lib_atomic_ref should have the value 202603L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -6766,7 +6766,7 @@
 #    endif
 #  endif
 
-#  if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
+#  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #    ifndef __cpp_lib_destroying_delete
 #      error "__cpp_lib_destroying_delete should be defined in c++26"
 #    endif
@@ -6775,7 +6775,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_destroying_delete
-#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
+#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
 #    endif
 #  endif
 
@@ -7812,8 +7812,8 @@
 #  ifndef __cpp_lib_saturation_arithmetic
 #    error "__cpp_lib_saturation_arithmetic should be defined in c++26"
 #  endif
-#  if __cpp_lib_saturation_arithmetic != 202311L
-#    error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
+#  if __cpp_lib_saturation_arithmetic != 202603L
+#    error "__cpp_lib_saturation_arithmetic should have the value 202603L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS

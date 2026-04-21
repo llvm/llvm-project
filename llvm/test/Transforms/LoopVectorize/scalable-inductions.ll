@@ -28,14 +28,14 @@ define void @add_ind64_unrolled(ptr noalias nocapture %a, ptr noalias nocapture 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP6]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[TMP9]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [8 x i8], ptr [[B:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP9]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 2 x i64>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <vscale x 2 x i64> [[WIDE_LOAD2]], [[STEP_ADD]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[TMP14]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP14]], i64 [[TMP8]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP12]], ptr [[TMP14]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP13]], ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
@@ -50,10 +50,10 @@ define void @add_ind64_unrolled(ptr noalias nocapture %a, ptr noalias nocapture 
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[B]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP18]], [[I_08]]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[I_08]]
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
@@ -64,7 +64,7 @@ define void @add_ind64_unrolled(ptr noalias nocapture %a, ptr noalias nocapture 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %b, i64 %i.08
   %0 = load i64, ptr %arrayidx, align 8
@@ -75,7 +75,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 
@@ -102,14 +102,14 @@ define void @add_ind64_unrolled_nxv1i64(ptr noalias nocapture %a, ptr noalias no
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP6]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 1 x i64> [[VEC_IND]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[B:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP8]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 1 x i64>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 1 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <vscale x 1 x i64> [[WIDE_LOAD]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <vscale x 1 x i64> [[WIDE_LOAD2]], [[STEP_ADD]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP13]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <vscale x 1 x i64> [[TMP11]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    store <vscale x 1 x i64> [[TMP12]], ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
@@ -124,10 +124,10 @@ define void @add_ind64_unrolled_nxv1i64(ptr noalias nocapture %a, ptr noalias no
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[B]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP17]], [[I_08]]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[I_08]]
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
@@ -138,7 +138,7 @@ define void @add_ind64_unrolled_nxv1i64(ptr noalias nocapture %a, ptr noalias no
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %b, i64 %i.08
   %0 = load i64, ptr %arrayidx, align 8
@@ -149,7 +149,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !9
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 
@@ -187,7 +187,7 @@ define void @add_unique_ind32(ptr noalias nocapture %a, i64 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[TMP7]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[VEC_IND]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
@@ -203,7 +203,7 @@ define void @add_unique_ind32(ptr noalias nocapture %a, i64 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[R_07:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[I_08]]
 ; CHECK-NEXT:    store i32 [[R_07]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[R_07]], 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
@@ -215,7 +215,7 @@ define void @add_unique_ind32(ptr noalias nocapture %a, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %i.08
@@ -225,7 +225,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !6
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 
@@ -264,7 +264,7 @@ define void @add_unique_indf32(ptr noalias nocapture %a, i64 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x float> [ [[TMP9]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 4 x float> [[VEC_IND]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = fadd <vscale x 4 x float> [[VEC_IND]], [[DOTSPLAT]]
@@ -280,7 +280,7 @@ define void @add_unique_indf32(ptr noalias nocapture %a, i64 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[R_07:%.*]] = phi float [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[I_08]]
 ; CHECK-NEXT:    store float [[R_07]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = fadd float [[R_07]], 2.000000e+00
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
@@ -292,7 +292,7 @@ define void @add_unique_indf32(ptr noalias nocapture %a, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi float [ %add, %for.body ], [ 0.000000e+00, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %i.08
@@ -302,7 +302,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !6
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 

@@ -6,14 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/float/definitions.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_fabs.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/math.h>
-#include <clc/relational/clc_isnan.h>
+#include "clc/math/clc_atan_helpers.h"
+#include "clc/math/clc_atanpi.h"
+#include "clc/math/clc_copysign.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_recip_fast.h"
 
-#define __CLC_BODY <clc_atanpi.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_atanpi.inc"
+#include "clc/math/gentype.inc"

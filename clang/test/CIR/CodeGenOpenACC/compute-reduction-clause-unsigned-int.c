@@ -16,7 +16,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -33,7 +33,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -49,7 +49,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[RHSARG]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -72,7 +72,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[LHSARG]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -95,7 +95,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[AND:.*]] = cir.binop(and, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[AND:.*]] = cir.and %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[AND]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -112,7 +112,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[OR:.*]] = cir.binop(or, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[OR:.*]] = cir.or %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[OR]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -129,7 +129,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[XOR:.*]] = cir.binop(xor, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[XOR:.*]] = cir.xor %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[XOR]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -203,7 +203,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
 // CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[END_VAL]] : !s64i
 // CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -213,12 +213,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -241,7 +241,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
 // CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[END_VAL]] : !s64i
 // CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -251,12 +251,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -279,7 +279,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
 // CHECK-NEXT: %[[MAX_IDX:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[ITR_CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[MAX_IDX]]) : !s64i, !cir.bool
+// CHECK-NEXT: %[[ITR_CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[MAX_IDX]] : !s64i
 // CHECK-NEXT: cir.condition(%[[ITR_CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -289,7 +289,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -301,7 +301,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -324,7 +324,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
 // CHECK-NEXT: %[[MAX_IDX:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[ITR_CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[MAX_IDX]]) : !s64i, !cir.bool
+// CHECK-NEXT: %[[ITR_CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[MAX_IDX]] : !s64i
 // CHECK-NEXT: cir.condition(%[[ITR_CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -334,7 +334,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -346,7 +346,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -369,7 +369,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
 // CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[END_VAL]] : !s64i
 // CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -379,12 +379,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[AND:.*]] = cir.binop(and, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[AND:.*]] = cir.and %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[AND]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -407,7 +407,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
 // CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[END_VAL]] : !s64i
 // CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -417,12 +417,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[OR:.*]] = cir.binop(or, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[OR:.*]] = cir.or %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[OR]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -445,7 +445,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
 // CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[END_VAL]] : !s64i
 // CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -455,12 +455,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[XOR:.*]] = cir.binop(xor, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[XOR:.*]] = cir.xor %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[XOR]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -483,7 +483,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
 // CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[END_VAL]] : !s64i
 // CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -509,7 +509,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -532,7 +532,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
 // CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[END_VAL]] : !s64i
 // CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -558,7 +558,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -579,7 +579,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -590,7 +590,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -607,7 +607,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -617,12 +617,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -643,7 +643,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -654,7 +654,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -671,7 +671,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -681,12 +681,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -707,7 +707,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -718,7 +718,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -735,7 +735,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -745,7 +745,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -757,7 +757,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -778,7 +778,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -789,7 +789,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -806,7 +806,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -816,7 +816,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i, !cir.bool
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -828,7 +828,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -849,7 +849,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -860,7 +860,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -877,7 +877,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -887,12 +887,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[AND:.*]] = cir.binop(and, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[AND:.*]] = cir.and %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[AND]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -913,7 +913,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -924,7 +924,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -941,7 +941,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -951,12 +951,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[OR:.*]] = cir.binop(or, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[OR:.*]] = cir.or %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[OR]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -977,7 +977,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -988,7 +988,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1005,7 +1005,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1015,12 +1015,12 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[XOR:.*]] = cir.binop(xor, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[XOR:.*]] = cir.xor %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[XOR]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1041,7 +1041,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1052,7 +1052,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1069,7 +1069,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1095,7 +1095,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1116,7 +1116,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1127,7 +1127,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1144,7 +1144,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1170,7 +1170,7 @@ void acc_compute() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }

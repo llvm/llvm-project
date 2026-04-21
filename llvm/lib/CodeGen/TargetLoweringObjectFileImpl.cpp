@@ -1036,8 +1036,8 @@ bool TargetLoweringObjectFileELF::shouldPutJumpTableInFunctionSection(
 /// Given a mergeable constant with the specified size and relocation
 /// information, return a section that it should be placed in.
 MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
   if (Kind.isMergeableConst4() && MergeableConst4Section)
     return MergeableConst4Section;
   if (Kind.isMergeableConst8() && MergeableConst8Section)
@@ -1055,11 +1055,11 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
 
 MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
-    StringRef SectionSuffix) const {
+    const Function *F, StringRef SectionSuffix) const {
   // TODO: Share code between this function and
   // MCObjectInfo::initELFMCObjectFileInfo.
   if (SectionSuffix.empty())
-    return getSectionForConstant(DL, Kind, C, Alignment);
+    return getSectionForConstant(DL, Kind, C, Alignment, F);
 
   auto &Context = getContext();
   if (Kind.isMergeableConst4() && MergeableConst4Section)
@@ -1306,6 +1306,8 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   // Emit the linker options if present.
   emitLinkerDirectives(Streamer, M);
 
+  emitPseudoProbeDescMetadata(Streamer, M);
+
   unsigned VersionVal = 0;
   unsigned ImageInfoFlags = 0;
   StringRef SectionVal;
@@ -1472,8 +1474,8 @@ MCSection *TargetLoweringObjectFileMachO::SelectSectionForGlobal(
 }
 
 MCSection *TargetLoweringObjectFileMachO::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
   // If this constant requires a relocation, we have to put it in the data
   // segment, not in the text segment.
   if (Kind.isData() || Kind.isReadOnlyWithRel())
@@ -1594,7 +1596,7 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   // non_lazy_ptr stubs.
   SmallString<128> Name;
   StringRef Suffix = "$non_lazy_ptr";
-  Name += MMI->getModule()->getDataLayout().getPrivateGlobalPrefix();
+  Name += MMI->getModule()->getDataLayout().getInternalSymbolPrefix();
   Name += Sym->getName();
   Name += Suffix;
   MCSymbol *Stub = Ctx.getOrCreateSymbol(Name);
@@ -2159,8 +2161,8 @@ static std::string scalarConstantToHexString(const Constant *C) {
 }
 
 MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
   if (Kind.isMergeableConst() && C &&
       getContext().getAsmInfo()->hasCOFFComdatConstants()) {
     // This creates comdat sections with the given symbol name, but unless
@@ -2200,8 +2202,8 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
                                          COFF::IMAGE_COMDAT_SELECT_ANY);
   }
 
-  return TargetLoweringObjectFile::getSectionForConstant(DL, Kind, C,
-                                                         Alignment);
+  return TargetLoweringObjectFile::getSectionForConstant(DL, Kind, C, Alignment,
+                                                         F);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2631,8 +2633,8 @@ bool TargetLoweringObjectFileXCOFF::shouldPutJumpTableInFunctionSection(
 /// Given a mergeable constant with the specified size and relocation
 /// information, return a section that it should be placed in.
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
   // TODO: Enable emiting constant pool to unique sections when we support it.
   if (Alignment > Align(16))
     report_fatal_error("Alignments greater than 16 not yet supported.");

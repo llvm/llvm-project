@@ -53,6 +53,10 @@ def GPU_Dialect : Dialect {
     /// space.
     static AddressSpace getPrivateAddressSpace() { return AddressSpace::Private; }
 
+    /// Returns the numeric value used to identify the constant memory address
+    /// space.
+    static AddressSpace getConstantAddressSpace() { return AddressSpace::Constant; }
+
     /// Return true if the given MemRefType has an address space that matches
     /// with the gpu::AddressSpaceAttr attribute with value 'workgroup`.
     static bool hasWorkgroupMemoryAddressSpace(MemRefType type);
@@ -60,6 +64,14 @@ def GPU_Dialect : Dialect {
     /// Return true if the given Attribute is an gpu::AddressSpaceAttr
     /// attribute with value 'workgroup`.
     static bool isWorkgroupMemoryAddressSpace(Attribute memorySpace);
+
+    /// Return true if the given MemRefType has an address space that matches
+    /// with the gpu::AddressSpaceAttr attribute with value 'constant`.
+    static bool hasConstantMemoryAddressSpace(MemRefType type);
+
+    /// Return true if the given Attribute is an gpu::AddressSpaceAttr
+    /// attribute with value 'constant`.
+    static bool isConstantMemoryAddressSpace(Attribute memorySpace);
   }];
   let discardableAttrs = (ins
     "::mlir::DenseI32ArrayAttr":$known_block_size,
@@ -89,17 +101,40 @@ class GPU_I32EnumAttr<string mnemonic, GPU_I32Enum enumInfo> :
 def GPU_AddressSpaceGlobal : I32EnumAttrCase<"Global", 1, "global">;
 def GPU_AddressSpaceWorkgroup : I32EnumAttrCase<"Workgroup", 2, "workgroup">;
 def GPU_AddressSpacePrivate : I32EnumAttrCase<"Private", 3, "private">;
+def GPU_AddressSpaceConstant : I32EnumAttrCase<"Constant", 4, "constant">;
 def GPU_AddressSpaceEnum : GPU_I32Enum<
   "AddressSpace", "GPU address space", [
     GPU_AddressSpaceGlobal,
     GPU_AddressSpaceWorkgroup,
-    GPU_AddressSpacePrivate
+    GPU_AddressSpacePrivate,
+    GPU_AddressSpaceConstant
   ]>;
 
 def GPU_AddressSpaceAttr :
   GPU_I32EnumAttr<"address_space", GPU_AddressSpaceEnum>;
 
 def GPU_AddressSpaceAttrArray : TypedArrayAttrBase<GPU_AddressSpaceAttr, "GPU Address Space array">;
+
+def GPU_Dimension : GPU_I32Enum<"Dimension",
+    "a dimension, either 'x', 'y', or 'z'",
+    [
+      I32EnumAttrCase<"x", 0>,
+      I32EnumAttrCase<"y", 1>,
+      I32EnumAttrCase<"z", 2>
+    ]>;
+
+def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
+
+def GPU_DimensionKind : I32Enum<"DimensionKind",
+  "the possible kinds of launch dimension",
+  [
+    I32EnumCase<"Other", 0, "other">,
+    I32EnumCase<"Block", 1, "block">,
+    I32EnumCase<"Grid", 2, "grid">,
+    I32EnumCase<"Cluster", 3, "cluster">
+  ]> {
+  let cppNamespace = "::mlir::gpu";
+}
 
 //===----------------------------------------------------------------------===//
 // GPU Types.

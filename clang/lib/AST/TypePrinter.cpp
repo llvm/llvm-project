@@ -638,27 +638,29 @@ void TypePrinter::printDependentAddressSpaceAfter(
 }
 
 void TypePrinter::printDependentSizedExtVectorBefore(
-                                          const DependentSizedExtVectorType *T,
-                                          raw_ostream &OS) {
-  if (Policy.UseHLSLTypes)
-    OS << "vector<";
-  printBefore(T->getElementType(), OS);
-}
-
-void TypePrinter::printDependentSizedExtVectorAfter(
-                                          const DependentSizedExtVectorType *T,
-                                          raw_ostream &OS) {
+    const DependentSizedExtVectorType *T, raw_ostream &OS) {
   if (Policy.UseHLSLTypes) {
+    OS << "vector<";
+    print(T->getElementType(), OS, StringRef());
     OS << ", ";
     if (T->getSizeExpr())
       T->getSizeExpr()->printPretty(OS, nullptr, Policy);
     OS << ">";
+    spaceBeforePlaceHolder(OS);
   } else {
-    OS << " __attribute__((ext_vector_type(";
-    if (T->getSizeExpr())
-      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
-    OS << ")))";
+    printBefore(T->getElementType(), OS);
   }
+}
+
+void TypePrinter::printDependentSizedExtVectorAfter(
+    const DependentSizedExtVectorType *T, raw_ostream &OS) {
+  if (Policy.UseHLSLTypes)
+    return;
+
+  OS << " __attribute__((ext_vector_type(";
+  if (T->getSizeExpr())
+    T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+  OS << ")))";
   printAfter(T->getElementType(), OS);
 }
 
@@ -826,23 +828,24 @@ void TypePrinter::printDependentVectorAfter(
 
 void TypePrinter::printExtVectorBefore(const ExtVectorType *T,
                                        raw_ostream &OS) {
-  if (Policy.UseHLSLTypes)
+  if (Policy.UseHLSLTypes) {
     OS << "vector<";
-  printBefore(T->getElementType(), OS);
+    print(T->getElementType(), OS, StringRef());
+    OS << ", " << T->getNumElements() << ">";
+    spaceBeforePlaceHolder(OS);
+  } else {
+    printBefore(T->getElementType(), OS);
+  }
 }
 
 void TypePrinter::printExtVectorAfter(const ExtVectorType *T, raw_ostream &OS) {
-  printAfter(T->getElementType(), OS);
+  if (Policy.UseHLSLTypes)
+    return;
 
-  if (Policy.UseHLSLTypes) {
-    OS << ", ";
-    OS << T->getNumElements();
-    OS << ">";
-  } else {
-    OS << " __attribute__((ext_vector_type(";
-    OS << T->getNumElements();
-    OS << ")))";
-  }
+  printAfter(T->getElementType(), OS);
+  OS << " __attribute__((ext_vector_type(";
+  OS << T->getNumElements();
+  OS << ")))";
 }
 
 static void printDims(const ConstantMatrixType *T, raw_ostream &OS) {
@@ -852,13 +855,14 @@ static void printDims(const ConstantMatrixType *T, raw_ostream &OS) {
 static void printHLSLMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
                                   raw_ostream &OS) {
   OS << "matrix<";
-  TP.printBefore(T->getElementType(), OS);
-}
-
-static void printHLSLMatrixAfter(const ConstantMatrixType *T, raw_ostream &OS) {
+  TP.print(T->getElementType(), OS, StringRef());
   OS << ", ";
   printDims(T, OS);
   OS << ">";
+  TP.spaceBeforePlaceHolder(OS);
+}
+
+static void printHLSLMatrixAfter(const ConstantMatrixType *T, raw_ostream &OS) {
 }
 
 static void printClangMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
@@ -889,21 +893,33 @@ void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T,
 
 void TypePrinter::printDependentSizedMatrixBefore(
     const DependentSizedMatrixType *T, raw_ostream &OS) {
-  printBefore(T->getElementType(), OS);
-  OS << " __attribute__((matrix_type(";
-  if (T->getRowExpr()) {
-    T->getRowExpr()->printPretty(OS, nullptr, Policy);
+  if (Policy.UseHLSLTypes) {
+    OS << "matrix<";
+    print(T->getElementType(), OS, StringRef());
+    OS << ", ";
+    if (T->getRowExpr())
+      T->getRowExpr()->printPretty(OS, nullptr, Policy);
+    OS << ", ";
+    if (T->getColumnExpr())
+      T->getColumnExpr()->printPretty(OS, nullptr, Policy);
+    OS << ">";
+    spaceBeforePlaceHolder(OS);
+  } else {
+    printBefore(T->getElementType(), OS);
+    OS << " __attribute__((matrix_type(";
+    if (T->getRowExpr())
+      T->getRowExpr()->printPretty(OS, nullptr, Policy);
+    OS << ", ";
+    if (T->getColumnExpr())
+      T->getColumnExpr()->printPretty(OS, nullptr, Policy);
+    OS << ")))";
   }
-  OS << ", ";
-  if (T->getColumnExpr()) {
-    T->getColumnExpr()->printPretty(OS, nullptr, Policy);
-  }
-  OS << ")))";
 }
 
 void TypePrinter::printDependentSizedMatrixAfter(
     const DependentSizedMatrixType *T, raw_ostream &OS) {
-  printAfter(T->getElementType(), OS);
+  if (!Policy.UseHLSLTypes)
+    printAfter(T->getElementType(), OS);
 }
 
 void
@@ -1351,12 +1367,12 @@ void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
                                             raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
-  static llvm::DenseMap<int, const char *> Transformation = {{
+  static const llvm::DenseMap<int, const char *> Transformation = {{
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   {UnaryTransformType::Enum, "__" #Trait},
 #include "clang/Basic/TransformTypeTraits.def"
   }};
-  OS << Transformation[T->getUTTKind()] << '(';
+  OS << Transformation.lookup(T->getUTTKind()) << '(';
   print(T->getBaseType(), OS, StringRef());
   OS << ')';
   spaceBeforePlaceHolder(OS);
@@ -2691,6 +2707,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_device";
   case LangAS::hlsl_input:
     return "hlsl_input";
+  case LangAS::hlsl_output:
+    return "hlsl_output";
   case LangAS::hlsl_push_constant:
     return "hlsl_push_constant";
   case LangAS::wasm_funcref:

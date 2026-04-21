@@ -20,7 +20,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1594,13 +1594,25 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProtocol(
 DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForTypedef(
     const TypedefNameDecl *Decl) {
   DeclarationFragments Fragments, After;
-  Fragments.append("typedef", DeclarationFragments::FragmentKind::Keyword)
-      .appendSpace()
-      .append(getFragmentsForType(Decl->getUnderlyingType(),
-                                  Decl->getASTContext(), After))
-      .append(std::move(After))
-      .appendSpace()
-      .append(Decl->getName(), DeclarationFragments::FragmentKind::Identifier);
+  if (!isa<TypeAliasDecl>(Decl))
+    Fragments.append("typedef", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace()
+        .append(getFragmentsForType(Decl->getUnderlyingType(),
+                                    Decl->getASTContext(), After))
+        .append(std::move(After))
+        .appendSpace()
+        .append(Decl->getName(),
+                DeclarationFragments::FragmentKind::Identifier);
+  else
+    Fragments.append("using", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace()
+        .append(Decl->getName(), DeclarationFragments::FragmentKind::Identifier)
+        .appendSpace()
+        .append("=", DeclarationFragments::FragmentKind::Text)
+        .appendSpace()
+        .append(getFragmentsForType(Decl->getUnderlyingType(),
+                                    Decl->getASTContext(), After))
+        .append(std::move(After));
 
   return Fragments.appendSemicolon();
 }

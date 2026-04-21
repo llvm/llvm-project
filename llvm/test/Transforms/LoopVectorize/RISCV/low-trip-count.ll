@@ -23,7 +23,7 @@ define void @trip1_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -36,7 +36,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 1
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -62,7 +62,7 @@ define void @trip3_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -75,7 +75,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 3
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -101,7 +101,7 @@ define void @trip5_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -114,7 +114,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 5
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -139,7 +139,7 @@ define void @trip8_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -152,7 +152,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 8
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -177,7 +177,7 @@ define void @trip16_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -190,7 +190,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 16
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -216,7 +216,7 @@ define void @trip32_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -229,7 +229,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 32
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -254,7 +254,7 @@ define void @trip24_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -267,11 +267,70 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 24
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
+define void @const_tc_with_predicated_store(i1 %c1, i1 %c2, i1 %c3, ptr %dst) #1 {
+; CHECK-LABEL: @const_tc_with_predicated_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C2:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C1:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT4]], splat (i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP13:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = or <vscale x 4 x i1> [[TMP13]], [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C1]], <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i1> zeroinitializer, i32 57)
+; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[BROADCAST_SPLAT]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <vscale x 4 x i1> [[TMP10]], <vscale x 4 x float> [[PREDPHI]], <vscale x 4 x float> splat (float 2.000000e+00)
+; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[PREDPHI5]], ptr align 4 [[DST:%.*]], <vscale x 4 x i1> splat (i1 true), i32 57)
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  br i1 %c1, label %if.else1, label %if.then
+
+if.then:
+  br i1 %c2, label %if.else2, label %if.else1
+
+if.else1:
+  %phi1 = phi float [ 0.0, %if.then ], [ 1.0, %header ]
+  br i1 %c3, label %latch, label %if.else2
+
+if.else2:
+  br label %latch
+
+latch:
+  %phi = phi float [ %phi1, %if.else1 ], [ 2.0, %if.else2 ]
+  %gep = getelementptr float, ptr %dst, i64 %iv
+  store float %phi, ptr %gep, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 56
+  br i1 %ec, label %exit, label %header
+
+exit:
+  ret void
+}
+
+
 attributes #0 = { "target-features"="+v,+d" vscale_range(2, 1024) }
+attributes #1 = { vscale_range(16, 1024) "target-features"="+v" }
 
 ; This is a non-power-of-2 low trip count, so we will try to tail-fold this. But
 ; the reduction is a multiply which is only legal for fixed-length VFs. But
@@ -285,13 +344,9 @@ define i8 @mul_non_pow_2_low_trip_count(ptr noalias %a) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i8> [ <i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP1]] = mul <8 x i8> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i8> [[WIDE_LOAD]], <i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.mul.v8i8(<8 x i8> [[TMP1]])
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
@@ -300,7 +355,7 @@ define i8 @mul_non_pow_2_low_trip_count(ptr noalias %a) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 8, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[RDX:%.*]] = phi i8 [ [[TMP3]], [[SCALAR_PH]] ], [ [[MUL:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[MUL]] = mul i8 [[TMP5]], [[RDX]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -313,7 +368,7 @@ define i8 @mul_non_pow_2_low_trip_count(ptr noalias %a) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %rdx = phi i8 [ 2, %entry ], [ %mul, %for.body ]
   %gep = getelementptr i8, ptr %a, i64 %iv
@@ -323,6 +378,6 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, 10
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i8 %mul
 }

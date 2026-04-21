@@ -16,11 +16,14 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -102,6 +105,90 @@ struct RemoveEmptyKernelEnvironment
     else
       rewriter.eraseOp(op);
 
+    return success();
+  }
+};
+
+static void updateComputeRegionInputOperandSegments(ComputeRegionOp op,
+                                                    PatternRewriter &rewriter,
+                                                    size_t numInput) {
+  const size_t numLaunch = op.getLaunchArgs().size();
+  op->setAttr(ComputeRegionOp::getOperandSegmentSizeAttr(),
+              rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
+                                             static_cast<int32_t>(numInput),
+                                             op.getStream() ? 1 : 0}));
+}
+
+struct ComputeRegionRemoveDuplicateArgs
+    : public OpRewritePattern<ComputeRegionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ComputeRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *body = op.getBody();
+    const size_t numLaunch = op.getLaunchArgs().size();
+    size_t numInput = op.getInputArgs().size();
+    assert(body->getNumArguments() == numLaunch + numInput &&
+           "region args mismatch");
+
+    bool mergedAny = false;
+    while (true) {
+      bool merged = false;
+      for (size_t j = 1; j < numInput && !merged; ++j) {
+        for (size_t i = 0; i < j; ++i) {
+          if (op->getOperand(static_cast<unsigned>(numLaunch + i)) !=
+              op->getOperand(static_cast<unsigned>(numLaunch + j)))
+            continue;
+          unsigned keepIdx = static_cast<unsigned>(numLaunch + i);
+          unsigned dropIdx = static_cast<unsigned>(numLaunch + j);
+          rewriter.replaceAllUsesWith(body->getArgument(dropIdx),
+                                      body->getArgument(keepIdx));
+          body->eraseArgument(dropIdx);
+          op->eraseOperand(dropIdx);
+          --numInput;
+          merged = true;
+          mergedAny = true;
+          break;
+        }
+      }
+      if (!merged)
+        break;
+    }
+
+    if (!mergedAny)
+      return failure();
+    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
+    return success();
+  }
+};
+
+struct ComputeRegionRemoveUnusedArgs
+    : public OpRewritePattern<ComputeRegionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ComputeRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *body = op.getBody();
+    const size_t numLaunch = op.getLaunchArgs().size();
+    size_t numInput = op.getInputArgs().size();
+    assert(body->getNumArguments() == numLaunch + numInput &&
+           "region args mismatch");
+
+    bool changed = false;
+    for (size_t k = numLaunch; k < numLaunch + numInput;) {
+      if (!body->getArgument(static_cast<unsigned>(k)).use_empty()) {
+        ++k;
+        continue;
+      }
+      body->eraseArgument(static_cast<unsigned>(k));
+      op->eraseOperand(static_cast<unsigned>(k));
+      --numInput;
+      changed = true;
+    }
+
+    if (!changed)
+      return failure();
+    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
     return success();
   }
 };
@@ -217,6 +304,32 @@ void KernelEnvironmentOp::getCanonicalizationPatterns(
   results.add<RemoveEmptyKernelEnvironment>(context);
 }
 
+template <typename ComputeConstructT>
+KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate(ComputeConstructT computeConstruct,
+                                       OpBuilder &builder) {
+  auto kernelEnvironment = KernelEnvironmentOp::create(
+      builder, computeConstruct->getLoc(),
+      computeConstruct.getDataClauseOperands(),
+      computeConstruct.getAsyncOperands(),
+      computeConstruct.getAsyncOperandsDeviceTypeAttr(),
+      computeConstruct.getAsyncOnlyAttr(), computeConstruct.getWaitOperands(),
+      computeConstruct.getWaitOperandsSegmentsAttr(),
+      computeConstruct.getWaitOperandsDeviceTypeAttr(),
+      computeConstruct.getHasWaitDevnumAttr(),
+      computeConstruct.getWaitOnlyAttr());
+  Block &block = kernelEnvironment.getRegion().emplaceBlock();
+  builder.setInsertionPointToStart(&block);
+  return kernelEnvironment;
+}
+
+template KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate<ParallelOp>(ParallelOp, OpBuilder &);
+template KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate<KernelsOp>(KernelsOp, OpBuilder &);
+template KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate<SerialOp>(SerialOp, OpBuilder &);
+
 //===----------------------------------------------------------------------===//
 // FirstprivateMapInitialOp
 //===----------------------------------------------------------------------===//
@@ -248,6 +361,69 @@ void FirstprivateMapInitialOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionInitOp
+//===----------------------------------------------------------------------===//
+
+void ReductionInitOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void ReductionInitOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<InvocationBounds> &invocationBounds) {
+  invocationBounds.emplace_back(1, 1);
+}
+
+ValueRange ReductionInitOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
+LogicalResult ReductionInitOp::verify() {
+  Block &block = getRegion().front();
+  if (auto yieldOp = dyn_cast<acc::YieldOp>(block.getTerminator())) {
+    if (yieldOp.getNumOperands() != 1)
+      return emitOpError(
+          "region must yield exactly one value (private storage)");
+    if (yieldOp.getOperand(0).getType() != getVar().getType())
+      return emitOpError("yielded value type must match var type");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReductionCombineRegionOp
+//===----------------------------------------------------------------------===//
+
+void ReductionCombineRegionOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void ReductionCombineRegionOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<InvocationBounds> &invocationBounds) {
+  invocationBounds.emplace_back(1, 1);
+}
+
+ValueRange
+ReductionCombineRegionOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
+LogicalResult ReductionCombineRegionOp::verify() {
+  Block &block = getRegion().front();
+  if (auto yieldOp = dyn_cast<acc::YieldOp>(block.getTerminator())) {
+    if (yieldOp.getNumOperands() != 0)
+      return emitOpError("region must be terminated by acc.yield with no "
+                         "operands");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionCombineOp
 //===----------------------------------------------------------------------===//
 
@@ -260,6 +436,286 @@ void ReductionCombineOp::getEffects(
                        SideEffects::DefaultResource::get());
   effects.emplace_back(MemoryEffects::Write::get(), &getDestMemrefMutable(),
                        SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
+// ComputeRegionOp
+//===----------------------------------------------------------------------===//
+
+static ParWidthOp getParWidthOpForLaunchArg(ComputeRegionOp op,
+                                            GPUParallelDimAttr parDim) {
+  for (auto launchArg : op.getLaunchArgs()) {
+    auto parOp = launchArg.getDefiningOp<ParWidthOp>();
+    if (!parOp)
+      continue;
+    auto launchArgDim = cast<GPUParallelDimAttr>(parOp.getParDim());
+    if (launchArgDim == parDim)
+      return parOp;
+  }
+  return nullptr;
+}
+
+std::optional<Value> ComputeRegionOp::getLaunchArg(GPUParallelDimAttr parDim) {
+  if (auto parWidthOp = getParWidthOpForLaunchArg(*this, parDim))
+    return parWidthOp.getResult();
+  return {};
+}
+
+std::optional<Value>
+ComputeRegionOp::getKnownLaunchArg(GPUParallelDimAttr parDim) {
+  if (auto parWidthOp = getParWidthOpForLaunchArg(*this, parDim))
+    if (parWidthOp.getLaunchArg())
+      return parWidthOp.getLaunchArg();
+  return {};
+}
+
+std::optional<uint64_t>
+ComputeRegionOp::getKnownConstantLaunchArg(GPUParallelDimAttr parDim) {
+  auto knownParWidth = getKnownLaunchArg(parDim);
+  if (knownParWidth.has_value())
+    return getConstantIntValue(knownParWidth.value());
+  return {};
+}
+
+BlockArgument ComputeRegionOp::appendInputArg(Value value) {
+  getInputArgsMutable().append(value);
+  return getBody()->addArgument(value.getType(), getLoc());
+}
+
+std::optional<BlockArgument>
+ComputeRegionOp::wireHoistedValueThroughIns(Value value) {
+  Region &region = getRegion();
+
+  auto useIsInRegion = [&](OpOperand &use) -> bool {
+    return region.isAncestor(use.getOwner()->getParentRegion());
+  };
+
+  if (!areValuesDefinedAbove(ValueRange(value), region) ||
+      !llvm::any_of(value.getUses(), useIsInRegion))
+    return std::nullopt;
+
+  BlockArgument arg = appendInputArg(value);
+  replaceAllUsesInRegionWith(value, arg, region);
+  return arg;
+}
+
+bool ComputeRegionOp::isEffectivelySerial() {
+  auto *ctx = getContext();
+
+  if (getLaunchArg(GPUParallelDimAttr::seqDim(ctx)))
+    return true;
+
+  auto checkDim = [&](GPUParallelDimAttr dim) -> bool {
+    auto val = getKnownConstantLaunchArg(dim);
+    return val && *val == 1;
+  };
+
+  return checkDim(GPUParallelDimAttr::threadXDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::threadYDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::threadZDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::blockXDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::blockYDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::blockZDim(ctx));
+}
+
+BlockArgument ComputeRegionOp::parDimToWidth(GPUParallelDimAttr parDim) {
+  for (auto [pos, launchArg] : llvm::enumerate(getLaunchArgs())) {
+    auto parOp = launchArg.getDefiningOp<ParWidthOp>();
+    assert(parOp);
+    auto launchArgDim = cast<GPUParallelDimAttr>(parOp.getParDim());
+    if (launchArgDim == parDim) {
+      assert(pos < getRegion().front().getNumArguments() &&
+             "launch arg position out of range");
+      return getRegion().front().getArgument(pos);
+    }
+  }
+  llvm_unreachable("attempting to get unspecified parDim");
+}
+
+SmallVector<GPUParallelDimAttr> ComputeRegionOp::getLaunchParDims() {
+  SmallVector<GPUParallelDimAttr> parDims;
+  for (auto launchArg : getLaunchArgs()) {
+    auto parOp = launchArg.getDefiningOp<ParWidthOp>();
+    auto launchArgDim = cast<GPUParallelDimAttr>(parOp.getParDim());
+    int64_t dimInt = launchArgDim.getValue().getInt();
+    parDims.push_back(intToParDim(getContext(), dimInt));
+  }
+  return parDims;
+}
+
+Value ComputeRegionOp::getOperand(BlockArgument blockArg) {
+  Block *body = getBody();
+  if (blockArg.getOwner() != body)
+    return Value();
+  unsigned argNumber = blockArg.getArgNumber();
+  unsigned numLaunchArgs = getLaunchArgs().size();
+  unsigned numInputArgs = getInputArgs().size();
+  if (argNumber >= numLaunchArgs + numInputArgs)
+    return Value();
+  if (argNumber < numLaunchArgs)
+    return getLaunchArgs()[argNumber];
+  return getInputArgs()[argNumber - numLaunchArgs];
+}
+
+std::optional<BlockArgument> ComputeRegionOp::getBlockArg(Value value) {
+  Block *body = getBody();
+  for (auto [idx, launchVal] : llvm::enumerate(getLaunchArgs())) {
+    if (launchVal == value)
+      return body->getArgument(idx);
+  }
+  unsigned numLaunch = getLaunchArgs().size();
+  for (auto [idx, inputVal] : llvm::enumerate(getInputArgs())) {
+    if (inputVal == value)
+      return body->getArgument(numLaunch + idx);
+  }
+  return std::nullopt;
+}
+
+void ComputeRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<ComputeRegionRemoveDuplicateArgs, ComputeRegionRemoveUnusedArgs>(
+      context);
+}
+
+BlockArgument ComputeRegionOp::gpuParWidth(gpu::Processor processor) {
+  return parDimToWidth(GPUParallelDimAttr::get(getContext(), processor));
+}
+
+LogicalResult ComputeRegionOp::verify() {
+  for (auto op : getLaunchArgs())
+    if (!op.getDefiningOp<acc::ParWidthOp>())
+      return emitOpError(
+          "launch arguments must be results of acc.par_width operations");
+
+  unsigned expectedBlockArgs = getLaunchArgs().size() + getInputArgs().size();
+  unsigned actualBlockArgs = getRegion().front().getNumArguments();
+  if (expectedBlockArgs != actualBlockArgs)
+    return emitOpError("expected ")
+           << expectedBlockArgs << " block arguments (launch + input), got "
+           << actualBlockArgs;
+
+  return success();
+}
+
+void ComputeRegionOp::print(OpAsmPrinter &p) {
+  ValueRange regionArgs = getBody()->getArguments();
+  ValueRange launchArgs = getLaunchArgs();
+  ValueRange inputArgs = getInputArgs();
+
+  assert(regionArgs.size() == (launchArgs.size() + inputArgs.size()) &&
+         "region args mismatch");
+
+  if (getStream())
+    p << " stream(" << getStream() << " : " << getStream().getType() << ")";
+
+  size_t i = 0;
+  if (!launchArgs.empty()) {
+    p << " launch(";
+    for (size_t j = 0; j < launchArgs.size(); ++j, ++i) {
+      p << regionArgs[i] << " = " << launchArgs[j];
+      if (j < launchArgs.size() - 1)
+        p << ", ";
+    }
+    p << ")";
+  }
+  if (!inputArgs.empty()) {
+    p << " ins(";
+    for (size_t j = 0; j < inputArgs.size(); ++j, ++i) {
+      p << regionArgs[i] << " = " << inputArgs[j];
+      if (j < inputArgs.size() - 1)
+        p << ", ";
+    }
+    p << ") : (";
+    for (size_t j = 0; j < inputArgs.size(); ++j) {
+      p << inputArgs[j].getType();
+      if (j < inputArgs.size() - 1)
+        p << ", ";
+    }
+    p << ")";
+  }
+  p.printOptionalArrowTypeList(getResultTypes());
+  p << " ";
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          /*elidedAttrs=*/getOperandSegmentSizeAttr());
+}
+
+ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  auto &builder = parser.getBuilder();
+
+  SmallVector<OpAsmParser::Argument> regionArgs;
+  OpAsmParser::UnresolvedOperand streamOperand;
+  Type streamType;
+  SmallVector<OpAsmParser::UnresolvedOperand> launchOperands;
+  SmallVector<OpAsmParser::UnresolvedOperand> inputOperands;
+  SmallVector<Type> types;
+
+  bool hasStream = false;
+  if (succeeded(parser.parseOptionalKeyword("stream"))) {
+    hasStream = true;
+    if (parser.parseLParen() || parser.parseOperand(streamOperand) ||
+        parser.parseColon() || parser.parseType(streamType) ||
+        parser.parseRParen())
+      return failure();
+  }
+
+  if (succeeded(parser.parseOptionalKeyword("launch"))) {
+    if (parser.parseAssignmentList(regionArgs, launchOperands))
+      return failure();
+    Type indexType = builder.getIndexType();
+    for (size_t i = 0; i < regionArgs.size(); ++i)
+      types.push_back(indexType);
+  }
+
+  if (succeeded(parser.parseOptionalKeyword("ins"))) {
+    if (parser.parseAssignmentList(regionArgs, inputOperands) ||
+        parser.parseColon() || parser.parseLParen() ||
+        parser.parseTypeList(types) || parser.parseRParen())
+      return failure();
+  }
+
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
+  for (auto [iterArg, type] : llvm::zip_equal(regionArgs, types))
+    iterArg.type = type;
+
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs))
+    return failure();
+
+  const size_t numLaunchOperands = launchOperands.size();
+  const size_t numInputOperands = inputOperands.size();
+  assert(numLaunchOperands + numInputOperands == regionArgs.size() &&
+         "compute region args mismatch");
+
+  result.addAttribute(
+      ComputeRegionOp::getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunchOperands),
+                                    static_cast<int32_t>(numInputOperands),
+                                    hasStream ? 1 : 0}));
+
+  for (size_t i = 0; i < numLaunchOperands; ++i) {
+    if (parser.resolveOperand(launchOperands[i], types[i], result.operands))
+      return failure();
+  }
+
+  for (size_t i = numLaunchOperands; i < regionArgs.size(); ++i) {
+    if (parser.resolveOperand(inputOperands[i - numLaunchOperands], types[i],
+                              result.operands))
+      return failure();
+  }
+
+  if (hasStream) {
+    if (parser.resolveOperand(streamOperand, streamType, result.operands))
+      return failure();
+  }
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

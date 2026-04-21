@@ -144,6 +144,8 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  bool isFPImmLegalAsFMov(const APFloat &Imm, EVT VT) const;
+
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
@@ -182,18 +184,6 @@ public:
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
-
-  // Note: The following group of functions are only used as part of the old SME
-  // ABI lowering. They will be removed once -aarch64-new-sme-abi=true is the
-  // default.
-  MachineBasicBlock *EmitInitTPIDR2Object(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitAllocateSMESaveBuffer(MachineInstr &MI,
-                                               MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
-                                        MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitEntryPStateSM(MachineInstr &MI,
                                        MachineBasicBlock *BB) const;
 
@@ -784,7 +774,7 @@ private:
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
-
+  SDValue LowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
 
   SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,

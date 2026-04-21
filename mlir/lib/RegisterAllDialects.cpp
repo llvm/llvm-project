@@ -14,7 +14,6 @@
 #include "mlir/InitAllDialects.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -39,6 +38,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/GPU/Transforms/BufferDeallocationOpInterfaceImpl.h"
+#include "mlir/Dialect/GPU/Transforms/IndexedAccessOpInterfaceImpl.h"
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -111,7 +111,6 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   registry.insert<acc::OpenACCDialect,
                   affine::AffineDialect,
                   amdgpu::AMDGPUDialect,
-                  amx::AMXDialect,
                   arith::ArithDialect,
                   arm_neon::ArmNeonDialect,
                   arm_sme::ArmSMEDialect,
@@ -170,6 +169,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   cf::registerBufferizableOpInterfaceExternalModels(registry);
   cf::registerBufferDeallocationOpInterfaceExternalModels(registry);
   gpu::registerBufferDeallocationOpInterfaceExternalModels(registry);
+  gpu::registerIndexedAccessOpInterfaceExternalModels(registry);
   gpu::registerValueBoundsOpInterfaceExternalModels(registry);
   LLVM::registerInlinerInterface(registry);
   NVVM::registerInlinerInterface(registry);
