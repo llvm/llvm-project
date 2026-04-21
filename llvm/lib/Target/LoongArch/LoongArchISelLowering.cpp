@@ -9431,8 +9431,6 @@ void LoongArchTargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 TargetLowering::AtomicExpansionKind
 LoongArchTargetLowering::shouldExpandAtomicRMWInIR(
     const AtomicRMWInst *AI) const {
-  if (AI->isElementwise())
-    return AtomicExpansionKind::Elementwise;
   // TODO: Add more AtomicRMWInst that needs to be extended.
 
   // Since floating-point operation requires a non-trivial set of data

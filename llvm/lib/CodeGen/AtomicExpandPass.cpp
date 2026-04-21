@@ -106,7 +106,6 @@ private:
   bool tryExpandAtomicStore(StoreInst *SI);
   void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
-  bool canReuseWholeValueAtomicRMW(AtomicRMWInst *AI);
   bool expandElementwiseAtomicRMW(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
@@ -307,23 +306,6 @@ void AtomicExpandImpl::handleUnsupportedAtomicSize(
                 DiagnosticInst);
 }
 
-/// Returns true if we can lower atomicrmw elementwise using normal atomicrmw.
-bool AtomicExpandImpl::canReuseWholeValueAtomicRMW(AtomicRMWInst *AI) {
-  assert(AI->isElementwise() && "expected elementwise atomicrmw");
-
-  // Integer non-elementwise vector atomicrmw is illegal IR, so we need to be
-  // careful to reject these before removing the elementwise modifier.
-  if (!AI->isFloatingPointOperation())
-    return false;
-
-  AI->setElementwise(false);
-  bool CanReuse = atomicSizeSupported(TLI, AI) &&
-                  TLI->shouldExpandAtomicRMWInIR(AI) ==
-                      TargetLoweringBase::AtomicExpansionKind::None;
-  AI->setElementwise(true);
-  return CanReuse;
-}
-
 bool AtomicExpandImpl::tryInsertTrailingSeqCstFence(Instruction *AtomicI) {
   if (!TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(AtomicI))
     return false;
@@ -400,32 +382,18 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   }
 
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
-    if (!atomicSizeSupported(TLI, RMWI)) {
-      if (RMWI->isElementwise())
+    if (RMWI->isElementwise()) {
+      auto ExpansionKind = TLI->shouldExpandAtomicRMWInIR(RMWI);
+      if (ExpansionKind == TargetLoweringBase::AtomicExpansionKind::Elementwise)
         return expandElementwiseAtomicRMW(RMWI);
+    }
+
+    if (!atomicSizeSupported(TLI, RMWI)) {
       expandAtomicRMWToLibcall(RMWI);
       return true;
     }
 
     bool MadeChange = false;
-
-    if (RMWI->isElementwise()) {
-      auto ExpansionKind = TLI->shouldExpandAtomicRMWInIR(RMWI);
-      if (ExpansionKind == TargetLoweringBase::AtomicExpansionKind::None)
-        return false;
-      assert(ExpansionKind ==
-                 TargetLoweringBase::AtomicExpansionKind::Elementwise &&
-             "shouldExpandAtomicRMWInIR should "
-             " return ExpansionKind::Elementwise or ExpansionKind::None on "
-             "elementwise atomicrmw");
-      if (!canReuseWholeValueAtomicRMW(RMWI))
-        return expandElementwiseAtomicRMW(RMWI);
-      // Dropping the elementwise modifier strengthens the semantics, which is
-      // conservatively correct. Prefer the target's existing whole-value
-      // lowering over IR expansion.
-      RMWI->setElementwise(false);
-      MadeChange = true;
-    }
 
     if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
         TargetLoweringBase::AtomicExpansionKind::CastToInteger) {

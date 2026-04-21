@@ -455,8 +455,6 @@ MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
 TargetLowering::AtomicExpansionKind
 WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(
     const AtomicRMWInst *AI) const {
-  if (AI->isElementwise())
-    return AtomicExpansionKind::Elementwise;
   // We have wasm instructions for these
   switch (AI->getOperation()) {
   case AtomicRMWInst::Add:

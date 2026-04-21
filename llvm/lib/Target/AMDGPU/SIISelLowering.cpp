@@ -19911,8 +19911,6 @@ getPrivateAtomicExpansionKind(const GCNSubtarget &STI) {
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
-  if (RMW->isElementwise())
-    return AtomicExpansionKind::Elementwise;
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return getPrivateAtomicExpansionKind(*getSubtarget());

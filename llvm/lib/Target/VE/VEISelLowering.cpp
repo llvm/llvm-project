@@ -1094,8 +1094,6 @@ SDValue VETargetLowering::lowerATOMIC_FENCE(SDValue Op,
 
 TargetLowering::AtomicExpansionKind
 VETargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
-  if (AI->isElementwise())
-    return AtomicExpansionKind::Elementwise;
   // We have TS1AM implementation for i8/i16/i32/i64, so use it.
   if (AI->getOperation() == AtomicRMWInst::Xchg) {
     return AtomicExpansionKind::None;

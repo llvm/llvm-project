@@ -12192,12 +12192,12 @@ type whose bit width is a power of two greater than or equal to eight.
 For xchg, this
 may also be a floating point or a pointer type with the same size constraints
 as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point
-or fixed vector of floating-point type.  The type of the '``<pointer>``'
+or fixed vector of floating-point type, with the same size constraints. The type of the '``<pointer>``'
 operand must be a pointer to that type. If the ``atomicrmw`` is marked
 as ``volatile``, then the optimizer is not allowed to modify the
 number or order of execution of this ``atomicrmw`` with other
 :ref:`volatile operations <volatile>`. If the ``elementwise`` modifier is present,
-then ``<value>`` must be a fixed vector type whose element type is legal for the
+then ``<value>`` must be a fixed vector type, with the same size constraints, whose element type is legal for the
 corresponding scalar ``atomicrmw`` operation.
 
 Note: if the alignment is not greater or equal to the size of the `<value>`

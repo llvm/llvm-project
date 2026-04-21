@@ -4,23 +4,38 @@
 define <4 x i32> @elem_add(ptr %p, <4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @elem_add(
 ; CHECK-SAME: ptr [[P:%.*]], <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x i32> [[V]], i64 0
-; CHECK-NEXT:    [[O0:%.*]] = atomicrmw add ptr [[P]], i32 [[V0]] monotonic, align 16
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[O0]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P]], i64 0, i64 1
-; CHECK-NEXT:    [[V1:%.*]] = extractelement <4 x i32> [[V]], i64 1
-; CHECK-NEXT:    [[O1:%.*]] = atomicrmw add ptr [[P1]], i32 [[V1]] monotonic, align 4
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x i32> [[R0]], i32 [[O1]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P]], i64 0, i64 2
-; CHECK-NEXT:    [[V2:%.*]] = extractelement <4 x i32> [[V]], i64 2
-; CHECK-NEXT:    [[O2:%.*]] = atomicrmw add ptr [[P2]], i32 [[V2]] monotonic, align 8
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x i32> [[R1]], i32 [[O2]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P]], i64 0, i64 3
-; CHECK-NEXT:    [[V3:%.*]] = extractelement <4 x i32> [[V]], i64 3
-; CHECK-NEXT:    [[O3:%.*]] = atomicrmw add ptr [[P3]], i32 [[V3]] monotonic, align 4
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x i32> [[R2]], i32 [[O3]], i64 3
-; CHECK-NEXT:    ret <4 x i32> [[R3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = call i128 @__atomic_fetch_add_16(ptr [[P]], i128 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i128 [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;
   %old = atomicrmw elementwise add ptr %p, <4 x i32> %v monotonic
   ret <4 x i32> %old
+}
+
+define <4 x float> @elem_fadd(ptr %p, <4 x float> %v) {
+; CHECK-LABEL: define <4 x float> @elem_fadd(
+; CHECK-SAME: ptr [[P:%.*]], <4 x float> [[V:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca <4 x float>, align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P]], align 16
+; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; CHECK:       [[ATOMICRMW_START]]:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x float> [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = fadd <4 x float> [[LOADED]], [[V]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
+; CHECK-NEXT:    store <4 x float> [[LOADED]], ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[NEW]] to i128
+; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_16(ptr [[P]], ptr [[TMP1]], i128 [[TMP3]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[TMP1]], align 16
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { <4 x float>, i1 } poison, <4 x float> [[TMP5]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { <4 x float>, i1 } [[TMP6]], i1 [[TMP4]], 1
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { <4 x float>, i1 } [[TMP7]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { <4 x float>, i1 } [[TMP7]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; CHECK:       [[ATOMICRMW_END]]:
+; CHECK-NEXT:    ret <4 x float> [[NEWLOADED]]
+;
+  %old = atomicrmw elementwise fadd ptr %p, <4 x float> %v monotonic
+  ret <4 x float> %old
 }

@@ -4802,7 +4802,7 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
               " operand must have integer type!",
           &RMWI, ElTy);
   }
-  checkAtomicMemAccessSize(RMWI.isElementwise() ? ScalarTy : ElTy, &RMWI);
+  checkAtomicMemAccessSize(ElTy, &RMWI);
   Check(AtomicRMWInst::FIRST_BINOP <= Op && Op <= AtomicRMWInst::LAST_BINOP,
         "Invalid binary operation!", &RMWI);
   visitInstruction(RMWI);

@@ -30624,8 +30624,6 @@ static bool rmwOpMayLowerToLibcall(const AArch64Subtarget &Subtarget,
 TargetLowering::AtomicExpansionKind
 AArch64TargetLowering::shouldExpandAtomicRMWInIR(
     const AtomicRMWInst *AI) const {
-  if (AI->isElementwise())
-    return AtomicExpansionKind::Elementwise;
   Type *Ty = AI->getType();
   unsigned Size = Ty->getPrimitiveSizeInBits();
   assert(Size <= 128 && "AtomicExpandPass should've handled larger sizes.");

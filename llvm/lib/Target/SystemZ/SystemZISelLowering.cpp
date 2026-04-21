@@ -1278,8 +1278,6 @@ SystemZTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
 TargetLowering::AtomicExpansionKind
 SystemZTargetLowering::shouldExpandAtomicRMWInIR(
     const AtomicRMWInst *RMW) const {
-  if (RMW->isElementwise())
-    return AtomicExpansionKind::Elementwise;
   // Don't expand subword operations as they require special treatment.
   if (RMW->getType()->isIntegerTy(8) || RMW->getType()->isIntegerTy(16))
     return AtomicExpansionKind::None;
