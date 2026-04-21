@@ -305,11 +305,11 @@ class SPIRVEmitIntrinsics
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
-
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
+  void scalarizeVectorPtrCasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
 
@@ -367,8 +367,6 @@ public:
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
   Instruction *visitCallInst(CallInst &I);
-  Instruction *visitPtrToIntInst(PtrToIntInst &I);
-  Instruction *visitIntToPtrInst(IntToPtrInst &I);
 
   StringRef getPassName() const override { return "SPIRV emit intrinsics"; }
 
@@ -2127,56 +2125,112 @@ SPIRVEmitIntrinsics::visitExtractElementInst(ExtractElementInst &I) {
   return NewI;
 }
 
-Instruction *SPIRVEmitIntrinsics::visitPtrToIntInst(PtrToIntInst &I) {
-  // Scalarize ptrtoint on vectors of pointers, since SPIR-V does not support
-  // vectors of pointers.
-  Type *SrcTy = I.getOperand(0)->getType();
-  auto *VecTy = dyn_cast<FixedVectorType>(SrcTy);
-
-  if (!VecTy || !VecTy->getElementType()->isPointerTy())
-    return &I;
-
-  IRBuilder<> B(I.getParent());
-  B.SetInsertPoint(&I);
-
-  unsigned NumElems = VecTy->getNumElements();
-  Type *ElemIntTy = cast<VectorType>(I.getType())->getElementType();
-  Value *Result = PoisonValue::get(I.getType());
-
-  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-    Value *Elem = B.CreateExtractElement(I.getOperand(0), B.getInt32(Idx));
-    Value *Conv = B.CreatePtrToInt(Elem, ElemIntTy);
-    Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+// Trace a vector Value to find which scalar value was inserted at a given
+// index. Walks backwards through insertelement chains. Returns nullptr if the
+// element cannot be determined statically.
+static Value *findInsertedElement(Value *Vec, unsigned TargetIdx) {
+  while (auto *IE = dyn_cast<InsertElementInst>(Vec)) {
+    auto *IdxC = dyn_cast<ConstantInt>(IE->getOperand(2));
+    if (!IdxC)
+      return nullptr;
+    if (IdxC->getZExtValue() == TargetIdx)
+      return IE->getOperand(1);
+    Vec = IE->getOperand(0);
   }
-
-  replaceAllUsesWithAndErase(B, &I, cast<Instruction>(Result));
-  return cast<Instruction>(Result);
+  return nullptr;
 }
 
-Instruction *SPIRVEmitIntrinsics::visitIntToPtrInst(IntToPtrInst &I) {
-  // Scalarize inttoptr producing vectors of pointers, since SPIR-V does not
-  // support vectors of pointers.
-  Type *DstTy = I.getType();
-  auto *VecTy = dyn_cast<FixedVectorType>(DstTy);
+// Scalarize ptrtoint and inttoptr instructions operating on vectors of
+// pointers, since SPIR-V does not support vectors of pointers without
+// extensions. This must run before the main visitor loop to ensure
+// insertelement/extractelement chains are still in their original IR form.
+void SPIRVEmitIntrinsics::scalarizeVectorPtrCasts(Function &F) {
+  // If the extension for vector-of-pointers is available, no scalarization
+  // is needed - the backend can handle them natively.
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(F);
+  if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter))
+    return;
 
-  if (!VecTy || !VecTy->getElementType()->isPointerTy())
-    return &I;
+  SmallVector<Instruction *, 8> ToErase;
 
-  IRBuilder<> B(I.getParent());
-  B.SetInsertPoint(&I);
+  for (Instruction &I : make_early_inc_range(instructions(F))) {
+    if (auto *PTI = dyn_cast<PtrToIntInst>(&I)) {
+      auto *VecTy = dyn_cast<FixedVectorType>(PTI->getOperand(0)->getType());
+      if (!VecTy || !VecTy->getElementType()->isPointerTy())
+        continue;
 
-  unsigned NumElems = VecTy->getNumElements();
-  Type *ElemPtrTy = VecTy->getElementType();
-  Value *Result = PoisonValue::get(I.getType());
+      IRBuilder<> B(PTI);
+      unsigned NumElems = VecTy->getNumElements();
+      Type *ElemIntTy = cast<VectorType>(PTI->getType())->getElementType();
+      Value *Result = PoisonValue::get(PTI->getType());
 
-  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-    Value *Elem = B.CreateExtractElement(I.getOperand(0), B.getInt32(Idx));
-    Value *Conv = B.CreateIntToPtr(Elem, ElemPtrTy);
-    Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+      for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+        Value *ElemPtr = findInsertedElement(PTI->getOperand(0), Idx);
+        if (!ElemPtr)
+          ElemPtr = B.CreateExtractElement(PTI->getOperand(0), B.getInt32(Idx));
+        Value *Conv = B.CreatePtrToInt(ElemPtr, ElemIntTy);
+        Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+      }
+
+      PTI->replaceAllUsesWith(Result);
+      ToErase.push_back(PTI);
+    } else if (auto *ITP = dyn_cast<IntToPtrInst>(&I)) {
+      auto *VecTy = dyn_cast<FixedVectorType>(ITP->getType());
+      if (!VecTy || !VecTy->getElementType()->isPointerTy())
+        continue;
+
+      // Only scalarize if all users are extractelement with constant index.
+      // Other uses (e.g. masked.gather) need the vector-of-pointers and
+      // should be handled by extension-specific lowering.
+      bool AllUsersExtract = llvm::all_of(ITP->users(), [&](User *U) {
+        auto *EE = dyn_cast<ExtractElementInst>(U);
+        return EE && isa<ConstantInt>(EE->getIndexOperand());
+      });
+      if (!AllUsersExtract)
+        continue;
+
+      IRBuilder<> B(ITP);
+      Type *ElemPtrTy = VecTy->getElementType();
+
+      // Replace extractelement users with scalar inttoptr.
+      for (User *U : make_early_inc_range(ITP->users())) {
+        auto *EE = cast<ExtractElementInst>(U);
+        unsigned Idx = cast<ConstantInt>(EE->getIndexOperand())->getZExtValue();
+        B.SetInsertPoint(EE);
+        Value *Elem =
+            B.CreateExtractElement(ITP->getOperand(0), B.getInt32(Idx));
+        Value *Conv = B.CreateIntToPtr(Elem, ElemPtrTy);
+        EE->replaceAllUsesWith(Conv);
+        ToErase.push_back(EE);
+      }
+
+      ToErase.push_back(ITP);
+    }
   }
 
-  replaceAllUsesWithAndErase(B, &I, cast<Instruction>(Result));
-  return cast<Instruction>(Result);
+  for (Instruction *I : ToErase)
+    I->eraseFromParent();
+
+  // Clean up dead insertelement chains that produced vectors of pointers
+  // (e.g. the chain feeding a now-erased ptrtoint). Use a worklist to
+  // handle chains where erasing one insert makes the previous one dead.
+  SmallVector<Instruction *, 8> DeadInsts;
+  for (Instruction &I : instructions(F)) {
+    if (!isa<InsertElementInst>(&I))
+      continue;
+    auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
+    if (VecTy && VecTy->getElementType()->isPointerTy() && I.use_empty())
+      DeadInsts.push_back(&I);
+  }
+  while (!DeadInsts.empty()) {
+    Instruction *I = DeadInsts.pop_back_val();
+    SmallVector<Value *, 4> Ops(I->operand_values());
+    I->eraseFromParent();
+    for (Value *Op : Ops)
+      if (auto *OpI = dyn_cast<Instruction>(Op);
+          OpI && OpI->use_empty() && isa<InsertElementInst>(OpI))
+        DeadInsts.push_back(OpI);
+  }
 }
 
 Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
@@ -3260,6 +3314,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
         Phi.mutateType(B.getInt32Ty());
       }
 
+  scalarizeVectorPtrCasts(Func);
   preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));

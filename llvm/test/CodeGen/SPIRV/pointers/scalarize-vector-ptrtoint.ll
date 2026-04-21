@@ -1,0 +1,27 @@
+; Test that ptrtoint on a vector of pointers to a vector of integers is
+; scalarized into per-element ptrtoint operations, since SPIR-V does not
+; support vectors of pointers without extensions.
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+declare spir_func void @foo(<2 x i64>)
+
+; CHECK-DAG: %[[#I64:]] = OpTypeInt 64 0
+; CHECK-DAG: %[[#V2I64:]] = OpTypeVector %[[#I64]] 2
+
+; CHECK: OpFunction
+; CHECK: OpConvertPtrToU %[[#I64]]
+; CHECK: OpCompositeInsert %[[#V2I64]]
+; CHECK: OpConvertPtrToU %[[#I64]]
+; CHECK: OpCompositeInsert %[[#V2I64]]
+; CHECK: OpFunctionEnd
+
+define spir_kernel void @test_ptrtoint_scalarized(ptr addrspace(1) %p0, ptr addrspace(1) %p1) {
+entry:
+  %vec0 = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) %p0, i32 0
+  %vec = insertelement <2 x ptr addrspace(1)> %vec0, ptr addrspace(1) %p1, i32 1
+  %addr = ptrtoint <2 x ptr addrspace(1)> %vec to <2 x i64>
+  call void @foo(<2 x i64> %addr)
+  ret void
+}
