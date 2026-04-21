@@ -297,6 +297,7 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
+  ApplyBVH_INTERSECT_RAY,
   SplitBitCount64To32,
   ExtrVecEltToSel,
   ExtrVecEltTo32,
