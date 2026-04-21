@@ -60,11 +60,11 @@ class LibcTest(lit.formats.ExecutableTest):
             filepath = os.path.join(source_path, filename)
 
             # Match our test executable pattern
-            if self._isTestExecutable(filename, filepath):
+            if self._isTestExecutable(filename, filepath, localConfig):
                 # Create a test with the executable name
                 yield lit.Test.Test(testSuite, path_in_suite + (filename,), localConfig)
 
-    def _isTestExecutable(self, filename, filepath):
+    def _isTestExecutable(self, filename, filepath, localConfig):
         """
         Check if a file is a libc test executable we should run.
 
@@ -90,11 +90,20 @@ class LibcTest(lit.formats.ExecutableTest):
                 return False
         elif test_name.startswith("libc.test.integration."):
             pass  # Accept all integration tests ending in .__build__
+        elif test_name.startswith("libc.test.shared."):
+            pass  # Accept all shared tests ending in .__build__
+        elif test_name.startswith("libc.test.utils."):
+            pass  # Accept all utils tests ending in .__build__
         else:
             return False
         if not os.path.isfile(filepath):
             return False
-        if not kIsWindows and not os.access(filepath, os.X_OK):
+        # GPU binaries are not host-executable but run via an emulator, so ignore X_OK if emulator is set.
+        if (
+            not kIsWindows
+            and not os.access(filepath, os.X_OK)
+            and not getattr(localConfig, "libc_crosscompiling_emulator", None)
+        ):
             return False
         return True
 
@@ -150,7 +159,11 @@ class LibcTest(lit.formats.ExecutableTest):
 
         test_cmd_template = getattr(test.config, "libc_test_cmd", "")
         if test_cmd_template:
-            test_cmd = test_cmd_template.replace("@BINARY@", test_path)
+            # Fallback to appending the binary path if @BINARY@ placeholder is missing.
+            if "@BINARY@" in test_cmd_template:
+                test_cmd = test_cmd_template.replace("@BINARY@", test_path)
+            else:
+                test_cmd = test_cmd_template + " " + test_path
             cmd_args = shlex.split(test_cmd)
             if not cmd_args:
                 cmd_args = [test_path]
