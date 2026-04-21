@@ -195,6 +195,10 @@ if (RUNTIMES_ENABLE_FLANG_MODULES)
   install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
     DESTINATION "${destination}"
   )
+
+  # The INSTALL'ed directory must exist, even if empty, or `ninja install` will
+  # fail with an error.
+  file(MAKE_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}")
 else ()
   # If Flang modules are disabled (e.g. because the compiler is not Flang), avoid the risk of Flang accidentally picking them up.
   extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${CMAKE_CURRENT_BINARY_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
