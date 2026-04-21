@@ -285,7 +285,8 @@ define i32 @unrelated_read(ptr noalias %loc, ptr noalias %otherloc) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @load(i32 [[IV]], ptr [[OTHERLOC]])
+; CHECK-NEXT:    [[OTHERLOC_GEP:%.*]] = getelementptr i32, ptr [[OTHERLOC]], i32 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @load(ptr [[OTHERLOC_GEP]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -297,7 +298,8 @@ entry:
   br label %loop
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
-  %val = call i32 @load(i32 %iv, ptr %otherloc)
+  %otherloc.gep = getelementptr i32, ptr %otherloc, i32 %iv
+  %val = call i32 @load(ptr %otherloc.gep)
   call void @store(i32 0, ptr %loc)
   %iv.next = add i32 %iv, 1
   %cmp = icmp slt i32 %iv, 200
