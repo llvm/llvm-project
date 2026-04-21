@@ -1828,7 +1828,7 @@ private:
           if (Indexes.size() == 1)
             KOS << printReg(Reg, TRI, Indexes.front(), MRI);
           else
-            KOS << printReg(Reg) << " mask=" << Mask.getAsInteger();
+            KOS << printReg(Reg) << " mask=" << PrintLaneMask(Mask);
         }
         OS << "  " << left_justify(RegName, RegNameWidth) << " : ";
         Elem.print(OS);

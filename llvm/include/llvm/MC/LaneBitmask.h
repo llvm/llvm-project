@@ -33,87 +33,93 @@
 #include "llvm/ADT/Bitset.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <array>
 #include <cassert>
 
 namespace llvm::detail {
-template <unsigned NumBits> struct LaneBitmaskImpl : public Bitset<NumBits> {
+template <unsigned NumBits> struct LaneBitmaskImpl {
   static constexpr unsigned BitWidth = NumBits;
 
   constexpr LaneBitmaskImpl() = default;
   constexpr LaneBitmaskImpl(const LaneBitmaskImpl &) = default;
   explicit constexpr LaneBitmaskImpl(uint64_t V)
-      : Bitset<NumBits>(std::array<uint64_t, (NumBits + 63) / 64>{V}) {}
+      : Storage(std::array<uint64_t, (NumBits + 63) / 64>{V}) {}
   explicit constexpr LaneBitmaskImpl(
       const std::array<uint64_t, (NumBits + 63) / 64> &B)
-      : Bitset<NumBits>(B) {}
-  explicit LaneBitmaskImpl(const APInt &N)
-      : Bitset<NumBits>(convertAPIntToArray(N)) {}
+      : Storage(B) {}
+  explicit LaneBitmaskImpl(const APInt &N) : Storage(convertAPIntToArray(N)) {}
   // Delete the initializer_list constructor to avoid ambiguity with the
   // std::array constructor.
   LaneBitmaskImpl(std::initializer_list<unsigned>) = delete;
   constexpr LaneBitmaskImpl &operator=(const LaneBitmaskImpl &) = default;
 
+  constexpr bool operator==(const LaneBitmaskImpl &Other) const {
+    return Storage == Other.Storage;
+  }
+  constexpr bool operator!=(const LaneBitmaskImpl &Other) const {
+    return Storage != Other.Storage;
+  }
   /// Compare as unsigned integers (most-significant word first). This differs
   /// from Bitset::operator< which compares bit-by-bit from LSB.
   constexpr bool operator<(const LaneBitmaskImpl &Other) const {
-    const auto &ThisBits = this->getData();
-    const auto &OtherBits = Other.getData();
-    for (int I = ThisBits.size() - 1; I >= 0; --I) {
-      if (ThisBits[I] != OtherBits[I])
-        return ThisBits[I] < OtherBits[I];
+    for (int I = Storage.getNumWords64() - 1; I >= 0; --I) {
+      if (Storage.getWord(I) != Other.Storage.getWord(I))
+        return Storage.getWord(I) < Other.Storage.getWord(I);
     }
     return false;
   }
 
+  constexpr bool none() const { return Storage.none(); }
+  constexpr bool any() const { return Storage.any(); }
+  constexpr bool all() const { return Storage.all(); }
+
   constexpr LaneBitmaskImpl operator~() const {
-    return Bitset<NumBits>::operator~();
+    LaneBitmaskImpl Result;
+    Result.Storage = ~Storage;
+    return Result;
   }
-  constexpr LaneBitmaskImpl operator|(LaneBitmaskImpl M) const {
-    return Bitset<NumBits>::operator|(M);
+  constexpr LaneBitmaskImpl operator|(const LaneBitmaskImpl &M) const {
+    LaneBitmaskImpl Result;
+    Result.Storage = Storage | M.Storage;
+    return Result;
   }
-  constexpr LaneBitmaskImpl operator&(LaneBitmaskImpl M) const {
-    return Bitset<NumBits>::operator&(M);
+  constexpr LaneBitmaskImpl operator&(const LaneBitmaskImpl &M) const {
+    LaneBitmaskImpl Result;
+    Result.Storage = Storage & M.Storage;
+    return Result;
   }
-  constexpr LaneBitmaskImpl &operator|=(LaneBitmaskImpl M) {
-    Bitset<NumBits>::operator|=(M);
+  constexpr LaneBitmaskImpl &operator|=(const LaneBitmaskImpl &M) {
+    Storage |= M.Storage;
     return *this;
   }
-  constexpr LaneBitmaskImpl &operator&=(LaneBitmaskImpl M) {
-    Bitset<NumBits>::operator&=(M);
-    return *this;
-  }
-  constexpr LaneBitmaskImpl operator^(LaneBitmaskImpl M) const {
-    return Bitset<NumBits>::operator^(M);
-  }
-  constexpr LaneBitmaskImpl &operator^=(LaneBitmaskImpl M) {
-    Bitset<NumBits>::operator^=(M);
+  constexpr LaneBitmaskImpl &operator&=(const LaneBitmaskImpl &M) {
+    Storage &= M.Storage;
     return *this;
   }
 
-  constexpr size_t getNumLanes() const { return this->count(); }
+  /// Return the I-th 64-bit word of the bitmask from least significant to most
+  /// significant.
+  constexpr uint64_t getWord(unsigned I) const { return Storage.getWord(I); }
+
+  constexpr size_t getNumLanes() const { return Storage.count(); }
 
   unsigned getHighestLane() const {
-    assert(this->any() && "getHighestLane called on empty mask");
-    const auto &Bits = this->getData();
-    constexpr size_t WordBits = sizeof(decltype(Bits[0])) * 8;
-    for (int I = Bits.size() - 1; I >= 0; --I)
-      if (Bits[I] != 0)
-        return I * WordBits + Log2_64(Bits[I]);
-    llvm_unreachable("should have found a set bit");
+    int Result = Storage.findLastSet();
+    assert(Result >= 0 && "getHighestLane called on empty mask");
+    return static_cast<unsigned>(Result);
   }
 
-  /// Shift bits left by \p S positions. Zeroes are shifted in from the right.
   constexpr LaneBitmaskImpl operator<<(unsigned S) const {
-    return Bitset<NumBits>::operator<<(S);
+    LaneBitmaskImpl Result;
+    Result.Storage = Storage << S;
+    return Result;
   }
-
-  /// Shift bits right by \p S positions. Zeroes are shifted in from the left.
   constexpr LaneBitmaskImpl operator>>(unsigned S) const {
-    return Bitset<NumBits>::operator>>(S);
+    LaneBitmaskImpl Result;
+    Result.Storage = Storage >> S;
+    return Result;
   }
 
   /// Rotate bits left by \p S positions.
@@ -136,18 +142,18 @@ template <unsigned NumBits> struct LaneBitmaskImpl : public Bitset<NumBits> {
 
   static constexpr LaneBitmaskImpl getAll() {
     LaneBitmaskImpl Result;
-    Result.set();
+    Result.Storage.set();
     return Result;
   }
 
   static constexpr LaneBitmaskImpl getLane(unsigned Lane) {
     LaneBitmaskImpl Result;
-    Result.set(Lane);
+    Result.Storage.set(Lane);
     return Result;
   }
 
 private:
-  constexpr LaneBitmaskImpl(const Bitset<NumBits> &B) : Bitset<NumBits>(B) {}
+  Bitset<NumBits> Storage;
 
   /// Helper to convert APInt to array format for Bitset constructor.
   static std::array<uint64_t, (NumBits + 63) / 64>
@@ -164,8 +170,6 @@ private:
       Result[I] = RawData[I];
     return Result;
   }
-
-  template <typename, typename> friend struct llvm::format_provider;
 };
 
 } // end namespace llvm::detail
@@ -177,19 +181,16 @@ template <unsigned NumBits>
 struct format_provider<detail::LaneBitmaskImpl<NumBits>> {
   using T = detail::LaneBitmaskImpl<NumBits>;
   static void format(const T &V, raw_ostream &Stream, StringRef Style) {
-    // Print as hex using platform words from most significant to least.
+    // Print as hex using 64-bit words from most significant to least.
     // Only print the first 64 bits if all upper words are zero.
-    const auto &Data = V.getData();
-    constexpr unsigned SizeOfBitword = sizeof(Data[0]);
-    constexpr unsigned HexWidth = SizeOfBitword * 2;
-    constexpr unsigned NumWordsIn64Bits = 8 / SizeOfBitword;
+    constexpr unsigned HexWidth = 16; // 16 hex digits per 64-bit word.
+    constexpr unsigned NumWords = Bitset<NumBits>::getNumWords64();
     T UpperWords = ~T(~0ULL) & V;
     if (UpperWords.none())
-      for (int I = NumWordsIn64Bits - 1; I >= 0; --I)
-        Stream << format_hex_no_prefix(Data[I], HexWidth, true);
+      Stream << format_hex_no_prefix(V.getWord(0), HexWidth, true);
     else
-      for (int I = Data.size() - 1; I >= 0; --I)
-        Stream << format_hex_no_prefix(Data[I], HexWidth, true);
+      for (int I = NumWords - 1; I >= 0; --I)
+        Stream << format_hex_no_prefix(V.getWord(I), HexWidth, true);
   }
 };
 
@@ -202,7 +203,17 @@ inline Printable PrintLaneMask(detail::LaneBitmaskImpl<NumBits> LaneMask) {
 
 template <unsigned NumBits>
 inline hash_code hash_value(const detail::LaneBitmaskImpl<NumBits> &LM) {
-  return hash_value(static_cast<const Bitset<NumBits> &>(LM));
+  constexpr unsigned NumWords = Bitset<NumBits>::getNumWords64();
+  if constexpr (NumWords == 1)
+    return hash_value(LM.getWord(0));
+  else if constexpr (NumWords == 2)
+    return hash_combine(LM.getWord(0), LM.getWord(1));
+  else {
+    hash_code H = hash_value(LM.getWord(0));
+    for (unsigned I = 1; I < NumWords; ++I)
+      H = hash_combine(H, LM.getWord(I));
+    return H;
+  }
 }
 
 } // end namespace llvm
@@ -212,7 +223,7 @@ namespace std {
 template <unsigned NumBits>
 struct hash<llvm::detail::LaneBitmaskImpl<NumBits>> {
   size_t operator()(const llvm::detail::LaneBitmaskImpl<NumBits> &LM) const {
-    return hash<llvm::Bitset<NumBits>>{}(LM);
+    return llvm::hash_value(LM);
   }
 };
 

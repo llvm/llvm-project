@@ -16,17 +16,12 @@
 #ifndef LLVM_ADT_BITSET_H
 #define LLVM_ADT_BITSET_H
 
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/bit.h"
 #include <array>
 #include <climits>
 #include <cstdint>
 
 namespace llvm {
-
-// Forward declare Bitset and hash_value for friend declarations.
-template <unsigned NumBits> class Bitset;
-template <unsigned NumBits> hash_code hash_value(const Bitset<NumBits> &);
 
 /// This is a constexpr reimplementation of a subset of std::bitset. It would be
 /// nice to use std::bitset directly, but it doesn't support constant
@@ -59,7 +54,13 @@ template <unsigned NumBits> class Bitset {
 protected:
   constexpr const StorageType &getData() const { return Bits; }
 
-  constexpr Bitset(const std::array<uint64_t, (NumBits + 63) / 64> &B) {
+public:
+  constexpr Bitset() = default;
+
+  /// Construct from an array of 64-bit words. On 32-bit platforms, each 64-bit
+  /// element is split into two 32-bit storage words.
+  explicit constexpr Bitset(
+      const std::array<uint64_t, (NumBits + 63) / 64> &B) {
     if constexpr (sizeof(BitWord) == sizeof(uint64_t)) {
       for (size_t I = 0; I != B.size(); ++I)
         Bits[I] = B[I];
@@ -77,9 +78,6 @@ protected:
     }
     maskLastWord();
   }
-
-public:
-  constexpr Bitset() = default;
   constexpr Bitset(std::initializer_list<unsigned> Init) {
     for (auto I : Init)
       set(I);
@@ -264,23 +262,37 @@ public:
     return Result;
   }
 
-  friend hash_code hash_value<NumBits>(const Bitset<NumBits> &);
-  friend struct std::hash<Bitset<NumBits>>;
-};
+  /// Return the number of 64-bit words needed to hold all bits.
+  static constexpr unsigned getNumWords64() { return (NumBits + 63) / 64; }
 
-template <unsigned NumBits>
-inline hash_code hash_value(const Bitset<NumBits> &B) {
-  return hash_combine_range(B.Bits.begin(), B.Bits.end());
-}
+  /// Return the I-th 64-bit word of the bitset, where word 0 contains bits
+  /// [0..63], word 1 contains bits [64..127], etc. On 32-bit platforms this
+  /// assembles two underlying storage words into one 64-bit value.
+  constexpr uint64_t getWord(unsigned I) const {
+    if constexpr (BitwordBits == 64) {
+      return Bits[I];
+    } else {
+      static_assert(BitwordBits == 32, "Unsupported word size");
+      uint64_t Lo = (2 * I < NumWords) ? Bits[2 * I] : 0;
+      uint64_t Hi = (2 * I + 1 < NumWords) ? Bits[2 * I + 1] : 0;
+      return Lo | (Hi << 32);
+    }
+  }
 
-} // end namespace llvm
-
-namespace std {
-template <unsigned NumBits> struct hash<llvm::Bitset<NumBits>> {
-  size_t operator()(const llvm::Bitset<NumBits> &B) const {
-    return llvm::hash_combine_range(B.Bits.begin(), B.Bits.end());
+  /// Return the index of the highest set bit, or -1 if no bits are set.
+  /// The return type is signed to allow the -1 sentinel.
+  constexpr int findLastSet() const {
+    for (int I = NumWords - 1; I >= 0; --I) {
+      if (Bits[I] != 0) {
+        unsigned LeadingZeros =
+            countl_zero_constexpr(static_cast<BitWord>(Bits[I]));
+        return I * BitwordBits + (BitwordBits - 1 - LeadingZeros);
+      }
+    }
+    return -1;
   }
 };
-} // end namespace std
+
+} // end namespace llvm
 
 #endif

@@ -407,7 +407,7 @@ public:
     LaneBitmask Even = LM & LaneBitmask(0xAAAAAAAAAAAAAAAAULL);
     LaneBitmask Mask = (Even >> 1) | LM;
     LaneBitmask Odd = Mask & LaneBitmask(0x5555555555555555ULL);
-    return Odd.count();
+    return Odd.getNumLanes();
   }
 
   // \returns a DWORD offset of a \p SubReg

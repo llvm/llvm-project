@@ -671,7 +671,7 @@ static DiffVec &diffEncode(DiffVec &V, unsigned InitVal, Iter Begin, Iter End) {
 static void printDiff16(raw_ostream &OS, int16_t Val) { OS << Val; }
 
 static void printMask(raw_ostream &OS, LaneBitmask Val) {
-  constexpr unsigned NumWords = (LaneBitmask::BitWidth + 63) / 64;
+  constexpr unsigned NumWords = Bitset<LaneBitmask::BitWidth>::getNumWords64();
   // Check if all upper words beyond the first 64 bits are zero.
   LaneBitmask UpperWords = ~LaneBitmask(~0ULL) & Val;
   if (UpperWords.none()) {
