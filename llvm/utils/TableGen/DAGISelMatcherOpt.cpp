@@ -442,7 +442,7 @@ static void FactorNodes(MatcherList &ML) {
         // Don't print if it's obvious nothing extract could be merged anyway.
         std::next(J) != E) {
       LLVM_DEBUG(
-          errs() << "Couldn't merge this:\n"; I->print(errs(), indent(4));
+          errs() << "Couldn't merge this:\n"; EqualMatchers[0].print(errs(), indent(4));
           errs() << "into this:\n"; J->print(errs(), indent(4));
           std::next(J)->front()->printOne(errs());
           if (std::next(J, 2) != E) std::next(J, 2)->front()->printOne(errs());
