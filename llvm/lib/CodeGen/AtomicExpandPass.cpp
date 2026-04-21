@@ -394,7 +394,6 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     bool MadeChange = false;
-
     if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
         TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       RMWI = convertAtomicXchgToIntegerType(RMWI);
