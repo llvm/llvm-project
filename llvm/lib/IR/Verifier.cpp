@@ -3122,9 +3122,6 @@ void Verifier::visitFunction(const Function &F) {
   Check(!Attrs.hasAttrSomewhere(Attribute::ElementType),
         "Attribute 'elementtype' can only be applied to a callsite.", &F);
 
-  Check(!Attrs.hasFnAttr("aarch64_zt0_undef"),
-        "Attribute 'aarch64_zt0_undef' can only be applied to a callsite.");
-
   if (Attrs.hasFnAttr(Attribute::Naked))
     for (const Argument &Arg : F.args())
       Check(Arg.use_empty(), "cannot use argument of naked function", &Arg);
@@ -6932,25 +6929,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "write argument to llvm.aarch64.range.prefetch must be 0 or 1", Call);
     Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
           "stream argument to llvm.aarch64.range.prefetch must be 0 or 1",
-          Call);
-    break;
-  }
-  case Intrinsic::aarch64_stshh_atomic_store: {
-    uint64_t Order = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
-    Check(Order == static_cast<uint64_t>(AtomicOrderingCABI::relaxed) ||
-              Order == static_cast<uint64_t>(AtomicOrderingCABI::release) ||
-              Order == static_cast<uint64_t>(AtomicOrderingCABI::seq_cst),
-          "order argument to llvm.aarch64.stshh.atomic.store must be 0, 3 or 5",
-          Call);
-
-    Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
-          "policy argument to llvm.aarch64.stshh.atomic.store must be 0 or 1",
-          Call);
-
-    uint64_t Size = cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue();
-    Check(Size == 8 || Size == 16 || Size == 32 || Size == 64,
-          "size argument to llvm.aarch64.stshh.atomic.store must be 8, 16, "
-          "32 or 64",
           Call);
     break;
   }

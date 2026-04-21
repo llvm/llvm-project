@@ -233,13 +233,9 @@ inline bool operator!=(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
 /// Describes API notes data for an Objective-C class or protocol or a C++
 /// namespace.
 class ContextInfo : public CommonTypeInfo {
-  /// Whether this class has a default nullability.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned HasDefaultNullability : 1;
-
-  /// The default nullability.
-  LLVM_PREFERRED_TYPE(NullabilityKind)
-  unsigned DefaultNullability : 2;
+  /// The default nullability, if any.
+  LLVM_PREFERRED_TYPE(NullabilityKindOrNone)
+  unsigned DefaultNullabilityOrNone : 3;
 
   /// Whether this class has designated initializers recorded.
   LLVM_PREFERRED_TYPE(bool)
@@ -257,7 +253,7 @@ class ContextInfo : public CommonTypeInfo {
 
 public:
   ContextInfo()
-      : HasDefaultNullability(0), DefaultNullability(0), HasDesignatedInits(0),
+      : DefaultNullabilityOrNone(0), HasDesignatedInits(0),
         SwiftImportAsNonGenericSpecified(false), SwiftImportAsNonGeneric(false),
         SwiftObjCMembersSpecified(false), SwiftObjCMembers(false) {}
 
@@ -266,17 +262,15 @@ public:
   ///
   /// Returns the default nullability, if implied, or std::nullopt if there is
   /// none.
-  std::optional<NullabilityKind> getDefaultNullability() const {
-    return HasDefaultNullability
-               ? std::optional<NullabilityKind>(
-                     static_cast<NullabilityKind>(DefaultNullability))
-               : std::nullopt;
+  NullabilityKindOrNone getDefaultNullability() const {
+    return NullabilityKindOrNone::fromInternalRepresentation(
+        DefaultNullabilityOrNone);
   }
 
   /// Set the default nullability for properties and methods of this class.
   void setDefaultNullability(NullabilityKind Kind) {
-    HasDefaultNullability = true;
-    DefaultNullability = static_cast<unsigned>(Kind);
+    DefaultNullabilityOrNone =
+        NullabilityKindOrNone(Kind).toInternalRepresentation();
   }
 
   bool hasDesignatedInits() const { return HasDesignatedInits; }
@@ -412,30 +406,23 @@ inline bool operator!=(const BoundsSafetyInfo &LHS,
 
 /// API notes for a variable/property.
 class VariableInfo : public CommonEntityInfo {
-  /// Whether this property has been audited for nullability.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned NullabilityAudited : 1;
-
-  /// The kind of nullability for this property. Only valid if the nullability
+  /// The kind of nullability for this property, if the nullability
   /// has been audited.
-  LLVM_PREFERRED_TYPE(NullabilityKind)
-  unsigned Nullable : 2;
+  LLVM_PREFERRED_TYPE(NullabilityKindOrNone)
+  unsigned NullabilityOrNone : 3;
 
   /// The C type of the variable, as a string.
   std::string Type;
 
 public:
-  VariableInfo() : NullabilityAudited(false), Nullable(0) {}
+  VariableInfo() : NullabilityOrNone(0) {}
 
-  std::optional<NullabilityKind> getNullability() const {
-    return NullabilityAudited ? std::optional<NullabilityKind>(
-                                    static_cast<NullabilityKind>(Nullable))
-                              : std::nullopt;
+  NullabilityKindOrNone getNullability() const {
+    return NullabilityKindOrNone::fromInternalRepresentation(NullabilityOrNone);
   }
 
   void setNullabilityAudited(NullabilityKind kind) {
-    NullabilityAudited = true;
-    Nullable = static_cast<unsigned>(kind);
+    NullabilityOrNone = NullabilityKindOrNone(kind).toInternalRepresentation();
   }
 
   const std::string &getType() const { return Type; }
@@ -446,7 +433,7 @@ public:
   VariableInfo &operator|=(const VariableInfo &RHS) {
     static_cast<CommonEntityInfo &>(*this) |= RHS;
 
-    if (!NullabilityAudited && RHS.NullabilityAudited)
+    if (!getNullability() && RHS.getNullability())
       setNullabilityAudited(*RHS.getNullability());
     if (Type.empty())
       Type = RHS.Type;
@@ -459,8 +446,7 @@ public:
 
 inline bool operator==(const VariableInfo &LHS, const VariableInfo &RHS) {
   return static_cast<const CommonEntityInfo &>(LHS) == RHS &&
-         LHS.NullabilityAudited == RHS.NullabilityAudited &&
-         LHS.Nullable == RHS.Nullable && LHS.Type == RHS.Type;
+         LHS.NullabilityOrNone == RHS.NullabilityOrNone && LHS.Type == RHS.Type;
 }
 
 inline bool operator!=(const VariableInfo &LHS, const VariableInfo &RHS) {

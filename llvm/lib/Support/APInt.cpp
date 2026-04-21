@@ -753,6 +753,17 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
   return true;
 }
 
+bool APInt::isInverseOfSlowCase(const APInt &RHS) const {
+  const unsigned Last = getNumWords() - 1;
+  for (unsigned I = 0; I != Last; ++I)
+    if ((U.pVal[I] ^ RHS.U.pVal[I]) != WORDTYPE_MAX)
+      return false;
+
+  unsigned TailBits = BitWidth - Last * APINT_BITS_PER_WORD;
+  WordType TailMask = llvm::maskTrailingOnes<WordType>(TailBits);
+  return (U.pVal[Last] ^ RHS.U.pVal[Last]) == TailMask;
+}
+
 APInt APInt::byteSwap() const {
   assert(BitWidth >= 16 && BitWidth % 8 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)

@@ -77,7 +77,7 @@ static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
 // TODO: Remove once the transition to the symbolic form is over.
 static cl::opt<bool>
     PrintSymbolicInlineAsmOps("print-symbolic-inline-asm-ops", cl::Hidden,
-                              cl::init(false),
+                              cl::init(true),
                               cl::desc("Print inline asm operands as names"));
 
 namespace {
@@ -364,6 +364,7 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.MaxAlignment = MFI.getMaxAlign().value();
   YamlMFI.AdjustsStack = MFI.adjustsStack();
   YamlMFI.HasCalls = MFI.hasCalls();
+  YamlMFI.FramePointerPolicy = MFI.getFramePointerPolicy();
   YamlMFI.MaxCallFrameSize = MFI.isMaxCallFrameSizeComputed()
     ? MFI.getMaxCallFrameSize() : ~0u;
   YamlMFI.CVBytesOfCalleeSavedRegisters =

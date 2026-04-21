@@ -5938,9 +5938,11 @@ bool ASTReader::readASTFileControlBlock(
     ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
     unsigned ClientLoadCapabilities) {
   // Open the AST file.
+  off_t Size;
+  time_t ModTime;
   std::unique_ptr<llvm::MemoryBuffer> OwnedBuffer;
   llvm::MemoryBuffer *Buffer =
-      ModCache.getInMemoryModuleCache().lookupPCM(Filename);
+      ModCache.getInMemoryModuleCache().lookupPCM(Filename, Size, ModTime);
   if (!Buffer) {
     // FIXME: We should add the pcm to the InMemoryModuleCache if it could be
     // read again later, but we do not have the context here to determine if it
@@ -5948,13 +5950,21 @@ bool ASTReader::readASTFileControlBlock(
 
     // FIXME: This allows use of the VFS; we do not allow use of the
     // VFS when actually loading a module.
-    auto Entry =
-        Filename == "-" ? FileMgr.getSTDIN() : FileMgr.getFileRef(Filename);
+    auto Entry = Filename == "-" ? FileMgr.getSTDIN()
+                                 : FileMgr.getFileRef(Filename,
+                                                      /*OpenFile=*/false,
+                                                      /*CacheFailure=*/true,
+                                                      /*IsText=*/false);
     if (!Entry) {
       llvm::consumeError(Entry.takeError());
       return true;
     }
-    auto BufferOrErr = FileMgr.getBufferForFile(*Entry);
+    auto BufferOrErr =
+        FileMgr.getBufferForFile(*Entry,
+                                 /*IsVolatile=*/false,
+                                 /*RequiresNullTerminator=*/false,
+                                 /*MaybeLimit=*/std::nullopt,
+                                 /*IsText=*/false);
     if (!BufferOrErr)
       return true;
     OwnedBuffer = std::move(*BufferOrErr);
@@ -11453,6 +11463,11 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
     break;
   }
+  case llvm::omp::OMPC_counts: {
+    unsigned NumCounts = Record.readInt();
+    C = OMPCountsClause::CreateEmpty(Context, NumCounts);
+    break;
+  }
   case llvm::omp::OMPC_permutation: {
     unsigned NumLoops = Record.readInt();
     C = OMPPermutationClause::CreateEmpty(Context, NumLoops);
@@ -11862,6 +11877,16 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
+    E = Record.readSubExpr();
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPCountsClause(OMPCountsClause *C) {
+  bool HasFill = Record.readBool();
+  if (HasFill)
+    C->setOmpFillIndex(Record.readInt());
+  C->setOmpFillLoc(Record.readSourceLocation());
+  for (Expr *&E : C->getCountsRefs())
     E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }

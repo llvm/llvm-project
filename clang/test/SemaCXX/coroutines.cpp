@@ -1545,3 +1545,24 @@ void warn_always_inline() { // expected-warning {{this coroutine may be split in
 void warn_gnu_always_inline() { // expected-warning {{this coroutine may be split into pieces; not every piece is guaranteed to be inlined}}
   co_await suspend_always{};
 }
+
+namespace GH98923 {
+struct Awaiter : suspend_never {
+  int await_resume() { return 0; }
+};
+
+void f(int x = co_await Awaiter{});
+// expected-error@-1 {{'co_await' cannot be used outside a function}}
+
+void g() {
+    void g1(int x = co_await Awaiter{});
+    // expected-error@-1 {{'co_await' cannot be used outside a function}}
+    void g2(int x = ((co_yield 0), 1));
+    // expected-error@-1 {{'co_yield' cannot be used outside a function}}
+    auto g3 = [&](int x = co_await Awaiter{}) -> void{
+    // expected-error@-1 {{'co_await' cannot be used outside a function}}
+        co_return 0;
+    };
+}
+
+}

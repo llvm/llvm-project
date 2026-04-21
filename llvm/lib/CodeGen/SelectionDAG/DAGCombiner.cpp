@@ -684,7 +684,7 @@ namespace {
     SDValue ReduceLoadOpStoreWidth(SDNode *N);
     SDValue splitMergedValStore(StoreSDNode *ST);
     SDValue TransformFPLoadStorePair(SDNode *N);
-    SDValue convertBuildVecZextToZext(SDNode *N);
+    SDValue convertBuildVecExtToExt(SDNode *N);
     SDValue convertBuildVecZextToBuildVecWithZeros(SDNode *N);
     SDValue reduceBuildVecExtToExtBuildVec(SDNode *N);
     SDValue reduceBuildVecTruncToBitCast(SDNode *N);
@@ -4549,11 +4549,16 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
   }
 
-  // If there's no chance of borrowing from adjacent bits, then sub is xor:
-  // sub C0, X --> xor X, C0
   if (ConstantSDNode *C0 = isConstOrConstSplat(N0)) {
+    const APInt &C0Val = C0->getAPIntValue();
+
+    // sub nuw C, x --> xor x, C when C is a mask (2^k - 1)
+    if (N->getFlags().hasNoUnsignedWrap() && C0Val.isMask())
+      return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
+
+    // If there's no chance of borrowing from adjacent bits, then sub is xor:
+    // sub C0, X --> xor X, C0
     if (!C0->isOpaque()) {
-      const APInt &C0Val = C0->getAPIntValue();
       const APInt &MaybeOnes = ~DAG.computeKnownBits(N1).Zero;
       if ((C0Val - MaybeOnes) == (C0Val ^ MaybeOnes))
         return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
@@ -4832,7 +4837,11 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
       SDValue Trunc = DAG.getZExtOrTrunc(LogBase2, DL, ShiftVT);
       SDNodeFlags Flags;
       Flags.setNoUnsignedWrap(N->getFlags().hasNoUnsignedWrap());
-      // TODO: Preserve setNoSignedWrap if LogBase2 isn't BitWidth - 1.
+      // Preserve nsw when the shift amount is strictly less than BitWidth - 1,
+      // i.e. the multiplier is not the signed minimum value.
+      if (N->getFlags().hasNoSignedWrap() && N1IsConst &&
+          ConstValue1.logBase2() < BitWidth - 1)
+        Flags.setNoSignedWrap(true);
       return Matcher.getNode(ISD::SHL, DL, VT, N0, Trunc, Flags);
     }
   }
@@ -6605,17 +6614,17 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
     }
   }
 
-  // TODO: What is the 'or' equivalent of this fold?
   // (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
-  if (IsAnd && LL == RL && CC0 == CC1 && OpVT.getScalarSizeInBits() > 1 &&
-      IsInteger && CC0 == ISD::SETNE &&
+  // (or  (seteq X, 0), (seteq X, -1)) --> (setult (add X, 1), 2)
+  if (LL == RL && CC0 == CC1 && OpVT.getScalarSizeInBits() > 1 && IsInteger &&
+      ((IsAnd && CC0 == ISD::SETNE) || (!IsAnd && CC0 == ISD::SETEQ)) &&
       ((isNullConstant(LR) && isAllOnesConstant(RR)) ||
        (isAllOnesConstant(LR) && isNullConstant(RR)))) {
     SDValue One = DAG.getConstant(1, DL, OpVT);
     SDValue Two = DAG.getConstant(2, DL, OpVT);
     SDValue Add = DAG.getNode(ISD::ADD, SDLoc(N0), OpVT, LL, One);
     AddToWorklist(Add.getNode());
-    return DAG.getSetCC(DL, VT, Add, Two, ISD::SETUGE);
+    return DAG.getSetCC(DL, VT, Add, Two, IsAnd ? ISD::SETUGE : ISD::SETULT);
   }
 
   // Try more general transforms if the predicates match and the only user of
@@ -24907,11 +24916,11 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     return InOp;
   }
 
-  // extract_vector_elt of out-of-bounds element -> UNDEF
+  // extract_vector_elt of out-of-bounds element -> POISON
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
   if (IndexC && VecVT.isFixedLengthVector() &&
       IndexC->getAPIntValue().uge(VecVT.getVectorNumElements()))
-    return DAG.getUNDEF(ScalarVT);
+    return DAG.getPOISON(ScalarVT);
 
   // extract_vector_elt (build_vector x, y), 1 -> y
   if (((IndexC && VecOp.getOpcode() == ISD::BUILD_VECTOR) ||
@@ -25936,22 +25945,24 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   return Shuffles[0];
 }
 
-// Try to turn a build vector of zero extends of extract vector elts into a
-// a vector zero extend and possibly an extract subvector.
-// TODO: Support sign extend?
+// Try to turn a build vector of zero/sign extends of extract vector elts into
+// a vector zero/sign extend and possibly an extract subvector.
 // TODO: Allow undef elements?
-SDValue DAGCombiner::convertBuildVecZextToZext(SDNode *N) {
+SDValue DAGCombiner::convertBuildVecExtToExt(SDNode *N) {
   if (LegalOperations)
     return SDValue();
 
   EVT VT = N->getValueType(0);
 
   bool FoundZeroExtend = false;
+  bool FoundSignExtend = false;
   SDValue Op0 = N->getOperand(0);
   auto checkElem = [&](SDValue Op) -> int64_t {
     unsigned Opc = Op.getOpcode();
     FoundZeroExtend |= (Opc == ISD::ZERO_EXTEND);
-    if ((Opc == ISD::ZERO_EXTEND || Opc == ISD::ANY_EXTEND) &&
+    FoundSignExtend |= (Opc == ISD::SIGN_EXTEND);
+    if ((Opc == ISD::ZERO_EXTEND || Opc == ISD::SIGN_EXTEND ||
+         Opc == ISD::ANY_EXTEND) &&
         Op.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
         Op0.getOperand(0).getOperand(0) == Op.getOperand(0).getOperand(0))
       if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(0).getOperand(1)))
@@ -25982,11 +25993,20 @@ SDValue DAGCombiner::convertBuildVecZextToZext(SDNode *N) {
       return SDValue();
   }
 
+  // Can't mix zero and sign extends in the same build_vector.
+  if (FoundZeroExtend && FoundSignExtend)
+    return SDValue();
+
+  unsigned ExtOpc = ISD::ANY_EXTEND;
+  if (FoundSignExtend)
+    ExtOpc = ISD::SIGN_EXTEND;
+  else if (FoundZeroExtend)
+    ExtOpc = ISD::ZERO_EXTEND;
+
   SDLoc DL(N);
   In = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InVT, In,
                    Op0.getOperand(0).getOperand(1));
-  return DAG.getNode(FoundZeroExtend ? ISD::ZERO_EXTEND : ISD::ANY_EXTEND, DL,
-                     VT, In);
+  return DAG.getNode(ExtOpc, DL, VT, In);
 }
 
 // If this is a very simple BUILD_VECTOR with first element being a ZERO_EXTEND,
@@ -26175,7 +26195,7 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
                          Op0.getOperand(0), Op0.getOperand(1));
   }
 
-  if (SDValue V = convertBuildVecZextToZext(N))
+  if (SDValue V = convertBuildVecExtToExt(N))
     return V;
 
   if (SDValue V = convertBuildVecZextToBuildVecWithZeros(N))
