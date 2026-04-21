@@ -1011,10 +1011,12 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
         "filetype", image_infos[i].macho_info.mach_header.filetype);
     mach_header_dict_sp->AddIntegerItem ("flags", 
                          image_infos[i].macho_info.mach_header.flags);
+    int mh_size = image_infos[i].macho_info.mach_header.magic == MH_MAGIC
+                      ? sizeof(mach_header)
+                      : sizeof(mach_header_64);
     mach_header_dict_sp->AddIntegerItem(
         "sizeof_mh_and_loadcmds",
-        sizeof(mach_header_64) +
-            image_infos[i].macho_info.mach_header.sizeofcmds);
+        mh_size + image_infos[i].macho_info.mach_header.sizeofcmds);
 
     //          DynamicLoaderMacOSX doesn't currently need these fields, so
     //          don't send them.
