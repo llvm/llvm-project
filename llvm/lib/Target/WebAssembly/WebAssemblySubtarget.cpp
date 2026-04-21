@@ -40,11 +40,8 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
 
   ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
 
-  // WASIP3 implies using the libcall thread context by
-  // default, unless explicitly disabled.
-  if (!FS.contains("libcall-thread-context") && !HasLibcallThreadContext &&
-      TargetTriple.getOS() == Triple::WASIp3) {
-    ToggleFeature(WebAssembly::FeatureLibcallThreadContext);
+  // WASIP3 implies using the libcall thread context.
+  if (!HasLibcallThreadContext && TargetTriple.getOS() == Triple::WASIp3) {
     HasLibcallThreadContext = true;
   }
 

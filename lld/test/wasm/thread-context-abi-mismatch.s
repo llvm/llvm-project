@@ -10,12 +10,6 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t/stack-pointer.o %t/stack-pointer.s
 # RUN: not wasm-ld --libcall-thread-context %t/start.o %t/stack-pointer.o -o %t/fail.wasm 2>&1 | FileCheck %s
 
-# Test that explicitly disallowing the libcall-thread-context feature causes linking to fail 
-# with an error when other files use the feature.
-
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t/disallow.o %t/disallow.s
-# RUN: not wasm-ld --libcall-thread-context %t/start.o %t/disallow.o -o %t/fail.wasm 2>&1 | FileCheck %s
-
 # CHECK: error: --libcall-thread-context is disallowed by {{.*}} because it uses globals for thread context rather than library function calls.
 
 #--- start.s
@@ -23,12 +17,6 @@
 _start:
   .functype _start () -> ()
   end_function
-
-.section  .custom_section.target_features,"",@
-  .int8 1
-  .int8 43
-  .int8 22
-  .ascii  "libcall-thread-context"
 
 #--- stack-pointer.s
 .globaltype __stack_pointer, i32
@@ -39,10 +27,3 @@ use_stack_pointer:
   global.get __stack_pointer
   drop
   end_function
-
-#--- disallow.s
-.section  .custom_section.target_features,"",@
-  .int8 1
-  .int8 45
-  .int8 22
-  .ascii  "libcall-thread-context"

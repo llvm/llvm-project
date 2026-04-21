@@ -118,9 +118,3 @@
 
 // COMPACT-IMPORTS: "-target-feature" "+compact-imports"
 // NO-COMPACT-IMPORTS: "-target-feature" "-compact-imports"
-
-// RUN: %clang --target=wasm32-unknown-unknown -### %s -mlibcall-thread-context 2>&1 | FileCheck %s -check-prefix=LIBCALL-THREAD-CONTEXT
-// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-libcall-thread-context 2>&1 | FileCheck %s -check-prefix=NO-LIBCALL-THREAD-CONTEXT
-
-// LIBCALL-THREAD-CONTEXT: "-target-feature" "+libcall-thread-context"
-// NO-LIBCALL-THREAD-CONTEXT: "-target-feature" "-libcall-thread-context"

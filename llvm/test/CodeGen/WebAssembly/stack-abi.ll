@@ -1,5 +1,5 @@
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+libcall-thread-context | FileCheck --check-prefix=LIBCALL %s
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=-libcall-thread-context | FileCheck --check-prefix=GLOBAL %s
+; RUN: llc < %s --mtriple=wasm32-wasip3 -asm-verbose=false | FileCheck --check-prefix=LIBCALL %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false | FileCheck --check-prefix=GLOBAL %s
 
 declare void @force_sp_save()
 define void @use_stack() #0 {

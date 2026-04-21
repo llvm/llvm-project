@@ -12,9 +12,9 @@ target triple = "wasm32-unknown-unknown"
 ; mvp: should not contain the target features section
 ; MVP-NOT: .custom_section.target_features,"",@
 
-; generic: +call-indirect-overlong, +multivalue, +mutable-globals, +reference-types, +sign-ext, -libcall-thread-context
+; generic: +call-indirect-overlong, +multivalue, +mutable-globals, +reference-types, +sign-ext
 ; GENERIC-LABEL: .custom_section.target_features,"",@
-; GENERIC-NEXT: .int8  9
+; GENERIC-NEXT: .int8  8
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  11
 ; GENERIC-NEXT: .ascii  "bulk-memory"
@@ -24,9 +24,6 @@ target triple = "wasm32-unknown-unknown"
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  22
 ; GENERIC-NEXT: .ascii  "call-indirect-overlong"
-; GENERIC-NEXT: .int8  45
-; GENERIC-NEXT: .int8  22
-; GENERIC-NEXT: .ascii  "libcall-thread-context"
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  10
 ; GENERIC-NEXT: .ascii  "multivalue"
@@ -44,9 +41,9 @@ target triple = "wasm32-unknown-unknown"
 ; GENERIC-NEXT: .ascii  "sign-ext"
 
 ; lime1: +bulk-memory-opt, +call-indirect-overlong, +extended-const, +multivalue,
-;        +mutable-globals, +nontrapping-fptoint, +sign-ext, -libcall-thread-context
+;        +mutable-globals, +nontrapping-fptoint, +sign-ext
 ; LIME1-LABEL: .custom_section.target_features,"",@
-; LIME1-NEXT: .int8  8
+; LIME1-NEXT: .int8  7
 ; LIME1-NEXT: .int8  43
 ; LIME1-NEXT: .int8  15
 ; LIME1-NEXT: .ascii  "bulk-memory-opt"
@@ -56,9 +53,6 @@ target triple = "wasm32-unknown-unknown"
 ; LIME1-NEXT: .int8  43
 ; LIME1-NEXT: .int8  14
 ; LIME1-NEXT: .ascii  "extended-const"
-; LIME1-NEXT: .int8  45
-; LIME1-NEXT: .int8  22
-; LIME1-NEXT: .ascii  "libcall-thread-context"
 ; LIME1-NEXT: .int8  43
 ; LIME1-NEXT: .int8  10
 ; LIME1-NEXT: .ascii  "multivalue"
@@ -77,9 +71,8 @@ target triple = "wasm32-unknown-unknown"
 ;                +extended-const, +fp16, +gc, +multimemory, +multivalue,
 ;                +mutable-globals, +nontrapping-fptoint, +relaxed-simd,
 ;                +reference-types, +simd128, +sign-ext, +tail-call
-;                -libcall-thread-context
 ; BLEEDING-EDGE-LABEL: .section  .custom_section.target_features,"",@
-; BLEEDING-EDGE-NEXT: .int8  18
+; BLEEDING-EDGE-NEXT: .int8  17
 ; BLEEDING-EDGE-NEXT: .int8  43
 ; BLEEDING-EDGE-NEXT: .int8  7
 ; BLEEDING-EDGE-NEXT: .ascii  "atomics"
@@ -104,9 +97,6 @@ target triple = "wasm32-unknown-unknown"
 ; BLEEDING-EDGE-NEXT: .int8  43
 ; BLEEDING-EDGE-NEXT: .int8  2
 ; BLEEDING-EDGE-NEXT: .ascii  "gc"
-; BLEEDING-EDGE-NEXT: .int8  45
-; BLEEDING-EDGE-NEXT: .int8  22
-; BLEEDING-EDGE-NEXT: .ascii  "libcall-thread-context"
 ; BLEEDING-EDGE-NEXT: .int8  43
 ; BLEEDING-EDGE-NEXT: .int8  11
 ; BLEEDING-EDGE-NEXT: .ascii  "multimemory"

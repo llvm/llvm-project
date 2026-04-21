@@ -5763,8 +5763,6 @@ def mfp16 : Flag<["-"], "mfp16">, Group<m_wasm_Features_Group>;
 def mno_fp16 : Flag<["-"], "mno-fp16">, Group<m_wasm_Features_Group>;
 def mgc : Flag<["-"], "mgc">, Group<m_wasm_Features_Group>;
 def mno_gc : Flag<["-"], "mno-gc">, Group<m_wasm_Features_Group>;
-def mlibcall_thread_context : Joined<["-"], "mlibcall-thread-context">, Group<m_wasm_Features_Group>;
-def mno_libcall_thread_context : Joined<["-"], "mno-libcall-thread-context">, Group<m_wasm_Features_Group>;
 def mmultimemory : Flag<["-"], "mmultimemory">, Group<m_wasm_Features_Group>;
 def mno_multimemory : Flag<["-"], "mno-multimemory">, Group<m_wasm_Features_Group>;
 def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;

@@ -36,10 +36,7 @@ tls2:
   .size tls2, 4
 
 .section  .custom_section.target_features,"",@
-  .int8 3
-  .int8 43
-  .int8 22
-  .ascii  "libcall-thread-context"
+  .int8 2
   .int8 43
   .int8 11
   .ascii  "bulk-memory"

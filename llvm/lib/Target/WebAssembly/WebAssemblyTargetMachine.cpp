@@ -292,7 +292,7 @@ public:
     else if (StrippedTLS && !StrippedAtomics)
       stripAtomics(M);
 
-    recordFeatures(M, WasmTM->getTargetCPU(), Features,
+    recordFeatures(M, Features,
                    StrippedAtomics || StrippedTLS);
 
     // Conservatively assume we have made some change
@@ -396,7 +396,7 @@ private:
     return Stripped;
   }
 
-  void recordFeatures(Module &M, StringRef CPU, const FeatureBitset &Features,
+  void recordFeatures(Module &M, const FeatureBitset &Features,
                       bool Stripped) {
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value]) {
@@ -413,15 +413,6 @@ private:
     // in a module with shared memory.
     if (Stripped) {
       M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",
-                      wasm::WASM_FEATURE_PREFIX_DISALLOWED);
-    }
-
-    // Mark libcall-thread-context as disallowed when not in use to
-    // prevent linking object files with incompatible threading ABIs.
-    // This is implicit for MVP since the feature is not supported at all.
-    if (CPU != "mvp" && !Features[WebAssembly::FeatureLibcallThreadContext]) {
-      M.addModuleFlag(Module::ModFlagBehavior::Error,
-                      "wasm-feature-libcall-thread-context",
                       wasm::WASM_FEATURE_PREFIX_DISALLOWED);
     }
   }

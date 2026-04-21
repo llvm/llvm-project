@@ -90,12 +90,7 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
 
 static bool WantsLibcallThreadContext(const llvm::Triple &Triple,
                                       const ArgList &Args) {
-  // If the target is WASIP3, then enable the
-  // libcall-thread-context feature by default, unless explicitly
-  // disabled.
-  return Triple.getOS() == llvm::Triple::WASIp3 &&
-         Args.hasFlag(options::OPT_mlibcall_thread_context,
-                      options::OPT_mno_libcall_thread_context, true);
+  return Triple.getOS() == llvm::Triple::WASIp3;
 }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -333,11 +328,6 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
-
-  if (WantsLibcallThreadContext(getTriple(), DriverArgs)) {
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+libcall-thread-context");
-  }
 
   // '-pthread' implies atomics, bulk-memory, mutable-globals, and sign-ext
   if (WantsPthread(getTriple(), DriverArgs)) {

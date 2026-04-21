@@ -388,14 +388,6 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasWideArithmetic = false;
       continue;
     }
-    if (Feature == "+libcall-thread-context") {
-      HasLibcallThreadContext = true;
-      continue;
-    }
-    if (Feature == "-libcall-thread-context") {
-      HasLibcallThreadContext = false;
-      continue;
-    }
 
     Diags.Report(diag::err_opt_not_valid_with_opt)
         << Feature << "-target-feature";

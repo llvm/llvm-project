@@ -304,14 +304,3 @@
 // LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
 
-// `wasm32-wasip3` passes `+libcall-thread-context` by default.
-
-// RUN: %clang -### --target=wasm32-wasip3 --sysroot=/foo %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=LINK_WASIP3_LIBCALL_THREAD_CONTEXT %s
-// LINK_WASIP3_LIBCALL_THREAD_CONTEXT: "-cc1" {{.*}} "-target-feature" "+libcall-thread-context"
-
-// `wasm32-wasip3` does not pass `+libcall-thread-context` when `-mno-libcall-thread-context` is used.
-
-// RUN: %clang -### --target=wasm32-wasip3 --sysroot=/foo -mno-libcall-thread-context %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=LINK_WASIP3_NO_LIBCALL_THREAD_CONTEXT %s
-// LINK_WASIP3_NO_LIBCALL_THREAD_CONTEXT: "-cc1" {{.*}} "-target-feature" "-libcall-thread-context"
