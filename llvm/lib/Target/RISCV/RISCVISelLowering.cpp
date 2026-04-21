@@ -24703,12 +24703,23 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
         unsigned CallArgIdx = Outs[OutIdx].OrigArgIndex;
 
         // Resolve which formal parameter is being passed at this call
-        // position. Outs[].OrigArgIndex indexes the filtered arg list
-        // (empty types removed), but IncomingIndirectArgs is keyed by
-        // Argument::getArgNo() (unfiltered position). We need to:
-        // 1. Find the call operand at filtered position CallArgIdx
-        // 2. Check if it's a forwarded formal param (dyn_cast<Argument>)
-        // 3. Resolve the unfiltered formal param index for the map lookup
+        // position.
+        //
+        // FIXME: Ins[].OrigArgIndex is Argument::getArgNo() (unfiltered),
+        // but Outs[].OrigArgIndex is an index into a filtered arg list
+        // (empty types removed, via CallLoweringInfo in the target-
+        // independent layer). IncomingIndirectArgs is keyed by the
+        // caller's unfiltered Argument::getArgNo(), so we have to walk
+        // the caller's formals (same filter) to translate the index.
+        // This target-independent asymmetry should be normalized so
+        // backends do not need to re-derive the mapping.
+        //
+        // Steps:
+        // 1. Find the call operand at filtered position CallArgIdx.
+        // 2. If it is an Argument, use getArgNo() directly (same filter
+        //    for caller formals and call operands).
+        // 3. Otherwise (computed value), walk the caller's formals and
+        //    skip empty types to map the filtered index to getArgNo().
         const Argument *FormalArg = nullptr;
         unsigned FilteredIdx = 0;
         for (const auto &CallArg : CLI.CB->args()) {
@@ -24727,9 +24738,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
         if (FormalArg) {
           FormalArgIdx = FormalArg->getArgNo();
         } else {
-          const Function *CallerFn = CLI.CB->getFunction();
           FilteredIdx = 0;
-          for (const auto &Arg : CallerFn->args()) {
+          for (const auto &Arg : MF.getFunction().args()) {
             if (Arg.getType()->isEmptyTy())
               continue;
             if (FilteredIdx == CallArgIdx) {
@@ -24740,19 +24750,22 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
           }
         }
 
-        if (FormalArg) {
-          // Forwarded formal parameter: reuse its incoming indirect pointer.
-          Register VReg = RVFI->getIncomingIndirectArg(FormalArgIdx);
-          ArgValue = DAG.getCopyFromReg(Chain, DL, VReg, PtrVT);
-        } else {
+        Register VReg = RVFI->getIncomingIndirectArg(FormalArgIdx);
+        SDValue CopyOp = DAG.getCopyFromReg(Chain, DL, VReg, PtrVT);
+        // Thread the CopyFromReg output chain through MemOpChains so the
+        // TokenFactor below sequences the copy with any stores we emit
+        // for this argument.
+        MemOpChains.push_back(CopyOp.getValue(1));
+        SDValue IncomingPtr = CopyOp;
+
+        if (!FormalArg) {
           // Computed value: store into the incoming indirect pointer for the
           // same-position formal parameter (musttail guarantees matching
           // prototypes, so types match). The pointer survives the tail call
           // since it points to the caller's caller's frame.
-          Register VReg = RVFI->getIncomingIndirectArg(FormalArgIdx);
-          SDValue IncomingPtr = DAG.getCopyFromReg(Chain, DL, VReg, PtrVT);
-          MemOpChains.push_back(DAG.getStore(Chain, DL, ArgValue, IncomingPtr,
-                                             MachinePointerInfo()));
+          MemOpChains.push_back(
+              DAG.getStore(Chain, DL, ArgValue, IncomingPtr,
+                           MachinePointerInfo::getUnknownStack(MF)));
           // Store any split parts at their respective offsets.
           unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
           while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
@@ -24761,12 +24774,13 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
             SDValue Addr = DAG.getNode(ISD::ADD, DL, PtrVT, IncomingPtr,
                                        DAG.getIntPtrConstant(PartOffset, DL));
             MemOpChains.push_back(
-                DAG.getStore(Chain, DL, PartValue, Addr, MachinePointerInfo()));
+                DAG.getStore(Chain, DL, PartValue, Addr,
+                             MachinePointerInfo::getUnknownStack(MF)));
             ++i;
             ++OutIdx;
           }
-          ArgValue = IncomingPtr;
         }
+        ArgValue = IncomingPtr;
 
         // Skip any remaining split parts (for forwarded args, they are
         // covered by the forwarded pointer).
