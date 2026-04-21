@@ -6,17 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageExtractor.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 
@@ -24,8 +26,8 @@ namespace {
 using namespace clang;
 using namespace ssaf;
 
-static llvm::Error makeCreateEntityNameError(const NamedDecl *FailedDecl,
-                                             ASTContext &Ctx) {
+llvm::Error makeCreateEntityNameError(const NamedDecl *FailedDecl,
+                                      ASTContext &Ctx) {
   std::string LocStr = FailedDecl->getSourceRange().getBegin().printToString(
       Ctx.getSourceManager());
   return llvm::createStringError(
@@ -33,19 +35,8 @@ static llvm::Error makeCreateEntityNameError(const NamedDecl *FailedDecl,
       FailedDecl->getNameAsString().c_str(), LocStr.c_str());
 }
 
-static llvm::Error makeAddEntitySummaryError(const NamedDecl *FailedContributor,
-                                             ASTContext &Ctx) {
-  std::string LocStr =
-      FailedContributor->getSourceRange().getBegin().printToString(
-          Ctx.getSourceManager());
-  return llvm::createStringError(
-      "failed to add entity summary for contributor %s declared at %s",
-      FailedContributor->getNameAsString().c_str(), LocStr.c_str());
-}
-
 Expected<EntityPointerLevelSet>
 buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
-                         UnsafeBufferUsageTUSummaryExtractor &Extractor,
                          ASTContext &Ctx,
                          std::function<EntityId(EntityName)> AddEntity) {
   EntityPointerLevelSet Result{};
@@ -71,7 +62,6 @@ buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
     return AllErrors;
   return Result;
 }
-} // namespace
 
 static std::set<const Expr *> findUnsafePointersInContributor(const Decl *D) {
   if (isa<FunctionDecl>(D) || isa<VarDecl>(D))
@@ -86,22 +76,37 @@ static std::set<const Expr *> findUnsafePointersInContributor(const Decl *D) {
   }
   return {};
 }
+} // namespace
 
-std::unique_ptr<UnsafeBufferUsageEntitySummary>
-UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
-    const Decl *Contributor, ASTContext &Ctx, llvm::Error &Error) {
+namespace clang::ssaf {
+class UnsafeBufferUsageTUSummaryExtractor : public TUSummaryExtractor {
+public:
+  UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
+      : TUSummaryExtractor(Builder) {}
+
+  EntityId addEntity(EntityName EN) { return SummaryBuilder.addEntity(EN); }
+
+  Expected<std::unique_ptr<UnsafeBufferUsageEntitySummary>>
+  extractEntitySummary(const Decl *Contributor, ASTContext &Ctx);
+
+  void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+} // namespace clang::ssaf
+
+Expected<std::unique_ptr<UnsafeBufferUsageEntitySummary>>
+clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
+    const Decl *Contributor, ASTContext &Ctx) {
   auto AddEntity = [this](EntityName EN) { return addEntity(EN); };
   Expected<EntityPointerLevelSet> EPLs = buildEntityPointerLevels(
-      findUnsafePointersInContributor(Contributor), *this, Ctx, AddEntity);
+      findUnsafePointersInContributor(Contributor), Ctx, AddEntity);
 
   if (EPLs)
     return std::make_unique<UnsafeBufferUsageEntitySummary>(
         UnsafeBufferUsageEntitySummary(std::move(*EPLs)));
-  Error = EPLs.takeError();
-  return nullptr;
+  return EPLs.takeError();
 }
 
-void UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
+void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     ASTContext &Ctx) {
 
   // FIXME: I suppose finding contributor Decls is commonly needed by all/many
@@ -125,39 +130,36 @@ void UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
 
       if (DC->isFileContext() || DC->isNamespace())
         Contributors.push_back(D);
-      return false;
+      return true;
     }
   } ContributorFinder;
 
-  ContributorFinder.VisitTranslationUnitDecl(Ctx.getTranslationUnitDecl());
-
-  llvm::Error Errors = llvm::ErrorSuccess();
-  auto addError = [&Errors](llvm::Error Err) {
-    Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
-  };
-
+  ContributorFinder.TraverseAST(Ctx);
   for (auto *CD : ContributorFinder.Contributors) {
-    llvm::Error Error = llvm::ErrorSuccess();
-    auto EntitySummary = extractEntitySummary(CD, Ctx, Error);
+    auto EntitySummary = extractEntitySummary(CD, Ctx);
 
-    if (Error)
-      addError(std::move(Error));
-    if (EntitySummary->empty())
+    if (!EntitySummary)
+      llvm::reportFatalInternalError(EntitySummary.takeError());
+    assert(*EntitySummary);
+    if ((*EntitySummary)->empty())
       continue;
 
     auto ContributorName = getEntityName(CD);
 
-    if (!ContributorName) {
-      addError(makeCreateEntityNameError(CD, Ctx));
-      continue;
-    }
+    if (!ContributorName)
+      llvm::reportFatalInternalError(makeCreateEntityNameError(CD, Ctx));
 
-    auto [EntitySummaryPtr, Success] = SummaryBuilder.addSummary(
-        addEntity(*ContributorName), std::move(EntitySummary));
+    auto [Ignored, InsertionSucceeded] = SummaryBuilder.addSummary(
+        addEntity(*ContributorName), std::move(*EntitySummary));
 
-    if (!Success)
-      addError(makeAddEntitySummaryError(CD, Ctx));
+    assert(InsertionSucceeded && "duplicated contributor extraction");
   }
-  // FIXME: handle errors!
-  llvm::consumeError(std::move(Errors));
 }
+
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int UnsafeBufferUsageTUSummaryExtractorAnchorSource = 0;
+
+static clang::ssaf::TUSummaryExtractorRegistry::Add<
+    ssaf::UnsafeBufferUsageTUSummaryExtractor>
+    RegisterExtractor(UnsafeBufferUsageEntitySummary::Name,
+                      "The TUSummaryExtractor for unsafe buffer pointers");
