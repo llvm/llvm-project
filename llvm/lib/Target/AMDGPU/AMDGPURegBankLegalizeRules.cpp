@@ -690,6 +690,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
 
+  addRulesForGOpcs({G_BUILD_VECTOR})
+      .Any({{UniBRC, S16}, {{}, {}, VerifyAllSgpr}})
+      .Any({{UniBRC, BRC}, {{}, {}, VerifyAllSgpr}})
+      .Any({{DivBRC, S16}, {{}, {}, ApplyAllVgpr}})
+      .Any({{DivBRC, BRC}, {{}, {}, ApplyAllVgpr}});
+
+  addRulesForGOpcs({G_MERGE_VALUES, G_CONCAT_VECTORS})
+      .Any({{UniBRC, BRC}, {{}, {}, VerifyAllSgpr}})
+      .Any({{DivBRC, BRC}, {{}, {}, ApplyAllVgpr}});
+
   addRulesForGOpcs({G_PHI})
       .Any({{UniS1}, {{}, {}, AextToS32InIncomingBlockGPHI}})
       .Any({{UniS16}, {{}, {}, VerifyAllSgprGPHI}})

@@ -458,16 +458,6 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     if (!MI->isPreISelOpcode())
       continue;
 
-    unsigned Opc = MI->getOpcode();
-
-    // Opcodes that support pretty much all combinations of reg banks and LLTs
-    // (except S1). There is no point in writing rules for them.
-    if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_MERGE_VALUES ||
-        Opc == AMDGPU::G_CONCAT_VECTORS) {
-      RBLHelper.applyMappingTrivial(*MI);
-      continue;
-    }
-
     if (!RBLHelper.findRuleAndApplyMapping(*MI))
       return false;
   }
