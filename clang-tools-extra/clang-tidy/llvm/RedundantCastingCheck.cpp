@@ -19,6 +19,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -205,14 +206,9 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
         }
       }
 
-      auto GetText = [&](SourceRange R) {
-        return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
-                                    *Result.SourceManager, getLangOpts());
-      };
-      StringRef ArgText = GetText(Arg->getSourceRange());
       diag(Call->getExprLoc(), "redundant use of '%0'")
           << FuncName
-          << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
+          << tooling::fixit::createReplacement(*Call, *Arg, *Result.Context);
     }
     // printing the canonical type for a template parameter prints as e.g.
     // 'type-parameter-0-0'
