@@ -89,8 +89,7 @@ public:
     Expected<StringRef> Contents = Sec.getContents();
     if (!Contents)
       return Contents.takeError();
-    return DataExtractor(Contents.get(), Obj.isLittleEndian(),
-                         Obj.getBytesInAddress());
+    return DataExtractor(Contents.get(), Obj.isLittleEndian());
   }
 
   std::optional<SectionRef> findSection(StringRef Name) const {

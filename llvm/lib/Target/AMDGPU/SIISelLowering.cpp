@@ -8348,6 +8348,18 @@ bool SITargetLowering::shouldUseLDSConstAddress(const GlobalValue *GV) const {
   if (!GV->hasExternalLinkage())
     return true;
 
+  // With object linking, external LDS declarations need relocations so the
+  // linker can assign their offsets.
+  if (AMDGPUTargetMachine::EnableObjectLinking) {
+    if (const auto *GVar = dyn_cast<GlobalVariable>(GV)) {
+      if (GVar->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+        assert(GVar->isDeclaration() && "AS3 GVs should be declaration here "
+                                        "when object linking is enabled");
+        return false;
+      }
+    }
+  }
+
   const auto OS = getTargetMachine().getTargetTriple().getOS();
   return OS == Triple::AMDHSA || OS == Triple::AMDPAL;
 }
