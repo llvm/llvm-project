@@ -557,8 +557,10 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   return false;
 }
 
+/// OrigLoadTy is the original type being loaded, while LoadTy is the type
+/// currently being folded (which may be integer type mapped from OrigLoadTy).
 Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
-                                       Type *RequestedLoadTy, int64_t Offset,
+                                       Type *OrigLoadTy, int64_t Offset,
                                        const DataLayout &DL) {
   // Bail out early. Not expect to load from scalable global variable.
   if (isa<ScalableVectorType>(LoadTy))
@@ -578,8 +580,8 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
 
     Type *MapTy = Type::getIntNTy(C->getContext(),
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
-    if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, RequestedLoadTy,
-                                                     Offset, DL)) {
+    if (Constant *Res =
+            FoldReinterpretLoadFromConst(C, MapTy, OrigLoadTy, Offset, DL)) {
       if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
         // Materializing a zero can be done trivially without a bitcast
         return Constant::getNullValue(LoadTy);
@@ -600,10 +602,13 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
   }
 
   unsigned BytesLoaded = (IntType->getBitWidth() + 7) / 8;
+  // Allow folding of large type loads (e.g. <16 x double>).
   if (BytesLoaded > 128 || BytesLoaded == 0)
     return nullptr;
 
-  if (BytesLoaded > 32 && RequestedLoadTy->isIntegerTy())
+  // For scalar integer load, use smaller limit to avoid regression when loading
+  // from string literal. Codegen may generate inefficient string operations.
+  if (BytesLoaded > 32 && OrigLoadTy->isIntegerTy())
     return nullptr;
 
   // If we're not accessing anything in this constant, the result is undefined.
