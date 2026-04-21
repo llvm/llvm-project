@@ -11058,7 +11058,8 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     if (CXXRecordDecl *RD =
             dyn_cast<CXXRecordDecl>(Specialization->getParent());
         RD && RD->isLambda()) {
-      Diag(D.getBeginLoc(), diag::err_lambda_explicit_inst);
+      Diag(D.getBeginLoc(), diag::err_lambda_explicit_temp_spec)
+          << 1 /*instantiation*/;
       Diag(RD->getLocation(), diag::note_defined_here) << RD;
       return (Decl *)nullptr;
     }
