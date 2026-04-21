@@ -58,10 +58,15 @@ void walkRegionSkipping(
   });
 }
 
-/// Returns true if the region contains any nested op with regions
-/// (structured CIR ops that must be flattened before their parent).
-/// CaseOps are excluded because they are structural children of SwitchOp
-/// and are handled by the SwitchOp flattening pattern.
+/// Check whether a region contains any nested op with regions (i.e. structured
+/// CIR ops that must be flattened before their parent). The greedy pattern
+/// rewriter doesn't guarantee inside-out processing order — when a pattern
+/// fires and modifies IR, newly created ops go onto the worklist and can be
+/// visited in any order. So each flattening pattern must explicitly defer
+/// until its nested structured ops are flat.
+///
+/// CaseOps are excluded because they are structural children of SwitchOp and
+/// are handled by the SwitchOp flattening pattern.
 static bool hasNestedOpsToFlatten(mlir::Region &region) {
   return region
       .walk([](mlir::Operation *op) {
