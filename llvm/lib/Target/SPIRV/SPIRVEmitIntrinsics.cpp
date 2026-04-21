@@ -356,7 +356,7 @@ class SPIRVEmitIntrinsics
       const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing);
 
   bool walkLogicalAccessChainConstant(
-      Type *CurType, ConstantInt *CI, uint64_t Multiplier,
+      Type *CurType, uint64_t Offset,
       const std::function<void(Type *, uint64_t)> &OnLiteralIndexing);
 
   // Returns the type accessed using the given GEP instruction by relying
@@ -771,10 +771,9 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChainDynamic(
 }
 
 bool SPIRVEmitIntrinsics::walkLogicalAccessChainConstant(
-    Type *CurType, ConstantInt *CI, uint64_t Multiplier,
+    Type *CurType, uint64_t Offset,
     const std::function<void(Type *, uint64_t)> &OnLiteralIndexing) {
   auto &DL = CurrF->getDataLayout();
-  uint64_t Offset = CI->getZExtValue() * Multiplier;
 
   do {
     if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
@@ -830,8 +829,8 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
 
   Value *Operand = *GEP.idx_begin();
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Operand))
-    return walkLogicalAccessChainConstant(CurType, CI, Multiplier,
-                                          OnLiteralIndexing);
+    return walkLogicalAccessChainConstant(
+        CurType, CI->getZExtValue() * Multiplier, OnLiteralIndexing);
 
   return walkLogicalAccessChainDynamic(CurType, Operand, Multiplier,
                                        OnLiteralIndexing, OnDynamicIndexing);
