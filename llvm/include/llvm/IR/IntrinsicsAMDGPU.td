@@ -486,6 +486,15 @@ def int_amdgcn_rcp_legacy : ClangBuiltin<"__builtin_amdgcn_rcp_legacy">,
   PureIntrinsic<[llvm_float_ty], [llvm_float_ty]
 >;
 
+// Reciprocal for normal f32 values using Newton-Raphson refinement.
+// Computes 1.0f / x using one Newton-Raphson iteration starting from
+// the hardware rcp instruction. Assumes input is a normal float
+// (not zero, inf, nan, or denormal). Produces correctly-rounded results
+// for normal inputs.
+def int_amdgcn_rcp_normal_f32 : PureIntrinsic<
+  [llvm_float_ty], [llvm_float_ty]
+>;
+
 def int_amdgcn_sqrt :  PureIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>]
 >;

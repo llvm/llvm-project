@@ -16,6 +16,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
@@ -66,6 +67,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -135,6 +137,8 @@ STATISTIC(NumRetsDup, "Number of return instructions duplicated");
 STATISTIC(NumDbgValueMoved, "Number of debug value instructions moved");
 STATISTIC(NumSelectsExpanded, "Number of selects turned into branches");
 STATISTIC(NumStoreExtractExposed, "Number of store(extractelement) exposed");
+STATISTIC(NumFP32RecipExpanded,
+          "Number of FP32 reciprocal divisions expanded to rcp.f32.normal");
 
 static cl::opt<bool> DisableBranchOpts(
     "disable-cgp-branch-opts", cl::Hidden, cl::init(false),
@@ -210,6 +214,11 @@ static cl::opt<uint64_t> FreqRatioToSkipMerge(
 static cl::opt<bool> ForceSplitStore(
     "force-split-store", cl::Hidden, cl::init(false),
     cl::desc("Force store splitting no matter what the target query says."));
+
+static cl::opt<bool> EnableFP32ReciprocalNormal(
+    "enable-fp32-recip-normal", cl::Hidden, cl::init(false),
+    cl::desc("Enable FP32 reciprocal expansion using rcp.f32.normal "
+             "intrinsic for AMDGPU targets (assumes normal float inputs)."));
 
 static cl::opt<bool> EnableTypePromotionMerge(
     "cgp-type-promotion-merge", cl::Hidden,
@@ -467,6 +476,7 @@ private:
                                    CmpInst *Cmp, Intrinsic::ID IID);
   bool optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool optimizeURem(Instruction *Rem);
+  bool optimizeFP32Reciprocal(BinaryOperator *FDiv, ModifyDT &ModifiedDT);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool unfoldPowerOf2Test(CmpInst *Cmp);
@@ -2266,6 +2276,108 @@ bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
   if (foldURemOfLoopIncrement(Rem, DL, LI, FreshBBs, IsHugeFunc))
     return true;
   return false;
+}
+
+/// Optimize FP32 reciprocal division (1.0f / x) to use the rcp.f32.normal
+/// intrinsic on AMDGPU targets. This transformation generates:
+///
+///   if (is_normal(denominator))
+///     result = llvm.amdgcn.rcp.f32.normal(denominator)   // fast path
+///   else
+///     result = fdiv 1.0, denominator                      // slow path
+///
+/// The rcp.f32.normal intrinsic uses Newton-Raphson refinement to provide
+/// correctly-rounded results for normal float inputs. Non-normal inputs
+/// (denormals, infinities, NaN, zero) fall back to the standard fdiv.
+///
+/// The slow-path fdiv is tagged with "amdgpu.rcp.slowpath" metadata so that
+/// CodeGenPrepare does not attempt to re-transform it on subsequent passes
+/// over the function (the pass restarts from scratch when the dominator tree
+/// is modified).
+///
+/// Only handles scalar f32 types.
+bool CodeGenPrepare::optimizeFP32Reciprocal(BinaryOperator *FDiv,
+                                            ModifyDT &ModifiedDT) {
+  if (!EnableFP32ReciprocalNormal)
+    return false;
+
+  if (FDiv->getOpcode() != Instruction::FDiv)
+    return false;
+
+  Type *Ty = FDiv->getType();
+
+  // Only handle scalar f32
+  if (!Ty->isFloatTy())
+    return false;
+
+  if (!TM || !TM->getTargetTriple().isAMDGCN())
+    return false;
+
+  // Skip fdiv instructions that were created as the slow path of a previous
+  // reciprocal expansion. Without this check the pass would loop: transform
+  // → restart → find the slow-path fdiv → transform again → ...
+  if (FDiv->getMetadata("amdgpu.rcp.slowpath"))
+    return false;
+
+  Value *Num = FDiv->getOperand(0);
+  Value *Den = FDiv->getOperand(1);
+
+  // Check if numerator is 1.0f (reciprocal operation)
+  const APFloat *NumVal;
+  if (!match(Num, m_APFloat(NumVal)) || !NumVal->isExactlyValue(1.0))
+    return false;
+
+  BasicBlock *OrigBB = FDiv->getParent();
+  Function *F = OrigBB->getParent();
+  LLVMContext &Ctx = F->getContext();
+
+  // Split the block at the fdiv. TailBB starts with FDiv and the rest of
+  // the original code; OrigBB keeps everything before the fdiv.
+  BasicBlock *TailBB =
+      OrigBB->splitBasicBlock(FDiv->getIterator(), "fdiv.tail");
+  OrigBB->getTerminator()->eraseFromParent();
+
+  BasicBlock *FastPathBB =
+      BasicBlock::Create(Ctx, "fdiv.fast.path", F, TailBB);
+  BasicBlock *SlowPathBB =
+      BasicBlock::Create(Ctx, "fdiv.slow.path", F, TailBB);
+
+  IRBuilder<> Builder(Ctx);
+
+  // OrigBB: runtime check — branch on whether the denominator is normal.
+  Builder.SetInsertPoint(OrigBB);
+  Function *FPClassFn = Intrinsic::getOrInsertDeclaration(
+      F->getParent(), Intrinsic::is_fpclass, {Ty});
+  Value *IsNormal =
+      Builder.CreateCall(FPClassFn, {Den, Builder.getInt32(fcNormal)});
+  Builder.CreateCondBr(IsNormal, FastPathBB, SlowPathBB);
+
+  // Fast path: use the rcp.f32.normal intrinsic.
+  Builder.SetInsertPoint(FastPathBB);
+  Function *RcpFn = Intrinsic::getOrInsertDeclaration(
+      F->getParent(), Intrinsic::amdgcn_rcp_normal_f32);
+  Value *FastResult = Builder.CreateCall(RcpFn, {Den});
+  Builder.CreateBr(TailBB);
+
+  // Slow path: regular fdiv, tagged with metadata to prevent re-transformation.
+  Builder.SetInsertPoint(SlowPathBB);
+  Value *SlowResult = Builder.CreateFDiv(Num, Den);
+  cast<Instruction>(SlowResult)
+      ->setMetadata("amdgpu.rcp.slowpath", MDNode::get(Ctx, {}));
+  Builder.CreateBr(TailBB);
+
+  // Tail: PHI node merges fast and slow path results.
+  Builder.SetInsertPoint(TailBB, TailBB->begin());
+  PHINode *Phi = Builder.CreatePHI(Ty, 2);
+  Phi->addIncoming(FastResult, FastPathBB);
+  Phi->addIncoming(SlowResult, SlowPathBB);
+
+  FDiv->replaceAllUsesWith(Phi);
+  FDiv->eraseFromParent();
+
+  ModifiedDT = ModifyDT::ModifyBBDT;
+  ++NumFP32RecipExpanded;
+  return true;
 }
 
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
@@ -9005,6 +9117,11 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   if (BinOp && BinOp->getOpcode() == Instruction::And && EnableAndCmpSinking &&
       sinkAndCmp0Expression(BinOp, *TLI, InsertedInsts))
     return true;
+
+  // Optimize FP32 reciprocal division for AMDGPU
+  if (BinOp && BinOp->getOpcode() == Instruction::FDiv)
+    if (optimizeFP32Reciprocal(BinOp, ModifiedDT))
+      return true;
 
   // TODO: Move this into the switch on opcode - it handles shifts already.
   if (BinOp && (BinOp->getOpcode() == Instruction::AShr ||
