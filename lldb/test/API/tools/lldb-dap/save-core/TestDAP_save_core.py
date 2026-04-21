@@ -9,6 +9,7 @@ import lldbdap_testcase
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class TestDAP_save_core(lldbdap_testcase.DAPTestCaseBase):
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
