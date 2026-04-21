@@ -35,6 +35,7 @@ struct Canonicalizer : public impl::CanonicalizerPassBase<Canonicalizer> {
     this->regionSimplifyLevel = config.getRegionSimplificationLevel();
     this->maxIterations = config.getMaxIterations();
     this->maxNumRewrites = config.getMaxNumRewrites();
+    this->cseBetweenIterations = config.isCSEBetweenIterationsEnabled();
     this->disabledPatterns = disabledPatterns;
     this->enabledPatterns = enabledPatterns;
   }
@@ -47,6 +48,7 @@ struct Canonicalizer : public impl::CanonicalizerPassBase<Canonicalizer> {
     config.setRegionSimplificationLevel(regionSimplifyLevel);
     config.setMaxIterations(maxIterations);
     config.setMaxNumRewrites(maxNumRewrites);
+    config.enableCSEBetweenIterations(cseBetweenIterations);
 
     RewritePatternSet owningPatterns(context);
     for (auto *dialect : context->getLoadedDialects())
