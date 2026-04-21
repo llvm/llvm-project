@@ -203,6 +203,38 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
   }
 };
 
+struct TestXeGPURecoverTemporaryLayouts
+    : public PassWrapper<TestXeGPURecoverTemporaryLayouts,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPURecoverTemporaryLayouts)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-recover-temporary-layouts";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU temporary layout recovery";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPURecoverTemporaryLayouts() = default;
+  TestXeGPURecoverTemporaryLayouts(const TestXeGPURecoverTemporaryLayouts &pass)
+      : PassWrapper(pass) {}
+
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    if (!xegpu::recoverTemporaryLayouts(op))
+      signalPassFailure();
+  }
+};
+
 struct TestXeGPUSGDistribute
     : public PassWrapper<TestXeGPUSGDistribute,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -457,6 +489,7 @@ namespace test {
 void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
+  PassRegistration<TestXeGPURecoverTemporaryLayouts>();
   PassRegistration<TestXeGPUSGDistribute>();
   PassRegistration<TestXeGPUSgToWiDistributeExperimental>();
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
