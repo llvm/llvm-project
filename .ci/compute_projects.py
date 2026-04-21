@@ -316,7 +316,6 @@ def _get_modified_projects(modified_files: list[str]) -> Set[str]:
     modified_projects = set()
     for modified_file in modified_files:
         modified_projects.update(_get_modified_projects_for_file(modified_file))
-    return {"cross-project-tests"}
     return modified_projects
 
 
