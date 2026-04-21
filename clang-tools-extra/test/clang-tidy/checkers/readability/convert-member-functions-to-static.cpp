@@ -254,5 +254,40 @@ struct OverloadedMethods {
   void j() { this->i++; }
   int j() const { return 1; }
 
+  void l() { this->i++; }
+  void l() const volatile { ; }
+
+  void f_out_of_class();
+  void f_out_of_class() const;
+
+  void g_out_of_class(int);
+  void g_out_of_class(int) const;
+
+  void h_out_of_class(int);
+  void h_out_of_class(float) const;
+
+  void j_out_of_class();
+  int j_out_of_class() const;
+
+  void l_out_of_class();
+  void l_out_of_class() const volatile;
+
   int i = 0;
 };
+
+void OverloadedMethods::f_out_of_class() { this->i++; }
+void OverloadedMethods::f_out_of_class() const { ; }
+
+void OverloadedMethods::g_out_of_class(int) { this->i++; }
+void OverloadedMethods::g_out_of_class(int) const { ; }
+
+void OverloadedMethods::h_out_of_class(int) { this->i++; }
+void OverloadedMethods::h_out_of_class(float) const { ; }
+// CHECK-MESSAGES: :[[@LINE-1]]:25: warning: method 'h_out_of_class' can be made static
+// CHECK-FIXES: static void h_out_of_class(float) ;
+
+void OverloadedMethods::j_out_of_class() { this->i++; }
+int OverloadedMethods::j_out_of_class() const { return 1; }
+
+void OverloadedMethods::l_out_of_class() { this->i++; }
+void OverloadedMethods::l_out_of_class() const volatile { return; }
