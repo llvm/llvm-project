@@ -110,14 +110,6 @@ static std::optional<unsigned> countLinesToLastUse(const VarDecl *Var,
       AllRefLines.empty() ? DeclLine
                           : std::max(DeclLine, *llvm::max_element(AllRefLines));
 
-  // const unsigned LastUseLine = std::transform_reduce(
-  //     AllRefs.begin(), AllRefs.end(), DeclLine,
-  //     [](unsigned Lhs, unsigned Rhs) -> unsigned { return std::max(Lhs, Rhs);
-  //     },
-  //     [&](const DeclRefExpr *RefToVar) -> unsigned {
-  //       return SrcMgr->getSpellingLineNumber(RefToVar->getLocation());
-  //     });
-
   return LastUseLine - DeclLine + 1;
 }
 
