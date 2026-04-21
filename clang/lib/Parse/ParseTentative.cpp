@@ -1243,7 +1243,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw_in:
   case tok::kw_inout:
   case tok::kw_out:
-    // HLSL layout qualifiers
+    // HLSL matrix layout qualifiers
   case tok::kw_row_major:
   case tok::kw_column_major:
 

@@ -11,6 +11,10 @@ column_major bool2x2 cm_bool_mat;
 row_major float3x3 rm_mat_arr[2];
 column_major float4x4 cm_mat_arr[3];
 
+// Valid: row_major and column_major on matrix 2d arrays
+row_major float3x3 rm_mat_arr_2d[2][3];
+column_major float4x4 cm_mat_arr_2d[3][2];
+
 // Valid: on struct fields with matrix type.
 struct S {
   row_major float2x2 mat1;

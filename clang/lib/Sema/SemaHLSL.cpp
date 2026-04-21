@@ -2684,9 +2684,10 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-static bool isMatrixOrArrayOfMatrix(const ASTContext &Ctx, QualType Ty) {
-  if (const auto *AT = Ctx.getAsArrayType(Ty))
-    Ty = AT->getElementType();
+static bool isMatrixOrArrayOfMatrix(const ASTContext &Ctx, QualType QT) {
+  const Type *Ty = QT->getUnqualifiedDesugaredType();
+  while (isa<ArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual();
   return Ty->isDependentType() || Ty->isConstantMatrixType();
 }
 
