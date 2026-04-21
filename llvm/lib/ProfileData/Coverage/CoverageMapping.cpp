@@ -1122,6 +1122,7 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
                                     llvm::toHex(BinaryID, /*LowerCase=*/true)));
         }
       }
+    }
   }
 
   if (!DataFound)
