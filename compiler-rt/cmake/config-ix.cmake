@@ -2,6 +2,7 @@ include(CMakePushCheckState)
 include(AddLLVM)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(CheckCSourceCompiles)
 include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(LLVMCheckCompilerLinkerFlag)
@@ -408,6 +409,18 @@ function(get_xcrun_platform_from_apple_platform platform out_var)
   endif()
   set(${out_var} ${xcrun_platform} PARENT_SCOPE)
 endfunction()
+
+# Detect which inline asm syntax the assembler supports for symbol assignment.
+# Most GNU assembler targets accept 'sym = val'; Hexagon rejects this form
+# (it resembles a mnemonic) and requires '.set sym, val'.  Alpha accepts only
+# 'sym = val' because '.set' is reserved for assembler mode flags on that
+# target.  Test both forms so the header can select the right one.
+check_c_source_compiles(
+  "__asm__(\"__crt_test_sym_eq = 0\"); int main(void) { return 0; }"
+  COMPILER_RT_HAS_ASM_EQUALS_ASSIGN)
+check_c_source_compiles(
+  "__asm__(\".set __crt_test_sym_dot_set, 0\"); int main(void) { return 0; }"
+  COMPILER_RT_HAS_ASM_DOT_SET)
 
 include(AllSupportedArchDefs)
 
