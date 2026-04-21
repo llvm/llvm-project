@@ -466,7 +466,3 @@ exit:
   ret void
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare double @llvm.cos.f64(double) #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

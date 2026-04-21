@@ -7,17 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "TestFixture.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageExtractor.h"
+#include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace ssaf;
@@ -35,7 +44,7 @@ const SomeDecl *findDeclByName(StringRef Name, ASTContext &Ctx) {
     NamedDeclFinder(StringRef SearchingName) : SearchingName(SearchingName) {}
 
     bool VisitDecl(Decl *D) override {
-      if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+      if (const auto *ND = dyn_cast<SomeDecl>(D)) {
         if (ND->getNameAsString() == SearchingName) {
           FoundDecl = ND;
           return false;
@@ -55,10 +64,7 @@ const FunctionDecl *findFnByName(StringRef Name, ASTContext &Ctx) {
   return findDeclByName<FunctionDecl>(Name, Ctx);
 }
 
-constexpr inline auto buildEntityPointerLevel =
-    UnsafeBufferUsageTUSummaryExtractor::buildEntityPointerLevel;
-
-class UnsafeBufferUsageTest : public testing::Test {
+class UnsafeBufferUsageTest : public TestFixture {
 protected:
   TUSummary TUSum;
   TUSummaryBuilder Builder;
@@ -69,16 +75,21 @@ protected:
       : TUSum(BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
         Builder(TUSum), Extractor(Builder) {}
 
+  template <typename ContributorDecl = NamedDecl>
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
   setUpTest(StringRef Code, StringRef ContributorName) {
     AST = tooling::buildASTFromCodeWithArgs(
-        Code, {"-Wno-unused-value -Wno-int-to-pointer-cast"});
+        Code, {"-Wno-unused-value", "-Wno-int-to-pointer-cast"});
 
     const auto *ContributorDefn =
-        findDeclByName(ContributorName, AST->getASTContext());
+        findDeclByName<ContributorDecl>(ContributorName, AST->getASTContext());
+
+    if (!ContributorDefn)
+      return nullptr;
+
     std::optional<EntityName> EN = getEntityName(ContributorDefn);
 
-    if (!ContributorDefn || !EN)
+    if (!EN)
       return nullptr;
 
     llvm::Error Error = llvm::ErrorSuccess();
@@ -177,6 +188,52 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntityPointerLevelSetTest) {
   EXPECT_THAT(getSubsetOf(Set, E1), UnorderedElementsAre(P1, P2));
   EXPECT_THAT(getSubsetOf(Set, E2), UnorderedElementsAre(P3, P4));
   EXPECT_THAT(getSubsetOf(Set, E3), UnorderedElementsAre(P5));
+}
+
+//////////////////////////////////////////////////////////////
+//   (De-)Serialization Tests                               //
+//////////////////////////////////////////////////////////////
+
+TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageSerializeTest) {
+  auto Sum = setUpTest(R"cpp(
+    void foo(int ***p, int ****q, int x) {
+      p[5][5][5];
+      q[5][5][5][5];
+    }
+  )cpp",
+                       "foo");
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U},
+                                     {"p", 2U},
+                                     {"p", 3U},
+                                     {"q", 1U},
+                                     {"q", 2U},
+                                     {"q", 3U},
+                                     {"q", 4U}}));
+
+  std::function<uint64_t(EntityId)> IdToIntFn = [](EntityId Id) -> uint64_t {
+    return getIndex(Id);
+  };
+  std::function<llvm::Expected<EntityId>(uint64_t)> IdFromIntFn =
+      [this](uint64_t Int) -> llvm::Expected<EntityId> {
+    std::optional<EntityId> Result = std::nullopt;
+
+    getIdTable(TUSum).forEach([&Int, &Result](const EntityName &, EntityId Id) {
+      if (getIndex(Id) == Int)
+        Result = Id;
+    });
+    if (Result)
+      return *Result;
+    return llvm::createStringError("failed to convert %d to an EntityId", Int);
+  };
+
+  auto RoundTripResult =
+      serializeDeserializeRoundTrip(*Sum, IdToIntFn, IdFromIntFn);
+
+  EXPECT_THAT_ERROR(RoundTripResult.takeError(), llvm::Succeeded());
+  ASSERT_NE(*RoundTripResult, nullptr);
+  EXPECT_EQ(*Sum, *static_cast<const UnsafeBufferUsageEntitySummary *>(
+                      RoundTripResult->get()));
 }
 
 //////////////////////////////////////////////////////////////
@@ -442,4 +499,133 @@ TEST_F(UnsafeBufferUsageTest, PointerToArrayOfPointers) {
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 3}}));
 }
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInGlobalVariableInitializer) {
+  auto Sum = setUpTest(R"cpp(
+      int *gp;
+      int x = gp[5];
+    )cpp",
+                       {"x"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInFieldInitializer) {
+  auto Sum = setUpTest(R"cpp(
+      int *gp;
+      struct Foo {
+        int field = gp[5];
+      };
+    )cpp",
+                       {"Foo"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInFieldInitializer2) {
+  auto Sum = setUpTest(R"cpp(
+      int *gp;
+      union Foo {
+        int field = gp[5];
+        int x;
+      };
+    )cpp",
+                       {"Foo"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, InitializerList) {
+  auto Sum = setUpTest(R"cpp(
+      int *gp;
+      struct Foo {
+        int field;
+        int x;
+      };
+      Foo FooObj{gp[5], 0};
+    )cpp",
+                       {"FooObj"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInCXXCtorInitializer) {
+  auto Sum = setUpTest<CXXConstructorDecl>(R"cpp(
+      struct Foo {
+        int member;
+        Foo(int *p) : member(p[5]) {}
+      };
+    )cpp",
+                                           {"Foo"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInDefaultArg) {
+  auto Sum = setUpTest(R"cpp(
+    int * gp;
+    void foo(int x = gp[5]);
+    )cpp",
+                       {"foo"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, NestedDefinitions) {
+  StringRef Code = R"cpp(
+    int * a = [](){
+      struct Foo {
+        void bar(int * ptr) { ptr[3] = 0; }
+      };
+      return nullptr;
+    }();
+    )cpp";
+  auto Sum = setUpTest(Code, {"bar"});
+
+  EXPECT_NE(Sum, nullptr);
+  // The closest contributor owns the fact:
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"ptr", 1U}}));
+
+  Sum = setUpTest(Code, {"Foo"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_TRUE(Sum->empty());
+
+  Sum = setUpTest(Code, {"a"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_TRUE(Sum->empty());
+}
+
+TEST_F(UnsafeBufferUsageTest, NestedDefinitions2) {
+  StringRef Code = R"cpp(
+    int main(void) {
+       struct Foo {
+          void bar(int * ptr) { ptr[3] = 0; }
+       };
+    }
+    )cpp";
+  auto Sum = setUpTest(Code, {"bar"});
+
+  EXPECT_NE(Sum, nullptr);
+  // The closest contributor owns the fact:
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"ptr", 1U}}));
+
+  Sum = setUpTest(Code, {"Foo"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_TRUE(Sum->empty());
+
+  Sum = setUpTest(Code, {"main"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_TRUE(Sum->empty());
+}
+
 } // namespace

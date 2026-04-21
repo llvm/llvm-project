@@ -596,9 +596,10 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   bool SkipModule =
       CPUStr == "help" || TuneCPUStr == "help" || is_contained(MAttrs, "help");
   if (SkipModule) {
-    TheTriple = Triple(Triple::normalize(TargetTriple));
-    if (TheTriple.getTriple().empty())
-      TheTriple.setTriple(sys::getDefaultTargetTriple());
+    if (!TargetTriple.empty())
+      TheTriple = Triple(Triple::normalize(TargetTriple));
+    else
+      TheTriple = Triple(sys::getDefaultTargetTriple());
 
     // Get the target specific parser.
     std::string Error;
@@ -616,7 +617,11 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     // to avoid a memory leak.
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
         TheTriple, SkipModuleCPU, FeaturesStr, Options, RM, CM, OLvl));
-    assert(Target && "Could not allocate target machine!");
+    if (!Target) {
+      WithColor::error(errs(), argv[0])
+          << "could not allocate target machine\n";
+      return 1;
+    }
 
     // If we don't have a module then just exit now. We do this down
     // here since the CPU/Feature help is underneath the target machine
@@ -645,7 +650,11 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     InitializeOptions(TheTriple);
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
         TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
-    assert(Target && "Could not allocate target machine!");
+    if (!Target) {
+      WithColor::error(errs(), argv[0])
+          << "could not allocate target machine\n";
+      exit(1);
+    }
 
     // Set PGO options based on command line flags
     setPGOOptions(*Target);

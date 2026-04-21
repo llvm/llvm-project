@@ -248,6 +248,19 @@ bool GPUDialect::hasWorkgroupMemoryAddressSpace(MemRefType type) {
   return isWorkgroupMemoryAddressSpace(memorySpace);
 }
 
+bool GPUDialect::isConstantMemoryAddressSpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuAttr.getValue() == getConstantAddressSpace();
+  return false;
+}
+
+bool GPUDialect::hasConstantMemoryAddressSpace(MemRefType type) {
+  Attribute memorySpace = type.getMemorySpace();
+  return isConstantMemoryAddressSpace(memorySpace);
+}
+
 bool GPUDialect::isKernel(Operation *op) {
   UnitAttr isKernelAttr = op->getAttrOfType<UnitAttr>(getKernelFuncAttrName());
   return static_cast<bool>(isKernelAttr);
@@ -288,6 +301,9 @@ void GPUDialect::initialize() {
                             BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp,
                             LaneIdOp, SubgroupIdOp, GlobalIdOp, NumSubgroupsOp,
                             SubgroupSizeOp, LaunchOp, SubgroupBroadcastOp>();
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface,
+                            SubgroupMmaLoadMatrixOp,
+                            SubgroupMmaStoreMatrixOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
@@ -2618,6 +2634,12 @@ OpFoldResult gpu::SubgroupBroadcastOp::fold(FoldAdaptor /*adaptor*/) {
 
   return nullptr;
 }
+
+//===----------------------------------------------------------------------===//
+// GPU_BallotOp
+//===----------------------------------------------------------------------===//
+
+// No custom implementations needed; ballot uses default behavior from ODS.
 
 //===----------------------------------------------------------------------===//
 // GPU KernelMetadataAttr

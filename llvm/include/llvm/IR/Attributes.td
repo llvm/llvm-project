@@ -132,7 +132,7 @@ def DereferenceableOrNull : IntAttr<"dereferenceable_or_null", IntersectMin,
 def DisableSanitizerInstrumentation: EnumAttr<"disable_sanitizer_instrumentation", IntersectPreserve, [FnAttr]>;
 
 /// Provide pointer element type to intrinsic.
-def ElementType : TypeAttr<"elementtype", IntersectPreserve, [ParamAttr]>;
+def ElementType : TypeAttr<"elementtype", IntersectPreserve, [RetAttr, ParamAttr]>;
 
 /// Flatten function by recursively inlining all calls.
 def Flatten : EnumAttr<"flatten", IntersectPreserve, [FnAttr]>;

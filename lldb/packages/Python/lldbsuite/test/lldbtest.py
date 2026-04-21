@@ -44,6 +44,7 @@ import signal
 from subprocess import *
 import sys
 import time
+import datetime
 import traceback
 from typing import Optional, Union
 
@@ -966,6 +967,9 @@ class Base(unittest.TestCase):
                 self.lib_lldb = lib
                 self.darwinWithFramework = self.platformIsDarwin()
 
+        # As the last operation, mark the setup completed for dumpSessionInfo.
+        self.__setup_done__ = True
+
     def setAsync(self, value):
         """Sets async mode to True/False and ensures it is reset after the testcase completes."""
         old_async = self.dbg.GetAsync()
@@ -1247,16 +1251,18 @@ class Base(unittest.TestCase):
         Dump the debugger interactions leading to a test error/failure.  This
         allows for more convenient postmortem analysis.
 
-        See also LLDBTestResult (dotest.py) which is a singlton class derived
+        See also LLDBTestResult (dotest.py) which is a singleton class derived
         from TextTestResult and overwrites addError, addFailure, and
         addExpectedFailure methods to allow us to to mark the test instance as
         such.
         """
+        # Ensure 'setUp' has completed.
+        if not getattr(self, "__setup_done__", False):
+            return
 
-        # We are here because self.tearDown() detected that this test instance
-        # either errored or failed.  The lldb.test_result singleton contains
-        # two lists (errors and failures) which get populated by the unittest
-        # framework.  Look over there for stack trace information.
+        # The lldb.test_result singleton contains two lists (errors and
+        # failures) which get populated by the unittest framework.  Look over
+        # there for stack trace information.
         #
         # The lists contain 2-tuples of TestCase instances and strings holding
         # formatted tracebacks.
@@ -1286,15 +1292,14 @@ class Base(unittest.TestCase):
 
         session_file = self.getLogBasenameForCurrentTest() + ".log"
 
+        lldbutil.mkdir_p(os.path.dirname(session_file))
         # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        session = encoded_file.open(session_file, "utf-8", mode="w")
+        session = encoded_file.open(session_file, "utf-8", mode="a")
 
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
                     print(traceback, file=session)
-
-        import datetime
 
         print(
             "Session info generated @",
@@ -1307,8 +1312,12 @@ class Base(unittest.TestCase):
         # process the log files
         if prefix != "Success" or lldbtest_config.log_success:
             # keep all log files, rename them to include prefix
+            # e.g. .../TestDAP_module/Incomplete.log > Failure_<test-name>.log
             src_log_basename = self.getLogBasenameForCurrentTest()
-            dst_log_basename = self.getLogBasenameForCurrentTest(prefix)
+            dst_log_basename = (
+                f"{self.getLogBasenameForCurrentTest(prefix)}_{self.testMethodName}"
+            )
+            files = []
             for src in self.log_files:
                 if os.path.isfile(src):
                     dst = src.replace(src_log_basename, dst_log_basename)
@@ -1323,6 +1332,12 @@ class Base(unittest.TestCase):
 
                     lldbutil.mkdir_p(os.path.dirname(dst))
                     os.rename(src, dst)
+                    files.append(dst)
+            if files:
+                print(
+                    "Log Files:\n - %s" % ("\n - ".join(files)),
+                    file=sys.stderr,
+                )
         else:
             # success!  (and we don't want log files) delete log files
             for log_file in self.log_files:
@@ -1523,6 +1538,7 @@ class Base(unittest.TestCase):
 
     def build(
         self,
+        *,
         debug_info=None,
         architecture=None,
         compiler=None,
@@ -1530,6 +1546,12 @@ class Base(unittest.TestCase):
         make_targets=None,
     ):
         """Platform specific way to build binaries."""
+        if debug_info or architecture or compiler or dictionary or make_targets:
+            self.assertFalse(
+                self.SHARED_BUILD_TESTCASE,
+                "shared build tests reuse the same compilation artifacts for all test functions",
+            )
+
         if not architecture and configuration.arch:
             architecture = configuration.arch
 
@@ -1963,9 +1985,6 @@ class LLDBTestCaseFactory(type):
         if original_testcase.NO_DEBUG_INFO_TESTCASE and not has_variant_tests:
             return original_testcase
 
-        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
-            original_testcase.SHARED_BUILD_TESTCASE = False
-
         # Default implementation for skip/xfail reason based on the debug category,
         # where "None" means to run the test as usual.
         def no_reason(*args, **kwargs):
@@ -2044,6 +2063,10 @@ class LLDBTestCaseFactory(type):
 
             else:
                 newattrs[attrname] = attrvalue
+
+        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+            newattrs["SHARED_BUILD_TESTCASE"] = False
+
         return super(LLDBTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
 
 

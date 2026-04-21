@@ -1755,6 +1755,12 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   EXPECT_TRUE(match(VectorInfPoison, m_Inf()));
   EXPECT_FALSE(match(VectorNaNPoison, m_Inf()));
 
+  EXPECT_TRUE(match(ScalarPosInf, m_PosInf()));
+  EXPECT_FALSE(match(ScalarNegInf, m_PosInf()));
+
+  EXPECT_FALSE(match(ScalarPosInf, m_NegInf()));
+  EXPECT_TRUE(match(ScalarNegInf, m_NegInf()));
+
   EXPECT_FALSE(match(ScalarUndef, m_NonInf()));
   EXPECT_FALSE(match(VectorUndef, m_NonInf()));
   EXPECT_FALSE(match(VectorZeroUndef, m_NonInf()));
@@ -2097,6 +2103,38 @@ TEST_F(PatternMatchTest, IntrinsicMatcher) {
       match(Intrinsic5, m_Intrinsic<Intrinsic::instrprof_increment_step>(
                             m_Value(), m_Value(), m_Value(), m_Value(),
                             m_SpecificInt(10))));
+}
+
+TEST_F(PatternMatchTest, AnyIntrinsicMatcher) {
+  Value *Ops0[] = {IRB.getInt32(0)};
+  Value *Ops1[] = {IRB.getInt32(0)};
+  Module *M = BB->getParent()->getParent();
+
+  Function *BswapFn =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::bswap, IRB.getInt32Ty());
+  Value *BswapCall = CallInst::Create(BswapFn, Ops0, "", BB);
+
+  Function *CtpopFn =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::ctpop, IRB.getInt32Ty());
+  Value *CtpopCall = CallInst::Create(CtpopFn, Ops1, "", BB);
+
+  // Match any of the listed intrinsic IDs.
+  EXPECT_TRUE(
+      match(BswapCall, m_AnyIntrinsic<Intrinsic::bswap, Intrinsic::ctpop>()));
+  EXPECT_TRUE(
+      match(CtpopCall, m_AnyIntrinsic<Intrinsic::bswap, Intrinsic::ctpop>()));
+
+  // Should not match an unlisted intrinsic.
+  EXPECT_FALSE(match(
+      BswapCall, m_AnyIntrinsic<Intrinsic::ctpop, Intrinsic::bitreverse>()));
+
+  // Single ID should work like m_Intrinsic.
+  EXPECT_TRUE(match(BswapCall, m_AnyIntrinsic<Intrinsic::bswap>()));
+  EXPECT_FALSE(match(CtpopCall, m_AnyIntrinsic<Intrinsic::bswap>()));
+
+  // Non-intrinsic call should not match.
+  EXPECT_FALSE(match(IRB.getInt32(0),
+                     m_AnyIntrinsic<Intrinsic::bswap, Intrinsic::ctpop>()));
 }
 
 namespace {

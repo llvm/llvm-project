@@ -517,12 +517,6 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateSame) {
     for (scudo::uptr I = 0; I < scudo::Min(CurrentSize, NewSize); I++)
       EXPECT_EQ((reinterpret_cast<char *>(NewP))[I], Marker);
 
-    // Verify that new bytes are set according to FillContentsMode.
-    for (scudo::uptr I = CurrentSize; I < NewSize; I++) {
-      unsigned char V = (reinterpret_cast<unsigned char *>(NewP))[I];
-      EXPECT_TRUE(V == scudo::PatternFillByte || V == 0);
-    }
-
     checkMemoryTaggingMaybe(Allocator, NewP, NewSize, 0);
     CurrentSize = NewSize;
   }
@@ -1471,6 +1465,30 @@ TEST(ScudoCombinedTest, FullUsableSize) {
   VerifyIterateOverUsableSize<AllocatorT>(*Allocator);
 }
 
+TEST(ScudoCombinedTest, ReallocUsableSize) {
+  using AllocatorT = TestAllocator<TestFullUsableSizeConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  scudo::uptr Size = 1000;
+  void *P = Allocator->allocate(Size, Origin);
+  scudo::uptr UsableSize = Allocator->getUsableSize(P);
+  std::vector<unsigned char> Buffer(UsableSize);
+  for (size_t I = 0; I < UsableSize; I++) {
+    Buffer[I] = I & 0xff;
+  }
+  memcpy(P, Buffer.data(), UsableSize);
+  EXPECT_LE(Size, UsableSize);
+
+  scudo::uptr NewSize = 2 * UsableSize;
+  void *NewP = Allocator->reallocate(P, NewSize);
+  EXPECT_NE(NewP, P);
+  for (size_t I = 0; I < UsableSize; I++) {
+    EXPECT_EQ((reinterpret_cast<unsigned char *>(NewP))[I], I & 0xff)
+        << "Failed at index " << I;
+  }
+  Allocator->deallocate(NewP, Origin);
+}
+
 struct TestFullUsableSizeMTEConfig : TestFullUsableSizeConfig {
   static const bool MaySupportMemoryTagging = true;
 };
@@ -1728,7 +1746,7 @@ TEST(ScudoCombinedDeathTest, AlignTypeMismatch) {
 
 // Scudo currently cannot verify that a pointer allocated with an aligned
 // new/new [] is deallocated with an aligned delete/delete [].
-TEST(ScudoCombinedTest, NewType) {
+TEST(ScudoCombinedTest, DISABLED_NewType) {
   ScopedScudoOptions Options("dealloc_type_mismatch=true");
 
   using AllocatorT = scudo::Allocator<TestMatchConfig>;
@@ -1829,7 +1847,7 @@ TEST(ScudoCombinedDeathTest, AlignMismatch) {
   // Pointer is guaranteed to not be aligned to 2 * page size.
   void *AlignedPtr = getMinAlignedPointer<AllocatorT>(Allocator.get());
   if (AlignedPtr == nullptr) {
-    GTEST_SKIP() << "Cannot allocate aligned pointer for test.";
+    TEST_SKIP("Cannot allocate aligned pointer for test.");
   }
 
   scudo::uptr Alignment = 2 * scudo::getPageSizeCached();

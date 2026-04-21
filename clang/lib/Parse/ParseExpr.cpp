@@ -481,7 +481,9 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     else
       RHS = ParseCastExpression(CastParseKind::AnyCastExpr);
 
-    if (RHS.isInvalid()) {
+    // We preserve the LHS only if we hit a clear statement boundary (tok::semi)
+    // to avoid additional bogus diagnostics.
+    if (RHS.isInvalid() && Tok.isNot(tok::semi)) {
       LHS = ExprError();
     }
 
@@ -513,7 +515,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
                             static_cast<prec::Level>(ThisPrec + !isRightAssoc));
       RHSIsInitList = false;
 
-      if (RHS.isInvalid()) {
+      if (RHS.isInvalid() && Tok.isNot(tok::semi)) {
         LHS = ExprError();
       }
 
@@ -540,7 +542,11 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
 
     if (!LHS.isInvalid()) {
       // Combine the LHS and RHS into the LHS (e.g. build AST).
-      if (TernaryMiddle.isInvalid()) {
+      if (RHS.isInvalid()) {
+        LHS = Actions.CreateRecoveryExpr(LHS.get()->getBeginLoc(),
+                                         PrevTokLocation,
+                                         {LHS.get()});
+      } else if (TernaryMiddle.isInvalid()) {
         // If we're using '>>' as an operator within a template
         // argument list (in C++98), suggest the addition of
         // parentheses so that the code remains well-formed in C++0x.
@@ -3464,6 +3470,15 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
       Diag(PlatformIdentifier->getLoc(),
            diag::err_avail_query_unrecognized_platform_name)
           << GivenPlatform;
+      return std::nullopt;
+    }
+
+    // Validate anyAppleOS version; reject versions older than 26.0.
+    if (Platform == "anyappleos" &&
+        !AvailabilitySpec::validateAnyAppleOSVersion(Version)) {
+      Diag(VersionRange.getBegin(),
+           diag::err_avail_query_anyappleos_min_version)
+          << Version.getAsString();
       return std::nullopt;
     }
 

@@ -13,6 +13,7 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -28,8 +29,10 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 #include <optional>
 
 namespace mlir {
@@ -2074,6 +2077,83 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
   }
 };
 
+struct GlobalLoadAsyncToLDSOpLowering
+    : public ConvertOpToLLVMPattern<GlobalLoadAsyncToLDSOp> {
+  GlobalLoadAsyncToLDSOpLowering(const LLVMTypeConverter &converter,
+                                 Chipset chipset)
+      : ConvertOpToLLVMPattern<GlobalLoadAsyncToLDSOp>(converter),
+        chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(GlobalLoadAsyncToLDSOp op,
+                  GlobalLoadAsyncToLDSOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op.emitOpError(
+          "global_load_async_to_lds is only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    auto dstMemRefType = cast<MemRefType>(op.getDst().getType());
+
+    Type transferType = op.getTransferType();
+    int transferBits =
+        isa<VectorType>(transferType)
+            ? cast<VectorType>(transferType).getNumElements() *
+                  cast<VectorType>(transferType).getElementTypeBitWidth()
+            : transferType.getIntOrFloatBitWidth();
+
+    Value srcPtr =
+        getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),
+                             adaptor.getSrcIndices());
+    Value dstPtr =
+        getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
+                             adaptor.getDstIndices());
+
+    if (op.getMask()) {
+      Value mask = adaptor.getMask();
+      int64_t nullptrVal =
+          llvm::AMDGPU::getNullPointerValue(llvm::AMDGPUAS::LOCAL_ADDRESS);
+      Value nullInt =
+          createI32Constant(rewriter, loc, static_cast<int32_t>(nullptrVal));
+      Value nullPtr =
+          LLVM::IntToPtrOp::create(rewriter, loc, dstPtr.getType(), nullInt);
+      dstPtr = LLVM::SelectOp::create(rewriter, loc, mask, dstPtr, nullPtr);
+    }
+
+    auto offset = rewriter.getI32IntegerAttr(0);
+    auto aux = rewriter.getI32IntegerAttr(0);
+
+    switch (transferBits) {
+    case 8:
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadAsyncToLDSB8Op>(
+          op, srcPtr, dstPtr, offset, aux, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+      break;
+    case 32:
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadAsyncToLDSB32Op>(
+          op, srcPtr, dstPtr, offset, aux, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+      break;
+    case 64:
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadAsyncToLDSB64Op>(
+          op, srcPtr, dstPtr, offset, aux, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+      break;
+    case 128:
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadAsyncToLDSB128Op>(
+          op, srcPtr, dstPtr, offset, aux, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+      break;
+    default:
+      return op.emitOpError("unsupported transfer width");
+    }
+    return success();
+  }
+};
+
 namespace {
 struct ExtPackedFp8OpLowering final
     : public ConvertOpToLLVMPattern<ExtPackedFp8Op> {
@@ -3950,6 +4030,43 @@ struct AMDGPUTensorLoadStoreOpLowering
   }
 };
 
+struct GlobalPrefetchOpLowering
+    : public ConvertOpToLLVMPattern<GlobalPrefetchOp> {
+  GlobalPrefetchOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<GlobalPrefetchOp>(converter), chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(GlobalPrefetchOp op, GlobalPrefetchOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("is only supported on gfx1250+");
+
+    const bool isSpeculative = op.getSpeculative();
+    const int32_t immArgValue = getGlobalPrefetchLLVMEncoding(
+        op.getTemporalHint(), op.getCacheScope(), isSpeculative);
+    IntegerAttr immArgAttr = rewriter.getI32IntegerAttr(immArgValue);
+
+    ValueRange indices = adaptor.getIndices();
+    Value memRef = adaptor.getSrc();
+    MemRefDescriptor descriptor(memRef);
+    MemRefType memRefType = op.getSrc().getType();
+    Location loc = op->getLoc();
+    auto inboundsFlags = isSpeculative ? LLVM::GEPNoWrapFlags::none
+                                       : LLVM::GEPNoWrapFlags::inbounds |
+                                             LLVM::GEPNoWrapFlags::nuw;
+    Value prefetchPtr = getStridedElementPtr(
+        rewriter, loc, memRefType, descriptor, indices, inboundsFlags);
+
+    rewriter.replaceOpWithNewOp<ROCDL::GlobalPrefetchOp>(
+        op, prefetchPtr, immArgAttr, mlir::ArrayAttr{}, mlir::ArrayAttr{},
+        mlir::ArrayAttr{});
+    return success();
+  }
+
+private:
+  Chipset chipset;
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -3989,6 +4106,8 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
           return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
         case gpu::AddressSpace::Private:
           return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
+        case gpu::AddressSpace::Constant:
+          return ROCDL::ROCDLDialect::kConstantMemoryAddressSpace;
         }
         llvm_unreachable("unknown address space enum value");
       });
@@ -4076,8 +4195,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            ScaledExtPackedMatrixOpLowering, ScaledExtPackedOpLowering,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
-           TransposeLoadOpLowering, AMDGPUPermlaneLowering,
-           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           GlobalLoadAsyncToLDSOpLowering, TransposeLoadOpLowering,
+           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,
@@ -4086,8 +4205,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
                                            ROCDL::TensorStoreFromLDSOp>,
            DsBarrierInitOpLowering, DsBarrierPollStateOpLowering,
-           DsAsyncBarrierArriveOpLowering, DsBarrierArriveOpLowering>(converter,
-                                                                      chipset);
+           DsAsyncBarrierArriveOpLowering, DsBarrierArriveOpLowering,
+           GlobalPrefetchOpLowering>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering, DsBarrierStatePhaseOpLowering,
                DsBarrierStatePendingCountOpLowering,
                DsBarrierStateInitCountOpLowering,

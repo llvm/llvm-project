@@ -1707,10 +1707,12 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
   case Decl::Kind::CXXConstructor:
   case Decl::Kind::CXXDestructor:
   case Decl::Kind::CXXMethod:
-  case Decl::Kind::Function:
-    return getReplacedTemplateParameter(
-        cast<FunctionDecl>(D)->getTemplateSpecializationInfo()->getTemplate(),
-        Index);
+  case Decl::Kind::Function: {
+    const FunctionTemplateSpecializationInfo *Info =
+        cast<FunctionDecl>(D)->getTemplateSpecializationInfo();
+    return {Info->getTemplate()->getTemplateParameters()->getParam(Index),
+            Info->TemplateArguments->asArray()[Index]};
+  }
   default:
     llvm_unreachable("Unhandled templated declaration kind");
   }

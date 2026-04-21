@@ -19,13 +19,8 @@
 namespace clang::ssaf {
 class UnsafeBufferUsageTUSummaryExtractor : public TUSummaryExtractor {
 public:
-  UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
+  explicit UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
-
-  static EntityPointerLevel buildEntityPointerLevel(EntityId Entity,
-                                                    unsigned PointerLevel) {
-    return {Entity, PointerLevel};
-  }
 
   EntityId addEntity(EntityName EN) { return SummaryBuilder.addEntity(EN); }
 

@@ -7,6 +7,7 @@
 ; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-full-max-count=2 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=MAX-COUNT
 ; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-allow-partial -unroll-partial-threshold=4 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=PARTIAL-NOPROFIT
 ; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-allow-remainder=false < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=PRAGMA-NOREMAINDER
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-partial-threshold=9 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=RUNTIME-NOPROFIT
 
 ; REQUIRES: asserts
 
@@ -461,7 +462,7 @@ exit:
 ; CHECK-NEXT: Trying loop peeling...
 ; CHECK-NEXT: Trying partial unroll...
 ; CHECK-NEXT: Trying runtime unroll...
-; CHECK-NEXT:  Not runtime unrolling: max trip count 3 is small (< 8) and not forced.
+; CHECK-NEXT:  Not runtime unrolling: max trip count 3 is small (<= 8) and not forced.
 ; CHECK-NEXT: Not unrolling: no viable strategy found.
 
 define i32 @runtime_small_max_tc(ptr %A, i32 %n) {
@@ -567,6 +568,23 @@ exit:
 ; CHECK-NEXT:  Runtime unrolling with count: 8
 ; CHECK-NEXT:  Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
 ; CHECK:UNROLLING loop %for.body by 8 with run-time trip count!
+;
+; With a low partial threshold, the runtime unroll count is reduced below 2
+; and no unrolling occurs. Verify we don't print a misleading
+; "Runtime unrolling with count" message.
+;
+; RUNTIME-NOPROFIT-LABEL:Loop Unroll: F[runtime_unroll_simple] Loop %for.body (depth=1)
+; RUNTIME-NOPROFIT-NEXT:Loop Size = 6
+; RUNTIME-NOPROFIT-NEXT: Computing unroll count: TripCount=0, MaxTripCount=2147483647, TripMultiple=1
+; RUNTIME-NOPROFIT-NEXT: Explicit unroll requested: pragma-enable
+; RUNTIME-NOPROFIT-NEXT: Trying pragma unroll...
+; RUNTIME-NOPROFIT-NEXT: Trying full unroll...
+; RUNTIME-NOPROFIT-NEXT: Trying upper-bound unroll...
+; RUNTIME-NOPROFIT-NEXT: Trying loop peeling...
+; RUNTIME-NOPROFIT-NEXT: Trying partial unroll...
+; RUNTIME-NOPROFIT-NEXT: Trying runtime unroll...
+; RUNTIME-NOPROFIT-NOT:  Runtime unrolling with count:
+; RUNTIME-NOPROFIT: Not unrolling: no viable strategy found.
 
 define i32 @runtime_unroll_simple(ptr %A, i32 %n) {
 entry:
