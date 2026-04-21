@@ -24756,6 +24756,17 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
     if (!Bundles.empty()) {
       for (ScheduleBundle *Bundle : Bundles) {
         Bundle->setSchedulingPriority(Idx++);
+        if (const TreeEntry *TE = Bundle->getTreeEntry();
+            TE && Bundle->hasValidDependencies() && TE->UserTreeIndex &&
+            TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+            TE->UserTreeIndex.UserTE->doesNotNeedToSchedule() &&
+            any_of(TE->UserTreeIndex.UserTE->Scalars, [&](Value *V) {
+              return TE->UserTreeIndex.UserTE->isExpandedBinOp(V);
+            })) {
+          for (ScheduleEntity *SE : Bundle->getBundle())
+            if (auto *SD = dyn_cast<ScheduleData>(SE))
+              SD->clearDirectDependencies();
+        }
         if (!Bundle->hasValidDependencies()) {
           SmallPtrSet<Value *, 4> ExpandedOps;
           BS->calculateDependencies(*Bundle, /*InsertInReadyList=*/false, this,
