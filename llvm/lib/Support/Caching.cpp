@@ -154,9 +154,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       size_t Task;
       SmallString<0> FilePath;
       MoveFileToCache(AddBufferFn AddBuffer, std::string EntryPath, size_t Task)
-          : CachedFileStream(
-                std::make_unique<raw_svector_ostream>(FilePath),
-                std::move(EntryPath)),
+          : CachedFileStream(std::make_unique<raw_svector_ostream>(FilePath),
+                             std::move(EntryPath)),
             AddBuffer(std::move(AddBuffer)), Task(Task) {}
       ~MoveFileToCache() {
         // Rename/move native object file into cache directory, if they are

@@ -2731,8 +2731,6 @@ public:
           // Cache hits are taken care of earlier. At this point, we could only
           // have cache misses.
           assert(Job.CacheAddStream);
-          MemoryBufferRef ObjFileMbRef =
-              ObjFileMbOrErr->get()->getMemBufferRef();
           // Obtain a file stream for a storing a cache entry.
           auto CachedFileStreamOrErr =
               Job.CacheAddStream(Job.Task, Job.ModuleID);
