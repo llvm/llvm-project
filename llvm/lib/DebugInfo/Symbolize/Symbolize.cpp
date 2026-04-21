@@ -498,6 +498,8 @@ bool LLVMSymbolizer::getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
     (void)InsertResult;
     return true;
   }
+  // Failure to fetch debuginfod is rarely an error and most users will not care
+  // why this failed.
   consumeError(Path.takeError());
   return false;
 }

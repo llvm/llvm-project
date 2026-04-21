@@ -1745,6 +1745,8 @@ fetchBinaryByBuildID(const ObjectFile &Obj) {
     return std::nullopt;
   Expected<std::string> Path = BIDFetcher->fetch(BuildID);
   if (!Path) {
+    // Failure to fetch debuginfod is rarely an error and most users will not
+    // care why this failed.
     consumeError(Path.takeError());
     return std::nullopt;
   }
@@ -3844,6 +3846,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
     object::BuildID BuildID = parseBuildIDArg(A);
     Expected<std::string> Path = BIDFetcher->fetch(BuildID);
     if (!Path) {
+      // Most users will not care why this failed.
       consumeError(Path.takeError());
       reportCmdLineError(A->getSpelling() + ": could not find build ID '" +
                          A->getValue() + "'");

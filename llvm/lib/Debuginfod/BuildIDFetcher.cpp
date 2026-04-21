@@ -24,6 +24,7 @@ DebuginfodFetcher::fetch(ArrayRef<uint8_t> BuildID) const {
   Expected<std::string> Path = BuildIDFetcher::fetch(BuildID);
   if (Path)
     return Path;
+  // Most users will not care why this failed.
   assert(errorToErrorCode(Path.takeError()) ==
              std::errc::no_such_file_or_directory &&
          "BuildIDFetcher::fetch() failed in an unexpected way");
