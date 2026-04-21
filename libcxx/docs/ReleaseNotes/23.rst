@@ -35,8 +35,6 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 23.0.0?
 ==============================
 
-- P2164R9: ``views::enumerate`` (`Github <https://llvm.org/PR105251>`__)
-
 Implemented Papers
 ------------------
 
@@ -44,6 +42,7 @@ Implemented Papers
 - P3936R1: Safer ``atomic_ref::address`` (`Github <https://llvm.org/PR189594>`__)
 - P3953R3: Rename ``std::runtime_format`` (`Github <https://llvm.org/PR189624>`__)
 - P4052R0: Renaming saturation arithmetic functions (`Github <https://llvm.org/PR189589>`__)
+- P2164R9: ``views::enumerate`` (`Github <https://llvm.org/PR105251>`__)
 
 Improvements and New Features
 -----------------------------
