@@ -2314,7 +2314,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenFastISel.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/AArch64/AArch64GenGlobalISel.inc",
             ),
             (
