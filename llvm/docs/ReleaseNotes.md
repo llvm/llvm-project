@@ -224,6 +224,9 @@ Changes to the C API
   successor order. This can cause subtle breakage when using ``LLVMGetOperand``
   or ``LLVMSetOperand`` to access successors.
 
+* Added `LLVMOrcThreadSafeContextGetLock` and `LLVMOrcThreadSafeContextReleaseLock`
+  for acquiring and releasing locks associated with `ThreadSafeContext` instances.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
