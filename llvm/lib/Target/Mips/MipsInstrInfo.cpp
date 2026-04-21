@@ -636,7 +636,8 @@ bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
     return false;
 
   return !llvm::any_of(LoadMI.defs(), [&](const MachineOperand &Op) {
-    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr);
+    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr) &&
+           !MIInSlot.hasRegisterImplicitUseOperand(Op.getReg());
   });
 }
 
@@ -714,6 +715,17 @@ unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
   }
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    // Size of xray sled
+    if (Subtarget.isGP64bit()) {
+      // beq + 15 nops
+      return 16 * 4;
+    } else {
+      // beq + 11 nops + addiu
+      return 13 * 4;
+    }
   case Mips::CONSTPOOL_ENTRY:
     // If this machine instr is a constant pool entry, its size is recorded as
     // operand #2.

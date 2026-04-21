@@ -176,7 +176,7 @@ define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr
 entry:
   br label %loop.header
 
-loop.header:                                     ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %ec = icmp eq i64 %iv, %N
   br i1 %ec, label %exit, label %continue
@@ -225,8 +225,7 @@ define void @test_blend_feeding_replicated_store_2(ptr noalias %src, ptr %dst, i
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP7]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP72:%.*]] = add i32 [[IV]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP72]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i8> [[PREDPHI]], i32 0
 ; CHECK-NEXT:    store i8 [[TMP10]], ptr [[TMP9]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]

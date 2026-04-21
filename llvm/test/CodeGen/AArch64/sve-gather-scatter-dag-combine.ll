@@ -7,9 +7,10 @@
 define <vscale x 2 x i64> @no_dag_combine_zext_sext(<vscale x 2 x i1> %pg,
 ; CHECK-LABEL: no_dag_combine_zext_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d, #16]
-; CHECK-NEXT:    st1b { z0.d }, p1, [x0]
+; CHECK-NEXT:    ld1b { z1.d }, p0/z, [z0.d, #16]
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff
+; CHECK-NEXT:    st1b { z1.d }, p1, [x0]
 ; CHECK-NEXT:    ret
                                                     <vscale x 2 x i64> %base,
                                                     ptr %res_out,
@@ -54,9 +55,10 @@ define <vscale x 2 x i64> @no_dag_combine_sext(<vscale x 2 x i1> %pg,
 define <vscale x 2 x i64> @no_dag_combine_zext(<vscale x 2 x i1> %pg,
 ; CHECK-LABEL: no_dag_combine_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d, #16]
-; CHECK-NEXT:    st1b { z0.d }, p1, [x0]
+; CHECK-NEXT:    ld1b { z1.d }, p0/z, [z0.d, #16]
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff
+; CHECK-NEXT:    st1b { z1.d }, p1, [x0]
 ; CHECK-NEXT:    ret
                                                <vscale x 2 x i64> %base,
                                                ptr %res_out,

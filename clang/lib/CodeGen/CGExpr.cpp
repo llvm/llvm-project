@@ -107,7 +107,12 @@ RawAddress
 CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits Align,
                                              const Twine &Name,
                                              llvm::Value *ArraySize) {
-  auto Alloca = CreateTempAlloca(Ty, Name, ArraySize);
+  if (getLangOpts().EmitLogicalPointer) {
+    auto Alloca = Builder.CreateStructuredAlloca(Ty, Name);
+    return RawAddress(Alloca, Ty, Align, KnownNonNull);
+  }
+
+  auto *Alloca = CreateTempAlloca(Ty, Name, ArraySize);
   Alloca->setAlignment(Align.getAsAlign());
   return RawAddress(Alloca, Ty, Align, KnownNonNull);
 }
@@ -2329,15 +2334,39 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
       E->getType().withCVRQualifiers(Base.getQuals().getCVRQualifiers());
 
   // Encode the element access list into a vector of unsigned indices.
+  // getEncodedElementAccess returns row-major linearized indices.
   SmallVector<uint32_t, 4> Indices;
   E->getEncodedElementAccess(Indices);
 
+  // getEncodedElementAccess returns row-major linearized indices
+  // If the matrix memory layout is column-major, convert indices
+  // to column-major indices.
+  bool IsColMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                    LangOptions::MatrixMemoryLayout::MatrixColMajor;
+  if (IsColMajor) {
+    const auto *MT = E->getBase()->getType()->castAs<ConstantMatrixType>();
+    unsigned NumCols = MT->getNumColumns();
+    for (uint32_t &Idx : Indices) {
+      // Decompose row-major index: Row = Idx / NumCols, Col = Idx % NumCols
+      unsigned Row = Idx / NumCols;
+      unsigned Col = Idx % NumCols;
+      // Re-linearize as column-major
+      Idx = MT->getColumnMajorFlattenedIndex(Row, Col);
+    }
+  }
+
   if (Base.isSimple()) {
+    RawAddress MatAddr = Base.getAddress();
+    if (getLangOpts().HLSL &&
+        E->getBase()->getType().getAddressSpace() == LangAS::hlsl_constant)
+      MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(
+          Base, E->getExprLoc(), *this);
+
     llvm::Constant *CV =
         llvm::ConstantDataVector::get(getLLVMContext(), Indices);
-    return LValue::MakeExtVectorElt(
-        MaybeConvertMatrixAddress(Base.getAddress(), *this), CV, ResultType,
-        Base.getBaseInfo(), TBAAAccessInfo());
+    return LValue::MakeExtVectorElt(MaybeConvertMatrixAddress(MatAddr, *this),
+                                    CV, ResultType, Base.getBaseInfo(),
+                                    TBAAAccessInfo());
   }
   assert(Base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
 
@@ -2347,6 +2376,7 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   for (unsigned Index : Indices)
     CElts.push_back(BaseElts->getAggregateElement(Index));
   llvm::Constant *CV = llvm::ConstantVector::get(CElts);
+
   return LValue::MakeExtVectorElt(
       MaybeConvertMatrixAddress(Base.getExtVectorAddress(), *this), CV,
       ResultType, Base.getBaseInfo(), TBAAAccessInfo());
@@ -2746,8 +2776,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       llvm::Type *VecTy = Vec->getType();
       llvm::Value *SrcVal = Src.getScalarVal();
 
-      if (SrcVal->getType()->getPrimitiveSizeInBits() <
-          VecTy->getScalarSizeInBits())
+      if (VecTy->isVectorTy() && SrcVal->getType()->getPrimitiveSizeInBits() <
+                                     VecTy->getScalarSizeInBits())
         SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
 
       auto *IRStoreTy = dyn_cast<llvm::IntegerType>(Vec->getType());
@@ -3302,15 +3332,18 @@ static Address emitDeclTargetVarDeclLValue(CodeGenFunction &CGF,
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   // Return an invalid address if variable is MT_To (or MT_Enter starting with
-  // OpenMP 5.2) and unified memory is not enabled. For all other cases: MT_Link
-  // and MT_To (or MT_Enter) with unified memory, return a valid address.
+  // OpenMP 5.2, or MT_Local in OpenMP 6.0) and unified memory is not enabled.
+  // For all other cases: MT_Link and MT_To (or MT_Enter/MT_Local) with unified
+  // memory, return a valid address.
   if (!Res || ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+                *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
                !CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory()))
     return Address::invalid();
   assert(((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
           ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-            *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+            *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+            *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
            CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())) &&
          "Expected link clause OR to clause with unified memory enabled.");
   QualType PtrTy = CGF.getContext().getPointerType(VD->getType());
@@ -4259,7 +4292,7 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   llvm::BasicBlock *Cont = createBasicBlock("cfi.cont");
 
   llvm::BasicBlock *CheckBB = createBasicBlock("cfi.slowpath");
-  llvm::BranchInst *BI = Builder.CreateCondBr(Cond, Cont, CheckBB);
+  llvm::CondBrInst *BI = Builder.CreateCondBr(Cond, Cont, CheckBB);
 
   llvm::MDBuilder MDHelper(getLLVMContext());
   llvm::MDNode *Node = MDHelper.createLikelyBranchWeights();
@@ -4574,7 +4607,7 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
     assert(isa<llvm::ArrayType>(Addr.getElementType()) &&
            "Expected pointer to array");
 
-    if (getLangOpts().EmitStructuredGEP) {
+    if (getLangOpts().EmitLogicalPointer) {
       // Array-to-pointer decay for an SGEP is a no-op as we don't do any
       // logical indexing. See #179951 for some additional context.
       auto *SGEP =
@@ -4621,7 +4654,7 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
                                           bool signedIndices,
                                           SourceLocation loc,
                                     const llvm::Twine &name = "arrayidx") {
-  if (inbounds && CGF.getLangOpts().EmitStructuredGEP)
+  if (inbounds && CGF.getLangOpts().EmitLogicalPointer)
     return CGF.Builder.CreateStructuredGEP(elemType, ptr, indices);
 
   if (inbounds) {
@@ -4640,7 +4673,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      bool signedIndices, SourceLocation loc,
                                      CharUnits align,
                                      const llvm::Twine &name = "arrayidx") {
-  if (inbounds && CGF.getLangOpts().EmitStructuredGEP)
+  if (inbounds && CGF.getLangOpts().EmitLogicalPointer)
     return RawAddress(CGF.Builder.CreateStructuredGEP(arrayType,
                                                       addr.emitRawPointer(CGF),
                                                       indices.drop_front()),
@@ -5135,9 +5168,16 @@ LValue CodeGenFunction::EmitMatrixSingleSubscriptExpr(
     const MatrixSingleSubscriptExpr *E) {
   LValue Base = EmitLValue(E->getBase());
   llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
-  return LValue::MakeMatrixRow(
-      MaybeConvertMatrixAddress(Base.getAddress(), *this), RowIdx,
-      E->getBase()->getType(), Base.getBaseInfo(), TBAAAccessInfo());
+
+  RawAddress MatAddr = Base.getAddress();
+  if (getLangOpts().HLSL &&
+      E->getBase()->getType().getAddressSpace() == LangAS::hlsl_constant)
+    MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(
+        Base, E->getExprLoc(), *this);
+
+  return LValue::MakeMatrixRow(MaybeConvertMatrixAddress(MatAddr, *this),
+                               RowIdx, E->getBase()->getType(),
+                               Base.getBaseInfo(), TBAAAccessInfo());
 }
 
 LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
@@ -5415,17 +5455,22 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     return LValue::MakeExtVectorElt(Base.getAddress(), CV, type,
                                     Base.getBaseInfo(), TBAAAccessInfo());
   }
+
   if (Base.isMatrixRow()) {
     if (auto *RowIdx =
             llvm::dyn_cast<llvm::ConstantInt>(Base.getMatrixRowIdx())) {
       llvm::SmallVector<llvm::Constant *> MatIndices;
       QualType MatTy = Base.getType();
       const ConstantMatrixType *MT = MatTy->castAs<ConstantMatrixType>();
-      unsigned NumCols = MT->getNumColumns();
+      unsigned NumCols = Indices.size();
       unsigned NumRows = MT->getNumRows();
-      MatIndices.reserve(NumCols);
-
       unsigned Row = RowIdx->getZExtValue();
+      QualType VecQT = E->getBase()->getType();
+      if (NumCols != MT->getNumColumns()) {
+        const auto *EVT = VecQT->getAs<ExtVectorType>();
+        QualType ElemQT = EVT->getElementType();
+        VecQT = getContext().getExtVectorType(ElemQT, NumCols);
+      }
       for (unsigned C = 0; C < NumCols; ++C) {
         unsigned Col = Indices[C];
         unsigned Linear = Col * NumRows + Row;
@@ -5433,8 +5478,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
       }
 
       llvm::Constant *ConstIdxs = llvm::ConstantVector::get(MatIndices);
-      return LValue::MakeExtVectorElt(Base.getMatrixAddress(), ConstIdxs,
-                                      E->getBase()->getType(),
+      return LValue::MakeExtVectorElt(Base.getMatrixAddress(), ConstIdxs, VecQT,
                                       Base.getBaseInfo(), TBAAAccessInfo());
     }
     llvm::Constant *Cols =
@@ -5622,7 +5666,7 @@ static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   llvm::Type *StructType =
       CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMType();
 
-  if (CGF.getLangOpts().EmitStructuredGEP)
+  if (CGF.getLangOpts().EmitLogicalPointer)
     return RawAddress(
         CGF.Builder.CreateStructuredGEP(StructType, base.emitRawPointer(CGF),
                                         {CGF.Builder.getSize(idx)}),
@@ -7043,14 +7087,15 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
     const auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
     if (VD && VD->hasAttr<OMPTargetIndirectCallAttr>()) {
-      auto *PtrTy = CGM.VoidPtrTy;
-      llvm::Type *RtlFnArgs[] = {PtrTy};
+      auto *FuncPtrTy = llvm::PointerType::get(
+          CGM.getLLVMContext(), CGM.getDataLayout().getProgramAddressSpace());
+      llvm::Type *RtlFnArgs[] = {FuncPtrTy};
       llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(
-          llvm::FunctionType::get(PtrTy, RtlFnArgs, false),
+          llvm::FunctionType::get(FuncPtrTy, RtlFnArgs, false),
           "__llvm_omp_indirect_call_lookup");
       llvm::Value *Func = Callee.getFunctionPointer();
       llvm::Type *BackupTy = Func->getType();
-      Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, PtrTy);
+      Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, FuncPtrTy);
       Func = EmitRuntimeCall(DeviceRtlFn, {Func});
       Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, BackupTy);
       Callee.setFunctionPointer(Func);

@@ -54,11 +54,13 @@ func.func @gather_memref_1d_i32_index(%base: memref<?xf32>, %v: vector<2xi32>, %
 // CHECK-DAG:     %[[C0:.+]]    = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.+]]    = arith.constant 1 : index
 // CHECK-DAG:     [[PTV0:%.+]]  = vector.extract [[PASS]][0] : vector<3xf32> from vector<2x3xf32>
+// CHECK:         %[[LIN:.+]]   = affine.linearize_index [%[[C0]], %[[C1]]] by
 // CHECK-DAG:     [[M0:%.+]]    = vector.extract [[MASK]][0, 0] : i1 from vector<2x3xi1>
 // CHECK-DAG:     [[IDX0:%.+]]  = vector.extract [[IDXVEC]][0, 0] : index from vector<2x3xindex>
-// CHECK-NEXT:    %[[OFF0:.+]]  = arith.addi [[IDX0]], %[[C1]] : index
-// CHECK-NEXT:    [[RES0:%.+]]  = scf.if [[M0]] -> (vector<3xf32>)
-// CHECK-NEXT:      [[LD0:%.+]]   = vector.load [[BASE]][%[[C0]], %[[OFF0]]] : memref<?x?xf32>, vector<1xf32>
+// CHECK:         %[[FLAT0:.+]] = arith.addi %[[LIN]], [[IDX0]] : index
+// CHECK:         %[[DL0:.+]]:2 = affine.delinearize_index %[[FLAT0]] into
+// CHECK:         [[RES0:%.+]]  = scf.if [[M0]] -> (vector<3xf32>)
+// CHECK-NEXT:      [[LD0:%.+]]   = vector.load [[BASE]][%[[DL0]]#0, %[[DL0]]#1] : memref<?x?xf32>, vector<1xf32>
 // CHECK-NEXT:      [[ELEM0:%.+]] = vector.extract [[LD0]][0] : f32 from vector<1xf32>
 // CHECK-NEXT:      [[INS0:%.+]]  = vector.insert [[ELEM0]], [[PTV0]] [0] : f32 into vector<3xf32>
 // CHECK-NEXT:      scf.yield [[INS0]] : vector<3xf32>
@@ -288,4 +290,73 @@ func.func @scalable_gather_1d(%base: tensor<?xf32>, %v: vector<[2]xindex>, %mask
   %c0 = arith.constant 0 : index
   %0 = vector.gather %base[%c0][%v], %mask, %pass_thru : tensor<?xf32>, vector<[2]xindex>, vector<[2]xi1>, vector<[2]xf32> into vector<[2]xf32>
   return %0 : vector<[2]xf32>
+}
+
+// Verify that gather on a 2D memref delinearizes the gather index.
+// With zero base offsets, the linearize and addi fold away.
+
+// CHECK-LABEL: @gather_memref_2d_delinearize
+// CHECK-SAME:    (%[[BASE:.+]]: memref<4x2xf32>,
+// CHECK-SAME:     %[[IDXVEC:.+]]: vector<4xi32>,
+// CHECK-SAME:     %[[MASK:.+]]: vector<4xi1>,
+// CHECK-SAME:     %[[PASS:.+]]: vector<4xf32>)
+// CHECK-DAG:     %[[IDXS:.+]] = arith.index_cast %[[IDXVEC]]
+//
+// CHECK-DAG:     %[[IDX0:.+]] = vector.extract %[[IDXS]][0]
+// CHECK:         %[[DL0:.+]]:2 = affine.delinearize_index %[[IDX0]] into (4, 2)
+// CHECK:         scf.if
+// CHECK:           vector.load %[[BASE]][%[[DL0]]#0, %[[DL0]]#1] : memref<4x2xf32>, vector<1xf32>
+//
+// CHECK:         %[[IDX1:.+]] = vector.extract %[[IDXS]][1]
+// CHECK:         affine.delinearize_index %[[IDX1]] into (4, 2)
+// CHECK:         scf.if
+// CHECK:           vector.load %[[BASE]][%{{.+}}, %{{.+}}] : memref<4x2xf32>, vector<1xf32>
+//
+// CHECK:         %[[IDX2:.+]] = vector.extract %[[IDXS]][2]
+// CHECK:         affine.delinearize_index %[[IDX2]] into (4, 2)
+// CHECK:         scf.if
+// CHECK:           vector.load %[[BASE]][%{{.+}}, %{{.+}}] : memref<4x2xf32>, vector<1xf32>
+//
+// CHECK:         %[[IDX3:.+]] = vector.extract %[[IDXS]][3]
+// CHECK:         affine.delinearize_index %[[IDX3]] into (4, 2)
+// CHECK:         scf.if
+// CHECK:           vector.load %[[BASE]][%{{.+}}, %{{.+}}] : memref<4x2xf32>, vector<1xf32>
+func.func @gather_memref_2d_delinearize(
+    %base: memref<4x2xf32>,
+    %v: vector<4xi32>, %mask: vector<4xi1>,
+    %pass_thru: vector<4xf32>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.gather %base[%c0, %c0][%v], %mask, %pass_thru
+    : memref<4x2xf32>, vector<4xi32>,
+      vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+// Verify that gather on a 2D memref with non-zero base offsets correctly
+// incorporates the offsets via linearize + add + delinearize.
+
+// CHECK-LABEL: @gather_memref_2d_delinearize_nonzero_offsets
+// CHECK-SAME:    (%[[BASE:.+]]: memref<4x2xf32>,
+// CHECK-SAME:     %[[OFF0:.+]]: index, %[[OFF1:.+]]: index,
+// CHECK-SAME:     %[[IDXVEC:.+]]: vector<2xi32>,
+// CHECK-SAME:     %[[MASK:.+]]: vector<2xi1>,
+// CHECK-SAME:     %[[PASS:.+]]: vector<2xf32>)
+// CHECK-DAG:     %[[IDXS:.+]] = arith.index_cast %[[IDXVEC]]
+// CHECK:         %[[LIN:.+]] = affine.linearize_index [%[[OFF0]], %[[OFF1]]] by (4, 2)
+// CHECK:         %[[IDX0:.+]] = vector.extract %[[IDXS]][0]
+// CHECK:         %[[FLAT:.+]] = arith.addi %[[LIN]], %[[IDX0]]
+// CHECK:         %[[DL:.+]]:2 = affine.delinearize_index %[[FLAT]] into (4, 2)
+// CHECK:         scf.if
+// CHECK:           vector.load %[[BASE]][%[[DL]]#0, %[[DL]]#1]
+func.func @gather_memref_2d_delinearize_nonzero_offsets(
+    %base: memref<4x2xf32>,
+    %off0: index, %off1: index,
+    %v: vector<2xi32>, %mask: vector<2xi1>,
+    %pass_thru: vector<2xf32>) -> vector<2xf32> {
+  %0 = vector.gather %base[%off0, %off1][%v], %mask, %pass_thru
+    : memref<4x2xf32>, vector<2xi32>,
+      vector<2xi1>, vector<2xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
 }

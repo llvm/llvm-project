@@ -9,8 +9,7 @@ define i1 @test(i32 %shr.i.i90, i32 %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[SHR_I_I90]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> [[TMP6]], <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[TMP1]], i1 true)
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt <2 x i64> [[TMP3]], <i64 100, i64 300>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt <2 x i32> [[TMP2]], <i32 100, i32 300>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; CHECK-NEXT:    ret i1 [[TMP5]]
 ;

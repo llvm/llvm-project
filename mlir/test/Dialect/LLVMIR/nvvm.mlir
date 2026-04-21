@@ -356,21 +356,21 @@ llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 
 // CHECK-LABEL: llvm.func @redux_sync
 llvm.func @redux_sync(%value : i32, %offset : i32) -> i32 {
-  // CHECK: nvvm.redux.sync  add %{{.*}}
+  // CHECK: nvvm.redux.sync add %{{.*}}
   %r1 = nvvm.redux.sync add %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  max %{{.*}}
+  // CHECK: nvvm.redux.sync max %{{.*}}
   %r2 = nvvm.redux.sync max %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  min %{{.*}}
+  // CHECK: nvvm.redux.sync min %{{.*}}
   %r3 = nvvm.redux.sync min %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  umax %{{.*}}
+  // CHECK: nvvm.redux.sync umax %{{.*}}
   %r5 = nvvm.redux.sync umax %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  umin %{{.*}}
+  // CHECK: nvvm.redux.sync umin %{{.*}}
   %r6 = nvvm.redux.sync umin %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  and %{{.*}}
+  // CHECK: nvvm.redux.sync and %{{.*}}
   %r7 = nvvm.redux.sync and %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  or %{{.*}}
+  // CHECK: nvvm.redux.sync or %{{.*}}
   %r8 = nvvm.redux.sync or %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  xor %{{.*}}
+  // CHECK: nvvm.redux.sync xor %{{.*}}
   %r9 = nvvm.redux.sync xor %value, %offset : i32 -> i32
   llvm.return %r1 : i32
 }
@@ -454,6 +454,13 @@ llvm.func private @mbarrier_arrive_nocomplete_shared(%barrier: !llvm.ptr<3>) {
   %count = nvvm.read.ptx.sreg.ntid.x : i32
   // CHECK:   nvvm.mbarrier.arrive.nocomplete %{{.*}} : !llvm.ptr<3>
   %0 = nvvm.mbarrier.arrive.nocomplete %barrier, %count : !llvm.ptr<3>, i32  -> i64
+  llvm.return
+}
+
+// CHECK-LABEL: @mbarrier_arrive_expect_tx_predicate
+llvm.func private @mbarrier_arrive_expect_tx_predicate(%barrier: !llvm.ptr<3>, %txcount: i32, %pred: i1) {
+  // CHECK:   nvvm.mbarrier.arrive.expect_tx %{{.*}}, %{{.*}}, predicate = %{{.*}} : !llvm.ptr<3>, i32, i1{{$}}
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount, predicate = %pred : !llvm.ptr<3>, i32, i1
   llvm.return
 }
 

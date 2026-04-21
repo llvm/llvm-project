@@ -1455,6 +1455,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setTargetDAGCombine({ISD::TRUNCATE, ISD::SETCC, ISD::SELECT_CC});
   }
 
+  if (Subtarget.hasP8Vector())
+    setTargetDAGCombine(ISD::BITCAST);
+
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
   if (Subtarget.useCRBits()) {
@@ -11175,7 +11178,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMergeValues(RetOps, dl);
   }
 
-  case Intrinsic::ppc_mma_build_dmr: {
+  case Intrinsic::ppc_build_dmr: {
     SmallVector<SDValue, 8> Pairs;
     SmallVector<SDValue, 8> Chains;
     for (int i = 1; i < 9; i += 2) {
@@ -11552,8 +11555,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             Op.getOperand(0)),
         0);
   }
-  case Intrinsic::ppc_mma_disassemble_dmr: {
-    return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
+  case Intrinsic::ppc_disassemble_dmr: {
+    assert(ArgStart == 1 &&
+           "llvm.ppc.disassemble.dmr must carry a chain argument.");
+    return DAG.getStore(Op.getOperand(0), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
   case Intrinsic::ppc_amo_stwat:
@@ -12122,12 +12127,18 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
     return Op;
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
-  // Here we create 2 or 4 v16i8 loads to load the pair or accumulator value in
-  // 2 or 4 vsx registers.
   assert((VT != MVT::v512i1 || Subtarget.hasMMA()) &&
          "Type unsupported without MMA");
   assert((VT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
          "Type unsupported without paired vector support");
+
+  // For v256i1 on ISA Future, let the load go through to instruction selection
+  // where it will be matched to lxvp/plxvp by the instruction patterns.
+  if (VT == MVT::v256i1 && Subtarget.isISAFuture())
+    return Op;
+
+  // For other cases, create 2 or 4 v16i8 loads to load the pair or accumulator
+  // value in 2 or 4 vsx registers.
   Align Alignment = LN->getAlign();
   SmallVector<SDValue, 4> Loads;
   SmallVector<SDValue, 4> LoadChains;
@@ -12290,12 +12301,19 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
     return Op;
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
-  // Here we create 2 or 4 v16i8 stores to store the pair or accumulator
-  // underlying registers individually.
   assert((StoreVT != MVT::v512i1 || Subtarget.hasMMA()) &&
          "Type unsupported without MMA");
   assert((StoreVT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
          "Type unsupported without paired vector support");
+
+  // For v256i1 on ISA Future, let the store go through to instruction selection
+  // where it will be matched to stxvp/pstxvp by the instruction patterns.
+  if (StoreVT == MVT::v256i1 && Subtarget.isISAFuture() &&
+      !DisableAutoPairedVecSt)
+    return Op;
+
+  // For other cases, create 2 or 4 v16i8 stores to store the pair or
+  // accumulator underlying registers individually.
   Align Alignment = SN->getAlign();
   SmallVector<SDValue, 4> Stores;
   unsigned NumVecs = 2;
@@ -15712,8 +15730,11 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
     auto *LoadNode = cast<LoadSDNode>(Operand);
-    return DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
-                       LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    SDValue NewLoad =
+        DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                    LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(Operand.getValue(1), NewLoad.getValue(1));
+    return NewLoad;
   };
 
   // Following code transforms the DAG
@@ -17205,6 +17226,81 @@ static SDValue DAGCombineAddc(SDNode *N,
   return SDValue();
 }
 
+/// Optimize the bitfloor(X) pattern for PowerPC.
+/// Transforms: select_cc X, 0, 0, (srl MinSignedValue, (ctlz X)), seteq
+/// Into: srl MinSignedValue, (ctlz X)
+///
+/// This is safe on PowerPC because the srw instruction returns 0 when the
+/// shift amount is == bitwidth, which matches the behavior we need for X=0.
+static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SELECT_CC)
+    return SDValue();
+
+  // SELECT_CC operands: LHS, RHS, TrueVal, FalseVal, CC
+  SDValue CmpLHS = N->getOperand(0);
+  SDValue CmpRHS = N->getOperand(1);
+  SDValue TrueVal = N->getOperand(2);
+  SDValue FalseVal = N->getOperand(3);
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+
+  // Check if condition is (X == 0)
+  if (CC != ISD::SETEQ || !isNullConstant(CmpRHS))
+    return SDValue();
+
+  // Check if TrueVal is constant 0
+  if (!isNullConstant(TrueVal))
+    return SDValue();
+
+  // This combine is replacing a select_cc with a PPC srl, not an srl with a
+  // PPC srl. If the original srl had multiple uses it would just remain in the
+  // code. This is at most a performance consideration.
+  if (FalseVal.getOpcode() != ISD::SRL || !FalseVal.hasOneUse())
+    return SDValue();
+
+  SDValue ShiftVal = FalseVal.getOperand(0);
+  SDValue ShiftAmt = FalseVal.getOperand(1);
+
+  // Check if ShiftVal is MinSignedValue
+  auto *ShiftConst = dyn_cast<ConstantSDNode>(ShiftVal);
+  if (!ShiftConst || !ShiftConst->getAPIntValue().isMinSignedValue())
+    return SDValue();
+
+  SDValue CtlzArg;
+  // Check if ShiftAmt is (ctlz CmpLHS) or (truncate (ctlz ...))
+  if (ShiftAmt.getOpcode() != ISD::CTLZ) {
+    // Look through truncate if present (for i64 ctlz truncated to i32 shift
+    // amount)
+    if (ShiftAmt.getOpcode() != ISD::TRUNCATE)
+      return SDValue();
+
+    // Verify the truncate target type is appropriate for shift amount (i32, not
+    // i1 or other)
+    if (ShiftAmt.getValueType() != MVT::i32)
+      return SDValue();
+
+    SDValue CtlzNode = ShiftAmt.getOperand(0);
+
+    if (CtlzNode.getOpcode() != ISD::CTLZ)
+      return SDValue();
+
+    CtlzArg = CtlzNode.getOperand(0);
+  } else {
+    CtlzArg = ShiftAmt.getOperand(0);
+  }
+
+  // Check if ctlz operates on the same value as the comparison
+  if (CtlzArg != CmpLHS)
+    return SDValue();
+
+  // Using PPCISD::SRL to ensure well-defined behavior.
+  // On PowerPC, PPCISD::SRL guarantees that shift by bitwidth returns 0,
+  // which is exactly what we need for the bitfloor(0) case.
+  SDLoc DL(N);
+  SDValue PPCSrl =
+      DAG.getNode(PPCISD::SRL, DL, FalseVal.getValueType(), ShiftVal, ShiftAmt);
+  return PPCSrl;
+}
+
 // Optimize zero-extension of setcc when the compared value is known to be 0
 // or 1.
 //
@@ -17441,6 +17537,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       return CSCC;
     [[fallthrough]];
   case ISD::SELECT_CC:
+    if (SDValue V = combineSELECT_CCBitFloor(N, DAG))
+      return V;
     return DAGCombineTruncBoolExt(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
@@ -18165,6 +18263,9 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return DAGCombineBuildVector(N, DCI);
   case PPCISD::ADDC:
     return DAGCombineAddc(N, DCI);
+
+  case ISD::BITCAST:
+    return DAGCombineBitcast(N, DCI);
   }
 
   return SDValue();
@@ -20603,4 +20704,77 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
 
 bool PPCTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
   return Subtarget.useCRBits();
+}
+
+/// Shuffle masks for vectors of bits are not legal as such vectors are
+/// reserved for MMA/DM.
+bool PPCTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const {
+  if (VT.getScalarType() == MVT::i1)
+    return false;
+  return TargetLowering::isShuffleMaskLegal(Mask, VT);
+}
+
+// Optimize the following patterns using vbpermq/vbpermd:
+//   i16 = bitcast(v16i1 truncate(v16i8))
+//   i8  = bitcast(v8i1  truncate(v8i16))
+//   i8  = bitcast(v8i1  truncate(v8i8))
+SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  SDValue Op0 = N->getOperand(0);
+  if (Op0.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+  SDValue Src = Op0.getOperand(0);
+  EVT ResVT = N->getValueType(0);
+  EVT TruncResVT = Op0.getValueType();
+  EVT SrcVT = Src.getValueType();
+  SDLoc dl(N);
+  SelectionDAG &DAG = DCI.DAG;
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  if (ResVT != MVT::i16 && ResVT != MVT::i8)
+    return SDValue();
+  SDValue VBPerm =
+      GenerateVBPERM(DAG, dl, Src, SrcVT, TruncResVT, IsLittleEndian);
+  if (!VBPerm)
+    return SDValue();
+  SDValue ForExtract = DAG.getBitcast(MVT::v4i32, VBPerm);
+  SDValue Extracted =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, ForExtract,
+                  DAG.getIntPtrConstant(IsLittleEndian ? 2 : 1, dl));
+  return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Extracted);
+}
+
+SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
+                                          SDValue Src, EVT SrcVT, EVT ResVT,
+                                          bool IsLE) const {
+  bool IsV16i8 = (ResVT == MVT::v16i1 && SrcVT == MVT::v16i8);
+  bool IsV8i16 = (ResVT == MVT::v8i1 && SrcVT == MVT::v8i16);
+  bool IsV8i8 = (ResVT == MVT::v8i1 && SrcVT == MVT::v8i8);
+
+  if (!IsV16i8 && !IsV8i16 && !IsV8i8)
+    return SDValue();
+
+  if (IsV8i8) {
+    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i8,
+                      DAG.getUNDEF(MVT::v16i8), Src,
+                      DAG.getIntPtrConstant(0, dl));
+  }
+  SmallVector<int, 16> BitIndices(16, 128);
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  unsigned EltSize = SrcVT.getScalarType().getSizeInBits();
+  for (int Idx = 0, End = SrcVT.getVectorNumElements(); Idx < End; Idx++) {
+    BitIndices[Idx] = EltSize * (NumElts - Idx) - 1;
+    if (IsV8i8 && IsLE)
+      BitIndices[Idx] += 64;
+  }
+  if (!IsLE)
+    std::reverse(BitIndices.begin(), BitIndices.end());
+  SmallVector<SDValue, 16> BVOps;
+  for (auto Idx : BitIndices)
+    BVOps.push_back(DAG.getConstant(Idx, dl, MVT::i8));
+  SDValue VRB = DAG.getBuildVector(MVT::v16i8, dl, BVOps);
+  return DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
+      DAG.getConstant(Intrinsic::ppc_altivec_vbpermq, dl, MVT::i32),
+      DAG.getBitcast(MVT::v16i8, Src), VRB);
 }

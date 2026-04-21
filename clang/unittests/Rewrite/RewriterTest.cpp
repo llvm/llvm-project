@@ -48,6 +48,10 @@ TEST(Rewriter, GetRewrittenTextRangeTypes) {
   //              get char range ^~~    = "xret"
   //             get token range ^~~+++ = "xreturn"
   //            get source range ^~~+++ = "xreturn"
+  //                  remove "n"
+  //              get char range ^~~    = "xret"
+  //             get token range ^~~++  = "xretur"
+  //            get source range ^~~++  = "xretur"
   RangeTypeTest T(Code, 13, 16);
   EXPECT_EQ(T.Rewrite.getRewrittenText(T.CRange), "ret");
   EXPECT_EQ(T.Rewrite.getRewrittenText(T.TRange), "return");
@@ -56,6 +60,10 @@ TEST(Rewriter, GetRewrittenTextRangeTypes) {
   EXPECT_EQ(T.Rewrite.getRewrittenText(T.CRange), "xret");
   EXPECT_EQ(T.Rewrite.getRewrittenText(T.TRange), "xreturn");
   EXPECT_EQ(T.Rewrite.getRewrittenText(T.SRange), "xreturn");
+  T.Rewrite.RemoveText(T.makeLoc(18));
+  EXPECT_EQ(T.Rewrite.getRewrittenText(T.CRange), "xret");
+  EXPECT_EQ(T.Rewrite.getRewrittenText(T.TRange), "xretur");
+  EXPECT_EQ(T.Rewrite.getRewrittenText(T.SRange), "xretur");
 }
 
 TEST(Rewriter, ReplaceTextRangeTypes) {

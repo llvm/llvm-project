@@ -4,10 +4,10 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -check-prefix=GFX10
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1030 | FileCheck %s -check-prefix=GFX1030
 
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=verde | FileCheck %s -check-prefix=G_SI
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=hawaii | FileCheck %s  -check-prefix=G_GFX7
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -check-prefix=G_GFX10
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1030 | FileCheck %s -check-prefix=G_GFX1030
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=verde | FileCheck %s -check-prefix=G_SI
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=hawaii | FileCheck %s  -check-prefix=G_GFX7
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -check-prefix=G_GFX10
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1030 | FileCheck %s -check-prefix=G_GFX1030
 
 declare double @llvm.amdgcn.raw.buffer.atomic.fmin.f64(double, <4 x i32>, i32, i32, i32 immarg)
 declare double @llvm.amdgcn.raw.buffer.atomic.fmax.f64(double, <4 x i32>, i32, i32, i32 immarg)

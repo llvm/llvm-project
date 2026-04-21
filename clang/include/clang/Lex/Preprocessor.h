@@ -381,12 +381,6 @@ private:
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
 
-  /// Whether the import is an `@import` or a standard c++ modules import.
-  bool IsAtImport = false;
-
-  /// Whether the last token we lexed was an '@'.
-  bool LastTokenWasAt = false;
-
   /// Whether we're importing a standard C++20 named Modules.
   bool ImportingCXXNamedModules = false;
 
@@ -1833,8 +1827,11 @@ public:
   bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                              SmallVectorImpl<Token> &Suffix,
                              SmallVectorImpl<IdentifierLoc> &Path,
-                             bool AllowMacroExpansion = true,
-                             bool IsPartition = false);
+                             bool AllowMacroExpansion, bool IsPartition);
+  bool HandleModuleName(StringRef DirType, SourceLocation UseLoc, Token &Tok,
+                        SmallVectorImpl<IdentifierLoc> &Path,
+                        SmallVectorImpl<Token> &DirToks,
+                        bool AllowMacroExpansion, bool IsPartition);
   void EnterModuleSuffixTokenStream(ArrayRef<Token> Toks);
   void HandleCXXImportDirective(Token Import);
   void HandleCXXModuleDirective(Token Module);
@@ -1854,7 +1851,6 @@ public:
     return FirstPPTokenLoc;
   }
 
-  bool LexAfterModuleImport(Token &Result);
   void CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
                              bool StopUntilEOD = false);
   bool CollectPPImportSuffixAndEnterStream(SmallVectorImpl<Token> &Toks,
@@ -2911,6 +2907,7 @@ private:
   void HandleIncludeMacrosDirective(SourceLocation HashLoc, Token &Tok);
   void HandleImportDirective(SourceLocation HashLoc, Token &Tok);
   void HandleMicrosoftImportDirective(Token &Tok);
+  void HandleObjCImportDirective(Token &AtTok, Token &ImportTok);
 
 public:
   /// Check that the given module is available, producing a diagnostic if not.
@@ -3173,9 +3170,6 @@ private:
   }
   static bool CLK_DependencyDirectivesLexer(Preprocessor &P, Token &Result) {
     return P.CurLexer->LexDependencyDirectiveToken(Result);
-  }
-  static bool CLK_LexAfterModuleImport(Preprocessor &P, Token &Result) {
-    return P.LexAfterModuleImport(Result);
   }
 };
 

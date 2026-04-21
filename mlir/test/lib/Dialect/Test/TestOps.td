@@ -489,6 +489,20 @@ def OpWithBitEnumPropNamed : TEST_Op<"op_with_bit_enum_prop_named"> {
   let assemblyFormat = "$value1 ($value2^)? attr-dict";
 }
 
+def TestSimpleEnum8Prop : EnumProp<TestSimpleEnum8>;
+
+def OpWithSimpleEnum8Prop : TEST_Op<"op_with_simple_enum_8_prop"> {
+  let arguments = (ins TestSimpleEnum8Prop:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
+def TestSimpleEnum16Prop : EnumProp<TestSimpleEnum16>;
+
+def OpWithSimpleEnum16Prop : TEST_Op<"op_with_simple_enum_16_prop"> {
+  let arguments = (ins TestSimpleEnum16Prop:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
@@ -546,7 +560,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   let extraClassDeclaration = [{
     static llvm::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
           std::optional<::mlir::Location> location, mlir::ValueRange operands,
-          mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, mlir::RegionRange regions,
+          mlir::DictionaryAttr attributes, mlir::PropertyRef properties, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({mlir::IntegerType::get(context, 16)});
       return mlir::success();
@@ -2244,7 +2258,8 @@ def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
 // emits an error, but getMutableSuccessorOperands() calls report_fatal_error
 // to expose the fact that FuncOp::verify() runs before the region is checked.
 def TestCrashingReturnOp : TEST_Op<"crashing_return", [
-    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+       ["getMutableSuccessorOperands"]>,
     Terminator]> {
   let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
   let assemblyFormat = "($args^ `:` type($args))? attr-dict";
@@ -2298,6 +2313,19 @@ def TestSignatureConversionUndoOp : TEST_Op<"signature_conversion_undo"> {
 def TestSignatureConversionNoConverterOp
   : TEST_Op<"signature_conversion_no_converter"> {
   let regions = (region AnyRegion);
+}
+
+// A return-like operation with override on the successor operand getter
+// interface method.
+def TestReturnWithIgnoredValueOp : TEST_Op<"return_with_ignored_value", [
+    Pure,
+    ReturnLike,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+      "getMutableSuccessorOperands"
+    ]>,
+    Terminator
+]> {
+  let arguments = (ins Variadic<AnyType>:$values, AnyType:$unwanted_value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2455,6 +2483,13 @@ def ArrayOfAttrOp : TEST_Op<"array_of_attr_op"> {
 def SideEffectOp : TEST_Op<"side_effect_op",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
+  let results = (outs AnyType:$result);
+}
+
+def ConditionalSideEffectOp
+    : TEST_Op<"conditional_side_effect_op", [DeclareOpInterfaceMethods<
+                                                MemoryEffectsOpInterface>]> {
+  let arguments = (ins BoolAttr:$has_effects);
   let results = (outs AnyType:$result);
 }
 
@@ -2707,8 +2742,9 @@ def LoopBlockOp : TEST_Op<"loop_block",
 }
 
 def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
-    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Pure,
-     Terminator]> {
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>,
+     Pure, Terminator]> {
   let arguments = (ins I32:$nextIterArg, F32:$exitArg);
 
   let assemblyFormat = [{
@@ -2814,7 +2850,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({operands[0].getType()});
       return ::mlir::success();
@@ -3095,6 +3131,30 @@ def TestNVVMRequirestSMArchCondMultiOp :
   let assemblyFormat = "attr-dict";
 }
 
+def TestNVVMRequiresSMFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_100f", [NVVMRequiresSMf<[100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondHigherOp :
+    TEST_Op<"nvvm_requires_sm_103f", [NVVMRequiresSMf<[103]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondMultiOp :
+    TEST_Op<"nvvm_requires_sm_100f_or_sm_120f", [NVVMRequiresSMf<[100, 120]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMArchOrFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMaOrSMf<[90], [100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Ops with Default-Valued String Attributes
 //===----------------------------------------------------------------------===//
@@ -3219,6 +3279,7 @@ def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOfNonZeroRankOf<[Any
 def TestWithBoundsOp : TEST_Op<"with_bounds",
                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            NoMemoryEffect]> {
+  let hasVerifier = 1;
   let description = [{
     Creates a value with specified [min, max] range for integer range analysis.
 
@@ -3875,10 +3936,13 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
 // Test Ops bufferization
 //===----------------------------------------------------------------------===//
 
-def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
-    [DeclareOpInterfaceMethods<BufferizableOpInterface,
-        ["bufferize", "bufferizesToMemoryRead",
-         "bufferizesToMemoryWrite", "getAliasingValues"]>]> {
+def TestDummyTensorOp
+    : TEST_Op<"dummy_tensor_op",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands"]>]> {
   let arguments = (ins
     Arg<Bufferization_TensorLikeTypeInterface>:$input
   );
@@ -3898,7 +3962,23 @@ def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
     ::mlir::bufferization::AliasingValueList
     test::TestDummyTensorOp::getAliasingValues(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
-      return {};
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{getOutput(), relation, /*isDefinite=*/true}};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestDummyTensorOp::getAliasingOpOperands(::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      if (value != getOutput())
+        return {};
+
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{&getOperation()->getOpOperand(0), relation,
+               /*isDefinite=*/true}};
     }
   }];
 }
@@ -3912,11 +3992,13 @@ def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   );
 }
 
-def TestCreateTensorOp : TEST_Op<"create_tensor_op",
-    [DeclareOpInterfaceMethods<BufferizableOpInterface,
-        ["bufferize", "getBufferType", "bufferizesToMemoryRead",
-         "bufferizesToMemoryWrite", "getAliasingValues",
-         "bufferizesToAllocation"]>]> {
+def TestCreateTensorOp
+    : TEST_Op<"create_tensor_op",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands", "bufferizesToAllocation"]>]> {
   let arguments = (ins);
   let results = (outs Arg<Bufferization_TensorLikeTypeInterface>:$output);
   let extraClassDefinition = [{
@@ -3935,6 +4017,14 @@ def TestCreateTensorOp : TEST_Op<"create_tensor_op",
     ::mlir::bufferization::AliasingValueList
     test::TestCreateTensorOp::getAliasingValues(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestCreateTensorOp::getAliasingOpOperands(
+        ::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      (void)value;
       return {};
     }
   }];

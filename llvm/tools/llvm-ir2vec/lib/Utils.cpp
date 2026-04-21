@@ -43,16 +43,29 @@ namespace llvm {
 
 namespace ir2vec {
 
-Error IR2VecTool::initializeVocabulary(StringRef VocabPath) {
+Expected<std::shared_ptr<Vocabulary>> loadVocabulary(StringRef VocabPath) {
   auto VocabOrErr = Vocabulary::fromFile(VocabPath);
   if (!VocabOrErr)
     return VocabOrErr.takeError();
 
-  Vocab = std::make_unique<Vocabulary>(std::move(*VocabOrErr));
+  auto V = std::make_shared<Vocabulary>(std::move(*VocabOrErr));
 
-  if (!Vocab->isValid())
+  if (!V->isValid())
     return createStringError(errc::invalid_argument,
                              "Failed to initialize IR2Vec vocabulary");
+  return V;
+}
+
+Error IR2VecTool::setVocabulary(std::shared_ptr<Vocabulary> V) {
+  if (!V)
+    return createStringError(errc::invalid_argument,
+                             "Null pointer provided for vocabulary. Will not "
+                             "set IR2VecTool vocabulary.");
+  if (!V->isValid())
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. Will not set IR2VecTool vocabulary.");
+  Vocab = std::move(V);
   return Error::success();
 }
 
@@ -68,7 +81,9 @@ TripletResult IR2VecTool::generateTriplets(const Function &F) const {
   bool HasPrevOpcode = false;
 
   for (const BasicBlock &BB : F) {
-    for (const auto &I : BB.instructionsWithoutDebug()) {
+    for (const auto &I : BB) {
+      if (I.isDebugOrPseudoInst())
+        continue;
       unsigned Opcode = Vocabulary::getIndex(I.getOpcode());
       unsigned TypeID = Vocabulary::getIndex(I.getType()->getTypeID());
 

@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; Make sure the loop is vectorized under -Os without folding its tail based on
 ; its trip-count's lower bits known to be zero.
 
-define dso_local void @alignTC(ptr noalias nocapture %A, i32 %n) optsize {
+define void @alignTC(ptr noalias nocapture %A, i32 %n) optsize {
 ; CHECK-LABEL: @alignTC(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALIGNEDTC:%.*]] = and i32 [[N:%.*]], -8
@@ -58,7 +58,7 @@ exit:
 ; Make sure the loop is vectorized under -Os without folding its tail based on
 ; its trip-count's lower bits assumed to be zero.
 
-define dso_local void @assumeAlignedTC(ptr noalias nocapture %A, i32 %p, i32 %q) optsize {
+define void @assumeAlignedTC(ptr noalias nocapture %A, i32 %p, i32 %q) optsize {
 ; CHECK-LABEL: @assumeAlignedTC(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[P:%.*]], 3
@@ -133,7 +133,7 @@ exit:
 ; Make sure the loop's tail is folded when vectorized under -Os based on its trip-count's
 ; not being provably divisible by chosen VF.
 
-define dso_local void @cannotProveAlignedTC(ptr noalias nocapture %A, i32 %p, i32 %q) optsize {
+define void @cannotProveAlignedTC(ptr noalias nocapture %A, i32 %p, i32 %q) optsize {
 ; CHECK-LABEL: @cannotProveAlignedTC(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[P:%.*]], 3
@@ -164,8 +164,7 @@ define dso_local void @cannotProveAlignedTC(ptr noalias nocapture %A, i32 %p, i3
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store i32 13, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
@@ -230,4 +229,3 @@ exit:
   ret void
 }
 
-declare void @llvm.assume(i1 noundef) nofree nosync nounwind willreturn

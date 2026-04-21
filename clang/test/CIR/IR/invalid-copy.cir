@@ -19,3 +19,14 @@ module {
     cir.return
   }
 }
+
+// -----
+
+module {
+  // skip_tail_padding is only valid for record pointee types.
+  cir.func @invalid_skip_tail_padding(%arg0 : !cir.ptr<!cir.int<s, 32>>, %arg1 : !cir.ptr<!cir.int<s, 32>>) {
+    // expected-error@+1 {{skip_tail_padding is only valid for record pointee types}}
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!cir.int<s, 32>>
+    cir.return
+  }
+}

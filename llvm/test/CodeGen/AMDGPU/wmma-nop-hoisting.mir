@@ -11,7 +11,7 @@ body: |
   ; NOHOIST: bb.0:
   ; NOHOIST-NEXT:   successors: %bb.1(0x80000000)
   ; NOHOIST-NEXT: {{  $}}
-  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; NOHOIST-NEXT:   S_BRANCH %bb.1
   ; NOHOIST-NEXT: {{  $}}
   ; NOHOIST-NEXT: bb.1:
@@ -28,7 +28,7 @@ body: |
   ; HOIST: bb.0:
   ; HOIST-NEXT:   successors: %bb.1(0x80000000)
   ; HOIST-NEXT: {{  $}}
-  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
@@ -42,7 +42,7 @@ body: |
   ; HOIST-NEXT:   S_BRANCH %bb.1
   bb.0:
     successors: %bb.1
-    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
   bb.1:
     successors: %bb.1
@@ -63,7 +63,7 @@ body: |
   ; NOHOIST-NEXT: bb.1:
   ; NOHOIST-NEXT:   successors: %bb.1(0x80000000)
   ; NOHOIST-NEXT: {{  $}}
-  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
   ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
   ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
@@ -80,7 +80,7 @@ body: |
   ; HOIST-NEXT: bb.1:
   ; HOIST-NEXT:   successors: %bb.1(0x80000000)
   ; HOIST-NEXT: {{  $}}
-  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
@@ -93,7 +93,7 @@ body: |
   bb.1:
     successors: %bb.1
     ; WMMA inside the loop writes to vgpr16-23, VALU reads vgpr16
-    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 ...
@@ -106,13 +106,13 @@ body: |
   ; NOHOIST: bb.0:
   ; NOHOIST-NEXT:   successors: %bb.1(0x80000000)
   ; NOHOIST-NEXT: {{  $}}
-  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; NOHOIST-NEXT:   S_BRANCH %bb.1
   ; NOHOIST-NEXT: {{  $}}
   ; NOHOIST-NEXT: bb.1:
   ; NOHOIST-NEXT:   successors: %bb.1(0x80000000)
   ; NOHOIST-NEXT: {{  $}}
-  ; NOHOIST-NEXT:   early-clobber $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, 8, killed $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55, 8, killed $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT:   early-clobber $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, killed $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55, 8, killed $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, 0, 0, 0, 0, implicit $exec
   ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
   ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
   ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
@@ -123,7 +123,7 @@ body: |
   ; HOIST: bb.0:
   ; HOIST-NEXT:   successors: %bb.1(0x80000000)
   ; HOIST-NEXT: {{  $}}
-  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
@@ -132,18 +132,18 @@ body: |
   ; HOIST-NEXT: bb.1:
   ; HOIST-NEXT:   successors: %bb.1(0x80000000)
   ; HOIST-NEXT: {{  $}}
-  ; HOIST-NEXT:   early-clobber $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, 8, killed $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55, 8, killed $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   early-clobber $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, killed $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55, 8, killed $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, 0, 0, 0, 0, implicit $exec
   ; HOIST-NEXT:   $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
   ; HOIST-NEXT:   S_BRANCH %bb.1
   bb.0:
     successors: %bb.1
     ; External WMMA writes to vgpr16-23
-    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
   bb.1:
     successors: %bb.1
     ; Loop WMMA writes to vgpr56-63 (different registers)
-    $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, 8, killed $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55, 8, killed $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, 0, 0, 0, 0, implicit $exec
+    $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, killed $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55, 8, killed $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, 0, 0, 0, 0, implicit $exec
     ; This reads vgpr16 from the external WMMA
     $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
     S_BRANCH %bb.1
@@ -158,7 +158,7 @@ body: |
   ; NOHOIST: bb.0:
   ; NOHOIST-NEXT:   successors: %bb.1(0x80000000)
   ; NOHOIST-NEXT: {{  $}}
-  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; NOHOIST-NEXT:   S_BRANCH %bb.1
   ; NOHOIST-NEXT: {{  $}}
   ; NOHOIST-NEXT: bb.1:
@@ -185,7 +185,7 @@ body: |
   ; HOIST: bb.0:
   ; HOIST-NEXT:   successors: %bb.1(0x80000000)
   ; HOIST-NEXT: {{  $}}
-  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
@@ -210,7 +210,7 @@ body: |
   bb.0:
     successors: %bb.1
     ; WMMA outside all loops - writes to vgpr16-23
-    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
   bb.1:
     ; Outer loop header - can exit to bb.3 or continue to bb.2
@@ -244,7 +244,7 @@ body: |
   ; NOHOIST-NEXT: bb.1:
   ; NOHOIST-NEXT:   successors: %bb.2(0x80000000)
   ; NOHOIST-NEXT: {{  $}}
-  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; NOHOIST-NEXT:   S_BRANCH %bb.2
   ; NOHOIST-NEXT: {{  $}}
   ; NOHOIST-NEXT: bb.2:
@@ -287,7 +287,7 @@ body: |
   ; HOIST-NEXT: bb.1:
   ; HOIST-NEXT:   successors: %bb.2(0x80000000)
   ; HOIST-NEXT: {{  $}}
-  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
@@ -325,7 +325,7 @@ body: |
     S_BRANCH %bb.1
   bb.1:
     successors: %bb.2
-    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.2
   bb.2:
     successors: %bb.3
@@ -359,7 +359,7 @@ body: |
   ; NOHOIST: bb.0:
   ; NOHOIST-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; NOHOIST-NEXT: {{  $}}
-  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; NOHOIST-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit undef $scc
   ; NOHOIST-NEXT:   S_BRANCH %bb.1
   ; NOHOIST-NEXT: {{  $}}
@@ -386,7 +386,7 @@ body: |
   ; HOIST: bb.0:
   ; HOIST-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; HOIST-NEXT: {{  $}}
-  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; HOIST-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit undef $scc
   ; HOIST-NEXT:   S_BRANCH %bb.1
   ; HOIST-NEXT: {{  $}}
@@ -410,7 +410,7 @@ body: |
   ; HOIST-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
-    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     S_CBRANCH_SCC1 %bb.2, implicit undef $scc
     S_BRANCH %bb.1
   bb.1:
@@ -434,7 +434,7 @@ body: |
   ; NOHOIST: bb.0:
   ; NOHOIST-NEXT:   successors: %bb.1(0x80000000)
   ; NOHOIST-NEXT: {{  $}}
-  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; NOHOIST-NEXT: {{  $}}
   ; NOHOIST-NEXT: bb.1:
   ; NOHOIST-NEXT:   successors: %bb.1(0x80000000)
@@ -450,7 +450,7 @@ body: |
   ; HOIST: bb.0:
   ; HOIST-NEXT:   successors: %bb.1(0x80000000)
   ; HOIST-NEXT: {{  $}}
-  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
@@ -463,7 +463,7 @@ body: |
   ; HOIST-NEXT:   S_BRANCH %bb.1
   bb.0:
     successors: %bb.1
-    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   bb.1:
     successors: %bb.1
     $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
@@ -476,7 +476,7 @@ name: test_not_in_loop_no_hoist
 body: |
   bb.0:
     ; NOHOIST-LABEL: name: test_not_in_loop_no_hoist
-    ; NOHOIST: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    ; NOHOIST: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     ; NOHOIST-NEXT: V_NOP_e32 implicit $exec
     ; NOHOIST-NEXT: V_NOP_e32 implicit $exec
     ; NOHOIST-NEXT: V_NOP_e32 implicit $exec
@@ -484,13 +484,13 @@ body: |
     ; NOHOIST-NEXT: $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
     ;
     ; HOIST-LABEL: name: test_not_in_loop_no_hoist
-    ; HOIST: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    ; HOIST: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     ; HOIST-NEXT: V_NOP_e32 implicit $exec
     ; HOIST-NEXT: V_NOP_e32 implicit $exec
     ; HOIST-NEXT: V_NOP_e32 implicit $exec
     ; HOIST-NEXT: V_NOP_e32 implicit $exec
     ; HOIST-NEXT: $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
-    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
 ...
 
@@ -512,7 +512,7 @@ body: |
   ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
   ; NOHOIST-NEXT:   V_NOP_e32 implicit $exec
   ; NOHOIST-NEXT:   $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
-  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; NOHOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; NOHOIST-NEXT:   S_BRANCH %bb.1
   ;
   ; HOIST-LABEL: name: test_valu_before_wmma_backedge_no_hoist
@@ -529,7 +529,7 @@ body: |
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   V_NOP_e32 implicit $exec
   ; HOIST-NEXT:   $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
-  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+  ; HOIST-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; HOIST-NEXT:   S_BRANCH %bb.1
   bb.0:
     successors: %bb.1
@@ -537,6 +537,6 @@ body: |
   bb.1:
     successors: %bb.1
     $vgpr25 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
-    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 ...

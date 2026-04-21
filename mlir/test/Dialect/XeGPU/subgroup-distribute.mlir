@@ -10,7 +10,7 @@
 // CHECK:         %[[T1:.*]] = xegpu.load_nd %[[T0]][%{{.*}}] <{packed}> : !xegpu.tensor_desc<16x16xf16> -> vector<16xf16>
 // CHECK-DAG:     %[[T4:.*]] = xegpu.dpas %[[T3]], %[[T1]] : vector<8xf16>, vector<16xf16> -> vector<8xf32>
 // CHECK:         %[[T5:.*]] = vector.shape_cast %[[T4]] : vector<8xf32> to vector<8x1xf32>
-// CHECK:         %[[T6:.*]] = math.exp %[[T5]] {{{.*}}} : vector<8x1xf32>
+// CHECK:         %[[T6:.*]] = math.exp %[[T5]] : vector<8x1xf32>
 // CHECK-DAG:     %[[T8:.*]] = vector.shape_cast %[[T6]] : vector<8x1xf32> to vector<8xf32>
 // CHECK-DAG:     %[[T7:.*]] = xegpu.create_nd_tdesc %[[ARG2]] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
 // CHECK:         xegpu.store_nd %[[T8]], %[[T7]][{{.*}}] : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
@@ -79,8 +79,8 @@ gpu.func @gemm(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024xbf16>, %ar
   %c16 = arith.constant 16 : index
   %c8 = arith.constant 8 : index
   %c1024 = arith.constant 1024 : index
-  %block_id_x = gpu.block_id  x
-  %block_id_y = gpu.block_id  y
+  %block_id_x = gpu.block_id x
+  %block_id_y = gpu.block_id y
   %0 = arith.muli %block_id_x, %c8 : index
   %1 = arith.muli %block_id_y, %c16 : index
   %2 = xegpu.create_nd_tdesc %arg2 : memref<1024x1024xf32> ->
@@ -385,7 +385,7 @@ gpu.module @xevm_module{
 gpu.module @xevm_module{
    gpu.func  @vector_shape_cast_scalar_to_vector(%arg0: memref<16xf16>, %arg1: memref<16x16xf16>) {
     %c0 = arith.constant 0 : index
-    %9 = gpu.block_id  x
+    %9 = gpu.block_id x
     %10 = arith.index_cast %9 : index to i16
     %11 = arith.bitcast %10 : i16 to f16
     // CHECK: vector.broadcast {{.*}} : f16 to vector<16xf16>
@@ -423,16 +423,17 @@ gpu.module @xevm_test {
     // CHECK: %[[VEC_RED:.*]] = vector.broadcast %[[VEC_RED_3]] : f32 to vector<1xf32>
     // CHECK: xegpu.store %[[VEC_RED]], %arg1[%[[CST]]], %[[CST_0]] : vector<1xf32>, memref<256xf32>, vector<1xindex>, vector<1xi1>
   gpu.func @vector_reduce_2d(%arg0: memref<4x16xf32>, %arg1: memref<256xf32>) {
-      %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>} 1.000000e+00 : f32
+      %cst = arith.constant 1.000000e+00 : f32
       %0 = xegpu.create_nd_tdesc %arg0 : memref<4x16xf32> -> !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
       %1 = xegpu.load_nd %0[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<4x16xf32>
-      %2 = vector.broadcast %cst {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} : f32 to vector<16xf32>
-      %3 = vector.multi_reduction <add>, %1, %2 {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} [0] : vector<4x16xf32> to vector<16xf32>
-      %4 = vector.reduction <add>, %3 {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>} : vector<16xf32> into f32
-      %5 = vector.broadcast %4 {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} : f32 to vector<16xf32>
-      %cst_0 = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<0> : vector<16xindex>
-      %cst_1 = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16xi1>
-      xegpu.store %5, %arg1[%cst_0], %cst_1 <{layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}> : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
+      %2 = vector.broadcast %cst : f32 to vector<16xf32>
+      %3 = vector.multi_reduction <add>, %1, %2 [0] : vector<4x16xf32> to vector<16xf32>
+      %4 = vector.reduction <add>, %3 : vector<16xf32> into f32
+      %40 = xegpu.convert_layout %4 <{input_layout =  #xegpu.slice<#xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>, dims = [0]>, target_layout =  #xegpu.slice<#xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>, dims = [0]>}>: f32
+      %5 = vector.broadcast %40 : f32 to vector<16xf32>
+      %cst_0 = arith.constant dense<0> : vector<16xindex>
+      %cst_1 = arith.constant dense<true> : vector<16xi1>
+      xegpu.store %5, %arg1[%cst_0], %cst_1 <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
     gpu.return
   }
 }

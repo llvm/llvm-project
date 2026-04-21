@@ -30,7 +30,7 @@ public:
   // Write out the decl info for the objects in the given map in the specified
   // format.
   virtual llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
       const ClangDocContext &CDCtx, std::string DirName = "") = 0;
 
   // This function writes a file with the index previously constructed.
@@ -132,7 +132,7 @@ struct MustacheGenerator : public Generator {
   /// JSON, and calls generateDocForJSON for each file.
   /// 4. A file of the desired format is created.
   llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
       const clang::doc::ClangDocContext &CDCtx, std::string DirName) override;
 };
 

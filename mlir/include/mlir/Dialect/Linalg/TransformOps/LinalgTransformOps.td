@@ -310,9 +310,13 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Decomposes named complex operations, such as higher-dimensional
-    (depthwise) convolutions, into combinations of lower-dimensional equivalents
-    when possible.
+    Decomposes higher-dimensional convolution ops into lower-dimensional
+    equivalents when possible. This operates on both named ops and equivalent
+    `linalg.generic` ops that have convolution-like structure (as determined
+    by `inferConvolutionDims`).
+
+    The transformation always attempts to specialize the result back to a named
+    op when possible.
 
     #### Return modes
 
@@ -584,20 +588,22 @@ def SpecializeOp : Op<Transform_Dialect, "structured.specialize",
      TransformOpInterface, TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Transforms a generic operation into the equivalent named form.
+    Transforms a generic operation into the equivalent named or category form.
+
+    By default, operations are specialized into named forms.
 
     #### Return modes
 
     This operation ignores non-Linalg ops and drops them in the return. If all
     the operations referred to by the `target` handle specialize, the transform
-    succeeds; otherwise, the operation produces a silenceable failure.  The return
-    handle points to only the subset of successfully produced equivalent named
+    succeeds; otherwise, the operation produces a silenceable failure. The return
+    handle points to only the subset of successfully produced equivalent specialized
     operations, which can be empty or contain the original ops if they were already
-    in named form. The supported specialization to named Linalg operations are:
-    - linalg.copy of any rank.
+    in the target form.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       DefaultValuedAttr<BoolAttr, "false">:$emit_category);
   let results = (outs TransformHandleTypeInterface:$transformed);
   let assemblyFormat = [{
       $target attr-dict `:` 

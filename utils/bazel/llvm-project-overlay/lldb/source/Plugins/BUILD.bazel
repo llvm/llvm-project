@@ -100,9 +100,13 @@ cc_library(
     hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
+        ":PluginTypeSystemClangHeaders",
         "//clang:codegen",
         "//lldb:CoreHeaders",
+        "//lldb:DataFormattersHeaders",
+        "//lldb:ExpressionHeaders",
         "//lldb:Headers",
+        "//lldb:InterpreterHeaders",
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
@@ -1225,6 +1229,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
+        ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessElfCore",
         ":PluginProcessUtility",
@@ -1236,6 +1241,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:Support",
     ],
 )
@@ -1824,6 +1830,8 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Debuginfod",
+        "//llvm:HTTP",
+        "//llvm:Support",
     ],
 )
 
@@ -2335,29 +2343,6 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginCXXItaniumABI",
-    srcs = glob(["LanguageRuntime/CPlusPlus/ItaniumABI/*.cpp"]),
-    hdrs = glob(["LanguageRuntime/CPlusPlus/ItaniumABI/*.h"]),
-    includes = [".."],
-    deps = [
-        ":PluginCPPRuntime",
-        ":PluginTypeSystemClang",
-        ":PluginTypeSystemClangHeaders",
-        "//lldb:Breakpoint",
-        "//lldb:Core",
-        "//lldb:DataFormattersHeaders",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Headers",
-        "//lldb:InterpreterHeaders",
-        "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:Target",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
     ],
 )
 

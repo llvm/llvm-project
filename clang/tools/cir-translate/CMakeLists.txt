@@ -13,6 +13,7 @@ clang_target_link_libraries(cir-translate
   PRIVATE
   clangCIR
   clangCIRLoweringDirectToLLVM
+  CIROpenMPSupport
   MLIRCIR
   MLIRCIRTransforms
 )

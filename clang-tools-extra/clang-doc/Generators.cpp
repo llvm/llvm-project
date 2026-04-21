@@ -66,7 +66,7 @@ Error MustacheGenerator::setupTemplate(
 }
 
 Error MustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string DirName) {
   {
     llvm::TimeTraceScope TS("Setup Templates");

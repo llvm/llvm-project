@@ -136,8 +136,8 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
 
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(Operation *op) const {
-  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::CreateDescOp,
-          xegpu::UpdateOffsetOp, xegpu::LoadMatrixOp>(op))
+  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::LoadMatrixOp>(
+          op))
     return getTileShape(op->getOpResult(0));
   if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp,
           xegpu::StoreMatrixOp>(op))
@@ -145,13 +145,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   if (isa<xegpu::StoreNdOp>(op))
     return getTileShape(op->getOpOperand(1));
 
-  // Handle LoadGatherOp and StoreScatterOp (with and without offset)
-  if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
-    if (loadGatherOp.getOffsets())
-      return getTileShape(loadGatherOp->getOpResult(0));
-    else
-      return getTileShape(loadGatherOp->getOpOperand(0));
-  }
+  if (isa<xegpu::LoadGatherOp>(op))
+    return getTileShape(op->getOpResult(0));
 
   if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
     auto inputInstData =
@@ -165,10 +160,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
       return targetInstData;
   }
 
-  if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
-    return getTileShape(storeScatterOp.getOffsets()
-                            ? storeScatterOp->getOpOperand(0)
-                            : storeScatterOp->getOpOperand(1));
+  if (isa<xegpu::StoreScatterOp>(op))
+    return getTileShape(op->getOpOperand(0));
 
   if (isa<xegpu::DpasOp>(op)) {
     std::optional<SmallVector<int64_t>> aTile =
@@ -270,12 +263,11 @@ void XeGPUBlockingPass::runOnOperation() {
   }
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
-                                 xegpu::LayoutAttr layout) {
+                                 xegpu::DistributeLayoutAttr layout) {
     int count = 1;
     SmallVector<int64_t> tileShape(shape);
-    if (layout && layout.getInstData()) {
-      DenseI32ArrayAttr instData = layout.getInstData();
-      tileShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
+    if (layout && !layout.getEffectiveInstDataAsInt().empty()) {
+      tileShape = layout.getEffectiveInstDataAsInt();
       count = computeProduct(shape) / computeProduct(tileShape);
     }
     return std::make_pair(tileShape, count);
@@ -308,7 +300,7 @@ void XeGPUBlockingPass::runOnOperation() {
         Type elemTy = type.getElementType();
         ArrayRef<int64_t> shape = type.getShape();
 
-        xegpu::LayoutAttr layout = type.getLayoutAttr();
+        xegpu::DistributeLayoutAttr layout = type.getLayoutAttr();
         if (layout && layout.isForWorkgroup())
           return failure();
 
@@ -341,23 +333,6 @@ void XeGPUBlockingPass::runOnOperation() {
     if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
 
       Attribute encoding = tdescTy.getEncoding();
-      // If the encoding is a ScatterTensorDescAttr, we need to
-      // potentially adjust the chunk size based on the inst_data.
-      if (tdescTy.isScattered()) {
-        int64_t chunkSize = tdescTy.getChunkSizeAsInt();
-
-        if (chunkSize > 1) {
-          int64_t blockedChunkSize = chunkSize;
-          auto instData = tdescTy.getLayoutAttr().getInstData();
-          if (!instData.empty())
-            blockedChunkSize = instData.asArrayRef().back();
-
-          // To create a new attribute with a different chunk_size:
-          auto newEncoding = xegpu::ScatterTensorDescAttr::get(
-              ctx, tdescTy.getMemorySpace(), blockedChunkSize);
-          encoding = newEncoding;
-        }
-      }
 
       newTy =
           xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
@@ -381,6 +356,11 @@ void XeGPUBlockingPass::runOnOperation() {
   populateXeGPUUnrollPatterns(patterns, options);
   vector::populateVectorUnrollPatterns(patterns, vectorOptions);
 
+  // Note: The pattern driver does op folding as well and clean up.
+  // But intermediate insert/extract strided slice ops with
+  // unrealized conversion cast ops in the middle does not get
+  // cleaned up in this step. One more round of folding is needed
+  // after the walk to resolve those unrealized conversion cast ops.
   (void)applyPatternsGreedily(op, std::move(patterns));
 
   op->walk([](Operation *op) {
@@ -405,4 +385,9 @@ void XeGPUBlockingPass::runOnOperation() {
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
   });
+
+  // One more round of folding to clean up the intermediate
+  // insert/extract strided slice ops.
+  RewritePatternSet emptyPatterns(ctx);
+  (void)applyPatternsGreedily(op, std::move(emptyPatterns));
 }

@@ -69,11 +69,20 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
           lldb::eSectionTypeDWARFDebugInfo, true))
     return nullptr;
 
+  // Otherwise, we try to locate it.
+  FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+
   // If the module specified a filespec, use that.
   FileSpec fspec = module_sp->GetSymbolFileFileSpec();
-  // Otherwise, use the PDB path from CodeView.
-  if (!fspec)
-    fspec = obj_file->GetPDBPath().value_or(FileSpec());
+  // Otherwise, if this is CodeView, use the PDB path and set the module
+  // directory as the first fallback lookup location.
+  if (!fspec) {
+    if (auto pdb_spec = obj_file->GetPDBPath()) {
+      fspec = *pdb_spec;
+      if (ConstString dir = obj_file->GetFileSpec().GetDirectory())
+        search_paths.Insert(0, FileSpec(dir));
+    }
+  }
   // Otherwise, try gnu_debuglink, if one exists.
   if (!fspec)
     fspec = obj_file->GetDebugLink().value_or(FileSpec());
@@ -87,7 +96,6 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   FileSystem::Instance().Resolve(module_spec.GetFileSpec());
   module_spec.GetSymbolFileSpec() = fspec;
   module_spec.GetUUID() = uuid;
-  FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec dsym_fspec = PluginManager::LocateExecutableSymbolFile(
       module_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
   if (!dsym_fspec)

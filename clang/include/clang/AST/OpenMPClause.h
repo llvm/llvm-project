@@ -39,6 +39,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
+#include <climits>
 #include <cstddef>
 #include <iterator>
 #include <utility>
@@ -1023,6 +1024,106 @@ public:
   }
 };
 
+/// This represents the 'counts' clause in the '#pragma omp split' directive.
+///
+/// \code
+/// #pragma omp split counts(3, omp_fill, 2)
+/// for (int i = 0; i < n; ++i) { ... }
+/// \endcode
+class OMPCountsClause final
+    : public OMPClause,
+      private llvm::TrailingObjects<OMPCountsClause, Expr *> {
+  friend class OMPClauseReader;
+  friend class llvm::TrailingObjects<OMPCountsClause, Expr *>;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Number of count expressions in the clause.
+  unsigned NumCounts = 0;
+
+  /// 0-based index of the omp_fill list item.
+  std::optional<unsigned> OmpFillIndex;
+
+  /// Source location of the omp_fill keyword.
+  SourceLocation OmpFillLoc;
+
+  /// Build an empty clause.
+  explicit OMPCountsClause(int NumCounts)
+      : OMPClause(llvm::omp::OMPC_counts, SourceLocation(), SourceLocation()),
+        NumCounts(NumCounts) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  void setOmpFillIndex(std::optional<unsigned> Idx) { OmpFillIndex = Idx; }
+  void setOmpFillLoc(SourceLocation Loc) { OmpFillLoc = Loc; }
+
+  /// Sets the count expressions.
+  void setCountsRefs(ArrayRef<Expr *> VL) {
+    assert(VL.size() == NumCounts);
+    llvm::copy(VL, getCountsRefs().begin());
+  }
+
+public:
+  /// Build a 'counts' AST node.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the 'counts' identifier.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc    Location of ')'.
+  /// \param Counts    Content of the clause.
+  static OMPCountsClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                 SourceLocation LParenLoc,
+                                 SourceLocation EndLoc, ArrayRef<Expr *> Counts,
+                                 std::optional<unsigned> FillIdx,
+                                 SourceLocation FillLoc);
+
+  /// Build an empty 'counts' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumCounts   Number of items in the clause.
+  static OMPCountsClause *CreateEmpty(const ASTContext &C, unsigned NumCounts);
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the number of list items.
+  unsigned getNumCounts() const { return NumCounts; }
+
+  std::optional<unsigned> getOmpFillIndex() const { return OmpFillIndex; }
+  SourceLocation getOmpFillLoc() const { return OmpFillLoc; }
+  bool hasOmpFill() const { return OmpFillIndex.has_value(); }
+
+  /// Returns the count expressions.
+  MutableArrayRef<Expr *> getCountsRefs() {
+    return getTrailingObjects(NumCounts);
+  }
+  ArrayRef<Expr *> getCountsRefs() const {
+    return getTrailingObjects(NumCounts);
+  }
+
+  child_range children() {
+    MutableArrayRef<Expr *> Counts = getCountsRefs();
+    return child_range(reinterpret_cast<Stmt **>(Counts.begin()),
+                       reinterpret_cast<Stmt **>(Counts.end()));
+  }
+  const_child_range children() const {
+    ArrayRef<Expr *> Counts = getCountsRefs();
+    return const_child_range(reinterpret_cast<Stmt *const *>(Counts.begin()),
+                             reinterpret_cast<Stmt *const *>(Counts.end()));
+  }
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_counts;
+  }
+};
+
 /// This class represents the 'permutation' clause in the
 /// '#pragma omp interchange' directive.
 ///
@@ -1506,7 +1607,9 @@ public:
 /// clause with OpenMP keyword 'omp_not_impex`. Other valid keywords that may
 /// appear in this clause are 'omp_import', 'omp_export' and 'omp_impex'.
 ///
-class OMPTransparentClause final : public OMPClause {
+class OMPTransparentClause final
+    : public OMPOneStmtClause<llvm::omp::OMPC_transparent, OMPClause>,
+      public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -1530,15 +1633,18 @@ public:
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPTransparentClause(Expr *ImpexTypeKind, SourceLocation StartLoc,
-                       SourceLocation LParenLoc, SourceLocation EndLoc)
-      : OMPClause(llvm::omp::OMPC_transparent, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), ImpexType(ImpexTypeKind) {}
+  OMPTransparentClause(Expr *ImpexTypeKind, Stmt *HelperValStmt,
+                       OpenMPDirectiveKind CaptureRegion,
+                       SourceLocation StartLoc, SourceLocation LParenLoc,
+                       SourceLocation EndLoc)
+      : OMPOneStmtClause(ImpexTypeKind, StartLoc, LParenLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc),
+        ImpexType(ImpexTypeKind) {
+    setPreInitStmt(HelperValStmt, CaptureRegion);
+  }
 
   /// Build an empty clause.
-  OMPTransparentClause()
-      : OMPClause(llvm::omp::OMPC_transparent, SourceLocation(),
-                  SourceLocation()) {}
+  OMPTransparentClause() : OMPOneStmtClause(), OMPClauseWithPreInit(this) {}
 
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }

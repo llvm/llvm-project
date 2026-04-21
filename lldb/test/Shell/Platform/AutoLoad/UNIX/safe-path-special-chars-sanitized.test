@@ -1,0 +1,24 @@
+# REQUIRES: python, asserts, !system-windows
+#
+# Test that a module name with special characters (dashes, dots, spaces) is
+# sanitized and the sanitized <module-name>.py is loaded.
+
+# RUN: split-file %s %t
+# RUN: %clang_host %t/main.c -o "%t/Test- Module.1.out"
+# RUN: mkdir -p "%t/safe-path/Test- Module.1"
+
+# RUN: cp %t/script.py "%t/safe-path/Test- Module.1/Test__Module_1.py"
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'settings append testing.safe-auto-load-paths %t/safe-path' \
+# RUN:   -o 'target create "%t/Test- Module.1.out"' 2>&1 | FileCheck %s
+
+# CHECK: SANITIZED_LOAD
+
+#--- main.c
+int main() { return 0; }
+
+#--- script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SANITIZED_LOAD", file=sys.stderr)

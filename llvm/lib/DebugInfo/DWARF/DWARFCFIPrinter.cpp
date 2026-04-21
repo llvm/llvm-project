@@ -13,6 +13,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cinttypes>
@@ -51,49 +52,49 @@ static void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
     if (!OpcodeName.empty())
       OS << " " << OpcodeName;
     else
-      OS << format(" Opcode %x", Opcode);
+      OS << formatv(" Opcode {0:x-}", Opcode);
     break;
   }
   case CFIProgram::OT_None:
     break;
   case CFIProgram::OT_Address:
-    OS << format(" %" PRIx64, Operand);
+    OS << formatv(" {0:x-}", Operand);
     Address = Operand;
     break;
   case CFIProgram::OT_Offset:
     // The offsets are all encoded in a unsigned form, but in practice
     // consumers use them signed. It's most certainly legacy due to
     // the lack of signed variants in the first Dwarf standards.
-    OS << format(" %+" PRId64, int64_t(Operand));
+    OS << formatv(" {0:+d}", int64_t(Operand));
     break;
   case CFIProgram::OT_FactoredCodeOffset: // Always Unsigned
     if (P.codeAlign())
-      OS << format(" %" PRId64, Operand * P.codeAlign());
+      OS << formatv(" {0}", int64_t(Operand * P.codeAlign()));
     else
-      OS << format(" %" PRId64 "*code_alignment_factor", Operand);
+      OS << formatv(" {0}*code_alignment_factor", int64_t(Operand));
     if (Address && P.codeAlign()) {
       *Address += Operand * P.codeAlign();
-      OS << format(" to 0x%" PRIx64, *Address);
+      OS << formatv(" to {0:x+}", *Address);
     }
     break;
   case CFIProgram::OT_SignedFactDataOffset:
     if (P.dataAlign())
-      OS << format(" %" PRId64, int64_t(Operand) * P.dataAlign());
+      OS << formatv(" {0}", int64_t(Operand) * P.dataAlign());
     else
-      OS << format(" %" PRId64 "*data_alignment_factor", int64_t(Operand));
+      OS << formatv(" {0}*data_alignment_factor", int64_t(Operand));
     break;
   case CFIProgram::OT_UnsignedFactDataOffset:
     if (P.dataAlign())
-      OS << format(" %" PRId64, Operand * P.dataAlign());
+      OS << formatv(" {0}", int64_t(Operand * P.dataAlign()));
     else
-      OS << format(" %" PRId64 "*data_alignment_factor", Operand);
+      OS << formatv(" {0}*data_alignment_factor", int64_t(Operand));
     break;
   case CFIProgram::OT_Register:
     OS << ' ';
     printRegister(OS, DumpOpts, Operand);
     break;
   case CFIProgram::OT_AddressSpace:
-    OS << format(" in addrspace%" PRId64, Operand);
+    OS << formatv(" in addrspace{0}", Operand);
     break;
   case CFIProgram::OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");

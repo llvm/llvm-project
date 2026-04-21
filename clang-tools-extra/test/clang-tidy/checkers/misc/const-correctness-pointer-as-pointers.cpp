@@ -115,3 +115,11 @@ void multi_level_pointer() {
   // CHECK-FIXES: const char * const* foo[] = {&s};
   const char * p = *foo[0];
 }
+
+void* operator new(decltype(sizeof(void*)), void*) noexcept;
+
+void pointer_in_emplacement_new() {
+  int* ptr = nullptr;
+  // CHECK-NOT: warning
+  new(ptr) int {123};
+}

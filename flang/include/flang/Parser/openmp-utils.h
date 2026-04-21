@@ -37,6 +37,34 @@ template <typename T> constexpr auto addr_if(const std::optional<T> &x) {
 }
 
 namespace detail {
+struct DirectiveSpecificationScope {
+  using ODS = OmpDirectiveSpecification;
+  template <typename T> static const ODS &GetODS(const T &x) {
+    if constexpr ( //
+        std::is_base_of_v<OmpBlockConstruct, T> ||
+        std::is_same_v<OpenMPLoopConstruct, T> ||
+        std::is_same_v<OpenMPSectionsConstruct, T>) {
+      return x.BeginDir();
+    } else if constexpr (WrapperTrait<T>) {
+      return GetODS(x.v);
+    } else if constexpr (UnionTrait<T>) {
+      return std::visit(
+          [](auto &&s) -> decltype(auto) { return GetODS(s); }, x.u);
+    } else {
+      static_assert(std::is_same_v<OpenMPSectionConstruct, T>);
+      llvm_unreachable("This function does not work for SECTION");
+    }
+  }
+  static inline const ODS &GetODS(const ODS &x) { return x; }
+};
+} // namespace detail
+
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPConstruct &x);
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPDeclarativeConstruct &x);
+
+namespace detail {
 struct DirectiveNameScope {
   static OmpDirectiveName MakeName(CharBlock source = {},
       llvm::omp::Directive id = llvm::omp::Directive::OMPD_unknown) {
@@ -121,17 +149,6 @@ const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
 
 const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x);
 const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x);
-
-// Is the template argument "Statement<T>" for some T?
-template <typename T> struct IsStatement {
-  static constexpr bool value{false};
-};
-template <typename T> struct IsStatement<Statement<T>> {
-  static constexpr bool value{true};
-};
-
-std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x);
-std::optional<Label> GetFinalLabel(const OpenMPConstruct &x);
 
 namespace detail {
 // Clauses with flangClass = "OmpObjectList".
@@ -296,14 +313,28 @@ struct ExecutionPartIterator {
   using IteratorType = Block::const_iterator;
   using IteratorRange = llvm::iterator_range<IteratorType>;
 
+  // An iterator range with a third iterator indicating a position inside
+  // the range.
+  struct IteratorGauge : public IteratorRange {
+    IteratorGauge(IteratorType b, IteratorType e)
+        : IteratorRange(b, e), at(b) {}
+    IteratorGauge(IteratorRange r) : IteratorRange(r), at(r.begin()) {}
+
+    bool atEnd() const { return at == end(); }
+    IteratorType at;
+  };
+
   struct Construct {
     Construct(IteratorType b, IteratorType e, const ExecutionPartConstruct *c)
-        : range(b, e), owner(c) {}
+        : location(b, e), owner(c) {}
     template <typename R>
     Construct(const R &r, const ExecutionPartConstruct *c)
-        : range(r), owner(c) {}
+        : location(r), owner(c) {}
     Construct(const Construct &c) = default;
-    IteratorRange range;
+    // The original range of the construct with the current position in it.
+    // The location.at is the construct currently being pointed at, or
+    // stepped into.
+    IteratorGauge location;
     const ExecutionPartConstruct *owner;
   };
 
@@ -332,6 +363,7 @@ struct ExecutionPartIterator {
 
   bool valid() const { return !stack_.empty(); }
 
+  const std::vector<Construct> &stack() const { return stack_; }
   decltype(auto) operator*() const { return *at(); }
   bool operator==(const ExecutionPartIterator &other) const {
     if (valid() != other.valid()) {
@@ -339,7 +371,7 @@ struct ExecutionPartIterator {
     }
     // Invalid iterators are considered equal.
     return !valid() ||
-        stack_.back().range.begin() == other.stack_.back().range.begin();
+        stack_.back().location.at == other.stack_.back().location.at;
   }
   bool operator!=(const ExecutionPartIterator &other) const {
     return !(*this == other);
@@ -368,7 +400,7 @@ struct ExecutionPartIterator {
   using iterator_category = std::forward_iterator_tag;
 
 private:
-  IteratorType at() const { return stack_.back().range.begin(); };
+  IteratorType at() const { return stack_.back().location.at; };
 
   // If the iterator is not at a legal location, keep advancing it until
   // it lands at a legal location or becomes invalid.

@@ -146,8 +146,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
 
   switch (component.getKind()) {
   case VTableComponent::CK_UnusedFunctionPointer:
-    cgm.errorNYI("getVTableComponent: UnusedFunctionPointer");
-    return mlir::Attribute();
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
 
   case VTableComponent::CK_VCallOffset:
     return builder.getConstPtrAttr(builder.getUInt8PtrTy(),
@@ -213,7 +212,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
       assert(!cir::MissingFeatures::pointerAuthentication());
     } else {
       // Otherwise we can use the method definition directly.
-      cir::FuncType fnTy = cgm.getTypes().getFunctionTypeForVTable(gd);
+      cir::FuncType fnTy = cgm.getTypes().getFunctionType(gd);
       fnPtr = cgm.getAddrOfFunction(gd, fnTy, /*ForVTable=*/true);
     }
 
@@ -560,26 +559,41 @@ uint64_t CIRGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *rd,
 
 static RValue performReturnAdjustment(CIRGenFunction &cgf, QualType resultType,
                                       RValue rv, const ThunkInfo &thunk) {
-  // Emit the return adjustment.
+  // Emit the return adjustment.  For non-reference pointer returns, match
+  // classic codegen: skip the adjustment when the returned pointer is null.
   bool nullCheckValue = !resultType->isReferenceType();
-
   mlir::Value returnValue = rv.getValue();
-
-  if (nullCheckValue)
-    cgf.cgm.errorNYI(
-        "return adjustment with null check for non-reference types");
 
   const CXXRecordDecl *classDecl =
       resultType->getPointeeType()->getAsCXXRecordDecl();
   CharUnits classAlign = cgf.cgm.getClassPointerAlignment(classDecl);
   mlir::Type pointeeType = cgf.convertTypeForMem(resultType->getPointeeType());
-  returnValue = cgf.cgm.getCXXABI().performReturnAdjustment(
-      cgf, Address(returnValue, pointeeType, classAlign), classDecl,
-      thunk.Return);
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = returnValue.getLoc();
 
-  if (nullCheckValue)
-    cgf.cgm.errorNYI(
-        "return adjustment with null check for non-reference types");
+  if (!nullCheckValue) {
+    returnValue = cgf.cgm.getCXXABI().performReturnAdjustment(
+        cgf, Address(returnValue, pointeeType, classAlign), classDecl,
+        thunk.Return);
+    return RValue::get(returnValue);
+  }
+
+  mlir::Value isNotNull = builder.createPtrIsNotNull(returnValue);
+  returnValue =
+      cir::TernaryOp::create(
+          builder, loc, isNotNull,
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value adjusted = cgf.cgm.getCXXABI().performReturnAdjustment(
+                cgf, Address(returnValue, pointeeType, classAlign), classDecl,
+                thunk.Return);
+            builder.createYield(loc, adjusted);
+          },
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value nullVal =
+                builder.getNullPtr(returnValue.getType(), loc).getResult();
+            builder.createYield(loc, nullVal);
+          })
+          .getResult();
 
   return RValue::get(returnValue);
 }
@@ -744,8 +758,33 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
 void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
                                        mlir::Value adjustedThisPtr,
                                        cir::FuncOp callee) {
-  assert(!cir::MissingFeatures::opCallMustTail());
-  cgm.errorNYI("musttail thunk");
+  // Forward all function arguments, replacing 'this' with the adjusted pointer.
+  // The call is marked musttail so varargs are forwarded correctly.
+  mlir::Block *entryBlock = getCurFunctionEntryBlock();
+  SmallVector<mlir::Value> args;
+  for (mlir::BlockArgument arg : entryBlock->getArguments())
+    args.push_back(arg);
+
+  // Replace the 'this' argument (first arg) with the adjusted pointer.
+  assert(!args.empty() && "thunk must have at least 'this' argument");
+  if (adjustedThisPtr.getType() != args[0].getType())
+    adjustedThisPtr = builder.createBitcast(adjustedThisPtr, args[0].getType());
+  args[0] = adjustedThisPtr;
+
+  mlir::Location loc = curFn->getLoc();
+  cir::FuncType calleeTy = callee.getFunctionType();
+  mlir::Type retTy = calleeTy.getReturnType();
+
+  cir::CallOp call = builder.createCallOp(loc, callee, args);
+  call->setAttr(cir::CIRDialect::getMustTailAttrName(),
+                mlir::UnitAttr::get(builder.getContext()));
+
+  if (isa<cir::VoidType>(retTy))
+    cir::ReturnOp::create(builder, loc);
+  else
+    cir::ReturnOp::create(builder, loc, call->getResult(0));
+
+  finishThunk();
 }
 
 void CIRGenFunction::generateThunk(cir::FuncOp fn,
@@ -766,8 +805,8 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
 
   // Create lexical scope - must stay alive for entire thunk generation.
   // startFunction() requires currLexScope to be set.
-  mlir::Location unknownLoc = builder.getUnknownLoc();
-  LexicalScope lexScope{*this, unknownLoc, entryBb};
+  SourceLocRAIIObject locRAII(*this, fn.getLoc());
+  LexicalScope lexScope{*this, fn.getLoc(), entryBb};
 
   startThunk(fn, gd, fnInfo, isUnprototyped);
   assert(!cir::MissingFeatures::generateDebugInfo());
@@ -828,7 +867,7 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
       mCtx.mangleThunk(md, thunkAdjustments, /*elideOverrideInfo=*/true, out);
   }
 
-  cir::FuncType thunkVTableTy = cgm.getTypes().getFunctionTypeForVTable(gd);
+  cir::FuncType thunkVTableTy = cgm.getTypes().getFunctionType(gd);
   cir::FuncOp thunk = cgm.getAddrOfThunk(name, thunkVTableTy, gd);
 
   // If we don't need to emit a definition, return this declaration as is.
@@ -939,4 +978,67 @@ void CIRGenVTables::emitThunks(GlobalDecl gd) {
 
   for (const ThunkInfo &thunk : *thunkInfoVector)
     maybeEmitThunk(gd, thunk, /*forVTable=*/false);
+}
+
+static bool shouldEmitAvailableExternallyVTable(const CIRGenModule &cgm,
+                                                const CXXRecordDecl *rd) {
+  return cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+         cgm.getCXXABI().canSpeculativelyEmitVTable(rd);
+}
+
+/// Given that we're currently at the end of the translation unit, and
+/// we've emitted a reference to the vtable for this class, should
+/// we define that vtable?
+static bool shouldEmitVTableAtEndOfTranslationUnit(CIRGenModule &cgm,
+                                                   const CXXRecordDecl *rd) {
+  // If vtable is internal then it has to be done.
+  if (!cgm.getVTables().isVTableExternal(rd))
+    return true;
+
+  // If it's external then maybe we will need it as available_externally.
+  return shouldEmitAvailableExternallyVTable(cgm, rd);
+}
+
+/// Given that at some point we emitted a reference to one or more
+/// vtables, and that we are now at the end of the translation unit,
+/// decide whether we should emit them.
+void CIRGenModule::emitDeferredVTables() {
+#ifndef NDEBUG
+  // Remember the size of DeferredVTables, because we're going to assume
+  // that this entire operation doesn't modify it.
+  size_t savedSize = deferredVTables.size();
+#endif
+  for (const CXXRecordDecl *rd : deferredVTables) {
+    if (shouldEmitVTableAtEndOfTranslationUnit(*this, rd))
+      vtables.generateClassData(rd);
+    else if (shouldOpportunisticallyEmitVTables())
+      opportunisticVTables.push_back(rd);
+  }
+
+  assert(savedSize == deferredVTables.size() &&
+         "deferred extra vtables during vtable emission?");
+  deferredVTables.clear();
+}
+
+void CIRGenModule::emitVTablesOpportunistically() {
+  // Try to emit external vtables as available_externally if they have emitted
+  // all inlined virtual functions.  It runs after EmitDeferred() and therefore
+  // is not allowed to create new references to things that need to be emitted
+  // lazily. Note that it also uses fact that we eagerly emitting RTTI.
+
+  assert(
+      (opportunisticVTables.empty() || shouldOpportunisticallyEmitVTables()) &&
+      "Only emit opportunistic vtables with optimizations");
+
+  for (const CXXRecordDecl *rd : opportunisticVTables) {
+    assert(getVTables().isVTableExternal(rd) &&
+           "This queue should only contain external vtables");
+    if (getCXXABI().canSpeculativelyEmitVTable(rd))
+      vtables.generateClassData(rd);
+  }
+  opportunisticVTables.clear();
+}
+
+bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
+  return codeGenOpts.OptimizationLevel > 0;
 }

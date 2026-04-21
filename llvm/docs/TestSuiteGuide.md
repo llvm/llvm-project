@@ -92,7 +92,7 @@ MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
   with the above `llvm-lit` command. In this case, the `results.json` file will
   contain compile time metrics only (code size, llvm stats and so on).
 
-  This mode is enabled by settting `-DTEST_SUITE_RUN_BENCHMARKS=OFF`,
+  This mode is enabled by setting `-DTEST_SUITE_RUN_BENCHMARKS=OFF`,
   more details [here](common_configuration_options).
 ```
 

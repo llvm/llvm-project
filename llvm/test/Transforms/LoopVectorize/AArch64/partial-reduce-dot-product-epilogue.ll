@@ -38,7 +38,7 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -53,7 +53,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -70,6 +70,7 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[IND_END6:%.*]] = add i64 [[IDX_NEG]], [[IV_NEXT]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -91,7 +92,6 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END6:%.*]] = add i64 [[IDX_NEG]], [[IV_NEXT]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
@@ -148,7 +148,7 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %iv.neg = phi i64 [ %iv.neg.next, %while.body ], [ %idx.neg, %entry ]
   %iv = phi i64 [ %iv.next, %while.body ], [ 0, %entry ]
   %accum = phi i32 [ %add, %while.body ], [ 0, %entry ]
@@ -164,7 +164,7 @@ while.body:                                       ; preds = %while.body, %entry
   %exitcond = and i1 %cmp.iv.neg, %cmp.iv
   br i1 %exitcond, label %while.body, label %while.end.loopexit
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %result = phi i32 [ %add, %while.body ]
   ret void
 }
@@ -429,7 +429,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds i8, ptr %a, i64 %iv
@@ -444,7 +444,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !7
 
-exit:                        ; preds = %for.body
+exit:
   ret i32 %add
 }
 
