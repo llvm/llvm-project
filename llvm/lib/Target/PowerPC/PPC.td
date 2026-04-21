@@ -362,6 +362,10 @@ def FeaturePredictableSelectIsExpensive :
 def FeatureFastMFLR : SubtargetFeature<"fast-MFLR", "HasFastMFLR", "true",
                                        "MFLR is a fast instruction">;
 
+def FeatureNoInlineGlue :
+ SubtargetFeature<"no-inline-glue", "NoInlineGlue", "true",
+                  "Use external ._ptrgl for indirect calls">;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
 

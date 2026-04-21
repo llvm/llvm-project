@@ -120,7 +120,6 @@ CGOPT(bool, DebugStrictDwarf)
 CGOPT(unsigned, AlignLoops)
 CGOPT(bool, JMCInstrument)
 CGOPT(bool, XCOFFReadOnlyPointers)
-CGOPT(bool, XCOFFInlineGlueCode)
 CGOPT(codegen::SaveStatsMode, SaveStats)
 
 #define CGBINDOPT(NAME)                                                        \
@@ -535,11 +534,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(XCOFFReadOnlyPointers);
 
-  static cl::opt<bool> XCOFFInlineGlueCode(
-      "xcoff-inline-glue-code",
-      cl::desc("Emir inline glue code for indirect calls"), cl::init(true));
-  CGBINDOPT(XCOFFInlineGlueCode);
-
   static cl::opt<bool> DisableIntegratedAS(
       "no-integrated-as", cl::desc("Disable integrated assembler"),
       cl::init(false));
@@ -641,7 +635,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.LoopAlignment = getAlignLoops();
   Options.JMCInstrument = getJMCInstrument();
   Options.XCOFFReadOnlyPointers = getXCOFFReadOnlyPointers();
-  Options.XCOFFInlineGlueCode = getXCOFFInlineGlueCode();
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
   Options.ThreadModel = getThreadModel();

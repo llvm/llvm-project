@@ -1,15 +1,15 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff \
-; RUN:   --xcoff-inline-glue-code=false < %s | FileCheck --check-prefixes=CHECK,CHECK32 %s
+; RUN:   -mattr=+no-inline-glue < %s | FileCheck --check-prefixes=CHECK,CHECK32 %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:   --xcoff-inline-glue-code=false < %s | FileCheck --check-prefixes=CHECK,CHECK64 %s
+; RUN:   -mattr=+no-inline-glue < %s | FileCheck --check-prefixes=CHECK,CHECK64 %s
 
 ; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
-; RUN:   -mtriple powerpc-ibm-aix-xcoff --xcoff-inline-glue-code=false < %s | \
+; RUN:   -mtriple powerpc-ibm-aix-xcoff -mattr=+no-inline-glue < %s | \
 ; RUN:   FileCheck --check-prefix=MIR32 %s
 
 ; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
-; RUN:   -mtriple powerpc64-ibm-aix-xcoff --xcoff-inline-glue-code=false < %s | \
+; RUN:   -mtriple powerpc64-ibm-aix-xcoff -mattr=+no-inline-glue < %s | \
 ; RUN:   FileCheck --check-prefix=MIR64 %s
 
 @a = dso_local global i32 55, align 4
