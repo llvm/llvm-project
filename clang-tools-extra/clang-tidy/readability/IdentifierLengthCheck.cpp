@@ -8,6 +8,7 @@
 
 #include "IdentifierLengthCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <numeric>
 
 using namespace clang::ast_matchers;
 
