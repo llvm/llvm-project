@@ -174,8 +174,8 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
   int64_t Lo12 = SignExtend64<12>(Val);
   Val = (uint64_t)Val - (uint64_t)Lo12;
 
-  int ShiftAmount = 0;
-  bool Unsigned = false;
+  unsigned ShiftAmount = 0;
+  unsigned ShiftOpc = RISCV::SLLI;
 
   // Val might now be valid for LUI without needing a shift.
   if (!isInt<32>(Val)) {
@@ -197,7 +197,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
         // LUI, then shift left with SLLI.UW to clear the upper 32 set bits.
         ShiftAmount -= 12;
         Val = SignExtend64<32>((uint64_t)Val << 12);
-        Unsigned = true;
+        ShiftOpc = RISCV::SLLI_UW;
       }
     }
 
@@ -207,7 +207,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
       // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
       Val = SignExtend64<32>((uint64_t)Val);
-      Unsigned = true;
+      ShiftOpc = RISCV::SLLI_UW;
     }
   }
 
@@ -215,8 +215,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
 
   // Skip shift if we were able to use LUI directly.
   if (ShiftAmount) {
-    unsigned Opc = Unsigned ? RISCV::SLLI_UW : RISCV::SLLI;
-    Res.emplace_back(Opc, ShiftAmount);
+    Res.emplace_back(ShiftOpc, ShiftAmount);
   }
 
   if (Lo12)
