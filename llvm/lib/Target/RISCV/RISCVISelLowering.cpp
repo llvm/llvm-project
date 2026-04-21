@@ -593,9 +593,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, VTs, Custom);
     setOperationAction(ISD::VSELECT, VTs, Legal);
     setOperationAction(ISD::SETCC, VTs, Legal);
-    setCondCodeAction({ISD::SETGE, ISD::SETUGT,
-                       ISD::SETUGE, ISD::SETULE, ISD::SETLE},
-                      VTs, Expand);
+    setCondCodeAction(
+        {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE}, VTs,
+        Expand);
     setCondCodeAction({ISD::SETNE, ISD::SETGT}, VTs, Custom);
 
     if (!Subtarget.is64Bit())
@@ -8758,7 +8758,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
 
       if (CCVal == ISD::SETGT) {
         if (ISD::isConstantSplatVectorAllOnes(RHS.getNode())) {
-          SDValue SetCC = DAG.getSetCC(DL, VT, LHS, DAG.getConstant(0, DL, VT), ISD::SETLT);
+          SDValue SetCC =
+              DAG.getSetCC(DL, VT, LHS, DAG.getConstant(0, DL, VT), ISD::SETLT);
           return DAG.getLogicalNOT(DL, SetCC, VT);
         }
 
