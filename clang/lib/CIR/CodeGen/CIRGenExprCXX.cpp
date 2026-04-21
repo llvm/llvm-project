@@ -1506,6 +1506,84 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   }
 }
 
+/// Emit the initialization of a new-expression result, including setting up
+/// a delete cleanup if needed, initializing array cookies, and calling the
+/// initializer. This is factored out to avoid manual insertion point
+/// manipulation at the call site.
+///
+/// \returns a tuple of (result pointer, resultPtr alloca, useNewDeleteCleanup).
+static std::tuple<Address, Address, bool>
+emitNewExprInit(CIRGenFunction &cgf, const CXXNewExpr *e, QualType allocType,
+                Address allocation, mlir::Value allocSize,
+                mlir::Value allocSizeWithoutCookie, CharUnits allocAlign,
+                const CallArgList &allocatorArgs, mlir::Value numElements,
+                const FunctionDecl *allocator) {
+  auto &builder = cgf.getBuilder();
+
+  bool useNewDeleteCleanup =
+      e->getOperatorDelete() &&
+      !e->getOperatorDelete()->isReservedGlobalPlacementOperator();
+  EHScopeStack::stable_iterator operatorDeleteCleanup;
+  mlir::Operation *cleanupDominator = nullptr;
+  if (useNewDeleteCleanup) {
+    assert(!cir::MissingFeatures::typeAwareAllocation());
+    enterNewDeleteCleanup(cgf, e, allocation, allocSize, allocAlign,
+                          allocatorArgs);
+    operatorDeleteCleanup = cgf.ehStack.stable_begin();
+    cleanupDominator =
+        cir::UnreachableOp::create(builder, cgf.getLoc(e->getSourceRange()))
+            .getOperation();
+  }
+
+  if (allocSize != allocSizeWithoutCookie) {
+    assert(e->isArray());
+    allocation = cgf.cgm.getCXXABI().initializeArrayCookie(
+        cgf, allocation, numElements, e, allocType);
+  }
+
+  mlir::Type elementTy;
+  if (e->isArray())
+    elementTy = cgf.convertTypeForMem(e->getAllocatedType());
+  else
+    elementTy = cgf.convertTypeForMem(allocType);
+
+  Address result = builder.createElementBitCast(cgf.getLoc(e->getSourceRange()),
+                                                allocation, elementTy);
+
+  Address resultPtr = Address::invalid();
+  if (useNewDeleteCleanup) {
+    resultPtr = cgf.createTempAlloca(
+        builder.getPointerTo(elementTy), result.getAlignment(),
+        cgf.getLoc(e->getSourceRange()), "__new_result");
+    builder.createStore(cgf.getLoc(e->getSourceRange()), result.getPointer(),
+                        resultPtr);
+  }
+
+  // Passing pointer through launder.invariant.group to avoid propagation of
+  // vptrs information which may be included in previous type.
+  if (cgf.cgm.getCodeGenOpts().StrictVTablePointers &&
+      allocator->isReservedGlobalPlacementOperator())
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "emitCXXNewExpr: strict vtable pointers");
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  emitNewInitializer(cgf, e, allocType, elementTy, result, numElements,
+                     allocSizeWithoutCookie);
+
+  if (useNewDeleteCleanup) {
+    assert(operatorDeleteCleanup.isValid());
+    assert(resultPtr.isValid());
+    cgf.deactivateCleanupBlock(operatorDeleteCleanup, cleanupDominator);
+    cleanupDominator->erase();
+    cir::LoadOp loadResult =
+        builder.createLoad(cgf.getLoc(e->getSourceRange()), resultPtr);
+    result = result.withPointer(loadResult.getResult());
+  }
+
+  return {result, resultPtr, useNewDeleteCleanup};
+}
+
 mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   // The element type being allocated.
   QualType allocType = getContext().getBaseElementType(e->getAllocatedType());
@@ -1634,77 +1712,9 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
     builder.setInsertionPoint(nullCheckYield);
   }
 
-  // If there's an operator delete, enter a cleanup to call it if an
-  // exception is thrown. If we do this, we'll be creating the result pointer
-  // inside a cleanup scope, either with a bitcast or an offset based on the
-  // array cookie size. However, we need to return that pointer from outside
-  // the cleanup scope, so we need to store it in a temporary variable.
-  bool useNewDeleteCleanup =
-      e->getOperatorDelete() &&
-      !e->getOperatorDelete()->isReservedGlobalPlacementOperator();
-  EHScopeStack::stable_iterator operatorDeleteCleanup;
-  mlir::Operation *cleanupDominator = nullptr;
-  if (useNewDeleteCleanup) {
-    assert(!cir::MissingFeatures::typeAwareAllocation());
-    enterNewDeleteCleanup(*this, e, allocation, allocSize, allocAlign,
-                          allocatorArgs);
-    operatorDeleteCleanup = ehStack.stable_begin();
-    cleanupDominator =
-        cir::UnreachableOp::create(builder, getLoc(e->getSourceRange()))
-            .getOperation();
-  }
-
-  if (allocSize != allocSizeWithoutCookie) {
-    assert(e->isArray());
-    allocation = cgm.getCXXABI().initializeArrayCookie(
-        *this, allocation, numElements, e, allocType);
-  }
-
-  mlir::Type elementTy;
-  if (e->isArray()) {
-    // For array new, use the allocated type to handle multidimensional arrays
-    // correctly
-    elementTy = convertTypeForMem(e->getAllocatedType());
-  } else {
-    elementTy = convertTypeForMem(allocType);
-  }
-  Address result = builder.createElementBitCast(getLoc(e->getSourceRange()),
-                                                allocation, elementTy);
-
-  // If we're inside a new delete cleanup, store the result pointer.
-  Address resultPtr = Address::invalid();
-  if (useNewDeleteCleanup) {
-    resultPtr =
-        createTempAlloca(builder.getPointerTo(elementTy), result.getAlignment(),
-                         getLoc(e->getSourceRange()), "__new_result");
-    builder.createStore(getLoc(e->getSourceRange()), result.getPointer(),
-                        resultPtr);
-  }
-
-  // Passing pointer through launder.invariant.group to avoid propagation of
-  // vptrs information which may be included in previous type.
-  // To not break LTO with different optimizations levels, we do it regardless
-  // of optimization level.
-  if (cgm.getCodeGenOpts().StrictVTablePointers &&
-      allocator->isReservedGlobalPlacementOperator())
-    cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: strict vtable pointers");
-
-  assert(!cir::MissingFeatures::sanitizers());
-
-  emitNewInitializer(*this, e, allocType, elementTy, result, numElements,
-                     allocSizeWithoutCookie);
-
-  // Deactivate the 'operator delete' cleanup if we finished
-  // initialization.
-  if (useNewDeleteCleanup) {
-    assert(operatorDeleteCleanup.isValid());
-    assert(resultPtr.isValid());
-    deactivateCleanupBlock(operatorDeleteCleanup, cleanupDominator);
-    cleanupDominator->erase();
-    cir::LoadOp loadResult =
-        builder.createLoad(getLoc(e->getSourceRange()), resultPtr);
-    result = result.withPointer(loadResult.getResult());
-  }
+  auto [result, resultPtr, useNewDeleteCleanup] = emitNewExprInit(
+      *this, e, allocType, allocation, allocSize, allocSizeWithoutCookie,
+      allocAlign, allocatorArgs, numElements, allocator);
 
   mlir::Value resultValue = result.getPointer();
 
