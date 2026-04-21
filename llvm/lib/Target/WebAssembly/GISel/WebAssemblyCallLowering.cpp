@@ -25,10 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Value.h"
@@ -62,17 +59,19 @@ static unsigned extendOpFromFlags(ISD::ArgFlagsTy Flags) {
 }
 
 static LLT getLLTForWasmMVT(MVT Ty, const DataLayout &DL) {
-  if (Ty == MVT::externref)
+  if (Ty == MVT::externref) {
     return LLT::pointer(
         WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF,
         DL.getPointerSizeInBits(
             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF));
+  }
 
-  if (Ty == MVT::funcref)
+  if (Ty == MVT::funcref) {
     return LLT::pointer(
         WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF,
         DL.getPointerSizeInBits(
             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF));
+  }
 
   return llvm::getLLTForMVT(Ty);
 }
@@ -200,91 +199,79 @@ static Register buildWasmArgument(unsigned Idx, MVT ArgVT, LLT ArgLLT,
                                   MachineIRBuilder &MIRBuilder,
                                   Register Def = Register()) {
   unsigned Op;
-  const TargetRegisterClass *RegClass;
 
   switch (ArgVT.SimpleTy) {
   case MVT::i32:
     Op = WebAssembly::ARGUMENT_i32;
-    RegClass = &WebAssembly::I32RegClass;
     break;
   case MVT::i64:
     Op = WebAssembly::ARGUMENT_i64;
-    RegClass = &WebAssembly::I64RegClass;
     break;
   case MVT::f32:
     Op = WebAssembly::ARGUMENT_f32;
-    RegClass = &WebAssembly::F32RegClass;
     break;
   case MVT::f64:
     Op = WebAssembly::ARGUMENT_f64;
-    RegClass = &WebAssembly::F64RegClass;
     break;
 
   case MVT::funcref:
     Op = WebAssembly::ARGUMENT_funcref;
-    RegClass = &WebAssembly::FUNCREFRegClass;
     break;
   case MVT::externref:
     Op = WebAssembly::ARGUMENT_externref;
-    RegClass = &WebAssembly::EXTERNREFRegClass;
     break;
   case MVT::exnref:
     Op = WebAssembly::ARGUMENT_exnref;
-    RegClass = &WebAssembly::EXNREFRegClass;
     break;
 
   case MVT::v16i8:
     Op = WebAssembly::ARGUMENT_v16i8;
-    RegClass = &WebAssembly::V128RegClass;
     break;
   case MVT::v8i16:
     Op = WebAssembly::ARGUMENT_v8i16;
-    RegClass = &WebAssembly::V128RegClass;
     break;
   case MVT::v4i32:
     Op = WebAssembly::ARGUMENT_v4i32;
-    RegClass = &WebAssembly::V128RegClass;
     break;
   case MVT::v2i64:
     Op = WebAssembly::ARGUMENT_v2i64;
-    RegClass = &WebAssembly::V128RegClass;
     break;
   case MVT::v8f16:
     Op = WebAssembly::ARGUMENT_v8f16;
-    RegClass = &WebAssembly::V128RegClass;
     break;
   case MVT::v4f32:
     Op = WebAssembly::ARGUMENT_v4f32;
-    RegClass = &WebAssembly::V128RegClass;
     break;
   case MVT::v2f64:
     Op = WebAssembly::ARGUMENT_v2f64;
-    RegClass = &WebAssembly::V128RegClass;
     break;
   default:
     llvm_unreachable("Found unexpected type for Wasm argument");
     break;
   }
 
+  const TargetInstrInfo &TII = MIRBuilder.getTII();
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const WebAssemblySubtarget &Subtarget =
       MF.getSubtarget<WebAssemblySubtarget>();
   const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
 
+  const TargetRegisterClass &RegClass = *TII.getRegClass(TII.get(Op), 0);
+
   Register NewReg;
 
   if (Def.isValid()) {
     NewReg = Def;
 
-    if (!RBI.constrainGenericRegister(Def, *RegClass, MRI)) {
-      NewReg = MRI.createVirtualRegister(RegClass);
+    if (!RBI.constrainGenericRegister(Def, RegClass, MRI)) {
+      NewReg = MRI.createVirtualRegister(&RegClass);
       MRI.setType(NewReg, ArgLLT);
 
       MIRBuilder.buildCopy(NewReg, Def);
     }
   } else {
-    NewReg = MRI.createVirtualRegister(RegClass);
+    NewReg = MRI.createVirtualRegister(&RegClass);
     MRI.setType(NewReg, ArgLLT);
   }
 
@@ -564,7 +551,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       if (Info.CB) {
         setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, *Info.CB);
       } else {
-        // we don't have a call base, so chances are we're looking at a
+        // We don't have a call base, so chances are we're looking at a
         // libcall (external symbol).
 
         // TODO: figure out how to get ALL the correct attributes
