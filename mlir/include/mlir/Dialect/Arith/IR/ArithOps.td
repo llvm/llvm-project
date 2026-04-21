@@ -1003,6 +1003,11 @@ def Arith_FlushDenormalsOp : Arith_FloatUnaryOp<"flush_denormals"> {
     The sign of zero is preserved when flushing a denormal: negative
     denormals flush to `-0.0`, positive denormals flush to `+0.0`.
 
+    A denormal number ("subnormal number" in IEEE-754) is a non-zero floating
+    point number that is smaller (closer to zero) than the smallest normal
+    number. Denormals fill the underflow gap around zero in floating-point
+    arithmetics, but may come at a runtime cost on some architectures.
+
     The input and result are required to be the same type. This type may be
     a floating-point scalar type, a vector whose element type is a
     floating-point type, or a tensor of floats. When operating on vectors
