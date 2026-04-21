@@ -1139,7 +1139,7 @@ def Builtin_Quantile : Builtin_Type<"Quantile", "quantile",
     after the storage type as `<min,max>`, overriding the defaults derived from
     the storage type width.
 
-    This type is used for weight compression schemes like NF4 (NormalFloat4)
+    This type is used for weight compression schemes like NF4 (NormalizedFloat4)
     and similar quantile-based formats.
 
     #### Example:

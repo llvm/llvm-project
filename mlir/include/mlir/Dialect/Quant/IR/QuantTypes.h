@@ -255,7 +255,7 @@ public:
 ///   Per-layer, optional parameters omitted:
 ///     !quant<uniform[StorageType]{Scale}>
 ///
-///   StorageType: 'i'|'u' NumBits, 'f4', 'hf8', 'bf8', 'quantile'
+///   StorageType: 'i'|'u' NumBits, 'f4', 'F8E5M2', 'bf8', 'quantile'
 ///   ExpressedType: 'f16', 'f32', 'bf16', 'f64'
 ///   Scale: A legal double value
 ///   ZeroPoint: An integer value

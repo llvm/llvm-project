@@ -398,6 +398,7 @@ Type Parser::parseNonFunctionType() {
 ///   quantile-type ::= `quantile` `<` type `:` type `,` `{` float-list `}` `>`
 ///
 Type Parser::parseQuantileType() {
+  SMLoc typeLoc = getToken().getLoc();
   consumeToken(Token::kw_quantile);
 
   if (parseToken(Token::less, "expected '<' in quantile type"))
@@ -492,8 +493,12 @@ Type Parser::parseQuantileType() {
     storageMax = maxVal;
   }
 
-  return QuantileType::get(storageType, quantileType, quantiles, storageMin,
-                           storageMax);
+  auto type = QuantileType::getChecked([&]() { return emitError(typeLoc); },
+                                       storageType, quantileType, quantiles,
+                                       storageMin, storageMax);
+  if (!type)
+    return nullptr;
+  return type;
 }
 
 /// Parse a tensor type.

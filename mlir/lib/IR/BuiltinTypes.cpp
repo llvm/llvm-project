@@ -128,6 +128,31 @@ LogicalResult QuantileType::verify(function_ref<InFlightDiagnostic()> emitError,
   if (storageMin.has_value() != storageMax.has_value())
     return emitError()
            << "storage min and max must both be specified or both omitted";
+
+  // Validate explicit storage range.
+  if (storageMin && storageMax && *storageMin >= *storageMax)
+    return emitError() << "storage min must be less than storage max";
+
+  unsigned width = storageType.getIntOrFloatBitWidth();
+  bool isSigned = !llvm::isa<IntegerType>(storageType) ||
+                  !llvm::cast<IntegerType>(storageType).isUnsigned();
+  auto effectiveMin =
+      storageMin.value_or(isSigned ? -(1LL << (width - 1)) : 0LL);
+  auto effectiveMax = storageMax.value_or(isSigned ? (1LL << (width - 1)) - 1
+                                                   : (1LL << width) - 1);
+  auto expectedSize = effectiveMax - effectiveMin + 1;
+  if (static_cast<decltype(expectedSize)>(quantiles.size()) != expectedSize)
+    return emitError() << "quantile LUT size (" << quantiles.size()
+                       << ") must equal the number of representable storage "
+                          "values ("
+                       << expectedSize << ")";
+
+  // No NaN or infinity allowed in the LUT.
+  for (double v : quantiles)
+    if (std::isnan(v) || std::isinf(v))
+      return emitError() << "quantile values must be finite (no NaN or "
+                            "infinity)";
+
   return success();
 }
 
