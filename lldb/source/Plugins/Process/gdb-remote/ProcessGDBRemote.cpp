@@ -2125,8 +2125,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   static constexpr llvm::StringLiteral g_key_memory("memory");
   static constexpr llvm::StringLiteral g_key_description("description");
   static constexpr llvm::StringLiteral g_key_signal("signal");
-  static constexpr llvm::StringLiteral g_added_binaries("added-binaries");
-  static constexpr llvm::StringLiteral g_detailed_binaries_info(
+  static constexpr llvm::StringLiteral g_key_added_binaries("added-binaries");
+  static constexpr llvm::StringLiteral g_key_detailed_binaries_info(
       "detailed-binaries-info");
 
   // Stop with signal and thread info
@@ -2257,7 +2257,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
       }
     } else if (key == g_key_signal)
       signo = object->GetUnsignedIntegerValue(LLDB_INVALID_SIGNAL_NUMBER);
-    else if (key == g_added_binaries) {
+    else if (key == g_key_added_binaries) {
       StructuredData::Array *array = object->GetAsArray();
       if (array) {
         array->ForEach([&added_binaries](
@@ -2272,7 +2272,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
           return true; // Keep iterating through all array items
         });
       }
-    } else if (key == g_detailed_binaries_info) {
+    } else if (key == g_key_detailed_binaries_info) {
       // Get a string representation and then parse it into
       // StructuredData to get a separate copy of this part of
       // the response.  We only have an Object* here, not the
