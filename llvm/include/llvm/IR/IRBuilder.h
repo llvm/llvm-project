@@ -245,9 +245,6 @@ public:
 
   /// Set location information used by debugging information.
   void SetCurrentDebugLocation(const DebugLoc &L) {
-    if (StoredDL == L)
-      return;
-
     // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
     // to include optional introspection data for use in Debugify.
     StoredDL = L;
@@ -255,9 +252,6 @@ public:
 
   /// Set location information used by debugging information.
   void SetCurrentDebugLocation(DebugLoc &&L) {
-    if (StoredDL == L)
-      return;
-
     // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
     // to include optional introspection data for use in Debugify.
     StoredDL = std::move(L);
