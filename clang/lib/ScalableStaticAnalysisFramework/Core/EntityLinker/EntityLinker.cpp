@@ -48,12 +48,16 @@ static constexpr const char *DuplicateTUNamespace =
 
 static NestedBuildNamespace
 resolveNamespace(const NestedBuildNamespace &LUNamespace,
+                 const NestedBuildNamespace &TUNamespace,
                  const NestedBuildNamespace &EntityNamespace,
                  EntityLinkageType Linkage) {
   switch (Linkage) {
   case EntityLinkageType::None:
   case EntityLinkageType::Internal:
-    return EntityNamespace.makeQualified(LUNamespace);
+    // Qualify with the TU namespace first (to disambiguate across TUs),
+    // then with the LU namespace.
+    return EntityNamespace.makeQualified(TUNamespace)
+        .makeQualified(LUNamespace);
   case EntityLinkageType::External:
     return NestedBuildNamespace(LUNamespace);
   }
@@ -62,9 +66,10 @@ resolveNamespace(const NestedBuildNamespace &LUNamespace,
 }
 
 EntityId EntityLinker::resolveEntity(const EntityName &OldName,
-                                     const EntityLinkage &Linkage) {
+                                     const EntityLinkage &Linkage,
+                                     const NestedBuildNamespace &TUNamespace) {
   NestedBuildNamespace NewNamespace = resolveNamespace(
-      Output.LUNamespace, OldName.Namespace, Linkage.getLinkage());
+      Output.LUNamespace, TUNamespace, OldName.Namespace, Linkage.getLinkage());
 
   EntityName NewName(OldName.USR, OldName.Suffix, NewNamespace);
 
@@ -103,7 +108,8 @@ EntityLinker::resolve(const TUSummaryEncoding &Summary) {
 
     const EntityLinkage &Linkage = Iter->second;
 
-    EntityId NewId = resolveEntity(OldName, Linkage);
+    EntityId NewId = resolveEntity(OldName, Linkage,
+                                   NestedBuildNamespace(Summary.TUNamespace));
 
     auto [_, Inserted] = EntityResolutionTable.insert({OldId, NewId});
     if (!Inserted) {

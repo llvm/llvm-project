@@ -415,6 +415,7 @@ struct GenericKernelTy {
   /// one used to initialize the kernel.
   Error launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
+               KernelExtraArgsTy *KernelExtraArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper,
                RecordReplayTy::HandleTy *RRHandle = nullptr) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice,
@@ -1019,7 +1020,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Run the kernel associated with \p EntryPtr
   Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
-                     KernelArgsTy &KernelArgs, __tgt_async_info *AsyncInfo);
+                     KernelArgsTy &KernelArgs,
+                     KernelExtraArgsTy *KernelExtraArgs,
+                     __tgt_async_info *AsyncInfo);
 
   /// Initialize a __tgt_async_info structure.
   Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
@@ -1615,6 +1618,7 @@ public:
   /// Begin executing a kernel on the given device.
   int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
                         ptrdiff_t *TgtOffsets, KernelArgsTy *KernelArgs,
+                        KernelExtraArgsTy *KernelExtraArgs,
                         __tgt_async_info *AsyncInfoPtr);
 
   /// Synchronize an asyncrhonous queue with the plugin runtime.

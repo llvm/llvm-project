@@ -31,9 +31,10 @@ using namespace error;
 
 RecordReplayTy::InstanceTy::InstanceTy(const GenericKernelTy &Kernel,
                                        uint32_t NumTeams, uint32_t NumThreads,
-                                       uint32_t SharedMemorySize)
+                                       uint32_t SharedMemorySize,
+                                       KernelReplayOutcomeTy *ReplayOutcome)
     : Kernel(Kernel), NumTeams(NumTeams), NumThreads(NumThreads),
-      SharedMemorySize(SharedMemorySize) {
+      SharedMemorySize(SharedMemorySize), ReplayOutcome(ReplayOutcome) {
   KernelHash = stable_hash_name(Kernel.getName());
   LaunchConfigHash =
       stable_hash_combine((stable_hash)NumTeams, (stable_hash)NumThreads,
@@ -92,10 +93,12 @@ Error RecordReplayTy::emitInstanceReport() {
   llvm::outs() << "directory: "
                << std::filesystem::absolute(OutputDirectory).string() << "\n";
   llvm::outs() << "kernels: " << Instances.size() << "\n";
-  for (const auto &Inst : Instances) {
-    llvm::outs() << getFilename(Inst, "json", /*IncludeDir=*/false) << ": "
-                 << Inst.Kernel.getName() << "\n";
-  }
+
+  SmallString<128> Filename;
+  for (const auto &Inst : Instances)
+    llvm::outs()
+        << getFilename(Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()
+        << ": " << Inst.Kernel.getName() << "\n";
   llvm::outs() << "=== record report end ===\n";
   return Plugin::success();
 }
@@ -103,10 +106,11 @@ Error RecordReplayTy::emitInstanceReport() {
 std::pair<const RecordReplayTy::InstanceTy &, bool>
 RecordReplayTy::registerInstance(const GenericKernelTy &Kernel,
                                  uint32_t NumTeams, uint32_t NumThreads,
-                                 uint32_t SharedMemorySize) {
+                                 uint32_t SharedMemorySize,
+                                 KernelReplayOutcomeTy *ReplayOutcome) {
   std::lock_guard<std::mutex> LG(InstancesLock);
-  auto [It, Inserted] =
-      Instances.emplace(Kernel, NumTeams, NumThreads, SharedMemorySize);
+  auto [It, Inserted] = Instances.emplace(Kernel, NumTeams, NumThreads,
+                                          SharedMemorySize, ReplayOutcome);
   // Increase the number of occurrences.
   It->Occurrences += 1;
   return {*It, Inserted};
@@ -131,14 +135,16 @@ Error RecordReplayTy::deallocate(void *Ptr) { return Plugin::success(); }
 
 Expected<RecordReplayTy::HandleTy> RecordReplayTy::recordPrologue(
     const GenericKernelTy &Kernel, const KernelArgsTy &KernelArgs,
+    const KernelExtraArgsTy *KernelExtraArgs,
     const KernelLaunchParamsTy &LaunchParams, uint32_t NumTeams[3],
     uint32_t NumThreads[3], uint32_t SharedMemorySize) {
   if (!isRecordingOrReplaying())
     return HandleTy{nullptr, false};
 
   // Register the instance and avoid recording if it is inactive or replaying.
-  auto [Instance, First] =
-      registerInstance(Kernel, NumTeams[0], NumThreads[0], SharedMemorySize);
+  auto [Instance, First] = registerInstance(
+      Kernel, NumTeams[0], NumThreads[0], SharedMemorySize,
+      (KernelExtraArgs) ? KernelExtraArgs->ReplayOutcome : nullptr);
 
   HandleTy Handle{&Instance, First};
   if (isReplaying() || !First)
@@ -158,28 +164,39 @@ Error RecordReplayTy::recordEpilogue(const GenericKernelTy &Kernel,
   if (!shouldRecordEpilogue() || !Handle.Active)
     return Plugin::success();
 
-  return recordEpilogueImpl(Kernel, *Handle.Instance);
+  const InstanceTy &Instance = *Handle.Instance;
+  if (auto Err = recordEpilogueImpl(Kernel, Instance))
+    return Err;
+
+  // If necessary, inform the replaying tool about where the epilogue snapshot
+  // file has been stored.
+  if (isReplaying() && Instance.ReplayOutcome) {
+    SmallString<128> Filename = getFilename(Instance, FileTy::EpilogueSnapshot);
+    Instance.ReplayOutcome->OutputFilepath = Filename;
+  }
+  return Plugin::success();
 }
 
 Error NativeRecordReplayTy::recordPrologueImpl(
     const GenericKernelTy &Kernel, const InstanceTy &Instance,
     const KernelArgsTy &KernelArgs, const KernelLaunchParamsTy &LaunchParams) {
-  std::string SnapshotFilename = getFilename(Instance, "record_input");
-  if (auto Err = recordSnapshot(SnapshotFilename))
+  SmallString<128> SnapshotFilename =
+      getFilename(Instance, FileTy::PrologueSnapshot);
+  if (auto Err = recordSnapshot(SnapshotFilename.c_str()))
     return Err;
 
-  std::string GlobalsFilename = getFilename(Instance, "globals");
-  if (auto Err = recordGlobals(GlobalsFilename))
+  SmallString<128> GlobalsFilename = getFilename(Instance, FileTy::Globals);
+  if (auto Err = recordGlobals(GlobalsFilename.c_str()))
     return Err;
 
-  std::string ImageFilename = getFilename(Instance, "image");
-  return recordImage(Kernel, ImageFilename);
+  SmallString<128> ImageFilename = getFilename(Instance, FileTy::Program);
+  return recordImage(Kernel, ImageFilename.c_str());
 }
 
 Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
                                                const InstanceTy &Instance) {
-  std::string SnapshotFilename =
-      getFilename(Instance, isRecording() ? "record_output" : "replay_output");
+  SmallString<128> SnapshotFilename =
+      getFilename(Instance, FileTy::EpilogueSnapshot);
   return recordSnapshot(SnapshotFilename);
 }
 
@@ -189,13 +206,27 @@ Error NativeRecordReplayTy::recordDescImpl(
   json::Object JsonKernelInfo;
   JsonKernelInfo["Name"] = Kernel.getName();
   JsonKernelInfo["NumArgs"] = KernelArgs.NumArgs;
-  JsonKernelInfo["NumTeamsClause"] = Instance.NumTeams;
-  JsonKernelInfo["ThreadLimitClause"] = Instance.NumThreads;
+  JsonKernelInfo["NumTeams"] = Instance.NumTeams;
+  JsonKernelInfo["NumThreads"] = Instance.NumThreads;
   JsonKernelInfo["SharedMemorySize"] = Instance.SharedMemorySize;
   JsonKernelInfo["LoopTripCount"] = KernelArgs.Tripcount;
   JsonKernelInfo["DeviceId"] = Device.getDeviceId();
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
+
+  // Add minimum and maximum for allowed number of teams. If zero, it means
+  // there was no restriction provided by the program.
+  json::Array JsonTeamsLimits;
+  JsonTeamsLimits.push_back(KernelArgs.NumTeams[0]);
+  JsonTeamsLimits.push_back(KernelArgs.NumTeams[0]);
+  JsonKernelInfo["TeamsLimits"] = json::Value(std::move(JsonTeamsLimits));
+
+  // Add minimum and maximum for allowed number of threads. If zero, it means
+  // there was no restriction provided by the program.
+  json::Array JsonThreadsLimits;
+  JsonThreadsLimits.push_back(uint32_t(KernelArgs.ThreadLimit[0] > 0));
+  JsonThreadsLimits.push_back(KernelArgs.ThreadLimit[0]);
+  JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;
   for (uint32_t I = 0; I < KernelArgs.NumArgs; ++I)
@@ -207,9 +238,10 @@ Error NativeRecordReplayTy::recordDescImpl(
     JsonArgOffsets.push_back(0);
   JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
-  std::string JsonFilename = getFilename(Instance, "json");
+  SmallString<128> JsonFilename = getFilename(Instance, FileTy::Descriptor);
+
   std::error_code EC;
-  raw_fd_ostream JsonOS(JsonFilename, EC);
+  raw_fd_ostream JsonOS(JsonFilename.c_str(), EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving kernel json file");
   JsonOS << json::Value(std::move(JsonKernelInfo));
@@ -217,17 +249,34 @@ Error NativeRecordReplayTy::recordDescImpl(
   return Plugin::success();
 }
 
-std::string NativeRecordReplayTy::getFilenameImpl(const InstanceTy &Instance,
-                                                  StringRef Suffix,
-                                                  bool IncludeDirectory) {
+StringRef NativeRecordReplayTy::getExtension(FileTy FileType) {
+  switch (FileType) {
+  case FileTy::PrologueSnapshot:
+    return "record_input";
+  case FileTy::EpilogueSnapshot:
+    return isRecording() ? "record_output" : "replay_output";
+  case FileTy::Descriptor:
+    return "json";
+  case FileTy::Globals:
+    return "globals";
+  case FileTy::Program:
+    return "image";
+  }
+  return "";
+}
+
+SmallString<128>
+NativeRecordReplayTy::getFilenameImpl(const InstanceTy &Instance,
+                                      FileTy FileType, bool IncludeDirectory) {
   std::filesystem::path Filepath = IncludeDirectory ? OutputDirectory : "";
   Filepath /= std::to_string(Instance.KernelHash) + "_" +
               std::to_string(Instance.LaunchConfigHash);
-  Filepath.replace_extension(Suffix.data());
-  return Filepath.string();
+  Filepath.replace_extension(getExtension(FileType).data());
+  SmallString<128> Filename(Filepath.c_str());
+  return Filename;
 }
 
-Error NativeRecordReplayTy::recordSnapshot(const std::string &Filename) {
+Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
   // Another thread may be allocating memory. The size can only increase.
   AllocationLock.lock();
   uint64_t RecordSize = CurrentSize;
@@ -255,7 +304,7 @@ Error NativeRecordReplayTy::recordSnapshot(const std::string &Filename) {
 }
 
 Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
-                                        const std::string &Filename) {
+                                        StringRef Filename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
@@ -265,7 +314,7 @@ Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
   return Plugin::success();
 }
 
-Error NativeRecordReplayTy::recordGlobals(const std::string &Filename) {
+Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
   AllocationLock.lock();
   // Copy the globals into a local vector so we can read it safely from this
   // thread. This vector should have a few entries in general. No need to lock

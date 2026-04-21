@@ -4714,8 +4714,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
   // If the input elements are only 1/2 the width of the result elements,
   // just use the normal splitting. Our trick only work if there's room
   // to split more than once.
-  if (isTypeLegal(LoOutVT) ||
-      InElementSize <= OutElementSize * 2)
+  if (isTypeLegal(LoOutVT) || InElementSize <= OutElementSize * 2 ||
+      (IsFloat && !isPowerOf2_32(InElementSize)))
     return SplitVecOp_UnaryOp(N);
   SDLoc DL(N);
 
@@ -6146,10 +6146,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_Unary(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_InregOp(SDNode *N) {
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  EVT ExtVT = EVT::getVectorVT(*DAG.getContext(),
-                               cast<VTSDNode>(N->getOperand(1))->getVT()
-                                 .getVectorElementType(),
-                               WidenVT.getVectorNumElements());
+  EVT ExtVT = EVT::getVectorVT(
+      *DAG.getContext(),
+      cast<VTSDNode>(N->getOperand(1))->getVT().getVectorElementType(),
+      WidenVT.getVectorElementCount());
   SDValue WidenLHS = GetWidenedVector(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N),
                      WidenVT, WidenLHS, DAG.getValueType(ExtVT));
