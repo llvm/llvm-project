@@ -91,7 +91,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicDiagnostics.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -3934,10 +3933,12 @@ void Verifier::visitCallBase(CallBase &Call) {
   if (IsIntrinsic) {
     FunctionType *DeclFTy = cast<FunctionType>(Callee->getValueType());
     if (DeclFTy != FTy) {
-      std::string Msg = "Intrinsic called with incompatible signature";
+      std::string Msg = "Intrinsic called with incompatible signature: "
+                        "expected signature: ";
       raw_string_ostream SS(Msg);
-      IntrinsicDiagnosticsProvider::querySignatureMismatch(Callee->getName(),
-                                                           DeclFTy, FTy, SS);
+      DeclFTy->print(SS);
+      SS << ", got: ";
+      FTy->print(SS);
       CheckFailed(Msg, Call);
       return;
     }
