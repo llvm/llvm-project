@@ -251,7 +251,8 @@ static void query(const MachineInstr &MI, bool &Read, bool &Write,
       !strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer"))
     StackPointer = true;
 
-  if (MI.isCall() && MI.getOperand(0).isSymbol() && !strcmp(MI.getOperand(0).getSymbolName(), "__wasm_get_stack_pointer"))
+  if (MI.isCall() && MI.getOperand(0).isSymbol() &&
+      !strcmp(MI.getOperand(0).getSymbolName(), "__wasm_get_stack_pointer"))
     StackPointer = true;
 
   // Analyze calls.

@@ -292,8 +292,7 @@ public:
     else if (StrippedTLS && !StrippedAtomics)
       stripAtomics(M);
 
-    recordFeatures(M, Features,
-                   StrippedAtomics || StrippedTLS);
+    recordFeatures(M, Features, StrippedAtomics || StrippedTLS);
 
     // Conservatively assume we have made some change
     return true;
@@ -396,8 +395,7 @@ private:
     return Stripped;
   }
 
-  void recordFeatures(Module &M, const FeatureBitset &Features,
-                      bool Stripped) {
+  void recordFeatures(Module &M, const FeatureBitset &Features, bool Stripped) {
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value]) {
         // Mark features as used
