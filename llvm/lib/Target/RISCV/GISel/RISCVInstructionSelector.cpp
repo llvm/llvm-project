@@ -1588,8 +1588,12 @@ bool RISCVInstructionSelector::selectCopy(MachineInstr &MI) const {
   if (DstReg.isPhysical())
     return true;
 
-  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-      MRI->getType(DstReg), *RBI.getRegBank(DstReg, *MRI, TRI));
+  // If the register class is already decided, for example in the case
+  // of inline assembly, use that already decided registre class.
+  const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(DstReg);
+  if (!DstRC)
+    DstRC = getRegClassForTypeOnBank(MRI->getType(DstReg),
+                                     *RBI.getRegBank(DstReg, *MRI, TRI));
   assert(DstRC &&
          "Register class not available for LLT, register bank combination");
 
