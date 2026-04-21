@@ -920,9 +920,13 @@ class VPatBinaryVL_XI<SDPatternOperator vop,
 multiclass VPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
                            list<VTypeInfo> vtilist = AllIntegerVectors,
                            bit isSEWAware = 0,
-                           list<Predicate> ExtraPreds = []> {
+                           list<Predicate> ExtraPreds = [],
+                           bit requireMinimal = false> {
   foreach vti = vtilist in {
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
+    let Predicates = !listconcat(ExtraPreds,
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<vti>.Predicates,
+                                     GetVTypePredicates<vti>.Predicates)) in {
     def : VPatBinaryVL_V<vop, instruction_name, "VV",
                          vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                          vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
@@ -934,10 +938,14 @@ multiclass VPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
 multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
                               list<VTypeInfo> vtilist = AllIntegerVectors,
                               bit isSEWAware = 0,
-                              list<Predicate> ExtraPreds = []> 
-    : VPatBinaryVL_VV<vop, instruction_name, vtilist, isSEWAware, ExtraPreds>{
+                              list<Predicate> ExtraPreds = [],
+                              bit requireMinimal = false> 
+    : VPatBinaryVL_VV<vop, instruction_name, vtilist, isSEWAware, ExtraPreds, requireMinimal>{
   foreach vti = vtilist in {
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    let Predicates = !listconcat(ExtraPreds,
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<vti>.Predicates,
+                                     GetVTypePredicates<vti>.Predicates)) in
     def : VPatBinaryVL_XI<vop, instruction_name, "VX",
                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
@@ -947,10 +955,14 @@ multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
 
 multiclass VPatBinaryVL_VV_VX_VI<SDPatternOperator vop, string instruction_name,
                                  Operand ImmType = simm5,
-                                 list<Predicate> ExtraPreds = []>
-    : VPatBinaryVL_VV_VX<vop, instruction_name, ExtraPreds=ExtraPreds> {
+                                 list<Predicate> ExtraPreds = [],
+                                 bit requireMinimal = false>
+    : VPatBinaryVL_VV_VX<vop, instruction_name, AllIntegerVectors, 0, ExtraPreds, requireMinimal> {
   foreach vti = AllIntegerVectors in {
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    let Predicates = !listconcat(ExtraPreds,
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<vti>.Predicates,
+                                     GetVTypePredicates<vti>.Predicates)) in
     def : VPatBinaryVL_XI<vop, instruction_name, "VI",
                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
