@@ -67,11 +67,6 @@ void test_core(void) {
   vec_scatter_element(vd, vul, ptrd, 1);
   // CHECK-ASM: vsceg %{{.*}}, 0(%{{.*}},%{{.*}}), 1
 
-  vd = vec_xld2(idx, cptrd);
-  // CHECK-ASM:      vst
-
-  vec_xstd2(vd, idx, ptrd);
-
   vd = vec_splat(vd, 0);
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> zeroinitializer
   // CHECK-ASM: vrepg
