@@ -5574,17 +5574,15 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   assert(isPowerOf2_32(ElementWidth) &&
          "expect element bitwidth to be power-of-two");
   unsigned HalfElementWidth = ElementWidth / 2;
-  APInt LoMask(ElementWidth, 0);
-  LoMask.setLowBits(HalfElementWidth);
-  APInt HiMask(ElementWidth, 0);
-  HiMask.setHighBits(HalfElementWidth);
+  APInt LoMask = APInt::getLowBitsSet(ElementWidth, HalfElementWidth);
+  APInt HiMask = APInt::getHighBitsSet(ElementWidth, HalfElementWidth);
 
   if (!I.hasNUses(2))
     return false;
   std::array<ExtractValueInst *, 2> OrigFields{};
   for (User *Usr : I.users()) {
     auto *E = dyn_cast<ExtractValueInst>(Usr);
-    // The detinerleave result can only be used by extractions.
+    // The deinterleave result can only be used by extractions.
     if (!E || E->getNumIndices() != 1)
       return false;
     unsigned Idx = *E->idx_begin();
@@ -5594,15 +5592,12 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
     OrigFields[Idx] = E;
   }
 
-  // Find the OR (merge instruction) first.
-  SmallVector<PossiblyDisjointInst *, 2> MergeInsts;
+  // Find the merge instruction (i.e. OR) first.
+  SmallVector<Instruction *, 2> MergeInsts;
   for (auto *FieldUsr : OrigFields[0]->users()) {
-    if (!FieldUsr->hasOneUse())
+    if (!FieldUsr->hasOneUse() || !isa<Instruction>(FieldUsr->user_back()))
       return false;
-    auto *Merge = dyn_cast<PossiblyDisjointInst>(*FieldUsr->user_begin());
-    if (!Merge)
-      return false;
-    MergeInsts.push_back(Merge);
+    MergeInsts.push_back(cast<Instruction>(FieldUsr->user_back()));
   }
   assert(MergeInsts.size() == 2);
 
@@ -5643,7 +5638,7 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
                            MergeInsts[0]->getType(), TTI::CastContextHint::None,
                            CostKind) *
           2;
-  if (OldCost <= NewCost) {
+  if (OldCost <= NewCost || !NewCost.isValid()) {
     LLVM_DEBUG(
         dbgs() << "VC: New deinterleave2 sequence cost (" << NewCost << ")"
                << " is higher than that of the old one (" << OldCost << ")\n");
@@ -5656,8 +5651,7 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   Value *NewDeinterleave = Builder.CreateIntrinsic(
       Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
   for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
-    Value *NewField =
-        Builder.CreateExtractValue(NewDeinterleave, {unsigned(Idx)});
+    Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
     NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
     replaceValue(*MergeInst, *NewField);
   }
