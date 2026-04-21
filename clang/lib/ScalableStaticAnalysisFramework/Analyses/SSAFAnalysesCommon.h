@@ -13,6 +13,7 @@
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ANALYSES_SSAFANALYSESCOMMON_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/JSON.h"
 
@@ -42,6 +43,18 @@ template <typename DeclOrExpr> bool hasPtrOrArrType(const DeclOrExpr *E) {
 
 llvm::Error makeEntityNameErr(clang::ASTContext &Ctx,
                               const clang::NamedDecl *D);
+
+/// Find all contributors in an AST.
+void findContributors(ASTContext &Ctx,
+                      std::vector<const NamedDecl *> &Contributors);
+
+/// Perform "MatchAction" on each Stmt and Decl belonging to the `Contributor`.
+/// \param Contributor
+/// \param MatchActionRef a reference (view) to a "MatchAction"
+void findMatchesIn(
+    const NamedDecl *Contributor,
+    llvm::function_ref<void(const DynTypedNode &)> MatchActionRef);
+
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ANALYSES_SSAFANALYSESCOMMON_H
