@@ -45,7 +45,7 @@ define i32 @local_alloca_simplifiable() {
 ; With cap=3, the global's AAPointerInfoFloating goes pessimistic
 ; after 3 accesses and the load cannot be simplified.
 
-@G = internal global i32 undef, align 4
+@G = internal global i32 poison, align 4
 
 define void @writer1() {
   store i32 42, ptr @G, align 4
