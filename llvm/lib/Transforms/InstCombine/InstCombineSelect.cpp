@@ -3348,11 +3348,6 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
 }
 
 static bool matchIsNotNaNTest(Value *Cond, Value *X, InstCombinerImpl &IC) {
-  // Match: fcmp ord X, X
-  if (match(Cond, m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Specific(X),
-                                          m_Specific(X)))))
-    return true;
-
   Instruction *CmpI;
   Value *Other;
 
@@ -3401,7 +3396,8 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
     return nullptr;
 
   auto *OuterCmp = cast<FCmpInst>(OuterCmpI);
-  if (!FCmpInst::isOrdered(OuterCmp->getPredicate()))
+  CmpInst::Predicate Pred = OuterCmp->getPredicate();
+  if (!FCmpInst::isOrdered(Pred))
     return nullptr;
 
   Value *Y = SI.getFalseValue();
@@ -3410,15 +3406,12 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   if (!X)
     return nullptr;
 
-  bool Swapped = false;
-  Value *OtherOp = nullptr;
-  if (match(Cmp0, m_OneUse(m_FAbs(m_Specific(InnerSel))))) {
-    OtherOp = Cmp1;
-  } else if (match(Cmp1, m_OneUse(m_FAbs(m_Specific(InnerSel))))) {
-    Swapped = true;
-    OtherOp = Cmp0;
-  } else {
-    return nullptr;
+  if (!match(Cmp0, m_OneUse(m_FAbs(m_Specific(InnerSel))))) {
+    if (!match(Cmp1, m_OneUse(m_FAbs(m_Specific(InnerSel)))))
+      return nullptr;
+
+    std::swap(Cmp0, Cmp1);
+    Pred = CmpInst::getSwappedPredicate(Pred);
   }
 
   Value *NewAbs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X);
@@ -3429,10 +3422,7 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   NewCmpFMF.setNoNaNs(false);
 
   Value *NewCmp =
-      Swapped ? IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(), OtherOp,
-                                         NewAbs, FMFSource(NewCmpFMF))
-              : IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(), NewAbs,
-                                         OtherOp, FMFSource(NewCmpFMF));
+      IC.Builder.CreateFCmpFMF(Pred, NewAbs, Cmp1, FMFSource(NewCmpFMF));
 
   Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
   return IC.replaceInstUsesWith(SI, NewSel);

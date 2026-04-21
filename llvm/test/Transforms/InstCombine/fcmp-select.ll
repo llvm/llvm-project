@@ -377,7 +377,7 @@ define double @test_fcmp_ord_commuted_select_fabs_fcmp_one_select_sitofp_nonnan(
 define double @test_fcmp_ord_select_fabs_rhs_fcmp_ogt_select_uitofp_nonnan(double %x, double %y, double %k, i32 %i) {
 ; CHECK-LABEL: @test_fcmp_ord_select_fabs_rhs_fcmp_ogt_select_uitofp_nonnan(
 ; CHECK:         [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[K:%.*]], [[ABS]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[ABS]], [[K:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
@@ -425,7 +425,7 @@ define double @test_fcmp_ord_select_fabs_fcmp_nnan_one_select_var_var(double %x,
 define double @test_fcmp_ord_select_fabs_rhs_fcmp_ogt_select_var_var(double %x, double %y, double %k) {
 ; CHECK-LABEL: @test_fcmp_ord_select_fabs_rhs_fcmp_ogt_select_var_var(
 ; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf ogt double [[K:%.*]], [[ABS]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf olt double [[ABS]], [[K:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select nnan i1 [[CMP]], double [[X]], double [[Y:%.*]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
