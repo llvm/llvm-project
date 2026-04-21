@@ -52,7 +52,7 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
 Error AsyncInfoWrapperTy::synchronize() {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
 
-  // Synchronize wit the async info operations without releasing the queue.
+  // Synchronize with the async info's operations without releasing the queue.
   return Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
 }
 

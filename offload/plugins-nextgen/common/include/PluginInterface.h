@@ -152,7 +152,8 @@ struct AsyncInfoWrapperTy {
   /// regardless of which async info this object wraps. The associated
   /// underlying queue (if any) will not be released. Calling this function does
   /// not obviate the need to call the finalize function later. This function is
-  /// intended only for specific use cases.
+  /// intended for specific use cases where a synchronous operation needs to
+  /// explicitly wait for the operations already on the queue.
   Error synchronize();
 
   /// Synchronize with the __tgt_async_info's pending operations if it's the
