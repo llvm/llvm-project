@@ -302,8 +302,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   }
 
   if (auto Err = launchImpl(GenericDevice, NumThreads, NumBlocks,
-                            DynBlockMemConf.NativeSize, KernelArgs, LaunchParams,
-                            AsyncInfoWrapper))
+                            DynBlockMemConf.NativeSize, KernelArgs,
+                            LaunchParams, AsyncInfoWrapper))
     return Err;
 
   if (RecordReplay) {
