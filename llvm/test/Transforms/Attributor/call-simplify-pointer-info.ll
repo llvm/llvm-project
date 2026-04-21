@@ -8,7 +8,7 @@ define internal i8 @read_arg(ptr %p) {
 ; CGSCC-LABEL: define {{[^@]+}}@read_arg
 ; CGSCC-SAME: (ptr nofree noundef nonnull readonly captures(none) dereferenceable(1022) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[L:%.*]] = load i8, ptr [[P]], align 1
+; CGSCC-NEXT:    [[L:%.*]] = load i8, ptr [[P]], align 1, !invariant.load [[META0:![0-9]+]]
 ; CGSCC-NEXT:    ret i8 [[L]]
 ;
 entry:
@@ -22,7 +22,7 @@ define internal i8 @read_arg_index(ptr %p, i64 %index) {
 ; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 16 captures(none) dereferenceable(1024) [[P:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[G:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
-; CGSCC-NEXT:    [[L:%.*]] = load i8, ptr [[G]], align 1
+; CGSCC-NEXT:    [[L:%.*]] = load i8, ptr [[G]], align 1, !invariant.load [[META0]]
 ; CGSCC-NEXT:    ret i8 [[L]]
 ;
 entry:
@@ -282,13 +282,15 @@ entry:
 }
 
 ;.
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: read) }
+; CGSCC: attributes #[[ATTR3]] = { nofree willreturn memory(read) }
+;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn memory(read) }
 ; TUNIT: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind willreturn memory(read) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
-; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: read) }
-; CGSCC: attributes #[[ATTR3]] = { nofree willreturn memory(read) }
+; CGSCC: [[META0]] = !{}
 ;.
