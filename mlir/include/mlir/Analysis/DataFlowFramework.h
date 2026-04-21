@@ -460,8 +460,7 @@ public:
 
   /// Fast-path predicate: true if any analysis loaded in this solver has
   /// opted into widening. Callers on the hot path should check this before
-  /// doing any further widening work. Derived from the configs map rather
-  /// than a redundant bool so there is only one source of truth.
+  /// doing any further widening work.
   bool hasWideningEnabled() const { return !wideningConfigs.empty(); }
 
   /// If widening is configured for `stateTypeID` and this state's merge-site
@@ -485,9 +484,7 @@ private:
   /// Configuration of the dataflow solver.
   DataFlowConfig config;
 
-  /// Per-state-type widening policy. Emptiness of this map is the canonical
-  /// answer to "is widening enabled for this solver"; see
-  /// `hasWideningEnabled`.
+  /// Per-state-type widening policy.
   struct WideningConfig {
     unsigned budget;
     WidenFn widen;
@@ -771,8 +768,7 @@ protected:
   /// Return the configuration of the solver used for this analysis.
   const DataFlowConfig &getSolverConfig() const { return solver.getConfig(); }
 
-  /// Return the solver that owns this analysis. Needed by sparse framework
-  /// code in subclasses (e.g. the merge-site widening path).
+  /// Return the solver that owns this analysis.
   DataFlowSolver &getSolver() { return solver; }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS

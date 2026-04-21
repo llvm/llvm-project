@@ -360,12 +360,11 @@ void AbstractSparseForwardDataFlowAnalysis::join(
     AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs) {
   ChangeResult changed = lhs->join(rhs);
   // Single fast-path branch when no analysis in this solver opted into
-  // widening. Well-predicted constant for any solver that never calls
-  // enableWidening, so this path is effectively free for constant-prop,
-  // liveness, dead-code, and SCCP. `tryWidenAtMerge` returns only the
-  // widening-induced delta so it cannot downgrade `changed`.
+  // widening.
   DataFlowSolver &s = getSolver();
   if (LLVM_UNLIKELY(s.hasWideningEnabled()))
+    // `tryWidenAtMerge` returns only the widening-induced delta so it
+    // cannot downgrade `changed`.
     changed |= s.tryWidenAtMerge(lhs, stateTypeID, changed);
   propagateIfChanged(lhs, changed);
 }
