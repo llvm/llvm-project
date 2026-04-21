@@ -206,6 +206,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswxdigit
     libc.src.wctype.iswpunct
     libc.src.wctype.iswprint
+    libc.src.wctype.iswctype
+    libc.src.wctype.wctype
 )
 
 if(LLVM_LIBC_FULL_BUILD)
