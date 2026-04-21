@@ -179,8 +179,7 @@ constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
   return b;
 }
 
-constexpr uint64_t hash_1to3_bytes(const char *s, size_t len,
-                                          uint64_t seed) {
+constexpr uint64_t hash_1to3_bytes(const char *s, size_t len, uint64_t seed) {
   uint8_t a = s[0];
   uint8_t b = s[len >> 1];
   uint8_t c = s[len - 1];
@@ -655,8 +654,8 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg) {
 }
 
 template <> struct DenseMapInfo<hash_code, void> {
-  static inline constexpr hash_code getEmptyKey() { return hash_code(-1); }
-  static inline constexpr hash_code getTombstoneKey() { return hash_code(-2); }
+  static constexpr hash_code getEmptyKey() { return hash_code(-1); }
+  static constexpr hash_code getTombstoneKey() { return hash_code(-2); }
   static constexpr unsigned getHashValue(hash_code val) {
     return static_cast<unsigned>(size_t(val));
   }
