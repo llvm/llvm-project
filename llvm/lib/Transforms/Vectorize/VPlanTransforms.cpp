@@ -71,9 +71,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *PhiR = dyn_cast<VPPhi>(&Ingredient)) {
         auto *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
-        NewRecipe = new VPWidenPHIRecipe(Phi, nullptr, PhiR->getDebugLoc());
-        for (VPValue *Op : PhiR->operands())
-          NewRecipe->addOperand(Op);
+        NewRecipe = new VPWidenPHIRecipe(PhiR->operands(), PhiR->getDebugLoc(),
+                                         Phi->getName());
       } else if (auto *VPI = dyn_cast<VPInstruction>(&Ingredient)) {
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryRecipe for loads and stores.
@@ -3899,9 +3898,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
                               DebugLoc::getUnknown(), "induction");
 
   // Create the widened phi of the vector IV.
-  auto *WidePHI = new VPWidenPHIRecipe(WidenIVR->getPHINode(), Init,
-                                       WidenIVR->getDebugLoc(), "vec.ind");
-  WidePHI->insertBefore(WidenIVR);
+  auto *WidePHI = VPBuilder(WidenIVR).createWidenPhi(
+      Init, WidenIVR->getDebugLoc(), "vec.ind");
 
   // Create the backedge value for the vector IV.
   VPValue *Inc;
