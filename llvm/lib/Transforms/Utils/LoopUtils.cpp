@@ -1326,7 +1326,8 @@ Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
 }
 
 Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
-                                    unsigned RdxOpcode, Value *Acc) {
+                                    unsigned RdxOpcode, Value *Acc,
+                                    DominatorTree *DT, LoopInfo *LI) {
   auto *VTy = cast<VectorType>(Vec->getType());
   Type *EltTy = VTy->getElementType();
   Function *F = Builder.GetInsertBlock()->getParent();
@@ -1339,8 +1340,8 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
 
   BasicBlock *EntryBB = Builder.GetInsertBlock();
   BasicBlock *LoopBB = BasicBlock::Create(F->getContext(), "rdx.loop", F);
-  BasicBlock *ExitBB =
-      EntryBB->splitBasicBlock(Builder.GetInsertPoint(), "rdx.exit");
+  BasicBlock *ExitBB = SplitBlock(EntryBB, Builder.GetInsertPoint(), DT, LI,
+                                  nullptr, "rdx.exit");
 
   EntryBB->getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(EntryBB);
@@ -1363,6 +1364,23 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
 
   Value *Done = Builder.CreateICmpEQ(NextIV, NumElts, "rdx.done");
   Builder.CreateCondBr(Done, ExitBB, LoopBB);
+
+  // SplitBlock above updated DT/LI for EntryBB -> ExitBB. Now update
+  // for replacing that edge with EntryBB -> LoopBB -> {ExitBB, LoopBB}.
+  if (DT)
+    DT->applyUpdates({{DominatorTree::Insert, EntryBB, LoopBB},
+                       {DominatorTree::Insert, LoopBB, LoopBB},
+                       {DominatorTree::Insert, LoopBB, ExitBB},
+                       {DominatorTree::Delete, EntryBB, ExitBB}});
+
+  if (LI) {
+    Loop *NewLoop = LI->AllocateLoop();
+    if (Loop *ParentLoop = LI->getLoopFor(EntryBB))
+      ParentLoop->addChildLoop(NewLoop);
+    else
+      LI->addTopLevelLoop(NewLoop);
+    NewLoop->addBasicBlockToLoop(LoopBB, *LI);
+  }
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return Res;
