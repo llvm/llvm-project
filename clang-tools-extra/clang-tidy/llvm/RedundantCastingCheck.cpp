@@ -30,7 +30,7 @@ namespace clang::tidy::llvm_check {
 namespace {
 AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
 AST_MATCHER_P(OverloadExpr, hasAnyUnresolvedName, ArrayRef<StringRef>, Names) {
-  auto DeclName = Node.getName();
+  DeclarationName DeclName = Node.getName();
   if (!DeclName.isIdentifier())
     return false;
   const IdentifierInfo *II = DeclName.getAsIdentifierInfo();
@@ -111,7 +111,7 @@ static bool isLLVMNamespace(NestedNameSpecifier NNS) {
 }
 
 void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto &Nodes = Result.Nodes;
+  const BoundNodes &Nodes = Result.Nodes;
   const auto *Call = Nodes.getNodeAs<CallExpr>("call");
 
   ArrayRef<TemplateArgumentLoc> TArgLocs;
@@ -135,14 +135,14 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   llvm::SmallVector<CanQualType, 4> TargetTypes;
-  for (const auto &TArgLoc : TArgLocs) {
+  for (const TemplateArgumentLoc &TArgLoc : TArgLocs) {
     const TemplateArgument TArg = TArgLoc.getArgument();
     if (TArg.getKind() == TemplateArgument::Type) {
       const CanQualType TargetTy =
           TArg.getAsType()->getCanonicalTypeUnqualified();
       TargetTypes.emplace_back(TargetTy);
     } else if (TArg.getKind() == TemplateArgument::Pack) {
-      for (const auto &E : TArg.pack_elements()) {
+      for (const TemplateArgument &E : TArg.pack_elements()) {
         if (E.getKind() != TemplateArgument::Type)
           return;
         TargetTypes.emplace_back(E.getAsType()->getCanonicalTypeUnqualified());
@@ -152,7 +152,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     }
   }
 
-  const auto *Arg = Call->getArg(0);
+  const Expr *Arg = Call->getArg(0);
   const QualType ArgTy = Arg->getType();
   const QualType ArgPointeeTy = stripPointerOrReference(ArgTy);
   const CanQualType FromTy = ArgPointeeTy->getCanonicalTypeUnqualified();
