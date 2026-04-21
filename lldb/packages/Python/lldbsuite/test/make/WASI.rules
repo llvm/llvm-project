@@ -1,0 +1,14 @@
+USE_SYSTEM_STDLIB = 1
+
+ifneq "$(RESOURCE_DIR)" ""
+  ARCH_CFLAGS += -resource-dir $(RESOURCE_DIR)
+endif
+
+ARCH_CXXFLAGS += \
+	-fno-exceptions
+
+ARCH_LDFLAGS += \
+	$(if $(RESOURCE_DIR),-resource-dir $(RESOURCE_DIR)) \
+	-Wl,--export-all \
+	-Wl,--no-entry \
+	-Wl,--allow-undefined

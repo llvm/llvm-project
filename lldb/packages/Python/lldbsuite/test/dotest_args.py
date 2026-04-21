@@ -107,6 +107,15 @@ def create_parser():
         help=textwrap.dedent("Specify which dsymutil to use."),
     )
     group.add_argument(
+        "--resource-dir",
+        metavar="dir",
+        dest="resource_dir",
+        default="",
+        help=textwrap.dedent(
+            "Specify the clang resource directory for cross-compiling test inferiors."
+        ),
+    )
+    group.add_argument(
         "--llvm-tools-dir",
         metavar="dir",
         dest="llvm_tools_dir",
