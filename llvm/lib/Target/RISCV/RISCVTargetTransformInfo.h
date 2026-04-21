@@ -415,7 +415,6 @@ public:
         Intrinsic::vp_select,
         Intrinsic::vp_sext,
         Intrinsic::vp_shl,
-        Intrinsic::vp_sqrt,
         Intrinsic::vp_srem,
         Intrinsic::vp_store,
         Intrinsic::vp_sub,
