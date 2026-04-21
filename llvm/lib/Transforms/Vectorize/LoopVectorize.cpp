@@ -4125,7 +4125,7 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
           assert(RdxResult &&
                  "FindIV reduction must have ComputeReductionResult");
           return any_of(RdxResult->users(),
-                        [](VPUser *U) { return !isa<VPInstruction>(U); });
+                        std::not_fn(IsaPred<VPInstruction>));
         }
         return false;
       });
@@ -8639,8 +8639,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   // be dead.
   if (!EPI.VectorTripCount) {
     assert(EPResumeVal->getNumIncomingValues() > 0 &&
-           all_of(EPResumeVal->incoming_values(),
-                  [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
+           all_of(EPResumeVal->incoming_values(), match_fn(m_SpecificInt(0))) &&
            "all incoming values must be 0");
     EPI.VectorTripCount = EPResumeVal->getOperand(0);
   }
@@ -9036,8 +9035,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (LVL.hasUncountableEarlyExit()) {
     BasicBlock *LoopLatch = L->getLoopLatch();
     if (IAI.requiresScalarEpilogue() ||
-        any_of(LVL.getCountableExitingBlocks(),
-               [LoopLatch](BasicBlock *BB) { return BB != LoopLatch; })) {
+        any_of(LVL.getCountableExitingBlocks(), not_equal_to(LoopLatch))) {
       reportVectorizationFailure("Auto-vectorization of early exit loops "
                                  "requiring a scalar epilogue is unsupported",
                                  "UncountableEarlyExitUnsupported", ORE, L);
