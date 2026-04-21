@@ -1867,13 +1867,13 @@ namespace {
 struct CIEKey {
   CIEKey() = default;
 
-  explicit CIEKey(const MCDwarfFrameInfo &Frame)
-      : Personality(Frame.Personality),
-        PersonalityEncoding(Frame.PersonalityEncoding),
-        LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
-        IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
-        IsBKeyFrame(Frame.IsBKeyFrame),
-        IsMTETaggedFrame(Frame.IsMTETaggedFrame) {}
+  CIEKey(const MCDwarfFrameInfo &Frame, bool IsEH)
+      : Personality(IsEH ? Frame.Personality : nullptr),
+        PersonalityEncoding(IsEH ? Frame.PersonalityEncoding : 0),
+        LsdaEncoding(IsEH ? Frame.LsdaEncoding : 0),
+        IsSignalFrame(Frame.IsSignalFrame), IsSimple(Frame.IsSimple),
+        RAReg(Frame.RAReg), IsBKeyFrame(Frame.IsBKeyFrame),
+        IsMTETaggedFrame(Frame.IsMTETaggedFrame), IsEH(IsEH) {}
 
   StringRef PersonalityName() const {
     if (!Personality)
@@ -1884,18 +1884,21 @@ struct CIEKey {
   bool operator<(const CIEKey &Other) const {
     return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
                            IsSignalFrame, IsSimple, RAReg, IsBKeyFrame,
-                           IsMTETaggedFrame) <
+                           IsMTETaggedFrame, IsEH) <
            std::make_tuple(Other.PersonalityName(), Other.PersonalityEncoding,
                            Other.LsdaEncoding, Other.IsSignalFrame,
                            Other.IsSimple, Other.RAReg, Other.IsBKeyFrame,
-                           Other.IsMTETaggedFrame);
+                           Other.IsMTETaggedFrame, Other.IsEH);
   }
 
   bool operator==(const CIEKey &Other) const {
-    return Personality == Other.Personality &&
-           PersonalityEncoding == Other.PersonalityEncoding &&
-           LsdaEncoding == Other.LsdaEncoding &&
-           IsSignalFrame == Other.IsSignalFrame && IsSimple == Other.IsSimple &&
+    if (IsEH != Other.IsEH)
+      return false;
+    if (IsEH && (Personality != Other.Personality ||
+                 PersonalityEncoding != Other.PersonalityEncoding ||
+                 LsdaEncoding != Other.LsdaEncoding))
+      return false;
+    return IsSignalFrame == Other.IsSignalFrame && IsSimple == Other.IsSimple &&
            RAReg == Other.RAReg && IsBKeyFrame == Other.IsBKeyFrame &&
            IsMTETaggedFrame == Other.IsMTETaggedFrame;
   }
@@ -1909,6 +1912,7 @@ struct CIEKey {
   unsigned RAReg = UINT_MAX;
   bool IsBKeyFrame = false;
   bool IsMTETaggedFrame = false;
+  bool IsEH = false;
 };
 
 } // end anonymous namespace
@@ -1960,8 +1964,9 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   // an FDE refers to a CIE other than the closest previous CIE.
   std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
   llvm::stable_sort(FrameArrayX,
-                    [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
-                      return CIEKey(X) < CIEKey(Y);
+                    [IsEH](const MCDwarfFrameInfo &X,
+                           const MCDwarfFrameInfo &Y) {
+                      return CIEKey(X, IsEH) < CIEKey(Y, IsEH);
                     });
   CIEKey LastKey;
   const MCSymbol *LastCIEStart = nullptr;
@@ -1978,7 +1983,7 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
       // section, do not emit anything.
       continue;
 
-    CIEKey Key(Frame);
+    CIEKey Key(Frame, IsEH);
     if (!LastCIEStart || Key != LastKey) {
       LastKey = Key;
       LastCIEStart = &Emitter.EmitCIE(Frame);
