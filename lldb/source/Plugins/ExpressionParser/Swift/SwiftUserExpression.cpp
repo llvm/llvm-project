@@ -921,7 +921,6 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       parse_result = GetTextAndSetExpressionParser(
           second_try_diagnostic_manager, source_code, exe_ctx, exe_scope);
 
-        diagnostic_manager.Consume(std::move(second_try_diagnostic_manager));
         if (parse_result == SwiftExpressionParser::ParseResult::success ||
             first_expression_not_supported)
           // If we succeeded the second time around, copy any diagnostics we
