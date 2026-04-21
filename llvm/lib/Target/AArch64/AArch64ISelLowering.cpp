@@ -23128,15 +23128,13 @@ static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
   if (CC == AArch64CC::HI) {
     if (!Flags.hasOneUse())
       return SDValue();
-    // Skip only-borrow + encodable cmp immediate: swap costs a mov with
-    // no savings to offset it.
+    // Skip when the outer SUB can't be eliminated and the swap would cost a mov.
     auto *RHSC = dyn_cast<ConstantSDNode>(Flags.getOperand(1));
-    if (!CanFoldSub && RHSC && isLegalCmpImmed(RHSC->getAPIntValue()))
+    if ((!CanFoldSub || !N0.hasOneUse()) && RHSC &&
+        isLegalCmpImmed(RHSC->getAPIntValue()))
       return SDValue();
-    EVT SubsVT = Flags.getNode()->getValueType(0);
-    Flags = DAG.getNode(AArch64ISD::SUBS, SDLoc(Flags),
-                        DAG.getVTList(SubsVT, FlagsVT), Flags.getOperand(1),
-                        Flags.getOperand(0))
+    Flags = DAG.getNode(AArch64ISD::SUBS, SDLoc(Flags), Flags->getVTList(),
+                        Flags.getOperand(1), Flags.getOperand(0))
                 .getValue(1);
   }
 
