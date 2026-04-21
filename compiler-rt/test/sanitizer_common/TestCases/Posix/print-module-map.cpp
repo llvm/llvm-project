@@ -19,7 +19,7 @@
 // XFAIL: msan && target={{.*linux.*}}
 
 // FIXME: Implement.
-// XFAIL: lsan, hwasan, tysan
+// XFAIL: lsan, hwasan
 
 int global;
 

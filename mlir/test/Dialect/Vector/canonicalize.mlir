@@ -2202,6 +2202,26 @@ func.func @masked_vector_multi_reduction_single_parallel(%arg0: vector<2xf32>, %
 
 // -----
 
+// CHECK-LABEL: func @vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[v:.*]]: vector<2x3xf32>,
+func.func @vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>) -> vector<2x3xf32> {
+    %0 = vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32>
+//       CHECK:   return %[[v]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[VAL_0:.*]]: vector<2x3xf32>, %{{.*}}: vector<2x3xf32>,
+func.func @masked_vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>, %mask: vector<2x3xi1>) -> vector<2x3xf32> {
+    %0 = vector.mask %mask { vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32> } : vector<2x3xi1> -> vector<2x3xf32>
+//       CHECK:   return %[[VAL_0]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @vector_multi_reduction_unit_dimensions(
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4x1x20xf32>, %[[ACC:.+]]: vector<5x4x20xf32>
 func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x4x20xf32>) -> vector<5x4x20xf32> {
@@ -2814,6 +2834,16 @@ func.func @shuffle_both_operands_used(%v0 : vector<3xi32>, %v1 : vector<3xi32>) 
 func.func @shuffle_poison_unused(%1: vector<2xi32>) -> vector<4xi32> {
   %0 = ub.poison : vector<2xi32>
   %r = vector.shuffle %0, %1 [0, 1, -1, -1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_poison_into_mask
+//       CHECK:   vector.shuffle %{{.*}}, %{{.*}} [-1, -1, 2, -1] : vector<2xi32>, vector<2xi32>
+func.func @fold_poison_into_mask(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, 2, 1] : vector<2xi32>, vector<2xi32>
   return %r : vector<4xi32>
 }
 

@@ -85,9 +85,7 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   // Add Control Flow Guard checks.
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSWindows())
-    addFunctionPass(CFGuardPass(TT.isX86_64() ? CFGuardPass::Mechanism::Dispatch
-                                              : CFGuardPass::Mechanism::Check),
-                    PMW);
+    addFunctionPass(CFGuardPass(), PMW);
 
   if (TM.Options.JMCInstrument) {
     flushFPMsToMPM(PMW);
@@ -181,8 +179,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   }
 
   addMachineFunctionPass(X86IndirectBranchTrackingPass(), PMW);
-  // TODO(boomanaiden154): Add X86IssueVZeroUpperPass here once it has been
-  // ported.
+  addMachineFunctionPass(X86InsertVZeroUpperPass(), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(X86FixupBWInstsPass(), PMW);
