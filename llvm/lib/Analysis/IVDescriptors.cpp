@@ -1011,16 +1011,19 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
     return InstDesc(Kind == RecurKind::FMul, I,
                     I->hasAllowReassoc() ? nullptr : I);
   case Instruction::FSub:
-    return InstDesc(Kind == RecurKind::FSub || Kind == RecurKind::FAdd, I,
-                    I->hasAllowReassoc() ? nullptr : I);
+    return InstDesc(Kind == RecurKind::FSub ||
+                        Kind == RecurKind::FAddChainWithSubs,
+                    I, I->hasAllowReassoc() ? nullptr : I);
   case Instruction::FAdd:
-    return InstDesc(Kind == RecurKind::FAdd, I,
-                    I->hasAllowReassoc() ? nullptr : I);
+    return InstDesc(Kind == RecurKind::FAdd ||
+                        Kind == RecurKind::FAddChainWithSubs,
+                    I, I->hasAllowReassoc() ? nullptr : I);
   case Instruction::Select:
     if (Kind == RecurKind::FAdd || Kind == RecurKind::FSub ||
         Kind == RecurKind::FMul || Kind == RecurKind::Add ||
         Kind == RecurKind::Mul || Kind == RecurKind::Sub ||
-        Kind == RecurKind::AddChainWithSubs)
+        Kind == RecurKind::AddChainWithSubs ||
+        Kind == RecurKind::FAddChainWithSubs)
       return isConditionalRdxPattern(I);
     if (isFindRecurrenceKind(Kind) && SE)
       return isFindPattern(L, OrigPhi, I, *SE);
@@ -1115,6 +1118,12 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   }
   if (AddReductionVar(Phi, RecurKind::FAdd, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an FAdd reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::FAddChainWithSubs, TheLoop, RedDes, DB,
+                      AC, DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a chained FADD-FSUB chained reduction PHI."
+                      << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::FMulAdd, TheLoop, RedDes, DB, AC, DT,
@@ -1233,6 +1242,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMul:
     return Instruction::FMul;
   case RecurKind::FMulAdd:
+  case RecurKind::FAddChainWithSubs:
   case RecurKind::FAdd:
     return Instruction::FAdd;
   case RecurKind::FSub:
@@ -1310,6 +1320,10 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
       return true;
 
     if (Cur->getOpcode() == Instruction::Sub &&
+        Kind == RecurKind::AddChainWithSubs)
+      return true;
+
+    if (Cur->getOpcode() == Instruction::FSub &&
         Kind == RecurKind::AddChainWithSubs)
       return true;
 
