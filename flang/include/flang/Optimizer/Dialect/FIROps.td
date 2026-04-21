@@ -3311,6 +3311,29 @@ def fir_UseStmtOp
 
 def ImplicitFirTerminator : SingleBlockImplicitTerminator<"FirEndOp">;
 
+def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
+    MemoryEffects<[MemWrite<DebuggingResource>]>,
+    IsolatedFromAbove,
+    ImplicitFirTerminator
+  ]> {
+  let summary = "USE statements inside a Fortran module";
+  let description = [{
+    Records the Fortran `USE` statements that appear in a module's specification
+    part for debug metadata.
+
+    The region holds one `fir.use_stmt` per `USE`, in program order. This
+    operation has no runtime effect. It is emitted only when full debug
+    information is requested.
+  }];
+
+  let arguments = (ins StrAttr:$module_name);
+  let regions = (region SizedRegion<1>:$uses);
+
+  let assemblyFormat = [{
+    $module_name attr-dict-with-keyword $uses
+  }];
+}
+
 def fir_TypeInfoOp : fir_Op<"type_info",
     [IsolatedFromAbove, Symbol, ImplicitFirTerminator]> {
   let summary = "Derived type information";

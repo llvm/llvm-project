@@ -3695,6 +3695,19 @@ struct UseStmtOpConversion : public fir::FIROpConversion<fir::UseStmtOp> {
   }
 };
 
+/// Erase `fir.module_debug_imports` during LLVM lowering (debug metadata only).
+struct ModuleDebugImportsOpConversion
+    : public fir::FIROpConversion<fir::ModuleDebugImportsOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::ModuleDebugImportsOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
                         std::optional<mlir::ValueRange> destOps,
                         mlir::ConversionPatternRewriter &rewriter,
@@ -4813,8 +4826,9 @@ void fir::populateFIRToLLVMConversionPatterns(
       StoreOpConversion, StringLitOpConversion, SubcOpConversion,
       TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
       UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
-      UseStmtOpConversion, XArrayCoorOpConversion, XEmboxOpConversion,
-      XReboxOpConversion, ZeroOpConversion>(converter, options);
+      UseStmtOpConversion, ModuleDebugImportsOpConversion,
+      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
+      ZeroOpConversion>(converter, options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.
