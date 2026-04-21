@@ -152,12 +152,10 @@ int llvm_debuginfod_find_main(int argc, char **argv,
 
 // Find a debug file in local build ID directories and via debuginfod.
 std::string fetchDebugInfo(object::BuildIDRef BuildID) {
-  Expected<std::string> PathOrErr =
-      DebuginfodFetcher(DebugFileDirectory).fetch(BuildID);
-  if (PathOrErr)
-    return *PathOrErr;
-  errs() << "Build ID " << llvm::toHex(BuildID, /*Lowercase=*/true) << ": "
+  if (std::optional<std::string> Path =
+          DebuginfodFetcher(DebugFileDirectory).fetch(BuildID))
+    return *Path;
+  errs() << "Build ID " << llvm::toHex(BuildID, /*Lowercase=*/true)
          << " could not be found.\n";
-  consumeError(PathOrErr.takeError());
   exit(1);
 }
