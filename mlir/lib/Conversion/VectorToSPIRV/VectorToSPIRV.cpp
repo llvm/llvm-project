@@ -447,7 +447,6 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
         INT_OR_FLOAT_CASE(MINSI, SPIRVSMinOp);
         INT_OR_FLOAT_CASE(MAXUI, SPIRVUMaxOp);
         INT_OR_FLOAT_CASE(MAXSI, SPIRVSMaxOp);
-
         INT_CASE(AND, BitwiseAndOp);
         INT_CASE(OR, BitwiseOrOp);
         INT_CASE(XOR, BitwiseXorOp);
