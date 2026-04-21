@@ -23128,7 +23128,8 @@ static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
   if (CC == AArch64CC::HI) {
     if (!Flags.hasOneUse())
       return SDValue();
-    // Skip when the outer SUB can't be eliminated and the swap would cost a mov.
+    // Skip when the outer SUB can't be eliminated and the swap would cost a
+    // mov.
     auto *RHSC = dyn_cast<ConstantSDNode>(Flags.getOperand(1));
     if ((!CanFoldSub || !N0.hasOneUse()) && RHSC &&
         isLegalCmpImmed(RHSC->getAPIntValue()))
