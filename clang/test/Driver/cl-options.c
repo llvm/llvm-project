@@ -377,6 +377,7 @@
 
 // For some warning ids, we can map from MSVC warning to Clang warning.
 // RUN: %clang_cl -wd4005 -wd4100 -wd4910 -wd4996 -wd12345678 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
+// RUN: %clang_cl /wd 4005 /wd 4100 /wd 4910 /wd 4996 /wd 12345678 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
 // Wno: "-cc1"
 // Wno: "-Wno-macro-redefined"
 // Wno: "-Wno-unused-parameter"
