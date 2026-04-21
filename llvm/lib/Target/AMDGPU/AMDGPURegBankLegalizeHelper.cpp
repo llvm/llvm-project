@@ -1405,10 +1405,27 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     }));
     return true;
   }
-  case ApplyINTRIN_IMAGE:
-    return applyRegisterBanksINTRIN_IMAGE(MI);
-  case ApplyBVH_INTERSECT_RAY:
-    return applyRegisterBanksBVH_INTERSECT_RAY(MI);
+  case ApplyINTRIN_IMAGE: {
+    const AMDGPU::RsrcIntrinsic *RSrcIntrin =
+        AMDGPU::lookupRsrcIntrinsic(AMDGPU::getIntrinsicID(MI));
+    assert(RSrcIntrin && RSrcIntrin->IsImage);
+    // The reported argument index is relative to the IR intrinsic call
+    // arguments, so shift by the number of defs and the intrinsic ID.
+    unsigned RsrcIdx = RSrcIntrin->RsrcArg + MI.getNumExplicitDefs() + 1;
+    return applyRegisterBanksVgprWithSgprRsrc(MI, RsrcIdx);
+  }
+  case ApplyBVH_INTERSECT_RAY: {
+    // Rsrc is the last register operand. Base BVH trails an A16 immediate
+    // after rsrc; dual/BVH8 do not. Scan backwards for the last virtual
+    // register.
+    unsigned RsrcIdx = MI.getNumOperands();
+    while (RsrcIdx-- > MI.getNumExplicitDefs()) {
+      const MachineOperand &Op = MI.getOperand(RsrcIdx);
+      if (Op.isReg() && Op.getReg().isVirtual())
+        break;
+    }
+    return applyRegisterBanksVgprWithSgprRsrc(MI, RsrcIdx);
+  }
   case SplitBitCount64To32:
     return lowerSplitBitCount64To32(MI);
   case ExtrVecEltToSel:
@@ -2104,85 +2121,9 @@ bool RegBankLegalizeHelper::applyMappingSrc(
   return true;
 }
 
-bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
-  const AMDGPU::RsrcIntrinsic *RSrcIntrin =
-      AMDGPU::lookupRsrcIntrinsic(AMDGPU::getIntrinsicID(MI));
-  assert(RSrcIntrin && RSrcIntrin->IsImage);
-
-  unsigned RsrcIdx = RSrcIntrin->RsrcArg;
+bool RegBankLegalizeHelper::applyRegisterBanksVgprWithSgprRsrc(
+    MachineInstr &MI, unsigned RsrcIdx) {
   const unsigned NumDefs = MI.getNumExplicitDefs();
-
-  // The reported argument index is relative to the IR intrinsic call arguments,
-  // so we need to shift by the number of defs and the intrinsic ID.
-  RsrcIdx += NumDefs + 1;
-
-  MachineBasicBlock *MBB = MI.getParent();
-  B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(MI.getIterator())));
-
-  // Defs(for image loads with return) are vgpr.
-  for (unsigned i = 0; i < NumDefs; ++i) {
-    const RegisterBank *RB = MRI.getRegBank(MI.getOperand(i).getReg());
-    if (RB == VgprRB)
-      continue;
-
-    Register Reg = MI.getOperand(i).getReg();
-    Register NewVgprDst = MRI.createVirtualRegister({VgprRB, MRI.getType(Reg)});
-    MI.getOperand(i).setReg(NewVgprDst);
-    buildReadAnyLane(B, Reg, NewVgprDst, RBI);
-  }
-
-  B.setInstrAndDebugLoc(MI);
-
-  // Register uses(before RsrcIdx) are vgpr.
-  for (unsigned i = 1; i < RsrcIdx; ++i) {
-    MachineOperand &Op = MI.getOperand(i);
-    if (!Op.isReg())
-      continue;
-
-    Register Reg = Op.getReg();
-    if (!Reg.isVirtual())
-      continue;
-
-    if (MRI.getRegBank(Reg) == VgprRB)
-      continue;
-
-    auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
-    Op.setReg(Copy.getReg(0));
-  }
-
-  SmallSet<Register, 4> OpsToWaterfall;
-
-  // Register use RsrcIdx(and RsrcIdx+1 in some cases) is sgpr.
-  for (unsigned i = RsrcIdx; i < MI.getNumOperands(); ++i) {
-    MachineOperand &Op = MI.getOperand(i);
-    if (!Op.isReg())
-      continue;
-
-    Register Reg = Op.getReg();
-    if (MRI.getRegBank(Reg) != SgprRB)
-      OpsToWaterfall.insert(Reg);
-  }
-
-  if (!OpsToWaterfall.empty()) {
-    MachineBasicBlock::iterator MII = MI.getIterator();
-    executeInWaterfallLoop(B, {OpsToWaterfall, MII, std::next(MII)});
-  }
-
-  return true;
-}
-
-bool RegBankLegalizeHelper::applyRegisterBanksBVH_INTERSECT_RAY(
-    MachineInstr &MI) {
-  const unsigned NumDefs = MI.getNumExplicitDefs();
-
-  // Rsrc is the last register operand. Base BVH trails an A16 immediate after
-  // rsrc; dual/BVH8 do not. Scan backwards for the last virtual register.
-  unsigned RsrcIdx = MI.getNumOperands();
-  while (RsrcIdx-- > NumDefs) {
-    const MachineOperand &Op = MI.getOperand(RsrcIdx);
-    if (Op.isReg() && Op.getReg().isVirtual())
-      break;
-  }
 
   MachineBasicBlock *MBB = MI.getParent();
   B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(MI.getIterator())));
@@ -2200,8 +2141,8 @@ bool RegBankLegalizeHelper::applyRegisterBanksBVH_INTERSECT_RAY(
 
   B.setInstrAndDebugLoc(MI);
 
-  // Register uses(before RsrcIdx) are vgpr.
-  for (unsigned i = NumDefs + 1; i < RsrcIdx; ++i) {
+  // Register uses before RsrcIdx are vgpr.
+  for (unsigned i = NumDefs; i < RsrcIdx; ++i) {
     MachineOperand &Op = MI.getOperand(i);
     if (!Op.isReg())
       continue;
@@ -2219,10 +2160,16 @@ bool RegBankLegalizeHelper::applyRegisterBanksBVH_INTERSECT_RAY(
 
   SmallSet<Register, 4> OpsToWaterfall;
 
-  // Register use RsrcIdx is sgpr.
-  Register RsrcReg = MI.getOperand(RsrcIdx).getReg();
-  if (MRI.getRegBank(RsrcReg) != SgprRB)
-    OpsToWaterfall.insert(RsrcReg);
+  // Register use RsrcIdx (and later register operands) is sgpr.
+  for (unsigned i = RsrcIdx; i < MI.getNumOperands(); ++i) {
+    MachineOperand &Op = MI.getOperand(i);
+    if (!Op.isReg())
+      continue;
+
+    Register Reg = Op.getReg();
+    if (MRI.getRegBank(Reg) != SgprRB)
+      OpsToWaterfall.insert(Reg);
+  }
 
   if (!OpsToWaterfall.empty()) {
     MachineBasicBlock::iterator MII = MI.getIterator();
