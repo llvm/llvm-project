@@ -5625,11 +5625,11 @@ define i64 @trunc_with_first_order_recurrence() {
 entry:
   br label %loop
 
-exit:                                        ; preds = %loop
+exit:
   %.lcssa = phi i64 [ %c23, %loop ]
   ret i64 %.lcssa
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %c5 = phi i64 [ %c23, %loop ], [ 0, %entry ]
   %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ 1, %entry ]
   %x = phi i32 [ %c24, %loop ], [ 1, %entry ]

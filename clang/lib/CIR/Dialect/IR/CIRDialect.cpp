@@ -918,6 +918,10 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     return ::mlir::failure();
   }
 
+  if (parser.parseOptionalKeyword("musttail").succeeded())
+    result.addAttribute(CIRDialect::getMustTailAttrName(),
+                        mlir::UnitAttr::get(parser.getContext()));
+
   if (parser.parseOptionalKeyword("nothrow").succeeded())
     result.addAttribute(CIRDialect::getNoThrowAttrName(),
                         mlir::UnitAttr::get(parser.getContext()));
@@ -1020,6 +1024,9 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
     printer << tryCall.getUnwindDest();
   }
 
+  if (op->hasAttr(CIRDialect::getMustTailAttrName()))
+    printer << " musttail";
+
   if (isNothrow)
     printer << " nothrow";
 
@@ -1031,6 +1038,7 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
 
   llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
       CIRDialect::getCalleeAttrName(),
+      CIRDialect::getMustTailAttrName(),
       CIRDialect::getNoThrowAttrName(),
       CIRDialect::getSideEffectAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName(),
@@ -1447,6 +1455,43 @@ void cir::CleanupScopeOp::getSuccessorRegions(
 mlir::ValueRange
 cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
   return ValueRange();
+}
+
+LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
+                                                PatternRewriter &rewriter) {
+  auto isRegionTrivial = [](Region &region) {
+    assert(!region.empty() && "CleanupScopeOp regions must not be empty");
+    if (!region.hasOneBlock())
+      return false;
+    Block &block = llvm::getSingleElement(region);
+    return llvm::hasSingleElement(block) &&
+           isa<cir::YieldOp>(llvm::getSingleElement(block));
+  };
+
+  Region &body = op.getBodyRegion();
+  Region &cleanup = op.getCleanupRegion();
+
+  // An EH-only cleanup scope with an empty body can never trigger its cleanup
+  // region — there are no operations in the body that could throw. Erase it.
+  if (op.getCleanupKind() == CleanupKind::EH && isRegionTrivial(body)) {
+    rewriter.eraseOp(op);
+    return success();
+  }
+
+  // A cleanup scope with a trivial cleanup region has no cleanup to perform.
+  // Inline the body into the parent block and erase the scope.
+  if (!isRegionTrivial(cleanup) || !body.hasOneBlock())
+    return failure();
+
+  Block &bodyBlock = body.front();
+  if (!isa<cir::YieldOp>(bodyBlock.getTerminator()))
+    return failure();
+
+  Operation *yield = bodyBlock.getTerminator();
+  rewriter.inlineBlockBefore(&bodyBlock, op);
+  rewriter.eraseOp(yield);
+  rewriter.eraseOp(op);
+  return success();
 }
 
 void cir::CleanupScopeOp::build(
@@ -3640,7 +3685,7 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
                           [&](Value value) {
                             p.printOperand(value);
                             p << " : " << value.getType();
-                            if (*attrIt)
+                            if (mlir::isa<mlir::UnitAttr>(*attrIt))
                               p << " (maybe_memory)";
                             attrIt++;
                           });
@@ -3760,7 +3805,7 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
         size++;
 
         if (parser.parseOptionalLParen().failed()) {
-          operandAttrs.push_back(mlir::Attribute());
+          operandAttrs.push_back(mlir::DictionaryAttr::get(ctxt));
           return mlir::success();
         }
 
@@ -3803,11 +3848,11 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
   if (parser.parseOptionalKeyword("side_effects").succeeded())
     result.attributes.set("side_effects", UnitAttr::get(ctxt));
 
-  if (parser.parseOptionalArrow().succeeded() &&
-      parser.parseType(resType).failed())
+  if (parser.parseOptionalAttrDict(result.attributes).failed())
     return mlir::failure();
 
-  if (parser.parseOptionalAttrDict(result.attributes).failed())
+  if (parser.parseOptionalArrow().succeeded() &&
+      parser.parseType(resType).failed())
     return mlir::failure();
 
   result.attributes.set("asm_flavor", AsmFlavorAttr::get(ctxt, *flavor));

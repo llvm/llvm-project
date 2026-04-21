@@ -46,6 +46,7 @@
 #include "ToolChains/SPIRV.h"
 #include "ToolChains/SPIRVOpenMP.h"
 #include "ToolChains/SYCL.h"
+#include "ToolChains/Serenity.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
 #include "ToolChains/UEFI.h"
@@ -1626,7 +1627,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (const Arg *A = Args.getLastArg(options::OPT_target))
     TargetTriple = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT_ccc_install_dir))
-    Dir = Dir = A->getValue();
+    Dir = A->getValue();
   for (const Arg *A : Args.filtered(options::OPT_B)) {
     A->claim();
     PrefixDirs.push_back(A->getValue(0));
@@ -4750,7 +4751,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  if (C.getDefaultToolChain().getTriple().isDXIL()) {
+  llvm::Triple TargetTriple(C.getDriver().getTargetTriple());
+  if (TargetTriple.getOS() == llvm::Triple::Vulkan ||
+      TargetTriple.getOS() == llvm::Triple::ShaderModel) {
     const auto &TC =
         static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
 
@@ -4764,11 +4767,16 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
             C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_Object));
     }
 
-    // Call validator for dxil when -Vd not in Args.
-    if (TC.requiresValidation(Args)) {
+    // Call validator when -Vd not in Args.
+    auto ValInfo = TC.getValidationInfo(Args);
+    if (ValInfo.NeedsValidation) {
       Action *LastAction = Actions.back();
-      Actions.push_back(C.MakeAction<BinaryAnalyzeJobAction>(
-          LastAction, types::TY_DX_CONTAINER));
+      if (LastAction->getType() == types::TY_Object) {
+        types::ID OutType =
+            ValInfo.ProducesOutput ? types::TY_DX_CONTAINER : types::TY_Object;
+        Actions.push_back(
+            C.MakeAction<BinaryAnalyzeJobAction>(LastAction, OutType));
+      }
     }
 
     // Call metal-shaderconverter when targeting metal.
@@ -5438,11 +5446,9 @@ void Driver::BuildJobs(Compilation &C) const {
     unsigned NumOutputs = 0;
     unsigned NumIfsOutputs = 0;
     for (const Action *A : C.getActions()) {
-      // The actions below do not increase the number of outputs, when operating
-      // on DX containers.
-      if (A->getType() == types::TY_DX_CONTAINER &&
-          (A->getKind() == clang::driver::Action::BinaryAnalyzeJobClass ||
-           A->getKind() == clang::driver::Action::BinaryTranslatorJobClass))
+      // The actions below do not increase the number of outputs.
+      if (A->getKind() == clang::driver::Action::BinaryAnalyzeJobClass ||
+          A->getKind() == clang::driver::Action::BinaryTranslatorJobClass)
         continue;
 
       if (A->getType() != types::TY_Nothing &&
@@ -6476,25 +6482,20 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
        C.getArgs().hasArg(options::OPT_dxc_Fo)) ||
       JA.getType() == types::TY_DX_CONTAINER) {
     StringRef FoValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fo);
-    // If we are targeting DXIL and not validating/translating/objcopying, we
-    // should set the final result file. Otherwise we should emit to a
-    // temporary.
-    if (C.getDefaultToolChain().getTriple().isDXIL()) {
-      const auto &TC = static_cast<const toolchains::HLSLToolChain &>(
-          C.getDefaultToolChain());
-      // Fo can be empty here if the validator is running for a compiler flow
-      // that is using Fc or just printing disassembly.
-      if (TC.isLastJob(C.getArgs(), JA.getKind()) && !FoValue.empty())
-        return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
-      StringRef Name = llvm::sys::path::filename(BaseInput);
-      std::pair<StringRef, StringRef> Split = Name.split('.');
-      const char *Suffix = types::getTypeTempSuffix(JA.getType(), true);
-      return CreateTempFile(C, Split.first, Suffix, false);
-    }
-    // We don't have SPIRV-val integrated (yet), so for now we can assume this
-    // is the final output.
-    assert(C.getDefaultToolChain().getTriple().isSPIRV());
-    return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
+    assert((C.getDefaultToolChain().getTriple().isDXIL() ||
+            C.getDefaultToolChain().getTriple().isSPIRV()) &&
+           "expected DXIL or SPIR-V triple for HLSL output path");
+    const auto &TC =
+        static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
+    // Fo can be empty here if the validator is running for a compiler flow
+    // that is using Fc or just printing disassembly.
+    if (TC.isLastOutputProducingJob(C.getArgs(), JA.getKind()) &&
+        !FoValue.empty())
+      return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
+    StringRef Name = llvm::sys::path::filename(BaseInput);
+    std::pair<StringRef, StringRef> Split = Name.split('.');
+    const char *Suffix = types::getTypeTempSuffix(JA.getType(), true);
+    return CreateTempFile(C, Split.first, Suffix, false);
   }
 
   // Is this the assembly listing for /FA?
@@ -6576,7 +6577,9 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   // Determine what the derived output name should be.
   const char *NamedOutput;
 
-  if ((JA.getType() == types::TY_Object || JA.getType() == types::TY_LTO_BC) &&
+  if ((JA.getType() == types::TY_Object || JA.getType() == types::TY_LTO_BC ||
+       JA.getType() == types::TY_LLVM_BC ||
+       JA.getType() == types::TY_LLVM_IR) &&
       C.getArgs().hasArg(options::OPT__SLASH_Fo, options::OPT__SLASH_o)) {
     // The /Fo or /o flag decides the object filename.
     StringRef Val =
@@ -6584,7 +6587,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
             .getLastArg(options::OPT__SLASH_Fo, options::OPT__SLASH_o)
             ->getValue();
     NamedOutput =
-        MakeCLOutputFilename(C.getArgs(), Val, BaseName, types::TY_Object);
+        MakeCLOutputFilename(C.getArgs(), Val, BaseName, JA.getType());
   } else if (JA.getType() == types::TY_Image &&
              C.getArgs().hasArg(options::OPT__SLASH_Fe,
                                 options::OPT__SLASH_o)) {
@@ -7069,6 +7072,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::Managarm:
       TC = std::make_unique<toolchains::Managarm>(*this, Target, Args);
       break;
+    case llvm::Triple::Serenity:
+      TC = std::make_unique<toolchains::Serenity>(*this, Target, Args);
+      break;
     case llvm::Triple::Solaris:
       TC = std::make_unique<toolchains::Solaris>(*this, Target, Args);
       break;
@@ -7160,6 +7166,10 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       case llvm::Triple::tcele:
         TC = std::make_unique<toolchains::TCELEToolChain>(*this, Target, Args);
         break;
+      case llvm::Triple::tcele64:
+        TC =
+            std::make_unique<toolchains::TCELE64ToolChain>(*this, Target, Args);
+        break;
       case llvm::Triple::hexagon:
         TC = std::make_unique<toolchains::HexagonToolChain>(*this, Target,
                                                              Args);
@@ -7195,6 +7205,10 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::csky:
         TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
+        break;
+      case llvm::Triple::amdgcn:
+      case llvm::Triple::r600:
+        TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
         break;
       default:
         if (toolchains::BareMetal::handlesTarget(Target))

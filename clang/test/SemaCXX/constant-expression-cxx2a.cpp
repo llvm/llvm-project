@@ -372,7 +372,7 @@ namespace Union {
     return *p; // expected-note {{read of member 'a' of union with active member 'b'}}
   }
   constexpr int read_uninitialized() {
-    B b = {.b = 1};
+    B b = {.b = 1}; // expected-note {{declared here}}
     int *p = &b.a.y;
     b.a.x = 1;
     return *p; // expected-note {{read of uninitialized object}}
@@ -542,7 +542,7 @@ namespace TwosComplementShifts {
 
 namespace Uninit {
   constexpr int f(bool init) {
-    int a;
+    int a; // expected-note {{declared here}}
     if (init)
       a = 1;
     return a; // expected-note {{read of uninitialized object}}
@@ -576,20 +576,26 @@ namespace Uninit {
   };
   // FIXME: This is working around clang not implementing DR2026. With that
   // fixed, we should be able to test this without the injected copy.
-  constexpr Y copy(Y y) { return y; } // expected-note {{in call to 'Y(y)'}} expected-note {{subobject 'n' is not initialized}}
+  constexpr Y copy(Y y) { return y; } // expected-note {{in call to 'Y(y)'}} \
+                                      // expected-note {{subobject 'n' is not initialized}} \
+                                      // expected-note {{declared here}}
   constexpr Y y1 = copy(Y());
   static_assert(y1.z1.n == 1 && y1.z2.n == 2 && y1.z3.n == 3);
 
   constexpr Y y2 = copy(Y(0)); // expected-error {{constant expression}} expected-note {{in call}}
 
   static_assert(Y(0,0).z2.n == 0);
-  static_assert(Y(0,0).z1.n == 0); // expected-error {{constant expression}} expected-note {{read of uninitialized object}}
-  static_assert(Y(0,0).z3.n == 0); // expected-error {{constant expression}} expected-note {{read of uninitialized object}}
+  static_assert(Y(0,0).z1.n == 0); // expected-error {{constant expression}} \
+                                   // expected-note {{read of uninitialized object}} \
+                                   // expected-note {{temporary created here}}
+  static_assert(Y(0,0).z3.n == 0); // expected-error {{constant expression}} \
+                                   // expected-note {{read of uninitialized object}} \
+                                   // expected-note {{temporary created here}}
 
   static_assert(copy(Y(0,0)).z2.n == 0); // expected-error {{constant expression}} expected-note {{in call}}
 
   constexpr unsigned char not_even_unsigned_char() {
-    unsigned char c;
+    unsigned char c; // expected-note {{declared here}}
     return c; // expected-note {{read of uninitialized object}}
   }
   constexpr unsigned char x = not_even_unsigned_char(); // expected-error {{constant expression}} expected-note {{in call}}
@@ -1086,7 +1092,8 @@ namespace dtor_call {
 
   constexpr bool pseudo(bool read, bool recreate) {
     using T = bool;
-    bool b = false; // expected-note {{lifetime has already ended}}
+    bool b = false; // expected-note {{lifetime has already ended}} \
+                    // expected-note {{declared here}}
     // This evaluates the store to 'b'...
     (b = true).~T();
     // ... and ends the lifetime of the object.
@@ -1102,14 +1109,14 @@ namespace dtor_call {
   static_assert(pseudo(false, true));
 
   constexpr void use_after_destroy() {
-    A a;
+    A a; // expected-note {{declared here}}
     a.~A();
     A b = a; // expected-note {{in call}} expected-note {{read of object outside its lifetime}}
   }
   static_assert((use_after_destroy(), true)); // expected-error {{}} expected-note {{in call}}
 
   constexpr void double_destroy() {
-    A a;
+    A a; // expected-note {{declared here}}
     a.~A();
     a.~A(); // expected-note {{destruction of object outside its lifetime}}
   }
@@ -1176,7 +1183,7 @@ namespace dtor_call {
 
   constexpr void use_after_virt_destroy() {
     char buff[4] = {};
-    VU vu;
+    VU vu; // expected-note {{declared here}}
     vu.z.p = buff;
     ((Y&)vu.z).~Y();
     ((Z&)vu.z).z = 1; // expected-note {{assignment to object outside its lifetime}}
@@ -1186,7 +1193,7 @@ namespace dtor_call {
   constexpr void destroy_after_lifetime() {
     A *p;
     {
-      A a;
+      A a; // expected-note {{declared here}}
       p = &a;
     }
     p->~A(); // expected-note {{destruction of object outside its lifetime}}

@@ -8487,6 +8487,30 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                          getValue(I.getOperand(1)), getValue(I.getOperand(2)),
                          DAG.getConstant(0, sdl, MVT::i64)));
     return;
+  case Intrinsic::masked_udiv:
+    setValue(&I,
+             DAG.getNode(ISD::MASKED_UDIV, sdl, EVT::getEVT(I.getType()),
+                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
+                         getValue(I.getOperand(2))));
+    return;
+  case Intrinsic::masked_sdiv:
+    setValue(&I,
+             DAG.getNode(ISD::MASKED_SDIV, sdl, EVT::getEVT(I.getType()),
+                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
+                         getValue(I.getOperand(2))));
+    return;
+  case Intrinsic::masked_urem:
+    setValue(&I,
+             DAG.getNode(ISD::MASKED_UREM, sdl, EVT::getEVT(I.getType()),
+                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
+                         getValue(I.getOperand(2))));
+    return;
+  case Intrinsic::masked_srem:
+    setValue(&I,
+             DAG.getNode(ISD::MASKED_SREM, sdl, EVT::getEVT(I.getType()),
+                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
+                         getValue(I.getOperand(2))));
+    return;
   }
 }
 
