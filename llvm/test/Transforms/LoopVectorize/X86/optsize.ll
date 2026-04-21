@@ -115,18 +115,18 @@ define i32 @foo_minsize() #1 {
 ; AUTOVF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AUTOVF:       [[VECTOR_BODY]]:
 ; AUTOVF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x i32> poison, i32 [[INDEX]], i64 0
-; AUTOVF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x i32> [[BROADCAST_SPLATINSERT]], <32 x i32> poison, <32 x i32> zeroinitializer
-; AUTOVF-NEXT:    [[VEC_IV:%.*]] = add <32 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; AUTOVF-NEXT:    [[TMP1:%.*]] = icmp ule <32 x i32> [[VEC_IV]], splat (i32 202)
+; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[INDEX]], i64 0
+; AUTOVF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
+; AUTOVF-NEXT:    [[VEC_IV:%.*]] = add <16 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; AUTOVF-NEXT:    [[TMP0:%.*]] = icmp ule <16 x i32> [[VEC_IV]], splat (i32 202)
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[INDEX]]
-; AUTOVF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <32 x i8> @llvm.masked.load.v32i8.p0(ptr align 1 [[TMP2]], <32 x i1> [[TMP1]], <32 x i8> poison)
-; AUTOVF-NEXT:    [[TMP4:%.*]] = icmp eq <32 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
-; AUTOVF-NEXT:    [[TMP5:%.*]] = select <32 x i1> [[TMP4]], <32 x i8> splat (i8 2), <32 x i8> splat (i8 1)
-; AUTOVF-NEXT:    call void @llvm.masked.store.v32i8.p0(<32 x i8> [[TMP5]], ptr align 1 [[TMP2]], <32 x i1> [[TMP1]])
-; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
-; AUTOVF-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 224
-; AUTOVF-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; AUTOVF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP2]], <16 x i1> [[TMP0]], <16 x i8> poison)
+; AUTOVF-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
+; AUTOVF-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[TMP5]], <16 x i8> splat (i8 2), <16 x i8> splat (i8 1)
+; AUTOVF-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP3]], ptr align 1 [[TMP2]], <16 x i1> [[TMP0]])
+; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
+; AUTOVF-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 208
+; AUTOVF-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
 ; AUTOVF-NEXT:    br label %[[FOR_END:.*]]
 ; AUTOVF:       [[FOR_END]]:
