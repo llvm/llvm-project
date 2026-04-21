@@ -836,3 +836,79 @@ then:
 else:
   ret i32 0
 }
+
+; Non-indirect args that spill to the stack (exercises the isEligibleFor
+; TailCallOptimization stack-size bypass for musttail). Both RV32 and RV64
+; use a0..a7 for the first 8 args and spill from the 9th. The spilled args
+; live in the caller's incoming stack slots, which musttail can re-use
+; because matching prototypes imply a matching layout.
+declare void @callee_musttail_stack_spill(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
+
+define void @caller_musttail_stack_spill(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9) nounwind {
+; RV32-LABEL: caller_musttail_stack_spill:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw t0, 0(sp)
+; RV32-NEXT:    lw t1, 4(sp)
+; RV32-NEXT:    sw t0, 0(sp)
+; RV32-NEXT:    sw t1, 4(sp)
+; RV32-NEXT:    tail callee_musttail_stack_spill
+;
+; RV64-LABEL: caller_musttail_stack_spill:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld t0, 0(sp)
+; RV64-NEXT:    ld t1, 8(sp)
+; RV64-NEXT:    sd t0, 0(sp)
+; RV64-NEXT:    sd t1, 8(sp)
+; RV64-NEXT:    tail callee_musttail_stack_spill
+  musttail call void @callee_musttail_stack_spill(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9)
+  ret void
+}
+
+; sret + musttail: the sret pointer is just a regular pointer arg in a0.
+; Tail call forwards it unchanged.
+%struct.Large = type { i64, i64, i64, i64 }
+declare void @callee_musttail_sret(ptr sret(%struct.Large), i32)
+
+define void @caller_musttail_sret(ptr sret(%struct.Large) %out, i32 %x) nounwind {
+; RV32-LABEL: caller_musttail_sret:
+; RV32:       # %bb.0:
+; RV32-NEXT:    tail callee_musttail_sret
+;
+; RV64-LABEL: caller_musttail_sret:
+; RV64:       # %bb.0:
+; RV64-NEXT:    tail callee_musttail_sret
+  musttail call void @callee_musttail_sret(ptr sret(%struct.Large) %out, i32 %x)
+  ret void
+}
+
+; Mix of indirect (fp128) and many i32 args spilled to the stack.
+declare void @callee_musttail_indirect_and_spill(fp128, i32, i32, i32, i32, i32, i32, i32, i32, i32)
+
+define void @caller_musttail_indirect_and_spill(fp128 %a, i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8) nounwind {
+; RV32-LABEL: caller_musttail_indirect_and_spill:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw t0, 0(sp)
+; RV32-NEXT:    lw t1, 4(sp)
+; RV32-NEXT:    sw t0, 0(sp)
+; RV32-NEXT:    sw t1, 4(sp)
+; RV32-NEXT:    tail callee_musttail_indirect_and_spill
+;
+; RV64-LABEL: caller_musttail_indirect_and_spill:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld t0, 0(sp)
+; RV64-NEXT:    ld t1, 8(sp)
+; RV64-NEXT:    ld t2, 16(sp)
+; RV64-NEXT:    sd t0, 0(sp)
+; RV64-NEXT:    sd t1, 8(sp)
+; RV64-NEXT:    sd t2, 16(sp)
+; RV64-NEXT:    tail callee_musttail_indirect_and_spill
+  musttail call void @callee_musttail_indirect_and_spill(fp128 %a, i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8)
+  ret void
+}
+
+; Note: byval + musttail is intentionally NOT tested here. isEligibleFor
+; TailCallOptimization rejects byval outright, which causes the musttail
+; site to hit reportFatalInternalError. Tail-call support for byval was
+; reverted in 501417baa60f (RISC-V/LoongArch) pending a vreg-based
+; re-implementation; once that lands, musttail + byval can be tested as
+; well.
