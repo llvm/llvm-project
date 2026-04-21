@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenCleanup.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "mlir/IR/Location.h"
@@ -990,7 +991,96 @@ struct CallStackRestore final : EHScopeStack::Cleanup {
     cgf.getBuilder().createStackRestore(loc, v);
   }
 };
+
+/// A cleanup which performs a partial array destroy where the end pointer is
+/// irregularly determined and must be loaded from a local.
+struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
+  mlir::Value arrayBegin;
+  Address arrayEndPointer;
+  QualType elementType;
+  CharUnits elementAlign;
+  CIRGenFunction::Destroyer *destroyer;
+
+  IrregularPartialArrayDestroy(mlir::Value arrayBegin, Address arrayEndPointer,
+                               QualType elementType, CharUnits elementAlign,
+                               CIRGenFunction::Destroyer *destroyer)
+      : arrayBegin(arrayBegin), arrayEndPointer(arrayEndPointer),
+        elementType(elementType), elementAlign(elementAlign),
+        destroyer(destroyer) {}
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    mlir::Location loc = arrayBegin.getLoc();
+
+    mlir::Value arrayEnd = builder.createLoad(loc, arrayEndPointer);
+
+    // The cleanup is destroying elements in reverse from arrayEnd back to
+    // arrayBegin, but only if arrayEnd != arrayBegin (i.e. something was
+    // constructed).
+    mlir::Type cirElementType = cgf.convertTypeForMem(elementType);
+    cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
+
+    mlir::Value ne = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
+                                        arrayEnd, arrayBegin);
+    cir::IfOp::create(
+        builder, loc, ne, /*withElseRegion=*/false,
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          Address iterAddr = cgf.createTempAlloca(
+              ptrToElmType, cgf.getPointerAlign(), loc, "__array_idx");
+          builder.createStore(loc, arrayEnd, iterAddr);
+          builder.createDoWhile(
+              loc,
+              /*condBuilder=*/
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                mlir::Value cur = builder.createLoad(loc, iterAddr);
+                mlir::Value cmp = cir::CmpOp::create(
+                    builder, loc, cir::CmpOpKind::ne, cur, arrayBegin);
+                builder.createCondition(cmp);
+              },
+              /*bodyBuilder=*/
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                mlir::Value cur = builder.createLoad(loc, iterAddr);
+                cir::ConstantOp negOne = builder.getConstInt(
+                    loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), -1);
+                mlir::Value prev = cir::PtrStrideOp::create(
+                    builder, loc, ptrToElmType, cur, negOne);
+                builder.createStore(loc, prev, iterAddr);
+                Address elemAddr = Address(prev, cirElementType, elementAlign);
+                destroyer(cgf, elemAddr, elementType);
+                builder.createYield(loc);
+              });
+          builder.createYield(loc);
+        });
+  }
+};
 } // namespace
+
+/// Push an EH cleanup to destroy already-constructed elements of the given
+/// array.  The cleanup may be popped with deactivateCleanupBlock or
+/// popCleanupBlock.
+///
+/// \param elementType - the immediate element type of the array;
+///   possibly still an array type
+void CIRGenFunction::pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
+                                                      Address arrayEndPointer,
+                                                      QualType elementType,
+                                                      CharUnits elementAlign,
+                                                      Destroyer *destroyer) {
+  ehStack.pushCleanup<IrregularPartialArrayDestroy>(
+      EHCleanup, arrayBegin, arrayEndPointer, elementType, elementAlign,
+      destroyer);
+}
+
+/// pushEHDestroyIfNeeded - Push the standard destructor for the given type as
+/// an EH-only cleanup. If EH cleanup is not needed, just return.
+void CIRGenFunction::pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind,
+                                           Address addr, QualType type) {
+  if (!needsEHCleanup(dtorKind))
+    return;
+
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
+  pushDestroy(EHCleanup, addr, type, getDestroyer(dtorKind));
+}
 
 /// Push the standard destructor for the given type as
 /// at least a normal cleanup.
@@ -1007,6 +1097,23 @@ void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
   pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }
 
+void CIRGenFunction::pushDestroyAndDeferDeactivation(
+    QualType::DestructionKind dtorKind, Address addr, QualType type) {
+  assert(dtorKind && "cannot push destructor for trivial type");
+
+  CleanupKind cleanupKind = getCleanupKind(dtorKind);
+  pushDestroyAndDeferDeactivation(
+      cleanupKind, addr, type, getDestroyer(dtorKind), cleanupKind & EHCleanup);
+}
+
+void CIRGenFunction::pushDestroyAndDeferDeactivation(
+    CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
+    bool useEHCleanupForArray) {
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
+  pushCleanupAndDeferDeactivation<DestroyObject>(cleanupKind, addr, type,
+                                                 destroyer);
+}
+
 void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
                                                  Address addr, QualType type,
                                                  Destroyer *destroyer,
@@ -1016,26 +1123,29 @@ void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
     return;
   }
 
-  // Classic codegen also uses pushDestroyAndDeferDeactivation here to push an
-  // EH cleanup that protects the temporary during the rest of the full
-  // expression, then deactivates it when the full expression ends. We don't
-  // have deferred deactivation yet, so we only queue the lifetime-extended
-  // cleanup below. When deferred deactivation is implemented, add the
-  // pushDestroyAndDeferDeactivation call here.
-  if (getLangOpts().Exceptions) {
-    cgm.errorNYI("lifetime-extended cleanup with exceptions enabled");
-    return;
-  }
+  // Add the cleanup to the EHStack. After the full-expr, this would be
+  // deactivated before being popped from the stack.
+  pushDestroyAndDeferDeactivation(cleanupKind, addr, type, destroyer,
+                                  useEHCleanupForArray);
 
   assert(!cir::MissingFeatures::useEHCleanupForArray());
 
   pushCleanupAfterFullExpr(cleanupKind, addr, type, destroyer);
 }
 
-void CIRGenFunction::pushLifetimeExtendedCleanupToEHStack(
-    const LifetimeExtendedCleanupEntry &entry) {
+void CIRGenFunction::pushPendingCleanupToEHStack(
+    const PendingCleanupEntry &entry) {
   ehStack.pushCleanup<DestroyObject>(entry.kind, entry.addr, entry.type,
                                      entry.destroyer);
+
+  if (entry.activeFlag.isValid()) {
+    EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
+    scope.setActiveFlag(entry.activeFlag);
+    if (scope.isNormalCleanup())
+      scope.setTestFlagInNormalCleanup();
+    if (scope.isEHCleanup())
+      scope.setTestFlagInEHCleanup();
+  }
 }
 
 /// Destroys all the elements of the given array, beginning from last to first.

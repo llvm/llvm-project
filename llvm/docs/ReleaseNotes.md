@@ -101,13 +101,6 @@ Changes to LLVM infrastructure
     this may fail if symlink permissions are not available.
   * Added ``readlink``, which reads the target of a symbolic link.
 
-* Bitcode libraries can now implement compiler-managed library functions
-  (libcalls) without causing incorrect API manipulation or undefined references
-  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
-  there are still issues with invalid compiler reasoning about some functions
-  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
-  distributed ThinLTO. 
-
 Changes to building LLVM
 ------------------------
 
@@ -279,11 +272,14 @@ Changes to LLDB
   `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
   using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
   writes to a kernel dump will still fail when the setting is false.
+* Added a command `process plugin refresh-threads`, enabling on-demand thread-list reconstruction from `/dev/mem`
+  so users can resync live kernel thread state without restarting LLDB. Note that this has no impact on full dump
+  and minidump files.
 
 ### Linux
 
 * On Arm Linux, the `tpidruro` register can now be read. Writing to this register is not supported.
-* Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
+* Thread local variables are now supported on Arm and RISC-V Linux if the program being debugged is using glibc.
 * LLDB now supports AArch64 Linux systems that only have SME (as opposed to
   SVE and SME). See the AArch64 Linux [documentation](https://lldb.llvm.org/use/aarch64-linux.html#sme-only-systems)
   for more details.
@@ -295,6 +291,9 @@ Changes to LLDB
   an affected version in a way that is compatible with these systems, the issue
   contains details of backports that could be done to fix the affected versions.
 
+### Windows
+
+* Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
 
 Changes to BOLT
 ---------------

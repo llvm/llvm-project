@@ -461,6 +461,20 @@ add_header_macro(
     .llvm_libc_common_h
 )
 
+if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+  add_header_macro(
+    ucontext
+    ../libc/include/ucontext.yaml
+    ucontext.h
+    DEPENDS
+      .llvm_libc_common_h
+      .llvm-libc-types.mcontext_t
+      .llvm-libc-types.ucontext_t
+      .llvm-libc-types.sigset_t
+      .llvm-libc-types.stack_t
+  )
+endif()
+
 add_header_macro(
   sched
   ../libc/include/sched.yaml
@@ -724,6 +738,7 @@ add_header_macro(
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
     .llvm-libc-types.struct_iovec
+    .llvm-libc-types.struct_linger
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
 )
@@ -873,6 +888,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.wint_t
+    .llvm-libc-types.wctype_t
 )
 
 add_header_macro(

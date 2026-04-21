@@ -9123,6 +9123,36 @@ For example:
 
 This will change the stack alignment to 8B.
 
+Windows Control Flow Guard Metadata
+-----------------------------------
+
+Controls what Control Flow Guard (CFG) checks are performed, how they are
+performed, and what metadata is emitted. There are multiple flags that can be
+used to control different aspects of CFG. Using two different values for the
+same flag will raise a warning when linking.
+
+To pass this information to the backend, these options are encoded in module
+flags metadata, using the following key-value pairs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Key
+     - Value
+
+   * - cfguard
+     - * 0 --- CFG is completely disabled.
+       * 1 --- The CFG table is emitted, but no checks are performed.
+       * 2 --- The CFG table is emitted and checks are performed.
+
+   * - cfguard-mechanism
+     - * 0 --- CFG uses the default mechanism for the architecture.
+       * 1 --- CFG uses the "check" mechanism. This will result in a separate
+         call to the checker function and then one to the target.
+       * 2 --- CFG uses the "dispatch" mechanism. This calls a dispatcher
+         function which both checks and then calls the target.
+
 Embedded Objects Names Metadata
 ===============================
 
@@ -28055,8 +28085,9 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or an
-``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
+The argument is either a ``poison`` value or an SSA variable whose defining
+instruction is ``alloca`` or a call of the ``llvm.structured.alloca``
+intrinsics. Otherwise, the IR is considered ill-formed.
 
 Semantics:
 """"""""""
@@ -28066,10 +28097,12 @@ If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
 Otherwise, the stack-allocated object that ``ptr`` points to is initially
 marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
 alive and has an uninitialized value.
-The stack object is marked as dead when either
-:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is
-executed or the function returns.
+Calling ``llvm.lifetime.start`` when the stack object is already alive just
+resets its contents to be uninitialized.
 
+The stack object is marked as dead again when either
+:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is executed or the
+function returns.
 After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
 The second '``llvm.lifetime.start``' call marks the object as alive, but it
@@ -28096,8 +28129,9 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or an
-``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
+The argument is either a ``poison`` value or an SSA variable whose defining
+instruction is ``alloca`` or a call of the ``llvm.structured.alloca``
+intrinsics. Otherwise, the IR is considered ill-formed.
 
 Semantics:
 """"""""""
