@@ -401,7 +401,7 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
   m_fragile_ivar = !no_fragile_ivar;
   m_check_ptr_vs_member = check_ptr_vs_member;
   m_allow_var_updates = allow_var_updates;
-  m_disallow_globals = disallow_globals;
+  m_allow_globals = !disallow_globals;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -439,7 +439,7 @@ Interpreter::Visit(const IdentifierNode &node) {
   lldb::ValueObjectSP identifier =
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
-  if (!identifier && !m_disallow_globals)
+  if (!identifier && m_allow_globals)
     identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
                                         m_target, use_dynamic);
   if (!identifier) {
