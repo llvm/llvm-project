@@ -411,7 +411,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112system_errorD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112system_errorD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112system_errorD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__113__hash_memoryEPKvm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__113random_deviceC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__113random_deviceC2ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__113random_deviceD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
