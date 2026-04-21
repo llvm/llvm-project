@@ -15,6 +15,20 @@ define i32 @sadd_min_max_assoc(i32 %x, i32 %y, i32 %z) {
   ret i32 %ret
 }
 
+define i32 @sadd_min_max_assoc_comm(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i32 @sadd_min_max_assoc_comm(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[RHS:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RET:%.*]] = add i32 [[Z]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %min = call i32 @llvm.smin.i32(i32 %x, i32 %y)
+  %rhs = add i32 %z, %min
+  %max = call i32 @llvm.smax.i32(i32 %x, i32 %y)
+  %ret = add i32 %max, %rhs
+  ret i32 %ret
+}
+
 define i32 @or_min_max_assoc(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @or_min_max_assoc(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
