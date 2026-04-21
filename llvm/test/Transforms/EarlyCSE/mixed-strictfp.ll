@@ -8,9 +8,9 @@
 
 define double @mixed_fadd_neginf(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fadd_neginf(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A]], double [[B]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fadd.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fadd.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
@@ -21,8 +21,8 @@ define double @mixed_fadd_neginf(double %a, double %b) #0 {
 
 define double @mixed_fadd_maytrap(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fadd_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fadd.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fadd.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -34,8 +34,8 @@ define double @mixed_fadd_maytrap(double %a, double %b) #0 {
 
 define double @mixed_fadd_strict(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fadd_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fadd.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fadd.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -47,8 +47,8 @@ define double @mixed_fadd_strict(double %a, double %b) #0 {
 
 define double @mixed_fsub_neginf(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fsub_neginf(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A]], double [[B]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fsub.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fsub.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -60,8 +60,8 @@ define double @mixed_fsub_neginf(double %a, double %b) #0 {
 
 define double @mixed_fsub_maytrap(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fsub_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fsub.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fsub.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -73,8 +73,8 @@ define double @mixed_fsub_maytrap(double %a, double %b) #0 {
 
 define double @mixed_fsub_strict(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fsub_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fsub.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fsub.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -86,8 +86,8 @@ define double @mixed_fsub_strict(double %a, double %b) #0 {
 
 define double @mixed_fmul_neginf(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fmul_neginf(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A]], double [[B]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fmul.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fmul.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -98,8 +98,8 @@ define double @mixed_fmul_neginf(double %a, double %b) #0 {
 }
 define double @mixed_fmul_maytrap(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fmul_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fmul.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fmul.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -111,8 +111,8 @@ define double @mixed_fmul_maytrap(double %a, double %b) #0 {
 
 define double @mixed_fmul_strict(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fmul_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fmul.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fmul.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -124,8 +124,8 @@ define double @mixed_fmul_strict(double %a, double %b) #0 {
 
 define double @mixed_fdiv_neginf(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fdiv_neginf(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A]], double [[B]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fdiv.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fdiv.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -137,8 +137,8 @@ define double @mixed_fdiv_neginf(double %a, double %b) #0 {
 
 define double @mixed_fdiv_maytrap(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fdiv_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fdiv.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fdiv.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -150,8 +150,8 @@ define double @mixed_fdiv_maytrap(double %a, double %b) #0 {
 
 define double @mixed_fdiv_strict(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fdiv_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fdiv.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.fdiv.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -163,8 +163,8 @@ define double @mixed_fdiv_strict(double %a, double %b) #0 {
 
 define double @mixed_frem_neginf(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_frem_neginf(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A]], double [[B]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.frem.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.frem.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -176,8 +176,8 @@ define double @mixed_frem_neginf(double %a, double %b) #0 {
 
 define double @mixed_frem_maytrap(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_frem_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.frem.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.frem.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -189,8 +189,8 @@ define double @mixed_frem_maytrap(double %a, double %b) #0 {
 
 define double @mixed_frem_strict(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_frem_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A]], double [[B]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.frem.f64(double [[A:%.*]], double [[B:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.frem.f64(double [[A]], double [[B]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -202,8 +202,8 @@ define double @mixed_frem_strict(double %a, double %b) #0 {
 
 define i32 @mixed_fptoui_maytrap(double %a) #0 {
 ; CHECK-LABEL: @mixed_fptoui_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double [[A:%.*]], metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double [[A]], metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP1]], i32 [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -215,8 +215,8 @@ define i32 @mixed_fptoui_maytrap(double %a) #0 {
 
 define i32 @mixed_fptoui_strict(double %a) #0 {
 ; CHECK-LABEL: @mixed_fptoui_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double [[A:%.*]], metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double [[A]], metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptoui.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = fptoui double [[A]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP1]], i32 [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -228,8 +228,8 @@ define i32 @mixed_fptoui_strict(double %a) #0 {
 
 define double @mixed_uitofp_neginf(i32 %a) #0 {
 ; CHECK-LABEL: @mixed_uitofp_neginf(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.uitofp.f64.i32(i32 [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.uitofp.f64.i32(i32 [[A]]) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -241,8 +241,8 @@ define double @mixed_uitofp_neginf(i32 %a) #0 {
 
 define double @mixed_uitofp_maytrap(i32 %a) #0 {
 ; CHECK-LABEL: @mixed_uitofp_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.uitofp.f64.i32(i32 [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.uitofp.f64.i32(i32 [[A]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -254,8 +254,8 @@ define double @mixed_uitofp_maytrap(i32 %a) #0 {
 
 define double @mixed_uitofp_strict(i32 %a) #0 {
 ; CHECK-LABEL: @mixed_uitofp_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.uitofp.f64.i32(i32 [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.uitofp.f64.i32(i32 [[A]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -267,8 +267,8 @@ define double @mixed_uitofp_strict(i32 %a) #0 {
 
 define i32 @mixed_fptosi_maytrap(double %a) #0 {
 ; CHECK-LABEL: @mixed_fptosi_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double [[A:%.*]], metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double [[A]], metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP1]], i32 [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -280,8 +280,8 @@ define i32 @mixed_fptosi_maytrap(double %a) #0 {
 
 define i32 @mixed_fptosi_strict(double %a) #0 {
 ; CHECK-LABEL: @mixed_fptosi_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double [[A:%.*]], metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double [[A]], metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fptosi.i32.f64(double [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = fptosi double [[A]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP1]], i32 [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -293,8 +293,8 @@ define i32 @mixed_fptosi_strict(double %a) #0 {
 
 define double @mixed_sitofp_neginf(i32 %a) #0 {
 ; CHECK-LABEL: @mixed_sitofp_neginf(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A]], metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.sitofp.f64.i32(i32 [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.sitofp.f64.i32(i32 [[A]]) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -306,8 +306,8 @@ define double @mixed_sitofp_neginf(i32 %a) #0 {
 
 define double @mixed_sitofp_maytrap(i32 %a) #0 {
 ; CHECK-LABEL: @mixed_sitofp_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.sitofp.f64.i32(i32 [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.sitofp.f64.i32(i32 [[A]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -319,8 +319,8 @@ define double @mixed_sitofp_maytrap(i32 %a) #0 {
 
 define double @mixed_sitofp_strict(i32 %a) #0 {
 ; CHECK-LABEL: @mixed_sitofp_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.sitofp.f64.i32(i32 [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.sitofp.f64.i32(i32 [[A]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
@@ -332,8 +332,8 @@ define double @mixed_sitofp_strict(i32 %a) #0 {
 
 define i1 @mixed_fcmp_maytrap(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fcmp_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[A]], double [[B]], metadata !"oeq", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.fcmp.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @bar.i32(i32 [[TMP3]], i32 [[TMP4]]) #[[ATTR0]]
@@ -349,8 +349,8 @@ define i1 @mixed_fcmp_maytrap(double %a, double %b) #0 {
 
 define i1 @mixed_fcmp_strict(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fcmp_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[A]], double [[B]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.fcmp.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"strict") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @bar.i32(i32 [[TMP3]], i32 [[TMP4]]) #[[ATTR0]]
@@ -366,8 +366,8 @@ define i1 @mixed_fcmp_strict(double %a, double %b) #0 {
 
 define i1 @mixed_fcmps_maytrap(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fcmps_maytrap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double [[B]], metadata !"oeq", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.fcmps.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.fcmps.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @bar.i32(i32 [[TMP3]], i32 [[TMP4]]) #[[ATTR0]]
@@ -383,8 +383,8 @@ define i1 @mixed_fcmps_maytrap(double %a, double %b) #0 {
 
 define i1 @mixed_fcmps_strict(double %a, double %b) #0 {
 ; CHECK-LABEL: @mixed_fcmps_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double [[B]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.fcmps.f64(double [[A:%.*]], double [[B:%.*]], metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.fcmps.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"strict") ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @bar.i32(i32 [[TMP3]], i32 [[TMP4]]) #[[ATTR0]]

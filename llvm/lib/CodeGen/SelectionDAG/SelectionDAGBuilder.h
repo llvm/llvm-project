@@ -55,7 +55,6 @@ class CondBrInst;
 class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
-class ConstrainedFPIntrinsic;
 class DataLayout;
 class DIExpression;
 class DILocalVariable;
@@ -652,7 +651,7 @@ private:
                                DebugLoc DbgLoc);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
-  void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
+  void visitBundledFPIntrinsicAsStrict(const IntrinsicInst &I);
   void visitConvergenceControl(const CallInst &I, unsigned Intrinsic);
   void visitVectorHistogram(const CallInst &I, unsigned IntrinsicID);
   void visitVectorExtractLastActive(const CallInst &I, unsigned Intrinsic);

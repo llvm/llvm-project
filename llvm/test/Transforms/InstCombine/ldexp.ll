@@ -1060,9 +1060,10 @@ define float @ldexp_f32_mask_select_0_swap_multi_use(i1 %cond, float %x, i32 %y,
 define float @ldexp_f32_mask_select_0_strictfp(i1 %cond, float %x, i32 %y) #0 {
 ; CHECK-LABEL: define float @ldexp_f32_mask_select_0_strictfp
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[Y]], i32 0
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float [[X]], i32 [[SELECT]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP1:%.*]] = select i1 [[COND]], float [[TMP1]], float [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret float [[LDEXP1]]
 ;
   %select = select i1 %cond, i32 %y, i32 0
   %ldexp = call float @llvm.experimental.constrained.ldexp.f32.i32(float %x, i32 %select, metadata !"round.dynamic", metadata !"fpexcept.strict")

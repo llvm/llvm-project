@@ -7,8 +7,7 @@
 
 define float @fadd_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -16,6 +15,7 @@ define float @fadd_nan_op0_strict(float %x) #0 {
 
 define float @fadd_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op0_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float 0x7FF8000000000000, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -40,8 +40,7 @@ define float @fadd_nan_op0_defaultfp(float %x) #0 {
 
 define float @fadd_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -49,6 +48,7 @@ define float @fadd_nan_op1_strict(float %x) #0 {
 
 define float @fadd_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op1_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float [[X:%.*]], float 0x7FF8000000000000) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -77,8 +77,7 @@ define float @fadd_nan_op1_defaultfp(float %x) #0 {
 
 define float @fsub_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -86,6 +85,7 @@ define float @fsub_nan_op0_strict(float %x) #0 {
 
 define float @fsub_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op0_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float 0x7FF8000000000000, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -110,8 +110,7 @@ define float @fsub_nan_op0_defaultfp(float %x) #0 {
 
 define float @fsub_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %r
@@ -119,6 +118,7 @@ define float @fsub_nan_op1_strict(float %x) #0 {
 
 define float @fsub_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op1_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float 0x7FF8000000000000) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -147,8 +147,7 @@ define float @fsub_nan_op1_defaultfp(float %x) #0 {
 
 define float @fmul_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -156,6 +155,7 @@ define float @fmul_nan_op0_strict(float %x) #0 {
 
 define float @fmul_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op0_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float 0x7FF8000000000000, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -180,8 +180,7 @@ define float @fmul_nan_op0_defaultfp(float %x) #0 {
 
 define float @fmul_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -189,6 +188,7 @@ define float @fmul_nan_op1_strict(float %x) #0 {
 
 define float @fmul_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op1_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float [[X:%.*]], float 0x7FF8000000000000) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -217,8 +217,7 @@ define float @fmul_nan_op1_defaultfp(float %x) #0 {
 
 define float @fdiv_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -226,6 +225,7 @@ define float @fdiv_nan_op0_strict(float %x) #0 {
 
 define float @fdiv_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op0_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float 0x7FF8000000000000, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -250,8 +250,7 @@ define float @fdiv_nan_op0_defaultfp(float %x) #0 {
 
 define float @fdiv_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -259,6 +258,7 @@ define float @fdiv_nan_op1_strict(float %x) #0 {
 
 define float @fdiv_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op1_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float [[X:%.*]], float 0x7FF8000000000000) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -287,8 +287,7 @@ define float @fdiv_nan_op1_defaultfp(float %x) #0 {
 
 define float @frem_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -296,6 +295,7 @@ define float @frem_nan_op0_strict(float %x) #0 {
 
 define float @frem_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op0_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float 0x7FF8000000000000, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -320,8 +320,7 @@ define float @frem_nan_op0_defaultfp(float %x) #0 {
 
 define float @frem_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -329,6 +328,7 @@ define float @frem_nan_op1_strict(float %x) #0 {
 
 define float @frem_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op1_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float [[X:%.*]], float 0x7FF8000000000000) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -357,8 +357,8 @@ define float @frem_nan_op1_defaultfp(float %x) #0 {
 
 define float @fma_nan_op0_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float 0x7FF8000000000000, float [[X:%.*]], float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float 0x7FF8000000000000, float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float 0x7FF8000000000000, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -366,6 +366,7 @@ define float @fma_nan_op0_strict(float %x, float %y) #0 {
 
 define float @fma_nan_op0_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op0_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float 0x7FF8000000000000, float [[X:%.*]], float [[Y:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float 0x7FF8000000000000, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -390,8 +391,8 @@ define float @fma_nan_op0_defaultfp(float %x, float %y) #0 {
 
 define float @fma_nan_op1_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float 0x7FF8000000000000, float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float 0x7FF8000000000000, float [[Y:%.*]])
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float 0x7FF8000000000000, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -399,6 +400,7 @@ define float @fma_nan_op1_strict(float %x, float %y) #0 {
 
 define float @fma_nan_op1_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op1_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float 0x7FF8000000000000, float [[Y:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float 0x7FF8000000000000, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -423,8 +425,8 @@ define float @fma_nan_op1_defaultfp(float %x, float %y) #0 {
 
 define float @fma_nan_op2_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op2_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0x7FF8000000000000)
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -432,6 +434,7 @@ define float @fma_nan_op2_strict(float %x, float %y) #0 {
 
 define float @fma_nan_op2_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op2_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0x7FF8000000000000) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")

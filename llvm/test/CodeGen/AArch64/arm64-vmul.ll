@@ -2,31 +2,25 @@
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:      warning: Instruction selection used fallback path for sqdmulh_1s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_2s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_4s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_2d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_commuted_neg_2s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_commuted_neg_4s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_commuted_neg_2d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_2s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_4s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_2d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_2s_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_4s_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_indexed_2d_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_2s_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_4s_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_2d_strict
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmulh_lane_1s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v4f32
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f32
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f64
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32_1
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32_1
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f64
+; CHECK-GI:       warning: Instruction selection used fallback path for sqdmulh_1s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_2s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_4s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_2d
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_2s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_4s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_2d
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_4s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2d
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmulh_lane_1s
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for scalar_fmls_from_extract_v4f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f64
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32_1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32_1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f64
 
 define <8 x i16> @smull8h(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: smull8h:
@@ -1889,6 +1883,7 @@ define i64 @sqdmlsl_lane_1d_v4i32(i64 %A, i32 %B, <4 x i32> %C) nounwind {
   %res = call i64 @llvm.aarch64.neon.sqsub.i64(i64 %A, i64 %prod)
   ret i64 %res
 }
+
 
 define <4 x i32> @umlal_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: umlal_lane_4s:

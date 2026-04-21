@@ -7,6 +7,7 @@
 define float @f_unused_precise() #0 {
 ; CHECK-LABEL: @f_unused_precise(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 1.000000e+00, float 1.000000e+00) [ "fp.control"(metadata !"rtp") ]
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
 entry:
@@ -18,7 +19,7 @@ entry:
 define float @f_unused_strict() #0 {
 ; CHECK-LABEL: @f_unused_strict(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float 1.000000e+00, float 3.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fdiv.f32(float 1.000000e+00, float 3.000000e+00) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
 entry:
@@ -65,6 +66,7 @@ entry:
 define float @f_eval_precise() #0 {
 ; CHECK-LABEL: @f_eval_precise(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fadd.f32(float 1.000000e+00, float 1.000000e+00) [ "fp.control"(metadata !"rtp") ]
 ; CHECK-NEXT:    ret float 2.000000e+00
 ;
 entry:
@@ -76,7 +78,7 @@ entry:
 define float @f_eval_strict() #0 {
 ; CHECK-LABEL: @f_eval_strict(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float 1.000000e+00, float 3.000000e+00, metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.fdiv.f32(float 1.000000e+00, float 3.000000e+00) [ "fp.control"(metadata !"rtp") ]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
 entry:
@@ -99,7 +101,7 @@ entry:
 define float @f_eval_dynamic_ignore() #0 {
 ; CHECK-LABEL: @f_eval_dynamic_ignore(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float 1.000000e+00, float 3.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.fdiv.f32(float 1.000000e+00, float 3.000000e+00) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
 entry:
@@ -111,6 +113,7 @@ entry:
 define float @f_eval_maytrap() #0 {
 ; CHECK-LABEL: @f_eval_maytrap(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.fdiv.f32(float 1.000000e+00, float 3.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float 0x3FD5555560000000
 ;
 entry:

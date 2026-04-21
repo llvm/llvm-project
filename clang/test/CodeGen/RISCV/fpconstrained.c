@@ -13,9 +13,9 @@ float f0, f1, f2;
 void foo(void) {
   // CHECK-LABEL: define {{.*}}void @foo()
 
-  // MAYTRAP: llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
-  // EXCEPT: llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // FPMODELSTRICT: llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  // MAYTRAP: call fast float @llvm.fadd.f32(float %{{.*}}, float %{{.*}}) {{.*}}[ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
+  // EXCEPT: call fast float @llvm.fadd.f32(float %{{.*}}, float %{{.*}}) {{.*}}[ "fp.control"(metadata !"rte") ]
+  // FPMODELSTRICT: fadd float %{{.*}}, %{{.*}}
   // STRICTEXCEPT: llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
   // STRICTNOEXCEPT: llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.dynamic", metadata !"fpexcept.ignore")
   // PRECISE: fadd contract float %{{.*}}, %{{.*}}

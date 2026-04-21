@@ -24,7 +24,7 @@
 // CONSTRAINED-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]], <2 x float> noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[C]], i32 1
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[B]], float [[EXTRACT]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.fma.f32(float [[B]], float [[EXTRACT]], float [[A]]) #[[ATTR2:[0-9]+]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret float [[TMP0]]
 //
 float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
@@ -42,7 +42,7 @@ float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CONSTRAINED-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]], <1 x double> noundef [[C:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <1 x double> [[C]], i32 0
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call double @llvm.experimental.constrained.fma.f64(double [[B]], double [[EXTRACT]], double [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call double @llvm.fma.f64(double [[B]], double [[EXTRACT]], double [[A]]) #[[ATTR2]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret double [[TMP0]]
 //
 float64_t test_vfmad_lane_f64(float64_t a, float64_t b, float64x1_t c) {
@@ -60,7 +60,7 @@ float64_t test_vfmad_lane_f64(float64_t a, float64_t b, float64x1_t c) {
 // CONSTRAINED-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]], <2 x double> noundef [[C:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x double> [[C]], i32 1
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call double @llvm.experimental.constrained.fma.f64(double [[B]], double [[EXTRACT]], double [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call double @llvm.fma.f64(double [[B]], double [[EXTRACT]], double [[A]]) #[[ATTR2]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret double [[TMP0]]
 //
 float64_t test_vfmad_laneq_f64(float64_t a, float64_t b, float64x2_t c) {
@@ -80,7 +80,7 @@ float64_t test_vfmad_laneq_f64(float64_t a, float64_t b, float64x2_t c) {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[FNEG:%.*]] = fneg float [[B]]
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[C]], i32 1
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[FNEG]], float [[EXTRACT]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.fma.f32(float [[FNEG]], float [[EXTRACT]], float [[A]]) #[[ATTR2]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret float [[TMP0]]
 //
 float32_t test_vfmss_lane_f32(float32_t a, float32_t b, float32x2_t c) {
@@ -122,7 +122,7 @@ float32_t test_vfmss_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <1 x double> [[TMP6]], <1 x double> [[TMP6]], <1 x i32> zeroinitializer
 // CONSTRAINED-NEXT:    [[FMLA:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CONSTRAINED-NEXT:    [[FMLA1:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
-// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <1 x double> @llvm.experimental.constrained.fma.v1f64(<1 x double> [[FMLA]], <1 x double> [[LANE]], <1 x double> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[FMLA]], <1 x double> [[LANE]], <1 x double> [[FMLA1]]) #[[ATTR2]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[FMLA2]]
 //
 float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
@@ -166,7 +166,7 @@ float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <1 x double> [[TMP6]], <1 x double> [[TMP6]], <1 x i32> zeroinitializer
 // CONSTRAINED-NEXT:    [[FMLA:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CONSTRAINED-NEXT:    [[FMLA1:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
-// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <1 x double> @llvm.experimental.constrained.fma.v1f64(<1 x double> [[FMLA]], <1 x double> [[LANE]], <1 x double> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[FMLA]], <1 x double> [[LANE]], <1 x double> [[FMLA1]]) #[[ATTR2]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[FMLA2]]
 //
 float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
@@ -207,7 +207,7 @@ float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to double
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <2 x double>
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fma.f64(double [[TMP7]], double [[EXTRACT]], double [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call double @llvm.fma.f64(double [[TMP7]], double [[EXTRACT]], double [[TMP6]]) #[[ATTR2]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[TMP10:%.*]] = bitcast double [[TMP9]] to <1 x double>
 // CONSTRAINED-NEXT:    ret <1 x double> [[TMP10]]
 //
@@ -251,7 +251,7 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to double
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <2 x double>
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fma.f64(double [[TMP7]], double [[EXTRACT]], double [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call double @llvm.fma.f64(double [[TMP7]], double [[EXTRACT]], double [[TMP6]]) #[[ATTR2]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[TMP10:%.*]] = bitcast double [[TMP9]] to <1 x double>
 // CONSTRAINED-NEXT:    ret <1 x double> [[TMP10]]
 //

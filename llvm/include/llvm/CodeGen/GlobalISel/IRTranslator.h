@@ -39,7 +39,6 @@ class BasicBlock;
 class CallInst;
 class CallLowering;
 class Constant;
-class ConstrainedFPIntrinsic;
 class DataLayout;
 class DbgDeclareInst;
 class DbgValueInst;
@@ -267,9 +266,6 @@ private:
   /// \return true if the translation succeeded.
   bool translateSimpleIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                 MachineIRBuilder &MIRBuilder);
-
-  bool translateConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI,
-                                       MachineIRBuilder &MIRBuilder);
 
   bool translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                MachineIRBuilder &MIRBuilder);

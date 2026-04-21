@@ -69,19 +69,7 @@ define <4 x float> @fma_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z) #0
 define <4 x i32> @fptosi_v4i32_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fptosi_v4i32_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vcvt.s32.f32 s4, s2
-; CHECK-NEXT:    vcvt.s32.f32 s6, s0
-; CHECK-NEXT:    vcvt.s32.f32 s0, s1
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vcvt.s32.f32 s4, s3
-; CHECK-NEXT:    vmov.32 d17[0], r0
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vmov.32 d16[0], r0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov.32 d17[1], r0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov.32 d16[1], r0
-; CHECK-NEXT:    vorr q0, q8, q8
+; CHECK-NEXT:    vcvt.s32.f32 q0, q0
 ; CHECK-NEXT:    bx lr
   %val = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
   ret <4 x i32> %val
@@ -90,19 +78,7 @@ define <4 x i32> @fptosi_v4i32_v4f32(<4 x float> %x) #0 {
 define <4 x i32> @fptoui_v4i32_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fptoui_v4i32_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vcvt.u32.f32 s4, s2
-; CHECK-NEXT:    vcvt.u32.f32 s6, s0
-; CHECK-NEXT:    vcvt.u32.f32 s0, s1
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vcvt.u32.f32 s4, s3
-; CHECK-NEXT:    vmov.32 d17[0], r0
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vmov.32 d16[0], r0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov.32 d17[1], r0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov.32 d16[1], r0
-; CHECK-NEXT:    vorr q0, q8, q8
+; CHECK-NEXT:    vcvt.u32.f32 q0, q0
 ; CHECK-NEXT:    bx lr
   %val = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
   ret <4 x i32> %val

@@ -11,8 +11,8 @@ float fp_contract_1(float a, float b, float c) {
 // COMMON: _Z13fp_contract_1fff
 // CHECK: %[[M:.+]] = fmul contract float %a, %b
 // CHECK-NEXT: fadd contract float %[[M]], %c
-// STRICT: %[[M:.+]] = tail call contract float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
-// STRICT-NEXT: tail call contract float @llvm.experimental.constrained.fadd.f32(float %[[M]], float %c, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// STRICT: %[[M:.+]] = call contract float @llvm.fmul.f32(float %a, float %b) #{{.*}} [ "fp.control"(metadata !"rte") ]
+// STRICT-NEXT: call contract float @llvm.fadd.f32(float %[[M]], float %c) #{{.*}} [ "fp.control"(metadata !"rte") ]
 
 #pragma clang fp contract(fast)
   return a * b + c;
@@ -23,8 +23,8 @@ float fp_contract_2(float a, float b, float c) {
   // COMMON: _Z13fp_contract_2fff
   // CHECK: %[[M:.+]] = fmul float %a, %b
   // CHECK-NEXT: fadd float %[[M]], %c
-  // STRICT: %[[M:.+]] = tail call float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // STRICT-NEXT: tail call float @llvm.experimental.constrained.fadd.f32(float %[[M]], float %c, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // STRICT: %[[M:.+]] = call float @llvm.fmul.f32(float %a, float %b) #{{.*}} [ "fp.control"(metadata !"rte") ]
+  // STRICT-NEXT: call float @llvm.fadd.f32(float %[[M]], float %c) #{{.*}} [ "fp.control"(metadata !"rte") ]
   {
 #pragma clang fp contract(fast)
   }
@@ -45,8 +45,8 @@ float fp_contract_3(float a, float b, float c) {
   // COMMON: _Z13fp_contract_3fff
   // CHECK: %[[M:.+]] = fmul contract float %a, %b
   // CHECK-NEXT: fadd contract float %[[M]], %c
-  // STRICT: %[[M:.+]] = tail call contract float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // STRICT-NEXT: tail call contract noundef float @llvm.experimental.constrained.fadd.f32(float %[[M]], float %c, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // STRICT: %[[M:.+]] = call contract float @llvm.fmul.f32(float %a, float %b) #{{.*}} [ "fp.control"(metadata !"rte") ]
+  // STRICT-NEXT: call contract noundef float @llvm.fadd.f32(float %[[M]], float %c) #{{.*}} [ "fp.control"(metadata !"rte") ]
   return template_muladd<float>(a, b, c);
 }
 
@@ -62,8 +62,8 @@ template class fp_contract_4<int>;
 // COMMON: _ZN13fp_contract_4IiE6methodEfff
 // CHECK: %[[M:.+]] = fmul contract float %a, %b
 // CHECK-NEXT: fadd contract float %[[M]], %c
-// STRICT: %[[M:.+]] = tail call contract float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
-// STRICT-NEXT: tail call contract float @llvm.experimental.constrained.fadd.f32(float %[[M]], float %c, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// STRICT: %[[M:.+]] = call contract float @llvm.fmul.f32(float %a, float %b) #{{.*}} [ "fp.control"(metadata !"rte") ]
+// STRICT-NEXT: call contract float @llvm.fadd.f32(float %[[M]], float %c) #{{.*}} [ "fp.control"(metadata !"rte") ]
 
 // Check file-scoped FP_CONTRACT
 #pragma clang fp contract(fast)
@@ -71,8 +71,8 @@ float fp_contract_5(float a, float b, float c) {
   // COMMON: _Z13fp_contract_5fff
   // CHECK: %[[M:.+]] = fmul contract float %a, %b
   // CHECK-NEXT: fadd contract float %[[M]], %c
-  // STRICT: %[[M:.+]] = tail call contract float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // STRICT-NEXT: tail call contract float @llvm.experimental.constrained.fadd.f32(float %[[M]], float %c, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // STRICT: %[[M:.+]] = call contract float @llvm.fmul.f32(float %a, float %b) #{{.*}} [ "fp.control"(metadata !"rte") ]
+  // STRICT-NEXT: call contract float @llvm.fadd.f32(float %[[M]], float %c) #{{.*}} [ "fp.control"(metadata !"rte") ]
   return a * b + c;
 }
 
@@ -82,8 +82,8 @@ float fp_contract_6(float a, float b, float c) {
   // COMMON: _Z13fp_contract_6fff
   // CHECK: %[[M:.+]] = fmul float %a, %b
   // CHECK-NEXT: fadd float %[[M]], %c
-  // STRICT: %[[M:.+]] = tail call float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // STRICT-NEXT: tail call float @llvm.experimental.constrained.fadd.f32(float %[[M]], float %c, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // STRICT: %[[M:.+]] = call float @llvm.fmul.f32(float %a, float %b) #{{.*}} [ "fp.control"(metadata !"rte") ]
+  // STRICT-NEXT: call float @llvm.fadd.f32(float %[[M]], float %c) #{{.*}} [ "fp.control"(metadata !"rte") ]
   return a * b + c;
 }
 
@@ -92,14 +92,14 @@ float fp_contract_6(float a, float b, float c) {
 float fp_contract_7(float a) {
 // COMMON: _Z13fp_contract_7f
 // CHECK: tail call contract float @llvm.sqrt.f32(float %a)
-// STRICT: tail call contract float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// STRICT: call contract float @llvm.sqrt.f32(float %a) #{{.*}} [ "fp.control"(metadata !"rte") ]
   return __builtin_sqrtf(a);
 }
 
 float fp_contract_8(float a) {
 // COMMON: _Z13fp_contract_8f
 // CHECK: tail call float @llvm.sqrt.f32(float %a)
-// STRICT: tail call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// STRICT: call float @llvm.sqrt.f32(float %a) #{{.*}} [ "fp.control"(metadata !"rte") ]
 #pragma clang fp contract(off)
   return __builtin_sqrtf(a);
 }

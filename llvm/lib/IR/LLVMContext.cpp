@@ -57,6 +57,10 @@ static StringRef knownBundleName(unsigned BundleTagID) {
     return "align";
   case LLVMContext::OB_deactivation_symbol:
     return "deactivation-symbol";
+  case LLVMContext::OB_fp_control:
+    return "fp.control";
+  case LLVMContext::OB_fp_except:
+    return "fp.except";
   default:
     llvm_unreachable("unknown bundle id");
   }

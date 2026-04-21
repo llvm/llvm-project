@@ -379,23 +379,23 @@
 // X86WINPRMTD_STRICT-NEXT:    [[B_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[B_COERCE]], 32
 // X86WINPRMTD_STRICT-NEXT:    [[B_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[B_SROA_2_0_EXTRACT_SHIFT]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = bitcast i32 [[B_SROA_2_0_EXTRACT_TRUNC]] to float
-// X86WINPRMTD_STRICT-NEXT:    [[EXT:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP0]], metadata !"fpexcept.strict") #[[ATTR3:[0-9]+]]
-// X86WINPRMTD_STRICT-NEXT:    [[EXT1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP1]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[EXT2:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP2]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[EXT3:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP3]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT1]], double [[EXT3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP4]], double [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT2]], double [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT3]], double [[EXT3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP7]], double [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT1]], double [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP10]], double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP6]], double [[TMP9]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP12]], double [[TMP9]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[UNPROMOTION4:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP14]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[EXT:%.*]] = fpext float [[TMP0]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[EXT1:%.*]] = fpext float [[TMP1]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[EXT2:%.*]] = fpext float [[TMP2]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[EXT3:%.*]] = fpext float [[TMP3]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fmul double [[EXT]], [[EXT2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fmul double [[EXT1]], [[EXT3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fadd double [[TMP4]], [[TMP5]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fmul double [[EXT2]], [[EXT2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fmul double [[EXT3]], [[EXT3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fadd double [[TMP7]], [[TMP8]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fmul double [[EXT1]], [[EXT2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fmul double [[EXT]], [[EXT3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fsub double [[TMP10]], [[TMP11]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = fdiv double [[TMP6]], [[TMP9]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = fdiv double [[TMP12]], [[TMP9]]
+// X86WINPRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = fptrunc double [[TMP13]] to float
+// X86WINPRMTD_STRICT-NEXT:    [[UNPROMOTION4:%.*]] = fptrunc double [[TMP14]] to float
 // X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = bitcast float [[UNPROMOTION]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = bitcast float [[UNPROMOTION4]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[RETVAL_SROA_2_0_INSERT_EXT:%.*]] = zext i32 [[TMP16]] to i64
@@ -412,25 +412,25 @@
 // PRMTD_STRICT-NEXT:  entry:
 // PRMTD_STRICT-NEXT:    [[A_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[A_COERCE]], i32 0
 // PRMTD_STRICT-NEXT:    [[A_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[A_COERCE]], i32 1
-// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[A_SROA_0_0_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4:[0-9]+]]
-// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[A_SROA_0_4_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = fpext float [[A_SROA_0_0_VEC_EXTRACT]] to double
+// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = fpext float [[A_SROA_0_4_VEC_EXTRACT]] to double
 // PRMTD_STRICT-NEXT:    [[B_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[B_COERCE]], i32 0
 // PRMTD_STRICT-NEXT:    [[B_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[B_COERCE]], i32 1
-// PRMTD_STRICT-NEXT:    [[EXT2:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[B_SROA_0_0_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[EXT3:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[B_SROA_0_4_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT1]], double [[EXT3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP0]], double [[TMP1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT2]], double [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT3]], double [[EXT3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP3]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT1]], double [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP6]], double [[TMP7]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP2]], double [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP8]], double [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP9]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION4:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP10]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[EXT2:%.*]] = fpext float [[B_SROA_0_0_VEC_EXTRACT]] to double
+// PRMTD_STRICT-NEXT:    [[EXT3:%.*]] = fpext float [[B_SROA_0_4_VEC_EXTRACT]] to double
+// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = fmul double [[EXT]], [[EXT2]]
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = fmul double [[EXT1]], [[EXT3]]
+// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fadd double [[TMP0]], [[TMP1]]
+// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul double [[EXT2]], [[EXT2]]
+// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fmul double [[EXT3]], [[EXT3]]
+// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fadd double [[TMP3]], [[TMP4]]
+// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fmul double [[EXT1]], [[EXT2]]
+// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fmul double [[EXT]], [[EXT3]]
+// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fsub double [[TMP6]], [[TMP7]]
+// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fdiv double [[TMP2]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv double [[TMP8]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = fptrunc double [[TMP9]] to float
+// PRMTD_STRICT-NEXT:    [[UNPROMOTION4:%.*]] = fptrunc double [[TMP10]] to float
 // PRMTD_STRICT-NEXT:    [[RETVAL_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x float> undef, float [[UNPROMOTION]], i32 0
 // PRMTD_STRICT-NEXT:    [[RETVAL_SROA_0_4_VEC_INSERT:%.*]] = insertelement <2 x float> [[RETVAL_SROA_0_0_VEC_INSERT]], float [[UNPROMOTION4]], i32 1
 // PRMTD_STRICT-NEXT:    ret <2 x float> [[RETVAL_SROA_0_4_VEC_INSERT]]
@@ -794,27 +794,27 @@ _Complex float divf(_Complex float a, _Complex float b) {
 // X86WINPRMTD_STRICT-NEXT:    [[B_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[B_COERCE]], 32
 // X86WINPRMTD_STRICT-NEXT:    [[B_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[B_SROA_2_0_EXTRACT_SHIFT]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = bitcast i32 [[B_SROA_2_0_EXTRACT_TRUNC]] to float
-// X86WINPRMTD_STRICT-NEXT:    [[EXT:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP0]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[EXT1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP1]], metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[EXT:%.*]] = fpext float [[TMP0]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[EXT1:%.*]] = fpext float [[TMP1]] to double
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
-// X86WINPRMTD_STRICT-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[DOTREAL]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[CONV2:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[DOTIMAG]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[CONV]], double [[EXT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[CONV2]], double [[EXT1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP2]], double [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT1]], double [[EXT1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP5]], double [[TMP6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[CONV2]], double [[EXT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[CONV]], double [[EXT1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP8]], double [[TMP9]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP4]], double [[TMP7]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP10]], double [[TMP7]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[CONV3:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[CONV4:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[CONV:%.*]] = fpext float [[DOTREAL]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[CONV2:%.*]] = fpext float [[DOTIMAG]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fmul double [[CONV]], [[EXT]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul double [[CONV2]], [[EXT1]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fadd double [[TMP2]], [[TMP3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fmul double [[EXT]], [[EXT]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fmul double [[EXT1]], [[EXT1]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fadd double [[TMP5]], [[TMP6]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fmul double [[CONV2]], [[EXT]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fmul double [[CONV]], [[EXT1]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fsub double [[TMP8]], [[TMP9]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fdiv double [[TMP4]], [[TMP7]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fdiv double [[TMP10]], [[TMP7]]
+// X86WINPRMTD_STRICT-NEXT:    [[CONV3:%.*]] = fptrunc double [[TMP11]] to float
+// X86WINPRMTD_STRICT-NEXT:    [[CONV4:%.*]] = fptrunc double [[TMP12]] to float
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREALP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP6:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    store float [[CONV3]], ptr [[DOTREALP5]], align 4
@@ -826,27 +826,27 @@ _Complex float divf(_Complex float a, _Complex float b) {
 // PRMTD_STRICT-NEXT:  entry:
 // PRMTD_STRICT-NEXT:    [[B_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[B_COERCE]], i32 0
 // PRMTD_STRICT-NEXT:    [[B_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[B_COERCE]], i32 1
-// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[B_SROA_0_0_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[B_SROA_0_4_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = fpext float [[B_SROA_0_0_VEC_EXTRACT]] to double
+// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = fpext float [[B_SROA_0_4_VEC_EXTRACT]] to double
 // PRMTD_STRICT-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
-// PRMTD_STRICT-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[DOTREAL]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[CONV2:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[DOTIMAG]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[CONV]], double [[EXT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[CONV2]], double [[EXT1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP0]], double [[TMP1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT1]], double [[EXT1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP3]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[CONV2]], double [[EXT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[CONV]], double [[EXT1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP6]], double [[TMP7]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP2]], double [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP8]], double [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[CONV3:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP9]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[CONV4:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP10]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[CONV:%.*]] = fpext float [[DOTREAL]] to double
+// PRMTD_STRICT-NEXT:    [[CONV2:%.*]] = fpext float [[DOTIMAG]] to double
+// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = fmul double [[CONV]], [[EXT]]
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = fmul double [[CONV2]], [[EXT1]]
+// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fadd double [[TMP0]], [[TMP1]]
+// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul double [[EXT]], [[EXT]]
+// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fmul double [[EXT1]], [[EXT1]]
+// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fadd double [[TMP3]], [[TMP4]]
+// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fmul double [[CONV2]], [[EXT]]
+// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fmul double [[CONV]], [[EXT1]]
+// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fsub double [[TMP6]], [[TMP7]]
+// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fdiv double [[TMP2]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv double [[TMP8]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[CONV3:%.*]] = fptrunc double [[TMP9]] to float
+// PRMTD_STRICT-NEXT:    [[CONV4:%.*]] = fptrunc double [[TMP10]] to float
 // PRMTD_STRICT-NEXT:    [[DOTREALP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP6:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    store float [[CONV3]], ptr [[DOTREALP5]], align 4
@@ -871,10 +871,10 @@ void divassignf(_Complex float *a, _Complex float b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub float [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd float [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno float [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2:![0-9]+]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1:![0-9]+]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno float [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call <2 x float> @__mulsc3(float noundef [[A_SROA_0_0_VEC_EXTRACT]], float noundef [[A_SROA_0_4_VEC_EXTRACT]], float noundef [[B_SROA_0_0_VEC_EXTRACT]], float noundef [[B_SROA_0_4_VEC_EXTRACT]]) #[[ATTR2]]
 // FULL-NEXT:    [[COERCE_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[CALL]], i32 0
@@ -1025,10 +1025,10 @@ void divassignf(_Complex float *a, _Complex float b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2:![0-9]+]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1:![0-9]+]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) <2 x float> @__mulsc3(float noundef nofpclass(nan inf) [[A_SROA_0_0_VEC_EXTRACT]], float noundef nofpclass(nan inf) [[A_SROA_0_4_VEC_EXTRACT]], float noundef nofpclass(nan inf) [[B_SROA_0_0_VEC_EXTRACT]], float noundef nofpclass(nan inf) [[B_SROA_0_4_VEC_EXTRACT]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[COERCE_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[CALL]], i32 0
@@ -1088,12 +1088,12 @@ void divassignf(_Complex float *a, _Complex float b) {
 // X86WINPRMTD_STRICT-NEXT:    [[B_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[B_COERCE]], 32
 // X86WINPRMTD_STRICT-NEXT:    [[B_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[B_SROA_2_0_EXTRACT_SHIFT]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = bitcast i32 [[B_SROA_2_0_EXTRACT_TRUNC]] to float
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[TMP0]], float [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[TMP1]], float [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[TMP0]], float [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[TMP1]], float [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[MUL_AC]], float [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[MUL_AD]], float [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul float [[TMP0]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul float [[TMP1]], [[TMP3]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul float [[TMP0]], [[TMP3]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul float [[TMP1]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub float [[MUL_AC]], [[MUL_BD]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd float [[MUL_AD]], [[MUL_BC]]
 // X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = bitcast float [[MUL_R]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = bitcast float [[MUL_I]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[RETVAL_SROA_2_0_INSERT_EXT:%.*]] = zext i32 [[TMP5]] to i64
@@ -1112,12 +1112,12 @@ void divassignf(_Complex float *a, _Complex float b) {
 // PRMTD_STRICT-NEXT:    [[A_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[A_COERCE]], i32 1
 // PRMTD_STRICT-NEXT:    [[B_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[B_COERCE]], i32 0
 // PRMTD_STRICT-NEXT:    [[B_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[B_COERCE]], i32 1
-// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[A_SROA_0_0_VEC_EXTRACT]], float [[B_SROA_0_0_VEC_EXTRACT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[A_SROA_0_4_VEC_EXTRACT]], float [[B_SROA_0_4_VEC_EXTRACT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[A_SROA_0_0_VEC_EXTRACT]], float [[B_SROA_0_4_VEC_EXTRACT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[A_SROA_0_4_VEC_EXTRACT]], float [[B_SROA_0_0_VEC_EXTRACT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[MUL_AC]], float [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[MUL_AD]], float [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul float [[A_SROA_0_0_VEC_EXTRACT]], [[B_SROA_0_0_VEC_EXTRACT]]
+// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul float [[A_SROA_0_4_VEC_EXTRACT]], [[B_SROA_0_4_VEC_EXTRACT]]
+// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul float [[A_SROA_0_0_VEC_EXTRACT]], [[B_SROA_0_4_VEC_EXTRACT]]
+// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul float [[A_SROA_0_4_VEC_EXTRACT]], [[B_SROA_0_0_VEC_EXTRACT]]
+// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub float [[MUL_AC]], [[MUL_BD]]
+// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd float [[MUL_AD]], [[MUL_BC]]
 // PRMTD_STRICT-NEXT:    [[RETVAL_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x float> undef, float [[MUL_R]], i32 0
 // PRMTD_STRICT-NEXT:    [[RETVAL_SROA_0_4_VEC_INSERT:%.*]] = insertelement <2 x float> [[RETVAL_SROA_0_0_VEC_INSERT]], float [[MUL_I]], i32 1
 // PRMTD_STRICT-NEXT:    ret <2 x float> [[RETVAL_SROA_0_4_VEC_INSERT]]
@@ -1142,10 +1142,10 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub float [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd float [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno float [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno float [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call <2 x float> @__mulsc3(float noundef [[DOTREAL]], float noundef [[DOTIMAG]], float noundef [[B_SROA_0_0_VEC_EXTRACT]], float noundef [[B_SROA_0_4_VEC_EXTRACT]]) #[[ATTR2]]
 // FULL-NEXT:    [[COERCE_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[CALL]], i32 0
@@ -1322,10 +1322,10 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) <2 x float> @__mulsc3(float noundef nofpclass(nan inf) [[DOTREAL]], float noundef nofpclass(nan inf) [[DOTIMAG]], float noundef nofpclass(nan inf) [[B_SROA_0_0_VEC_EXTRACT]], float noundef nofpclass(nan inf) [[B_SROA_0_4_VEC_EXTRACT]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[COERCE_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[CALL]], i32 0
@@ -1394,12 +1394,12 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[DOTREAL]], float [[TMP0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[DOTIMAG]], float [[TMP1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[DOTREAL]], float [[TMP1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[DOTIMAG]], float [[TMP0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[MUL_AC]], float [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[MUL_AD]], float [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul float [[DOTREAL]], [[TMP0]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul float [[DOTIMAG]], [[TMP1]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul float [[DOTREAL]], [[TMP1]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul float [[DOTIMAG]], [[TMP0]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub float [[MUL_AC]], [[MUL_BD]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd float [[MUL_AD]], [[MUL_BC]]
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    store float [[MUL_R]], ptr [[DOTREALP1]], align 4
@@ -1415,12 +1415,12 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // PRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
-// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[DOTREAL]], float [[B_SROA_0_0_VEC_EXTRACT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[DOTIMAG]], float [[B_SROA_0_4_VEC_EXTRACT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[DOTREAL]], float [[B_SROA_0_4_VEC_EXTRACT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[DOTIMAG]], float [[B_SROA_0_0_VEC_EXTRACT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[MUL_AC]], float [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[MUL_AD]], float [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul float [[DOTREAL]], [[B_SROA_0_0_VEC_EXTRACT]]
+// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul float [[DOTIMAG]], [[B_SROA_0_4_VEC_EXTRACT]]
+// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul float [[DOTREAL]], [[B_SROA_0_4_VEC_EXTRACT]]
+// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul float [[DOTIMAG]], [[B_SROA_0_0_VEC_EXTRACT]]
+// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub float [[MUL_AC]], [[MUL_BD]]
+// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd float [[MUL_AD]], [[MUL_BC]]
 // PRMTD_STRICT-NEXT:    [[DOTREALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    store float [[MUL_R]], ptr [[DOTREALP1]], align 4
@@ -1754,31 +1754,31 @@ void mulassignf(_Complex float *a, _Complex float b) {
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR2:[0-9]+]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR2]]
+// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt double [[TMP0]], [[TMP1]]
 // X86WINPRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[B_IMAG]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP2]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[B_REAL]], double [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_IMAG]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A_REAL]], double [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP6]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_REAL]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A_IMAG]], double [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP9]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fdiv double [[B_IMAG]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul double [[TMP2]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fadd double [[B_REAL]], [[TMP3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fmul double [[A_IMAG]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fadd double [[A_REAL]], [[TMP5]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fdiv double [[TMP6]], [[TMP4]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fmul double [[A_REAL]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fsub double [[A_IMAG]], [[TMP8]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv double [[TMP9]], [[TMP4]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_less_than_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[B_REAL]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP11]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[B_IMAG]], double [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_REAL]], double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP14]], double [[A_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP15]], double [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_IMAG]], double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP17]], double [[A_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP18]], double [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fdiv double [[B_REAL]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fmul double [[TMP11]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = fadd double [[B_IMAG]], [[TMP12]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = fmul double [[A_REAL]], [[TMP11]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = fadd double [[TMP14]], [[A_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = fdiv double [[TMP15]], [[TMP13]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = fmul double [[A_IMAG]], [[TMP11]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = fsub double [[TMP17]], [[A_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = fdiv double [[TMP18]], [[TMP13]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV]]
 // X86WINPRMTD_STRICT:       complex_div:
 // X86WINPRMTD_STRICT-NEXT:    [[TMP20:%.*]] = phi double [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
@@ -1798,25 +1798,25 @@ void mulassignf(_Complex float *a, _Complex float b) {
 // X86WINPRMTD_STRICT-NEXT:    ret void
 //
 // PRMTD_STRICT-LABEL: define dso_local { double, double } @divd(
-// PRMTD_STRICT-SAME: double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) #[[ATTR2:[0-9]+]] {
+// PRMTD_STRICT-SAME: double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) #[[ATTR1:[0-9]+]] {
 // PRMTD_STRICT-NEXT:  entry:
-// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[A_COERCE0]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[A_COERCE1]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[EXT2:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[B_COERCE0]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[EXT3:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[B_COERCE1]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[EXT]], x86_fp80 [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[EXT1]], x86_fp80 [[EXT3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[EXT2]], x86_fp80 [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[EXT3]], x86_fp80 [[EXT3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[TMP3]], x86_fp80 [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[EXT1]], x86_fp80 [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[EXT]], x86_fp80 [[EXT3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[TMP6]], x86_fp80 [[TMP7]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP2]], x86_fp80 [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP8]], x86_fp80 [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = call double @llvm.experimental.constrained.fptrunc.f64.f80(x86_fp80 [[TMP9]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION4:%.*]] = call double @llvm.experimental.constrained.fptrunc.f64.f80(x86_fp80 [[TMP10]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = fpext double [[A_COERCE0]] to x86_fp80
+// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = fpext double [[A_COERCE1]] to x86_fp80
+// PRMTD_STRICT-NEXT:    [[EXT2:%.*]] = fpext double [[B_COERCE0]] to x86_fp80
+// PRMTD_STRICT-NEXT:    [[EXT3:%.*]] = fpext double [[B_COERCE1]] to x86_fp80
+// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = fmul x86_fp80 [[EXT]], [[EXT2]]
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = fmul x86_fp80 [[EXT1]], [[EXT3]]
+// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fadd x86_fp80 [[TMP0]], [[TMP1]]
+// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul x86_fp80 [[EXT2]], [[EXT2]]
+// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fmul x86_fp80 [[EXT3]], [[EXT3]]
+// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fadd x86_fp80 [[TMP3]], [[TMP4]]
+// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fmul x86_fp80 [[EXT1]], [[EXT2]]
+// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fmul x86_fp80 [[EXT]], [[EXT3]]
+// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fsub x86_fp80 [[TMP6]], [[TMP7]]
+// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fdiv x86_fp80 [[TMP2]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv x86_fp80 [[TMP8]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = fptrunc x86_fp80 [[TMP9]] to double
+// PRMTD_STRICT-NEXT:    [[UNPROMOTION4:%.*]] = fptrunc x86_fp80 [[TMP10]] to double
 // PRMTD_STRICT-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { double, double } poison, double [[UNPROMOTION]], 0
 // PRMTD_STRICT-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { double, double } [[DOTFCA_0_INSERT]], double [[UNPROMOTION4]], 1
 // PRMTD_STRICT-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
@@ -2190,31 +2190,31 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR2]]
+// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt double [[TMP0]], [[TMP1]]
 // X86WINPRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[B_IMAG]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP2]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[B_REAL]], double [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[DOTREAL]], double [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP6]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[DOTIMAG]], double [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP9]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fdiv double [[B_IMAG]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul double [[TMP2]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fadd double [[B_REAL]], [[TMP3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fmul double [[DOTIMAG]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fadd double [[DOTREAL]], [[TMP5]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fdiv double [[TMP6]], [[TMP4]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fmul double [[DOTREAL]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fsub double [[DOTIMAG]], [[TMP8]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv double [[TMP9]], [[TMP4]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_less_than_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[B_REAL]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP11]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[B_IMAG]], double [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP14]], double [[DOTIMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP15]], double [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP17]], double [[DOTREAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP18]], double [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fdiv double [[B_REAL]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fmul double [[TMP11]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = fadd double [[B_IMAG]], [[TMP12]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = fmul double [[DOTREAL]], [[TMP11]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = fadd double [[TMP14]], [[DOTIMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = fdiv double [[TMP15]], [[TMP13]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = fmul double [[DOTIMAG]], [[TMP11]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = fsub double [[TMP17]], [[DOTREAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = fdiv double [[TMP18]], [[TMP13]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV]]
 // X86WINPRMTD_STRICT:       complex_div:
 // X86WINPRMTD_STRICT-NEXT:    [[TMP20:%.*]] = phi double [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
@@ -2226,29 +2226,29 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // X86WINPRMTD_STRICT-NEXT:    ret void
 //
 // PRMTD_STRICT-LABEL: define dso_local void @divassignd(
-// PRMTD_STRICT-SAME: ptr noundef [[A:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) #[[ATTR2]] {
+// PRMTD_STRICT-SAME: ptr noundef [[A:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) #[[ATTR1]] {
 // PRMTD_STRICT-NEXT:  entry:
-// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[B_COERCE0]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[B_COERCE1]], metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = fpext double [[B_COERCE0]] to x86_fp80
+// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = fpext double [[B_COERCE1]] to x86_fp80
 // PRMTD_STRICT-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8
-// PRMTD_STRICT-NEXT:    [[CONV:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[DOTREAL]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[CONV2:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[DOTIMAG]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[CONV]], x86_fp80 [[EXT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[CONV2]], x86_fp80 [[EXT1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[EXT]], x86_fp80 [[EXT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[EXT1]], x86_fp80 [[EXT1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[TMP3]], x86_fp80 [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[CONV2]], x86_fp80 [[EXT]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[CONV]], x86_fp80 [[EXT1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[TMP6]], x86_fp80 [[TMP7]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP2]], x86_fp80 [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP8]], x86_fp80 [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[CONV3:%.*]] = call double @llvm.experimental.constrained.fptrunc.f64.f80(x86_fp80 [[TMP9]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[CONV4:%.*]] = call double @llvm.experimental.constrained.fptrunc.f64.f80(x86_fp80 [[TMP10]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[CONV:%.*]] = fpext double [[DOTREAL]] to x86_fp80
+// PRMTD_STRICT-NEXT:    [[CONV2:%.*]] = fpext double [[DOTIMAG]] to x86_fp80
+// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = fmul x86_fp80 [[CONV]], [[EXT]]
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = fmul x86_fp80 [[CONV2]], [[EXT1]]
+// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fadd x86_fp80 [[TMP0]], [[TMP1]]
+// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul x86_fp80 [[EXT]], [[EXT]]
+// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fmul x86_fp80 [[EXT1]], [[EXT1]]
+// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fadd x86_fp80 [[TMP3]], [[TMP4]]
+// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fmul x86_fp80 [[CONV2]], [[EXT]]
+// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fmul x86_fp80 [[CONV]], [[EXT1]]
+// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fsub x86_fp80 [[TMP6]], [[TMP7]]
+// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fdiv x86_fp80 [[TMP2]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv x86_fp80 [[TMP8]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[CONV3:%.*]] = fptrunc x86_fp80 [[TMP9]] to double
+// PRMTD_STRICT-NEXT:    [[CONV4:%.*]] = fptrunc x86_fp80 [[TMP10]] to double
 // PRMTD_STRICT-NEXT:    [[DOTREALP5:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP6:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    store double [[CONV3]], ptr [[DOTREALP5]], align 8
@@ -2269,10 +2269,10 @@ void divassignd(_Complex double *a, _Complex double b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno double [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno double [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef [[A_COERCE0]], double noundef [[A_COERCE1]], double noundef [[B_COERCE0]], double noundef [[B_COERCE1]]) #[[ATTR2]]
 // FULL-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
@@ -2414,10 +2414,10 @@ void divassignd(_Complex double *a, _Complex double b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn double [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn double [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { double, double } @__muldc3(double noundef nofpclass(nan inf) [[A_COERCE0]], double noundef nofpclass(nan inf) [[A_COERCE1]], double noundef nofpclass(nan inf) [[B_COERCE0]], double noundef nofpclass(nan inf) [[B_COERCE1]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
@@ -2467,12 +2467,12 @@ void divassignd(_Complex double *a, _Complex double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_REAL]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_IMAG]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_REAL]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_IMAG]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[MUL_AC]], double [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[MUL_AD]], double [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul double [[A_REAL]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul double [[A_IMAG]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul double [[A_REAL]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul double [[A_IMAG]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // X86WINPRMTD_STRICT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    store double [[MUL_R]], ptr [[AGG_RESULT_REALP]], align 8
@@ -2488,14 +2488,14 @@ void divassignd(_Complex double *a, _Complex double b) {
 // X86WINPRMTD_STRICT-NEXT:    ret void
 //
 // PRMTD_STRICT-LABEL: define dso_local { double, double } @muld(
-// PRMTD_STRICT-SAME: double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) #[[ATTR2]] {
+// PRMTD_STRICT-SAME: double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) #[[ATTR1]] {
 // PRMTD_STRICT-NEXT:  entry:
-// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_COERCE0]], double [[B_COERCE0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_COERCE1]], double [[B_COERCE1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_COERCE0]], double [[B_COERCE1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_COERCE1]], double [[B_COERCE0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[MUL_AC]], double [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[MUL_AD]], double [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul double [[A_COERCE0]], [[B_COERCE0]]
+// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul double [[A_COERCE1]], [[B_COERCE1]]
+// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul double [[A_COERCE0]], [[B_COERCE1]]
+// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul double [[A_COERCE1]], [[B_COERCE0]]
+// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
+// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // PRMTD_STRICT-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { double, double } poison, double [[MUL_R]], 0
 // PRMTD_STRICT-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { double, double } [[DOTFCA_0_INSERT]], double [[MUL_I]], 1
 // PRMTD_STRICT-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
@@ -2518,10 +2518,10 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno double [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno double [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef [[DOTREAL]], double noundef [[DOTIMAG]], double noundef [[B_COERCE0]], double noundef [[B_COERCE1]]) #[[ATTR2]]
 // FULL-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
@@ -2687,10 +2687,10 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn double [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn double [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { double, double } @__muldc3(double noundef nofpclass(nan inf) [[DOTREAL]], double noundef nofpclass(nan inf) [[DOTIMAG]], double noundef nofpclass(nan inf) [[B_COERCE0]], double noundef nofpclass(nan inf) [[B_COERCE1]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
@@ -2754,12 +2754,12 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[MUL_AC]], double [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[MUL_AD]], double [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul double [[DOTREAL]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul double [[DOTIMAG]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul double [[DOTREAL]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul double [[DOTIMAG]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    store double [[MUL_R]], ptr [[DOTREALP1]], align 8
@@ -2767,18 +2767,18 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // X86WINPRMTD_STRICT-NEXT:    ret void
 //
 // PRMTD_STRICT-LABEL: define dso_local void @mulassignd(
-// PRMTD_STRICT-SAME: ptr noundef [[A:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) #[[ATTR2]] {
+// PRMTD_STRICT-SAME: ptr noundef [[A:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) #[[ATTR1]] {
 // PRMTD_STRICT-NEXT:  entry:
 // PRMTD_STRICT-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8
-// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[B_COERCE0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[B_COERCE1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[B_COERCE1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[B_COERCE0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[MUL_AC]], double [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[MUL_AD]], double [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul double [[DOTREAL]], [[B_COERCE0]]
+// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul double [[DOTIMAG]], [[B_COERCE1]]
+// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul double [[DOTREAL]], [[B_COERCE1]]
+// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul double [[DOTIMAG]], [[B_COERCE0]]
+// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
+// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // PRMTD_STRICT-NEXT:    [[DOTREALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    store double [[MUL_R]], ptr [[DOTREALP1]], align 8
@@ -3200,31 +3200,31 @@ void mulassignd(_Complex double *a, _Complex double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR2]]
+// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt double [[TMP0]], [[TMP1]]
 // X86WINPRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[B_IMAG]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP2]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[B_REAL]], double [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_IMAG]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A_REAL]], double [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP6]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_REAL]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A_IMAG]], double [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP9]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fdiv double [[B_IMAG]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul double [[TMP2]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fadd double [[B_REAL]], [[TMP3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fmul double [[A_IMAG]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fadd double [[A_REAL]], [[TMP5]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fdiv double [[TMP6]], [[TMP4]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fmul double [[A_REAL]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fsub double [[A_IMAG]], [[TMP8]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv double [[TMP9]], [[TMP4]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_less_than_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[B_REAL]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP11]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[B_IMAG]], double [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_REAL]], double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP14]], double [[A_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP15]], double [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_IMAG]], double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP17]], double [[A_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP18]], double [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fdiv double [[B_REAL]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fmul double [[TMP11]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = fadd double [[B_IMAG]], [[TMP12]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = fmul double [[A_REAL]], [[TMP11]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = fadd double [[TMP14]], [[A_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = fdiv double [[TMP15]], [[TMP13]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = fmul double [[A_IMAG]], [[TMP11]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = fsub double [[TMP17]], [[A_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = fdiv double [[TMP18]], [[TMP13]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV]]
 // X86WINPRMTD_STRICT:       complex_div:
 // X86WINPRMTD_STRICT-NEXT:    [[TMP20:%.*]] = phi double [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
@@ -3244,7 +3244,7 @@ void mulassignd(_Complex double *a, _Complex double b) {
 // X86WINPRMTD_STRICT-NEXT:    ret void
 //
 // PRMTD_STRICT-LABEL: define dso_local { x86_fp80, x86_fp80 } @divld(
-// PRMTD_STRICT-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR2]] {
+// PRMTD_STRICT-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // PRMTD_STRICT-NEXT:  entry:
 // PRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load x86_fp80, ptr [[A_REALP]], align 16
@@ -3254,31 +3254,31 @@ void mulassignd(_Complex double *a, _Complex double b) {
 // PRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load x86_fp80, ptr [[B_REALP]], align 16
 // PRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[B]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load x86_fp80, ptr [[B_IMAGP]], align 16
-// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_REAL]]) #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_IMAG]]) #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_REAL]]) #[[ATTR3:[0-9]+]]
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_IMAG]]) #[[ATTR3]]
+// PRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt x86_fp80 [[TMP0]], [[TMP1]]
 // PRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // PRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
-// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[B_IMAG]], x86_fp80 [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[TMP2]], x86_fp80 [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[B_REAL]], x86_fp80 [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[A_IMAG]], x86_fp80 [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[A_REAL]], x86_fp80 [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP6]], x86_fp80 [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[A_REAL]], x86_fp80 [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[A_IMAG]], x86_fp80 [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP9]], x86_fp80 [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fdiv x86_fp80 [[B_IMAG]], [[B_REAL]]
+// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul x86_fp80 [[TMP2]], [[B_IMAG]]
+// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fadd x86_fp80 [[B_REAL]], [[TMP3]]
+// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fmul x86_fp80 [[A_IMAG]], [[TMP2]]
+// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fadd x86_fp80 [[A_REAL]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fdiv x86_fp80 [[TMP6]], [[TMP4]]
+// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fmul x86_fp80 [[A_REAL]], [[TMP2]]
+// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fsub x86_fp80 [[A_IMAG]], [[TMP8]]
+// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv x86_fp80 [[TMP9]], [[TMP4]]
 // PRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV:%.*]]
 // PRMTD_STRICT:       abs_rhsr_less_than_abs_rhsi:
-// PRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[B_REAL]], x86_fp80 [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[TMP11]], x86_fp80 [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP13:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[B_IMAG]], x86_fp80 [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP14:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[A_REAL]], x86_fp80 [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP15:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[TMP14]], x86_fp80 [[A_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP16:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP15]], x86_fp80 [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP17:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[A_IMAG]], x86_fp80 [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP18:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[TMP17]], x86_fp80 [[A_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP19:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP18]], x86_fp80 [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fdiv x86_fp80 [[B_REAL]], [[B_IMAG]]
+// PRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fmul x86_fp80 [[TMP11]], [[B_REAL]]
+// PRMTD_STRICT-NEXT:    [[TMP13:%.*]] = fadd x86_fp80 [[B_IMAG]], [[TMP12]]
+// PRMTD_STRICT-NEXT:    [[TMP14:%.*]] = fmul x86_fp80 [[A_REAL]], [[TMP11]]
+// PRMTD_STRICT-NEXT:    [[TMP15:%.*]] = fadd x86_fp80 [[TMP14]], [[A_IMAG]]
+// PRMTD_STRICT-NEXT:    [[TMP16:%.*]] = fdiv x86_fp80 [[TMP15]], [[TMP13]]
+// PRMTD_STRICT-NEXT:    [[TMP17:%.*]] = fmul x86_fp80 [[A_IMAG]], [[TMP11]]
+// PRMTD_STRICT-NEXT:    [[TMP18:%.*]] = fsub x86_fp80 [[TMP17]], [[A_REAL]]
+// PRMTD_STRICT-NEXT:    [[TMP19:%.*]] = fdiv x86_fp80 [[TMP18]], [[TMP13]]
 // PRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV]]
 // PRMTD_STRICT:       complex_div:
 // PRMTD_STRICT-NEXT:    [[TMP20:%.*]] = phi x86_fp80 [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
@@ -3712,31 +3712,31 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR2]]
+// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt double [[TMP0]], [[TMP1]]
 // X86WINPRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[B_IMAG]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP2]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[B_REAL]], double [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[DOTREAL]], double [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP6]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[DOTIMAG]], double [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP9]], double [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fdiv double [[B_IMAG]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul double [[TMP2]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fadd double [[B_REAL]], [[TMP3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fmul double [[DOTIMAG]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fadd double [[DOTREAL]], [[TMP5]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fdiv double [[TMP6]], [[TMP4]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fmul double [[DOTREAL]], [[TMP2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fsub double [[DOTIMAG]], [[TMP8]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv double [[TMP9]], [[TMP4]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_less_than_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[B_REAL]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP11]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[B_IMAG]], double [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP14]], double [[DOTIMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP15]], double [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP17]], double [[DOTREAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP18]], double [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fdiv double [[B_REAL]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fmul double [[TMP11]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = fadd double [[B_IMAG]], [[TMP12]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = fmul double [[DOTREAL]], [[TMP11]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = fadd double [[TMP14]], [[DOTIMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = fdiv double [[TMP15]], [[TMP13]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = fmul double [[DOTIMAG]], [[TMP11]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = fsub double [[TMP17]], [[DOTREAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = fdiv double [[TMP18]], [[TMP13]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV]]
 // X86WINPRMTD_STRICT:       complex_div:
 // X86WINPRMTD_STRICT-NEXT:    [[TMP20:%.*]] = phi double [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
@@ -3748,7 +3748,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // X86WINPRMTD_STRICT-NEXT:    ret void
 //
 // PRMTD_STRICT-LABEL: define dso_local void @divassignld(
-// PRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR2]] {
+// PRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // PRMTD_STRICT-NEXT:  entry:
 // PRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[B]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load x86_fp80, ptr [[B_REALP]], align 16
@@ -3758,31 +3758,31 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // PRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load x86_fp80, ptr [[DOTREALP]], align 16
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load x86_fp80, ptr [[DOTIMAGP]], align 16
-// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_REAL]]) #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_IMAG]]) #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_REAL]]) #[[ATTR3]]
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_IMAG]]) #[[ATTR3]]
+// PRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt x86_fp80 [[TMP0]], [[TMP1]]
 // PRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // PRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
-// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[B_IMAG]], x86_fp80 [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[TMP2]], x86_fp80 [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[B_REAL]], x86_fp80 [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[DOTIMAG]], x86_fp80 [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[DOTREAL]], x86_fp80 [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP6]], x86_fp80 [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[DOTREAL]], x86_fp80 [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[DOTIMAG]], x86_fp80 [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP9]], x86_fp80 [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fdiv x86_fp80 [[B_IMAG]], [[B_REAL]]
+// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul x86_fp80 [[TMP2]], [[B_IMAG]]
+// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fadd x86_fp80 [[B_REAL]], [[TMP3]]
+// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fmul x86_fp80 [[DOTIMAG]], [[TMP2]]
+// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fadd x86_fp80 [[DOTREAL]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fdiv x86_fp80 [[TMP6]], [[TMP4]]
+// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fmul x86_fp80 [[DOTREAL]], [[TMP2]]
+// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fsub x86_fp80 [[DOTIMAG]], [[TMP8]]
+// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv x86_fp80 [[TMP9]], [[TMP4]]
 // PRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV:%.*]]
 // PRMTD_STRICT:       abs_rhsr_less_than_abs_rhsi:
-// PRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[B_REAL]], x86_fp80 [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[TMP11]], x86_fp80 [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP13:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[B_IMAG]], x86_fp80 [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP14:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[DOTREAL]], x86_fp80 [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP15:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[TMP14]], x86_fp80 [[DOTIMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP16:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP15]], x86_fp80 [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP17:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[DOTIMAG]], x86_fp80 [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP18:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[TMP17]], x86_fp80 [[DOTREAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP19:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP18]], x86_fp80 [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fdiv x86_fp80 [[B_REAL]], [[B_IMAG]]
+// PRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fmul x86_fp80 [[TMP11]], [[B_REAL]]
+// PRMTD_STRICT-NEXT:    [[TMP13:%.*]] = fadd x86_fp80 [[B_IMAG]], [[TMP12]]
+// PRMTD_STRICT-NEXT:    [[TMP14:%.*]] = fmul x86_fp80 [[DOTREAL]], [[TMP11]]
+// PRMTD_STRICT-NEXT:    [[TMP15:%.*]] = fadd x86_fp80 [[TMP14]], [[DOTIMAG]]
+// PRMTD_STRICT-NEXT:    [[TMP16:%.*]] = fdiv x86_fp80 [[TMP15]], [[TMP13]]
+// PRMTD_STRICT-NEXT:    [[TMP17:%.*]] = fmul x86_fp80 [[DOTIMAG]], [[TMP11]]
+// PRMTD_STRICT-NEXT:    [[TMP18:%.*]] = fsub x86_fp80 [[TMP17]], [[DOTREAL]]
+// PRMTD_STRICT-NEXT:    [[TMP19:%.*]] = fdiv x86_fp80 [[TMP18]], [[TMP13]]
 // PRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV]]
 // PRMTD_STRICT:       complex_div:
 // PRMTD_STRICT-NEXT:    [[TMP20:%.*]] = phi x86_fp80 [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
@@ -3815,10 +3815,10 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub x86_fp80 [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno x86_fp80 [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno x86_fp80 [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef [[A_REAL]], x86_fp80 noundef [[A_IMAG]], x86_fp80 noundef [[B_REAL]], x86_fp80 noundef [[B_IMAG]]) #[[ATTR2]]
 // FULL-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
@@ -4000,10 +4000,10 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn x86_fp80 [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
@@ -4069,12 +4069,12 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_REAL]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_IMAG]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_REAL]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A_IMAG]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[MUL_AC]], double [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[MUL_AD]], double [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul double [[A_REAL]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul double [[A_IMAG]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul double [[A_REAL]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul double [[A_IMAG]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // X86WINPRMTD_STRICT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    store double [[MUL_R]], ptr [[AGG_RESULT_REALP]], align 8
@@ -4090,7 +4090,7 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // X86WINPRMTD_STRICT-NEXT:    ret void
 //
 // PRMTD_STRICT-LABEL: define dso_local { x86_fp80, x86_fp80 } @mulld(
-// PRMTD_STRICT-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR2]] {
+// PRMTD_STRICT-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // PRMTD_STRICT-NEXT:  entry:
 // PRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load x86_fp80, ptr [[A_REALP]], align 16
@@ -4100,12 +4100,12 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load x86_fp80, ptr [[B_REALP]], align 16
 // PRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[B]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load x86_fp80, ptr [[B_IMAGP]], align 16
-// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[A_REAL]], x86_fp80 [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[A_IMAG]], x86_fp80 [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[A_REAL]], x86_fp80 [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[A_IMAG]], x86_fp80 [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[MUL_AC]], x86_fp80 [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[MUL_AD]], x86_fp80 [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul x86_fp80 [[A_REAL]], [[B_REAL]]
+// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul x86_fp80 [[A_IMAG]], [[B_IMAG]]
+// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul x86_fp80 [[A_REAL]], [[B_IMAG]]
+// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul x86_fp80 [[A_IMAG]], [[B_REAL]]
+// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub x86_fp80 [[MUL_AC]], [[MUL_BD]]
+// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // PRMTD_STRICT-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { x86_fp80, x86_fp80 } poison, x86_fp80 [[MUL_R]], 0
 // PRMTD_STRICT-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { x86_fp80, x86_fp80 } [[DOTFCA_0_INSERT]], x86_fp80 [[MUL_I]], 1
 // PRMTD_STRICT-NEXT:    ret { x86_fp80, x86_fp80 } [[DOTFCA_1_INSERT]]
@@ -4132,10 +4132,10 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub x86_fp80 [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno x86_fp80 [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno x86_fp80 [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef [[DOTREAL]], x86_fp80 noundef [[DOTIMAG]], x86_fp80 noundef [[B_REAL]], x86_fp80 noundef [[B_IMAG]]) #[[ATTR2]]
 // FULL-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
@@ -4321,10 +4321,10 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn x86_fp80 [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef nofpclass(nan inf) [[DOTREAL]], x86_fp80 noundef nofpclass(nan inf) [[DOTIMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
@@ -4396,12 +4396,12 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTREAL]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DOTIMAG]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[MUL_AC]], double [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[MUL_AD]], double [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul double [[DOTREAL]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul double [[DOTIMAG]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul double [[DOTREAL]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul double [[DOTIMAG]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
+// X86WINPRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // X86WINPRMTD_STRICT-NEXT:    [[DOTREALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[DOTIMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    store double [[MUL_R]], ptr [[DOTREALP1]], align 8
@@ -4409,7 +4409,7 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // X86WINPRMTD_STRICT-NEXT:    ret void
 //
 // PRMTD_STRICT-LABEL: define dso_local void @mulassignld(
-// PRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR2]] {
+// PRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // PRMTD_STRICT-NEXT:  entry:
 // PRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[B]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load x86_fp80, ptr [[B_REALP]], align 16
@@ -4419,12 +4419,12 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // PRMTD_STRICT-NEXT:    [[DOTREAL:%.*]] = load x86_fp80, ptr [[DOTREALP]], align 16
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[DOTIMAG:%.*]] = load x86_fp80, ptr [[DOTIMAGP]], align 16
-// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[DOTREAL]], x86_fp80 [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[DOTIMAG]], x86_fp80 [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[DOTREAL]], x86_fp80 [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[DOTIMAG]], x86_fp80 [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[MUL_AC]], x86_fp80 [[MUL_BD]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[MUL_AD]], x86_fp80 [[MUL_BC]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[MUL_AC:%.*]] = fmul x86_fp80 [[DOTREAL]], [[B_REAL]]
+// PRMTD_STRICT-NEXT:    [[MUL_BD:%.*]] = fmul x86_fp80 [[DOTIMAG]], [[B_IMAG]]
+// PRMTD_STRICT-NEXT:    [[MUL_AD:%.*]] = fmul x86_fp80 [[DOTREAL]], [[B_IMAG]]
+// PRMTD_STRICT-NEXT:    [[MUL_BC:%.*]] = fmul x86_fp80 [[DOTIMAG]], [[B_REAL]]
+// PRMTD_STRICT-NEXT:    [[MUL_R:%.*]] = fsub x86_fp80 [[MUL_AC]], [[MUL_BD]]
+// PRMTD_STRICT-NEXT:    [[MUL_I:%.*]] = fadd x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // PRMTD_STRICT-NEXT:    [[DOTREALP1:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[A]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[DOTIMAGP2:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    store x86_fp80 [[MUL_R]], ptr [[DOTREALP1]], align 16
@@ -5068,56 +5068,56 @@ void mulassignld(_Complex long double *a, _Complex long double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP2]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP3]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.fabs.f64(double [[CONV]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.fabs.f64(double [[CONV1]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP4]], double [[TMP5]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[CONV:%.*]] = fpext float [[TMP2]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[CONV1:%.*]] = fpext float [[TMP3]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.fabs.f64(double [[CONV]]) #[[ATTR2]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call double @llvm.fabs.f64(double [[CONV1]]) #[[ATTR2]]
+// X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt double [[TMP4]], [[TMP5]]
 // X86WINPRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[CONV1]], double [[CONV]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP6]], double [[CONV1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[CONV]], double [[TMP7]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[B_IMAG]], double [[TMP6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[B_REAL]], double [[TMP9]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP10]], double [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[B_REAL]], double [[TMP6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[B_IMAG]], double [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP13]], double [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fdiv double [[CONV1]], [[CONV]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fmul double [[TMP6]], [[CONV1]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fadd double [[CONV]], [[TMP7]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fmul double [[B_IMAG]], [[TMP6]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fadd double [[B_REAL]], [[TMP9]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fdiv double [[TMP10]], [[TMP8]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fmul double [[B_REAL]], [[TMP6]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP13:%.*]] = fsub double [[B_IMAG]], [[TMP12]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP14:%.*]] = fdiv double [[TMP13]], [[TMP8]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_less_than_abs_rhsi:
-// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[CONV]], double [[CONV1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[TMP15]], double [[CONV]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[CONV1]], double [[TMP16]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[B_REAL]], double [[TMP15]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP18]], double [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP20:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP19]], double [[TMP17]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP21:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[B_IMAG]], double [[TMP15]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP22:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP21]], double [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP23:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP22]], double [[TMP17]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP15:%.*]] = fdiv double [[CONV]], [[CONV1]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP16:%.*]] = fmul double [[TMP15]], [[CONV]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP17:%.*]] = fadd double [[CONV1]], [[TMP16]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP18:%.*]] = fmul double [[B_REAL]], [[TMP15]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP19:%.*]] = fadd double [[TMP18]], [[B_IMAG]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP20:%.*]] = fdiv double [[TMP19]], [[TMP17]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP21:%.*]] = fmul double [[B_IMAG]], [[TMP15]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP22:%.*]] = fsub double [[TMP21]], [[B_REAL]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP23:%.*]] = fdiv double [[TMP22]], [[TMP17]]
 // X86WINPRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV]]
 // X86WINPRMTD_STRICT:       complex_div:
 // X86WINPRMTD_STRICT-NEXT:    [[TMP24:%.*]] = phi double [ [[TMP11]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP20]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
 // X86WINPRMTD_STRICT-NEXT:    [[TMP25:%.*]] = phi double [ [[TMP14]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP23]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
-// X86WINPRMTD_STRICT-NEXT:    [[CONV2:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP24]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[CONV3:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP25]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[EXT:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CONV2]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[EXT4:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CONV3]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[EXT5:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP0]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[EXT6:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP1]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP26:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP27:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT4]], double [[EXT6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP28:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP26]], double [[TMP27]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP29:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT5]], double [[EXT5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP30:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT6]], double [[EXT6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP31:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP29]], double [[TMP30]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP32:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT4]], double [[EXT5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP33:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP34:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP32]], double [[TMP33]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP35:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP28]], double [[TMP31]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP36:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP34]], double [[TMP31]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP35]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[UNPROMOTION7:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP36]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[CONV2:%.*]] = fptrunc double [[TMP24]] to float
+// X86WINPRMTD_STRICT-NEXT:    [[CONV3:%.*]] = fptrunc double [[TMP25]] to float
+// X86WINPRMTD_STRICT-NEXT:    [[EXT:%.*]] = fpext float [[CONV2]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[EXT4:%.*]] = fpext float [[CONV3]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[EXT5:%.*]] = fpext float [[TMP0]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[EXT6:%.*]] = fpext float [[TMP1]] to double
+// X86WINPRMTD_STRICT-NEXT:    [[TMP26:%.*]] = fmul double [[EXT]], [[EXT5]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP27:%.*]] = fmul double [[EXT4]], [[EXT6]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP28:%.*]] = fadd double [[TMP26]], [[TMP27]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP29:%.*]] = fmul double [[EXT5]], [[EXT5]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP30:%.*]] = fmul double [[EXT6]], [[EXT6]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP31:%.*]] = fadd double [[TMP29]], [[TMP30]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP32:%.*]] = fmul double [[EXT4]], [[EXT5]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP33:%.*]] = fmul double [[EXT]], [[EXT6]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP34:%.*]] = fsub double [[TMP32]], [[TMP33]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP35:%.*]] = fdiv double [[TMP28]], [[TMP31]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP36:%.*]] = fdiv double [[TMP34]], [[TMP31]]
+// X86WINPRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = fptrunc double [[TMP35]] to float
+// X86WINPRMTD_STRICT-NEXT:    [[UNPROMOTION7:%.*]] = fptrunc double [[TMP36]] to float
 // X86WINPRMTD_STRICT-NEXT:    [[TMP37:%.*]] = bitcast float [[UNPROMOTION]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[TMP38:%.*]] = bitcast float [[UNPROMOTION7]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[RETVAL_SROA_2_0_INSERT_EXT:%.*]] = zext i32 [[TMP38]] to i64
@@ -5138,58 +5138,58 @@ void mulassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load x86_fp80, ptr [[B_IMAGP]], align 16
 // PRMTD_STRICT-NEXT:    [[C_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[C_COERCE]], i32 0
 // PRMTD_STRICT-NEXT:    [[C_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[C_COERCE]], i32 1
-// PRMTD_STRICT-NEXT:    [[CONV:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f32(float [[C_SROA_0_0_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[CONV1:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f32(float [[C_SROA_0_4_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV]]) #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV1]]) #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[CONV:%.*]] = fpext float [[C_SROA_0_0_VEC_EXTRACT]] to x86_fp80
+// PRMTD_STRICT-NEXT:    [[CONV1:%.*]] = fpext float [[C_SROA_0_4_VEC_EXTRACT]] to x86_fp80
+// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV]]) #[[ATTR3]]
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV1]]) #[[ATTR3]]
+// PRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt x86_fp80 [[TMP0]], [[TMP1]]
 // PRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // PRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
-// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[CONV1]], x86_fp80 [[CONV]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[TMP2]], x86_fp80 [[CONV1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[CONV]], x86_fp80 [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[B_IMAG]], x86_fp80 [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[B_REAL]], x86_fp80 [[TMP5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP6]], x86_fp80 [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[B_REAL]], x86_fp80 [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[B_IMAG]], x86_fp80 [[TMP8]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP9]], x86_fp80 [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = fdiv x86_fp80 [[CONV1]], [[CONV]]
+// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = fmul x86_fp80 [[TMP2]], [[CONV1]]
+// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = fadd x86_fp80 [[CONV]], [[TMP3]]
+// PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = fmul x86_fp80 [[B_IMAG]], [[TMP2]]
+// PRMTD_STRICT-NEXT:    [[TMP6:%.*]] = fadd x86_fp80 [[B_REAL]], [[TMP5]]
+// PRMTD_STRICT-NEXT:    [[TMP7:%.*]] = fdiv x86_fp80 [[TMP6]], [[TMP4]]
+// PRMTD_STRICT-NEXT:    [[TMP8:%.*]] = fmul x86_fp80 [[B_REAL]], [[TMP2]]
+// PRMTD_STRICT-NEXT:    [[TMP9:%.*]] = fsub x86_fp80 [[B_IMAG]], [[TMP8]]
+// PRMTD_STRICT-NEXT:    [[TMP10:%.*]] = fdiv x86_fp80 [[TMP9]], [[TMP4]]
 // PRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV:%.*]]
 // PRMTD_STRICT:       abs_rhsr_less_than_abs_rhsi:
-// PRMTD_STRICT-NEXT:    [[TMP11:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[CONV]], x86_fp80 [[CONV1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP12:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[TMP11]], x86_fp80 [[CONV]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP13:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[CONV1]], x86_fp80 [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP14:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[B_REAL]], x86_fp80 [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP15:%.*]] = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 [[TMP14]], x86_fp80 [[B_IMAG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP16:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP15]], x86_fp80 [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP17:%.*]] = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 [[B_IMAG]], x86_fp80 [[TMP11]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP18:%.*]] = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 [[TMP17]], x86_fp80 [[B_REAL]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP19:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[TMP18]], x86_fp80 [[TMP13]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP11:%.*]] = fdiv x86_fp80 [[CONV]], [[CONV1]]
+// PRMTD_STRICT-NEXT:    [[TMP12:%.*]] = fmul x86_fp80 [[TMP11]], [[CONV]]
+// PRMTD_STRICT-NEXT:    [[TMP13:%.*]] = fadd x86_fp80 [[CONV1]], [[TMP12]]
+// PRMTD_STRICT-NEXT:    [[TMP14:%.*]] = fmul x86_fp80 [[B_REAL]], [[TMP11]]
+// PRMTD_STRICT-NEXT:    [[TMP15:%.*]] = fadd x86_fp80 [[TMP14]], [[B_IMAG]]
+// PRMTD_STRICT-NEXT:    [[TMP16:%.*]] = fdiv x86_fp80 [[TMP15]], [[TMP13]]
+// PRMTD_STRICT-NEXT:    [[TMP17:%.*]] = fmul x86_fp80 [[B_IMAG]], [[TMP11]]
+// PRMTD_STRICT-NEXT:    [[TMP18:%.*]] = fsub x86_fp80 [[TMP17]], [[B_REAL]]
+// PRMTD_STRICT-NEXT:    [[TMP19:%.*]] = fdiv x86_fp80 [[TMP18]], [[TMP13]]
 // PRMTD_STRICT-NEXT:    br label [[COMPLEX_DIV]]
 // PRMTD_STRICT:       complex_div:
 // PRMTD_STRICT-NEXT:    [[TMP20:%.*]] = phi x86_fp80 [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
 // PRMTD_STRICT-NEXT:    [[TMP21:%.*]] = phi x86_fp80 [ [[TMP10]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP19]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
-// PRMTD_STRICT-NEXT:    [[CONV2:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f80(x86_fp80 [[TMP20]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[CONV3:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f80(x86_fp80 [[TMP21]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CONV2]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[EXT4:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CONV3]], metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[CONV2:%.*]] = fptrunc x86_fp80 [[TMP20]] to float
+// PRMTD_STRICT-NEXT:    [[CONV3:%.*]] = fptrunc x86_fp80 [[TMP21]] to float
+// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = fpext float [[CONV2]] to double
+// PRMTD_STRICT-NEXT:    [[EXT4:%.*]] = fpext float [[CONV3]] to double
 // PRMTD_STRICT-NEXT:    [[A_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[A_COERCE]], i32 0
 // PRMTD_STRICT-NEXT:    [[A_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[A_COERCE]], i32 1
-// PRMTD_STRICT-NEXT:    [[EXT5:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[A_SROA_0_0_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[EXT6:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[A_SROA_0_4_VEC_EXTRACT]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP22:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP23:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT4]], double [[EXT6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP24:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP22]], double [[TMP23]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP25:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT5]], double [[EXT5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP26:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT6]], double [[EXT6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP27:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP25]], double [[TMP26]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP28:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT4]], double [[EXT5]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP29:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[EXT]], double [[EXT6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP30:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP28]], double [[TMP29]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP31:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP24]], double [[TMP27]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP32:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[TMP30]], double [[TMP27]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP31]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION7:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP32]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[EXT5:%.*]] = fpext float [[A_SROA_0_0_VEC_EXTRACT]] to double
+// PRMTD_STRICT-NEXT:    [[EXT6:%.*]] = fpext float [[A_SROA_0_4_VEC_EXTRACT]] to double
+// PRMTD_STRICT-NEXT:    [[TMP22:%.*]] = fmul double [[EXT]], [[EXT5]]
+// PRMTD_STRICT-NEXT:    [[TMP23:%.*]] = fmul double [[EXT4]], [[EXT6]]
+// PRMTD_STRICT-NEXT:    [[TMP24:%.*]] = fadd double [[TMP22]], [[TMP23]]
+// PRMTD_STRICT-NEXT:    [[TMP25:%.*]] = fmul double [[EXT5]], [[EXT5]]
+// PRMTD_STRICT-NEXT:    [[TMP26:%.*]] = fmul double [[EXT6]], [[EXT6]]
+// PRMTD_STRICT-NEXT:    [[TMP27:%.*]] = fadd double [[TMP25]], [[TMP26]]
+// PRMTD_STRICT-NEXT:    [[TMP28:%.*]] = fmul double [[EXT4]], [[EXT5]]
+// PRMTD_STRICT-NEXT:    [[TMP29:%.*]] = fmul double [[EXT]], [[EXT6]]
+// PRMTD_STRICT-NEXT:    [[TMP30:%.*]] = fsub double [[TMP28]], [[TMP29]]
+// PRMTD_STRICT-NEXT:    [[TMP31:%.*]] = fdiv double [[TMP24]], [[TMP27]]
+// PRMTD_STRICT-NEXT:    [[TMP32:%.*]] = fdiv double [[TMP30]], [[TMP27]]
+// PRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = fptrunc double [[TMP31]] to float
+// PRMTD_STRICT-NEXT:    [[UNPROMOTION7:%.*]] = fptrunc double [[TMP32]] to float
 // PRMTD_STRICT-NEXT:    [[RETVAL_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x float> undef, float [[UNPROMOTION]], i32 0
 // PRMTD_STRICT-NEXT:    [[RETVAL_SROA_0_4_VEC_INSERT:%.*]] = insertelement <2 x float> [[RETVAL_SROA_0_0_VEC_INSERT]], float [[UNPROMOTION7]], i32 1
 // PRMTD_STRICT-NEXT:    ret <2 x float> [[RETVAL_SROA_0_4_VEC_INSERT]]
@@ -5198,7 +5198,7 @@ _Complex float f1(_Complex float a, _Complex long double b, _Complex float c) {
   return (_Complex float)(b / c) / a;
 }
 //.
-// FULL: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+// FULL: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 //.
-// FULL_FAST: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+// FULL_FAST: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 //.

@@ -102,31 +102,27 @@ void test_compare(void) {
   // CHECK-ASM-LABEL: test_compare
 
   vbl = vec_cmpeq(vd, vd);
-  // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"oeq", metadata !{{.*}})
+  // CHECK: call <2 x i1> @llvm.fcmp.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfcedb
 
   vbl = vec_cmpge(vd, vd);
-  // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"oge", metadata !{{.*}})
-  // CHECK-ASM: kdbr
-  // CHECK-ASM: kdbr
+  // CHECK: call <2 x i1> @llvm.fcmp.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK-ASM: vfchedb
   // CHECK-ASM: vst
 
   vbl = vec_cmpgt(vd, vd);
-  // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"ogt", metadata !{{.*}})
-  // CHECK-ASM: kdbr
-  // CHECK-ASM: kdbr
+  // CHECK: call <2 x i1> @llvm.fcmp.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK-ASM: vfchdb
   // CHECK-ASM: vst
 
   vbl = vec_cmple(vd, vd);
-  // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"ole", metadata !{{.*}})
-  // CHECK-ASM: kdbr
-  // CHECK-ASM: kdbr
+  // CHECK: call <2 x i1> @llvm.fcmp.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK-ASM: vfchedb
   // CHECK-ASM: vst
 
   vbl = vec_cmplt(vd, vd);
-  // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"olt", metadata !{{.*}})
-  // CHECK-ASM: kdbr
-  // CHECK-ASM: kdbr
+  // CHECK: call <2 x i1> @llvm.fcmp.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK-ASM: vfchdb
   // CHECK-ASM: vst
 
   idx = vec_all_lt(vd, vd);
@@ -206,115 +202,115 @@ void test_float(void) {
   // CHECK-ASM: vflpdb
 
   vd = vec_nabs(vd);
-  // CHECK: [[ABS:%[^ ]+]] = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{.*}})
+  // CHECK: [[ABS:%[^ ]+]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-NEXT: fneg <2 x double> [[ABS]]
   // CHECK-ASM: vflndb
 
   vd = vec_madd(vd, vd, vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfmadb
   vd = vec_msub(vd, vd, vd);
   // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> %{{.*}}
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]], metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfmsdb
   vd = vec_sqrt(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.sqrt.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.sqrt.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfsqdb
 
   vd = vec_ld2f(cptrf);
   // CHECK: [[VAL:%[^ ]+]] = load <2 x float>, ptr %{{.*}}
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float> [[VAL]], metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.fpext.v2f64.v2f32(<2 x float> [[VAL]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vec_st2f(vd, ptrf);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = call <2 x float> @llvm.fptrunc.v2f32.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK: store <2 x float> [[VAL]], ptr %{{.*}}
   // (emulated)
 
   vd = vec_ctd(vsl, 0);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vd = vec_ctd(vul, 0);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vd = vec_ctd(vsl, 1);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 5.000000e-01), metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = call <2 x double> @llvm.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK: call <2 x double> @llvm.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 5.000000e-01)) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vd = vec_ctd(vul, 1);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 5.000000e-01), metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = call <2 x double> @llvm.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK: call <2 x double> @llvm.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 5.000000e-01)) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vd = vec_ctd(vsl, 31);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 0x3E00000000000000), metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = call <2 x double> @llvm.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK: call <2 x double> @llvm.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 0x3E00000000000000)) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vd = vec_ctd(vul, 31);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 0x3E00000000000000), metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = call <2 x double> @llvm.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK: call <2 x double> @llvm.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 0x3E00000000000000)) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
 
   vsl = vec_ctsl(vd, 0);
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x i64> @llvm.fptosi.v2i64.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vul = vec_ctul(vd, 0);
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x i64> @llvm.fptoui.v2i64.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vsl = vec_ctsl(vd, 1);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> {{.*}}, <2 x double> splat (double 2.000000e+00), metadata !{{.*}})
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(<2 x double> [[VAL]], metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = call <2 x double> @llvm.fmul.v2f64(<2 x double> {{.*}}, <2 x double> splat (double 2.000000e+00)) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK: call <2 x i64> @llvm.fptosi.v2i64.v2f64(<2 x double> [[VAL]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vul = vec_ctul(vd, 1);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> splat (double 2.000000e+00), metadata !{{.*}})
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double> [[VAL]], metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = call <2 x double> @llvm.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> splat (double 2.000000e+00)) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK: call <2 x i64> @llvm.fptoui.v2i64.v2f64(<2 x double> [[VAL]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vsl = vec_ctsl(vd, 31);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> splat (double 0x41E0000000000000), metadata !{{.*}})
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(<2 x double> [[VAL]], metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = call <2 x double> @llvm.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> splat (double 0x41E0000000000000)) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK: call <2 x i64> @llvm.fptosi.v2i64.v2f64(<2 x double> [[VAL]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
   vul = vec_ctul(vd, 31);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> splat (double 0x41E0000000000000), metadata !{{.*}})
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double> [[VAL]], metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = call <2 x double> @llvm.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> splat (double 0x41E0000000000000)) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
+  // CHECK: call <2 x i64> @llvm.fptoui.v2i64.v2f64(<2 x double> [[VAL]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // (emulated)
 
   vd = vec_double(vsl);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vcdgb
   vd = vec_double(vul);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vcdlgb
 
   vsl = vec_signed(vd);
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x i64> @llvm.fptosi.v2i64.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vcgdb
   vul = vec_unsigned(vd);
-  // CHECK: call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x i64> @llvm.fptoui.v2i64.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vclgdb
 
   vd = vec_roundp(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.ceil.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 6
   vd = vec_ceil(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.ceil.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 6
   vd = vec_roundm(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 7
   vd = vec_floor(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 7
   vd = vec_roundz(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 5
   vd = vec_trunc(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 5
   vd = vec_roundc(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 0
   vd = vec_rint(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.rint.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 0, 0
   vd = vec_round(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.roundeven.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.roundeven.v2f64(<2 x double> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 4
 }

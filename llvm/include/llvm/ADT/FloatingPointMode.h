@@ -412,6 +412,39 @@ LLVM_ABI bool cannotOrderStrictlyLess(FPClassTest LHS, FPClassTest RHS,
 LLVM_ABI bool cannotOrderStrictlyLessEq(FPClassTest LHS, FPClassTest RHS,
                                         bool OrderedZeroSign = false);
 
+/// If the specified string represents denormal mode as used in operand bundles,
+/// returns the corresponding mode.
+inline std::optional<DenormalMode::DenormalModeKind>
+parseDenormalKindFromOperandBundle(StringRef Str) {
+  if (Str == "ieee")
+    return DenormalMode::IEEE;
+  if (Str == "zero")
+    return DenormalMode::PreserveSign;
+  if (Str == "pzero")
+    return DenormalMode::PositiveZero;
+  if (Str == "dyn")
+    return DenormalMode::Dynamic;
+  return std::nullopt;
+}
+
+/// Converts the specified denormal mode into string suitable for use in an
+/// operand bundle.
+inline std::optional<StringRef>
+printDenormalForOperandBundle(DenormalMode::DenormalModeKind Mode) {
+  switch (Mode) {
+  case DenormalMode::IEEE:
+    return "ieee";
+  case DenormalMode::PreserveSign:
+    return "zero";
+  case DenormalMode::PositiveZero:
+    return "pzero";
+  case DenormalMode::Dynamic:
+    return "dyn";
+  default:
+    return std::nullopt;
+  }
+}
+
 } // namespace llvm
 
 #endif // LLVM_ADT_FLOATINGPOINTMODE_H

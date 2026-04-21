@@ -24,7 +24,7 @@
 // CONSTRAINED-LABEL: define dso_local <2 x float> @test_vadd_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0:[0-9]+]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3:[0-9]+]]
+// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <2 x float> @llvm.fadd.v2f32(<2 x float> [[V1]], <2 x float> [[V2]]) #[[ATTR3:[0-9]+]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x float> [[ADD_I]]
 //
 float32x2_t test_vadd_f32(float32x2_t v1, float32x2_t v2) {
@@ -40,7 +40,7 @@ float32x2_t test_vadd_f32(float32x2_t v1, float32x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <4 x float> @test_vaddq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <4 x float> @llvm.fadd.v4f32(<4 x float> [[V1]], <4 x float> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <4 x float> [[ADD_I]]
 //
 float32x4_t test_vaddq_f32(float32x4_t v1, float32x4_t v2) {
@@ -56,7 +56,7 @@ float32x4_t test_vaddq_f32(float32x4_t v1, float32x4_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x float> @test_vsub_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> [[V1]], <2 x float> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x float> [[SUB_I]]
 //
 float32x2_t test_vsub_f32(float32x2_t v1, float32x2_t v2) {
@@ -72,7 +72,7 @@ float32x2_t test_vsub_f32(float32x2_t v1, float32x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <4 x float> @test_vsubq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <4 x float> @llvm.experimental.constrained.fsub.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <4 x float> @llvm.fsub.v4f32(<4 x float> [[V1]], <4 x float> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <4 x float> [[SUB_I]]
 //
 float32x4_t test_vsubq_f32(float32x4_t v1, float32x4_t v2) {
@@ -88,7 +88,7 @@ float32x4_t test_vsubq_f32(float32x4_t v1, float32x4_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x double> @test_vsubq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <2 x double> @llvm.experimental.constrained.fsub.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <2 x double> @llvm.fsub.v2f64(<2 x double> [[V1]], <2 x double> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x double> [[SUB_I]]
 //
 float64x2_t test_vsubq_f64(float64x2_t v1, float64x2_t v2) {
@@ -104,7 +104,7 @@ float64x2_t test_vsubq_f64(float64x2_t v1, float64x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x float> @test_vmul_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x float> @llvm.experimental.constrained.fmul.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x float> @llvm.fmul.v2f32(<2 x float> [[V1]], <2 x float> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x float> [[MUL_I]]
 //
 float32x2_t test_vmul_f32(float32x2_t v1, float32x2_t v2) {
@@ -120,7 +120,7 @@ float32x2_t test_vmul_f32(float32x2_t v1, float32x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <4 x float> @test_vmulq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <4 x float> @llvm.fmul.v4f32(<4 x float> [[V1]], <4 x float> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <4 x float> [[MUL_I]]
 //
 float32x4_t test_vmulq_f32(float32x4_t v1, float32x4_t v2) {
@@ -136,7 +136,7 @@ float32x4_t test_vmulq_f32(float32x4_t v1, float32x4_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x double> @test_vmulq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x double> @llvm.fmul.v2f64(<2 x double> [[V1]], <2 x double> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x double> [[MUL_I]]
 //
 float64x2_t test_vmulq_f64(float64x2_t v1, float64x2_t v2) {
@@ -153,8 +153,8 @@ float64x2_t test_vmulq_f64(float64x2_t v1, float64x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x float> @test_vmla_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]], <2 x float> noundef [[V3:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x float> @llvm.experimental.constrained.fmul.v2f32(<2 x float> [[V2]], <2 x float> [[V3]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
-// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[V1]], <2 x float> [[MUL_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x float> @llvm.fmul.v2f32(<2 x float> [[V2]], <2 x float> [[V3]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
+// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <2 x float> @llvm.fadd.v2f32(<2 x float> [[V1]], <2 x float> [[MUL_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x float> [[ADD_I]]
 //
 float32x2_t test_vmla_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
@@ -171,8 +171,8 @@ float32x2_t test_vmla_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
 // CONSTRAINED-LABEL: define dso_local <4 x float> @test_vmlaq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]], <4 x float> noundef [[V3:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float> [[V2]], <4 x float> [[V3]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
-// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> [[V1]], <4 x float> [[MUL_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <4 x float> @llvm.fmul.v4f32(<4 x float> [[V2]], <4 x float> [[V3]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
+// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <4 x float> @llvm.fadd.v4f32(<4 x float> [[V1]], <4 x float> [[MUL_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <4 x float> [[ADD_I]]
 //
 float32x4_t test_vmlaq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
@@ -189,8 +189,8 @@ float32x4_t test_vmlaq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
 // CONSTRAINED-LABEL: define dso_local <2 x double> @test_vmlaq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]], <2 x double> noundef [[V3:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[V2]], <2 x double> [[V3]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
-// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double> [[V1]], <2 x double> [[MUL_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x double> @llvm.fmul.v2f64(<2 x double> [[V2]], <2 x double> [[V3]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
+// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <2 x double> @llvm.fadd.v2f64(<2 x double> [[V1]], <2 x double> [[MUL_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x double> [[ADD_I]]
 //
 float64x2_t test_vmlaq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
@@ -207,8 +207,8 @@ float64x2_t test_vmlaq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
 // CONSTRAINED-LABEL: define dso_local <2 x float> @test_vmls_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]], <2 x float> noundef [[V3:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x float> @llvm.experimental.constrained.fmul.v2f32(<2 x float> [[V2]], <2 x float> [[V3]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
-// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> [[V1]], <2 x float> [[MUL_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x float> @llvm.fmul.v2f32(<2 x float> [[V2]], <2 x float> [[V3]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
+// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> [[V1]], <2 x float> [[MUL_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x float> [[SUB_I]]
 //
 float32x2_t test_vmls_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
@@ -225,8 +225,8 @@ float32x2_t test_vmls_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
 // CONSTRAINED-LABEL: define dso_local <4 x float> @test_vmlsq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]], <4 x float> noundef [[V3:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float> [[V2]], <4 x float> [[V3]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
-// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <4 x float> @llvm.experimental.constrained.fsub.v4f32(<4 x float> [[V1]], <4 x float> [[MUL_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <4 x float> @llvm.fmul.v4f32(<4 x float> [[V2]], <4 x float> [[V3]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
+// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <4 x float> @llvm.fsub.v4f32(<4 x float> [[V1]], <4 x float> [[MUL_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <4 x float> [[SUB_I]]
 //
 float32x4_t test_vmlsq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
@@ -243,8 +243,8 @@ float32x4_t test_vmlsq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
 // CONSTRAINED-LABEL: define dso_local <2 x double> @test_vmlsq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]], <2 x double> noundef [[V3:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[V2]], <2 x double> [[V3]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
-// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <2 x double> @llvm.experimental.constrained.fsub.v2f64(<2 x double> [[V1]], <2 x double> [[MUL_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <2 x double> @llvm.fmul.v2f64(<2 x double> [[V2]], <2 x double> [[V3]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
+// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <2 x double> @llvm.fsub.v2f64(<2 x double> [[V1]], <2 x double> [[MUL_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x double> [[SUB_I]]
 //
 float64x2_t test_vmlsq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
@@ -278,7 +278,7 @@ float64x2_t test_vmlsq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x float>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <2 x float>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <2 x float>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float> [[TMP7]], <2 x float> [[TMP8]], <2 x float> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[TMP7]], <2 x float> [[TMP8]], <2 x float> [[TMP6]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x float> [[TMP9]]
 //
 float32x2_t test_vfma_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
@@ -312,7 +312,7 @@ float32x2_t test_vfma_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x float>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <4 x float>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x float>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x float> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x float> [[TMP6]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <4 x float> [[TMP9]]
 //
 float32x4_t test_vfmaq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
@@ -346,7 +346,7 @@ float32x4_t test_vfmaq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x double>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <2 x double>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <2 x double>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x double> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x double> [[TMP6]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x double> [[TMP9]]
 //
 float64x2_t test_vfmaq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
@@ -382,7 +382,7 @@ float64x2_t test_vfmaq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x float>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <2 x float>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <2 x float>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float> [[TMP7]], <2 x float> [[TMP8]], <2 x float> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[TMP7]], <2 x float> [[TMP8]], <2 x float> [[TMP6]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x float> [[TMP9]]
 //
 float32x2_t test_vfms_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
@@ -418,7 +418,7 @@ float32x2_t test_vfms_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x float>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <4 x float>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x float>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x float> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x float> [[TMP6]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <4 x float> [[TMP9]]
 //
 float32x4_t test_vfmsq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
@@ -454,7 +454,7 @@ float32x4_t test_vfmsq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x double>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <2 x double>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <2 x double>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x double> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x double> [[TMP6]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x double> [[TMP9]]
 //
 float64x2_t test_vfmsq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
@@ -470,7 +470,7 @@ float64x2_t test_vfmsq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
 // CONSTRAINED-LABEL: define dso_local <2 x double> @test_vdivq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[DIV_I:%.*]] = call <2 x double> @llvm.experimental.constrained.fdiv.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[DIV_I:%.*]] = call <2 x double> @llvm.fdiv.v2f64(<2 x double> [[V1]], <2 x double> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x double> [[DIV_I]]
 //
 float64x2_t test_vdivq_f64(float64x2_t v1, float64x2_t v2) {
@@ -486,7 +486,7 @@ float64x2_t test_vdivq_f64(float64x2_t v1, float64x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <4 x float> @test_vdivq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[DIV_I:%.*]] = call <4 x float> @llvm.experimental.constrained.fdiv.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[DIV_I:%.*]] = call <4 x float> @llvm.fdiv.v4f32(<4 x float> [[V1]], <4 x float> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <4 x float> [[DIV_I]]
 //
 float32x4_t test_vdivq_f32(float32x4_t v1, float32x4_t v2) {
@@ -502,7 +502,7 @@ float32x4_t test_vdivq_f32(float32x4_t v1, float32x4_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x float> @test_vdiv_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[DIV_I:%.*]] = call <2 x float> @llvm.experimental.constrained.fdiv.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[DIV_I:%.*]] = call <2 x float> @llvm.fdiv.v2f32(<2 x float> [[V1]], <2 x float> [[V2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <2 x float> [[DIV_I]]
 //
 float32x2_t test_vdiv_f32(float32x2_t v1, float32x2_t v2) {
@@ -519,7 +519,7 @@ float32x2_t test_vdiv_f32(float32x2_t v1, float32x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i32> @test_vceq_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmp.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"oeq") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i32>
 // CONSTRAINED-NEXT:    ret <2 x i32> [[SEXT_I]]
 //
@@ -537,7 +537,7 @@ uint32x2_t test_vceq_f32(float32x2_t v1, float32x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <1 x i64> @test_vceq_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.experimental.constrained.fcmp.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.fcmp.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"oeq") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <1 x i1> [[CMP_I]] to <1 x i64>
 // CONSTRAINED-NEXT:    ret <1 x i64> [[SEXT_I]]
 //
@@ -555,7 +555,7 @@ uint64x1_t test_vceq_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-LABEL: define dso_local <4 x i32> @test_vceqq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.fcmp.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"oeq") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <4 x i1> [[CMP_I]] to <4 x i32>
 // CONSTRAINED-NEXT:    ret <4 x i32> [[SEXT_I]]
 //
@@ -573,7 +573,7 @@ uint32x4_t test_vceqq_f32(float32x4_t v1, float32x4_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i64> @test_vceqq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"oeq") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i64>
 // CONSTRAINED-NEXT:    ret <2 x i64> [[SEXT_I]]
 //
@@ -591,7 +591,7 @@ uint64x2_t test_vceqq_f64(float64x2_t v1, float64x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i32> @test_vcge_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"oge", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"oge") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i32>
 // CONSTRAINED-NEXT:    ret <2 x i32> [[SEXT_I]]
 //
@@ -609,7 +609,7 @@ uint32x2_t test_vcge_f32(float32x2_t v1, float32x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <1 x i64> @test_vcge_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.experimental.constrained.fcmps.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"oge", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.fcmp.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"oge") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <1 x i1> [[CMP_I]] to <1 x i64>
 // CONSTRAINED-NEXT:    ret <1 x i64> [[SEXT_I]]
 //
@@ -627,7 +627,7 @@ uint64x1_t test_vcge_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-LABEL: define dso_local <4 x i32> @test_vcgeq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"oge", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.fcmp.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"oge") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <4 x i1> [[CMP_I]] to <4 x i32>
 // CONSTRAINED-NEXT:    ret <4 x i32> [[SEXT_I]]
 //
@@ -645,7 +645,7 @@ uint32x4_t test_vcgeq_f32(float32x4_t v1, float32x4_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i64> @test_vcgeq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"oge", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"oge") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i64>
 // CONSTRAINED-NEXT:    ret <2 x i64> [[SEXT_I]]
 //
@@ -663,7 +663,7 @@ uint64x2_t test_vcgeq_f64(float64x2_t v1, float64x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i32> @test_vcle_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"ole", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"ole") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i32>
 // CONSTRAINED-NEXT:    ret <2 x i32> [[SEXT_I]]
 //
@@ -681,7 +681,7 @@ uint32x2_t test_vcle_f32(float32x2_t v1, float32x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <1 x i64> @test_vcle_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.experimental.constrained.fcmps.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"ole", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.fcmp.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"ole") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <1 x i1> [[CMP_I]] to <1 x i64>
 // CONSTRAINED-NEXT:    ret <1 x i64> [[SEXT_I]]
 //
@@ -699,7 +699,7 @@ uint64x1_t test_vcle_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-LABEL: define dso_local <4 x i32> @test_vcleq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"ole", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.fcmp.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"ole") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <4 x i1> [[CMP_I]] to <4 x i32>
 // CONSTRAINED-NEXT:    ret <4 x i32> [[SEXT_I]]
 //
@@ -717,7 +717,7 @@ uint32x4_t test_vcleq_f32(float32x4_t v1, float32x4_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i64> @test_vcleq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"ole", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"ole") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i64>
 // CONSTRAINED-NEXT:    ret <2 x i64> [[SEXT_I]]
 //
@@ -735,7 +735,7 @@ uint64x2_t test_vcleq_f64(float64x2_t v1, float64x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i32> @test_vcgt_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"ogt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i32>
 // CONSTRAINED-NEXT:    ret <2 x i32> [[SEXT_I]]
 //
@@ -753,7 +753,7 @@ uint32x2_t test_vcgt_f32(float32x2_t v1, float32x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <1 x i64> @test_vcgt_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.experimental.constrained.fcmps.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.fcmp.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"ogt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <1 x i1> [[CMP_I]] to <1 x i64>
 // CONSTRAINED-NEXT:    ret <1 x i64> [[SEXT_I]]
 //
@@ -771,7 +771,7 @@ uint64x1_t test_vcgt_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-LABEL: define dso_local <4 x i32> @test_vcgtq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.fcmp.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"ogt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <4 x i1> [[CMP_I]] to <4 x i32>
 // CONSTRAINED-NEXT:    ret <4 x i32> [[SEXT_I]]
 //
@@ -789,7 +789,7 @@ uint32x4_t test_vcgtq_f32(float32x4_t v1, float32x4_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i64> @test_vcgtq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"ogt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i64>
 // CONSTRAINED-NEXT:    ret <2 x i64> [[SEXT_I]]
 //
@@ -807,7 +807,7 @@ uint64x2_t test_vcgtq_f64(float64x2_t v1, float64x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i32> @test_vclt_f32(
 // CONSTRAINED-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"olt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f32(<2 x float> [[V1]], <2 x float> [[V2]], metadata !"olt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i32>
 // CONSTRAINED-NEXT:    ret <2 x i32> [[SEXT_I]]
 //
@@ -825,7 +825,7 @@ uint32x2_t test_vclt_f32(float32x2_t v1, float32x2_t v2) {
 // CONSTRAINED-LABEL: define dso_local <1 x i64> @test_vclt_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.experimental.constrained.fcmps.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"olt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <1 x i1> @llvm.fcmp.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"olt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <1 x i1> [[CMP_I]] to <1 x i64>
 // CONSTRAINED-NEXT:    ret <1 x i64> [[SEXT_I]]
 //
@@ -843,7 +843,7 @@ uint64x1_t test_vclt_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-LABEL: define dso_local <4 x i32> @test_vcltq_f32(
 // CONSTRAINED-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"olt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <4 x i1> @llvm.fcmp.v4f32(<4 x float> [[V1]], <4 x float> [[V2]], metadata !"olt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <4 x i1> [[CMP_I]] to <4 x i32>
 // CONSTRAINED-NEXT:    ret <4 x i32> [[SEXT_I]]
 //
@@ -861,7 +861,7 @@ uint32x4_t test_vcltq_f32(float32x4_t v1, float32x4_t v2) {
 // CONSTRAINED-LABEL: define dso_local <2 x i64> @test_vcltq_f64(
 // CONSTRAINED-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"olt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[CMP_I:%.*]] = call <2 x i1> @llvm.fcmp.v2f64(<2 x double> [[V1]], <2 x double> [[V2]], metadata !"olt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i64>
 // CONSTRAINED-NEXT:    ret <2 x i64> [[SEXT_I]]
 //
@@ -882,7 +882,7 @@ uint64x2_t test_vcltq_f64(float64x2_t v1, float64x2_t v2) {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[LANE0_I:%.*]] = extractelement <2 x float> [[A]], i64 0
 // CONSTRAINED-NEXT:    [[LANE1_I:%.*]] = extractelement <2 x float> [[A]], i64 1
-// CONSTRAINED-NEXT:    [[VPADDD_I:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[LANE0_I]], float [[LANE1_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VPADDD_I:%.*]] = call float @llvm.fadd.f32(float [[LANE0_I]], float [[LANE1_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret float [[VPADDD_I]]
 //
 float32_t test_vpadds_f32(float32x2_t a) {
@@ -902,7 +902,7 @@ float32_t test_vpadds_f32(float32x2_t a) {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[LANE0_I:%.*]] = extractelement <2 x double> [[A]], i64 0
 // CONSTRAINED-NEXT:    [[LANE1_I:%.*]] = extractelement <2 x double> [[A]], i64 1
-// CONSTRAINED-NEXT:    [[VPADDD_I:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[LANE0_I]], double [[LANE1_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VPADDD_I:%.*]] = call double @llvm.fadd.f64(double [[LANE0_I]], double [[LANE1_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret double [[VPADDD_I]]
 //
 float64_t test_vpaddd_f64(float64x2_t a) {
@@ -918,7 +918,7 @@ float64_t test_vpaddd_f64(float64x2_t a) {
 // CONSTRAINED-LABEL: define dso_local float @test_vcvts_f32_s32(
 // CONSTRAINED-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.sitofp.f32.i32(i32 [[A]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret float [[TMP0]]
 //
 float32_t test_vcvts_f32_s32(int32_t a) {
@@ -934,7 +934,7 @@ float32_t test_vcvts_f32_s32(int32_t a) {
 // CONSTRAINED-LABEL: define dso_local double @test_vcvtd_f64_s64(
 // CONSTRAINED-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i64(i64 [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call double @llvm.sitofp.f64.i64(i64 [[A]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret double [[TMP0]]
 //
 float64_t test_vcvtd_f64_s64(int64_t a) {
@@ -950,7 +950,7 @@ float64_t test_vcvtd_f64_s64(int64_t a) {
 // CONSTRAINED-LABEL: define dso_local float @test_vcvts_f32_u32(
 // CONSTRAINED-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.uitofp.f32.i32(i32 [[A]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret float [[TMP0]]
 //
 float32_t test_vcvts_f32_u32(uint32_t a) {
@@ -967,7 +967,7 @@ float32_t test_vcvts_f32_u32(uint32_t a) {
 // CONSTRAINED-LABEL: define dso_local double @test_vcvtd_f64_u64(
 // CONSTRAINED-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call double @llvm.uitofp.f64.i64(i64 [[A]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret double [[TMP0]]
 //
 float64_t test_vcvtd_f64_u64(uint64_t a) {
@@ -984,7 +984,7 @@ float64_t test_vcvtd_f64_u64(uint64_t a) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vceqs_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[A]], float [[B]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float [[B]], metadata !"oeq") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCMPD_I]]
 //
@@ -1002,7 +1002,7 @@ uint32_t test_vceqs_f32(float32_t a, float32_t b) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vceqd_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[A]], double [[B]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"oeq") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCMPD_I]]
 //
@@ -1020,7 +1020,7 @@ uint64_t test_vceqd_f64(float64_t a, float64_t b) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vceqzs_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[A]], float 0.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float 0.000000e+00, metadata !"oeq") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCEQZ_I]]
 //
@@ -1038,7 +1038,7 @@ uint32_t test_vceqzs_f32(float32_t a) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vceqzd_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[A]], double 0.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double 0.000000e+00, metadata !"oeq") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCEQZ_I]]
 //
@@ -1056,7 +1056,7 @@ uint64_t test_vceqzd_f64(float64_t a) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vcges_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float [[B]], metadata !"oge", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float [[B]], metadata !"oge") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCMPD_I]]
 //
@@ -1074,7 +1074,7 @@ uint32_t test_vcges_f32(float32_t a, float32_t b) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vcged_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double [[B]], metadata !"oge", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"oge") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCMPD_I]]
 //
@@ -1092,7 +1092,7 @@ uint64_t test_vcged_f64(float64_t a, float64_t b) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vcgezs_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float 0.000000e+00, metadata !"oge") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCGEZ_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCGEZ_I]]
 //
@@ -1110,7 +1110,7 @@ uint32_t test_vcgezs_f32(float32_t a) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vcgezd_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double 0.000000e+00, metadata !"oge") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCGEZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCGEZ_I]]
 //
@@ -1128,7 +1128,7 @@ uint64_t test_vcgezd_f64(float64_t a) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vcgts_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float [[B]], metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float [[B]], metadata !"ogt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCMPD_I]]
 //
@@ -1146,7 +1146,7 @@ uint32_t test_vcgts_f32(float32_t a, float32_t b) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vcgtd_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double [[B]], metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"ogt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCMPD_I]]
 //
@@ -1164,7 +1164,7 @@ uint64_t test_vcgtd_f64(float64_t a, float64_t b) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vcgtzs_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float 0.000000e+00, metadata !"ogt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCGTZ_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCGTZ_I]]
 //
@@ -1182,7 +1182,7 @@ uint32_t test_vcgtzs_f32(float32_t a) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vcgtzd_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double 0.000000e+00, metadata !"ogt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCGTZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCGTZ_I]]
 //
@@ -1200,7 +1200,7 @@ uint64_t test_vcgtzd_f64(float64_t a) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vcles_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float [[B]], metadata !"ole", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float [[B]], metadata !"ole") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCMPD_I]]
 //
@@ -1218,7 +1218,7 @@ uint32_t test_vcles_f32(float32_t a, float32_t b) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vcled_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double [[B]], metadata !"ole", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"ole") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCMPD_I]]
 //
@@ -1236,7 +1236,7 @@ uint64_t test_vcled_f64(float64_t a, float64_t b) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vclezs_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float 0.000000e+00, metadata !"ole") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCLEZ_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCLEZ_I]]
 //
@@ -1254,7 +1254,7 @@ uint32_t test_vclezs_f32(float32_t a) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vclezd_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double 0.000000e+00, metadata !"ole") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCLEZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCLEZ_I]]
 //
@@ -1272,7 +1272,7 @@ uint64_t test_vclezd_f64(float64_t a) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vclts_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float [[B]], metadata !"olt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float [[B]], metadata !"olt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCMPD_I]]
 //
@@ -1290,7 +1290,7 @@ uint32_t test_vclts_f32(float32_t a, float32_t b) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vcltd_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double [[B]], metadata !"olt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"olt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCMPD_I]]
 //
@@ -1308,7 +1308,7 @@ uint64_t test_vcltd_f64(float64_t a, float64_t b) {
 // CONSTRAINED-LABEL: define dso_local i32 @test_vcltzs_f32(
 // CONSTRAINED-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[A]], float 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f32(float [[A]], float 0.000000e+00, metadata !"olt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCLTZ_I:%.*]] = sext i1 [[TMP0]] to i32
 // CONSTRAINED-NEXT:    ret i32 [[VCLTZ_I]]
 //
@@ -1326,7 +1326,7 @@ uint32_t test_vcltzs_f32(float32_t a) {
 // CONSTRAINED-LABEL: define dso_local i64 @test_vcltzd_f64(
 // CONSTRAINED-SAME: double noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double [[A]], double 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call i1 @llvm.fcmp.f64(double [[A]], double 0.000000e+00, metadata !"olt") #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    [[VCLTZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CONSTRAINED-NEXT:    ret i64 [[VCLTZ_I]]
 //
@@ -1343,7 +1343,7 @@ uint64_t test_vcltzd_f64(float64_t a) {
 // CONSTRAINED-LABEL: define dso_local <1 x double> @test_vadd_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <1 x double> @llvm.experimental.constrained.fadd.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <1 x double> @llvm.fadd.v1f64(<1 x double> [[A]], <1 x double> [[B]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[ADD_I]]
 //
 float64x1_t test_vadd_f64(float64x1_t a, float64x1_t b) {
@@ -1359,7 +1359,7 @@ float64x1_t test_vadd_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-LABEL: define dso_local <1 x double> @test_vmul_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <1 x double> @llvm.experimental.constrained.fmul.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <1 x double> @llvm.fmul.v1f64(<1 x double> [[A]], <1 x double> [[B]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[MUL_I]]
 //
 float64x1_t test_vmul_f64(float64x1_t a, float64x1_t b) {
@@ -1375,7 +1375,7 @@ float64x1_t test_vmul_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-LABEL: define dso_local <1 x double> @test_vdiv_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[DIV_I:%.*]] = call <1 x double> @llvm.experimental.constrained.fdiv.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[DIV_I:%.*]] = call <1 x double> @llvm.fdiv.v1f64(<1 x double> [[A]], <1 x double> [[B]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[DIV_I]]
 //
 float64x1_t test_vdiv_f64(float64x1_t a, float64x1_t b) {
@@ -1392,8 +1392,8 @@ float64x1_t test_vdiv_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-LABEL: define dso_local <1 x double> @test_vmla_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[C:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <1 x double> @llvm.experimental.constrained.fmul.v1f64(<1 x double> [[B]], <1 x double> [[C]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
-// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <1 x double> @llvm.experimental.constrained.fadd.v1f64(<1 x double> [[A]], <1 x double> [[MUL_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <1 x double> @llvm.fmul.v1f64(<1 x double> [[B]], <1 x double> [[C]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
+// CONSTRAINED-NEXT:    [[ADD_I:%.*]] = call <1 x double> @llvm.fadd.v1f64(<1 x double> [[A]], <1 x double> [[MUL_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[ADD_I]]
 //
 float64x1_t test_vmla_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
@@ -1410,8 +1410,8 @@ float64x1_t test_vmla_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // CONSTRAINED-LABEL: define dso_local <1 x double> @test_vmls_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[C:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <1 x double> @llvm.experimental.constrained.fmul.v1f64(<1 x double> [[B]], <1 x double> [[C]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
-// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <1 x double> @llvm.experimental.constrained.fsub.v1f64(<1 x double> [[A]], <1 x double> [[MUL_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[MUL_I:%.*]] = call <1 x double> @llvm.fmul.v1f64(<1 x double> [[B]], <1 x double> [[C]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
+// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <1 x double> @llvm.fsub.v1f64(<1 x double> [[A]], <1 x double> [[MUL_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[SUB_I]]
 //
 float64x1_t test_vmls_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
@@ -1451,7 +1451,7 @@ float64x1_t test_vmls_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x double>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <1 x double> @llvm.experimental.constrained.fma.v1f64(<1 x double> [[TMP7]], <1 x double> [[TMP8]], <1 x double> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[TMP7]], <1 x double> [[TMP8]], <1 x double> [[TMP6]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[TMP9]]
 //
 float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
@@ -1493,7 +1493,7 @@ float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x double>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <1 x double> @llvm.experimental.constrained.fma.v1f64(<1 x double> [[TMP7]], <1 x double> [[TMP8]], <1 x double> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[TMP7]], <1 x double> [[TMP8]], <1 x double> [[TMP6]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[TMP9]]
 //
 float64x1_t test_vfms_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
@@ -1509,7 +1509,7 @@ float64x1_t test_vfms_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // CONSTRAINED-LABEL: define dso_local <1 x double> @test_vsub_f64(
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <1 x double> @llvm.experimental.constrained.fsub.v1f64(<1 x double> [[A]], <1 x double> [[B]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[SUB_I:%.*]] = call <1 x double> @llvm.fsub.v1f64(<1 x double> [[A]], <1 x double> [[B]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[SUB_I]]
 //
 float64x1_t test_vsub_f64(float64x1_t a, float64x1_t b) {
@@ -1533,7 +1533,7 @@ float64x1_t test_vsub_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VCVTZ1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> [[VCVTZ_I]]) #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VCVTZ1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> [[VCVTZ_I]]) #[[ATTR4:[0-9]+]]
 // CONSTRAINED-NEXT:    ret <1 x i64> [[VCVTZ1_I]]
 //
 int64x1_t test_vcvt_s64_f64(float64x1_t a) {
@@ -1557,7 +1557,7 @@ int64x1_t test_vcvt_s64_f64(float64x1_t a) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VCVTZ1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> [[VCVTZ_I]]) #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VCVTZ1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> [[VCVTZ_I]]) #[[ATTR4]]
 // CONSTRAINED-NEXT:    ret <1 x i64> [[VCVTZ1_I]]
 //
 uint64x1_t test_vcvt_u64_f64(float64x1_t a) {
@@ -1577,7 +1577,7 @@ uint64x1_t test_vcvt_u64_f64(float64x1_t a) {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CONSTRAINED-NEXT:    [[VCVT_I:%.*]] = call <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i64(<1 x i64> [[TMP1]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VCVT_I:%.*]] = call <1 x double> @llvm.sitofp.v1f64.v1i64(<1 x i64> [[TMP1]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[VCVT_I]]
 //
 float64x1_t test_vcvt_f64_s64(int64x1_t a) {
@@ -1597,7 +1597,7 @@ float64x1_t test_vcvt_f64_s64(int64x1_t a) {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CONSTRAINED-NEXT:    [[VCVT_I:%.*]] = call <1 x double> @llvm.experimental.constrained.uitofp.v1f64.v1i64(<1 x i64> [[TMP1]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VCVT_I:%.*]] = call <1 x double> @llvm.uitofp.v1f64.v1i64(<1 x i64> [[TMP1]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[VCVT_I]]
 //
 float64x1_t test_vcvt_f64_u64(uint64x1_t a) {
@@ -1621,7 +1621,7 @@ float64x1_t test_vcvt_f64_u64(uint64x1_t a) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDA_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VRNDA1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.round.v1f64(<1 x double> [[VRNDA_I]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VRNDA1_I:%.*]] = call <1 x double> @llvm.round.v1f64(<1 x double> [[VRNDA_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[VRNDA1_I]]
 //
 float64x1_t test_vrnda_f64(float64x1_t a) {
@@ -1645,7 +1645,7 @@ float64x1_t test_vrnda_f64(float64x1_t a) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDP_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VRNDP1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.ceil.v1f64(<1 x double> [[VRNDP_I]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VRNDP1_I:%.*]] = call <1 x double> @llvm.ceil.v1f64(<1 x double> [[VRNDP_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[VRNDP1_I]]
 //
 float64x1_t test_vrndp_f64(float64x1_t a) {
@@ -1669,7 +1669,7 @@ float64x1_t test_vrndp_f64(float64x1_t a) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDM_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VRNDM1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.floor.v1f64(<1 x double> [[VRNDM_I]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VRNDM1_I:%.*]] = call <1 x double> @llvm.floor.v1f64(<1 x double> [[VRNDM_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[VRNDM1_I]]
 //
 float64x1_t test_vrndm_f64(float64x1_t a) {
@@ -1693,7 +1693,7 @@ float64x1_t test_vrndm_f64(float64x1_t a) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDX_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VRNDX1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.rint.v1f64(<1 x double> [[VRNDX_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VRNDX1_I:%.*]] = call <1 x double> @llvm.rint.v1f64(<1 x double> [[VRNDX_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[VRNDX1_I]]
 //
 float64x1_t test_vrndx_f64(float64x1_t a) {
@@ -1717,7 +1717,7 @@ float64x1_t test_vrndx_f64(float64x1_t a) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDZ_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VRNDZ1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.trunc.v1f64(<1 x double> [[VRNDZ_I]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VRNDZ1_I:%.*]] = call <1 x double> @llvm.trunc.v1f64(<1 x double> [[VRNDZ_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[VRNDZ1_I]]
 //
 float64x1_t test_vrnd_f64(float64x1_t a) {
@@ -1741,7 +1741,7 @@ float64x1_t test_vrnd_f64(float64x1_t a) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDI_V_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VRNDI_V1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.nearbyint.v1f64(<1 x double> [[VRNDI_V_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VRNDI_V1_I:%.*]] = call <1 x double> @llvm.nearbyint.v1f64(<1 x double> [[VRNDI_V_I]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[VRNDI_V1_I]]
 //
 float64x1_t test_vrndi_f64(float64x1_t a) {
@@ -1765,7 +1765,7 @@ float64x1_t test_vrndi_f64(float64x1_t a) {
 // CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <1 x double> @llvm.experimental.constrained.sqrt.v1f64(<1 x double> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
+// CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <1 x double> @llvm.sqrt.v1f64(<1 x double> [[TMP2]]) #[[ATTR3]] [ "fp.control"(metadata !"rte") ]
 // CONSTRAINED-NEXT:    ret <1 x double> [[VSQRT_I]]
 //
 float64x1_t test_vsqrt_f64(float64x1_t a) {

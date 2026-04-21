@@ -925,8 +925,8 @@ define half @atan2_f16(half %x, half %y) #0 {
 ; CHECK-LABEL: atan2_f16:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-NEXT:    bl atan2f
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}
@@ -974,8 +974,8 @@ define half @pow_f16(half %x, half %y) #0 {
 ; CHECK-LABEL: pow_f16:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}
@@ -1061,11 +1061,10 @@ define half @nearbyint_f16(half %x) #0 {
 
 define i32 @lrint_f16(half %x) #0 {
 ; CHECK-LABEL: lrint_f16:
-; CHECK:         .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-NEXT:    bl lrintf
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK:         vrintx.f16 s0, s0
+; CHECK-NEXT:    vcvt.s32.f16 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
   %val = call i32 @llvm.experimental.constrained.lrint.i32.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
@@ -1115,11 +1114,9 @@ define half @floor_f16(half %x) #0 {
 
 define i32 @lround_f16(half %x) #0 {
 ; CHECK-LABEL: lround_f16:
-; CHECK:         .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-NEXT:    bl lroundf
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK:         vcvta.s32.f16 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
   %val = call i32 @llvm.experimental.constrained.lround.i32.f16(half %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }

@@ -6,6 +6,7 @@
 define double @floor_01() #0 {
 ; CHECK-LABEL: @floor_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.floor.f64(double 1.010000e+01) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
@@ -17,7 +18,7 @@ entry:
 define double @floor_02() #0 {
 ; CHECK-LABEL: @floor_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.floor.f64(double -1.010000e+01, metadata !"fpexcept.strict") #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.floor.f64(double -1.010000e+01)
 ; CHECK-NEXT:    ret double -1.100000e+01
 ;
 entry:
@@ -29,6 +30,7 @@ entry:
 define double @ceil_01() #0 {
 ; CHECK-LABEL: @ceil_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.ceil.f64(double 1.010000e+01) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 1.100000e+01
 ;
 entry:
@@ -40,7 +42,7 @@ entry:
 define double @ceil_02() #0 {
 ; CHECK-LABEL: @ceil_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.ceil.f64(double -1.010000e+01, metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.ceil.f64(double -1.010000e+01)
 ; CHECK-NEXT:    ret double -1.000000e+01
 ;
 entry:
@@ -52,6 +54,7 @@ entry:
 define double @trunc_01() #0 {
 ; CHECK-LABEL: @trunc_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.trunc.f64(double 1.010000e+01) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
@@ -63,7 +66,7 @@ entry:
 define double @trunc_02() #0 {
 ; CHECK-LABEL: @trunc_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.trunc.f64(double -1.010000e+01, metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.trunc.f64(double -1.010000e+01)
 ; CHECK-NEXT:    ret double -1.000000e+01
 ;
 entry:
@@ -75,6 +78,7 @@ entry:
 define double @round_01() #0 {
 ; CHECK-LABEL: @round_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.round.f64(double 1.050000e+01) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 1.100000e+01
 ;
 entry:
@@ -86,7 +90,7 @@ entry:
 define double @round_02() #0 {
 ; CHECK-LABEL: @round_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.round.f64(double -1.050000e+01, metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.round.f64(double -1.050000e+01)
 ; CHECK-NEXT:    ret double -1.100000e+01
 ;
 entry:
@@ -98,7 +102,7 @@ entry:
 define double @nearbyint_01() #0 {
 ; CHECK-LABEL: @nearbyint_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret double 1.100000e+01
+; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
   %result = call double @llvm.experimental.constrained.nearbyint.f64(double 1.050000e+01, metadata !"round.upward", metadata !"fpexcept.ignore") #0
@@ -109,6 +113,7 @@ entry:
 define double @nearbyint_02() #0 {
 ; CHECK-LABEL: @nearbyint_02(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.nearbyint.f64(double 1.050000e+01) [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
@@ -120,7 +125,7 @@ entry:
 define double @nearbyint_03() #0 {
 ; CHECK-LABEL: @nearbyint_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.nearbyint.f64(double 1.050000e+01, metadata !"round.towardzero", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.nearbyint.f64(double 1.050000e+01) [ "fp.control"(metadata !"rtz") ]
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
@@ -132,7 +137,7 @@ entry:
 define double @nearbyint_04() #0 {
 ; CHECK-LABEL: @nearbyint_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.nearbyint.f64(double 1.050000e+01, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.nearbyint.f64(double 1.050000e+01) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
@@ -144,8 +149,8 @@ entry:
 define double @nearbyint_05() #0 {
 ; CHECK-LABEL: @nearbyint_05(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.nearbyint.f64(double 1.050000e+01, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret double [[RESULT]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.nearbyint.f64(double 1.050000e+01)
+; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
   %result = call double @llvm.experimental.constrained.nearbyint.f64(double 1.050000e+01, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -156,8 +161,8 @@ entry:
 define double @nonfinite_01() #0 {
 ; CHECK-LABEL: @nonfinite_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.trunc.f64(double 0x7FF4000000000000, metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret double [[RESULT]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.trunc.f64(double 0x7FF4000000000000)
+; CHECK-NEXT:    ret double 0x7FFC000000000000
 ;
 entry:
   %result = call double @llvm.experimental.constrained.trunc.f64(double 0x7ff4000000000000, metadata !"fpexcept.strict") #0
@@ -168,7 +173,8 @@ entry:
 define double @nonfinite_02() #0 {
 ; CHECK-LABEL: @nonfinite_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.trunc.f64(double 0x7FF4000000000000) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret double 0x7FFC000000000000
 ;
 entry:
   %result = call double @llvm.experimental.constrained.trunc.f64(double 0x7ff4000000000000, metadata !"fpexcept.ignore") #0
@@ -179,7 +185,7 @@ entry:
 define double @nonfinite_03() #0 {
 ; CHECK-LABEL: @nonfinite_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.trunc.f64(double 0x7FF8000000000000, metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.trunc.f64(double 0x7FF8000000000000)
 ; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
 entry:
@@ -191,7 +197,7 @@ entry:
 define double @nonfinite_04() #0 {
 ; CHECK-LABEL: @nonfinite_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.trunc.f64(double 0x7FF0000000000000, metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.trunc.f64(double 0x7FF0000000000000)
 ; CHECK-NEXT:    ret double 0x7FF0000000000000
 ;
 entry:
@@ -203,7 +209,7 @@ entry:
 define double @rint_01() #0 {
 ; CHECK-LABEL: @rint_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.rint.f64(double 1.000000e+01, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.rint.f64(double 1.000000e+01) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
@@ -215,8 +221,8 @@ entry:
 define double @rint_02() #0 {
 ; CHECK-LABEL: @rint_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.rint.f64(double 1.010000e+01, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret double [[RESULT]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.rint.f64(double 1.010000e+01) [ "fp.control"(metadata !"rte") ]
+; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
   %result = call double @llvm.experimental.constrained.rint.f64(double 1.010000e+01, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -227,6 +233,7 @@ entry:
 define double @rint_03() #0 {
 ; CHECK-LABEL: @rint_03(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.rint.f64(double 1.010000e+01) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
 entry:
@@ -270,7 +277,7 @@ entry:
 define double @fadd_04() #0 {
 ; CHECK-LABEL: @fadd_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 0x3FF0000000000001, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.fadd.f64(double 1.000000e+00, double 0x3FF0000000000001) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    ret double [[RESULT]]
 ;
 entry:
@@ -282,7 +289,7 @@ entry:
 define double @fadd_05() #0 {
 ; CHECK-LABEL: @fadd_05(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 2.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.fadd.f64(double 1.000000e+00, double 2.000000e+00) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    ret double 3.000000e+00
 ;
 entry:
@@ -294,7 +301,6 @@ entry:
 define double @fadd_06() #0 {
 ; CHECK-LABEL: @fadd_06(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    ret double 3.000000e+00
 ;
 entry:
@@ -306,7 +312,7 @@ entry:
 define double @fadd_07() #0 {
 ; CHECK-LABEL: @fadd_07(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 0x3FF0000000000001, metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.fadd.f64(double 1.000000e+00, double 0x3FF0000000000001) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double [[RESULT]]
 ;
 entry:
@@ -328,7 +334,7 @@ entry:
 define double @fadd_09() #0 {
 ; CHECK-LABEL: @fadd_09(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 0x7FEFFFFFFFFFFFFF, double 0x7FEFFFFFFFFFFFFF, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.fadd.f64(double 0x7FEFFFFFFFFFFFFF, double 0x7FEFFFFFFFFFFFFF) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    ret double [[RESULT]]
 ;
 entry:
@@ -389,6 +395,7 @@ entry:
 define double @frem_01() #0 {
 ; CHECK-LABEL: @frem_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.frem.f64(double 1.000000e+00, double 2.000000e+00) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
 entry:
@@ -399,6 +406,7 @@ entry:
 define double @fma_01() #0 {
 ; CHECK-LABEL: @fma_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.fma.f64(double 1.000000e+00, double 2.000000e+00, double 3.000000e+00) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 5.000000e+00
 ;
 entry:
@@ -409,6 +417,7 @@ entry:
 define double @fmuladd_01() #0 {
 ; CHECK-LABEL: @fmuladd_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.fmuladd.f64(double 1.000000e+00, double 2.000000e+00, double 3.000000e+00) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret double 5.000000e+00
 ;
 entry:
@@ -421,6 +430,7 @@ entry:
 define i1 @cmp_eq_01() #0 {
 ; CHECK-LABEL: @cmp_eq_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call i1 @llvm.fcmp.f64(double 1.000000e+00, double 2.000000e+00, metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
@@ -431,6 +441,7 @@ entry:
 define i1 @cmp_eq_02() #0 {
 ; CHECK-LABEL: @cmp_eq_02(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call i1 @llvm.fcmp.f64(double 2.000000e+00, double 2.000000e+00, metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -441,6 +452,7 @@ entry:
 define <2 x i1> @cmp_eq_02a() #0 {
 ; CHECK-LABEL: @cmp_eq_02a(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call <2 x i1> @llvm.fcmp.v2f64(<2 x double> <double 2.000000e+00, double 3.000000e+00>, <2 x double> splat (double 2.000000e+00), metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 false>
 ;
 entry:
@@ -451,6 +463,7 @@ entry:
 define i1 @cmp_eq_03() #0 {
 ; CHECK-LABEL: @cmp_eq_03(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call i1 @llvm.fcmp.f64(double 2.000000e+00, double 0x7FF8000000000000, metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
@@ -461,6 +474,7 @@ entry:
 define i1 @cmp_eq_04() #0 {
 ; CHECK-LABEL: @cmp_eq_04(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT1:%.*]] = call i1 @llvm.fcmp.f64(double 2.000000e+00, double 0x7FF4000000000000, metadata !"oeq") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
@@ -492,8 +506,8 @@ entry:
 define i1 @cmp_eq_nan_01() #0 {
 ; CHECK-LABEL: @cmp_eq_nan_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7FF4000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call i1 @llvm.fcmp.f64(double 0x7FF4000000000000, double 1.000000e+00, metadata !"oeq") [ "fp.except"(metadata !"strict") ]
+; CHECK-NEXT:    ret i1 [[RESULT1]]
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7ff4000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
@@ -503,11 +517,11 @@ entry:
 define i1 @cmp_eq_nan_02() #0 {
 ; CHECK-LABEL: @cmp_eq_nan_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 0x7FF4000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.fcmps.f64(double 0x7FF4000000000000, double 1.000000e+00, metadata !"oeq")
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
-  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 0x7ff4000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %result = call i1 @llvm.fcmps.f64(double 0x7ff4000000000000, double 1.0, metadata !"oeq")
   ret i1 %result
 }
 
@@ -515,7 +529,7 @@ entry:
 define i1 @cmp_eq_nan_03() #0 {
 ; CHECK-LABEL: @cmp_eq_nan_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7FF8000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call i1 @llvm.fcmp.f64(double 0x7FF8000000000000, double 1.000000e+00, metadata !"oeq") [ "fp.except"(metadata !"strict") ]
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
@@ -526,11 +540,11 @@ entry:
 define i1 @cmp_eq_nan_04() #0 {
 ; CHECK-LABEL: @cmp_eq_nan_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 0x7FF8000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.fcmps.f64(double 0x7FF8000000000000, double 1.000000e+00, metadata !"oeq")
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
-  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 0x7ff8000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %result = call i1 @llvm.fcmps.f64(double 0x7ff8000000000000, double 1.0, metadata !"oeq")
   ret i1 %result
 }
 
@@ -555,5 +569,5 @@ declare double @llvm.experimental.constrained.fma.f64(double, double, double, me
 declare double @llvm.experimental.constrained.fmuladd.f64(double, double, double, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
 declare <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double>, <2 x double>, metadata, metadata)
-declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
+declare i1 @llvm.fcmps.f64(double, double, metadata)
 

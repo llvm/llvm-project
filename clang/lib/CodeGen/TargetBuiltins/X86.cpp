@@ -83,32 +83,6 @@ static Value *emitX86RoundImmediate(CodeGenFunction &CGF, Value *X,
   unsigned RoundingMode = RoundingControl & RoundingMask;
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
-  LLVMContext &Ctx = CGF.CGM.getLLVMContext();
-  if (CGF.Builder.getIsFPConstrained()) {
-
-    Value *ExceptMode =
-        MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore"));
-
-    switch (RoundingMode) {
-    case 0b00:
-      ID = Intrinsic::experimental_constrained_roundeven;
-      break;
-    case 0b01:
-      ID = Intrinsic::experimental_constrained_floor;
-      break;
-    case 0b10:
-      ID = Intrinsic::experimental_constrained_ceil;
-      break;
-    case 0b11:
-      ID = Intrinsic::experimental_constrained_trunc;
-      break;
-    default:
-      llvm_unreachable("Invalid rounding mode");
-    }
-
-    Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
-    return CGF.Builder.CreateCall(F, {X, ExceptMode});
-  }
 
   switch (RoundingMode) {
   case 0b00:
@@ -448,15 +422,8 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
     Res = CGF.Builder.CreateCall(Intr, {A, B, C, Ops.back() });
   } else {
     llvm::Type *Ty = A->getType();
-    Function *FMA;
-    if (CGF.Builder.getIsFPConstrained()) {
-      CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
-      FMA = CGF.CGM.getIntrinsic(Intrinsic::experimental_constrained_fma, Ty);
-      Res = CGF.Builder.CreateConstrainedFPCall(FMA, {A, B, C});
-    } else {
-      FMA = CGF.CGM.getIntrinsic(Intrinsic::fma, Ty);
-      Res = CGF.Builder.CreateCall(FMA, {A, B, C});
-    }
+    Function *FMA = CGF.CGM.getIntrinsic(Intrinsic::fma, Ty);
+    Res = CGF.Builder.CreateCall(FMA, {A, B, C});
   }
 
   // Handle any required masking.
@@ -533,11 +500,6 @@ static Value *EmitScalarFMAExpr(CodeGenFunction &CGF, const CallExpr *E,
     }
     Res = CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(IID),
                                  {Ops[0], Ops[1], Ops[2], Ops[4]});
-  } else if (CGF.Builder.getIsFPConstrained()) {
-    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
-    Function *FMA = CGF.CGM.getIntrinsic(
-        Intrinsic::experimental_constrained_fma, Ops[0]->getType());
-    Res = CGF.Builder.CreateConstrainedFPCall(FMA, Ops.slice(0, 3));
   } else {
     Function *FMA = CGF.CGM.getIntrinsic(Intrinsic::fma, Ops[0]->getType());
     Res = CGF.Builder.CreateCall(FMA, Ops.slice(0, 3));
@@ -2322,16 +2284,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
     }
     Value *A = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
-    Function *F;
-    if (Builder.getIsFPConstrained()) {
-      CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
-      F = CGM.getIntrinsic(Intrinsic::experimental_constrained_sqrt,
-                           A->getType());
-      A = Builder.CreateConstrainedFPCall(F, A);
-    } else {
-      F = CGM.getIntrinsic(Intrinsic::sqrt, A->getType());
-      A = Builder.CreateCall(F, A);
-    }
+    Function *F = CGM.getIntrinsic(Intrinsic::sqrt, A->getType());
+    A = Builder.CreateCall(F, A);
     Value *Src = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
     A = EmitX86ScalarSelect(*this, Ops[3], A, Src);
     return Builder.CreateInsertElement(Ops[0], A, (uint64_t)0);
@@ -2360,15 +2314,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       }
       return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
     }
-    if (Builder.getIsFPConstrained()) {
-      CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
-      Function *F = CGM.getIntrinsic(Intrinsic::experimental_constrained_sqrt,
-                                     Ops[0]->getType());
-      return Builder.CreateConstrainedFPCall(F, Ops[0]);
-    } else {
-      Function *F = CGM.getIntrinsic(Intrinsic::sqrt, Ops[0]->getType());
-      return Builder.CreateCall(F, Ops[0]);
-    }
+    Function *F = CGM.getIntrinsic(Intrinsic::sqrt, Ops[0]->getType());
+    return Builder.CreateCall(F, Ops[0]);
   }
 
   case X86::BI__builtin_ia32_pmuludq128:

@@ -21,7 +21,7 @@
 __m128h test_mm_sqrt_sh(__m128h x, __m128h y) {
   // COMMON-LABEL: test_mm_sqrt_sh
   // UNCONSTRAINED: call {{.*}}half @llvm.sqrt.f16(half {{.*}})
-  // CONSTRAINED: call {{.*}}half @llvm.experimental.constrained.sqrt.f16(half {{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call {{.*}}half @llvm.sqrt.f16(half {{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vsqrtsh %xmm{{.*}},
   return _mm_sqrt_sh(x, y);
 }
@@ -30,7 +30,7 @@ __m128h test_mm_mask_sqrt_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B
   // COMMON-LABEL: test_mm_mask_sqrt_sh
   // COMMONIR: extractelement <8 x half> %{{.*}}, i64 0
   // UNCONSTRAINED: call {{.*}}half @llvm.sqrt.f16(half %{{.*}})
-  // CONSTRAINED: call {{.*}}half @llvm.experimental.constrained.sqrt.f16(half %{{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call {{.*}}half @llvm.sqrt.f16(half %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vsqrtsh %xmm{{.*}},
   // COMMONIR-NEXT: extractelement <8 x half> %{{.*}}, i64 0
   // COMMONIR-NEXT: bitcast i8 %{{.*}} to <8 x i1>
@@ -44,7 +44,7 @@ __m128h test_mm_maskz_sqrt_sh(__mmask8 __U, __m128h __A, __m128h __B){
   // COMMON-LABEL: test_mm_maskz_sqrt_sh
   // COMMONIR: extractelement <2 x half> %{{.*}}, i64 0
   // UNCONSTRAINED: call {{.*}}half @llvm.sqrt.f16(half %{{.*}})
-  // CONSTRAINED: call {{.*}}half @llvm.experimental.constrained.sqrt.f16(half %{{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call {{.*}}half @llvm.sqrt.f16(half %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vsqrtsh %xmm{{.*}},
   // COMMONIR-NEXT: extractelement <2 x half> %{{.*}}, i64 0
   // COMMONIR-NEXT: bitcast i8 %{{.*}} to <8 x i1>
@@ -57,7 +57,7 @@ __m128h test_mm_maskz_sqrt_sh(__mmask8 __U, __m128h __A, __m128h __B){
 __m512h test_mm512_sqrt_ph(__m512h x) {
   // COMMON-LABEL: test_mm512_sqrt_ph
   // UNCONSTRAINED: call {{.*}}<32 x half> @llvm.sqrt.v32f16(<32 x half> {{.*}})
-  // CONSTRAINED: call {{.*}}<32 x half> @llvm.experimental.constrained.sqrt.v32f16(<32 x half> {{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call {{.*}}<32 x half> @llvm.sqrt.v32f16(<32 x half> {{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vsqrtph %zmm{{.*}},
   return _mm512_sqrt_ph(x);
 }
@@ -66,7 +66,7 @@ __m512h test_mm512_mask_sqrt_ph (__m512h __W, __mmask32 __U, __m512h __A)
 {
   // COMMON-LABEL: test_mm512_mask_sqrt_ph
   // UNCONSTRAINED: call {{.*}}<32 x half> @llvm.sqrt.v32f16(<32 x half> %{{.*}})
-  // CONSTRAINED: call {{.*}}<32 x half> @llvm.experimental.constrained.sqrt.v32f16(<32 x half> %{{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call {{.*}}<32 x half> @llvm.sqrt.v32f16(<32 x half> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vsqrtph %zmm{{.*}},
   // COMMONIR: bitcast i32 %{{.*}} to <32 x i1>
   // COMMONIR: select <32 x i1> %{{.*}}, <32 x half> %{{.*}}, <32 x half> %{{.*}}
@@ -77,7 +77,7 @@ __m512h test_mm512_maskz_sqrt_ph (__mmask32 __U, __m512h __A)
 {
   // COMMON-LABEL: test_mm512_maskz_sqrt_ph
   // UNCONSTRAINED: call {{.*}}<32 x half> @llvm.sqrt.v32f16(<32 x half> %{{.*}})
-  // CONSTRAINED: call {{.*}}<32 x half> @llvm.experimental.constrained.sqrt.v32f16(<32 x half> %{{.*}}, metadata !{{.*}})
+  // CONSTRAINED: call {{.*}}<32 x half> @llvm.sqrt.v32f16(<32 x half> %{{.*}}) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
   // CHECK-ASM: vsqrtph %zmm{{.*}},
   // COMMONIR: bitcast i32 %{{.*}} to <32 x i1>
   // COMMONIR: select <32 x i1> %{{.*}}, <32 x half> %{{.*}}, <32 x half> {{.*}}

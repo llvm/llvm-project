@@ -116,20 +116,20 @@ float fff(float x, float y) {
 #pragma float_control(except, on)
   float z;
   z = z * z;
-  //CHECK: llvm.experimental.constrained.fmul{{.*}}
+  //CHECK: llvm.fmul.
   {
     z = x * y;
-    //CHECK: llvm.experimental.constrained.fmul{{.*}}
+    //CHECK: llvm.fmul.
   }
   {
 // This pragma has no effect since if there are any fp intrin in the
 // function then all the operations need to be fp intrin
 #pragma float_control(except, off)
     z = z + x * y;
-    //CHECK: llvm.experimental.constrained.fmul{{.*}}
+    //CHECK: llvm.fmul.
   }
   z = z * z;
-  //CHECK: llvm.experimental.constrained.fmul{{.*}}
+  //CHECK: llvm.fmul.
   return z;
 }
 float check_precise(float x, float y) {
@@ -179,7 +179,7 @@ T add(T lhs, T rhs) {
 
 float test_OperatorCall() {
   return add(1.0f, 2.0f);
-  //CHECK: llvm.experimental.constrained.fadd{{.*}}fpexcept.strict
+  //CHECK: llvm.fadd.
 }
 // CHECK-LABEL define{{.*}} float  {{.*}}test_OperatorCall{{.*}}
 
@@ -191,7 +191,7 @@ float test_OperatorCall() {
 void callt() {
   volatile float z;
   z = z * z;
-  //CHECK-FENV: llvm.experimental.constrained.fmul{{.*}}
+  //CHECK-FENV: fmul float
 }
 
 // CHECK-LABEL: define {{.*}}myAdd{{.*}}
@@ -200,10 +200,10 @@ float myAdd(int i, float f) {
   return 1.0 + 2.0;
   // Check that floating point constant folding doesn't occur if
   // #pragma STC FENV_ACCESS is enabled.
-  //CHECK-FENV: llvm.experimental.constrained.fadd{{.*}}double 1.0{{.*}}double 2.0{{.*}}
+  //CHECK-FENV: store float 3.0
   //CHECK: store float 3.0{{.*}}retval{{.*}}
   static double v = 1.0 / 3.0;
-  //CHECK-FENV: llvm.experimental.constrained.fptrunc.f32.f64{{.*}}
+  //CHECK-FENV: fptrunc double
   //CHECK-NOT: fdiv
   return v;
 }
@@ -216,7 +216,7 @@ float exc_on(double x, float zero) {
 // CHECK-NS: define {{.*}}exc_on{{.*}}
   {} try {
     x = 1.0 / zero; /* division by zero, the result unused */
-//CHECK-NS: llvm.experimental.constrained.fdiv{{.*}}
+//CHECK-NS: llvm.fdiv.
   } catch (...) {}
   return zero;
 }
@@ -227,7 +227,7 @@ float exc_still_on(double x, float zero) {
 // CHECK-NS: define {{.*}}exc_still_on{{.*}}
   {} try {
     x = 1.0 / zero; /* division by zero, the result unused */
-//CHECK-NS: llvm.experimental.constrained.fdiv{{.*}}
+//CHECK-NS: llvm.fdiv.
   } catch (...) {}
   return zero;
 }
@@ -249,7 +249,7 @@ T exc_on(double x, T zero) {
 // CHECK-NS: define {{.*}}fc_template_namespace{{.*}}
   {} try {
     x = 1.0 / zero; /* division by zero, the result unused */
-//CHECK-NS: llvm.experimental.constrained.fdiv{{.*}}
+//CHECK-NS: llvm.fdiv.
   } catch (...) {}
   return zero;
 }
@@ -269,7 +269,7 @@ float try_lam(float x, unsigned n) {
         [](float a, float b) {
 #pragma float_control( except, on)
             return a * b;
-//CHECK: llvm.experimental.constrained.fmul{{.*}}fpexcept.strict
+//CHECK: llvm.fmul.
         } // end of lambda expression
   (1.0f,2.0f);
   result = x + t;

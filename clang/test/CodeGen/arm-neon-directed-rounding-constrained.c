@@ -38,7 +38,7 @@
 
 // COMMON-LABEL: test_vrndi_f32
 // UNCONSTRAINED: [[VRNDI1_I:%.*]] = call <2 x float> @llvm.nearbyint.v2f32(<2 x float> [[VRNDI_I:%.*]])
-// CONSTRAINED:   [[VRNDI1_I:%.*]] = call <2 x float> @llvm.experimental.constrained.nearbyint.v2f32(<2 x float> [[VRNDI_I:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[VRNDI1_I:%.*]] = call <2 x float> @llvm.nearbyint.v2f32(<2 x float> [[VRNDI_I:%.*]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
 // CHECK-ASM32:   vrintr.f32 s{{[0-9]+}}, s{{[0-9]+}}
 // CHECK-ASM32:   vrintr.f32 s{{[0-9]+}}, s{{[0-9]+}}
 // CHECK-ASM64:   frinti v{{[0-9]+}}.2s, v{{[0-9]+}}.2s
@@ -49,7 +49,7 @@ float32x2_t test_vrndi_f32(float32x2_t a) {
 
 // COMMON-LABEL: test_vrndiq_f32
 // UNCONSTRAINED: [[VRNDI1_I:%.*]] = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> [[VRNDI_I:%.*]])
-// CONSTRAINED:   [[VRNDI1_I:%.*]] = call <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float> [[VRNDI_I:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[VRNDI1_I:%.*]] = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> [[VRNDI_I:%.*]]) #{{[0-9]+}} [ "fp.control"(metadata !"rte") ]
 // CHECK-ASM32:   vrintr.f32 s{{[0-9]+}}, s{{[0-9]+}}
 // CHECK-ASM32:   vrintr.f32 s{{[0-9]+}}, s{{[0-9]+}}
 // CHECK-ASM32:   vrintr.f32 s{{[0-9]+}}, s{{[0-9]+}}

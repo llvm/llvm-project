@@ -419,6 +419,11 @@ def LLVM_StripInvariantGroupOp
 }
 
 // Constrained Floating-Point Intrinsics.
+//
+// These MLIR ops (llvm.intr.experimental.constrained.*) lower to new LLVM FP
+// intrinsics (llvm.fadd, llvm.fsub, etc.) with fp.control / fp.except operand
+// bundles.  The experimental_constrained_* intrinsics were removed and are
+// auto-upgraded to the new form on IR load.
 
 class LLVM_ConstrainedIntr<string mnem, int numArgs,
                            bit overloadedResult, list<int> overloadedOperands,
@@ -438,6 +443,10 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
                            /*requiresArgAndResultAttrs=*/0,
                            /*immArgPositions=*/[],
                            /*immArgAttrNames=*/[]> {
+  // Override the LLVM enum name to the new (non-constrained) intrinsic ID.
+  // The experimental_constrained_* intrinsics have been replaced by llvm.fadd,
+  // llvm.fsub, etc. with fp.control/fp.except operand bundles.
+  let llvmEnumName = mnem;
   dag regularArgs = !dag(ins, !listsplat(LLVM_Type, numArgs), !foreach(i, !range(numArgs), "arg_" #i));
   dag attrArgs = !con(!cond(!gt(hasRoundingMode, 0) : (ins ValidRoundingModeAttr:$roundingmode),
                             true : (ins)),
@@ -458,42 +467,65 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *callee =
       llvm::Intrinsic::getOrInsertDeclaration(module,
-        llvm::Intrinsic::experimental_constrained_}] #
+        llvm::Intrinsic::}] #
     mnem # [{, overloadedTypes); }] #
     !cond(!gt(hasRoundingMode, 0) : [{
     // Get rounding mode using interface.
     llvm::RoundingMode rounding =
         moduleTranslation.translateRoundingMode($roundingmode); }],
-          true : [{
-    // No rounding mode.
-    std::optional<llvm::RoundingMode> rounding; }]) # [{
+          true : "") # [{
     llvm::fp::ExceptionBehavior except =
       moduleTranslation.translateFPExceptionBehavior($fpExceptionBehavior);
-    $res = builder.CreateConstrainedFPCall(callee, args, "", rounding, except);
+    SmallVector<llvm::OperandBundleDef, 2> bundles; }] #
+    !cond(!gt(hasRoundingMode, 0) : [{
+    llvm::addFPRoundingBundle(module->getContext(), bundles, rounding); }],
+          true : "") # [{
+    llvm::addFPExceptionBundle(module->getContext(), bundles, except);
+    $res = builder.CreateCall(callee, args, bundles);
   }];
   let mlirBuilder = [{
-    SmallVector<Value> mlirOperands;
-    SmallVector<NamedAttribute> mlirAttrs;
-    if (failed(moduleImport.convertIntrinsicArguments(
-        llvmOperands.take_front( }] # numArgs # [{), {}, false,
-        {}, {}, mlirOperands, mlirAttrs))) {
-      return failure();
-    }
+    // Only import as constrained op when the call carries at least one FP bundle
+    // (fp.except or fp.control). If no bundle is present, skip op creation.
+    //
+    // Note: for intrinsics that have a regular MLIR counterpart (fma, fmuladd),
+    // the non-bundle case is handled explicitly in LLVMIRToLLVMTranslation.cpp
+    // before reaching this generated dispatch, so a plain call to those intrinsics
+    // never reaches this handler. For all other constrained ops (fadd, fsub, etc.),
+    // the corresponding llvm.fadd / llvm.fsub intrinsics are new and only ever
+    // appear with FP bundles, so the no-bundle branch here is dead code.
+    //
+    // The auto-upgrade of old experimental_constrained_* intrinsics omits the
+    // fp.except bundle when the exception behavior is the default (strict), and
+    // omits fp.control when the rounding mode is the default (dynamic), so we
+    // check for either bundle rather than requiring fp.except specifically.
+    if (inst->getOperandBundle(llvm::LLVMContext::OB_fp_except).has_value() ||
+        inst->getOperandBundle(llvm::LLVMContext::OB_fp_control).has_value()) {
+      SmallVector<Value> mlirOperands;
+      SmallVector<NamedAttribute> mlirAttrs;
+      if (failed(moduleImport.convertIntrinsicArguments(
+          llvmOperands.take_front( }] # numArgs # [{), {}, false,
+          {}, {}, mlirOperands, mlirAttrs))) {
+        return failure();
+      }
 
-    FPExceptionBehaviorAttr fpExceptionBehaviorAttr =
-        $_fpExceptionBehavior_attr($fpExceptionBehavior);
-    mlirAttrs.push_back(
-        $_builder.getNamedAttr(
-            $_qualCppClassName::getFPExceptionBehaviorAttrName(),
-            fpExceptionBehaviorAttr)); }] #
+      FPExceptionBehaviorAttr fpExceptionBehaviorAttr =
+          moduleImport.matchFPExceptionBehaviorAttrFromBundle(inst);
+      mlirAttrs.push_back(
+          $_builder.getNamedAttr(
+              $_qualCppClassName::getFPExceptionBehaviorAttrName(),
+              fpExceptionBehaviorAttr)); }] #
     !cond(!gt(hasRoundingMode, 0) : [{
-    RoundingModeAttr roundingModeAttr = $_roundingMode_attr($roundingmode);
-    mlirAttrs.push_back(
-        $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
-                               roundingModeAttr));
+      RoundingModeAttr roundingModeAttr =
+          moduleImport.matchRoundingModeAttrFromBundle(inst);
+      mlirAttrs.push_back(
+          $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
+                                 roundingModeAttr));
     }], true : "") # [{
-    $res = $_qualCppClassName::create($_builder, $_location,
-      $_resultType, mlirOperands, mlirAttrs);
+      $res = $_qualCppClassName::create($_builder, $_location,
+        $_resultType, mlirOperands, mlirAttrs);
+    }
+    // No return here when no bundles: fall through to let the regular handler
+    // (if any) process the plain call to this intrinsic.
   }];
 }
 

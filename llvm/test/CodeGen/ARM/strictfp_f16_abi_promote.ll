@@ -17,7 +17,6 @@ define void @f16_arg(half %arg, ptr %ptr) #0 {
 ; NOFP16-LABEL: f16_arg:
 ; NOFP16:       @ %bb.0:
 ; NOFP16-NEXT:    push {r4, lr}
-; NOFP16-NEXT:    uxth r0, r0
 ; NOFP16-NEXT:    mov r4, r1
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    str r0, [r4]
@@ -33,12 +32,11 @@ define void @v2f16_arg(<2 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    push {r4, r5, r11, lr}
 ; NOFP16-NEXT:    vpush {d8}
 ; NOFP16-NEXT:    mov r5, r0
-; NOFP16-NEXT:    uxth r0, r1
+; NOFP16-NEXT:    mov r0, r1
 ; NOFP16-NEXT:    mov r4, r2
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
-; NOFP16-NEXT:    uxth r1, r5
 ; NOFP16-NEXT:    vmov s17, r0
-; NOFP16-NEXT:    mov r0, r1
+; NOFP16-NEXT:    mov r0, r5
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s16, r0
 ; NOFP16-NEXT:    vstr d8, [r4]
@@ -55,16 +53,15 @@ define void @v3f16_arg(<3 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    push {r4, r5, r6, lr}
 ; NOFP16-NEXT:    vpush {d8}
 ; NOFP16-NEXT:    mov r6, r0
-; NOFP16-NEXT:    uxth r0, r1
+; NOFP16-NEXT:    mov r0, r1
 ; NOFP16-NEXT:    mov r4, r3
 ; NOFP16-NEXT:    mov r5, r2
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
-; NOFP16-NEXT:    uxth r1, r6
 ; NOFP16-NEXT:    vmov s17, r0
-; NOFP16-NEXT:    mov r0, r1
+; NOFP16-NEXT:    mov r0, r6
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s16, r0
-; NOFP16-NEXT:    uxth r0, r5
+; NOFP16-NEXT:    mov r0, r5
 ; NOFP16-NEXT:    vst1.32 {d8}, [r4:64]!
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    str r0, [r4]
@@ -81,19 +78,19 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; NOFP16-NEXT:    vpush {d8, d9}
 ; NOFP16-NEXT:    mov r6, r0
-; NOFP16-NEXT:    uxth r0, r1
+; NOFP16-NEXT:    mov r0, r1
 ; NOFP16-NEXT:    mov r4, r3
 ; NOFP16-NEXT:    mov r5, r2
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    mov r7, r0
-; NOFP16-NEXT:    uxth r0, r4
+; NOFP16-NEXT:    mov r0, r4
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s19, r0
-; NOFP16-NEXT:    uxth r0, r5
+; NOFP16-NEXT:    mov r0, r5
 ; NOFP16-NEXT:    ldr r4, [sp, #40]
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s18, r0
-; NOFP16-NEXT:    uxth r0, r6
+; NOFP16-NEXT:    mov r0, r6
 ; NOFP16-NEXT:    vmov s17, r7
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s16, r0
