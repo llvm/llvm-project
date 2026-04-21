@@ -365,7 +365,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
               LineStr);
 }
 
-static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr* Expr) {
+static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr *Expr) {
   MCContext &Context = OS.getContext();
   assert(!isa<MCSymbolRefExpr>(Expr));
   if (!Context.getAsmInfo()->doesSetDirectiveSuppressReloc())
@@ -431,8 +431,8 @@ void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
   // Second the file table.
   for (unsigned i = 1; i < MCDwarfFiles.size(); i++) {
     assert(!MCDwarfFiles[i].Name.empty());
-    MCOS->emitBytes(MCDwarfFiles[i].Name); // FileName and...
-    MCOS->emitBytes(StringRef("\0", 1));   // its null terminator.
+    MCOS->emitBytes(MCDwarfFiles[i].Name);               // FileName and...
+    MCOS->emitBytes(StringRef("\0", 1));                 // its null terminator.
     MCOS->emitULEB128IntValue(MCDwarfFiles[i].DirIndex); // Directory number.
     MCOS->emitInt8(0); // Last modification timestamp (always 0).
     MCOS->emitInt8(0); // File size (always 0).
@@ -669,9 +669,8 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
     // allocated by inline-assembler .file directives.
     FileNumber = MCDwarfFiles.empty() ? 1 : MCDwarfFiles.size();
     SmallString<256> Buffer;
-    auto IterBool = SourceIdMap.insert(
-        std::make_pair((Directory + Twine('\0') + FileName).toStringRef(Buffer),
-                       FileNumber));
+    auto IterBool = SourceIdMap.insert(std::make_pair(
+        (Directory + Twine('\0') + FileName).toStringRef(Buffer), FileNumber));
     if (!IterBool.second)
       return IterBool.first->second;
   }
@@ -938,7 +937,7 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
   // The 1 byte size of a segment descriptor, we use a value of zero.
   MCOS->emitInt8(0);
   // Align the header with the padding if needed, before we put out the table.
-  for(int i = 0; i < Pad; i++)
+  for (int i = 0; i < Pad; i++)
     MCOS->emitInt8(0);
 
   // Now emit the table of pairs of PointerSize'ed values for the section
@@ -1084,7 +1083,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
 
   // AT_APPLE_flags, the command line arguments of the assembler tool.
   StringRef DwarfDebugFlags = context.getDwarfDebugFlags();
-  if (!DwarfDebugFlags.empty()){
+  if (!DwarfDebugFlags.empty()) {
     MCOS->emitBytes(DwarfDebugFlags);
     MCOS->emitInt8(0); // NULL byte to terminate the string.
   }
@@ -1280,7 +1279,7 @@ void MCGenDwarfLabelEntry::Make(MCSymbol *Symbol, MCStreamer *MCOS,
   // underbar if any.
   StringRef Name = Symbol->getName();
   if (Name.starts_with("_"))
-    Name = Name.substr(1, Name.size()-1);
+    Name = Name.substr(1, Name.size() - 1);
 
   // Get the dwarf file number to be used for the dwarf label.
   unsigned FileNumber = context.getGenDwarfFileNumber();
@@ -1317,7 +1316,8 @@ static unsigned getSizeForEncoding(MCStreamer &streamer,
   MCContext &context = streamer.getContext();
   unsigned format = symbolEncoding & 0x0f;
   switch (format) {
-  default: llvm_unreachable("Unknown Encoding");
+  default:
+    llvm_unreachable("Unknown Encoding");
   case dwarf::DW_EH_PE_absptr:
   case dwarf::DW_EH_PE_signed:
     return context.getAsmInfo()->getCodePointerSize();
@@ -1337,9 +1337,8 @@ static void emitFDESymbol(MCObjectStreamer &streamer, const MCSymbol &symbol,
                           unsigned symbolEncoding, bool isEH) {
   MCContext &context = streamer.getContext();
   const MCAsmInfo *asmInfo = context.getAsmInfo();
-  const MCExpr *v = asmInfo->getExprForFDESymbol(&symbol,
-                                                 symbolEncoding,
-                                                 streamer);
+  const MCExpr *v =
+      asmInfo->getExprForFDESymbol(&symbol, symbolEncoding, streamer);
   unsigned size = getSizeForEncoding(streamer, symbolEncoding);
   if (asmInfo->doDwarfFDESymbolsUseAbsDiff() && isEH)
     emitAbsValue(streamer, v, size);
@@ -1351,9 +1350,8 @@ static void EmitPersonality(MCStreamer &streamer, const MCSymbol &symbol,
                             unsigned symbolEncoding) {
   MCContext &context = streamer.getContext();
   const MCAsmInfo *asmInfo = context.getAsmInfo();
-  const MCExpr *v = asmInfo->getExprForPersonalitySymbol(&symbol,
-                                                         symbolEncoding,
-                                                         streamer);
+  const MCExpr *v =
+      asmInfo->getExprForPersonalitySymbol(&symbol, symbolEncoding, streamer);
   unsigned size = getSizeForEncoding(streamer, symbolEncoding);
   streamer.emitValue(v, size);
 }
@@ -1425,7 +1423,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpAdjustCfaOffset:
   case MCCFIInstruction::OpDefCfaOffset: {
     const bool IsRelative =
-      Instr.getOperation() == MCCFIInstruction::OpAdjustCfaOffset;
+        Instr.getOperation() == MCCFIInstruction::OpAdjustCfaOffset;
 
     Streamer.emitInt8(dwarf::DW_CFA_def_cfa_offset);
 
@@ -1474,7 +1472,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpOffset:
   case MCCFIInstruction::OpRelOffset: {
     const bool IsRelative =
-      Instr.getOperation() == MCCFIInstruction::OpRelOffset;
+        Instr.getOperation() == MCCFIInstruction::OpRelOffset;
 
     unsigned Reg = Instr.getRegister();
     if (!IsEH)
@@ -1563,7 +1561,8 @@ void FrameEmitterImpl::emitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
   for (const MCCFIInstruction &Instr : Instrs) {
     MCSymbol *Label = Instr.getLabel();
     // Throw out move if the label is invalid.
-    if (Label && !Label->isDefined()) continue; // Not emitted, in dead code.
+    if (Label && !Label->isDefined())
+      continue; // Not emitted, in dead code.
 
     // Advance row if new location.
     if (BaseLabel && Label) {
@@ -1606,8 +1605,10 @@ void FrameEmitterImpl::EmitCompactUnwind(const MCDwarfFrameInfo &Frame) {
   //   .quad except_tab1
 
   uint32_t Encoding = Frame.CompactUnwindEncoding;
-  if (!Encoding) return;
-  bool DwarfEHFrameOnly = (Encoding == MOFI->getCompactUnwindDwarfEHFrameOnly());
+  if (!Encoding)
+    return;
+  bool DwarfEHFrameOnly =
+      (Encoding == MOFI->getCompactUnwindDwarfEHFrameOnly());
 
   // The encoding needs to know we have an LSDA.
   if (!DwarfEHFrameOnly && Frame.Lsda)
@@ -1868,11 +1869,11 @@ struct CIEKey {
   CIEKey() = default;
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame, bool IsEH)
-      : Personality(IsEH ? Frame.Personality : nullptr),
-        PersonalityEncoding(IsEH ? Frame.PersonalityEncoding : 0),
-        LsdaEncoding(IsEH ? Frame.LsdaEncoding : 0),
-        IsSignalFrame(Frame.IsSignalFrame), IsSimple(Frame.IsSimple),
-        RAReg(Frame.RAReg), IsBKeyFrame(Frame.IsBKeyFrame),
+      : Personality(Frame.Personality),
+        PersonalityEncoding(Frame.PersonalityEncoding),
+        LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
+        IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
+        IsBKeyFrame(Frame.IsBKeyFrame),
         IsMTETaggedFrame(Frame.IsMTETaggedFrame), IsEH(IsEH) {}
 
   StringRef PersonalityName() const {
@@ -1882,6 +1883,11 @@ struct CIEKey {
   }
 
   bool operator<(const CIEKey &Other) const {
+    assert(IsEH == Other.IsEH);
+    if (!IsEH)
+      std::make_tuple(RAReg, IsSimple) <
+          std::make_tuple(Other.RAReg, Other.IsSimple);
+
     return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
                            IsSignalFrame, IsSimple, RAReg, IsBKeyFrame,
                            IsMTETaggedFrame, IsEH) <
@@ -1892,13 +1898,14 @@ struct CIEKey {
   }
 
   bool operator==(const CIEKey &Other) const {
-    if (IsEH != Other.IsEH)
-      return false;
-    if (IsEH && (Personality != Other.Personality ||
-                 PersonalityEncoding != Other.PersonalityEncoding ||
-                 LsdaEncoding != Other.LsdaEncoding))
-      return false;
-    return IsSignalFrame == Other.IsSignalFrame && IsSimple == Other.IsSimple &&
+    assert(IsEH == Other.IsEH);
+    if (!IsEH)
+      RAReg == Other.RAReg &&IsSimple == Other.IsSimple;
+
+    return Personality == Other.Personality &&
+           PersonalityEncoding == Other.PersonalityEncoding &&
+           LsdaEncoding == Other.LsdaEncoding &&
+           IsSignalFrame == Other.IsSignalFrame && IsSimple == Other.IsSimple &&
            RAReg == Other.RAReg && IsBKeyFrame == Other.IsBKeyFrame &&
            IsMTETaggedFrame == Other.IsMTETaggedFrame;
   }
@@ -1930,15 +1937,15 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
     Streamer.generateCompactUnwindEncodings();
     bool SectionEmitted = false;
     for (const MCDwarfFrameInfo &Frame : FrameArray) {
-      if (Frame.CompactUnwindEncoding == 0) continue;
+      if (Frame.CompactUnwindEncoding == 0)
+        continue;
       if (!SectionEmitted) {
         Streamer.switchSection(MOFI->getCompactUnwindSection());
         Streamer.emitValueToAlignment(Align(AsmInfo->getCodePointerSize()));
         SectionEmitted = true;
       }
-      NeedsEHFrameSection |=
-        Frame.CompactUnwindEncoding ==
-          MOFI->getCompactUnwindDwarfEHFrameOnly();
+      NeedsEHFrameSection |= Frame.CompactUnwindEncoding ==
+                             MOFI->getCompactUnwindDwarfEHFrameOnly();
       Emitter.EmitCompactUnwind(Frame);
     }
   }
@@ -1947,7 +1954,8 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   // debug_frame section. Skip emitting FDEs and CIEs when the compact unwind
   // doesn't need an eh_frame section and the emission location is the eh_frame
   // section.
-  if (!NeedsEHFrameSection && IsEH) return;
+  if (!NeedsEHFrameSection && IsEH)
+    return;
 
   MCSection &Section =
       IsEH ? *const_cast<MCObjectFileInfo *>(MOFI)->getEHFrameSection()
@@ -1962,19 +1970,21 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   // This isn't technically necessary according to the DWARF standard,
   // but the Android libunwindstack rejects eh_frame sections where
   // an FDE refers to a CIE other than the closest previous CIE.
-  std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
-  llvm::stable_sort(FrameArrayX,
-                    [IsEH](const MCDwarfFrameInfo &X,
-                           const MCDwarfFrameInfo &Y) {
-                      return CIEKey(X, IsEH) < CIEKey(Y, IsEH);
-                    });
+  std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(),
+                                            FrameArray.end());
+  llvm::stable_sort(FrameArrayX, [IsEH](const MCDwarfFrameInfo &X,
+                                        const MCDwarfFrameInfo &Y) {
+    return CIEKey(X, IsEH) < CIEKey(Y, IsEH);
+  });
   CIEKey LastKey;
   const MCSymbol *LastCIEStart = nullptr;
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
     const MCDwarfFrameInfo &Frame = *I;
     ++I;
-    if (CanOmitDwarf && Frame.CompactUnwindEncoding !=
-          MOFI->getCompactUnwindDwarfEHFrameOnly() && IsEH)
+    if (CanOmitDwarf &&
+        Frame.CompactUnwindEncoding !=
+            MOFI->getCompactUnwindDwarfEHFrameOnly() &&
+        IsEH)
       // CIEs and FDEs can be emitted in either the eh_frame section or the
       // debug_frame section, on some platforms (e.g. AArch64) the target object
       // file supports emitting a compact_unwind section without an associated
