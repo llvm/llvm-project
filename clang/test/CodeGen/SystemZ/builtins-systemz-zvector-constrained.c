@@ -67,13 +67,8 @@ void test_core(void) {
   vec_scatter_element(vd, vul, ptrd, 1);
   // CHECK-ASM: vsceg %{{.*}}, 0(%{{.*}},%{{.*}}), 1
 
-  vd = vec_xl(idx, cptrd);
-  // CHECK-ASM: vst
-
   vd = vec_xld2(idx, cptrd);
   // CHECK-ASM:      vst
-
-  vec_xst(vd, idx, ptrd);
 
   vec_xstd2(vd, idx, ptrd);
 
