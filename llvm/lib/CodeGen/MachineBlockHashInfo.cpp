@@ -11,8 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -25,8 +29,8 @@ static uint64_t hashBlock(const MachineBasicBlock &MBB, bool HashOperands) {
     Hash = hashing::detail::hash_16_bytes(Hash, MI.getOpcode());
     if (HashOperands) {
       for (unsigned i = 0; i < MI.getNumOperands(); i++) {
-        Hash =
-            hashing::detail::hash_16_bytes(Hash, hash_value(MI.getOperand(i)));
+        Hash = hashing::detail::hash_16_bytes(
+            Hash, stableHashValue(MI.getOperand(i)));
       }
     }
   }
@@ -34,13 +38,16 @@ static uint64_t hashBlock(const MachineBasicBlock &MBB, bool HashOperands) {
 }
 
 /// Fold a 64-bit integer to a 16-bit one.
-static uint16_t fold_64_to_16(const uint64_t Value) {
+static constexpr uint16_t fold_64_to_16(const uint64_t Value) {
   uint16_t Res = static_cast<uint16_t>(Value);
   Res ^= static_cast<uint16_t>(Value >> 16);
   Res ^= static_cast<uint16_t>(Value >> 32);
   Res ^= static_cast<uint16_t>(Value >> 48);
   return Res;
 }
+
+static_assert(fold_64_to_16(1) == 1);
+static_assert(fold_64_to_16(12345678) == 25074);
 
 INITIALIZE_PASS(MachineBlockHashInfo, "machine-block-hash",
                 "Machine Block Hash Analysis", true, true)
@@ -61,7 +68,10 @@ struct CollectHashInfo {
   uint64_t NeighborHash;
 };
 
-bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
+MachineBlockHashInfoResult::MachineBlockHashInfoResult() = default;
+
+MachineBlockHashInfoResult::MachineBlockHashInfoResult(
+    const MachineFunction &F) {
   DenseMap<const MachineBasicBlock *, CollectHashInfo> HashInfos;
   uint16_t Offset = 0;
   // Initialize hash components
@@ -101,14 +111,43 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
                                  fold_64_to_16(HashInfo.NeighborHash));
     MBBHashInfo[&MBB] = BlendedHash.combine();
   }
+}
 
+uint64_t
+MachineBlockHashInfoResult::getMBBHash(const MachineBasicBlock &MBB) const {
+  auto it = MBBHashInfo.find(&MBB);
+  return it->second;
+}
+
+bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
+  Result = MachineBlockHashInfoResult{F};
   return false;
 }
 
-uint64_t MachineBlockHashInfo::getMBBHash(const MachineBasicBlock &MBB) {
-  return MBBHashInfo[&MBB];
+uint64_t MachineBlockHashInfo::getMBBHash(const MachineBasicBlock &MBB) const {
+  return Result.getMBBHash(MBB);
 }
 
 MachineFunctionPass *llvm::createMachineBlockHashInfoPass() {
   return new MachineBlockHashInfo();
+}
+
+AnalysisKey MachineBlockHashInfoAnalysis::Key;
+
+MachineBlockHashInfoResult
+MachineBlockHashInfoAnalysis::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  return MachineBlockHashInfoResult{MF};
+}
+
+PreservedAnalyses
+MachineBlockHashInfoPrinterPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  auto &MBHI = MFAM.getResult<MachineBlockHashInfoAnalysis>(MF);
+  OS << "Machine Block Hash Info for function: " << MF.getName() << "\n";
+  for (const auto &MBB : MF) {
+    OS << "  BB#" << MBB.getNumber() << ": "
+       << format_hex(MBHI.getMBBHash(MBB), 16) << "\n";
+  }
+  return PreservedAnalyses::all();
 }
