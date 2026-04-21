@@ -29,7 +29,9 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <memory>
 #include <optional>
@@ -337,9 +339,9 @@ protected:
           // The request went past the stack, so handle that case:
           const uint32_t num_frames = thread->GetStackFrameCount();
           if (static_cast<int32_t>(num_frames - frame_idx) >
-              *m_options.relative_frame_offset)
-          frame_idx += *m_options.relative_frame_offset;
-          else {
+              *m_options.relative_frame_offset) {
+            frame_idx += *m_options.relative_frame_offset;
+          } else {
             if (frame_idx == num_frames - 1) {
               // If we are already at the top of the stack, just warn and don't
               // reset the frame.
@@ -439,17 +441,23 @@ protected:
     if (!var_sp)
       return llvm::StringRef();
 
-    switch (var_sp->GetScope()) {
+    auto vt = var_sp->GetScope();
+    bool is_synthetic = IsSyntheticValueType(vt);
+    // Clear the bit so the rest works correctly.
+    if (is_synthetic)
+      vt = GetBaseValueType(vt);
+
+    switch (vt) {
     case eValueTypeVariableGlobal:
-      return "GLOBAL: ";
+      return is_synthetic ? "(synthetic) GLOBAL: " : "GLOBAL: ";
     case eValueTypeVariableStatic:
-      return "STATIC: ";
+      return is_synthetic ? "(synthetic) STATIC: " : "STATIC: ";
     case eValueTypeVariableArgument:
-      return "ARG: ";
+      return is_synthetic ? "(synthetic) ARG: " : "ARG: ";
     case eValueTypeVariableLocal:
-      return "LOCAL: ";
+      return is_synthetic ? "(synthetic) LOCAL: " : "LOCAL: ";
     case eValueTypeVariableThreadLocal:
-      return "THREAD: ";
+      return is_synthetic ? "(synthetic) THREAD: " : "THREAD: ";
     default:
       break;
     }
@@ -459,6 +467,14 @@ protected:
 
   /// Returns true if `scope` matches any of the options in `m_option_variable`.
   bool ScopeRequested(lldb::ValueType scope) {
+    // If it's a synthetic variable, check if we want to show those first.
+    bool is_synthetic = IsSyntheticValueType(scope);
+    if (is_synthetic) {
+      if (!m_option_variable.show_synthetic)
+        return false;
+
+      scope = GetBaseValueType(scope);
+    }
     switch (scope) {
     case eValueTypeVariableGlobal:
     case eValueTypeVariableStatic:
@@ -474,7 +490,10 @@ protected:
     case eValueTypeVariableThreadLocal:
     case eValueTypeVTable:
     case eValueTypeVTableEntry:
-      return false;
+      // The default for all other value types is is_synthetic. Aside from the
+      // modifiers above that should apply equally to synthetic and normal
+      // variables, any other synthetic variable we should default to showing.
+      return is_synthetic;
     }
     llvm_unreachable("Unexpected scope value");
   }
@@ -521,7 +540,8 @@ protected:
 
     Status error;
     VariableList *variable_list =
-        frame->GetVariableList(m_option_variable.show_globals, &error);
+        frame->GetVariableList(m_option_variable.show_globals,
+                               m_option_variable.show_synthetic, &error);
 
     if (error.Fail() && (!variable_list || variable_list->GetSize() == 0)) {
       result.AppendError(error.AsCString());
