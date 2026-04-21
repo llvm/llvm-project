@@ -1,4 +1,4 @@
-! Test Flang lowering of SIMD Directive to ensure the correct Vectorisation flags are
+! Test lowering of SIMD directive to ensure that correct cectorisation flags are
 ! applied to the do loops
 
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s

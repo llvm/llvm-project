@@ -1,4 +1,4 @@
-! Test parsing an unparsing of SIMD Directibe
+! Test parsing and unparsing of SIMD Directive
 
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree %s -o - | FileCheck %s --check-prefix="PARSE-TREE"
 ! RUN: %flang_fc1 -fdebug-unparse %s -o - | FileCheck %s --check-prefix="UNPARSE"
