@@ -51,6 +51,11 @@ public:
   virtual ~ProjectModules() = default;
 };
 
+/// Providing modules information for the project by scanning every file.
+std::unique_ptr<ProjectModules> getProjectModules(
+    std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
+    const ThreadsafeFS &TFS);
+
 } // namespace clangd
 } // namespace clang
 

@@ -15,7 +15,7 @@
 #include "CodeComplete.h"
 #include "Compiler.h"
 #include "ModulesBuilder.h"
-#include "ScanningProjectModules.h"
+#include "ProjectModules.h"
 #include "TestTU.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
@@ -73,7 +73,8 @@ public:
 
   std::unique_ptr<ProjectModules> getProjectModules(PathRef) const override {
     return std::make_unique<GlobalScanningCounterProjectModules>(
-        scanningProjectModules(MockedCDBPtr, TFS), GlobalScanningCount);
+        clang::clangd::getProjectModules(MockedCDBPtr, TFS),
+        GlobalScanningCount);
   }
 
   unsigned getGlobalScanningCount() const { return GlobalScanningCount; }
