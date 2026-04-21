@@ -105,8 +105,7 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP5]], 1
 ; RV64-UF2-NEXT:    [[TMP15:%.*]] = sub i64 0, [[TMP10]]
 ; RV64-UF2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 [[TMP15]]
-; RV64-UF2-NEXT:    [[TMP12:%.*]] = sub i64 0, [[TMP5]]
-; RV64-UF2-NEXT:    [[TMP11:%.*]] = add i64 [[TMP15]], [[TMP12]]
+; RV64-UF2-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP15]], [[TMP5]]
 ; RV64-UF2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 [[TMP11]]
 ; RV64-UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP18]], align 4
 ; RV64-UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP19]], align 4
@@ -315,8 +314,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP26:%.*]] = sub nuw nsw i64 [[TMP18]], 1
 ; RV64-UF2-NEXT:    [[TMP30:%.*]] = sub i64 0, [[TMP26]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 [[TMP30]]
-; RV64-UF2-NEXT:    [[TMP27:%.*]] = sub i64 0, [[TMP18]]
-; RV64-UF2-NEXT:    [[TMP25:%.*]] = add i64 [[TMP30]], [[TMP27]]
+; RV64-UF2-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP30]], [[TMP18]]
 ; RV64-UF2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 [[TMP25]]
 ; RV64-UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP33]], align 4
 ; RV64-UF2-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x i32>, ptr [[TMP34]], align 4
@@ -538,8 +536,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP26:%.*]] = sub nuw nsw i64 [[TMP18]], 1
 ; RV64-UF2-NEXT:    [[TMP30:%.*]] = sub i64 0, [[TMP26]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 [[TMP30]]
-; RV64-UF2-NEXT:    [[TMP27:%.*]] = sub i64 0, [[TMP18]]
-; RV64-UF2-NEXT:    [[TMP25:%.*]] = add i64 [[TMP30]], [[TMP27]]
+; RV64-UF2-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP30]], [[TMP18]]
 ; RV64-UF2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 [[TMP25]]
 ; RV64-UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP33]], align 4
 ; RV64-UF2-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x float>, ptr [[TMP34]], align 4
@@ -686,8 +683,7 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP5]], 1
 ; RV64-UF2-NEXT:    [[TMP15:%.*]] = sub i64 0, [[TMP10]]
 ; RV64-UF2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[TMP15]]
-; RV64-UF2-NEXT:    [[TMP12:%.*]] = sub i64 0, [[TMP5]]
-; RV64-UF2-NEXT:    [[TMP11:%.*]] = add i64 [[TMP15]], [[TMP12]]
+; RV64-UF2-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP15]], [[TMP5]]
 ; RV64-UF2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[TMP11]]
 ; RV64-UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP18]], align 4
 ; RV64-UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP19]], align 4
