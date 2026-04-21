@@ -1024,7 +1024,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        const RegisterBankInfo &RBI) {
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
-  Register SubSrcReg = I.getOperand(1).getSubReg();
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
@@ -1049,6 +1048,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
     const TypeSize SrcSize = TRI.getRegSizeInBits(*SrcRC);
     const TypeSize DstSize = TRI.getRegSizeInBits(*DstRC);
+    unsigned SubSrcReg = I.getOperand(1).getSubReg();
     unsigned SubReg;
 
     // If the source bank doesn't support a subregister copy small enough,
