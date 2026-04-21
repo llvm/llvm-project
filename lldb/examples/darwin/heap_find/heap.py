@@ -682,7 +682,9 @@ lldb_info""" % (
                 i_max = options.max_history
             for i in range(i_max):
                 stack_history_entry = malloc_stack_history.entries[i]
-                dump_stack_history_entry(target, options, result, stack_history_entry, i)
+                dump_stack_history_entry(
+                    target, options, result, stack_history_entry, i
+                )
             if num_stacks > options.max_history:
                 result.AppendMessage(
                     'warning: the max number of stacks (%u) was reached, use the "--max-history=%u" option to see all of the stacks'
