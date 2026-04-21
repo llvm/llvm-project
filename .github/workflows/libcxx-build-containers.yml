@@ -28,7 +28,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     strategy:
       matrix:
-        image_names: ['libcxx-linux-builder-base', 'libcxx-linux-builder', 'libcxx-android-builder']
+        image_name: ['libcxx-linux-builder-base', 'libcxx-linux-builder', 'libcxx-android-builder']
     permissions:
       packages: write
 
