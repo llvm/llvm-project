@@ -3094,6 +3094,29 @@ func.func @test_negf1(%f : f32) -> (f32) {
 
 // -----
 
+// CHECK-LABEL: @test_flush_denormals_const(
+// CHECK: %[[res:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK: return %[[res]]
+func.func @test_flush_denormals_const() -> (f32) {
+  %c = arith.constant 1.0e-40 : f32
+  %0 = arith.flush_denormals %c : f32
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_flush_denormals_idempotent(
+// CHECK-SAME: %[[arg0:.+]]:
+// CHECK: %[[res:.+]] = arith.flush_denormals %[[arg0]] : f32
+// CHECK: return %[[res]]
+func.func @test_flush_denormals_idempotent(%f : f32) -> (f32) {
+  %0 = arith.flush_denormals %f : f32
+  %1 = arith.flush_denormals %0 : f32
+  return %1 : f32
+}
+
+// -----
+
 // CHECK-LABEL: @test_remui(
 // CHECK: %[[res:.+]] = arith.constant dense<[0, 0, 4, 2]> : vector<4xi32>
 // CHECK: return %[[res]]

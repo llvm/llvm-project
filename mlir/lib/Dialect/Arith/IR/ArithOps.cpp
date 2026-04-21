@@ -1105,6 +1105,28 @@ OpFoldResult arith::NegFOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// FlushDenormalsOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::FlushDenormalsOp::fold(FoldAdaptor adaptor) {
+  // TODO: Fold flush_denormals if the floating-point type does not support
+  // denormals. There is currently no API to query this information from
+  // APFloat.
+
+  // flush_denormals(flush_denormals(x)) -> flush_denormals(x)
+  if (auto op = this->getOperand().getDefiningOp<arith::FlushDenormalsOp>())
+    return op.getResult();
+
+  // Constant-fold flush_denormals if the operand is a constant.
+  return constFoldUnaryOp<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) {
+        if (a.isDenormal())
+          return APFloat::getZero(a.getSemantics(), a.isNegative());
+        return a;
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // AddFOp
 //===----------------------------------------------------------------------===//
 
