@@ -1612,25 +1612,26 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
 }
 
 void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
-  // When CUDA Fortran is enabled together with OpenACC, new
-  // symbols are created for the one appearing in the use_device
-  // clause. These new symbols have the CUDA Fortran device
-  // attribute.
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
-      name && name->symbol) {
-    if (Symbol * copy{currScope().CopySymbol(name->symbol->GetUltimate())}) {
-      name->symbol = copy;
+  // New symbols are created for those appearing in the use_device clause.
+  // These new symbols get the CUDA device attribute.
+  if (name && name->symbol) {
+    Symbol *copy{currScope().CopySymbol(name->symbol->GetUltimate())};
+    if (copy) {
       if (auto *object{copy->GetUltimate().detailsIf<ObjectEntityDetails>()}) {
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
+    } else {
+      copy = FindInScope(currScope(), name->symbol->GetUltimate().name());
+    }
+    if (copy) {
+      name->symbol = copy;
     }
   }
 }
 
 void AccVisitor::CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
     llvm::ArrayRef<SourceName> componentPath, parser::Designator &designator) {
-  if (!context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) ||
-      !baseName || !baseName->symbol || componentPath.empty()) {
+  if (!baseName || !baseName->symbol || componentPath.empty()) {
     return;
   }
   const Symbol &orig{*baseName->symbol};

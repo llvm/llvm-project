@@ -1,5 +1,7 @@
 Test the --embed-resource option.
 
+REQUIRES: x86-registered-target
+
 Create a temp resource file and embed it into the dSYM bundle.
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
