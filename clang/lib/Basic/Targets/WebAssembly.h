@@ -111,6 +111,8 @@ public:
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
     }
+    if (T.getOS() == llvm::Triple::WASIp3)
+      HasLibcallThreadContext = true;
   }
 
   StringRef getABI() const override;
