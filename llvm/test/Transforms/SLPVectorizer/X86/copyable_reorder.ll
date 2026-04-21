@@ -392,3 +392,46 @@ entry:
   store i32 %res3, ptr %gep2.3
   ret void
 }
+
+define void @test_sub_zero_copyable_not_swapped(ptr %z) {
+; CHECK-LABEL: @test_sub_zero_copyable_not_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_SRC_FAR0:%.*]] = getelementptr inbounds i32, ptr [[Z:%.*]], i64 0
+; CHECK-NEXT:    [[GEP_SRC_NEAR0:%.*]] = getelementptr inbounds i32, ptr [[Z]], i64 1
+; CHECK-NEXT:    [[GEP_SRC_FAR1:%.*]] = getelementptr inbounds i32, ptr [[Z]], i64 2
+; CHECK-NEXT:    [[GEP_SRC_NEAR1:%.*]] = getelementptr inbounds i32, ptr [[Z]], i64 3
+; CHECK-NEXT:    [[GEP_DST0:%.*]] = getelementptr inbounds i32, ptr [[Z]], i64 64
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[GEP_SRC_FAR0]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[GEP_SRC_NEAR0]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP_SRC_FAR1]], align 4
+; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[GEP_SRC_NEAR1]], align 4
+; CHECK-NEXT:    [[NEG0:%.*]] = sub nsw i32 0, [[V0]]
+; CHECK-NEXT:    [[NEG2:%.*]] = sub nsw i32 0, [[V2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[NEG0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[V1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[NEG2]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[V3]], i32 3
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[GEP_DST0]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %gep.src.far0  = getelementptr inbounds i32, ptr %z, i64 0
+  %gep.src.near0 = getelementptr inbounds i32, ptr %z, i64 1
+  %gep.src.far1  = getelementptr inbounds i32, ptr %z, i64 2
+  %gep.src.near1 = getelementptr inbounds i32, ptr %z, i64 3
+  %gep.dst0 = getelementptr inbounds i32, ptr %z, i64 64
+  %gep.dst1 = getelementptr inbounds i32, ptr %z, i64 65
+  %gep.dst2 = getelementptr inbounds i32, ptr %z, i64 66
+  %gep.dst3 = getelementptr inbounds i32, ptr %z, i64 67
+  %v0 = load i32, ptr %gep.src.far0,  align 4
+  %v1 = load i32, ptr %gep.src.near0, align 4
+  %v2 = load i32, ptr %gep.src.far1,  align 4
+  %v3 = load i32, ptr %gep.src.near1, align 4
+  %neg0 = sub nsw i32 0, %v0
+  %neg2 = sub nsw i32 0, %v2
+  store i32 %neg0, ptr %gep.dst0, align 4
+  store i32 %v1,   ptr %gep.dst1, align 4
+  store i32 %neg2, ptr %gep.dst2, align 4
+  store i32 %v3,   ptr %gep.dst3, align 4
+  ret void
+}
