@@ -124,11 +124,6 @@ static cl::opt<std::string> ClWriteSummary(
     cl::desc("Write summary to given YAML file after running pass"),
     cl::Hidden);
 
-static cl::opt<bool>
-    ClAnnotateDebugInfo("lowertypetests-annotate-debug-info",
-                        cl::desc("Create debug info for generate function"),
-                        cl::Hidden);
-
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
     return false;
@@ -1567,7 +1562,7 @@ void LowerTypeTestsModule::createJumpTable(
     Triple::ArchType JumpTableArch) {
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
-  if (ClAnnotateDebugInfo)
+  if (M.getDwarfVersion() != 0)
     IRB.SetCurrentDebugLocation(createDebugInfo(F));
 
   InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
