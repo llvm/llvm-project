@@ -56,16 +56,9 @@ class CIRGenFunction : public CIRGenTypeCache {
 public:
   CIRGenModule &cgm;
 
-private:
-  friend class ::ScalarExprEmitter;
-  /// The builder is a helper class to create IR inside a function. The
-  /// builder is stateful, in particular it keeps an "insertion point": this
-  /// is where the next operations will be introduced.
-  CIRGenBuilderTy &builder;
-
-  /// State used to communicate OpenMP loop bounds from `emitOMPForDirective`
-  /// to `emitForStmt`.
-  struct LoopBounds {
+  /// Loop bounds and metadata passed from emitOMPForDirective to emitForStmt
+  /// to emit an omp.loop_nest instead of a regular cir.for loop.
+  struct OMPLoopArguments {
     mlir::Value lowerBound;
     mlir::Value upperBound;
     mlir::Value step;
@@ -74,7 +67,14 @@ private:
     bool inclusive;
   };
 
-  std::optional<LoopBounds> currentOMPLoopBounds;
+  std::optional<OMPLoopArguments> ompLoopArgs;
+
+private:
+  friend class ::ScalarExprEmitter;
+  /// The builder is a helper class to create IR inside a function. The
+  /// builder is stateful, in particular it keeps an "insertion point": this
+  /// is where the next operations will be introduced.
+  CIRGenBuilderTy &builder;
 
   /// A jump destination is an abstract label, branching to which may
   /// require a jump out through normal cleanups.

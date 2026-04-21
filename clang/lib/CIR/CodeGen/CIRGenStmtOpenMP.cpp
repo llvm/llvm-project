@@ -68,16 +68,7 @@ CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
   return res;
 }
 
-// Helpers and implementation for emitOMPForDirective, which lowers an
-// OMPForDirective into an omp.wsloop + omp.loop_nest.
-
 namespace {
-/// Extract integer literal value from an expression, if present.
-static std::optional<int64_t> getIntLiteralValue(const Expr *expr) {
-  if (const auto *intLit = dyn_cast<IntegerLiteral>(expr->IgnoreImpCasts()))
-    return intLit->getValue().getSExtValue();
-  return std::nullopt;
-}
 
 /// Ensure a CIR value has the given CIR integer type, inserting an integral
 /// cast if necessary. Loads through CIR pointers first.
@@ -104,162 +95,158 @@ static mlir::Value cirIntToStdInt(mlir::OpBuilder &builder, mlir::Location loc,
                                                   cirValue)
       .getResult(0);
 }
-} // anonymous namespace
 
-mlir::LogicalResult
-CIRGenFunction::emitOMPForDirective(const OMPForDirective &s) {
+/// Emits the Sema-generated pre-init statements for an OpenMP loop directive.
+/// For DeclStmts, emits each VarDecl directly so that OMPCapturedExprDecls
+/// are not skipped.
+static mlir::LogicalResult doEmitPreinits(CIRGenFunction &cgf,
+                                          const Stmt *preInits) {
+  if (!preInits)
+    return mlir::success();
 
-  mlir::LogicalResult res = mlir::success();
-  mlir::Location begin = getLoc(s.getBeginLoc());
+  llvm::SmallVector<const Stmt *> stmts;
+  if (const auto *compound = dyn_cast<CompoundStmt>(preInits))
+    llvm::append_range(stmts, compound->body());
+  else
+    stmts.push_back(preInits);
 
-  // Extract the underlying canonical `for` loop from the CapturedStmt
-  const CapturedStmt *capturedStmt = s.getInnermostCapturedStmt();
-  const ForStmt *forStmt = dyn_cast<ForStmt>(capturedStmt->getCapturedStmt());
-
-  if (!forStmt) {
-    return mlir::failure();
+  for (const Stmt *stmt : stmts) {
+    if (const auto *declStmt = dyn_cast<DeclStmt>(stmt)) {
+      for (const Decl *d : declStmt->decls())
+        cgf.emitVarDecl(cast<VarDecl>(*d));
+    } else {
+      if (cgf.emitStmt(stmt, /*useCurrentScope=*/true).failed())
+        return mlir::failure();
+    }
   }
+  return mlir::success();
+}
 
-  // Loop bounds are first built as CIR integer values, then converted to
-  // standard MLIR integers via UnrealizedConversionCastOp before being
-  // passed to omp.loop_nest (which requires IntLikeType operands).
+/// Lowers an OMPLoopDirective into an omp.wsloop + omp.loop_nest.
+/// The original loop bounds are passed directly to omp.loop_nest, which
+/// handles work distribution. The induction variable alloca is emitted before
+/// the wsloop region so that the loop body can reference it.
+static mlir::LogicalResult emitOMPWorksharingLoop(CIRGenFunction &cgf,
+                                                  const OMPLoopDirective &s) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(s.getBeginLoc());
+
+  if (doEmitPreinits(cgf, s.getPreInits()).failed())
+    return mlir::failure();
+
+  const CapturedStmt *capturedStmt = s.getInnermostCapturedStmt();
+  const auto *forStmt = cast<ForStmt>(capturedStmt->getCapturedStmt());
+
+  // omp.loop_nest takes the original iteration space and stores its block
+  // argument directly into the user's loop variable.
   mlir::Value lowerBound;
   mlir::Value upperBound;
   mlir::Value step;
   bool inclusive = false;
 
-  // Extract loop variable type and lower bound.
   const auto *declStmt = dyn_cast_or_null<DeclStmt>(forStmt->getInit());
   const auto *varDecl =
       declStmt ? dyn_cast<VarDecl>(declStmt->getSingleDecl()) : nullptr;
-
   if (!varDecl)
     return mlir::failure();
 
-  // The loop variable's CIR integer type is the canonical type for all bounds.
   QualType loopVarQType = varDecl->getType();
-  auto cirType = convertType(loopVarQType);
-  auto cirIntType = mlir::cast<cir::IntType>(cirType);
+  auto cirIntType = mlir::cast<cir::IntType>(cgf.convertType(loopVarQType));
 
-  // Extract lower bound.
   if (!varDecl->hasInit())
     return mlir::failure();
-
-  if (auto constVal = getIntLiteralValue(varDecl->getInit())) {
-    lowerBound = builder.getConstInt(begin, cirIntType, *constVal);
-  } else {
-    mlir::Value cirValue = emitScalarExpr(varDecl->getInit());
-    lowerBound = ensureCIRIntType(builder, begin, cirValue, cirIntType);
+  {
+    mlir::Value v = cgf.emitScalarExpr(varDecl->getInit());
+    lowerBound = ensureCIRIntType(builder, loc, v, cirIntType);
   }
 
-  // Extract upper bound and comparison operator.
-  const auto *condBinOp = dyn_cast_or_null<BinaryOperator>(forStmt->getCond());
-  if (!condBinOp)
-    return mlir::failure();
-
-  BinaryOperatorKind opKind = condBinOp->getOpcode();
-
-  // Determine which side of the comparison holds the upper bound.
-  // Canonical forms: `i < ub`, `i <= ub` (var on LHS, bound on RHS)
-  //                  `ub > i`, `ub >= i` (bound on LHS, var on RHS)
-  const Expr *boundExpr = nullptr;
-  if (opKind == BO_LT || opKind == BO_LE) {
-    boundExpr = condBinOp->getRHS();
-    inclusive = (opKind == BO_LE);
-  } else if (opKind == BO_GT || opKind == BO_GE) {
-    boundExpr = condBinOp->getLHS();
-    inclusive = (opKind == BO_GE);
-  } else {
-    return mlir::failure();
+  {
+    const auto *condBinOp =
+        dyn_cast_or_null<BinaryOperator>(forStmt->getCond());
+    if (!condBinOp)
+      return mlir::failure();
+    BinaryOperatorKind op = condBinOp->getOpcode();
+    const Expr *boundExpr = nullptr;
+    if (op == BO_LT || op == BO_LE) {
+      boundExpr = condBinOp->getRHS();
+      inclusive = (op == BO_LE);
+    } else if (op == BO_GT || op == BO_GE) {
+      boundExpr = condBinOp->getLHS();
+      inclusive = (op == BO_GE);
+    } else {
+      return mlir::failure();
+    }
+    mlir::Value v = cgf.emitScalarExpr(boundExpr);
+    upperBound = ensureCIRIntType(builder, loc, v, cirIntType);
   }
 
-  if (auto constVal = getIntLiteralValue(boundExpr)) {
-    upperBound = builder.getConstInt(begin, cirIntType, *constVal);
-  } else {
-    mlir::Value cirValue = emitScalarExpr(boundExpr);
-    upperBound = ensureCIRIntType(builder, begin, cirValue, cirIntType);
-  }
-
-  // Extract step.
-  if (const auto *unaryOp =
-          dyn_cast_or_null<UnaryOperator>(forStmt->getInc())) {
-    int64_t val = unaryOp->isIncrementOp() ? 1 : -1;
-    step = builder.getConstInt(begin, cirIntType, val);
+  if (const auto *unary = dyn_cast_or_null<UnaryOperator>(forStmt->getInc())) {
+    step =
+        builder.getConstInt(loc, cirIntType, unary->isIncrementOp() ? 1 : -1);
   } else if (const auto *binOp =
                  dyn_cast_or_null<BinaryOperator>(forStmt->getInc())) {
     const Expr *stepExpr = nullptr;
-
     if (binOp->isCompoundAssignmentOp()) {
       stepExpr = binOp->getRHS();
     } else if (binOp->isAssignmentOp()) {
-      // i = i + step or i = step + i
-      if (auto *subBinOp =
+      if (auto *sub =
               dyn_cast<BinaryOperator>(binOp->getRHS()->IgnoreImpCasts())) {
-        const Expr *lhs = subBinOp->getLHS()->IgnoreImpCasts();
-        const Expr *rhs = subBinOp->getRHS()->IgnoreImpCasts();
-        // Identify which operand is the loop variable and which is the step.
-        if (auto *lhsRef = dyn_cast<DeclRefExpr>(lhs)) {
+        const Expr *lhs = sub->getLHS()->IgnoreImpCasts();
+        const Expr *rhs = sub->getRHS()->IgnoreImpCasts();
+        if (auto *lhsRef = dyn_cast<DeclRefExpr>(lhs))
           stepExpr = (lhsRef->getDecl() == varDecl) ? rhs : lhs;
-        } else if (auto *rhsRef = dyn_cast<DeclRefExpr>(rhs)) {
+        else if (auto *rhsRef = dyn_cast<DeclRefExpr>(rhs))
           stepExpr = (rhsRef->getDecl() == varDecl) ? lhs : rhs;
-        }
       }
     }
-
     if (stepExpr) {
-      if (auto constVal = getIntLiteralValue(stepExpr)) {
-        step = builder.getConstInt(begin, cirIntType, *constVal);
-      } else {
-        mlir::Value cirValue = emitScalarExpr(stepExpr);
-        step = ensureCIRIntType(builder, begin, cirValue, cirIntType);
-      }
+      mlir::Value v = cgf.emitScalarExpr(stepExpr);
+      step = ensureCIRIntType(builder, loc, v, cirIntType);
     }
   }
-
-  // Default to unit step if not recognized.
   if (!step)
-    step = builder.getConstInt(begin, cirIntType, 1);
+    step = builder.getConstInt(loc, cirIntType, 1);
 
-  // Emit init, convert bounds to std integers, and create the wsloop.
-
-  // Emit the loop init statement (e.g. `int i = 0`) to create the alloca
-  // for the induction variable *before* the wsloop.
+  // The induction variable alloca must be visible in the wsloop region below,
+  // so emit the init before creating the wsloop op.
   if (forStmt->getInit())
-    if (emitStmt(forStmt->getInit(), /*useCurrentScope=*/true).failed())
+    if (cgf.emitStmt(forStmt->getInit(), /*useCurrentScope=*/true).failed())
       return mlir::failure();
 
-  // Convert CIR integer bounds to standard MLIR integers at the boundary.
-  // omp.loop_nest requires IntLikeType (AnyInteger | Index), not CIR types.
-  mlir::Value stdLB = cirIntToStdInt(builder, begin, lowerBound);
-  mlir::Value stdUB = cirIntToStdInt(builder, begin, upperBound);
-  mlir::Value stdStep = cirIntToStdInt(builder, begin, step);
-  mlir::Type loopBoundsType = stdLB.getType();
+  // omp.loop_nest requires IntLikeType operands, not CIR integer types.
+  mlir::Value stdLB = cirIntToStdInt(builder, loc, lowerBound);
+  mlir::Value stdUB = cirIntToStdInt(builder, loc, upperBound);
+  mlir::Value stdStep = cirIntToStdInt(builder, loc, step);
 
-  currentOMPLoopBounds =
-      LoopBounds{stdLB, stdUB, stdStep, loopBoundsType, varDecl, inclusive};
+  cgf.ompLoopArgs = CIRGenFunction::OMPLoopArguments{
+      stdLB, stdUB, stdStep, stdLB.getType(), varDecl, inclusive};
 
-  // Create wsloop with empty region
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-  auto wsloopOp = mlir::omp::WsloopOp::create(builder, begin, retTy, operands);
+  auto wsloopOp = mlir::omp::WsloopOp::create(builder, loc, retTy, operands);
+  mlir::Block *innerBlock = new mlir::Block();
+  wsloopOp.getRegion().push_back(innerBlock);
 
-  mlir::Region &region = wsloopOp.getRegion();
-  mlir::Block *block = new mlir::Block();
-  region.push_back(block);
-
-  // Emit the ForStmt body (will create loop_nest when it detects OpenMP
-  // context)
+  // emitForStmt detects ompLoopArgs and emits omp.loop_nest instead of
+  // cir.for, skipping the for-init already emitted above.
   mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(block);
+  builder.setInsertionPointToStart(innerBlock);
+  mlir::LogicalResult res = cgf.emitStmt(forStmt, /*useCurrentScope=*/false);
 
-  if (emitStmt(forStmt, /*useCurrentScope=*/false).failed()) {
-    res = mlir::failure();
-  }
-
-  // Clear loop-bound state
-  currentOMPLoopBounds = std::nullopt;
-
+  cgf.ompLoopArgs = std::nullopt;
   return res;
+}
+
+} // anonymous namespace
+
+static mlir::LogicalResult emitOMPForDirective(const OMPLoopDirective &s,
+                                               CIRGenFunction &cgf) {
+  return emitOMPWorksharingLoop(cgf, s);
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitOMPForDirective(const OMPForDirective &s) {
+  return ::emitOMPForDirective(s, *this);
 }
 
 mlir::LogicalResult

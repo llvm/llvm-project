@@ -1002,7 +1002,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
   mlir::omp::LoopNestOp loopNestOp;
 
   auto scopeLoc = getLoc(s.getSourceRange());
-  bool isOpenMPFor = currentOMPLoopBounds.has_value();
+  bool isOpenMPFor = ompLoopArgs.has_value();
 
   // This lambda emits either an OpenMP `omp.loop_nest` or a regular CIR
   // `cir.for`, depending on whether we are inside an OpenMP for directive.
@@ -1030,12 +1030,12 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     if (isOpenMPFor) {
       mlir::OpBuilder::InsertionGuard guard(builder);
 
-      mlir::Type loopBoundsType = currentOMPLoopBounds->inductionVarType;
-      mlir::Value lb = currentOMPLoopBounds->lowerBound;
-      mlir::Value ub = currentOMPLoopBounds->upperBound;
-      mlir::Value step = currentOMPLoopBounds->step;
-      bool inclusive = currentOMPLoopBounds->inclusive;
-      const VarDecl *inductionVar = currentOMPLoopBounds->inductionVar;
+      mlir::Type loopBoundsType = ompLoopArgs->inductionVarType;
+      mlir::Value lb = ompLoopArgs->lowerBound;
+      mlir::Value ub = ompLoopArgs->upperBound;
+      mlir::Value step = ompLoopArgs->step;
+      bool inclusive = ompLoopArgs->inclusive;
+      const VarDecl *inductionVar = ompLoopArgs->inductionVar;
 
       loopNestOp = loopNestOp.create(builder, scopeLoc, 1, lb, ub, step,
                                      inclusive, nullptr);
