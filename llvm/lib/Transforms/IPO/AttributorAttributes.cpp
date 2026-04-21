@@ -114,6 +114,8 @@ static cl::opt<unsigned> MaxAccessesPerAAPointerInfo(
 
 STATISTIC(NumAAs, "Number of abstract attributes created");
 STATISTIC(NumIndirectCallsPromoted, "Number of indirect calls promoted");
+STATISTIC(NumAAPointerInfoAccessesCapped,
+          "Number of AAPointerInfo instances capped to pessimistic");
 
 // Some helper macros to deal with statistics tracking.
 //
@@ -944,8 +946,10 @@ ChangeStatus AA::PointerInfo::State::addAccess(
     std::optional<Value *> Content, AAPointerInfo::AccessKind Kind, Type *Ty,
     Instruction *RemoteI) {
   if (MaxAccessesPerAAPointerInfo > 0 &&
-      AccessList.size() >= MaxAccessesPerAAPointerInfo)
+      AccessList.size() >= MaxAccessesPerAAPointerInfo) {
+    ++NumAAPointerInfoAccessesCapped;
     return indicatePessimisticFixpoint();
+  }
 
   RemoteI = RemoteI ? RemoteI : &I;
 
