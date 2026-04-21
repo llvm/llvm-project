@@ -372,7 +372,6 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
 
                 offset_t offset = 0;
                 for (uint64_t i = 0; i < image_infos_count; i++) {
-                  Status error;
                   addr_t addr = added_binaries.GetAddress(&offset);
                   image_load_addresses.push_back(addr);
                   offset += 2 * addrsize;
