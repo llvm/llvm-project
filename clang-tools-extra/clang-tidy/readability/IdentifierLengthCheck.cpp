@@ -100,13 +100,23 @@ static std::optional<unsigned> countLinesToLastUse(const VarDecl *Var,
   auto AllRefs =
       utils::decl_ref_expr::allDeclRefExprs(*Var, *ParentScope, *Ctx);
 
-  const unsigned DeclLine = SrcMgr->getSpellingLineNumber(Var->getLocation());
-  const unsigned LastUseLine = std::transform_reduce(
-      AllRefs.begin(), AllRefs.end(), DeclLine,
-      [](unsigned Lhs, unsigned Rhs) -> unsigned { return std::max(Lhs, Rhs); },
-      [&](const DeclRefExpr *RefToVar) -> unsigned {
+  auto AllRefLines =
+      llvm::map_range(AllRefs, [&](const DeclRefExpr *RefToVar) -> unsigned {
         return SrcMgr->getSpellingLineNumber(RefToVar->getLocation());
       });
+
+  const unsigned DeclLine = SrcMgr->getSpellingLineNumber(Var->getLocation());
+  const unsigned LastUseLine =
+      AllRefLines.empty() ? DeclLine
+                          : std::max(DeclLine, *llvm::max_element(AllRefLines));
+
+  // const unsigned LastUseLine = std::transform_reduce(
+  //     AllRefs.begin(), AllRefs.end(), DeclLine,
+  //     [](unsigned Lhs, unsigned Rhs) -> unsigned { return std::max(Lhs, Rhs);
+  //     },
+  //     [&](const DeclRefExpr *RefToVar) -> unsigned {
+  //       return SrcMgr->getSpellingLineNumber(RefToVar->getLocation());
+  //     });
 
   return LastUseLine - DeclLine + 1;
 }
