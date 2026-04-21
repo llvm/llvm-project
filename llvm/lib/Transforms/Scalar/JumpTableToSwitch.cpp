@@ -158,7 +158,10 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
 
     for (const auto &[G, C] : Targets) {
       [[maybe_unused]] auto It = GuidToCounter.insert({G, C});
-      assert(It.second);
+      // TODO(boomanaiden154): Currently we do not assert on inserting
+      // duplicate GUIDs because we might have multiple zeros when the profile
+      // loader fails to map addresses to functions. Readd the assertion that
+      // we did insert once this has been fixed.
     }
   }
   for (auto [Index, Func] : llvm::enumerate(JT.Funcs)) {
