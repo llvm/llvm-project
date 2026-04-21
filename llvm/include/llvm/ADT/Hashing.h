@@ -168,7 +168,7 @@ constexpr uint64_t rotate(uint64_t val, size_t shift) {
 
 constexpr uint64_t shift_mix(uint64_t val) { return val ^ (val >> 47); }
 
-inline constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
+constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
   // Murmur-inspired hashing.
   const uint64_t kMul = 0x9ddfea08eb382d69ULL;
   uint64_t a = (low ^ high) * kMul;
