@@ -15318,6 +15318,14 @@ If the source pointer is poison, the instruction returns poison.
 The resulting pointer belongs to the same address space as ``source``.
 This instruction does not dereference the pointer.
 
+Chaining indices in a single ``llvm.structured.gep`` instruction or spliting
+is sequentialy over multiple has exactly the same behavior. As such, two
+``llvm.structured.gep`` instruction can be merged if the second one base
+pointer is the result of the first by appending the indices of the second to
+the first.
+Conversely, a single structured GEP instruction can be split in to by
+splitting the indices sequence over multiple instructions.
+
 Example:
 """"""""
 
@@ -15377,6 +15385,20 @@ Or:
 
 This is, however, dependent on context that codegen has an insight on. The
 fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
+
+**SGEP split & merge**
+
+A structured GEP can be split, or merged with no observable difference:
+
+.. code-block:: llvm
+
+    %S = type [ 2 x { i32, i32 } ]
+    %a = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 0, i32 1)
+
+    %tmp = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 0)
+    %b = call ptr @llvm.structured.gep(ptr elementtype({ i32, i32 }) %tmp, i32 1)
+
+Here, `%a` and `%b` point to the same object.
 
 
 .. _i_structured_alloca:
