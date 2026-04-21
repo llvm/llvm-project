@@ -435,22 +435,28 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
     result = fop::create(rewriter, loc, resultType, result, next);             \
     break
 
+#define INT_CASE(kind, iop)                                                    \
+  case vector::CombiningKind::kind:                                            \
+    assert(isa<IntegerType>(resultType));                                      \
+    result = spirv::iop::create(rewriter, loc, resultType, result, next);      \
+    break
+
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
         INT_AND_FLOAT_CASE(MUL, IMulOp, FMulOp);
         INT_OR_FLOAT_CASE(MINUI, SPIRVUMinOp);
         INT_OR_FLOAT_CASE(MINSI, SPIRVSMinOp);
         INT_OR_FLOAT_CASE(MAXUI, SPIRVUMaxOp);
         INT_OR_FLOAT_CASE(MAXSI, SPIRVSMaxOp);
+        INT_CASE(AND, BitwiseAndOp);
+        INT_CASE(OR, BitwiseOrOp);
+        INT_CASE(XOR, BitwiseXorOp);
 
-      case vector::CombiningKind::AND:
-      case vector::CombiningKind::OR:
-      case vector::CombiningKind::XOR:
-        return rewriter.notifyMatchFailure(reduceOp, "unimplemented");
       default:
         return rewriter.notifyMatchFailure(reduceOp, "not handled here");
       }
 #undef INT_AND_FLOAT_CASE
 #undef INT_OR_FLOAT_CASE
+#undef INT_CASE
     }
 
     rewriter.replaceOp(reduceOp, result);
