@@ -13,7 +13,6 @@ RWStructuredBuffer<float> Out : register(u0);
 
 // CHECK: define {{.*}} float @_Z3fooA3_N4hlsl8RWBufferIfEE(ptr noundef byval([3 x %"class.hlsl::RWBuffer"]) align 4 %LocalA)
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 float foo(RWBuffer<float> LocalA[3]) {
 // CHECK-NEXT: %[[LocalA_2_Ptr:.*]] = getelementptr inbounds [3 x %"class.hlsl::RWBuffer"], ptr %LocalA, i32 0, i32 2
 // CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr @_ZN4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[LocalA_2_Ptr]], i32 noundef 0)
@@ -24,7 +23,6 @@ float foo(RWBuffer<float> LocalA[3]) {
 
 // CHECK: define internal void @_Z4mainv()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 [numthreads(4,1,1)]
 void main() {
 // Check that the `main` function calls `foo` with a local copy of the array
