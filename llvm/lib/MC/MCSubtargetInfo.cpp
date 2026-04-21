@@ -34,23 +34,24 @@ static const T *Find(StringRef S, ArrayRef<T> A) {
 }
 
 /// For each feature that is (transitively) implied by this feature, set it.
-static
-void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
+static 
+void SetImpliedBits(FeatureBitset &Bits, FeatureBitset Implies,
                     ArrayRef<SubtargetFeatureKV> FeatureTable) {
   // Transitively set all features implied. We don't assume that the features in
   // Bits have already had their implied features set.
   FeatureBitset NewBits = Implies;
-  while (NewBits.any()) {
+  while (Implies.any()) {
     FeatureBitset Implied;
     for (const SubtargetFeatureKV &FE : FeatureTable) {
-      if (NewBits.test(FE.Value))
+      if (Implies.test(FE.Value))
         Implied |= FE.Implies.getAsBitset();
     }
 
     // Only continue for bits that haven't been set yet.
-    NewBits = Implied & ~Bits;
-    Bits |= NewBits;
+    Implies = Implied & ~NewBits;
+    NewBits |= Implies;
   }
+  Bits |= NewBits;
 }
 
 /// For each feature that (transitively) implies this feature, clear it.
