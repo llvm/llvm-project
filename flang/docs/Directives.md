@@ -103,9 +103,9 @@ A list of non-standard directives supported by Flang
 * `!dir$ forceinline` works in the same way as the `inline` directive, but it forces
    inlining by the compiler on a function call statement.
 * `!dir$ inlinealways <name>`. An alternative spelling to `forceinline`, providing compatibility
-  with older Fortran compilers, such as classic-flang. It can be defined at the callsite, or
-  in the function you want to inline. `name` is optional and should only be used when
-  specifying the directive within a function, example:
+  with older Fortran compilers, such as classic-flang. It can be specified at the callsite, or
+  in the function or subroutine you want to inline. `name` is optional and should only be used
+  when specifying the directive within a function, example:
   ```
   function test
     !DIR$ INLINEALWAYS test
