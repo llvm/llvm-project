@@ -211,15 +211,12 @@ Interpreter::PromoteSignedInteger(CompilerType &lhs_type,
 
 llvm::Expected<CompilerType>
 Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
-                                  lldb::ValueObjectSP &rhs, uint32_t location,
-                                  bool is_assign) {
-  // Apply unary conversion for both operands, unless doing assignment.
-  if (!is_assign) {
-    auto lhs_or_err = UnaryConversion(lhs, location);
-    if (!lhs_or_err)
-      return lhs_or_err.takeError();
-    lhs = *lhs_or_err;
-  }
+                                  lldb::ValueObjectSP &rhs, uint32_t location) {
+  // Apply unary conversion for both operands.
+  auto lhs_or_err = UnaryConversion(lhs, location);
+  if (!lhs_or_err)
+    return lhs_or_err.takeError();
+  lhs = *lhs_or_err;
   auto rhs_or_err = UnaryConversion(rhs, location);
   if (!rhs_or_err)
     return rhs_or_err.takeError();

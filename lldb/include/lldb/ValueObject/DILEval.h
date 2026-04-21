@@ -99,8 +99,7 @@ private:
   /// \returns The result type of an arithmetic operation.
   llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
                                                     lldb::ValueObjectSP &rhs,
-                                                    uint32_t location,
-                                                    bool is_assign = false);
+                                                    uint32_t location);
 
   /// Add or subtract the offset to the pointer according to the pointee type
   /// byte size.
