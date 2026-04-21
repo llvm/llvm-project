@@ -85,6 +85,7 @@ DEFAULT_PLUGINS = [
     "SymbolFileSymtab",
     "SymbolLocatorDebuginfod",
     "SymbolLocatorDefault",
+    "SymbolLocatorSymStore",
     "SymbolVendorELF",
     "SymbolVendorPECOFF",
     "SymbolVendorWasm",
