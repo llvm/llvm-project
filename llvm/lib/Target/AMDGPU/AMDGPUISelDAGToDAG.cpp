@@ -915,7 +915,7 @@ bool AMDGPUDAGToDAGISel::isSDWAOperand(const SDNode *N) const {
 
   if (N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL)
     if (auto *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-      return RHS->getZExtValue() == 24 || RHS->getZExtValue() == 16;
+      return (RHS->getZExtValue() % 8) == 0;
 
   return false;
 }
