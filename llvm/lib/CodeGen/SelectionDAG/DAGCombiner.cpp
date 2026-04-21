@@ -2987,8 +2987,8 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
                      m_Deferred(X)))) {
       if (X != Y) {
         // Redistribute shared NUW flag.
-        SDNodeFlags NewFlags = SDNodeFlags::NoUnsignedWrap;
-        NewFlags &= N->getFlags() & InnerAdd->getFlags();
+        SDNodeFlags NewFlags =
+            N->getFlags() & InnerAdd->getFlags() & SDNodeFlags::NoUnsignedWrap;
         SDValue X2 = DAG.getNode(ISD::ADD, DL, VT, X, X, NewFlags);
         return DAG.getNode(ISD::ADD, DL, VT, Y, X2, NewFlags);
       }
