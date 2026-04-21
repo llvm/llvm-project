@@ -89,54 +89,29 @@ xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
 static void walkRegionBackward(Region &region,
                                llvm::function_ref<void(Operation *)> visit) {
 
-  // blocks: back -> front
-  for (Block &block : llvm::reverse(region)) {
-    // ops: back -> front, early-inc so visit() may erase current op safely
-    for (Operation &op : llvm::reverse(block)) {
+  // Use post-order traversal to process blocks in reverse topological order.
+  // This ensures that use blocks are visited before def blocks, which is
+  // required for backward layout propagation.
+  if (region.empty())
+    return;
+  llvm::ReversePostOrderTraversal<Region *> rpot(&region);
+  SmallVector<Block *> blocks(rpot.begin(), rpot.end());
+  for (Block *block : llvm::reverse(blocks)) {
+    // ops: back -> front
+    for (Operation &op : llvm::reverse(*block)) {
       // make sure we first visit inside the region op (so yield op first)
       // and then move to region op itself
-      for (Region &nested : llvm::reverse(op.getRegions()))
+      // Regions are iterated in forward order so that for multi-region ops
+      // like scf.while, earlier regions (e.g., "before/cond") are processed
+      // first. This ensures that when a later region's terminator (e.g., "do"
+      // yield) needs the layout of an earlier region's block args, those
+      // layouts are already available from use points.
+      for (Region &nested : op.getRegions())
         walkRegionBackward(nested, visit);
 
       visit(&op);
     }
   }
-  // // Process blocks in post-order (reverse topological order: dominated
-  // before dominators)
-  // // For single-block regions, this is just that block
-  // // For control flow, this ensures dominated blocks are processed before
-  // dominators
-
-  // // Step 1: Get reverse post-order traversal
-  // llvm::ReversePostOrderTraversal<Region *> rpot(&region);
-  // // Step 2: Collect into vector
-  // llvm::SmallVector<Block *> blocks(rpot.begin(), rpot.end());
-  // // Step 3: Reverse it to get post-order (reverse topological order)
-  // for (Block *block : llvm::reverse(blocks)) {
-  //   // ops: back -> front, with early-inc so visit() may erase current op
-  //   safely
-  //   // We need to collect operations first because nested region walks might
-  //   modify the block llvm::SmallVector<Operation *> ops; for (Operation &op :
-  //   llvm::reverse(*block))
-  //     ops.push_back(&op);
-
-  //   for (Operation *op : ops) {
-  //     // Check if op is still alive (might have been erased by nested walk)
-  //     if (!op->isRegistered())
-  //       continue;
-
-  //     // make sure we first visit inside the region op (so yield op first)
-  //     // and then move to region op itself
-  //     // Note: Region iteration order doesn't affect correctness since each
-  //     // region is processed in reverse topological order independently
-  //     for (Region &nested : op->getRegions())
-  //       walkRegionBackward(nested, visit);
-
-  //     // Check again if op is still alive before visiting
-  //     if (op->isRegistered())
-  //       visit(op);  // Can safely erase op now
-  //   }
-  // }
 }
 
 static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
@@ -184,8 +159,12 @@ static void propagateResultsToRegularOperands(Operation *op) {
   }
 }
 
-// propagate layout from region results to yield operands. This set the
-// temproary layout for reguion results and yield operands.
+// Propagate layout from region op results and sibling region block args
+// to yield/condition operands. For each successor of this terminator:
+// - Parent successor: propagate from parent op's result layouts (use points).
+// - Region successor: propagate from target region's block arg layouts (use
+//   points), e.g., scf.yield in "after/do" region propagates to "before/cond"
+//   block args.
 static void propagateRegionResultsToYieldOperands(
     mlir::RegionBranchTerminatorOpInterface yieldOp) {
   auto regionBranchOp =
@@ -193,57 +172,42 @@ static void propagateRegionResultsToYieldOperands(
   if (!regionBranchOp)
     return;
 
-  // Gather layouts for each result of the parent region op from external
-  // use points.
-  unsigned numResults = regionBranchOp->getNumResults();
-  if (numResults == 0)
-    return;
-
-  SmallVector<xegpu::DistributeLayoutAttr> resultLayouts(numResults, nullptr);
-  for (unsigned i = 0; i < numResults; ++i) {
-    OpResult result = regionBranchOp->getResult(i);
-    resultLayouts[i] = getLayoutFromUsePoints(result);
-    if (resultLayouts[i])
-      xegpu::setTemporaryLayout(result, resultLayouts[i]);
-  }
-
-  // We are interested in the parent successor, i.e., the branch that exits
-  // the region and forwards operands to the parent op's results. This handles
-  // index offsets automatically (e.g., scf.condition's predicate at operand #0
-  // is excluded).
-  // SmallVector<RegionSuccessor> successors;
-  // SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
-  // yieldOp.getSuccessorRegions(operandAttrs, successors);
-  // auto *parentSuccessor = llvm::find_if(
-  //     successors, [](const RegionSuccessor &s) { return s.isParent(); });
-  // assert(parentSuccessor != successors.end() &&
-  //        "terminator must have the parent op as a successor");
-
-  // OperandRange succOps = yieldOp.getSuccessorOperands(*parentSuccessor);
-  // unsigned beginIdx = succOps.getBeginOperandIndex();
-  // unsigned count = std::min(static_cast<unsigned>(succOps.size()), numResults);
-
   SmallVector<RegionSuccessor> successors;
   SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
   yieldOp.getSuccessorRegions(operandAttrs, successors);
-  assert(!successors.empty() && "terminator must have at least one successor");
 
-  OperandRange succOps = yieldOp.getSuccessorOperands(successors.front());
-  unsigned beginIdx = succOps.getBeginOperandIndex();
-  unsigned count = std::min(static_cast<unsigned>(succOps.size()), numResults);
-
-  for (unsigned i = 0; i < count; ++i) {
-    if (!resultLayouts[i])
+  for (const RegionSuccessor &successor : successors) {
+    OperandRange succOps = yieldOp.getSuccessorOperands(successor);
+    if (succOps.empty())
       continue;
-    xegpu::setTemporaryLayout(yieldOp->getOpOperand(beginIdx + i),
-                              resultLayouts[i]);
+    unsigned beginIdx = succOps.getBeginOperandIndex();
+    ValueRange successorInputs = regionBranchOp.getSuccessorInputs(successor);
+    unsigned count = std::min<unsigned>(succOps.size(), successorInputs.size());
+
+    for (unsigned i = 0; i < count; ++i) {
+      xegpu::DistributeLayoutAttr layout;
+      if (successor.isParent()) {
+        // For parent successor, get layout from external use points of the
+        // parent op's results.
+        layout = getLayoutFromUsePoints(regionBranchOp->getResult(i));
+        if (layout)
+          xegpu::setTemporaryLayout(regionBranchOp->getResult(i), layout);
+      } else {
+        // For region successor, get layout from the target region's block
+        // arg use points (e.g., "before/cond" region args for scf.while
+        // "after/do" yield).
+        layout = getLayoutFromUsePoints(successorInputs[i]);
+      }
+      if (!layout)
+        continue;
+      if (isa<VectorType>(succOps[i].getType()))
+        xegpu::setTemporaryLayout(yieldOp->getOpOperand(beginIdx + i), layout);
+    }
   }
 }
 
-// propagate layout from region arguments to region op's init operands. This set
-// the temproary layout for region arguments and init operands.
-// For while op containing multipel regions, different segements of init
-// operands might mapped to diferent region arguments.
+// Propagate layout from region arguments to region op's init operands. This
+// sets the temporary layout for region arguments and init operands.
 static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
   // Iterate all regions of the region op. For each block argument that has a
   // layout (determined from its use points), trace back to find the
@@ -252,14 +216,30 @@ static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
   // RegionBranchOpInterface ops.
   for (Region &region : regionOp->getRegions()) {
     RegionSuccessor regionSuccessor(&region);
-    for (auto [argIdx, regionArg] : llvm::enumerate(region.getArguments())) {
+    // Use getSuccessorInputs to get the block arguments that correspond to
+    // predecessor operands. This correctly handles ops like scf.for where
+    // the induction variable is a block arg but not a successor input.
+    ValueRange successorInputs = regionOp.getSuccessorInputs(regionSuccessor);
+    for (auto [inputIdx, regionArg] : llvm::enumerate(successorInputs)) {
       auto layout = getLayoutFromUsePoints(regionArg);
       if (!layout)
         continue;
 
+      // Recover layout for tensor_desc block args by updating the type.
+      if (auto tensorDescTy =
+              dyn_cast<xegpu::TensorDescType>(regionArg.getType())) {
+        if (!tensorDescTy.getLayoutAttr()) {
+          auto typeWithLayout = xegpu::TensorDescType::get(
+              tensorDescTy.getContext(), tensorDescTy.getShape(),
+              tensorDescTy.getElementType(), tensorDescTy.getEncoding(),
+              layout);
+          regionArg.setType(typeWithLayout);
+        }
+      }
+
       // Find all predecessor values that flow into this block argument.
       SmallVector<Value> predValues;
-      regionOp.getPredecessorValues(regionSuccessor, argIdx - 1, predValues);
+      regionOp.getPredecessorValues(regionSuccessor, inputIdx, predValues);
       for (Value predVal : predValues) {
         // Match predecessor value to an operand of the regionOp.
         for (OpOperand &operand : regionOp->getOpOperands()) {
