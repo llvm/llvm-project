@@ -517,3 +517,13 @@ add_libc_test(
     libc.src.wchar.wcstold
     libc.test.UnitTest.ErrnoCheckingTest
 )
+
+add_libc_unittest(
+  wcsxfrm_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsxfrm_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsxfrm
+)
