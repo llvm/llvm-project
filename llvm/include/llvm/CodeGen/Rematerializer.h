@@ -538,11 +538,17 @@ private:
     /// stores its index. Otherwise equals \ref Rematerializer::NoReg.
     RegisterIdx NextRegIdx;
 
-    RollbackInfo(const Rematerializer &Remater, RegisterIdx RegIdx);
+    RollbackInfo(const Rematerializer::Reg &Reg, RegisterIdx NextRegIdx);
   };
 
   /// Original registers that have been deleted, in order of deletion.
   MapVector<RegisterIdx, RollbackInfo> DeadRegs;
+  /// When there are two ajacent rematerializable MIs in the original
+  /// instruction order and the later one is deleted, stores a mapping from the
+  /// earlier one's register index to the later one's register index. If the
+  /// earlier one is then deleted, this makes it possible to rematerialize it at
+  /// the correct position after the later one is re-created.
+  DenseMap<RegisterIdx, RegisterIdx> AdjacentDeletedMIs;
   /// Registers which have been rematerialized (from original index to
   /// rematerialized index).
   DenseMap<RegisterIdx, Rematerializer::RematsOf> Rematerializations;

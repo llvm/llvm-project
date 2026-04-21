@@ -636,33 +636,65 @@ TEST_F(RematerializerTest, RollbackInvalidInsertPos) {
     const unsigned MBB0 = 0, MBB1 = 1;
     const RegisterIdx Cst0 = 0, Cst1 = 1, Cst2 = 2, Cst3 = 3;
 
-    // Rematerialize %0 to MBB1, deleting the original register.
-    RW->rematerializeToRegion(Cst0, MBB1, DRI);
-    RW.moveMIs(MBB0, MBB1, 1);
-    ASSERT_REGION_SIZES();
+    auto RematToMBB1 = [&](RegisterIdx RegIdx) -> void {
+      // Rematerialize %RegIdx to MBB1, deleting the original register.
+      RW->rematerializeToRegion(RegIdx, MBB1, DRI.clear());
+      RW.moveMIs(MBB0, MBB1, 1);
+      ASSERT_REGION_SIZES();
+    };
 
-    // Rematerialize %1 to MBB1, deleting the original register.
-    RW->rematerializeToRegion(Cst1, MBB1, DRI.clear());
-    RW.moveMIs(MBB0, MBB1, 1);
-    ASSERT_REGION_SIZES();
+    auto GetNextMI = [&](MachineInstr *MI) -> MachineInstr * {
+      return &*std::next(MI->getIterator());
+    };
 
-    // Rematerialize %2 to MBB1, deleting the original register.
-    RW->rematerializeToRegion(Cst2, MBB1, DRI.clear());
-    RW.moveMIs(MBB0, MBB1, 1);
-    ASSERT_REGION_SIZES();
+    auto RollbackAndCheckOriginalOrder = [&]() -> void {
+      // Rollback and check for correct instruction order in the original
+      // defining region. The asserts on region sizes ensure that all original
+      // registers were indeed deleted and will be re-created in the original
+      // region.
+      Rollback.rollback(*RW);
+      RW.moveMIs(MBB1, MBB0, 3);
+      ASSERT_REGION_SIZES();
 
-    // Now rollback and check for correct instruction order in the original
-    // defining region.
-    Rollback.rollback(*RW);
-    RW.moveMIs(MBB1, MBB0, 3);
-    ASSERT_REGION_SIZES();
+      MachineInstr *DefCst0 = RW->getReg(Cst0).DefMI;
+      MachineInstr *DefCst1 = RW->getReg(Cst1).DefMI;
+      MachineInstr *DefCst2 = RW->getReg(Cst2).DefMI;
+      MachineInstr *DefCst3 = RW->getReg(Cst3).DefMI;
+      EXPECT_EQ(GetNextMI(DefCst0), DefCst1);
+      EXPECT_EQ(GetNextMI(DefCst1), DefCst2);
+      EXPECT_EQ(GetNextMI(DefCst2), DefCst3);
+    };
 
-    MachineInstr &DefCst0 = *RW->getReg(Cst0).DefMI;
-    MachineInstr &DefCst1 = *RW->getReg(Cst1).DefMI;
-    MachineInstr &DefCst2 = *RW->getReg(Cst2).DefMI;
-    MachineInstr &DefCst3 = *RW->getReg(Cst3).DefMI;
-    EXPECT_EQ(std::next(DefCst0.getIterator()), DefCst1.getIterator());
-    EXPECT_EQ(std::next(DefCst1.getIterator()), DefCst2.getIterator());
-    EXPECT_EQ(std::next(DefCst2.getIterator()), DefCst3.getIterator());
+    // Test every possible rematerialization order.
+
+    RematToMBB1(Cst0);
+    RematToMBB1(Cst1);
+    RematToMBB1(Cst2);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst0);
+    RematToMBB1(Cst2);
+    RematToMBB1(Cst1);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst1);
+    RematToMBB1(Cst0);
+    RematToMBB1(Cst2);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst1);
+    RematToMBB1(Cst2);
+    RematToMBB1(Cst0);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst2);
+    RematToMBB1(Cst0);
+    RematToMBB1(Cst1);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst2);
+    RematToMBB1(Cst1);
+    RematToMBB1(Cst0);
+    RollbackAndCheckOriginalOrder();
   });
 }
