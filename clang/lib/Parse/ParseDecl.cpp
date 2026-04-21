@@ -5076,7 +5076,11 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                          (AllowEnumSpecifier == AllowDefiningTypeSpec::Yes ||
                           CanBeOpaqueEnumDeclaration);
 
-  CXXScopeSpec &SS = DS.getTypeSpecScope();
+  // We use a temporary scope when parsing the name specifier for a
+  // declaration with additional invalid type specifiers.
+  CXXScopeSpec InvalidDeclScope;
+  CXXScopeSpec &SS =
+      DS.hasTypeSpecifier() ? InvalidDeclScope : DS.getTypeSpecScope();
   if (getLangOpts().CPlusPlus) {
     // "enum foo : bar;" is not a potential typo for "enum foo::bar;".
     ColonProtectionRAIIObject X(*this);
