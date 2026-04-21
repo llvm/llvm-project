@@ -93,8 +93,8 @@ public:
   std::vector<lldb::addr_t> FetchNewlyAddedBinaries() override;
   StructuredData::ObjectSP FetchDetailedBinariesInfo() override;
 
-  void SetNewlyAddedBinaries(std::vector<lldb::addr_t> added_binaries);
-  void SetDetailedBinariesInfo(StructuredData::ObjectSP detailed_info);
+  void SetNewlyAddedBinaries(std::vector<lldb::addr_t> &added_binaries);
+  void SetDetailedBinariesInfo(StructuredData::ObjectSP &detailed_info);
 
 protected:
   friend class ProcessGDBRemote;

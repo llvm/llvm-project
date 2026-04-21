@@ -744,10 +744,10 @@ stack pointer, which are needed for computing backtraces) and it reduces the pac
 count.
 
 When a thread has hit the binaries-loaded lldb internal breakpoint
-(if it can detect that), it may expedite information about the
-binaries that have been loaded, to reduce packet traffic that would
-immediately follow.  The key `added-binaries` will have a value of
-an array of binary addresses.  The key `detailed-binaries-info`
+(if the server can detect that), the server may expedite information
+about the binaries that have been loaded, to reduce packet traffic
+that would immediately follow.  The key `added-binaries` will have
+a value of an array of binary addresses.  The key `detailed-binaries-info`
 will have a value of a JSON dictionary which is the reply that
 `jGetLoadedDynamicLibrariesInfos` would return for these binaries,
 so lldb doesn't need to request it.

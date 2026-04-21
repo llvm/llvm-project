@@ -1761,14 +1761,25 @@ uint32_t DNBProcessGetCPUType(nub_process_t pid) {
   return 0;
 }
 
-int DNBProcessAddrSize(nub_process_t pid) {
-  uint32_t cputype = DNBProcessGetCPUType(pid);
-  // unable to get process cpu type
-  if (cputype == 0)
-    return 0;
-  if (cputype == CPU_TYPE_ARM64_32)
-    return 4;
-  return 8;
+bool DNBProcessAddrSize(nub_process_t pid, int &addr_size) {
+  addr_size = 0;
+
+  // A single debugserver instance only attaches to one process,
+  // so we can save it in a global static once it's known.
+  static int g_addr_size = 0;
+
+  if (g_addr_size == 0) {
+    uint32_t cputype = DNBProcessGetCPUType(pid);
+    // unable to get process cpu type
+    if (cputype == 0)
+      return false;
+    if (cputype == CPU_TYPE_ARM64_32)
+      g_addr_size = 4;
+    else
+      g_addr_size = 8;
+  }
+  addr_size = g_addr_size;
+  return true;
 }
 
 nub_bool_t DNBResolveExecutablePath(const char *path, char *resolved_path,
@@ -1960,6 +1971,77 @@ bool DNBProcessIsBeingDebugged(nub_process_t pid) {
   return MachProcess::ProcessIsBeingDebugged(pid);
 }
 
+bool DNBSharedCacheRegionAddr(nub_process_t pid, nub_addr_t &vmaddr,
+                              nub_addr_t &size) {
+  vmaddr = size = 0;
+
+  // Get the shared cache VM address start and size.
+  JSONGenerator::ObjectSP sc_info = DNBGetSharedCacheInfo(pid);
+  if (!sc_info || !sc_info->GetAsDictionary())
+    return false;
+  JSONGenerator::Dictionary *sc_dict = sc_info->GetAsDictionary();
+  JSONGenerator::ObjectSP value =
+      sc_dict->GetValueForKey("shared_cache_base_address");
+  if (!value || !value->GetAsInteger())
+    return false;
+  // shared cache not yet set up; we're very early in process launch.
+  if (value->GetAsInteger()->GetValue() == 0)
+    return false;
+  vmaddr = value->GetAsInteger()->GetValue();
+
+  value = sc_dict->GetValueForKey("shared_cache_size");
+  if (!value || !value->GetAsInteger())
+    return false;
+  size = value->GetAsInteger()->GetValue();
+  if (size == 0)
+    return false;
+
+  return true;
+}
+
+bool DNBDyldNotificationFunctionAddr(nub_process_t pid,
+                                     nub_addr_t &lldb_image_notifier) {
+  static nub_addr_t g_notifier_breakpoint_addr = 0;
+  lldb_image_notifier = 0;
+
+  if (g_notifier_breakpoint_addr == 0) {
+    nub_addr_t sc_vmaddr, sc_size;
+    if (!DNBSharedCacheRegionAddr(pid, sc_vmaddr, sc_size))
+      return false;
+
+    int addr_size;
+    if (!DNBProcessAddrSize(pid, addr_size))
+      return false;
+
+    // Early return if the dyld_all_image_infos is outside
+    // the shared cache VM region.
+    nub_addr_t dyld_all_image_infos =
+        DNBProcessGetSharedLibraryInfoAddress(pid);
+    if (dyld_all_image_infos == INVALID_NUB_ADDRESS ||
+        dyld_all_image_infos == 0)
+      return false;
+    if (dyld_all_image_infos < sc_vmaddr ||
+        dyld_all_image_infos > sc_vmaddr + sc_size)
+      return false;
+
+    nub_addr_t notifier_fptr_addr = dyld_all_image_infos + 4 + // version
+                                    4 +                        // infoArrayCount
+                                    addr_size;                 // infoArray
+    nub_addr_t notifier_fptr = DNBProcessMemoryReadInteger(
+        pid, notifier_fptr_addr, addr_size, INVALID_NUB_ADDRESS);
+    if (notifier_fptr == INVALID_NUB_ADDRESS)
+      return false;
+
+    g_notifier_breakpoint_addr = DNBFixAddress(notifier_fptr, pid);
+  }
+  if (g_notifier_breakpoint_addr == 0 ||
+      g_notifier_breakpoint_addr == INVALID_NUB_ADDRESS)
+    return false;
+
+  lldb_image_notifier = g_notifier_breakpoint_addr;
+  return true;
+}
+
 bool DNBGetBinariesLoadedInfo(nub_process_t pid, nub_thread_t tid,
                               std::vector<uint64_t> &added_binaries,
                               JSONGenerator::ObjectSP &detailed_binary_infos) {
@@ -1982,80 +2064,11 @@ bool DNBGetBinariesLoadedInfo(nub_process_t pid, nub_thread_t tid,
   if (!arg1 || !arg2 || !arg3 || !pc)
     return false;
 
-  // With a full process launch, the first few stops we are working
-  // with a dyld outside the shared cache.  It will transition to
-  // the shared cache dyld, and at that point we can cache the
-  // g_notifier_breakpoint_addr in the shared cache.  Use the
-  // shared cache VM range to detect when we are working with the
-  // final shared cache dyld -- don't return any information until that
-  // happens.
-  // We could use the outside-the-shared-cache launch dyld's notification
-  // address for this one-time use and not cache the address, but
-  // that's more complication than is probably worth it to save a couple
-  // of packets in the initial startup seqeuence.
-  static nub_size_t g_addr_size = 0;
-  static nub_addr_t g_notifier_breakpoint_addr = 0;
-
-  if (g_notifier_breakpoint_addr == 0) {
-    // Get the shared cache VM address start and size.
-    JSONGenerator::ObjectSP sc_info = DNBGetSharedCacheInfo(pid);
-    if (!sc_info->GetAsDictionary())
-      return false;
-    JSONGenerator::ObjectSP value =
-        sc_info->GetAsDictionary()->GetValueForKey("shared_cache_base_address");
-    if (!value || !value->GetAsInteger())
-      return false;
-    // shared cache not yet set up; we're very early in process launch.
-    if (value->GetAsInteger()->GetValue() == 0)
-      return false;
-    nub_addr_t sc_base_addr = value->GetAsInteger()->GetValue();
-
-    if (!sc_info->GetAsDictionary()->GetValueForKey("shared_cache_size"))
-      return false;
-    value = sc_info->GetAsDictionary()->GetValueForKey("shared_cache_size");
-    if (!value || !value->GetAsInteger() ||
-        value->GetAsInteger()->GetValue() == 0)
-      return false;
-    nub_addr_t sc_size = value->GetAsInteger()->GetValue();
-
-    // Get the pointer size for the inferior process.
-    if (g_addr_size == 0) {
-#if defined(__LP64__)
-      // Inferior may be arm64_32 if debugserver is running arm64.
-      g_addr_size = DNBProcessAddrSize(pid);
-#else
-      g_addr_size = 4;
-#endif
-    }
-    if (g_addr_size == 0)
-      return false;
-
-    // Early return if the dyld_all_image_infos is outside
-    // the shared cache VM region.
-    nub_addr_t dyld_all_image_infos =
-        DNBProcessGetSharedLibraryInfoAddress(pid);
-    if (dyld_all_image_infos == INVALID_NUB_ADDRESS ||
-        dyld_all_image_infos == 0)
-      return false;
-    if (dyld_all_image_infos < sc_base_addr ||
-        dyld_all_image_infos > sc_base_addr + sc_size)
-      return false;
-
-    nub_addr_t notifier_fptr_addr = dyld_all_image_infos + 4 + // version
-                                    4 +                        // infoArrayCount
-                                    g_addr_size;               // infoArray
-    nub_addr_t notifier_fptr = DNBProcessMemoryReadInteger(
-        pid, notifier_fptr_addr, g_addr_size, INVALID_NUB_ADDRESS);
-    if (notifier_fptr == INVALID_NUB_ADDRESS)
-      return false;
-
-    g_notifier_breakpoint_addr = DNBFixAddress(notifier_fptr, pid);
-  }
-  if (g_notifier_breakpoint_addr == 0 ||
-      g_notifier_breakpoint_addr == INVALID_NUB_ADDRESS)
+  nub_addr_t notifier_breakpoint_addr;
+  if (!DNBDyldNotificationFunctionAddr(pid, notifier_breakpoint_addr))
     return false;
 
-  if (*pc != g_notifier_breakpoint_addr)
+  if (*pc != notifier_breakpoint_addr)
     return false;
   if (*arg1 != /*dyld_notify_adding=*/0)
     return false;
@@ -2063,6 +2076,10 @@ bool DNBGetBinariesLoadedInfo(nub_process_t pid, nub_thread_t tid,
   if (count == 0)
     return false;
   nub_addr_t header_array = *arg3;
+
+  int addr_size;
+  if (!DNBProcessAddrSize(pid, addr_size))
+    return false;
 
   // header_array points to an array of image_infos_count elements,
   // each is
@@ -2074,9 +2091,9 @@ bool DNBGetBinariesLoadedInfo(nub_process_t pid, nub_thread_t tid,
   //
   // and we only need the imageLoadAddress fields.
   for (uint64_t i = 0; i < count; i++) {
-    nub_addr_t dyld_image_info = header_array + (g_addr_size * 3 * i);
+    nub_addr_t dyld_image_info = header_array + (addr_size * 3 * i);
     nub_addr_t load_addr = DNBProcessMemoryReadInteger(
-        pid, dyld_image_info, g_addr_size, INVALID_NUB_ADDRESS);
+        pid, dyld_image_info, addr_size, INVALID_NUB_ADDRESS);
     if (load_addr != INVALID_NUB_ADDRESS)
       added_binaries.push_back(load_addr);
   }

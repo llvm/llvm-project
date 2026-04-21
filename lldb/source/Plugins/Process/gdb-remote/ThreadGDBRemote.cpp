@@ -376,11 +376,11 @@ StructuredData::ObjectSP ThreadGDBRemote::FetchDetailedBinariesInfo() {
 }
 
 void ThreadGDBRemote::SetNewlyAddedBinaries(
-    std::vector<lldb::addr_t> added_binaries) {
+    std::vector<lldb::addr_t> &added_binaries) {
   m_added_binaries = added_binaries;
 }
 
 void ThreadGDBRemote::SetDetailedBinariesInfo(
-    StructuredData::ObjectSP detailed_info) {
+    StructuredData::ObjectSP &detailed_info) {
   m_detailed_binaries_info = detailed_info;
 }
