@@ -194,7 +194,10 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (OutputFilename.empty()) {
     if (ExecFilenames.size() == 1) {
       OutputFilename = ExecFilenames[0] + ".dwp";
-    } else if (ExecFilenames.size() > 1) {
+    } else if (ExecFilenames.empty()) {
+      WithColor::error() << "no output file specified (use -o or -e)\n";
+      return 1;
+    } else {
       WithColor::error()
           << "cannot derive a default output file name when multiple "
              "executables are specified; use -o\n";
