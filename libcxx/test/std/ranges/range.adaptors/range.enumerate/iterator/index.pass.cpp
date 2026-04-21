@@ -20,8 +20,10 @@
 #include <cassert>
 #include <concepts>
 #include <cstdint>
-#include <utility>
+#include <memory>
+#include <ranges>
 #include <tuple>
+#include <utility>
 
 #include "test_iterators.h"
 #include "test_macros.h"

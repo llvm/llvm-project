@@ -16,8 +16,15 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
+#include <cstddef>
+#include <initializer_list>
+#include <iterator>
 #include <ranges>
 #include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 #include "types.h"
 

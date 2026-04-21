@@ -27,8 +27,11 @@
 //      requires random_access_range<Base>;
 //    friend constexpr difference_type operator-(const iterator& x, const iterator& y) noexcept;
 
+#include <cassert>
 #include <concepts>
+#include <iterator>
 #include <ranges>
+#include <type_traits>
 
 #include "test_iterators.h"
 
@@ -63,7 +66,7 @@ using CommonRandomAccessRange = std::ranges::subrange<int*>;
 static_assert(std::ranges::common_range<CommonRandomAccessRange>);
 static_assert(std::ranges::random_access_range<CommonRandomAccessRange>);
 // clang-format off
-static_assert(std::sized_sentinel_for<std::ranges::iterator_t<CommonRandomAccessRange>, 
+static_assert(std::sized_sentinel_for<std::ranges::iterator_t<CommonRandomAccessRange>,
                                       std::ranges::iterator_t<CommonRandomAccessRange>>);
 // clang-format on
 static_assert(HasPlusEqual<EnumerateIter<CommonRandomAccessRange>, int>);
@@ -77,7 +80,7 @@ using NonCommonRandomAccessRange = std::ranges::subrange<std::counted_iterator<i
 static_assert(!std::ranges::common_range<NonCommonRandomAccessRange>);
 static_assert(std::ranges::random_access_range<NonCommonRandomAccessRange>);
 // clang-format off
-static_assert(std::sized_sentinel_for<std::ranges::iterator_t<NonCommonRandomAccessRange>, 
+static_assert(std::sized_sentinel_for<std::ranges::iterator_t<NonCommonRandomAccessRange>,
                                       std::ranges::iterator_t<NonCommonRandomAccessRange>>);
 // clang-format on
 static_assert(HasPlusEqual<EnumerateIter<NonCommonRandomAccessRange>, int>);
@@ -91,7 +94,7 @@ using NonRandomAccessRange = std::ranges::subrange<bidirectional_iterator<int*>>
 static_assert(!std::ranges::random_access_range<NonRandomAccessRange>);
 static_assert(std::ranges::bidirectional_range<NonRandomAccessRange>);
 // clang-format off
-static_assert(!std::sized_sentinel_for<std::ranges::iterator_t<NonRandomAccessRange>, 
+static_assert(!std::sized_sentinel_for<std::ranges::iterator_t<NonRandomAccessRange>,
                                        std::ranges::iterator_t<NonRandomAccessRange>>);
 // clang-format on
 static_assert(!HasPlusEqual<EnumerateIter<NonRandomAccessRange>, int>);

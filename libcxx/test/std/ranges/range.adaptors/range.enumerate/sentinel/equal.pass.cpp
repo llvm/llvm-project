@@ -23,6 +23,7 @@
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <memory>
 #include <utility>
 
 #include "test_iterators.h"

@@ -17,7 +17,9 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstddef>
 #include <ranges>
+#include <tuple>
 
 #include "test_iterators.h"
 

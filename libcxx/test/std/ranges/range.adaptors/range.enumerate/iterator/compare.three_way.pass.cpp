@@ -17,6 +17,8 @@
 // friend constexpr strong_ordering operator<=>(const iterator& x, const iterator& y) noexcept;
 
 #include <cassert>
+#include <compare>
+#include <concepts>
 #include <ranges>
 
 #include "test_iterators.h"

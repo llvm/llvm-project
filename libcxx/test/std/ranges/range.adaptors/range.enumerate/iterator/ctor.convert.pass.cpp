@@ -22,6 +22,7 @@
 #include <concepts>
 #include <memory>
 #include <ranges>
+#include <type_traits>
 #include <utility>
 
 #include "test_iterators.h"

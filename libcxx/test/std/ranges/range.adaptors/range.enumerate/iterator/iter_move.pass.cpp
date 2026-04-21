@@ -20,6 +20,7 @@
 
 #include <array>
 #include <cassert>
+#include <memory>
 #include <ranges>
 #include <type_traits>
 #include <utility>

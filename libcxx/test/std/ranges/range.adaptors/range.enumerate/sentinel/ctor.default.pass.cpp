@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <ranges>
+#include <tuple>
 
 #include "test_iterators.h"
 

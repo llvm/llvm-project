@@ -9,7 +9,10 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ENUMERATE_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ENUMERATE_TYPES_H
 
+#include <concepts>
 #include <cstddef>
+#include <iterator>
+#include <memory>
 #include <ranges>
 #include <tuple>
 

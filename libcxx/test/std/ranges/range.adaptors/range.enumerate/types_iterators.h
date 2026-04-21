@@ -9,6 +9,9 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ENUMERATE_TYPES_ITERATORS_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ENUMERATE_TYPES_ITERATORS_H
 
+#include <array>
+#include <iterator>
+
 #include "types.h"
 
 // Iterators & Sentinels
