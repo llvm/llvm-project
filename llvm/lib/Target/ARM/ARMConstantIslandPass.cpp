@@ -1699,8 +1699,15 @@ ARMConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
   if (!isThumb1)
     llvm_unreachable("fixupUnconditionalBr is Thumb1 only!");
 
-  if (!AFI->isLRSpilled())
-    report_fatal_error("underestimated function size");
+  // If LR was not spilled, then this transformation corrupts the function's
+  // return address, which (as long as the function is _planning_ to return) is
+  // a code generation fault. Check for that case, and turn it into a fatal
+  // error, which is preferable.
+  if (!AFI->isLRSpilled() &&
+      !MF->getFunction().hasFnAttribute(Attribute::NoReturn))
+    report_fatal_error("tried to use tBfar, but LR needed and not spilled "
+                       "(EstimateFunctionSizeInBytes underestimated "
+                       "function size)");
 
   // Use BL to implement far jump.
   Br.MaxDisp = (1 << 21) * 2;
