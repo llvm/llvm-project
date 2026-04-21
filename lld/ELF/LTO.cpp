@@ -176,7 +176,7 @@ static lto::Config createConfig(Ctx &ctx) {
   return c;
 }
 
-BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
+BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : IRCompiler(ctx) {
   // Initialize indexFile.
   if (!ctx.arg.thinLTOIndexOnlyArg.empty())
     indexFile = openFile(ctx.arg.thinLTOIndexOnlyArg);
@@ -232,9 +232,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   }
 }
 
-BitcodeCompiler::~BitcodeCompiler() = default;
-
-void BitcodeCompiler::add(BitcodeFile &f) {
+void IRCompiler::add(IRFile &f) {
   lto::InputFile &obj = *f.obj;
   bool isExec = !ctx.arg.shared && !ctx.arg.relocatable;
 
@@ -295,7 +293,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // their values are still not final.
     r.LinkerRedefined = sym->scriptDefined;
   }
-  checkError(ctx.e, ltoObj->add(std::move(f.obj), resols));
+  addObject(f, resols);
 }
 
 // If LazyObjFile has not been added to link, emit empty index files.
@@ -435,4 +433,9 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
       ret.push_back(createObjFile(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
   return ret;
+}
+
+void BitcodeCompiler::addObject(IRFile &f,
+                                std::vector<llvm::lto::SymbolResolution> &r) {
+  checkError(ctx.e, ltoObj->add(std::move(f.obj), r));
 }

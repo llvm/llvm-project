@@ -23,37 +23,58 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <vector>
 
 namespace llvm::lto {
 class LTO;
+struct SymbolResolution;
 }
 
 namespace lld::elf {
 struct Ctx;
 class BitcodeFile;
+class ELFFileBase;
 class InputFile;
+class IRFile;
+class BinaryFile;
 
-class BitcodeCompiler {
+class IRCompiler {
+protected:
+  Ctx &ctx;
+  llvm::DenseSet<StringRef> thinIndices;
+  llvm::DenseSet<StringRef> usedStartStop;
+  virtual void addObject(IRFile &f,
+                         std::vector<llvm::lto::SymbolResolution> &r) = 0;
+
+public:
+  IRCompiler(Ctx &ctx) : ctx(ctx) {}
+  virtual ~IRCompiler() {}
+  void add(IRFile &f);
+  virtual SmallVector<std::unique_ptr<InputFile>, 0> compile() = 0;
+};
+
+class BitcodeCompiler : public IRCompiler {
+protected:
+  void addObject(IRFile &f,
+                 std::vector<llvm::lto::SymbolResolution> &r) override;
+
 public:
   BitcodeCompiler(Ctx &ctx);
-  ~BitcodeCompiler();
+  ~BitcodeCompiler() {}
 
-  void add(BitcodeFile &f);
-  SmallVector<std::unique_ptr<InputFile>, 0> compile();
+  void add(BinaryFile &f);
+  SmallVector<std::unique_ptr<InputFile>, 0> compile() override;
 
 private:
-  Ctx &ctx;
   std::unique_ptr<llvm::lto::LTO> ltoObj;
   // An array of (module name, native relocatable file content) pairs.
   SmallVector<std::pair<std::string, SmallString<0>>, 0> buf;
   std::vector<std::unique_ptr<MemoryBuffer>> files;
   SmallVector<std::string, 0> filenames;
-  llvm::DenseSet<StringRef> usedStartStop;
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
-  llvm::DenseSet<StringRef> thinIndices;
 };
 } // namespace lld::elf
 

@@ -18,6 +18,10 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../include/lld/config.h.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/../include/lld/config.h)
+
 add_lld_library(lldELF
   AArch64ErrataFix.cpp
   Arch/AArch64.cpp
@@ -43,6 +47,7 @@ add_lld_library(lldELF
   Driver.cpp
   DriverUtils.cpp
   EhFrame.cpp
+  GccLTO.cpp
   ICF.cpp
   InputFiles.cpp
   InputSection.cpp

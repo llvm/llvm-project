@@ -16,6 +16,7 @@
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Threading.h"
@@ -317,15 +318,25 @@ private:
   ArrayRef<Elf_Word> shndxTable;
 };
 
-class BitcodeFile : public InputFile {
+class IRFile : public InputFile {
 public:
-  BitcodeFile(Ctx &, MemoryBufferRef m, StringRef archiveName,
-              uint64_t offsetInArchive, bool lazy);
+  IRFile(Ctx &ctx, MemoryBufferRef m, StringRef archiveName,
+         uint64_t offsetInArchive, bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
-  void parse();
+  virtual void parse() = 0;
   void parseLazy();
-  void postParse();
+  virtual void postParse() = 0;
   std::unique_ptr<llvm::lto::InputFile> obj;
+};
+
+class BitcodeFile : public IRFile {
+public:
+  BitcodeFile(Ctx &ctx, MemoryBufferRef m, StringRef archiveName,
+              uint64_t offsetInArchive, bool lazy)
+      : IRFile(ctx, m, archiveName, offsetInArchive, lazy) {};
+  static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
+  void parse() override;
+  void postParse() override;
   std::vector<bool> keptComdats;
 };
 

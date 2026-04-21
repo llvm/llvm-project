@@ -1,0 +1,11 @@
+RUN: not ld.lld -plugin %S/Inputs/plugin.so  2>&1 | FileCheck %s
+RUN: not ld.lld --plugin=%S/Inputs/plugin.so 2>&1 | FileCheck %s
+
+CHECK: no input files
+CHECK-NOT: unknown argument
+
+RUN: not ld.lld -plugin foo  2>&1 | FileCheck --check-prefix=MISSING %s
+RUN: not ld.lld --plugin=foo 2>&1 | FileCheck --check-prefix=MISSING %s
+
+MISSING: Cannot find plugin foo
+MISSING-NOT: unknown argument
