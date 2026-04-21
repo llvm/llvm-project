@@ -55,7 +55,11 @@ def generate_updated_list() -> str:
         shutil.copytree(DOCS_DIR, temp_docs_dir)
 
         subprocess.run(
-            [sys.executable, os.path.join(temp_clang_tidy_dir, "add_new_check.py"), "--update-docs"],
+            [
+                sys.executable,
+                os.path.join(temp_clang_tidy_dir, "add_new_check.py"),
+                "--update-docs",
+            ],
             cwd=temp_clang_tidy_dir,
             check=True,
             stdout=subprocess.PIPE,
@@ -63,7 +67,9 @@ def generate_updated_list() -> str:
             text=True,
         )
 
-        return read_text(os.path.join(temp_docs_dir, "clang-tidy", "checks", "list.rst"))
+        return read_text(
+            os.path.join(temp_docs_dir, "clang-tidy", "checks", "list.rst")
+        )
 
 
 def main(argv: Sequence[str]) -> int:
