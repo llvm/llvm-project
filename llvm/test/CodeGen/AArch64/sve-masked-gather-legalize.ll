@@ -31,10 +31,11 @@ define <vscale x 2 x i64> @masked_sgather_zext(ptr %base, <vscale x 2 x i64> %of
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    add z1.d, z0.d, z1.d
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    and z2.d, z2.d, #0xff
+; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff
-; CHECK-NEXT:    and z1.d, z1.d, #0xff
-; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z2.d
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i8, ptr %base, <vscale x 2 x i64> %offsets
   %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
