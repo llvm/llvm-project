@@ -42,11 +42,14 @@ add_libc_unittest(
     connect_accept_test.cpp
   DEPENDS
     libc.include.sys_socket
+    libc.hdr.fcntl_macros
     libc.hdr.sys_socket_macros
     libc.hdr.types.size_t
     libc.hdr.types.struct_sockaddr_un
     libc.src.errno.errno
+    libc.src.fcntl.fcntl
     libc.src.sys.socket.accept
+    libc.src.sys.socket.accept4
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
     libc.src.sys.socket.listen

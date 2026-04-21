@@ -25,6 +25,9 @@
 #define SOCK_SEQPACKET 5
 #define SOCK_PACKET 10
 
+#define SOCK_CLOEXEC 0x80000
+#define SOCK_NONBLOCK 0x800
+
 #define SOL_SOCKET 1
 
 #define SO_DEBUG 1
