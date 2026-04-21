@@ -550,7 +550,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     // TODO:This check needs to be replaced with proper uArch capability check
     auto chip = xegpu::getChipStr(readOp);
-    if (chip != "pvc" && chip != "bmg") {
+    if ((chip != "pvc" && chip != "bmg") ||
+        readOp.getVectorType().getRank() > 2) {
       // lower to scattered load Op if the target HW doesn't have 2d block load
       // support
       // TODO: add support for OutOfBound access
@@ -634,7 +635,8 @@ struct TransferWriteLowering
 
     // TODO:This check needs to be replaced with proper uArch capability check
     auto chip = xegpu::getChipStr(writeOp);
-    if (chip != "pvc" && chip != "bmg") {
+    if ((chip != "pvc" && chip != "bmg") ||
+        writeOp.getVectorType().getRank() > 2) {
       // lower to scattered store Op if the target HW doesn't have 2d block
       // store support
       // TODO: add support for OutOfBound access
