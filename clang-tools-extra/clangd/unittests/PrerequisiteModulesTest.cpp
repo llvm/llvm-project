@@ -54,6 +54,10 @@ public:
     return Underlying->getSourceForModuleName(ModuleName, RequiredSrcFile);
   }
 
+  ModuleNameState getModuleNameState(llvm::StringRef ModuleName) override {
+    return Underlying->getModuleNameState(ModuleName);
+  }
+
 private:
   std::unique_ptr<ProjectModules> Underlying;
   std::atomic<unsigned> &Count;
