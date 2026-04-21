@@ -656,11 +656,23 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackMinMax})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  // Note: we only write S1 rules for G_IMPLICIT_DEF, G_CONSTANT and G_FCONSTANT
-  // here, rest is trivially regbankselected earlier
-  addRulesForGOpcs({G_IMPLICIT_DEF}).Any({{UniS1}, {{Sgpr32Trunc}, {}}});
-  addRulesForGOpcs({G_CONSTANT})
-      .Any({{UniS1, _}, {{Sgpr32Trunc}, {None}, UniCstExt}});
+  addRulesForGOpcs({G_IMPLICIT_DEF})
+      .Any({{UniS1}, {{Sgpr32Trunc}, {}}})
+      .Any({{UniS16}, {{Sgpr16}, {}}})
+      .Any({{UniBRC}, {{SgprBRC}, {}}});
+
+  addRulesForGOpcs({G_CONSTANT}, Standard)
+      .Any({{UniS1, _}, {{Sgpr32Trunc}, {}, UniCstExt}})
+      .Uni(S16, {{Sgpr16}, {}})
+      .Uni(S32, {{Sgpr32}, {}})
+      .Uni(S64, {{Sgpr64}, {}})
+      .Any({{UniPtr32, _}, {{SgprPtr32}, {}}})
+      .Any({{UniPtr64, _}, {{SgprPtr64}, {}}});
+
+  addRulesForGOpcs({G_FCONSTANT}, Standard)
+      .Uni(S16, {{Sgpr16}, {}})
+      .Uni(S32, {{Sgpr32}, {}})
+      .Uni(S64, {{Sgpr64}, {}});
 
   addRulesForGOpcs({G_FREEZE})
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt}}})
