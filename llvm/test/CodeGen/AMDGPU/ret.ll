@@ -5,7 +5,7 @@
 
 ; GCN-LABEL: {{^}}vgpr:
 ; GCN-DAG: v_mov_b32_e32 v1, v0
-; GCN-DAG: exp mrt0 v0, v0, v0, v0 done vm
+; GCN-DAG: exp mrt0, v0, v0, v0, v0 done vm
 ; GCN: s_waitcnt expcnt(0)
 ; GCN: v_add_f32_e32 v0, 1.0, v1
 ; GCN-NOT: s_endpgm
@@ -19,7 +19,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}vgpr_literal:
-; GCN: exp mrt0 v0, v0, v0, v0 done vm
+; GCN: exp mrt0, v0, v0, v0, v0 done vm
 
 ; GCN-DAG: v_mov_b32_e32 v0, 1.0
 ; GCN-DAG: v_mov_b32_e32 v1, 2.0
@@ -205,7 +205,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}both:
-; GCN-DAG: exp mrt0 v0, v0, v0, v0 done vm
+; GCN-DAG: exp mrt0, v0, v0, v0, v0 done vm
 ; GCN-DAG: v_mov_b32_e32 v1, v0
 ; GCN-DAG: s_mov_b32 s1, s2
 ; GCN-DAG: s_waitcnt expcnt(0)
@@ -227,7 +227,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}structure_literal:
-; GCN: exp mrt0 v0, v0, v0, v0 done vm
+; GCN: exp mrt0, v0, v0, v0, v0 done vm
 
 ; GCN-DAG: v_mov_b32_e32 v0, 1.0
 ; GCN-DAG: s_mov_b32 s0, 2

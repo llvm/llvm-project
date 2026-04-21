@@ -1,8 +1,3 @@
-.. CHANGE TRACKER for reference
-.. Purpose: Fixed document location and added Current Topics & Backlog
-.. Author: Carlos Andres Ramirez
-.. Last updated: 2025-09-08 by Carlos Ramirez
-
 ========================
 LLVM Qualification Group
 ========================
@@ -49,7 +44,8 @@ Group Members
 -------------
 
 The members of the LLVM Qualification Group represent a diverse cross-section of the LLVM community, including individual contributors, researchers, vendor representatives, and experts in the field of software qualification, including reliability, quality, safety, and/or security.
-They meet the criteria for inclusion below. Knowing their handles help us keep track of who’s who across platforms, coordinate activities, and recognize contributions.
+They meet the criteria for inclusion described in the sub-sections below and are identified as `active contributors <#contribution-principles>`_.
+Knowing their handles help us keep track of who’s who across platforms, coordinate activities, and recognize contributions.
 
 .. list-table::
    :widths: 20 20 20 20 20
@@ -60,41 +56,16 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
      - Discourse handle
      - Discord handle
      - GitHub handle
-   * - Alan Phipps
-     - Texas Instruments
-     - evodius96
-     - alanphipps
-     - evodius96
    * - Carlos Andrés Ramírez
      - Woven by Toyota
      - CarlosAndresRamirez
      - carlos\_andres\_ramirez
      - CarlosAndresRamirez
-   * - Davide Cunial
-     - BMW A.G.
-     - capitan-davide
-     - capitan_davide
-     - capitan-davide
-   * - Jorge Pinto Sousa
-     - Critical Techworks
-     - sousajo-cc
-     - sousajo-cc
-     - sousajo-cc
-   * - José Rui Simões
-     - Critical Software
-     - jr-simoes
-     - jr_simoes
-     - iznogoud-zz
    * - Oscar Slotosch
      - Validas
      - slotosch
      - oscarslotosch_66740
      - \-
-   * - Petar Jovanovic
-     - HTECH
-     - petarj
-     - petarjovanovic_18635
-     - petar-jovanovic
    * - Petter Berntsson
      - Arm Limited
      - petbernt
@@ -139,11 +110,20 @@ We understand that most members contribute in a limited capacity due to their pr
 * **Realistic progress expectations:** Given the voluntary nature and no full-time involvement, we expect our progress to be slow. This group was initiated in July 2025. Concrete outcomes in 1-2 years would be considered excellent for this type of cross-company and voluntary collaboration.
 * **Respect for differing capacities:** We value every member’s engagement, whether large or small, often or sporadically, as it all contributes to the overall effort. Even contributions that may seem small, such as sharing an idea or pointing out a relevant resource, are meaningful and important.
 
-However, we need a balance between flexibility, structure, and enough organization to move forward together. Members are expected to remain engaged through one or more of the following:
+However, we need a balance between flexibility, structure, and enough organization to move forward together. Thus, to support coordination and clarity, the group distinguishes between **active contributors** and **observers / interested participants**.
 
-* Regular participation in meetings or asynchronous discussions.
-* Contributions to qualification artifacts, methodologies, or documentation.
-* Active involvement in at least one qualification-related task over the past year.
+**Active contributors** are members who provide regular and substantive contributions to the group’s work. This includes ongoing engagement in at least one of the following:
+
+* Participation in sync-ups or asynchronous discussions (via Discord or Discourse),
+* Contributions to qualification artifacts, methodologies, documentation, structured reviews, or feedback on proposals and drafts,
+* Analysis, research activities, or support for coordination, outreach, or other working tasks.
+
+Active contribution implies sustained engagement that meaningfully advances the group’s objectives. Participation may be synchronous or asynchronous, depending on availability. Participation status reflects current bandwidth and coordination needs and may be updated during the `biannual membership review <#membership-review>`_.
+
+**Observers**, or **interested participants** are anyone who follows the group’s work and may participate when availability allows. 
+This is an open status and does not require the `nomination process <#nomination-process>`_ used for active contributors. 
+Observers remain welcome to attend meetings, provide feedback, and contribute at any time. 
+Moreover, observer status does not imply reduced importance or access within the group.
 
 Membership Criteria
 -------------------
@@ -174,12 +154,61 @@ Individuals may nominate themselves or be nominated by an existing member. Nomin
 * Be submitted via this form: `Participant Introduction & Membership <https://forms.gle/cE1kHjqkKNtafUrD7>`_
 * Be communicated to an active LLVM Qualification Group member (e.g., on the Discord channel).
 
+This nomination process applies to becoming an **active contributor**. People who simply wish to 
+follow the group’s work or participate occasionally may do so as observers / interested participants, 
+without a formal nomination process.
+
 Nominations are discussed within the group. If consensus is reached, the nominee is accepted. Otherwise, a majority vote will decide.
 
 Membership Review
 -----------------
 
-To ensure the group remains active and focused, member participation will be reviewed every six months. Inactive members may be removed following this review.
+To ensure the group remains active and focused, member participation is reviewed every six months. Inactive members may be removed following this review.
+
+During the biannual membership review, members who have not participated in discussions or provided substantive contributions during the review period will be contacted. After consensus, they may be transitioned to **observer** status to reflect current availability.
+
+This transition is procedural and does not restrict participation. Members may resume **active contributor** status at any time when their engagement increases.
+
+
+Decision Making
+---------------
+
+The LLVM Qualification Working Group aims to make decisions transparently, collaboratively, and without unnecessary formality. The goal is to maintain efficiency while encouraging broad participation and mutual understanding.
+
+This section describes the lightweight process used to handle proposals and decisions within the group. It may be revised as the group evolves and gains experience.
+
+Principles
+^^^^^^^^^^
+
+* **Consensus first:** The preferred mode of decision-making is consensus through open discussion (primarily on Discord or during sync-up meetings).
+* **Inclusiveness and respect:** All viewpoints are encouraged, and members are expected to contribute constructively toward reaching a shared understanding.
+* **Transparency:** Discussions leading to a decision should be visible to the group and, whenever appropriate, summarized in public channels (e.g., Discourse meeting notes, Discord channel, documentation updates).
+
+Consensus and Time Limits
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Discussions remain open until a clear consensus emerges, meaning no sustained objections have been raised after reasonable discussion.
+
+To prevent open-ended debates, if no new viewpoints are expressed after an agreed period (e.g., 2 weeks), the moderator (typically the person who started the discussion thread) may take one of the following actions:
+
+* **Summarize the apparent consensus** and close the discussion, or
+* **Postpone the topic** to the next sync-up meeting if the outcome remains unclear, or
+* **Call for a short vote** to confirm the group’s position.
+
+Voting Procedure
+^^^^^^^^^^^^^^^^
+
+When consensus cannot be reached or when a clear yes/no decision is needed:
+
+* The moderator may call for a **simple vote** using emoji reactions on Discord or a similar visible method.
+* A decision passes if it receives a **majority (>50%)** of votes among **participants who voted.** Non-votes are **not counted** in the total.
+* To ensure decisions reflect the collective position of the group, **at least three-quarters of the total core members** must participate in the vote for it to be considered valid.
+* If results are evenly split **(50/50)**, or if participation falls below this threshold, the topic may be postponed to the next sync-up meeting for further discussion.
+
+Documentation
+^^^^^^^^^^^^^
+
+Final decisions should be briefly documented (e.g., in meeting minutes, the corresponding GitHub issue, or Discord discussion thread). Once stable, the resulting policy or outcome may be reflected in this documentation for reference.
 
 Current Topics & Backlog
 ========================
@@ -201,14 +230,8 @@ Agendas, meeting notes, and presentation slides for the sync-ups are shared to e
 Upcoming and past meeting agendas, and meeting minutes are published in a dedicated thread
 on the LLVM Discourse forum: `Meeting Agendas and Minutes <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`_ 
 
-Slides used to support discussions during sync-up meetings are stored in LLVM's GitHub repository.
-
-Available slides:
-
-* `September 2025 <https://docs.google.com/presentation/d/1SZAE-QHfJED6CxJCCtBkPDxcw7XU9ORX54TJyXe1ppc/edit?usp=sharing>`_
-* `August 2025 <https://docs.google.com/presentation/d/1K8GWoRm8ZAeyyGvTeV5f-sMOhMr7WHiEk6_Nm5Fk10o/edit?usp=sharing>`_
-* `July 2025 <https://docs.google.com/presentation/d/1ktURe9qz5ggbdOQYK-2ISpiC18B-Y_35WvGyAnnxEpw/edit?usp=sharing>`_
-* (add future entries here)
+Slides used to support discussions during sync-up meetings are stored in a dedicated Google Drive folder: `Link <https://drive.google.com/drive/u/1/folders/1nu3JAanE0gqQDll0S9ofVy4FOFezc6Mm>`_.
+Note that the naming convention for these slides is *YYYYMM*\_llvm_qual_wg.
 
 AI Transcription Policy
 =======================

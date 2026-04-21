@@ -76,6 +76,18 @@ func.func @broadcast_vec1d_from_f32(%arg0: f32) -> vector<2xf32> {
 
 // -----
 
+func.func @broadcast_single_elem_vec1d_from_f32(%arg0: f32) -> vector<1xf32> {
+  %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
+  return %0 : vector<1xf32>
+}
+// CHECK-LABEL: @broadcast_single_elem_vec1d_from_f32
+// CHECK-SAME:  %[[A:.*]]: f32)
+// CHECK:       %[[T0:.*]] = llvm.insertelement %[[A]]
+// CHECK-NOT:   llvm.shufflevector
+// CHECK:       return %[[T0]] : vector<1xf32>
+
+// -----
+
 func.func @broadcast_vec1d_from_f32_scalable(%arg0: f32) -> vector<[2]xf32> {
   %0 = vector.broadcast %arg0 : f32 to vector<[2]xf32>
   return %0 : vector<[2]xf32>
@@ -1532,7 +1544,9 @@ func.func @create_mask_0d(%num_elems : index) -> vector<i1> {
 // CHECK-LABEL: func @create_mask_0d
 // CHECK-SAME: %[[NUM_ELEMS:.*]]: index
 // CHECK:  %[[INDICES:.*]] = arith.constant dense<0> : vector<i32>
-// CHECK:  %[[NUM_ELEMS_i32:.*]] = arith.index_cast %[[NUM_ELEMS]] : index to i32
+// CHECK:  %[[MAX:.*]] = arith.constant 2147483647 : index
+// CHECK:  %[[CLAMPED:.*]] = arith.minsi %[[NUM_ELEMS]], %[[MAX]] : index
+// CHECK:  %[[NUM_ELEMS_i32:.*]] = arith.index_cast %[[CLAMPED]] : index to i32
 // CHECK:  %[[BOUNDS:.*]] = llvm.insertelement %[[NUM_ELEMS_i32]]
 // CHECK:  %[[BOUNDS_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOUNDS]] : vector<1xi32> to vector<i32>
 // CHECK:  %[[RESULT:.*]] = arith.cmpi sgt, %[[BOUNDS_CAST]], %[[INDICES]] : vector<i32>
@@ -1548,7 +1562,9 @@ func.func @create_mask_1d(%num_elems : index) -> vector<4xi1> {
 // CHECK-LABEL: func @create_mask_1d
 // CHECK-SAME: %[[NUM_ELEMS:.*]]: index
 // CHECK:  %[[INDICES:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
-// CHECK:  %[[NUM_ELEMS_i32:.*]] = arith.index_cast %[[NUM_ELEMS]] : index to i32
+// CHECK:  %[[MAX:.*]] = arith.constant 2147483647 : index
+// CHECK:  %[[CLAMPED:.*]] = arith.minsi %[[NUM_ELEMS]], %[[MAX]] : index
+// CHECK:  %[[NUM_ELEMS_i32:.*]] = arith.index_cast %[[CLAMPED]] : index to i32
 // CHECK:  %[[BOUNDS_INSERT:.*]] = llvm.insertelement %[[NUM_ELEMS_i32]]
 // CHECK:  %[[BOUNDS:.*]] = llvm.shufflevector %[[BOUNDS_INSERT]]
 // CHECK:  %[[RESULT:.*]] = arith.cmpi sgt, %[[BOUNDS]], %[[INDICES]] : vector<4xi32>
@@ -1564,7 +1580,9 @@ func.func @create_mask_1d_scalable(%num_elems : index) -> vector<[4]xi1> {
 // CHECK-LABEL: func @create_mask_1d_scalable
 // CHECK-SAME: %[[NUM_ELEMS:.*]]: index
 // CHECK:  %[[INDICES:.*]] = llvm.intr.stepvector : vector<[4]xi32>
-// CHECK:  %[[NUM_ELEMS_i32:.*]] = arith.index_cast %[[NUM_ELEMS]] : index to i32
+// CHECK:  %[[MAX:.*]] = arith.constant 2147483647 : index
+// CHECK:  %[[CLAMPED:.*]] = arith.minsi %[[NUM_ELEMS]], %[[MAX]] : index
+// CHECK:  %[[NUM_ELEMS_i32:.*]] = arith.index_cast %[[CLAMPED]] : index to i32
 // CHECK:  %[[BOUNDS_INSERT:.*]] = llvm.insertelement %[[NUM_ELEMS_i32]], {{.*}} : vector<[4]xi32>
 // CHECK:  %[[BOUNDS:.*]] = llvm.shufflevector %[[BOUNDS_INSERT]], {{.*}} : vector<[4]xi32>
 // CHECK:  %[[RESULT:.*]] = arith.cmpi slt, %[[INDICES]], %[[BOUNDS]] : vector<[4]xi32>

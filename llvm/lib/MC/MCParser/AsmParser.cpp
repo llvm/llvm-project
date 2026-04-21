@@ -46,6 +46,7 @@
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -119,6 +120,7 @@ private:
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
+  std::unique_ptr<MCAsmParserExtension> LFIParser;
   SMLoc StartTokLoc;
   std::optional<SMLoc> CFIStartProcLoc;
 
@@ -206,7 +208,7 @@ public:
 
   void addDirectiveHandler(StringRef Directive,
                            ExtensionDirectiveHandler Handler) override {
-    ExtensionDirectiveMap[Directive] = Handler;
+    ExtensionDirectiveMap[Directive] = std::move(Handler);
   }
 
   void addAliasForDirective(StringRef Directive, StringRef Alias) override {
@@ -228,11 +230,9 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
-  bool Warning(SMLoc L, const Twine &Msg,
-               SMRange Range = std::nullopt) override;
-  bool printError(SMLoc L, const Twine &Msg,
-                  SMRange Range = std::nullopt) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool printError(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
 
   const AsmToken &Lex() override;
 
@@ -312,7 +312,7 @@ private:
 
   void printMacroInstantiations();
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = std::nullopt) const {
+                    SMRange Range = {}) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -418,6 +418,7 @@ private:
     DK_P2ALIGN,
     DK_P2ALIGNW,
     DK_P2ALIGNL,
+    DK_PREFALIGN,
     DK_ORG,
     DK_FILL,
     DK_ENDR,
@@ -530,6 +531,7 @@ private:
     DK_LTO_SET_CONDITIONAL,
     DK_CFI_MTE_TAGGED_FRAME,
     DK_MEMTAG,
+    DK_BASE64,
     DK_END
   };
 
@@ -543,7 +545,8 @@ private:
     CVDR_DEFRANGE_REGISTER,
     CVDR_DEFRANGE_FRAMEPOINTER_REL,
     CVDR_DEFRANGE_SUBFIELD_REGISTER,
-    CVDR_DEFRANGE_REGISTER_REL
+    CVDR_DEFRANGE_REGISTER_REL,
+    CVDR_DEFRANGE_REGISTER_REL_INDIR
   };
 
   /// Maps Codeview def_range types --> CVDefRangeType enum, for
@@ -552,6 +555,7 @@ private:
 
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
+  bool parseDirectiveBase64();                  // ".base64"
   bool parseDirectiveReloc(SMLoc DirectiveLoc); // ".reloc"
   bool parseDirectiveValue(StringRef IDVal,
                            unsigned Size);       // ".byte", ".long", ...
@@ -565,6 +569,7 @@ private:
   bool parseDirectiveOrg(); // ".org"
   // ".align{,32}", ".p2align{,w,l}"
   bool parseDirectiveAlign(bool IsPow2, uint8_t ValueSize);
+  bool parseDirectivePrefAlign();
 
   // ".file", ".line", ".loc", ".loc_label", ".stabs"
   bool parseDirectiveFile(SMLoc DirectiveLoc);
@@ -726,7 +731,7 @@ public:
     Lexer.setLexHLASMStrings(true);
   }
 
-  ~HLASMAsmParser() { Lexer.setSkipSpace(true); }
+  ~HLASMAsmParser() override { Lexer.setSkipSpace(true); }
 
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI) override;
@@ -737,13 +742,6 @@ public:
 namespace llvm {
 
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
-extern MCAsmParserExtension *createDarwinAsmParser();
-extern MCAsmParserExtension *createELFAsmParser();
-extern MCAsmParserExtension *createCOFFAsmParser();
-extern MCAsmParserExtension *createGOFFAsmParser();
-extern MCAsmParserExtension *createXCOFFAsmParser();
-extern MCAsmParserExtension *createWasmAsmParser();
 
 } // end namespace llvm
 
@@ -792,6 +790,10 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   }
 
   PlatformParser->Initialize(*this);
+  if (Out.getLFIRewriter()) {
+    LFIParser.reset(createLFIAsmParser(Out.getLFIRewriter()));
+    LFIParser->Initialize(*this);
+  }
   initializeDirectiveKindMap();
   initializeCVDefRangeTypeMap();
 }
@@ -854,6 +856,10 @@ bool AsmParser::enterIncludeFile(const std::string &Filename) {
 /// returns true on failure.
 bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
                                   const MCExpr *Count, SMLoc Loc) {
+  // The .incbin file cannot introduce new symbols.
+  if (SymbolScanningMode)
+    return false;
+
   std::string IncludedFile;
   unsigned NewBuf =
       SrcMgr.AddIncludeFile(Filename, Lexer.getLoc(), IncludedFile);
@@ -937,7 +943,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
 
   // Prime the lexer.
   Lex();
@@ -1051,7 +1057,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
 bool AsmParser::checkForValidSection() {
   if (!ParsingMSInlineAsm && !getStreamer().getCurrentFragment()) {
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
   }
@@ -1953,6 +1959,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_ASCIZ:
     case DK_STRING:
       return parseDirectiveAscii(IDVal, true);
+    case DK_BASE64:
+      return parseDirectiveBase64();
     case DK_BYTE:
     case DK_DC_B:
       return parseDirectiveValue(IDVal, 1);
@@ -2002,6 +2010,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveAlign(/*IsPow2=*/true, /*ExprSize=*/2);
     case DK_P2ALIGNL:
       return parseDirectiveAlign(/*IsPow2=*/true, /*ExprSize=*/4);
+    case DK_PREFALIGN:
+      return parseDirectivePrefAlign();
     case DK_ORG:
       return parseDirectiveOrg();
     case DK_FILL:
@@ -3076,6 +3086,37 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
   return parseMany(parseOp);
 }
 
+/// parseDirectiveBase64:
+//    ::= .base64 "string" (, "string" )*
+bool AsmParser::parseDirectiveBase64() {
+  auto parseOp = [&]() -> bool {
+    if (checkForValidSection())
+      return true;
+
+    if (getTok().isNot(AsmToken::String)) {
+      return true;
+    }
+
+    std::vector<char> Decoded;
+    std::string const str = getTok().getStringContents().str();
+    if (check(str.empty(), "expected nonempty string")) {
+      return true;
+    }
+
+    llvm::Error e = decodeBase64(str, Decoded);
+    if (e) {
+      consumeError(std::move(e));
+      return Error(Lexer.getLoc(), "failed to base64 decode string data");
+    }
+
+    getStreamer().emitBytes(std::string(Decoded.begin(), Decoded.end()));
+    Lex();
+    return false;
+  };
+
+  return check(parseMany(parseOp), "expected string");
+}
+
 /// parseDirectiveReloc
 ///  ::= .reloc expression , identifier [ , expression ]
 bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
@@ -3425,6 +3466,59 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   }
 
   return ReturnVal;
+}
+
+bool AsmParser::parseDirectivePrefAlign() {
+  SMLoc AlignmentLoc = getLexer().getLoc();
+  int64_t Log2Alignment;
+  if (checkForValidSection() || parseAbsoluteExpression(Log2Alignment))
+    return true;
+
+  if (Log2Alignment < 0 || Log2Alignment > 63)
+    return Error(AlignmentLoc, "log2 alignment must be in the range [0, 63]");
+
+  // Parse end symbol: .prefalign N, sym
+  SMLoc SymLoc = getLexer().getLoc();
+  if (parseComma())
+    return true;
+  StringRef Name;
+  SymLoc = getLexer().getLoc();
+  if (parseIdentifier(Name))
+    return Error(SymLoc, "expected symbol name");
+  MCSymbol *End = getContext().getOrCreateSymbol(Name);
+
+  // Parse fill operand: integer byte [0, 255] or "nop".
+  SMLoc FillLoc = getLexer().getLoc();
+  if (parseComma())
+    return true;
+
+  bool EmitNops = false;
+  uint8_t Fill = 0;
+  SMLoc FillLoc2 = getLexer().getLoc();
+  if (getLexer().is(AsmToken::Identifier) &&
+      getLexer().getTok().getIdentifier() == "nop") {
+    EmitNops = true;
+    Lex();
+  } else {
+    int64_t FillVal;
+    if (parseAbsoluteExpression(FillVal))
+      return true;
+    if (FillVal < 0 || FillVal > 255)
+      return Error(FillLoc2, "fill value must be in range [0, 255]");
+    Fill = static_cast<uint8_t>(FillVal);
+  }
+
+  if (parseEOL())
+    return true;
+  if ((EmitNops || Fill != 0) &&
+      getStreamer().getCurrentSectionOnly()->isBssSection())
+    return Error(FillLoc, "non-zero fill in BSS section '" +
+                              getStreamer().getCurrentSectionOnly()->getName() +
+                              "'");
+
+  getStreamer().emitPrefAlign(Align(1ULL << Log2Alignment), *End, EmitNops,
+                              Fill, getTargetParser().getSTI());
+  return false;
 }
 
 /// parseDirectiveFile
@@ -3922,6 +4016,7 @@ void AsmParser::initializeCVDefRangeTypeMap() {
   CVDefRangeTypeMap["frame_ptr_rel"] = CVDR_DEFRANGE_FRAMEPOINTER_REL;
   CVDefRangeTypeMap["subfield_reg"] = CVDR_DEFRANGE_SUBFIELD_REGISTER;
   CVDefRangeTypeMap["reg_rel"] = CVDR_DEFRANGE_REGISTER_REL;
+  CVDefRangeTypeMap["reg_rel_indir"] = CVDR_DEFRANGE_REGISTER_REL_INDIR;
 }
 
 /// parseDirectiveCVDefRange
@@ -4022,6 +4117,37 @@ bool AsmParser::parseDirectiveCVDefRange() {
     DRHdr.Register = DRRegister;
     DRHdr.Flags = DRFlags;
     DRHdr.BasePointerOffset = DRBasePointerOffset;
+    getStreamer().emitCVDefRangeDirective(Ranges, DRHdr);
+    break;
+  }
+  case CVDR_DEFRANGE_REGISTER_REL_INDIR: {
+    int64_t DRRegister;
+    int64_t DRFlags;
+    int64_t DRBasePointerOffset;
+    int64_t DROffsetInUdt;
+    if (parseToken(AsmToken::Comma, "expected comma before register number in "
+                                    ".cv_def_range directive") ||
+        parseAbsoluteExpression(DRRegister))
+      return Error(Loc, "expected register value");
+    if (parseToken(
+            AsmToken::Comma,
+            "expected comma before flag value in .cv_def_range directive") ||
+        parseAbsoluteExpression(DRFlags))
+      return Error(Loc, "expected flag value");
+    if (parseToken(AsmToken::Comma, "expected comma before base pointer offset "
+                                    "in .cv_def_range directive") ||
+        parseAbsoluteExpression(DRBasePointerOffset))
+      return Error(Loc, "expected base pointer offset value");
+    if (parseToken(AsmToken::Comma, "expected comma before offset in UDT "
+                                    "in .cv_def_range directive") ||
+        parseAbsoluteExpression(DROffsetInUdt))
+      return Error(Loc, "expected offset in UDT value");
+
+    codeview::DefRangeRegisterRelIndirHeader DRHdr;
+    DRHdr.Register = DRRegister;
+    DRHdr.Flags = DRFlags;
+    DRHdr.BasePointerOffset = DRBasePointerOffset;
+    DRHdr.OffsetInUdt = DROffsetInUdt;
     getStreamer().emitCVDefRangeDirective(Ranges, DRHdr);
     break;
   }
@@ -5345,6 +5471,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".asciz"] = DK_ASCIZ;
   DirectiveKindMap[".string"] = DK_STRING;
   DirectiveKindMap[".byte"] = DK_BYTE;
+  DirectiveKindMap[".base64"] = DK_BASE64;
   DirectiveKindMap[".short"] = DK_SHORT;
   DirectiveKindMap[".value"] = DK_VALUE;
   DirectiveKindMap[".2byte"] = DK_2BYTE;
@@ -5365,6 +5492,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".p2align"] = DK_P2ALIGN;
   DirectiveKindMap[".p2alignw"] = DK_P2ALIGNW;
   DirectiveKindMap[".p2alignl"] = DK_P2ALIGNL;
+  DirectiveKindMap[".prefalign"] = DK_PREFALIGN;
   DirectiveKindMap[".org"] = DK_ORG;
   DirectiveKindMap[".fill"] = DK_FILL;
   DirectiveKindMap[".zero"] = DK_ZERO;
@@ -6235,12 +6363,11 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
   return parseAsMachineInstruction(Info, SI);
 }
 
-namespace llvm {
-namespace MCParserUtils {
-
-bool parseAssignmentExpression(StringRef Name, bool allow_redef,
-                               MCAsmParser &Parser, MCSymbol *&Sym,
-                               const MCExpr *&Value) {
+bool llvm::MCParserUtils::parseAssignmentExpression(StringRef Name,
+                                                    bool allow_redef,
+                                                    MCAsmParser &Parser,
+                                                    MCSymbol *&Sym,
+                                                    const MCExpr *&Value) {
 
   // FIXME: Use better location, we should use proper tokens.
   SMLoc EqualLoc = Parser.getTok().getLoc();
@@ -6276,9 +6403,6 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
 
   return false;
 }
-
-} // end namespace MCParserUtils
-} // end namespace llvm
 
 /// Create an MCAsmParser instance.
 MCAsmParser *llvm::createMCAsmParser(SourceMgr &SM, MCContext &C,

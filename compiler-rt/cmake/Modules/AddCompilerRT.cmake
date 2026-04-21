@@ -162,7 +162,6 @@ endmacro()
 #                         OBJECT_LIBS <object libraries to use as sources>
 #                         PARENT_TARGET <convenience parent target>
 #                         ADDITIONAL_HEADERS <header files>
-#                         EXTENSIONS <boolean>
 #                         C_STANDARD <version>
 #                         CXX_STANDARD <version>)
 function(add_compiler_rt_runtime name type)
@@ -174,7 +173,7 @@ function(add_compiler_rt_runtime name type)
   cmake_parse_arguments(LIB
     ""
     "PARENT_TARGET;C_STANDARD;CXX_STANDARD"
-    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS;EXTENSIONS"
+    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
   # Until we support this some other way, build compiler-rt runtime without LTO
@@ -184,6 +183,12 @@ function(add_compiler_rt_runtime name type)
     set(NO_LTO_FLAGS "-fno-lto")
   else()
     set(NO_LTO_FLAGS "")
+  endif()
+
+  # The GPU build does not support shared libraries, just suppress them here as
+  # there is no global config for this.
+  if(COMPILER_RT_GPU_BUILD AND type MATCHES "SHARED")
+    return()
   endif()
 
   # By default do not instrument or use profdata for compiler-rt.
@@ -444,10 +449,6 @@ function(add_compiler_rt_runtime name type)
 
     if(type STREQUAL "SHARED")
       rt_externalize_debuginfo(${libname})
-    endif()
-
-    if(DEFINED LIB_EXTENSIONS)
-      set_target_properties(${libname} PROPERTIES C_EXTENSIONS ${LIB_EXTENSIONS})
     endif()
   endforeach()
   if(LIB_PARENT_TARGET)

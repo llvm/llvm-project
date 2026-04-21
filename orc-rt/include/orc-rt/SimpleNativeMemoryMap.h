@@ -14,11 +14,13 @@
 #define ORC_RT_SIMPLENATIVEMEMORYMAP_H
 
 #include "orc-rt/AllocAction.h"
+#include "orc-rt/BootstrapInfo.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/MemoryFlags.h"
-#include "orc-rt/ResourceManager.h"
-#include "orc-rt/SPSWrapperFunction.h"
+#include "orc-rt/Service.h"
+#include "orc-rt/SimpleSymbolTable.h"
 #include "orc-rt/move_only_function.h"
+#include "orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h"
 
 #include <map>
 #include <mutex>
@@ -27,21 +29,43 @@
 
 namespace orc_rt {
 
+class Session;
+
 /// JIT'd memory management backend.
 ///
 /// Intances can:
 /// 1. Reserve address space.
-/// 2. Finalize memory regions within reserved memory (copying content,
+/// 2. Initialize memory regions within reserved memory (copying content,
 ///    applying permissions, running finalize actions, and recording
 ///    deallocate actions).
-/// 3. Deallocate memory regions within reserved memory (running
+/// 3. Deinitialize memory regions within reserved memory (running
 ///    deallocate actions and making memory available for future
-///    finalize calls (if the system permits this).
-/// 4. Release address space, deallocating any not-yet-deallocated finalized
+///    initialize calls (if the system permits this).
+/// 4. Release address space, deinitializing any remaining initialized
 ///    regions, and returning the address space to the system for reuse (if
 ///    the system permits).
-class SimpleNativeMemoryMap : public ResourceManager {
+class SimpleNativeMemoryMap : public Service {
 public:
+  /// Create a SimpleNativeMemoryMap, adding associated symbols to the given
+  /// SimpleSymbolTable (typically the BootstrapInfo table).
+  static Expected<std::unique_ptr<SimpleNativeMemoryMap>>
+  Create(Session &S, SimpleSymbolTable &ST,
+         const char *InstanceName = "orc_rt_SimpleNativeMemoryMap_Instance",
+         SimpleSymbolTable::MutatorFn AddInterface =
+             sps_ci::addSimpleNativeMemoryMap);
+
+  /// Convenience constructor that adds default symbols to the given
+  /// BootstrapInfo's symbols map.
+  static Expected<std::unique_ptr<SimpleNativeMemoryMap>>
+  Create(Session &S, BootstrapInfo &BI) {
+    return Create(S, BI.symbols());
+  }
+  /// SimpleNativeMemoryMap is not copyable / moveable.
+  SimpleNativeMemoryMap(const SimpleNativeMemoryMap &) = delete;
+  SimpleNativeMemoryMap &operator=(const SimpleNativeMemoryMap &) = delete;
+  SimpleNativeMemoryMap(SimpleNativeMemoryMap &&) = delete;
+  SimpleNativeMemoryMap &operator=(SimpleNativeMemoryMap &&) = delete;
+
   /// Reserves a slab of contiguous address space for allocation.
   ///
   /// Returns the base address of the allocated memory.
@@ -50,9 +74,15 @@ public:
 
   /// Release a slab of contiguous address space back to the system.
   using OnReleaseCompleteFn = move_only_function<void(Error)>;
-  void release(OnReleaseCompleteFn &&OnComplete, void *Addr);
+  void release(OnReleaseCompleteFn &&OnComplete, void *Addrs);
 
-  struct FinalizeRequest {
+  /// Convenience method to release multiple slabs with one call. This can be
+  /// used to save on interprocess communication at the cost of less expressive
+  /// errors.
+  void releaseMultiple(OnReleaseCompleteFn &&OnComplete,
+                       std::vector<void *> Addrs);
+
+  struct InitializeRequest {
     struct Segment {
       AllocGroup AG;
       char *Address = nullptr;
@@ -66,50 +96,49 @@ public:
 
   /// Writes content into the requested ranges, applies permissions, and
   /// performs allocation actions.
-  using OnFinalizeCompleteFn = move_only_function<void(Expected<void *>)>;
-  void finalize(OnFinalizeCompleteFn &&OnComplete, FinalizeRequest FR);
+  using OnInitializeCompleteFn = move_only_function<void(Expected<void *>)>;
+  void initialize(OnInitializeCompleteFn &&OnComplete, InitializeRequest IR);
 
   /// Runs deallocation actions and resets memory permissions for the requested
   /// memory.
-  using OnDeallocateCompleteFn = move_only_function<void(Error)>;
-  void deallocate(OnDeallocateCompleteFn &&OnComplete, void *Base);
+  using OnDeinitializeCompleteFn = move_only_function<void(Error)>;
+  void deinitialize(OnDeinitializeCompleteFn &&OnComplete, void *Base);
 
-  void detach(ResourceManager::OnCompleteFn OnComplete) override;
-  void shutdown(ResourceManager::OnCompleteFn OnComplete) override;
+  /// Convenience method to deinitialize multiple regions with one call. This
+  /// can be used to save on interprocess communication at the cost of less
+  /// expressive errors.
+  void deinitializeMultiple(OnDeinitializeCompleteFn &&OnComplete,
+                            std::vector<void *> Bases);
+
+  void onDetach(Service::OnCompleteFn OnComplete,
+                bool ShutdownRequested) override;
+  void onShutdown(Service::OnCompleteFn OnComplete) override;
 
 private:
+  SimpleNativeMemoryMap(Session &S) : S(S) {}
+
   struct SlabInfo {
     SlabInfo(size_t Size) : Size(Size) {}
     size_t Size;
     std::unordered_map<void *, std::vector<AllocAction>> DeallocActions;
   };
 
+  void releaseNext(OnReleaseCompleteFn &&OnComplete, std::vector<void *> Addrs,
+                   bool AnyError, Error LastErr);
+  void deinitializeNext(OnDeinitializeCompleteFn &&OnComplete,
+                        std::vector<void *> Bases, bool AnyError,
+                        Error LastErr);
   void shutdownNext(OnCompleteFn OnComplete, std::vector<void *> Bases);
   Error makeBadSlabError(void *Base, const char *Op);
   SlabInfo *findSlabInfoFor(void *Base);
   Error recordDeallocActions(void *Base,
                              std::vector<AllocAction> DeallocActions);
 
+  Session &S;
   std::mutex M;
   std::map<void *, SlabInfo> Slabs;
 };
 
 } // namespace orc_rt
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
-    orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_release_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
-    orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_finalize_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
-    orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_deallocate_sps_wrapper(
-    orc_rt_SessionRef Session, void *CallCtx,
-    orc_rt_WrapperFunctionReturn Return, orc_rt_WrapperFunctionBuffer ArgBytes);
 
 #endif // ORC_RT_SIMPLENATIVEMEMORYMAP_H

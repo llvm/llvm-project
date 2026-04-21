@@ -251,25 +251,55 @@ public:
     if (isa<llvm::Constant>(IndexOp))
       return false;
 
-    SmallVector<Value *> WorkList;
-    WorkList.push_back(IndexOp);
+    SmallVector<Value *, 16> Worklist;
+    SmallPtrSet<Value *, 16> Visited;
+    Worklist.push_back(IndexOp);
 
-    while (!WorkList.empty()) {
-      Value *V = WorkList.pop_back_val();
-      if (auto *CI = dyn_cast<CallInst>(V)) {
-        if (CI->getCalledFunction()->getIntrinsicID() ==
-            Intrinsic::dx_resource_nonuniformindex)
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+
+      if (isa<llvm::Constant>(V))
+        continue;
+
+      if (!Visited.insert(V).second)
+        continue;
+
+      if (auto *CI = dyn_cast<CallInst>(V))
+        if (CI->getIntrinsicID() == Intrinsic::dx_resource_nonuniformindex)
           return true;
+
+      // If it's a PHI node, check ALL incoming values —
+      // taint from ANY predecessor counts
+      if (auto *Phi = dyn_cast<PHINode>(V)) {
+        for (Value *Incoming : Phi->incoming_values())
+          Worklist.push_back(Incoming);
+        continue;
       }
-      if (auto *U = llvm::dyn_cast<llvm::User>(V)) {
-        for (llvm::Value *Op : U->operands()) {
-          if (isa<llvm::Constant>(Op))
-            continue;
-          WorkList.push_back(Op);
-        }
-      }
+
+      if (auto *Inst = dyn_cast<Instruction>(V))
+        if (Inst->getNumOperands() > 0 && !Inst->isTerminator())
+          for (Value *Op : Inst->operands())
+            Worklist.push_back(Op);
     }
     return false;
+  }
+
+  Error validateRawBufferElementIndex(Value *Resource, Value *ElementIndex) {
+    bool IsStructured =
+        cast<RawBufferExtType>(Resource->getType())->isStructured();
+    bool IsPoison = isa<PoisonValue>(ElementIndex);
+
+    if (IsStructured && IsPoison)
+      return make_error<StringError>(
+          "Element index of structured buffer may not be poison",
+          inconvertibleErrorCode());
+
+    if (!IsStructured && !IsPoison)
+      return make_error<StringError>(
+          "Element index of raw buffer must be poison",
+          inconvertibleErrorCode());
+
+    return Error::success();
   }
 
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
@@ -336,9 +366,8 @@ public:
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
       // size, so we need to be careful about the difference for "unbounded".
-      uint32_t Unbounded = std::numeric_limits<uint32_t>::max();
-      uint32_t UpperBound = Binding.Size == Unbounded
-                                ? Unbounded
+      uint32_t UpperBound = Binding.Size == 0
+                                ? std::numeric_limits<uint32_t>::max()
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
                                                Binding.Space, RC);
@@ -560,6 +589,11 @@ public:
       Value *Align =
           ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
 
+      if (Error E = validateRawBufferElementIndex(CI->getOperand(0), Index1))
+        return E;
+      if (isa<PoisonValue>(Index1))
+        Index1 = UndefValue::get(Index1->getType());
+
       Expected<CallInst *> OpCall =
           MMDI.DXILVersion >= VersionTuple(1, 2)
               ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
@@ -627,6 +661,28 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Undef = UndefValue::get(Int32Ty);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::GetDimensions, {Handle, Undef}, CI->getName(), Int32Ty);
+      if (Error E = OpCall.takeError())
+        return E;
+      Value *Dim = IRB.CreateExtractValue(*OpCall, 0);
+
+      CI->replaceAllUsesWith(Dim);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerGetPointer(Function &F) {
     // These should have already been handled in DXILResourceAccess, so we can
     // just clean up the dead prototype.
@@ -648,6 +704,13 @@ public:
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Index0 = CI->getArgOperand(1);
       Value *Index1 = IsRaw ? CI->getArgOperand(2) : UndefValue::get(Int32Ty);
+
+      if (IsRaw) {
+        if (Error E = validateRawBufferElementIndex(CI->getOperand(0), Index1))
+          return E;
+        if (isa<PoisonValue>(Index1))
+          Index1 = UndefValue::get(Index1->getType());
+      }
 
       Value *Data = CI->getArgOperand(IsRaw ? 3 : 2);
       Type *DataTy = Data->getType();
@@ -933,6 +996,9 @@ public:
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
+        break;
+      case Intrinsic::dx_resource_getdimensions_x:
+        HasErrors |= lowerGetDimensionsX(F);
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);

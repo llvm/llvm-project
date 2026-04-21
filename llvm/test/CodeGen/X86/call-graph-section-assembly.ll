@@ -1,8 +1,8 @@
 ;; Test if temporary labels are generated for each indirect callsite.
-;; Test if the .callgraph section contains the MD5 hash of callees' type (type id)
+;; Test if the .llvm.callgraph section contains the MD5 hash of callees' type (type id)
 ;; is correctly paired with its corresponding temporary label generated for indirect
 ;; call sites annotated with !callee_type metadata.
-;; Test if the .callgraph section contains unique direct callees.
+;; Test if the .llvm.callgraph section contains unique direct callees.
 
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
@@ -11,7 +11,6 @@ declare !type !1 i32 @direct_bar(i8)
 declare !type !2 ptr @direct_baz(ptr)
 
 ; CHECK: ball:
-; CHECK-NEXT: [[LABEL_FUNC:\.Lfunc_begin[0-9]+]]:
 define ptr @ball() {
 entry:
   call void @direct_foo()
@@ -36,13 +35,13 @@ entry:
 !4 = !{!5}
 !5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
 
-; CHECK: .section .callgraph,"o",@progbits,.text
+; CHECK: .section .llvm.callgraph,"o",@llvm_call_graph,.text
 ;; Version
 ; CHECK-NEXT: .byte   0
 ;; Flags
 ; CHECK-NEXT: .byte   7
 ;; Function Entry PC
-; CHECK-NEXT: .quad   [[LABEL_FUNC]]
+; CHECK-NEXT: .quad ball
 ;; Function type ID -- set to 0 as no type metadata attached to function.
 ; CHECK-NEXT: .quad   0
 ;; Number of unique direct callees.

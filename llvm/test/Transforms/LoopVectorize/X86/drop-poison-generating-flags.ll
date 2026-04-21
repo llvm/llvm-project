@@ -19,16 +19,16 @@ target triple = "x86_64-pc-linux-gnu"
 
 ; Drop poison-generating flags from 'sub' and 'getelementptr' feeding a masked load.
 ; Test for PR52111.
-define void @drop_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_scalar_nuw_nsw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[INPUT]], i64 -1
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP0]], i32 4, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP0]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_LOAD]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -61,16 +61,16 @@ loop.exit:
 }
 
 ; Variant with getelementptr nusw.
-define void @drop_scalar_gep_nusw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_scalar_gep_nusw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_scalar_gep_nusw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[INPUT]], i64 -1
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP0]], i32 4, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP0]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_LOAD]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -103,16 +103,16 @@ loop.exit:
 }
 
 ; Variant with getelementptr nuw.
-define void @drop_scalar_gep_nuw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_scalar_gep_nuw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_scalar_gep_nuw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[INPUT]], i64 -1
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP0]], i32 4, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP0]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_LOAD]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -146,16 +146,16 @@ loop.exit:
 
 ; Drop poison-generating flags from 'sub' and 'getelementptr' feeding a masked load.
 ; In this case, 'sub' and 'getelementptr' are not guarded by the predicate.
-define void @drop_nonpred_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_nonpred_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_nonpred_scalar_nuw_nsw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[INPUT]], i64 -1
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP0]], i32 4, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP0]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_LOAD]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -188,16 +188,16 @@ loop.exit:
 }
 
 ; Preserve poison-generating flags from vector 'sub', 'mul' and 'getelementptr' feeding a masked gather.
-define void @preserve_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @preserve_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @preserve_vector_nuw_nsw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[INPUT]], <4 x i64> <i64 -2, i64 0, i64 2, i64 4>
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> [[TMP0]], i32 4, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_GATHER]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -231,18 +231,18 @@ loop.exit:
 }
 
 ; Drop poison-generating flags from vector 'sub' and 'gep' feeding a masked load.
-define void @drop_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output, ptr noalias %ptrs) local_unnamed_addr #0 {
+define void @drop_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %output, ptr noalias %ptrs) #0 {
 ; CHECK-LABEL: define void @drop_vector_nuw_nsw(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[INPUT]], <4 x i64> <i64 -1, i64 0, i64 1, i64 2>
-; CHECK-NEXT:    store <4 x ptr> [[TMP3]], ptr [[PTRS]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[TMP3]], i32 0
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP6]], i32 4, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    store <4 x ptr> [[TMP3]], ptr [[PTRS]], align 8
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP6]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_LOAD]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -279,20 +279,18 @@ loop.exit:
 ; Same as @drop_vector_nuw_nsw, except built with avx1; in this case,
 ; we make scalar clones of the 'sub' operation. These clones also need
 ; cleared flags.
-define void @drop_nonvector_nuw_nsw_avx1(ptr noalias nocapture readonly %input, ptr %output, ptr noalias %ptrs) local_unnamed_addr #1 {
+define void @drop_nonvector_nuw_nsw_avx1(ptr noalias nocapture readonly %input, ptr %output, ptr noalias %ptrs) #1 {
 ; CHECK-LABEL: define void @drop_nonvector_nuw_nsw_avx1(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[PTRS]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 0, 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 1, 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 2, 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 3, 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[INPUT]], i64 -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP9]]
@@ -300,11 +298,10 @@ define void @drop_nonvector_nuw_nsw_avx1(ptr noalias nocapture readonly %input, 
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> [[TMP14]], ptr [[TMP11]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP12]], i32 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x ptr> [[TMP16]], ptr [[TMP13]], i32 3
-; CHECK-NEXT:    store <4 x ptr> [[TMP17]], ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP10]], i32 4, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    store <4 x ptr> [[TMP17]], ptr [[PTRS]], align 8
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP10]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_LOAD]], <4 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[OUTPUT]], i64 0
-; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -338,9 +335,9 @@ loop.exit:
 
 ; Preserve poison-generating flags from 'sub', which is not contributing to any address computation
 ; of any masked load/store/gather/scatter.
-define void @preserve_nuw_nsw_no_addr(ptr %output) local_unnamed_addr #0 {
+define void @preserve_nuw_nsw_no_addr(ptr %output) #0 {
 ; CHECK-LABEL: define void @preserve_nuw_nsw_no_addr(
-; CHECK-SAME: ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -375,15 +372,15 @@ loop.exit:
 }
 
 ; Drop poison-generating flags from 'sdiv' and 'getelementptr' feeding a masked load.
-define void @drop_scalar_exact(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @drop_scalar_exact(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @drop_scalar_exact(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[INPUT]], i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[INPUT]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 false>, <4 x float> zeroinitializer, <4 x float> [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -432,14 +429,14 @@ define void @drop_zext_nneg(ptr noalias %p, ptr noalias %p1) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i32> [[VEC_IND]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP2]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr [[TMP3]], i32 8, <4 x i1> [[TMP0]], <4 x double> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP3]], <4 x i1> [[TMP0]], <4 x double> poison)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x double> [[WIDE_MASKED_LOAD]], <4 x double> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[PREDPHI]], i32 3
 ; CHECK-NEXT:    store double [[TMP5]], ptr [[P1]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -470,16 +467,16 @@ exit:
 }
 
 ; Preserve poison-generating flags from 'sdiv' and 'getelementptr' feeding a masked gather.
-define void @preserve_vector_exact_no_addr(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @preserve_vector_exact_no_addr(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @preserve_vector_exact_no_addr(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[INPUT]], <4 x i64> <i64 0, i64 0, i64 1, i64 1>
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 false>, <4 x float> zeroinitializer, <4 x float> [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -516,9 +513,9 @@ loop.exit:
 
 ; Preserve poison-generating flags from 'sdiv', which is not contributing to any address computation
 ; of any masked load/store/gather/scatter.
-define void @preserve_exact_no_addr(ptr %output) local_unnamed_addr #0 {
+define void @preserve_exact_no_addr(ptr %output) #0 {
 ; CHECK-LABEL: define void @preserve_exact_no_addr(
-; CHECK-SAME: ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -554,9 +551,9 @@ loop.exit:
 
 ; Make sure we don't vectorize a loop with a phi feeding a poison value to
 ; a masked load/gather.
-define void @dont_vectorize_poison_phi(ptr noalias nocapture readonly %input, ptr %output) local_unnamed_addr #0 {
+define void @dont_vectorize_poison_phi(ptr noalias nocapture readonly %input, ptr %output) #0 {
 ; CHECK-LABEL: define void @dont_vectorize_poison_phi(
-; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
@@ -747,9 +744,7 @@ define void @recipe_without_underlying_instr_lanes_used(i64 %n, ptr noalias %dst
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP26:%.*]] = phi <4 x i8> [ [[TMP22]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP28]], %[[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> [[TMP26]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> poison, <4 x i64> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[PREDPHI7]], i32 3
-; CHECK-NEXT:    store i64 [[TMP12]], ptr [[AUX]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[AUX]], align 8
 ; CHECK-NEXT:    store <4 x i8> [[PREDPHI]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -807,7 +802,7 @@ define void @Bgep_inbounds_unconditionally_due_to_store(ptr noalias %B, ptr read
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
 
@@ -838,7 +833,7 @@ exit:
   ret void
 }
 
-attributes #0 = { noinline nounwind uwtable "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
+attributes #0 = { noinline "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
 attributes #1 = { "target-features"="+avx" }
 
 !0 = !{}

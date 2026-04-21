@@ -1044,21 +1044,38 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
   if (PVD) {
     unsigned Index = PVD->getFunctionScopeIndex();
     const StackFrameContext *SFC = LC->getStackFrame();
-    const Stmt *CallSite = SFC->getCallSite();
+    const Expr *CallSite = SFC->getCallSite();
     if (CallSite) {
-      const Decl *D = SFC->getDecl();
-      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-        if (Index < FD->param_size() && FD->parameters()[Index] == PVD)
-          return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
-                                              getStackArgumentsRegion(SFC));
-      } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
-        if (Index < BD->param_size() && BD->parameters()[Index] == PVD)
-          return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
-                                              getStackArgumentsRegion(SFC));
-      } else {
-        return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
-                                            getStackArgumentsRegion(SFC));
+      const Decl *CalleeDecl = SFC->getDecl();
+      bool CurrentParam = true;
+      if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
+        CurrentParam =
+            (Index < FD->param_size() && FD->getParamDecl(Index) == PVD);
+      } else if (const auto *BD = dyn_cast<BlockDecl>(CalleeDecl)) {
+        CurrentParam =
+            (Index < BD->param_size() && BD->getParamDecl(Index) == PVD);
       }
+
+      if (CurrentParam) {
+        // If this is a parameter of the *current* stack frame, we can
+        // represent it with a `ParamVarRegion`.
+        return getSubRegion<ParamVarRegion>(CallSite, Index,
+                                            getStackArgumentsRegion(SFC));
+      } else {
+        // TODO: Parameters of other stack frames (which may have been be
+        // captured by a lambda or a block) are currently represented by
+        // `NonParamVarRegion`s. This behavior is present since commit
+        // 98db1f990fc273adc1ae36d4ce97ce66fd27ac30 which introduced
+        // `ParamVarRegion` in 2020; and appears to work (at least to some
+        // extent); but it would be nice to clean this up (if somebody has time
+        // and knowledge for a proper investigation).
+      }
+    } else {
+      // TODO: Parameters of the entrypoint stack frame (where `CallSite` is
+      // null) are currently represented by `NonParamVarRegion`s. This behavior
+      // is also present since 98db1f990fc273adc1ae36d4ce97ce66fd27ac30 which
+      // introduced `ParamVarRegion` in 2020, but it would be nice to clean it
+      // up for the sake of clarity and consistency.
     }
   }
 

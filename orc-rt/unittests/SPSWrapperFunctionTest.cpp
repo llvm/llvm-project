@@ -20,13 +20,24 @@
 
 #include "gtest/gtest.h"
 
+static void add_via_function(orc_rt::move_only_function<void(int32_t)> Return,
+                             int32_t X, int32_t Y) {
+  Return(X + Y);
+}
+
+// Note: This macro use has been deliberately moved above the
+// "using namespace orc_rt;" statement below to check that its expansion works
+// from other namespaces.
+ORC_RT_SPS_WRAPPER(add_via_function_sps_wrapper, int32_t(int32_t, int32_t),
+                   add_via_function);
+
 using namespace orc_rt;
 
-static void void_noop_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+static void void_noop_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                   orc_rt_WrapperFunctionReturn Return,
                                   orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<void()>::handle(
-      Session, CallCtx, Return, ArgBytes,
+      S, CallId, Return, ArgBytes,
       [](move_only_function<void()> Return) { Return(); });
 }
 
@@ -40,11 +51,11 @@ TEST(SPSWrapperFunctionUtilsTest, VoidNoop) {
   EXPECT_TRUE(Ran);
 }
 
-static void add_via_lambda_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+static void add_via_lambda_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                        orc_rt_WrapperFunctionReturn Return,
                                        orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
-      Session, CallCtx, Return, ArgBytes,
+      S, CallId, Return, ArgBytes,
       [](move_only_function<void(int32_t)> Return, int32_t X, int32_t Y) {
         Return(X + Y);
       });
@@ -58,19 +69,6 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaLambda) {
   EXPECT_EQ(Result, 42);
 }
 
-static void add_via_function(move_only_function<void(int32_t)> Return,
-                             int32_t X, int32_t Y) {
-  Return(X + Y);
-}
-
-static void
-add_via_function_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
-                             orc_rt_WrapperFunctionReturn Return,
-                             orc_rt_WrapperFunctionBuffer ArgBytes) {
-  SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
-      Session, CallCtx, Return, ArgBytes, add_via_function);
-}
-
 TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunction) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -80,11 +78,11 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunction) {
 }
 
 static void
-add_via_function_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+add_via_function_pointer_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                      orc_rt_WrapperFunctionReturn Return,
                                      orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
-      Session, CallCtx, Return, ArgBytes, &add_via_function);
+      S, CallId, Return, ArgBytes, &add_via_function);
 }
 
 TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunctionPointer) {
@@ -96,11 +94,11 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunctionPointer) {
 }
 
 static void
-round_trip_string_via_span_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+round_trip_string_via_span_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                        orc_rt_WrapperFunctionReturn Return,
                                        orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<SPSString(SPSString)>::handle(
-      Session, CallCtx, Return, ArgBytes,
+      S, CallId, Return, ArgBytes,
       [](move_only_function<void(std::string)> Return, span<const char> S) {
         Return({S.data(), S.size()});
       });
@@ -118,12 +116,11 @@ TEST(SPSWrapperFunctionUtilsTest, RoundTripStringViaSpan) {
   EXPECT_EQ(Result, "hello, world!");
 }
 
-static void improbable_feat_sps_wrapper(orc_rt_SessionRef Session,
-                                        void *CallCtx,
+static void improbable_feat_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                         orc_rt_WrapperFunctionReturn Return,
                                         orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<SPSError(bool)>::handle(
-      Session, CallCtx, Return, ArgBytes,
+      S, CallId, Return, ArgBytes,
       [](move_only_function<void(Error)> Return, bool LuckyHat) {
         if (LuckyHat)
           Return(Error::success());
@@ -155,11 +152,11 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionErrorFailureCase) {
   EXPECT_EQ(ErrMsg, "crushed by boulder");
 }
 
-static void halve_number_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+static void halve_number_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                      orc_rt_WrapperFunctionReturn Return,
                                      orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<SPSExpected<int32_t>(int32_t)>::handle(
-      Session, CallCtx, Return, ArgBytes,
+      S, CallId, Return, ArgBytes,
       [](move_only_function<void(Expected<int32_t>)> Return, int N) {
         if (N % 2 == 0)
           Return(N >> 1);
@@ -192,62 +189,6 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionExpectedFailureCase) {
   EXPECT_EQ(ErrMsg, "N is not a multiple of 2");
 }
 
-static void
-round_trip_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
-                                   orc_rt_WrapperFunctionReturn Return,
-                                   orc_rt_WrapperFunctionBuffer ArgBytes) {
-  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::handle(
-      Session, CallCtx, Return, ArgBytes,
-      [](move_only_function<void(int32_t *)> Return, int32_t *P) {
-        Return(P);
-      });
-}
-
-TEST(SPSWrapperFunctionUtilsTest, TransparentConversionPointers) {
-  int X = 42;
-  int *P = nullptr;
-  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
-      DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
-      [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); }, &X);
-
-  EXPECT_EQ(P, &X);
-}
-
-TEST(SPSWrapperFunctionUtilsTest, TransparentConversionReferenceArguments) {
-  int X = 42;
-  int *P = nullptr;
-  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
-      DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
-      [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); },
-      static_cast<int *const &>(&X));
-
-  EXPECT_EQ(P, &X);
-}
-
-static void
-expected_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
-                                 orc_rt_WrapperFunctionReturn Return,
-                                 orc_rt_WrapperFunctionBuffer ArgBytes) {
-  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr)>::handle(
-      Session, CallCtx, Return, ArgBytes,
-      [](move_only_function<void(Expected<int32_t *>)> Return, int32_t *P) {
-        Return(P);
-      });
-}
-
-TEST(SPSWrapperFunctionUtilsTest, TransparentConversionExpectedPointers) {
-  int X = 42;
-  int *P = nullptr;
-  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr)>::call(
-      DirectCaller(nullptr, expected_int_pointer_sps_wrapper),
-      [&](Expected<Expected<int32_t *>> R) {
-        P = cantFail(cantFail(std::move(R)));
-      },
-      &X);
-
-  EXPECT_EQ(P, &X);
-}
-
 template <size_t N> struct SPSOpCounter {};
 
 namespace orc_rt {
@@ -263,13 +204,12 @@ public:
 } // namespace orc_rt
 
 static void
-handle_with_reference_types_sps_wrapper(orc_rt_SessionRef Session,
-                                        void *CallCtx,
+handle_with_reference_types_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                         orc_rt_WrapperFunctionReturn Return,
                                         orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<void(
       SPSOpCounter<0>, SPSOpCounter<1>, SPSOpCounter<2>,
-      SPSOpCounter<3>)>::handle(Session, CallCtx, Return, ArgBytes,
+      SPSOpCounter<3>)>::handle(S, CallId, Return, ArgBytes,
                                 [](move_only_function<void()> Return,
                                    OpCounter<0>, OpCounter<1> &,
                                    const OpCounter<2> &,
@@ -336,12 +276,11 @@ public:
 };
 } // anonymous namespace
 
-static void adder_add_async_sps_wrapper(orc_rt_SessionRef Session,
-                                        void *CallCtx,
+static void adder_add_async_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                         orc_rt_WrapperFunctionReturn Return,
                                         orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::handle(
-      Session, CallCtx, Return, ArgBytes,
+      S, CallId, Return, ArgBytes,
       WrapperFunction::handleWithAsyncMethod(&Adder::addAsync));
 }
 
@@ -356,11 +295,11 @@ TEST(SPSWrapperFunctionUtilsTest, HandleWtihAsyncMethod) {
   EXPECT_EQ(Result, 42);
 }
 
-static void adder_add_sync_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+static void adder_add_sync_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                        orc_rt_WrapperFunctionReturn Return,
                                        orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::handle(
-      Session, CallCtx, Return, ArgBytes,
+      S, CallId, Return, ArgBytes,
       WrapperFunction::handleWithSyncMethod(&Adder::addSync));
 }
 

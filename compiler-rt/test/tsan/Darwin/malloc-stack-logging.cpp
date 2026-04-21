@@ -4,7 +4,7 @@
 // use syscalls directly) to make sure other interceptors aren't called.
 
 // RUN: %clangxx_tsan -O1 %s -o %t
-// RUN: MallocStackLogging=1 %run %t 2>&1 | FileCheck %s
+// RUN: env MallocStackLogging=1 %run %t 2>&1 | FileCheck %s
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>

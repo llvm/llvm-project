@@ -532,18 +532,8 @@ class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
 
   using BaseT = SmallPtrSetImpl<PtrType>;
 
-  // A constexpr version of llvm::bit_ceil.
-  // TODO: Replace this with std::bit_ceil once C++20 is available.
-  static constexpr size_t RoundUpToPowerOfTwo(size_t X) {
-    size_t C = 1;
-    size_t CMax = C << (std::numeric_limits<size_t>::digits - 1);
-    while (C < X && C < CMax)
-      C <<= 1;
-    return C;
-  }
-
   // Make sure that SmallSize is a power of two, round up if not.
-  static constexpr size_t SmallSizePowTwo = RoundUpToPowerOfTwo(SmallSize);
+  static constexpr size_t SmallSizePowTwo = llvm::bit_ceil_constexpr(SmallSize);
   /// SmallStorage - Fixed size storage used in 'small mode'.
   const void *SmallStorage[SmallSizePowTwo];
 

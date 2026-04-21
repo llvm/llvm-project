@@ -534,13 +534,38 @@ MachProcess::MachProcess()
       m_image_infos_baton(NULL), m_sent_interrupt_signo(0),
       m_auto_resume_signo(0), m_did_exec(false),
       m_dyld_process_info_create(nullptr),
+      m_dyld_process_create_for_task(nullptr),
+      m_dyld_process_snapshot_create_for_process(nullptr),
+      m_dyld_process_snapshot_get_shared_cache(nullptr),
+      m_dyld_shared_cache_for_each_file(nullptr),
+      m_dyld_shared_cache_get_mapped_size(nullptr),
+      m_dyld_process_snapshot_dispose(nullptr), m_dyld_process_dispose(nullptr),
       m_dyld_process_info_for_each_image(nullptr),
       m_dyld_process_info_release(nullptr),
       m_dyld_process_info_get_cache(nullptr),
-      m_dyld_process_info_get_state(nullptr) {
+      m_dyld_process_info_get_state(nullptr),
+      m_dyld_shared_cache_file_path(nullptr) {
   m_dyld_process_info_create =
       (void *(*)(task_t task, uint64_t timestamp, kern_return_t * kernelError))
           dlsym(RTLD_DEFAULT, "_dyld_process_info_create");
+
+  m_dyld_process_create_for_task =
+      (void *(*)(task_read_t, kern_return_t *))dlsym(
+          RTLD_DEFAULT, "dyld_process_create_for_task");
+  m_dyld_process_snapshot_create_for_process =
+      (void *(*)(void *, kern_return_t *))dlsym(
+          RTLD_DEFAULT, "dyld_process_snapshot_create_for_process");
+  m_dyld_process_snapshot_get_shared_cache = (void *(*)(void *))dlsym(
+      RTLD_DEFAULT, "dyld_process_snapshot_get_shared_cache");
+  m_dyld_shared_cache_for_each_file =
+      (void (*)(void *, void (^)(const char *)))dlsym(
+          RTLD_DEFAULT, "dyld_shared_cache_for_each_file");
+  m_dyld_shared_cache_get_mapped_size = (uint64_t(*)(void *))dlsym(
+      RTLD_DEFAULT, "dyld_shared_cache_get_mapped_size");
+  m_dyld_process_snapshot_dispose =
+      (void (*)(void *))dlsym(RTLD_DEFAULT, "dyld_process_snapshot_dispose");
+  m_dyld_process_dispose =
+      (void (*)(void *))dlsym(RTLD_DEFAULT, "dyld_process_dispose");
   m_dyld_process_info_for_each_image =
       (void (*)(void *info, void (^)(uint64_t machHeaderAddress,
                                      const uuid_t uuid, const char *path)))
@@ -553,6 +578,8 @@ MachProcess::MachProcess()
       RTLD_DEFAULT, "_dyld_process_info_get_platform");
   m_dyld_process_info_get_state = (void (*)(void *info, void *stateInfo))dlsym(
       RTLD_DEFAULT, "_dyld_process_info_get_state");
+  m_dyld_shared_cache_file_path =
+      (const char *(*)())dlsym(RTLD_DEFAULT, "dyld_shared_cache_file_path");
 
   DNBLogThreadedIf(LOG_PROCESS | LOG_VERBOSE, "%s", __PRETTY_FUNCTION__);
 }
@@ -926,7 +953,7 @@ bool MachProcess::GetMachOInformationFromMemory(
 // with all the details we want to send to lldb.
 JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     const std::vector<struct binary_image_information> &image_infos,
-    bool report_load_commands) {
+    DNBBinaryInformationLevel info_level) {
 
   JSONGenerator::ArraySP image_infos_array_sp(new JSONGenerator::Array());
 
@@ -936,19 +963,20 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     // If we should report the Mach-O header and load commands,
     // and those were unreadable, don't report anything about this
     // binary.
-    if (report_load_commands && !image_infos[i].is_valid_mach_header)
+    if (info_level == eBinaryInformationLevelFull &&
+        !image_infos[i].is_valid_mach_header)
       continue;
     JSONGenerator::DictionarySP image_info_dict_sp(
         new JSONGenerator::Dictionary());
     image_info_dict_sp->AddIntegerItem("load_address",
                                        image_infos[i].load_address);
-    // TODO: lldb currently rejects a response without this, but it
-    // is always zero from dyld.  It can be removed once we've had time
-    // for lldb's that require it to be present are obsolete.
-    image_info_dict_sp->AddIntegerItem("mod_date", 0);
-    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+    if (info_level == eBinaryInformationLevelAddrOnly) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
-    if (!report_load_commands) {
+    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+    if (info_level == eBinaryInformationLevelAddrName) {
       image_infos_array_sp->AddItem(image_info_dict_sp);
       continue;
     }
@@ -956,6 +984,10 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     uuid_string_t uuidstr;
     uuid_unparse_upper(image_infos[i].macho_info.uuid, uuidstr);
     image_info_dict_sp->AddStringItem("uuid", uuidstr);
+    if (info_level == eBinaryInformationLevelAddrNameUUID) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
     if (!image_infos[i].macho_info.min_version_os_name.empty() &&
         !image_infos[i].macho_info.min_version_os_version.empty()) {
@@ -1092,12 +1124,12 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
 // macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP
 MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
-                                        bool report_load_commands) {
+                                        DNBBinaryInformationLevel info_level) {
 
   int pointer_size = GetInferiorAddrSize(pid);
   std::vector<struct binary_image_information> image_infos;
   GetAllLoadedBinariesViaDYLDSPI(image_infos);
-  if (report_load_commands) {
+  if (info_level == eBinaryInformationLevelFull) {
     uint32_t platform = GetPlatform();
     const size_t image_count = image_infos.size();
     for (size_t i = 0; i < image_count; i++) {
@@ -1108,7 +1140,7 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
       }
     }
   }
-  return FormatDynamicLibrariesIntoJSON(image_infos, report_load_commands);
+  return FormatDynamicLibrariesIntoJSON(image_infos, info_level);
 }
 
 std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
@@ -1132,7 +1164,8 @@ MachProcess::GetMainBinaryCPUTypes(nub_process_t pid) {
 // using the
 // dyld SPIs that exist in macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
-    nub_process_t pid, std::vector<uint64_t> &macho_addresses) {
+    nub_process_t pid, DNBBinaryInformationLevel info_level,
+    std::vector<uint64_t> &macho_addresses) {
 
   int pointer_size = GetInferiorAddrSize(pid);
 
@@ -1175,17 +1208,87 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
         image_infos[i].is_valid_mach_header = true;
       }
     }
-    return FormatDynamicLibrariesIntoJSON(image_infos,
-                                          /* report_load_commands =  */ true);
+    return FormatDynamicLibrariesIntoJSON(image_infos, info_level);
 }
 
-// From dyld's internal podyld_process_info.h:
+bool MachProcess::GetDebugserverSharedCacheInfo(
+    uuid_t &uuid, std::string &shared_cache_path) {
+  uuid_clear(uuid);
+  shared_cache_path.clear();
 
-JSONGenerator::ObjectSP MachProcess::GetSharedCacheInfo(nub_process_t pid) {
+  if (m_dyld_process_info_create && m_dyld_process_info_get_cache) {
+    kern_return_t kern_ret;
+    dyld_process_info info =
+        m_dyld_process_info_create(mach_task_self(), 0, &kern_ret);
+    if (info) {
+      struct dyld_process_cache_info shared_cache_info;
+      m_dyld_process_info_get_cache(info, &shared_cache_info);
+      uuid_copy(uuid, shared_cache_info.cacheUUID);
+      m_dyld_process_info_release(info);
+    }
+  }
+  if (m_dyld_shared_cache_file_path) {
+    const char *cache_path = m_dyld_shared_cache_file_path();
+    if (cache_path)
+      shared_cache_path = cache_path;
+  }
+  if (!uuid_is_null(uuid))
+    return true;
+  return false;
+}
+
+bool MachProcess::GetInferiorSharedCacheFilepathAndSize(
+    std::string &inferior_sc_path, uint64_t &size) {
+  inferior_sc_path.clear();
+
+  if (!m_dyld_process_create_for_task ||
+      !m_dyld_process_snapshot_create_for_process ||
+      !m_dyld_process_snapshot_get_shared_cache ||
+      !m_dyld_shared_cache_for_each_file || !m_dyld_process_snapshot_dispose ||
+      !m_dyld_shared_cache_get_mapped_size || !m_dyld_process_dispose)
+    return false;
+
+  __block std::string sc_path;
+  kern_return_t kr;
+  void *process = m_dyld_process_create_for_task(m_task.TaskPort(), &kr);
+  if (kr != KERN_SUCCESS)
+    return false;
+  void *snapshot = m_dyld_process_snapshot_create_for_process(process, &kr);
+  if (kr != KERN_SUCCESS)
+    return false;
+  void *cache = m_dyld_process_snapshot_get_shared_cache(snapshot);
+
+  // The shared cache is a collection of files on disk, this callback
+  // will iterate over all of them.
+  // The first filepath provided is the base filename of the cache.
+  __block bool done = false;
+  m_dyld_shared_cache_for_each_file(cache, ^(const char *path) {
+    if (done) {
+      return;
+    }
+    done = true;
+    sc_path = path;
+  });
+  size = m_dyld_shared_cache_get_mapped_size(cache);
+
+  m_dyld_process_snapshot_dispose(snapshot);
+  m_dyld_process_dispose(process);
+
+  inferior_sc_path = sc_path;
+  if (!sc_path.empty())
+    return true;
+  return false;
+}
+
+// From dyld's internal dyld_process_info.h:
+
+JSONGenerator::ObjectSP
+MachProcess::GetInferiorSharedCacheInfo(nub_process_t pid) {
   JSONGenerator::DictionarySP reply_sp(new JSONGenerator::Dictionary());
 
-  kern_return_t kern_ret;
+  uuid_t inferior_sc_uuid;
   if (m_dyld_process_info_create && m_dyld_process_info_get_cache) {
+    kern_return_t kern_ret;
     dyld_process_info info =
         m_dyld_process_info_create(m_task.TaskPort(), 0, &kern_ret);
     if (info) {
@@ -1197,6 +1300,7 @@ JSONGenerator::ObjectSP MachProcess::GetSharedCacheInfo(nub_process_t pid) {
 
       uuid_string_t uuidstr;
       uuid_unparse_upper(shared_cache_info.cacheUUID, uuidstr);
+      uuid_copy(inferior_sc_uuid, shared_cache_info.cacheUUID);
       reply_sp->AddStringItem("shared_cache_uuid", uuidstr);
 
       reply_sp->AddBooleanItem("no_shared_cache", shared_cache_info.noCache);
@@ -1206,6 +1310,31 @@ JSONGenerator::ObjectSP MachProcess::GetSharedCacheInfo(nub_process_t pid) {
       m_dyld_process_info_release(info);
     }
   }
+
+
+  // Use SPI that are only available on newer OSes to fetch the
+  // filepath of the shared cache of the inferior, if available.
+  std::string inferior_sc_path;
+  uint64_t size;
+  if (GetInferiorSharedCacheFilepathAndSize(inferior_sc_path, size)) {
+    reply_sp->AddStringItem("shared_cache_path", inferior_sc_path);
+    reply_sp->AddIntegerItem("shared_cache_size", size);
+  } else {
+    // If debugserver and the inferior are have the same cache UUID,
+    // use the simple call to get the filepath to debugserver's shared
+    // cache, return that.  Can't get the shared cache size this way,
+    // currently.
+    uuid_t debugserver_sc_uuid;
+    std::string debugserver_sc_path;
+    if (GetDebugserverSharedCacheInfo(debugserver_sc_uuid,
+                                      debugserver_sc_path)) {
+      if (uuid_compare(inferior_sc_uuid, debugserver_sc_uuid) == 0 &&
+          !debugserver_sc_path.empty()) {
+        reply_sp->AddStringItem("shared_cache_path", debugserver_sc_path);
+      }
+    }
+  }
+
   return reply_sp;
 }
 
@@ -1739,7 +1868,7 @@ bool MachProcess::Detach() {
     ReplyToAllExceptions();
   }
 
-  m_task.ShutDownExcecptionThread();
+  m_task.ShutDownExceptionThread();
 
   // Detach from our process
   errno = 0;
@@ -2853,12 +2982,6 @@ pid_t MachProcess::AttachForDebug(
 
     if (err.Success()) {
       m_flags |= eMachProcessFlagsAttached;
-      // Sleep a bit to let the exception get received and set our process
-      // status
-      // to stopped.
-      ::usleep(250000);
-      DNBLog("[LaunchAttach] (%d) Done napping after ptrace(PT_ATTACHEXC)'ing",
-             getpid());
       DNBLogThreadedIf(LOG_PROCESS, "successfully attached to pid %d", pid);
       return m_pid;
     } else {

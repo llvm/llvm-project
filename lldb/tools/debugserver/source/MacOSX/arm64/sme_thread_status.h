@@ -46,7 +46,7 @@ __attribute__((aligned(alignof(unsigned int))));
 #define ARM_SME_ZA_STATE9 40
 #define ARM_SME_ZA_STATE10 41
 #define ARM_SME_ZA_STATE11 42
-#define ARM_SME_ZA_STATE12 42
+#define ARM_SME_ZA_STATE12 43
 #define ARM_SME_ZA_STATE13 44
 #define ARM_SME_ZA_STATE14 45
 #define ARM_SME_ZA_STATE15 46

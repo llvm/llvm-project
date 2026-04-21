@@ -18,8 +18,6 @@
 #include <dlfcn.h>
 #include <execinfo.h>
 
-#include "llvm/Object/ELF.h"
-
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -32,6 +30,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/Object/ELF.h"
 #include "llvm/TargetParser/Host.h"
 
 namespace lldb_private {

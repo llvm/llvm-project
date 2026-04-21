@@ -112,7 +112,7 @@ void analyzeProfMetadata(BasicBlock *BB,
                          BranchProbability ColdProbThresh,
                          SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks) {
   // TODO: Handle branches with > 2 successors.
-  BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
+  CondBrInst *CondBr = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!CondBr)
     return;
 
@@ -287,7 +287,7 @@ static InstructionCost getOutliningBenefit(ArrayRef<BasicBlock *> Region,
   // with \ref getOutliningPenalty is needed to model the costs of terminators.
   InstructionCost Benefit = 0;
   for (BasicBlock *BB : Region)
-    for (Instruction &I : BB->instructionsWithoutDebug())
+    for (Instruction &I : *BB)
       if (&I != BB->getTerminator())
         Benefit +=
             TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
@@ -721,7 +721,9 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             SubRegion, &*DT, /* AggregateArgs */ false, /* BFI */ nullptr,
             /* BPI */ nullptr, AC, /* AllowVarArgs */ false,
             /* AllowAlloca */ false, /* AllocaBlock */ nullptr,
-            /* Suffix */ "cold." + std::to_string(OutlinedFunctionID));
+            /* Suffix */ "cold." + std::to_string(OutlinedFunctionID),
+            /* ArgsInZeroAddressSpace */ false,
+            /* VoidReturnWithSingleOutput */ false);
 
         if (CE.isEligible() && isSplittingBeneficial(CE, SubRegion, TTI) &&
             // If this outlining region intersects with another, drop the new

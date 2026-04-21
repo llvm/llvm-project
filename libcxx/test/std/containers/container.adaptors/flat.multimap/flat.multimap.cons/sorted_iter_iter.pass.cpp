@@ -68,7 +68,7 @@ constexpr void test() {
     auto m  = M(std::sorted_equivalent,
                cpp17_input_iterator<const P*>(ar),
                cpp17_input_iterator<const P*>(ar + 4),
-               std::less<int>());
+               std::less<Value>());
     assert(std::ranges::equal(m, std::vector<std::pair<int, int>>{{1, 1}, {4, 2}, {4, 4}, {5, 5}}));
     assert(m.key_comp()(1, 2) == true);
 
@@ -76,19 +76,19 @@ constexpr void test() {
     M m2 = {std::sorted_equivalent,
             cpp17_input_iterator<const P*>(ar),
             cpp17_input_iterator<const P*>(ar + 4),
-            std::less<int>()};
+            std::less<Value>()};
     assert(m2 == m);
   }
   {
     // flat_multimap(sorted_equivalent_t, InputIterator, InputIterator, const key_compare&);
     // greater
-    using M = std::flat_multimap<Key, Value, std::greater<int>, KeyContainer, ValueContainer>;
+    using M = std::flat_multimap<Key, Value, std::greater<Value>, KeyContainer, ValueContainer>;
     using P = std::pair<Key, Value>;
     P ar[]  = {{5, 5}, {4, 4}, {4, 2}, {1, 1}};
     auto m  = M(std::sorted_equivalent,
                cpp17_input_iterator<const P*>(ar),
                cpp17_input_iterator<const P*>(ar + 4),
-               std::greater<int>());
+               std::greater<Value>());
     assert(std::ranges::equal(m, std::vector<std::pair<int, int>>{{5, 5}, {4, 4}, {4, 2}, {1, 1}}));
   }
   {
@@ -108,8 +108,8 @@ constexpr void test_alloc() {
   {
     // flat_multimap(sorted_equivalent_t, InputIterator , InputIterator, const Allocator&)
     using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, std::less<int>, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using A2 = test_allocator<long>;
+    using M  = std::flat_multimap<int, long, std::less<int>, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     using P  = std::pair<int, int>;
     P ar[]   = {{1, 1}, {4, 2}, {4, 4}, {5, 5}};
     auto m   = M(std::sorted_equivalent, ar, ar + 4, A1(5));
@@ -127,8 +127,8 @@ constexpr void test_alloc() {
     // flat_multimap(sorted_equivalent_t, InputIterator, InputIterator, const key_compare&, const Allocator&);
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, C, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using A2 = test_allocator<long>;
+    using M  = std::flat_multimap<int, long, C, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     using P  = std::pair<int, int>;
     P ar[]   = {{1, 1}, {4, 2}, {4, 4}, {5, 5}};
     auto m   = M(std::sorted_equivalent, ar, ar + 4, C(3), A1(5));
@@ -140,9 +140,9 @@ constexpr void test_alloc() {
   {
     // flat_multimap(sorted_equivalent_t, InputIterator, InputIterator, const key_compare&, const Allocator&);
     // explicit(false)
-    using A1 = test_allocator<short>;
+    using A1 = test_allocator<long>;
     using A2 = test_allocator<int>;
-    using M  = std::flat_multimap<short, int, std::less<int>, KeyContainer<short, A1>, ValueContainer<int, A2>>;
+    using M  = std::flat_multimap<long, int, std::less<int>, KeyContainer<long, A1>, ValueContainer<int, A2>>;
     using P  = std::pair<int, int>;
     P ar[]   = {{1, 1}, {4, 2}, {4, 4}, {5, 5}};
     M m      = {std::sorted_equivalent, ar, ar + 4, {}, A1(5)}; // implicit ctor

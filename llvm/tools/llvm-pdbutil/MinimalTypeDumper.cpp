@@ -261,11 +261,15 @@ Error MinimalTypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
 }
 
 Error MinimalTypeDumpVisitor::visitTypeEnd(CVType &Record) {
+  if (RecordBytes)
+    P.formatBinary("bytes", Record.RecordData, 0);
   P.Unindent(Width + 3);
-  if (RecordBytes) {
-    AutoIndent Indent(P, 9);
-    P.formatBinary("Bytes", Record.RecordData, 0);
-  }
+  return Error::success();
+}
+
+Error MinimalTypeDumpVisitor::visitUnknownType(CVType &Record) {
+  if (!RecordBytes)
+    P.formatBinary("bytes", Record.RecordData, 0);
   return Error::success();
 }
 
@@ -277,7 +281,15 @@ Error MinimalTypeDumpVisitor::visitMemberBegin(CVMemberRecord &Record) {
 Error MinimalTypeDumpVisitor::visitMemberEnd(CVMemberRecord &Record) {
   if (RecordBytes) {
     AutoIndent Indent(P, 2);
-    P.formatBinary("Bytes", Record.Data, 0);
+    P.formatBinary("bytes", Record.Data, 0);
+  }
+  return Error::success();
+}
+
+Error MinimalTypeDumpVisitor::visitUnknownMember(CVMemberRecord &Record) {
+  if (!RecordBytes) {
+    AutoIndent Indent(P, 2);
+    P.formatBinary("bytes", Record.Data, 0);
   }
   return Error::success();
 }
@@ -309,7 +321,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
     return Error::success();
 
   auto Max = llvm::max_element(Indices);
-  uint32_t W = NumDigits(Max->getIndex()) + 2;
+  uint32_t W = NumDigitsBase10(Max->getIndex()) + 2;
 
   for (auto I : Indices)
     P.formatLine("{0}: `{1}`", fmt_align(I, AlignStyle::Right, W),
@@ -324,7 +336,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
     return Error::success();
 
   auto Max = llvm::max_element(Indices);
-  uint32_t W = NumDigits(Max->getIndex()) + 2;
+  uint32_t W = NumDigitsBase10(Max->getIndex()) + 2;
 
   for (auto I : Indices)
     P.formatLine("{0}: `{1}`", fmt_align(I, AlignStyle::Right, W),
@@ -494,7 +506,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
     return Error::success();
 
   auto Max = llvm::max_element(Indices);
-  uint32_t W = NumDigits(Max->getIndex()) + 2;
+  uint32_t W = NumDigitsBase10(Max->getIndex()) + 2;
 
   for (auto I : Indices)
     P.formatLine("{0}: `{1}`", fmt_align(I, AlignStyle::Right, W),

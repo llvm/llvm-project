@@ -50,7 +50,7 @@ class COFFWriter {
   Expected<uint32_t> virtualAddressToFileAddress(uint32_t RVA);
 
 public:
-  virtual ~COFFWriter() {}
+  virtual ~COFFWriter() = default;
   Error write();
 
   COFFWriter(Object &Obj, raw_ostream &Out)

@@ -28,8 +28,6 @@ define void @mop4a_za16_fp8_2x1(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2
 ; CHECK-LABEL: mop4a_za16_fp8_2x1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z24.d, z2.d
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmop4a za0.h, { z0.b, z1.b }, z24.b
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sme.fp8.fmop4a.za16.2x1(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm)
@@ -40,9 +38,7 @@ define void @mop4a_za16_fp8_2x2(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2
 ; CHECK-LABEL: mop4a_za16_fp8_2x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z25.d, z3.d
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov z24.d, z2.d
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmop4a za0.h, { z0.b, z1.b }, { z24.b, z25.b }
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sme.fp8.fmop4a.za16.2x2(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2)
@@ -74,8 +70,6 @@ define void @mop4a_za32_fp8_2x1(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2
 ; CHECK-LABEL: mop4a_za32_fp8_2x1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z24.d, z2.d
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmop4a za0.s, { z0.b, z1.b }, z24.b
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sme.fp8.fmop4a.za32.2x1(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm)
@@ -86,9 +80,7 @@ define void @mop4a_za32_fp8_2x2(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2
 ; CHECK-LABEL: mop4a_za32_fp8_2x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z25.d, z3.d
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov z24.d, z2.d
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmop4a za0.s, { z0.b, z1.b }, { z24.b, z25.b }
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sme.fp8.fmop4a.za32.2x2(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2)

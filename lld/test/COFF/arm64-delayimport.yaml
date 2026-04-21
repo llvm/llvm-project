@@ -8,33 +8,35 @@
 # DISASM:  140001014:      d0000011        adrp    x17, 0x140003000
 # DISASM:  140001018:      91002231        add     x17, x17, #8
 # DISASM:  14000101c:      14000001        b       0x140001020 <.text+0x20>
-# DISASM:  140001020:      a9b37bfd        stp     x29, x30, [sp, #-208]!
+# DISASM:  140001020:      a9b27bfd        stp     x29, x30, [sp, #-224]!
 # DISASM:  140001024:      910003fd        mov     x29, sp
 # DISASM:  140001028:      a90107e0        stp     x0, x1, [sp, #16]
 # DISASM:  14000102c:      a9020fe2        stp     x2, x3, [sp, #32]
 # DISASM:  140001030:      a90317e4        stp     x4, x5, [sp, #48]
 # DISASM:  140001034:      a9041fe6        stp     x6, x7, [sp, #64]
-# DISASM:  140001038:      ad0287e0        stp     q0, q1, [sp, #80]
-# DISASM:  14000103c:      ad038fe2        stp     q2, q3, [sp, #112]
-# DISASM:  140001040:      ad0497e4        stp     q4, q5, [sp, #144]
-# DISASM:  140001044:      ad059fe6        stp     q6, q7, [sp, #176]
-# DISASM:  140001048:      aa1103e1        mov     x1, x17
-# DISASM:  14000104c:      b0000000        adrp    x0, 0x140002000
-# DISASM:  140001050:      91000000        add     x0, x0, #0
-# DISASM:  140001054:      90000002        adrp    x2, 0x140001000 <.text>
-# DISASM:  140001058:      91000042        add     x2, x2, #0
-# DISASM:  14000105c:      d63f0040        blr     x2
-# DISASM:  140001060:      aa0003f0        mov     x16, x0
-# DISASM:  140001064:      ad459fe6        ldp     q6, q7, [sp, #176]
-# DISASM:  140001068:      ad4497e4        ldp     q4, q5, [sp, #144]
-# DISASM:  14000106c:      ad438fe2        ldp     q2, q3, [sp, #112]
-# DISASM:  140001070:      ad4287e0        ldp     q0, q1, [sp, #80]
-# DISASM:  140001074:      a9441fe6        ldp     x6, x7, [sp, #64]
-# DISASM:  140001078:      a94317e4        ldp     x4, x5, [sp, #48]
-# DISASM:  14000107c:      a9420fe2        ldp     x2, x3, [sp, #32]
-# DISASM:  140001080:      a94107e0        ldp     x0, x1, [sp, #16]
-# DISASM:  140001084:      a8cd7bfd        ldp     x29, x30, [sp], #208
-# DISASM:  140001088:      d61f0200        br      x16
+# DISASM:  140001038:      f9002be8        str     x8,     [sp, #80]
+# DISASM:  14000103c:      ad0307e0        stp     q0, q1, [sp, #96]
+# DISASM:  140001040:      ad040fe2        stp     q2, q3, [sp, #128]
+# DISASM:  140001044:      ad0517e4        stp     q4, q5, [sp, #160]
+# DISASM:  140001048:      ad061fe6        stp     q6, q7, [sp, #192]
+# DISASM:  14000104c:      aa1103e1        mov     x1, x17
+# DISASM:  140001050:      b0000000        adrp    x0, 0x140002000
+# DISASM:  140001054:      91000000        add     x0, x0, #0
+# DISASM:  140001058:      90000002        adrp    x2, 0x140001000 <.text>
+# DISASM:  14000105c:      91000042        add     x2, x2, #0
+# DISASM:  140001060:      d63f0040        blr     x2
+# DISASM:  140001064:      aa0003f0        mov     x16, x0
+# DISASM:  140001068:      ad461fe6        ldp     q6, q7, [sp, #192]
+# DISASM:  14000106c:      ad4517e4        ldp     q4, q5, [sp, #160]
+# DISASM:  140001070:      ad440fe2        ldp     q2, q3, [sp, #128]
+# DISASM:  140001074:      ad4307e0        ldp     q0, q1, [sp, #96]
+# DISASM:  140001078:      f9402be8        ldr     x8,     [sp, #80]
+# DISASM:  14000107c:      a9441fe6        ldp     x6, x7, [sp, #64]
+# DISASM:  140001080:      a94317e4        ldp     x4, x5, [sp, #48]
+# DISASM:  140001084:      a9420fe2        ldp     x2, x3, [sp, #32]
+# DISASM:  140001088:      a94107e0        ldp     x0, x1, [sp, #16]
+# DISASM:  14000108c:      a8ce7bfd        ldp     x29, x30, [sp], #224
+# DISASM:  140001090:      d61f0200        br      x16
 
 # IMPORTS: Format: COFF-ARM64
 # IMPORTS: Arch: aarch64

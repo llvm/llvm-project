@@ -15,6 +15,7 @@
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Parser/Parser.h"
 
+#include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
@@ -222,9 +223,72 @@ TEST(Bytecode, OpWithoutProperties) {
       llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
   Operation *roundtripped = &block->front();
   EXPECT_EQ(roundtripped->getAttrs().size(), 2u);
-  EXPECT_TRUE(roundtripped->getInherentAttr("inherent_attr") != std::nullopt);
-  EXPECT_TRUE(roundtripped->getDiscardableAttr("other_attr") != Attribute());
+  EXPECT_EQ(roundtripped->getInherentAttr("inherent_attr"), std::nullopt);
+  EXPECT_NE(roundtripped->getDiscardableAttr("inherent_attr"), Attribute());
+  EXPECT_NE(roundtripped->getDiscardableAttr("other_attr"), Attribute());
 
   EXPECT_TRUE(OperationEquivalence::computeHash(op.get()) ==
               OperationEquivalence::computeHash(roundtripped));
+}
+
+TEST(Bytecode, DeepCallSiteLoc) {
+  MLIRContext context;
+  ParserConfig config(&context);
+
+  // Create a deep CallSiteLoc chain to test iterative parsing.
+  Location baseLoc = FileLineColLoc::get(&context, "test.mlir", 1, 1);
+  Location loc = baseLoc;
+  constexpr int kDepth = 1000;
+  for (int i = 0; i < kDepth; ++i) {
+    loc = CallSiteLoc::get(loc, baseLoc);
+  }
+
+  // Create a simple module with the deep location.
+  Builder builder(&context);
+  OwningOpRef<ModuleOp> module =
+      ModuleOp::create(loc, /*attributes=*/std::nullopt);
+  ASSERT_TRUE(module);
+
+  // Write to bytecode.
+  std::string bytecode;
+  llvm::raw_string_ostream os(bytecode);
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), os)));
+
+  // Parse it back using the bytecode reader.
+  std::unique_ptr<Block> block = std::make_unique<Block>();
+  ASSERT_TRUE(succeeded(readBytecodeFile(
+      llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
+
+  // Verify we got the roundtripped module.
+  ASSERT_FALSE(block->empty());
+  Operation *roundTripped = &block->front();
+
+  // Verify the location matches.
+  EXPECT_EQ(module.get()->getLoc(), roundTripped->getLoc());
+}
+
+// Regression test for https://github.com/llvm/llvm-project/issues/99626.
+// FusedLoc::get(context, locs) returns UnknownLoc when locs is empty, so the
+// bytecode reader must not use cast<FusedLoc>() on that result.
+TEST(Bytecode, EmptyFusedLocRoundtrip) {
+  MLIRContext context;
+
+  // FusedLoc with empty locations (no metadata). FusedLoc::get returns
+  // UnknownLoc in this case, but the bytecode writer stores a FusedLoc.
+  FusedLoc fusedLoc = FusedLoc::get(&context, /*locs=*/{}, /*metadata=*/{});
+  auto module = mlir::ModuleOp::create(fusedLoc, "test");
+
+  // Write the module to bytecode.
+  std::string buffer;
+  llvm::raw_string_ostream ostream(buffer);
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module, ostream)));
+  ostream.flush();
+
+  // Parse it back - this used to crash with an assertion failure in cast<>.
+  ParserConfig parseConfig(&context);
+  OwningOpRef<Operation *> roundTripModule =
+      parseSourceString<Operation *>(buffer, parseConfig);
+  ASSERT_TRUE(roundTripModule);
+
+  module.erase();
 }

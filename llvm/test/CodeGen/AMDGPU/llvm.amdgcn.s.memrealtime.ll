@@ -1,7 +1,10 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
+; RUN: not llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
 
-; ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.s.memrealtime
+; ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.s.memrealtime
+; ERR-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:sreg_64(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.memrealtime)
 
 declare i64 @llvm.amdgcn.s.memrealtime() #0
 

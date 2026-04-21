@@ -500,6 +500,17 @@ opt<bool> EnableConfig{
     init(true),
 };
 
+opt<bool> StrongWorkspaceMode{
+    "strong-workspace-mode",
+    cat(Features),
+    desc("An alternate mode of operation for clangd, where the clangd instance "
+         "is used to edit a single workspace.\n"
+         "When enabled, fallback commands use the workspace directory as their "
+         "working directory instead of the parent folder."),
+    init(false),
+    Hidden,
+};
+
 opt<bool> UseDirtyHeaders{"use-dirty-headers", cat(Misc),
                           desc("Use files open in the editor when parsing "
                                "headers instead of reading from the disk"),
@@ -512,6 +523,14 @@ opt<bool> PreambleParseForwardingFunctions{
     desc("Parse all emplace-like functions in included headers"),
     Hidden,
     init(ParseOptions().PreambleParseForwardingFunctions),
+};
+
+opt<bool> SkipPreambleBuild{
+    "skip-preamble-build",
+    cat(Misc),
+    desc("If ture, skip preamble build"),
+    Hidden,
+    init(ParseOptions().SkipPreambleBuild),
 };
 
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
@@ -907,6 +926,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
+  Opts.StrongWorkspaceMode = StrongWorkspaceMode;
   Opts.BuildDynamicSymbolIndex = true;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
@@ -993,6 +1013,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   Opts.UseDirtyHeaders = UseDirtyHeaders;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
+  Opts.SkipPreambleBuild = SkipPreambleBuild;
   Opts.ImportInsertions = ImportInsertions;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
   Opts.TweakFilter = [&](const Tweak &T) {

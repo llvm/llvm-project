@@ -556,6 +556,26 @@ public:
   }
 };
 
+/// Allow SPSExectorAddr serialization to/from T*.
+template <typename T> class SPSSerializationTraits<SPSExecutorAddr, T *> {
+public:
+  static size_t size(T *const &P) {
+    return SPSArgList<SPSExecutorAddr>::size(ExecutorAddr::fromPtr(P));
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, T *const &P) {
+    return SPSArgList<SPSExecutorAddr>::serialize(OB, ExecutorAddr::fromPtr(P));
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, T *&P) {
+    ExecutorAddr Value;
+    if (!SPSArgList<SPSExecutorAddr>::deserialize(IB, Value))
+      return false;
+    P = Value.toPtr<T *>();
+    return true;
+  }
+};
+
 /// Helper type for serializing Errors.
 ///
 /// llvm::Errors are move-only, and not inspectable except by consuming them.

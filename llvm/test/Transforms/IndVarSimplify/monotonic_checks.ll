@@ -6,7 +6,7 @@
 define i32 @test_01(ptr %p) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -45,7 +45,7 @@ exit:
 define i32 @test_01_neg(ptr %p) {
 ; CHECK-LABEL: @test_01_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -86,7 +86,7 @@ exit:
 define i32 @test_02(ptr %p) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG1:!range !.*]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -125,7 +125,7 @@ exit:
 define i32 @test_02_neg(ptr %p) {
 ; CHECK-LABEL: @test_02_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG1]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG1]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -164,7 +164,7 @@ exit:
 define i32 @test_03(ptr %p) {
 ; CHECK-LABEL: @test_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG2:!range !.*]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -202,7 +202,7 @@ exit:
 define i32 @test_04(ptr %p) {
 ; CHECK-LABEL: @test_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG2]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]

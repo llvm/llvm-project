@@ -43,6 +43,9 @@ void doWrite<ol_platform_backend_t>(std::ostream &S,
   case OL_PLATFORM_BACKEND_AMDGPU:
     S << "AMDGPU";
     break;
+  case OL_PLATFORM_BACKEND_LEVEL_ZERO:
+    S << "LEVEL_ZERO";
+    break;
   case OL_PLATFORM_BACKEND_HOST:
     S << "HOST";
     break;
@@ -176,6 +179,7 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
       printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_NAME, "Name"));
   OFFLOAD_ERR(printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_PRODUCT_NAME,
                                              "Product Name"));
+  OFFLOAD_ERR(printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_UID, "UID"));
   OFFLOAD_ERR(
       printDeviceValue<ol_device_type_t>(S, D, OL_DEVICE_INFO_TYPE, "Type"));
   OFFLOAD_ERR(printDeviceValue<const char *>(
@@ -204,6 +208,9 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
       S, D, OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE, "Max Mem Allocation Size", "B"));
   OFFLOAD_ERR(printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_GLOBAL_MEM_SIZE,
                                          "Global Mem Size", "B"));
+  OFFLOAD_ERR(
+      printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
+                                 "Work Group Shared Mem Size", "B"));
   OFFLOAD_ERR(
       (printDeviceValue<ol_device_fp_capability_flags_t, PrintKind::FP_FLAGS>(
           S, D, OL_DEVICE_INFO_SINGLE_FP_CONFIG,
@@ -242,7 +249,7 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
 }
 
 ol_result_t printRoot(std::ostream &S) {
-  OFFLOAD_ERR(olInit());
+  OFFLOAD_ERR(olInit(nullptr));
   S << "Liboffload Version: " << OL_VERSION_MAJOR << "." << OL_VERSION_MINOR
     << "." << OL_VERSION_PATCH << "\n";
 

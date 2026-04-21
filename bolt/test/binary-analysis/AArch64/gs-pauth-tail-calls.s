@@ -1,9 +1,6 @@
 // RUN: %clang %cflags -Wl,--entry=_custom_start -march=armv8.3-a %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pacret                        %t.exe 2>&1 | FileCheck -check-prefix=PACRET %s
-// RUN: llvm-bolt-binary-analysis --scanners=pauth --auth-traps-on-failure %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,FPAC %s
-// RUN: llvm-bolt-binary-analysis --scanners=pauth                         %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,NOFPAC %s
-
-// PACRET-NOT: untrusted link register found before tail call
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all --auth-traps-on-failure %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,FPAC %s
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all                         %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,NOFPAC %s
 
         .text
 

@@ -356,13 +356,10 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
           }
         }
 
-        // If there was only one owner, then we're done.  But if we also hit
-        // some user breakpoint on our way out, we should mark ourselves as
-        // done, but also not claim to explain the stop, since it is more
-        // important to report the user breakpoint than the step out
-        // completion.
-
-        if (site_sp->GetNumberOfConstituents() == 1)
+        // If the thread also hit a user breakpoint on its way out, the plan is
+        // done but should not claim to explain the stop. It is more important
+        // to report the user breakpoint than the step out completion.
+        if (!site_sp->ContainsUserBreakpointForThread(GetThread()))
           return true;
       }
       return false;
@@ -469,8 +466,7 @@ bool ThreadPlanStepOut::MischiefManaged() {
     // we're done with this step out operation.
 
     Log *log = GetLog(LLDBLog::Step);
-    if (log)
-      LLDB_LOGF(log, "Completed step out plan.");
+    LLDB_LOGF(log, "Completed step out plan.");
     if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
       GetTarget().RemoveBreakpointByID(m_return_bp_id);
       m_return_bp_id = LLDB_INVALID_BREAK_ID;

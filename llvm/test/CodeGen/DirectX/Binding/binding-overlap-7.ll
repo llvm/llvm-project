@@ -29,7 +29,7 @@ entry:
 
   ; Buffer<double> C[] : register(t2, space4);
   %h2 = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, ptr @C.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 10, ptr @C.str)
 
   ret void
 }

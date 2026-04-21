@@ -76,7 +76,6 @@ define float @float_fsub_acquire(ptr %p) nounwind {
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
 ; LA64F-NEXT:    lu12i.w $a1, -264192
-; LA64F-NEXT:    lu32i.d $a1, 0
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB1_1: # %atomicrmw.start
@@ -641,7 +640,6 @@ define float @float_fsub_release(ptr %p) nounwind {
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
 ; LA64F-NEXT:    lu12i.w $a1, -264192
-; LA64F-NEXT:    lu32i.d $a1, 0
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB9_1: # %atomicrmw.start
@@ -1206,7 +1204,6 @@ define float @float_fsub_acq_rel(ptr %p) nounwind {
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
 ; LA64F-NEXT:    lu12i.w $a1, -264192
-; LA64F-NEXT:    lu32i.d $a1, 0
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB17_1: # %atomicrmw.start
@@ -1771,7 +1768,6 @@ define float @float_fsub_seq_cst(ptr %p) nounwind {
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
 ; LA64F-NEXT:    lu12i.w $a1, -264192
-; LA64F-NEXT:    lu32i.d $a1, 0
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB25_1: # %atomicrmw.start
@@ -2336,7 +2332,6 @@ define float @float_fsub_monotonic(ptr %p) nounwind {
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
 ; LA64F-NEXT:    lu12i.w $a1, -264192
-; LA64F-NEXT:    lu32i.d $a1, 0
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB33_1: # %atomicrmw.start

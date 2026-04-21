@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -39,36 +40,36 @@ using namespace llvm;
 STATISTIC(NumBroken, "Number of blocks inserted");
 
 namespace {
-  struct BreakCriticalEdges : public FunctionPass {
-    static char ID; // Pass identification, replacement for typeid
-    BreakCriticalEdges() : FunctionPass(ID) {
-      initializeBreakCriticalEdgesPass(*PassRegistry::getPassRegistry());
-    }
+struct BreakCriticalEdges : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  BreakCriticalEdges() : FunctionPass(ID) {
+    initializeBreakCriticalEdgesPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override {
-      auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-      auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  bool runOnFunction(Function &F) override {
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
 
-      auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
-      auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
+    auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
+    auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
 
-      auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
-      auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
-      unsigned N =
-          SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI, nullptr, PDT));
-      NumBroken += N;
-      return N > 0;
-    }
+    auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
+    auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
+    unsigned N = SplitAllCriticalEdges(
+        F, CriticalEdgeSplittingOptions(DT, LI, nullptr, PDT));
+    NumBroken += N;
+    return N > 0;
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addPreserved<LoopInfoWrapperPass>();
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
 
-      // No loop canonicalization guarantees are broken by this pass.
-      AU.addPreservedID(LoopSimplifyID);
-    }
-  };
-}
+    // No loop canonicalization guarantees are broken by this pass.
+    AU.addPreservedID(LoopSimplifyID);
+  }
+};
+} // namespace
 
 char BreakCriticalEdges::ID = 0;
 INITIALIZE_PASS(BreakCriticalEdges, "break-crit-edges",
@@ -76,6 +77,7 @@ INITIALIZE_PASS(BreakCriticalEdges, "break-crit-edges",
 
 // Publicly exposed interface to pass...
 char &llvm::BreakCriticalEdgesID = BreakCriticalEdges::ID;
+
 FunctionPass *llvm::createBreakCriticalEdgesPass() {
   return new BreakCriticalEdges();
 }
@@ -172,7 +174,7 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
                                                      DestBB->getName() +
                                                      "_crit_edge");
   // Create our unconditional branch.
-  BranchInst *NewBI = BranchInst::Create(DestBB, NewBB);
+  UncondBrInst *NewBI = UncondBrInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());
   if (auto *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
     NewBI->setMetadata(LLVMContext::MD_loop, LoopMD);
@@ -333,7 +335,8 @@ findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
         return nullptr;
       IBB = PredBB;
       break;
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Switch:
       OtherPreds.push_back(PredBB);
       continue;
@@ -348,7 +351,8 @@ findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
 bool llvm::SplitIndirectBrCriticalEdges(Function &F,
                                         bool IgnoreBlocksWithoutPHI,
                                         BranchProbabilityInfo *BPI,
-                                        BlockFrequencyInfo *BFI) {
+                                        BlockFrequencyInfo *BFI,
+                                        DomTreeUpdater *DTU) {
   // Check whether the function has any indirectbrs, and collect which blocks
   // they may jump to. Since most functions don't have indirect branches,
   // this lowers the common case's overhead to O(Blocks) instead of O(Edges).
@@ -389,7 +393,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       BPI->eraseBlock(Target);
     }
 
-    BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHIIt, ".split");
+    BasicBlock *BodyBlock =
+        SplitBlock(Target, FirstNonPHIIt, DTU, nullptr, nullptr, ".split");
     if (ShouldUpdateAnalysis) {
       // Copy the BFI/BPI from Target to BodyBlock.
       BPI->setEdgeProbability(BodyBlock, EdgeProbabilities);
@@ -410,6 +415,9 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
         RemapSourceAtom(&I, VMap);
 
     BlockFrequency BlockFreqForDirectSucc;
+    SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
+    if (DTU)
+      DTUpdates.reserve(OtherPreds.size() * 2 + 1);
     for (BasicBlock *Pred : OtherPreds) {
       // If the target is a loop to itself, then the terminator of the split
       // block (BodyBlock) needs to be updated.
@@ -418,12 +426,20 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       if (ShouldUpdateAnalysis)
         BlockFreqForDirectSucc += BFI->getBlockFreq(Src) *
             BPI->getEdgeProbability(Src, DirectSucc);
+      if (DTU) {
+        DTUpdates.push_back({DominatorTree::Insert, Src, DirectSucc});
+        DTUpdates.push_back({DominatorTree::Delete, Src, Target});
+      }
     }
     if (ShouldUpdateAnalysis) {
       BFI->setBlockFreq(DirectSucc, BlockFreqForDirectSucc);
       BlockFrequency NewBlockFreqForTarget =
           BFI->getBlockFreq(Target) - BlockFreqForDirectSucc;
       BFI->setBlockFreq(Target, NewBlockFreqForTarget);
+    }
+    if (DTU) {
+      DTUpdates.push_back({DominatorTree::Insert, DirectSucc, BodyBlock});
+      DTU->applyUpdates(DTUpdates);
     }
 
     // Ok, now fix up the PHIs. We know the two blocks only have PHIs, and that
