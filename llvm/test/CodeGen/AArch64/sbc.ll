@@ -235,15 +235,42 @@ define i32 @test_only_borrow_ugt_42(i32 %a, i32 %x) {
 }
 
 define i32 @test_only_borrow_ugt_42_combine(i32 %a, i32 %x) {
-; CHECK-LABEL: test_only_borrow_ugt_42_combine:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #42
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    sub w0, w1, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_only_borrow_ugt_42_combine:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w19, -8
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    subs w0, w0, #42
+; CHECK-SD-NEXT:    cset w8, hi
+; CHECK-SD-NEXT:    sub w19, w1, w8
+; CHECK-SD-NEXT:    bl use
+; CHECK-SD-NEXT:    mov w0, w19
+; CHECK-SD-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_only_borrow_ugt_42_combine:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w20, -16
+; CHECK-GI-NEXT:    .cfi_offset w30, -32
+; CHECK-GI-NEXT:    cmp w0, #42
+; CHECK-GI-NEXT:    sub w0, w0, #42
+; CHECK-GI-NEXT:    mov w19, w1
+; CHECK-GI-NEXT:    cset w20, hi
+; CHECK-GI-NEXT:    bl use
+; CHECK-GI-NEXT:    sub w0, w19, w20
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %cc = icmp ugt i32 %a, 42
   %carry = zext i1 %cc to i32
   %res = sub i32 %x, %carry
+  %sub42 = sub i32 %a, 42
+  call void @use(i32 %sub42)
   ret i32 %res
 }
 
