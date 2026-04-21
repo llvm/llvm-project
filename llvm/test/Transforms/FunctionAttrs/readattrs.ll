@@ -352,13 +352,13 @@ define i32 @volatile_load(ptr %p) {
 ; FNATTRS-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
 ; FNATTRS-NEXT:    ret i32 [[LOAD]]
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@volatile_load
 ; ATTRIBUTOR-SAME: (ptr nofree [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
 ; ATTRIBUTOR-NEXT:    ret i32 [[LOAD]]
 ;
-; ATTRIBUTOR-CGSCC: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR-CGSCC: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@volatile_load
 ; ATTRIBUTOR-CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR10:[0-9]+]] {
 ; ATTRIBUTOR-CGSCC-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
