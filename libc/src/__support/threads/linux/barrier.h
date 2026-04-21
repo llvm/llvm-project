@@ -47,7 +47,7 @@ static_assert(alignof(Barrier) <= alignof(pthread_barrier_t),
 static_assert(sizeof(CndVar) <= 24,
               "CndVar size exceeds the size in __barrier_type.h");
 
-static_assert(sizeof(Mutex) <= 32,
+static_assert(sizeof(Mutex) <= 24,
               "Mutex size exceeds the size in __barrier_type.h");
 
 } // namespace LIBC_NAMESPACE_DECL
