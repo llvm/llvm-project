@@ -706,7 +706,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       Status error;
       return child_sp->GetData(data, error);
     }
-    return true;
+    return 0;
   } else /* (items > 1) */
   {
     Status error;
