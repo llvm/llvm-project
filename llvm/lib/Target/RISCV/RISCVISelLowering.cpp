@@ -880,7 +880,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
 
     static const unsigned FloatingPointVPOps[] = {
-        ISD::VP_FADD,        ISD::VP_FMUL,
         ISD::VP_FNEG,
         ISD::VP_FMA,         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
         ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,
@@ -1201,8 +1200,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: support more vp ops.
     static const unsigned ZvfhminZvfbfminPromoteVPOps[] = {
-        ISD::VP_FADD,
-        ISD::VP_FMUL,
         ISD::VP_FMA,
         ISD::VP_REDUCE_FMIN,
         ISD::VP_REDUCE_FMAX,
@@ -7548,8 +7545,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(UDIV)       // VP_UDIV
   VP_CASE(UREM)       // VP_UREM
   VP_CASE(SHL)        // VP_SHL
-  VP_CASE(FADD)       // VP_FADD
-  VP_CASE(FMUL)       // VP_FMUL
   VP_CASE(FNEG)       // VP_FNEG
   VP_CASE(SETCC)      // VP_SETCC
   case ISD::CTLZ_ZERO_UNDEF:
@@ -8975,8 +8970,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_OR:
   case ISD::VP_XOR:
     return lowerLogicVPOp(Op, DAG);
-  case ISD::VP_FADD:
-  case ISD::VP_FMUL:
   case ISD::VP_FNEG:
   case ISD::VP_SQRT:
   case ISD::VP_FMA:
