@@ -18,6 +18,7 @@ The following options are described below:
  - :option:`MinimumLoopCounterNameLength`, :option:`IgnoredLoopCounterNames`
  - :option:`MinimumExceptionNameLength`,
    :option:`IgnoredExceptionVariableNames`
+ - :option:`LineCountThreshold`
 
 .. option:: MinimumVariableNameLength
 
@@ -121,3 +122,20 @@ The following options are described below:
       catch (const std::exception& e) {
           // ...
       }
+
+.. option:: LineCountThreshold
+
+    Defines the minimum number of lines required between declaration and last
+    use for a diagnostic to be issued. The default value for this option is 0,
+    which corresponds to all variables being flagged. This option only affects
+    the behavior regarding local variables: a warning is always issued when a
+    global variable has a short name, because globals can potentially be used
+    across multiple files.
+
+    .. code-block:: c++
+
+      // In this example, a warning will be issued if LineCountThreshold < N
+      int a = 0;      // First line (declaration line)
+      a = 1;          // Second line
+                      // ...
+      last_use_of(a); // N-th line
