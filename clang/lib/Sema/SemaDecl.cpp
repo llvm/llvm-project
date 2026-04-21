@@ -2899,14 +2899,16 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   // previous decl", for example if the attribute needs to be consistent
   // between redeclarations, you need to call a custom merge function here.
   InheritableAttr *NewAttr = nullptr;
-  if (const auto *AA = dyn_cast<AvailabilityAttr>(Attr))
-    NewAttr = S.mergeAvailabilityAttr(
+  if (const auto *AA = dyn_cast<AvailabilityAttr>(Attr)) {
+    const IdentifierInfo *InferredPlatformII = nullptr;
+    if (AvailabilityAttr *Inf = AA->getInferredAttrAs())
+      InferredPlatformII = Inf->getPlatform();
+    NewAttr = S.mergeAndInferAvailabilityAttr(
         D, *AA, AA->getPlatform(), AA->isImplicit(), AA->getIntroduced(),
         AA->getDeprecated(), AA->getObsoleted(), AA->getUnavailable(),
         AA->getMessage(), AA->getStrict(), AA->getReplacement(), AMK,
-        AA->getPriority(), AA->getEnvironment(),
-        AA->getOrigAnyAppleOSVersion());
-  else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
+        AA->getPriority(), AA->getEnvironment(), InferredPlatformII);
+  } else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
     NewAttr = S.mergeVisibilityAttr(D, *VA, VA->getVisibility());
   else if (const auto *VA = dyn_cast<TypeVisibilityAttr>(Attr))
     NewAttr = S.mergeTypeVisibilityAttr(D, *VA, VA->getVisibility());
@@ -4800,6 +4802,25 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       return New->setInvalidDecl();
     }
   }
+
+  // C2y 6.7.1p7:
+  //   Within a translation unit, the same identifier shall not appear with
+  //   both internal and external linkage.
+  //
+  // In C11 through C23, this was undefined behavior (C11 6.2.2p7).
+  //
+  // This can occur when an extern declaration in block scope finds a file-scope
+  // static declaration, but a no-linkage local variable shadowed the static,
+  // preventing linkage inheritance per C2y 6.2.2p4.
+  if (!getLangOpts().CPlusPlus && New->isLocalVarDecl() &&
+      New->hasExternalStorage() && Old->isFileVarDecl() && Old->hasLinkage() &&
+      Previous.isShadowed() && Old->getFormalLinkage() == Linkage::Internal) {
+    Diag(New->getLocation(), diag::err_internal_extern_mismatch)
+        << New->getDeclName() << getLangOpts().C2y;
+    Diag(OldLocation, PrevDiag);
+    return New->setInvalidDecl();
+  }
+
   // C99 6.2.2p4:
   //   For an identifier declared with the storage-class specifier
   //   extern in a scope in which a prior declaration of that
@@ -9274,9 +9295,12 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
         continue;
       if (Overridden.insert(BaseMD).second) {
         MD->addOverriddenMethod(BaseMD);
-        CheckOverridingFunctionReturnType(MD, BaseMD);
-        CheckOverridingFunctionAttributes(MD, BaseMD);
-        CheckOverridingFunctionExceptionSpec(MD, BaseMD);
+        bool Invalid = false;
+        Invalid |= CheckOverridingFunctionReturnType(MD, BaseMD);
+        Invalid |= CheckOverridingFunctionAttributes(MD, BaseMD);
+        Invalid |= CheckOverridingFunctionExceptionSpec(MD, BaseMD);
+        if (Invalid)
+          MD->setInvalidDecl();
         CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
       }
 
@@ -18047,7 +18071,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   bool IsFixed = !UnderlyingType.isUnset() || ScopedEnum;
 
   if (Kind == TagTypeKind::Enum) {
-    if (UnderlyingType.isInvalid() || (!UnderlyingType.get() && ScopedEnum)) {
+    if (UnderlyingType.isInvalid() || (!UnderlyingType.get() && ScopedEnum) ||
+        Invalid) {
       // No underlying type explicitly specified, or we failed to parse the
       // type, default to int.
       EnumUnderlying = Context.IntTy.getTypePtr();

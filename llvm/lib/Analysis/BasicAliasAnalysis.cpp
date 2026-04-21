@@ -624,9 +624,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     if (Op->getOpcode() == Instruction::BitCast ||
         Op->getOpcode() == Instruction::AddrSpaceCast) {
       Value *NewV = Op->getOperand(0);
-      // Don't look through casts between address spaces with differing index
-      // widths.
-      if (DL.getIndexTypeSizeInBits(NewV->getType()) != IndexSize) {
+      auto *NewVTy = NewV->getType();
+      // Don't look through casts to non-scalar-pointer types or address spaces
+      // with differing index widths.
+      if (!isa<PointerType>(NewVTy) ||
+          DL.getIndexTypeSizeInBits(NewVTy) != IndexSize) {
         Decomposed.Base = V;
         return Decomposed;
       }
@@ -1292,7 +1294,8 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
     const APInt &Scale = Index.Scale;
 
-    KnownBits Known = computeKnownBits(Index.Val.V, DL, &AC, Index.CxtI, DT);
+    SimplifyQuery SQ(DL, DT, &AC, Index.CxtI, /*UseInstrInfo=*/true);
+    KnownBits Known = computeKnownBits(Index.Val.V, SQ);
 
     APInt ScaleForGCD = Scale;
     if (!Index.IsNSW)
@@ -1315,8 +1318,8 @@ AliasResult BasicAAResult::aliasGEP(
     else
       GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
 
-    ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
-                                            true, &AC, Index.CxtI);
+    ConstantRange CR =
+        computeConstantRange(Index.Val.V, /*ForSigned=*/false, SQ);
     CR = CR.intersectWith(
         ConstantRange::fromKnownBits(Known, /* Signed */ true),
         ConstantRange::Signed);
