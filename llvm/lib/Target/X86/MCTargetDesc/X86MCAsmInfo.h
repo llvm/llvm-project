@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCASMINFO_H
 
 #include "MCTargetDesc/X86MCExpr.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmInfoELF.h"
@@ -26,7 +27,9 @@ class X86MCAsmInfoDarwin : public MCAsmInfoDarwin {
   virtual void anchor();
 
 public:
+  StringSet<> ReservedIdentifiers;
   explicit X86MCAsmInfoDarwin(const Triple &Triple);
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 struct X86_64MCAsmInfoDarwin : public X86MCAsmInfoDarwin {
@@ -40,14 +43,18 @@ class X86ELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
+  StringSet<> ReservedIdentifiers;
   explicit X86ELFMCAsmInfo(const Triple &Triple);
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 class X86MCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
   void anchor() override;
 
 public:
+  StringSet<> ReservedIdentifiers;
   explicit X86MCAsmInfoMicrosoft(const Triple &Triple);
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 class X86MCAsmInfoMicrosoftMASM : public X86MCAsmInfoMicrosoft {
@@ -61,7 +68,9 @@ class X86MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
   void anchor() override;
 
 public:
+  StringSet<> ReservedIdentifiers;
   explicit X86MCAsmInfoGNUCOFF(const Triple &Triple);
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 namespace X86 {
