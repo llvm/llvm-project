@@ -419,24 +419,24 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 
     // Handle boolean reductions with spirv.Any / spirv.All.
     if (resultType.isInteger(1)) {
-      auto kind = reduceOp.getKind();
-      if (kind == vector::CombiningKind::OR ||
-          kind == vector::CombiningKind::AND) {
-        Value result;
-        if (kind == vector::CombiningKind::OR)
-          result = spirv::AnyOp::create(rewriter, loc, resultType,
-                                        adaptor.getVector());
-        else
-          result = spirv::AllOp::create(rewriter, loc, resultType,
-                                        adaptor.getVector());
-        if (Value acc = adaptor.getAcc()) {
-          if (kind == vector::CombiningKind::OR)
-            result = spirv::LogicalOrOp::create(rewriter, loc, resultType,
-                                                result, acc);
-          else
-            result = spirv::LogicalAndOp::create(rewriter, loc, resultType,
-                                                 result, acc);
-        }
+      vector::CombiningKind kind = reduceOp.getKind();
+
+      if (kind == vector::CombiningKind::OR) {
+        Value result = spirv::AnyOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalOrOp::create(rewriter, loc, resultType,
+                                              result, acc);
+        rewriter.replaceOp(reduceOp, result);
+        return success();
+      }
+
+      if (kind == vector::CombiningKind::AND) {
+        Value result = spirv::AllOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalAndOp::create(rewriter, loc, resultType,
+                                               result, acc);
         rewriter.replaceOp(reduceOp, result);
         return success();
       }
