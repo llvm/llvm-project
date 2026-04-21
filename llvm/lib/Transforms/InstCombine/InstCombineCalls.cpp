@@ -3971,6 +3971,47 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::vp_load: {
+    auto *VPI = cast<VPIntrinsic>(II);
+    // Fold away bit casts of the loaded value by loading the desired type,
+    // if the mask is all-ones.
+    Value *Mask = VPI->getMaskParam();
+    Value *EVL = VPI->getVectorLengthParam();
+    if (!isa<Constant>(Mask) || !cast<Constant>(Mask)->isAllOnesValue() ||
+        !II->hasOneUse())
+      break;
+
+    const DataLayout &DL = II->getDataLayout();
+    auto *Cast = dyn_cast<CastInst>(II->user_back());
+    if (!Cast || !Cast->isNoopCast(DL) || !isa<VectorType>(Cast->getDestTy()))
+      break;
+    VectorType *OrigVecTy = cast<VectorType>(II->getType());
+    Align OrigAlign =
+        DL.getValueOrABITypeAlignment(VPI->getPointerAlignment(), OrigVecTy);
+    ElementCount OrigVecCnt = OrigVecTy->getElementCount();
+    VectorType *NewVecTy = cast<VectorType>(Cast->getDestTy());
+    ElementCount NewVecCnt = NewVecTy->getElementCount();
+
+    // Right now we only support cases where the NewVec is longer, because for
+    // cases where it's shorter, we have to be sure that EVL can be exactly
+    // divided, otherwise it might yield incorrect results or even page faults
+    // (if we round-up during the division).
+    if (OrigVecCnt.isScalable() == NewVecCnt.isScalable() &&
+        NewVecCnt.hasKnownScalarFactor(OrigVecCnt)) {
+      unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
+      Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
+      Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
+      CallInst *NewVP = Builder.CreateIntrinsic(
+          NewVecTy, Intrinsic::vp_load,
+          {VPI->getMemoryPointerParam(), NewMask, NewEVL});
+      // Preserve the original alignment.
+      NewVP->addParamAttrs(
+          0, AttrBuilder(VPI->getContext()).addAlignmentAttr(OrigAlign));
+      replaceInstUsesWith(*Cast, NewVP);
+      return eraseInstFromFunction(*Cast);
+    }
+    break;
+  }
   case Intrinsic::experimental_vp_reverse: {
     Value *X;
     Value *Vec = II->getArgOperand(0);
