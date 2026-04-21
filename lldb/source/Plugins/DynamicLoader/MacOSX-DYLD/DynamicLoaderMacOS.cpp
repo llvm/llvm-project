@@ -456,15 +456,15 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
 }
 
 static size_t LibraryInfosCount(StructuredData::ObjectSP binaries_info_sp) {
-  if (binaries_info_sp && binaries_info_sp->GetAsDictionary() &&
-      binaries_info_sp->GetAsDictionary()->HasKey("images") &&
-      binaries_info_sp->GetAsDictionary()
-          ->GetValueForKey("images")
-          ->GetAsArray())
-    return binaries_info_sp->GetAsDictionary()
-        ->GetValueForKey("images")
-        ->GetAsArray()
-        ->GetSize();
+  if (!binaries_info_sp)
+    return 0;
+  if (StructuredData::Dictionary *dict = binaries_info_sp->GetAsDictionary()) {
+    if (!dict->HasKey("images"))
+      return 0;
+    if (StructuredData::Array *images =
+            dict->GetValueForKey("images")->GetAsArray())
+      return images->GetSize();
+  }
 
   return 0;
 }
