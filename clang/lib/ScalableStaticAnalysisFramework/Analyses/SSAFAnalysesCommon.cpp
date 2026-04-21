@@ -18,15 +18,15 @@ namespace {
 // Traverses the AST and finds contributors.
 class ContributorFinder : public DynamicRecursiveASTVisitor {
 public:
-  std::vector<const NamedDecl *> Contributors;
+  std::set<const NamedDecl *> Contributors;
 
   bool VisitFunctionDecl(FunctionDecl *D) override {
-    Contributors.push_back(D);
+    Contributors.insert(D);
     return true;
   }
 
   bool VisitRecordDecl(RecordDecl *D) override {
-    Contributors.push_back(D);
+    Contributors.insert(D);
     return true;
   }
 
@@ -34,29 +34,31 @@ public:
     DeclContext *DC = D->getDeclContext();
 
     if (DC->isFileContext() || DC->isNamespace())
-      Contributors.push_back(D);
+      Contributors.insert(D);
     return true;
   }
 };
 
-// An AST visitor that skips the root node's strict-descendants that are
-// callable Decls and record Decls, because those are separate contributors.
-//
-// Clients need to implement their own `MatchAction`, which is a function that
-// takes a `DynTypedNode`, decides if it matches and performs any further
-// callback actions.
+/// An AST visitor that skips the root node's strict-descendants that are
+/// callable Decls and record Decls, because those are separate contributors.
+///
+/// Clients need to implement their own "MatchAction", which is a function that
+/// takes a `DynTypedNode`, decides if the node matches and performs any further
+/// callback actions.
+/// ContributorFactFinder takes a reference to a "MatchAction". It does not own
+/// the "MatchAction", which is usually stateful and may own containers.
 class ContributorFactFinder : public DynamicRecursiveASTVisitor {
-  llvm::function_ref<void(const DynTypedNode &)> MatchAction;
+  llvm::function_ref<void(const DynTypedNode &)> MatchActionRef;
   const NamedDecl *RootDecl = nullptr;
 
   template <typename NodeTy> void match(const NodeTy &Node) {
-    MatchAction(DynTypedNode::create(Node));
+    MatchActionRef(DynTypedNode::create(Node));
   }
 
 public:
   ContributorFactFinder(
-      llvm::function_ref<void(const DynTypedNode &)> MatchAction)
-      : MatchAction(MatchAction) {
+      llvm::function_ref<void(const DynTypedNode &)> MatchActionRef)
+      : MatchActionRef(MatchActionRef) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false;
   }
