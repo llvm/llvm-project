@@ -155,7 +155,6 @@ define i1 @extract_bitcast_oob_idx(<4 x i32> %bits, ptr %p) nounwind {
 ; CHECK-NEXT:    vrsub.vx v9, v9, a1
 ; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
   %masked = or <4 x i32> %bits, <i32 u0x80000000, i32 0, i32 u0x80000000, i32 0>
   %fvec = bitcast <4 x i32> %masked to <4 x float>
