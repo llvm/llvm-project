@@ -211,7 +211,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.config.ltoCache.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.config.ltoCache,
-                             createAddBufferFn(files, file_names)));
+                             createAddBufferFn(files, file_names),
+                             !ctx.config.dtltoDistributor.empty()));
 
   checkError(ltoObj->run(
       [&](size_t task, const Twine &moduleName) {

@@ -20,6 +20,11 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
+/// This type defines the callback to add a pre-existing file (e.g. in a cache).
+///
+/// Buffer callbacks must be thread safe.
+using AddBufferFn = std::function<void(unsigned Task, const Twine &ModuleName,
+                                       std::unique_ptr<MemoryBuffer> MB)>;
 
 /// This class wraps an output stream for a file. Most clients should just be
 /// able to return an instance of this base class from the stream callback, but
@@ -50,6 +55,7 @@ public:
     if (!Committed)
       report_fatal_error("CachedFileStream was not committed.\n");
   }
+  virtual AddBufferFn GetAddBuffer() { return AddBufferFn(); }
 };
 
 /// This type defines the callback to add a file that is generated on the fly.
@@ -101,12 +107,6 @@ private:
   std::string CacheDirectoryPath;
 };
 
-/// This type defines the callback to add a pre-existing file (e.g. in a cache).
-///
-/// Buffer callbacks must be thread safe.
-using AddBufferFn = std::function<void(unsigned Task, const Twine &ModuleName,
-                                       std::unique_ptr<MemoryBuffer> MB)>;
-
 /// Create a local file system cache which uses the given cache name, temporary
 /// file prefix, cache directory and file callback.  This function does not
 /// immediately create the cache directory if it does not yet exist; this is
@@ -117,7 +117,8 @@ LLVM_ABI Expected<FileCache> localCache(
     const Twine &CacheNameRef, const Twine &TempFilePrefixRef,
     const Twine &CacheDirectoryPathRef,
     AddBufferFn AddBuffer = [](size_t Task, const Twine &ModuleName,
-                               std::unique_ptr<MemoryBuffer> MB) {});
+                               std::unique_ptr<MemoryBuffer> MB) {},
+    bool CacheFileRename = false);
 } // namespace llvm
 
 #endif
