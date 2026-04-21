@@ -264,6 +264,10 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vabds_f32:
   case NEON::BI__builtin_neon_vshld_s64:
   case NEON::BI__builtin_neon_vshld_u64:
+  case NEON::BI__builtin_neon_vpmins_f32:
+  case NEON::BI__builtin_neon_vpminqd_f64:
+  case NEON::BI__builtin_neon_vpminnms_f32:
+  case NEON::BI__builtin_neon_vpminnmqd_f64:
     return emitNeonCall(cgf.cgm, cgf.getBuilder(),
                         {cgf.convertType(expr->getArg(0)->getType())}, ops,
                         llvmIntrName, cgf.convertType(expr->getType()), loc);
@@ -2457,8 +2461,16 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vpmin_v:
   case NEON::BI__builtin_neon_vpminq_v:
+    intrName = usgn ? "aarch64.neon.uminp" : "aarch64.neon.sminp";
+    if (cir::isFPOrVectorOfFPType(ty))
+      intrName = "aarch64.neon.fminp";
+    return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vpmax_v:
   case NEON::BI__builtin_neon_vpmaxq_v:
     cgm.errorNYI(expr->getSourceRange(),
@@ -2603,8 +2615,14 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vmul_laneq_v:
   case NEON::BI__builtin_neon_vpmaxnm_v:
   case NEON::BI__builtin_neon_vpmaxnmq_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vpminnm_v:
   case NEON::BI__builtin_neon_vpminnmq_v:
+    intrName = "aarch64.neon.fminnmp";
+    return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vsqrth_f16:
   case NEON::BI__builtin_neon_vsqrt_v:
   case NEON::BI__builtin_neon_vsqrtq_v:
