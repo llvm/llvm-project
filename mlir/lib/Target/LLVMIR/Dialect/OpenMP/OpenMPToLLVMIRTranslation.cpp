@@ -438,8 +438,21 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::SimdOp op) { checkReduction(op, result); })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
-            omp::AtomicCaptureOp, omp::AtomicCompareOp>(
-          [&](auto op) { checkHint(op, result); })
+            omp::AtomicCaptureOp>([&](auto op) { checkHint(op, result); })
+      .Case([&](omp::AtomicCompareOp op) {
+        checkHint(op, result);
+        Region &region = op.getRegion();
+        if (region.empty())
+          return;
+        mlir::Type argType = region.front().getArgument(0).getType();
+        auto structTy = dyn_cast<LLVM::LLVMStructType>(argType);
+        if (!structTy)
+          return;
+        DataLayout dl = DataLayout(op->getParentOfType<ModuleOp>());
+        unsigned totalBits = dl.getTypeSizeInBits(structTy);
+        if (totalBits > 128)
+          result = todo("compare for complex types wider than 128 bits");
+      })
       .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp>(
           [&](auto op) { checkDepend(op, result); })
       .Case([&](omp::TargetUpdateOp op) { checkDepend(op, result); })
@@ -4533,11 +4546,12 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
 
   llvm::Value *llvmX = moduleTranslation.lookupValue(atomicCompareOp.getX());
 
-  // Fortran integers are signed, and the OpenMPIRBuilder may use signedness
-  // for GT/LT atomic compare operations. Set IsSigned=true to produce correct
-  // code for all valid inputs.
+  // IsSigned is determined from the comparison predicate in the region.
+  // Signed ICmp predicates (slt/sgt) set this to true; unsigned (ult/ugt)
+  // leave it false. For EQ and float comparisons, signedness is irrelevant.
+  bool isSigned = false;
   llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicX = {llvmX, llvmXElementType,
-                                                      /*IsSigned=*/true,
+                                                      isSigned,
                                                       /*IsVolatile=*/false};
 
   llvm::AtomicOrdering atomicOrdering =
@@ -4636,15 +4650,6 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
     unsigned totalBits =
         DL.getTypeStoreSizeInBits(llvmXElementType).getFixedValue();
 
-    // Reject complex types wider than 128 bits (e.g. COMPLEX(16) would be
-    // i256). Major LLVM backends do not natively support cmpxchg for such
-    // wide integer types, resulting in code having libcall within a lock/mutex.
-    if (totalBits > 128)
-      return atomicCompareOp.emitError(
-          "atomic compare for complex types wider than 128 bits is not "
-          "supported (requires i" +
-          llvm::Twine(totalBits) + " cmpxchg)");
-
     llvm::IntegerType *intTy =
         llvm::IntegerType::get(builder.getContext(), totalBits);
 
@@ -4682,6 +4687,12 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
           return atomicCompareOp.emitError(
               "unsupported comparison predicate in atomic compare");
         compareOp = *maybeOp;
+
+        LLVM::ICmpPredicate pred = icmpOp.getPredicate();
+        isSigned = (pred == LLVM::ICmpPredicate::slt ||
+                    pred == LLVM::ICmpPredicate::sgt ||
+                    pred == LLVM::ICmpPredicate::sle ||
+                    pred == LLVM::ICmpPredicate::sge);
 
         // Identify which operand is the block argument (x) and which is e.
         isXBinopExpr = (icmpOp.getOperand(0) == block.getArgument(0));
@@ -4728,6 +4739,8 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
           "failed to extract desired value (d) from atomic compare region");
     dVal = materializeValue(yieldOp.getResults()[0]);
   }
+
+  llvmAtomicX.IsSigned = isSigned;
 
   llvm::OpenMPIRBuilder::AtomicOpValue vOpVal = {nullptr, nullptr, false,
                                                  false};
