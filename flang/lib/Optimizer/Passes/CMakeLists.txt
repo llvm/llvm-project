@@ -7,6 +7,7 @@ add_flang_library(flangPasses
 
   LINK_LIBS
   FIRCodeGen
+  FIROpenACCTransforms
   FIRTransforms
   FlangOpenMPTransforms
   FortranSupport

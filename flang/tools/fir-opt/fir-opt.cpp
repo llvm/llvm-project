@@ -39,7 +39,6 @@ void registerTestOpenACC();
 int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
   fir::registerFlangPipelinePasses();
-  fir::acc::registerFIROpenACCPasses();
 #ifdef FLANG_INCLUDE_TESTS
   fir::test::registerTestFIRAliasAnalysisPass();
   fir::test::registerTestFIROpenACCInterfacesPass();
@@ -50,6 +49,6 @@ int main(int argc, char **argv) {
   fir::support::registerDialects(registry);
   registry.insert<mlir::memref::MemRefDialect>();
   fir::support::addFIRExtensions(registry);
-  return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
-      registry));
+  return failed(
+      MlirOptMain(argc, argv, "FIR modular optimizer driver\n", registry));
 }
