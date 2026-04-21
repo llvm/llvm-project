@@ -1326,6 +1326,8 @@ def : InstRW<[P9_BR_2C, DISP_BR_1C],
   BCTRL8_LDinto_toc_RM,
   BCTRL_LWZinto_toc_RM,
   BCn,
+  BL_RESTORE,
+  BL8_RESTORE,
   CTRL_DEP
 )>;
 

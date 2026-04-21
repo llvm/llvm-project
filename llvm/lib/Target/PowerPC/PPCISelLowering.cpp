@@ -5360,7 +5360,7 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     // slot into gpr2. For 64-bit ELFv2 ABI with PCRel, do not restore the TOC
     // as it is not saved or used.
     if (!TM.Options.XCOFFInlineGlueCode)
-      RetOpc = PPCISD::CALL;
+      RetOpc = PPCISD::BL_LOAD_TOC;
     else
       RetOpc = isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
                                                    : PPCISD::BCTRL;

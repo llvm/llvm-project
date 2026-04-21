@@ -154,6 +154,8 @@ bool PPCMCCodeEmitter::isNoTOCCallInstr(const MCInst &MI) const {
   case PPC::TCRETURNri:
   case PPC::BCTRL_LWZinto_toc:
   case PPC::BCTRL_LWZinto_toc_RM:
+  case PPC::BL_RESTORE:
+  case PPC::BL8_RESTORE:
   case PPC::TAILBCTR:
   case PPC::TAILB:
   case PPC::TAILBA:
