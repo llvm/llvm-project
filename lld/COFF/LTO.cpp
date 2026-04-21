@@ -38,6 +38,16 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::coff;
 
+static AddBufferFn
+createAddBufferFn(std::vector<std::unique_ptr<MemoryBuffer>> &files,
+                  std::vector<std::string> &filenames) {
+  return [&files, &filenames](unsigned task, const Twine &moduleName,
+                              std::unique_ptr<MemoryBuffer> mb) {
+    files[task] = std::move(mb);
+    filenames[task] = moduleName.str();
+  };
+}
+
 std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
   return lto::getThinLTOOutputFile(path, ctx.config.thinLTOPrefixReplaceOld,
                                    ctx.config.thinLTOPrefixReplaceNew);
@@ -189,11 +199,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.config.ltoCache.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.config.ltoCache,
-                             [&](size_t task, const Twine &moduleName,
-                                 std::unique_ptr<MemoryBuffer> mb) {
-                               files[task] = std::move(mb);
-                               file_names[task] = moduleName.str();
-                             }));
+                             createAddBufferFn(files, file_names),
+                             !ctx.config.dtltoDistributor.empty()));
 
   checkError(ltoObj->run(
       [&](size_t task, const Twine &moduleName) {
