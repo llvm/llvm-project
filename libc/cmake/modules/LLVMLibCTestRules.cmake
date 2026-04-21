@@ -354,9 +354,9 @@ function(create_libc_unittest fq_target_name)
     )
   endif()
 
-  # The SUITE variable can be used to group tests into a custom target. 
-  # If a target named ${LIBC_UNITTEST_SUITE}-build exists, we add the 
-  # test executable to it as a dependency. This allows building the 
+  # The SUITE variable can be used to group tests into a custom target.
+  # If a target named ${LIBC_UNITTEST_SUITE}-build exists, we add the
+  # test executable to it as a dependency. This allows building the
   # test binaries for Lit without triggering their execution.
   if(LIBC_UNITTEST_SUITE)
     add_dependencies(${LIBC_UNITTEST_SUITE} ${fq_target_name})
@@ -682,8 +682,8 @@ function(add_integration_test test_name)
   )
   if(INTEGRATION_TEST_SUITE)
     add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
-    # If a target named ${INTEGRATION_TEST_SUITE}-build exists, we add the 
-    # test executable to it as a dependency. This allows building the 
+    # If a target named ${INTEGRATION_TEST_SUITE}-build exists, we add the
+    # test executable to it as a dependency. This allows building the
     # test binaries for Lit without triggering their execution.
     if(TARGET ${INTEGRATION_TEST_SUITE}-build)
       add_dependencies(${INTEGRATION_TEST_SUITE}-build ${fq_build_target_name})
@@ -927,8 +927,8 @@ function(add_libc_hermetic test_name)
     add_dependencies(libc-hermetic-tests ${fq_target_name})
     if(LIBC_HERMETIC_TEST_SUITE)
       add_dependencies(${LIBC_HERMETIC_TEST_SUITE} ${fq_target_name})
-      # If a target named ${LIBC_HERMETIC_TEST_SUITE}-build exists, we add the 
-      # test executable to it as a dependency. This allows building the 
+      # If a target named ${LIBC_HERMETIC_TEST_SUITE}-build exists, we add the
+      # test executable to it as a dependency. This allows building the
       # test binaries for Lit without triggering their execution.
       if(TARGET ${LIBC_HERMETIC_TEST_SUITE}-build)
         add_dependencies(${LIBC_HERMETIC_TEST_SUITE}-build ${fq_build_target_name})
