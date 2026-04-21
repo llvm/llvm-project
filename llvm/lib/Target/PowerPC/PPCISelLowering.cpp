@@ -5728,7 +5728,7 @@ SDValue PPCTargetLowering::FinishCall(
   const auto &TM = getTargetMachine();
 
   if ((Subtarget.is64BitELFABI() && !Subtarget.isUsingPCRelativeCalls()) ||
-      (Subtarget.isAIXABI() && !TM.Options.XCOFFInlineGlueCode))
+      Subtarget.isAIXABI())
     setUsesTOCBasePtr(DAG);
 
   unsigned CallOpc =
