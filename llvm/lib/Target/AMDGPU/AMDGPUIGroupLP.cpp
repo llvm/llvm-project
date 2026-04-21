@@ -1353,12 +1353,6 @@ void MFMAExpInterleaveOpt::computeDAGAnalysis(
     auto Opc = SU.getInstr()->getOpcode();
     if (TII->isTRANS(Opc)) {
       // Avoid counting a potential bonus V_EXP which all the MFMA depend on
-      // FIXME: This heuristic needs improvement/clarification!
-      // In general, the pipeline seems to look like this:
-      //   fma_f32 -> exp_f32 -> cvt_f16_f32 -> v_pack_b32_f16 -> mfma_.._f16
-      //   (with potential arithmetic between exp and cvt)
-      //   see
-      //   https://github.com/llvm/llvm-project/pull/80370#discussion_r1483660378
       if (SU.Succs.size() >= 7)
         continue;
       for (auto &Succ : SU.Succs) {
