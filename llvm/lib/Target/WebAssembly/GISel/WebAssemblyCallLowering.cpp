@@ -627,10 +627,9 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     }
   }
 
-  if (!Info.CanLowerReturn) {
+  if (!Info.CanLowerReturn)
     insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
                     Info.DemoteRegister, Info.DemoteStackIndex);
-  }
 
   return true;
 }
