@@ -263,6 +263,8 @@ ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
 #    include "sanitizer_syscall_linux_hexagon.inc"
 #  elif SANITIZER_LINUX && SANITIZER_LOONGARCH64
 #    include "sanitizer_syscall_linux_loongarch64.inc"
+#  elif SANITIZER_LINUX && SANITIZER_ALPHA
+#    include "sanitizer_syscall_linux_alpha.inc"
 #  else
 #    include "sanitizer_syscall_generic.inc"
 #  endif
