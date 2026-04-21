@@ -135,7 +135,7 @@ LogicalResult QuantileType::verify(function_ref<InFlightDiagnostic()> emitError,
 
   unsigned width = storageType.getIntOrFloatBitWidth();
   bool isSigned = !llvm::isa<IntegerType>(storageType) ||
-                  !llvm::cast<IntegerType>(storageType).isUnsigned();
+                  llvm::cast<IntegerType>(storageType).isSigned();
   auto effectiveMin =
       storageMin.value_or(isSigned ? -(1LL << (width - 1)) : 0LL);
   auto effectiveMax = storageMax.value_or(isSigned ? (1LL << (width - 1)) - 1
@@ -158,7 +158,7 @@ LogicalResult QuantileType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 bool QuantileType::shouldDefaultToSigned() const {
   if (auto intType = llvm::dyn_cast<IntegerType>(getStorageType()))
-    return !intType.isUnsigned();
+    return intType.isSigned();
   // Float types default to signed.
   return true;
 }
