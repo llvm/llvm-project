@@ -57,7 +57,6 @@ add_llvm_component_library(LLVMCodeGen
   EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
   ExpandIRInsts.cpp
-  ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
   ExpandVectorPredication.cpp

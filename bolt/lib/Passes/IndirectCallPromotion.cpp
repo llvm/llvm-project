@@ -775,8 +775,7 @@ IndirectCallPromotion::rewriteCall(
   InstructionListType TailInsts;
   const MCInst *TailInst = &CallInst;
   if (IsTailCallOrJT)
-    while (TailInst + 1 < &(*IndCallBlock.end()) &&
-           MIB->isPseudo(*(TailInst + 1)))
+    while (TailInst != &IndCallBlock.back() && MIB->isPseudo(*(TailInst + 1)))
       TailInsts.push_back(*++TailInst);
 
   InstructionListType MovedInst = IndCallBlock.splitInstructions(&CallInst);

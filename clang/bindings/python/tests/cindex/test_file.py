@@ -1,9 +1,10 @@
 import os
 
-from clang.cindex import File, Index, TranslationUnit
+from clang.cindex import _CXUnsavedFile, File, Index, TranslationUnit
 
 
 import unittest
+import warnings
 
 inputs_dir = os.path.join(os.path.dirname(__file__), "INPUTS")
 
@@ -67,3 +68,13 @@ int b[] = {
         self.assertNotEqual(main_file, a_file)
         self.assertNotEqual(main_file, b_file)
         self.assertNotEqual(main_file, "a.inc")
+
+
+class TestUnsavedFile(unittest.TestCase):
+    def test_deprecation_warning(self):
+        unsaved_file = _CXUnsavedFile()
+        with warnings.catch_warnings(record=True) as log:
+            unsaved_file.name
+            self.assertEqual(len(log), 1)
+            for warning in log:
+                self.assertIsInstance(warning.message, DeprecationWarning)

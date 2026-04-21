@@ -871,7 +871,7 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_add_i32 s3, s1, 1
 ; GFX1032-NEXT:    s_cmp_ge_u32 s2, s0
 ; GFX1032-NEXT:    s_cselect_b32 s4, s3, s1
-; GFX1032-NEXT:  .LBB15_3:
+; GFX1032-NEXT:  .LBB15_3: ; %bb.split
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, s5
@@ -1022,7 +1022,7 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_add_i32 s3, s1, 1
 ; GFX1064-NEXT:    s_cmp_ge_u32 s2, s0
 ; GFX1064-NEXT:    s_cselect_b32 s4, s3, s1
-; GFX1064-NEXT:  .LBB15_3:
+; GFX1064-NEXT:  .LBB15_3: ; %bb.split
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, s5
@@ -1692,8 +1692,8 @@ define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) 
 ; GFX1032-NEXT:    v_cndmask_b32_e64 v1, 0, s3, s4
 ; GFX1032-NEXT:    v_cndmask_b32_e64 v0, 0, s2, s4
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s4
-; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX1032-NEXT:    global_store_dwordx2 v4, v[2:3], s[0:1]
 ; GFX1032-NEXT:    s_endpgm
@@ -1706,8 +1706,8 @@ define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) 
 ; GFX1064-NEXT:    v_cndmask_b32_e64 v1, 0, s3, s[4:5]
 ; GFX1064-NEXT:    v_cndmask_b32_e64 v0, 0, s2, s[4:5]
 ; GFX1064-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX1064-NEXT:    global_store_dwordx2 v4, v[2:3], s[0:1]
 ; GFX1064-NEXT:    s_endpgm

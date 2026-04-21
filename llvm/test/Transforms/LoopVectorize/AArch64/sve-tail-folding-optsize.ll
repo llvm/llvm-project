@@ -35,7 +35,7 @@ define void @trip1025_i64(ptr noalias nocapture noundef %dst, ptr noalias nocapt
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.06 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i64, ptr %src, i64 %i.06
   %0 = load i64, ptr %arrayidx, align 8
@@ -48,7 +48,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 1025
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

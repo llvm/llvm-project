@@ -58,6 +58,7 @@
 ; O0-NEXT: xray-instrumentation
 ; O0-NEXT: patchable-function
 ; O0-NEXT: x86-indirect-branch-tracking
+; O0-NEXT: x86-insert-vzeroupper
 ; O0-NEXT: x86-compress-evex
 ; O0-NEXT: x86-insert-x87-wait
 ; O0-NEXT: FuncletLayoutPass
@@ -79,6 +80,7 @@
 ; O2-NEXT: require<collector-metadata>
 ; O2-NEXT: require<runtime-libcall-info>
 ; O2-NEXT: require<libcall-lowering-info>
+; O2-NEXT: function(objc-arc-contract)
 ; O2-NEXT: pre-isel-intrinsic-lowering
 ; O2-NEXT: function(expand-ir-insts<O2>
 ; O2-NEXT: atomic-expand
@@ -87,8 +89,6 @@
 ; O2-NEXT: verify
 ; O2-NEXT: loop(canon-freeze
 ; O2-NEXT: loop-reduce)
-; O2-NEXT: mergeicmps
-; O2-NEXT: expand-memcmp
 ; O2-NEXT: gc-lowering)
 ; O2-NEXT: shadow-stack-gc-lowering
 ; O2-NEXT: function(unreachableblockelim
@@ -103,7 +103,6 @@
 ; O2-NEXT: indirectbr-expand
 ; O2-NEXT: codegenprepare
 ; O2-NEXT: dwarf-eh-prepare
-; O2-NEXT: objc-arc-contract
 ; O2-NEXT: inline-asm-prepare
 ; O2-NEXT: safe-stack
 ; O2-NEXT: stack-protector
@@ -174,6 +173,7 @@
 ; O2-NEXT: patchable-function
 ; O2-NEXT: BreakFalseDepsPass
 ; O2-NEXT: x86-indirect-branch-tracking
+; O2-NEXT: x86-insert-vzeroupper
 ; O2-NEXT: x86-fixup-bw-insts
 ; O2-NEXT: x86-fixup-leas
 ; O2-NEXT: x86-fixup-inst-tuning
@@ -244,6 +244,7 @@
 ; O0-WINDOWS-NEXT: xray-instrumentation
 ; O0-WINDOWS-NEXT: patchable-function
 ; O0-WINDOWS-NEXT: x86-indirect-branch-tracking
+; O0-WINDOWS-NEXT: x86-insert-vzeroupper
 ; O0-WINDOWS-NEXT: x86-compress-evex
 ; O0-WINDOWS-NEXT: x86-insert-x87-wait
 ; O0-WINDOWS-NEXT: FuncletLayoutPass
@@ -267,6 +268,7 @@
 ; O3-WINDOWS-NEXT: require<collector-metadata>
 ; O3-WINDOWS-NEXT: require<runtime-libcall-info>
 ; O3-WINDOWS-NEXT: require<libcall-lowering-info>
+; O3-WINDOWS-NEXT: function(objc-arc-contract)
 ; O3-WINDOWS-NEXT: pre-isel-intrinsic-lowering
 ; O3-WINDOWS-NEXT: function(expand-ir-insts<O3>
 ; O3-WINDOWS-NEXT: atomic-expand
@@ -275,8 +277,6 @@
 ; O3-WINDOWS-NEXT: verify
 ; O3-WINDOWS-NEXT: loop(canon-freeze
 ; O3-WINDOWS-NEXT: loop-reduce)
-; O3-WINDOWS-NEXT: mergeicmps
-; O3-WINDOWS-NEXT: expand-memcmp
 ; O3-WINDOWS-NEXT: gc-lowering)
 ; O3-WINDOWS-NEXT: shadow-stack-gc-lowering
 ; O3-WINDOWS-NEXT: function(unreachableblockelim
@@ -293,7 +293,6 @@
 ; O3-WINDOWS-NEXT: codegenprepare
 ; O3-WINDOWS-NEXT: win-eh-prepare
 ; O3-WINDOWS-NEXT: dwarf-eh-prepare
-; O3-WINDOWS-NEXT: objc-arc-contract
 ; O3-WINDOWS-NEXT: inline-asm-prepare
 ; O3-WINDOWS-NEXT: safe-stack
 ; O3-WINDOWS-NEXT: stack-protector
@@ -363,6 +362,7 @@
 ; O3-WINDOWS-NEXT: patchable-function
 ; O3-WINDOWS-NEXT: BreakFalseDepsPass
 ; O3-WINDOWS-NEXT: x86-indirect-branch-tracking
+; O3-WINDOWS-NEXT: x86-insert-vzeroupper
 ; O3-WINDOWS-NEXT: x86-fixup-bw-insts
 ; O3-WINDOWS-NEXT: x86-fixup-leas
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning

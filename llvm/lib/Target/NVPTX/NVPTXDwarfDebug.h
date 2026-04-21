@@ -36,6 +36,14 @@ private:
 public:
   NVPTXDwarfDebug(AsmPrinter *A);
 
+  /// Get or create an MCSymbol in .debug_str for a function's linkage name.
+  /// Used to reference the function name in .loc directives with inlined_at.
+  MCSymbol *getOrCreateFuncNameSymbol(StringRef LinkageName);
+
+  /// Returns true if the enhanced lineinfo mode (with inlined_at) is active
+  /// for the given MachineFunction.
+  bool isEnhancedLineinfo(const MachineFunction &MF) const;
+
   bool shouldResetBaseAddress(const MCSection &Section) const override;
   const DIExpression *adjustExpressionForTarget(
       const DIExpression *Expr,
@@ -49,6 +57,7 @@ protected:
   void initializeTargetDebugInfo(const MachineFunction &MF) override;
   void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) override;
   bool shouldAttachCompileUnitRanges() const override;
+  bool shouldEmitDwarfPubSections() const override { return false; }
 };
 
 } // end namespace llvm

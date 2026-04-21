@@ -694,7 +694,9 @@ static llvm::dwarf::SourceLanguage GetSourceLanguage(const CodeGenModule &CGM) {
 
   llvm::dwarf::SourceLanguage LangTag;
   if (LO.CPlusPlus) {
-    if (LO.HIP)
+    if (LO.HLSL)
+      LangTag = llvm::dwarf::DW_LANG_HLSL;
+    else if (LO.HIP)
       LangTag = llvm::dwarf::DW_LANG_HIP;
     else if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
@@ -732,7 +734,9 @@ GetDISourceLanguageName(const CodeGenModule &CGM) {
   uint32_t LangVersion = 0;
   llvm::dwarf::SourceLanguageName LangTag;
   if (LO.CPlusPlus) {
-    if (LO.HIP) {
+    if (LO.HLSL) {
+      LangTag = llvm::dwarf::DW_LNAME_HLSL;
+    } else if (LO.HIP) {
       LangTag = llvm::dwarf::DW_LNAME_HIP;
     } else if (LO.ObjC) {
       LangTag = llvm::dwarf::DW_LNAME_ObjC_plus_plus;
@@ -1103,6 +1107,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     if (!SingletonId)                                                          \
       SingletonId =                                                            \
           DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
+    return SingletonId;                                                        \
+  }
+#define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align)     \
+  case BuiltinType::Id: {                                                      \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_boolean);  \
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
@@ -4015,12 +4026,19 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
-llvm::DILocation *CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc Location,
-                                                       StringRef FuncName) {
-  llvm::DISubprogram *SP =
-      createInlinedSubprogram(FuncName, Location->getFile());
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     llvm::DISubprogram *SynthSubprogram) {
   return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/SP, /*InlinedAt=*/Location);
+                               SynthSubprogram, ParentLocation);
+}
+
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     StringRef SynthFuncName,
+                                     llvm::DIFile *SynthFile) {
+  llvm::DISubprogram *SP = createInlinedSubprogram(SynthFuncName, SynthFile);
+  return CreateSyntheticInlineAt(ParentLocation, SP);
 }
 
 llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
@@ -4034,7 +4052,8 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   FuncName += "$";
   FuncName += FailureMsg;
 
-  return CreateSyntheticInlineAt(TrapLocation, FuncName);
+  return CreateSyntheticInlineAt(TrapLocation, FuncName,
+                                 TrapLocation->getFile());
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
@@ -5979,15 +5998,14 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
-    if (const auto *ED = dyn_cast<EnumDecl>(ET->getDecl())) {
-      if (!ED->getIdentifier()) {
-        Reconstitutable = false;
-        return false;
-      }
-      if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
-        Reconstitutable = false;
-        return false;
-      }
+    const EnumDecl *ED = ET->getDecl();
+    if (!ED->getIdentifier()) {
+      Reconstitutable = false;
+      return false;
+    }
+    if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
+      Reconstitutable = false;
+      return false;
     }
     return true;
   }
@@ -6759,8 +6777,15 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
   else
     Label = SanitizerHandlerToCheckLabel(Handler);
 
-  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); }))
-    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label);
+  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); })) {
+    // Use ubsan header file to have the same filename for all checks. There is
+    // nothing special in that file, we just want to make tools to count all
+    // syntetic functions of a check as the same.
+    llvm::DIFile *File = llvm::DIFile::get(CGM.getLLVMContext(),
+                                           /*Filename=*/"ubsan_interface.h",
+                                           /*Directory=*/"sanitizer");
+    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label, File);
+  }
 
   return CheckDebugLoc;
 }

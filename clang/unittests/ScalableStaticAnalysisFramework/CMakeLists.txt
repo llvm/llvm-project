@@ -1,4 +1,5 @@
 add_distinct_clang_unittest(ClangScalableAnalysisTests
+  Analyses/CallGraph/CallGraphExtractorTest.cpp
   Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp
   ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
@@ -23,6 +24,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   SummaryNameTest.cpp
   TestFixture.cpp
   TUSummaryBuilderTest.cpp
+  WholeProgramAnalysis/AnalysisDriverTest.cpp
 
   CLANG_LIBS
   clangAST

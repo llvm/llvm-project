@@ -62,17 +62,16 @@ indirect.dest:
   br label %coro_Cleanup
 
 coro_Cleanup:                                     ; preds = %sw.epilog, %sw.bb1
-  %5 = load ptr, ptr %coro_hdl, align 8, !dbg !24
-  %6 = call ptr @llvm.coro.free(token %0, ptr %5), !dbg !24
-  call void @free(ptr %6), !dbg !24
+  %mem = call ptr @llvm.coro.free(token %0, ptr %2), !dbg !24
+  call void @free(ptr %mem), !dbg !24
   call void @llvm.dbg.value(metadata i32 %asm_res, metadata !32, metadata !13), !dbg !16
   br label %coro_Suspend, !dbg !24
 
 coro_Suspend:                                     ; preds = %coro_Cleanup, %sw.default
   call void @llvm.coro.end(ptr null, i1 false, token none), !dbg !24
-  %7 = load ptr, ptr %coro_hdl, align 8, !dbg !24
+  %ret = load ptr, ptr %coro_hdl, align 8, !dbg !24
   store i32 0, ptr %late_local, !dbg !24
-  ret ptr %7, !dbg !24
+  ret ptr %ret, !dbg !24
 
 ehcleanup:
   %ex = landingpad { ptr, i32 }
@@ -163,10 +162,9 @@ attributes #0 = { noinline nounwind presplitcoroutine }
 ; Also check that it contains `#dbg_declare` and `#dbg_value` debug instructions
 ; making the debug variables available to the debugger.
 ;
-; CHECK: define internal fastcc void @flink.resume(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
+; CHECK: define internal fastcc void @flink.resume(ptr noundef nonnull align 8 dereferenceable(32) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
 ; CHECK: %[[DBG_PTR:.*]] = alloca ptr
-; CHECK-NEXT: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_COROHDL:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
 ; CHECK-NEXT: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_X:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL:.*]])
 ; CHECK-NEXT: store ptr {{.*}}, ptr %[[DBG_PTR]]
 ; CHECK-NOT: alloca ptr
@@ -188,8 +186,8 @@ attributes #0 = { noinline nounwind presplitcoroutine }
 
 ; Check that the destroy and cleanup functions are present and capture their debug info id.
 ;
-; CHECK: define internal fastcc void @flink.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
-; CHECK: define internal fastcc void @flink.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
+; CHECK: define internal fastcc void @flink.destroy(ptr noundef nonnull align 8 dereferenceable(32) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
+; CHECK: define internal fastcc void @flink.cleanup(ptr noundef nonnull align 8 dereferenceable(32) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; Check that the linkage name of the original function is set correctly.
 ;
@@ -198,7 +196,6 @@ attributes #0 = { noinline nounwind presplitcoroutine }
 
 ; Check that metadata for local variables in the resume function is set correctly.
 ;
-; CHECK: ![[RESUME_COROHDL]] = !DILocalVariable(name: "coro_hdl", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_X]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
 ; CHECK: ![[RESUME_CONST]] = !DILocalVariable(name: "direct_const", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]

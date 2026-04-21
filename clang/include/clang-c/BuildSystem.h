@@ -18,6 +18,7 @@
 #include "clang-c/CXString.h"
 #include "clang-c/ExternC.h"
 #include "clang-c/Platform.h"
+#include <time.h>
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 
@@ -142,6 +143,23 @@ clang_ModuleMapDescriptor_writeToBuffer(CXModuleMapDescriptor, unsigned options,
  * Dispose a \c CXModuleMapDescriptor object.
  */
 CINDEX_LINKAGE void clang_ModuleMapDescriptor_dispose(CXModuleMapDescriptor);
+
+/**
+ * Prune module files in the module cache directory that haven't been accessed
+ * in a long time.
+ *
+ * \param Path the path to the module cache directory.
+ *
+ * \param PruneInterval the minimum time in seconds between two prune
+ * operations. If the timestamp file is newer than this, pruning is skipped.
+ *
+ * \param PruneAfter the time in seconds after which unused module files are
+ * removed.
+ *
+ */
+CINDEX_LINKAGE void clang_ModuleCache_prune(const char *Path,
+                                            time_t PruneInterval,
+                                            time_t PruneAfter);
 
 /**
  * @}

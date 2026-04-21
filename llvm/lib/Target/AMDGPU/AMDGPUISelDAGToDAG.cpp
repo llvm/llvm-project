@@ -129,6 +129,22 @@ static SDValue stripExtractLoElt(SDValue In) {
   return In;
 }
 
+static SDValue emitRegSequence(llvm::SelectionDAG &CurDAG, unsigned DstRegClass,
+                               EVT DstTy, ArrayRef<SDValue> Elts,
+                               ArrayRef<unsigned> SubRegClass,
+                               const SDLoc &DL) {
+  assert(Elts.size() == SubRegClass.size() && "array size mismatch");
+  unsigned NumElts = Elts.size();
+  SmallVector<SDValue, 17> Ops(2 * NumElts + 1);
+  Ops[0] = (CurDAG.getTargetConstant(DstRegClass, DL, MVT::i32));
+  for (unsigned i = 0; i < NumElts; ++i) {
+    Ops[2 * i + 1] = Elts[i];
+    Ops[2 * i + 2] = CurDAG.getTargetConstant(SubRegClass[i], DL, MVT::i32);
+  }
+  return SDValue(
+      CurDAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, DstTy, Ops), 0);
+}
+
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISelLegacy, "amdgpu-isel",
@@ -879,6 +895,26 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   }
 
   SelectCode(N);
+}
+
+bool AMDGPUDAGToDAGISel::isSDWAOperand(const SDNode *N) const {
+  if (!Subtarget->hasSDWA())
+    return false;
+
+  if (N->getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    EVT VT = cast<VTSDNode>(N->getOperand(1))->getVT();
+    return VT.getScalarSizeInBits() == 8 || VT.getScalarSizeInBits() == 16;
+  }
+
+  if (N->getOpcode() == ISD::AND)
+    if (auto *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+      return RHS->getZExtValue() == 0xFF || RHS->getZExtValue() == 0xFFFF;
+
+  if (N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL)
+    if (auto *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+      return (RHS->getZExtValue() % 8) == 0;
+
+  return false;
 }
 
 bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
@@ -3691,6 +3727,37 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
   return SelectVOP3PMods(In, Src, SrcMods, true);
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3PNoModsDOT(SDValue In, SDValue &Src) const {
+  SDValue SrcTmp, SrcModsTmp;
+  SelectVOP3PMods(In, SrcTmp, SrcModsTmp, true);
+  if (cast<ConstantSDNode>(SrcModsTmp)->getZExtValue() == SISrcMods::OP_SEL_1) {
+    Src = SrcTmp;
+    return true;
+  }
+
+  return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsF32(SDValue In, SDValue &Src,
+                                            SDValue &SrcMods) const {
+  SelectVOP3Mods(In, Src, SrcMods);
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  Mods |= cast<ConstantSDNode>(SrcMods)->getZExtValue();
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PNoModsF32(SDValue In, SDValue &Src) const {
+  SDValue SrcTmp, SrcModsTmp;
+  SelectVOP3PModsF32(In, SrcTmp, SrcModsTmp);
+  if (cast<ConstantSDNode>(SrcModsTmp)->getZExtValue() == SISrcMods::OP_SEL_1) {
+    Src = SrcTmp;
+    return true;
+  }
+
+  return false;
+}
+
 bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,
                                                   SDValue &Src) const {
   const ConstantSDNode *C = cast<ConstantSDNode>(In);
@@ -3705,9 +3772,9 @@ bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,
   return true;
 }
 
-static MachineSDNode *buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
-                                         llvm::SelectionDAG *CurDAG,
-                                         const SDLoc &DL) {
+MachineSDNode *
+AMDGPUDAGToDAGISel::buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
+                                       const SDLoc &DL) const {
   unsigned DstRegClass;
   EVT DstTy;
   switch (Elts.size()) {
@@ -3737,9 +3804,9 @@ static MachineSDNode *buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, DstTy, Ops);
 }
 
-static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
-                                         llvm::SelectionDAG *CurDAG,
-                                         const SDLoc &DL) {
+MachineSDNode *
+AMDGPUDAGToDAGISel::buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
+                                       const SDLoc &DL) const {
   SmallVector<SDValue, 8> PackedElts;
   assert("unhandled Reg sequence size" &&
          (Elts.size() == 8 || Elts.size() == 16));
@@ -3752,6 +3819,20 @@ static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
     if (isExtractHiElt(Elts[i + 1], HiSrc) && LoSrc == HiSrc) {
       PackedElts.push_back(HiSrc);
     } else {
+      if (Subtarget->useRealTrue16Insts()) {
+        // FIXME-TRUE16. For now pack VGPR_32 for 16-bit source before
+        // passing to v_perm_b32. Eventually we should use replace v_perm_b32
+        // by reg_sequence.
+        SDValue Undef = SDValue(
+            CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i16),
+            0);
+        Elts[i] =
+            emitRegSequence(*CurDAG, AMDGPU::VGPR_32RegClassID, MVT::i32,
+                            {Elts[i], Undef}, {AMDGPU::lo16, AMDGPU::hi16}, DL);
+        Elts[i + 1] = emitRegSequence(*CurDAG, AMDGPU::VGPR_32RegClassID,
+                                      MVT::i32, {Elts[i + 1], Undef},
+                                      {AMDGPU::lo16, AMDGPU::hi16}, DL);
+      }
       SDValue PackLoLo = CurDAG->getTargetConstant(0x05040100, DL, MVT::i32);
       MachineSDNode *Packed =
           CurDAG->getMachineNode(AMDGPU::V_PERM_B32_e64, DL, MVT::i32,
@@ -3759,24 +3840,25 @@ static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
       PackedElts.push_back(SDValue(Packed, 0));
     }
   }
-
-  return buildRegSequence32(PackedElts, CurDAG, DL);
+  return buildRegSequence32(PackedElts, DL);
 }
 
-static MachineSDNode *buildRegSequence(SmallVectorImpl<SDValue> &Elts,
-                                       llvm::SelectionDAG *CurDAG,
-                                       const SDLoc &DL, unsigned ElementSize) {
+MachineSDNode *
+AMDGPUDAGToDAGISel::buildRegSequence(SmallVectorImpl<SDValue> &Elts,
+                                     const SDLoc &DL,
+                                     unsigned ElementSize) const {
   if (ElementSize == 16)
-    return buildRegSequence16(Elts, CurDAG, DL);
+    return buildRegSequence16(Elts, DL);
   if (ElementSize == 32)
-    return buildRegSequence32(Elts, CurDAG, DL);
+    return buildRegSequence32(Elts, DL);
   llvm_unreachable("Unhandled element size");
 }
 
-static void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
-                                 SmallVectorImpl<SDValue> &Elts, SDValue &Src,
-                                 llvm::SelectionDAG *CurDAG, const SDLoc &DL,
-                                 unsigned ElementSize) {
+void AMDGPUDAGToDAGISel::selectWMMAModsNegAbs(unsigned ModOpcode,
+                                              unsigned &Mods,
+                                              SmallVectorImpl<SDValue> &Elts,
+                                              SDValue &Src, const SDLoc &DL,
+                                              unsigned ElementSize) const {
   if (ModOpcode == ISD::FNEG) {
     Mods |= SISrcMods::NEG;
     // Check if all elements also have abs modifier
@@ -3788,17 +3870,17 @@ static void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
     }
     if (Elts.size() != NegAbsElts.size()) {
       // Neg
-      Src = SDValue(buildRegSequence(Elts, CurDAG, DL, ElementSize), 0);
+      Src = SDValue(buildRegSequence(Elts, DL, ElementSize), 0);
     } else {
       // Neg and Abs
       Mods |= SISrcMods::NEG_HI;
-      Src = SDValue(buildRegSequence(NegAbsElts, CurDAG, DL, ElementSize), 0);
+      Src = SDValue(buildRegSequence(NegAbsElts, DL, ElementSize), 0);
     }
   } else {
     assert(ModOpcode == ISD::FABS);
     // Abs
     Mods |= SISrcMods::NEG_HI;
-    Src = SDValue(buildRegSequence(Elts, CurDAG, DL, ElementSize), 0);
+    Src = SDValue(buildRegSequence(Elts, DL, ElementSize), 0);
   }
 }
 
@@ -3837,7 +3919,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16Neg(SDValue In, SDValue &Src,
 
     // All elements have neg modifier
     if (BV->getNumOperands() * 2 == EltsF16.size()) {
-      Src = SDValue(buildRegSequence16(EltsF16, CurDAG, SDLoc(In)), 0);
+      Src = SDValue(buildRegSequence16(EltsF16, SDLoc(In)), 0);
       Mods |= SISrcMods::NEG;
       Mods |= SISrcMods::NEG_HI;
     }
@@ -3856,7 +3938,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16Neg(SDValue In, SDValue &Src,
 
     // All pairs of elements have neg modifier
     if (BV->getNumOperands() == EltsV2F16.size()) {
-      Src = SDValue(buildRegSequence32(EltsV2F16, CurDAG, SDLoc(In)), 0);
+      Src = SDValue(buildRegSequence32(EltsV2F16, SDLoc(In)), 0);
       Mods |= SISrcMods::NEG;
       Mods |= SISrcMods::NEG_HI;
     }
@@ -3887,8 +3969,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16NegAbs(SDValue In, SDValue &Src,
 
     // All elements have ModOpcode modifier
     if (BV->getNumOperands() * 2 == EltsF16.size())
-      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF16, Src, CurDAG, SDLoc(In),
-                           16);
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF16, Src, SDLoc(In), 16);
   }
 
   // mods are on v2f16 elements
@@ -3907,8 +3988,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16NegAbs(SDValue In, SDValue &Src,
 
     // All elements have ModOpcode modifier
     if (BV->getNumOperands() == EltsV2F16.size())
-      selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, CurDAG, SDLoc(In),
-                           32);
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, SDLoc(In), 32);
   }
 
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
@@ -3936,8 +4016,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
 
     // All elements had ModOpcode modifier
     if (BV->getNumOperands() == EltsF32.size())
-      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF32, Src, CurDAG, SDLoc(In),
-                           32);
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF32, Src, SDLoc(In), 32);
   }
 
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);

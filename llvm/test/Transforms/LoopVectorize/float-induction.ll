@@ -233,11 +233,11 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.lr.ph, label %for.end
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %fpinc = load float, ptr @fp_inc, align 4
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %for.body.lr.ph ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -248,10 +248,10 @@ for.body:                                         ; preds = %for.body, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -478,11 +478,11 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.lr.ph, label %for.end
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %fpinc = load float, ptr @fp_inc, align 4
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %for.body.lr.ph ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -493,10 +493,10 @@ for.body:                                         ; preds = %for.body, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -705,10 +705,10 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %x.06 = phi float [ %conv1, %for.body ], [ %init, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -719,10 +719,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -1055,11 +1055,11 @@ entry:
   %cmp9 = icmp sgt i32 %N, 0
   br i1 %cmp9, label %for.body.lr.ph, label %for.end
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %0 = load float, ptr @fp_inc, align 4
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %y.012 = phi float [ 0x3FB99999A0000000, %for.body.lr.ph ], [ %conv1, %for.body ]
   %x.011 = phi float [ %init, %for.body.lr.ph ], [ %add, %for.body ]
@@ -1281,10 +1281,10 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %x.06 = phi float [ %conv1, %for.body ], [ 1.000000e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -1295,10 +1295,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -1322,8 +1322,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; VEC4_INTERL1-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC4_INTERL1:       pred.store.if:
-; VEC4_INTERL1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]]
-; VEC4_INTERL1-NEXT:    store float [[DOTCAST2]], ptr [[TMP3]], align 4
+; VEC4_INTERL1-NEXT:    store float [[DOTCAST2]], ptr [[TMP0]], align 4
 ; VEC4_INTERL1-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC4_INTERL1:       pred.store.continue:
 ; VEC4_INTERL1-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
@@ -1402,8 +1401,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL2-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC4_INTERL2:       pred.store.if:
-; VEC4_INTERL2-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]]
-; VEC4_INTERL2-NEXT:    store float [[DOTCAST2]], ptr [[TMP35]], align 4
+; VEC4_INTERL2-NEXT:    store float [[DOTCAST2]], ptr [[TMP1]], align 4
 ; VEC4_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC4_INTERL2:       pred.store.continue:
 ; VEC4_INTERL2-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
@@ -1573,8 +1571,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC2_INTERL1_PRED_STORE:       pred.store.if:
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]]
-; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[DOTCAST2]], ptr [[TMP3]], align 4
+; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[DOTCAST2]], ptr [[TMP0]], align 4
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC2_INTERL1_PRED_STORE:       pred.store.continue:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
@@ -2017,7 +2014,7 @@ define void @fp_iv_used_in_gep_fadd(float %init, ptr noalias nocapture %A, float
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %entry ], [ %add, %for.body ]
   %c = fptoui float %x.05 to i32
@@ -2324,7 +2321,7 @@ define void @fp_iv_used_in_gep_fsub(float %init, ptr noalias nocapture %A, float
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %entry ], [ %add, %for.body ]
   %c = fptoui float %x.05 to i32
@@ -2416,7 +2413,7 @@ define void @fp_iv_used_in_gep_fmul(float %init, ptr noalias nocapture %A, float
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %entry ], [ %add, %for.body ]
   %c = fptoui float %x.05 to i32

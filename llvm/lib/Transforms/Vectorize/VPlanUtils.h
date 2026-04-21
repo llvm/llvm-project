@@ -60,8 +60,8 @@ bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
-/// or its operand is known to be uniform across all VFs and UFs (e.g.
-/// VPDerivedIV or VPCanonicalIVPHI).
+/// or its operands are known to be uniform across all VFs and UFs (e.g.
+/// VPDerivedIV or the canonical IV).
 bool isUniformAcrossVFsAndUFs(VPValue *V);
 
 /// Returns the header block of the first, top-level loop, or null if none
@@ -80,9 +80,9 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// \p GEPs.
 LLVM_ABI_FOR_TEST
 std::optional<VPValue *>
-getRecipesForUncountableExit(VPlan &Plan,
-                             SmallVectorImpl<VPRecipeBase *> &Recipes,
-                             SmallVectorImpl<VPRecipeBase *> &GEPs);
+getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
+                             SmallVectorImpl<VPInstruction *> &GEPs,
+                             VPBasicBlock *LatchVPBB);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -140,6 +140,10 @@ template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
   using namespace llvm::VPlanPatternMatch;
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
 }
+
+/// Find the canonical IV increment of \p Plan's vector loop region. Returns
+/// nullptr if not found.
+VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
 /// inserted for predicated reductions or tail folding.
@@ -260,10 +264,16 @@ public:
     Old->clearSuccessors();
   }
 
+  /// Clone the CFG for all nodes reachable from \p Entry, including cloning
+  /// the blocks and their recipes. Operands of cloned recipes will NOT be
+  /// updated. Remapping of operands must be done separately. Returns a pair
+  /// with the new entry and exiting blocks of the cloned region. If \p Entry
+  /// isn't part of a region, return nullptr for the exiting block.
+  static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
+
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
-  template <typename BlockTy, typename T>
-  static auto blocksOnly(const T &Range) {
+  template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
     // Create BaseTy with correct const-ness based on BlockTy.
     using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
                                       const VPBlockBase, VPBlockBase>;
@@ -278,6 +288,12 @@ public:
       return cast<BlockTy>(&Block);
     });
   }
+
+  /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
+  /// to LastBB forms a single-sucessor chain.
+  static SmallVector<VPBasicBlock *>
+  blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                      VPBasicBlock *LastBB);
 
   /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
   /// \p From's successor to \p To to point to \p BlockPtr and \p To's

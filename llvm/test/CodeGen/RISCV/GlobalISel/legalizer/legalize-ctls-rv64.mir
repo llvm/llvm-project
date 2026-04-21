@@ -90,7 +90,7 @@ body:             |
     ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[C2]]
     ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C3]]
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CLZW]], [[C3]]
     ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[SEXT_INREG1]], [[C1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[SUB1]](s64)
@@ -186,7 +186,7 @@ body:             |
     ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[C2]]
     ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C3]]
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CLZW]], [[C3]]
     ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[SEXT_INREG1]], [[C1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[SUB1]](s64)

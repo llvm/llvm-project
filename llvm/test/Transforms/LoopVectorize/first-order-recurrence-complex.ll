@@ -2,12 +2,12 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses -S %s | FileCheck %s
 
 
-@p = external local_unnamed_addr global [257 x i32], align 16
-@q = external local_unnamed_addr global [257 x i32], align 16
+@p = external global [257 x i32], align 16
+@q = external global [257 x i32], align 16
 
 ; Test case for PR43398.
 
-define void @can_sink_after_store(i32 %x, ptr %ptr, i64 %tc) local_unnamed_addr #0 {
+define void @can_sink_after_store(i32 %x, ptr %ptr, i64 %tc) #0 {
 ; CHECK-LABEL: @can_sink_after_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[PREHEADER:%.*]]
@@ -82,7 +82,7 @@ exit:
 
 ; We can sink potential trapping instructions, as this will only delay the trap
 ; and not introduce traps on additional paths.
-define void @sink_sdiv(i32 %x, ptr %ptr, i64 %tc) local_unnamed_addr #0 {
+define void @sink_sdiv(i32 %x, ptr %ptr, i64 %tc) #0 {
 ; CHECK-LABEL: @sink_sdiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[PREHEADER:%.*]]
@@ -389,7 +389,7 @@ define void @instruction_with_2_FOR_operands(ptr noalias %A, ptr noalias %B, ptr
 bb:
   br label %bb13
 
-bb13:                                             ; preds = %bb13, %bb
+bb13:
   %tmp37 = phi float [ %tmp60, %bb13 ], [ 0.0, %bb ]
   %tmp27 = phi float [ %tmp49, %bb13 ], [ 1.0, %bb ]
   %iv = phi i64 [ %iv.next, %bb13 ], [ 0, %bb ]
@@ -402,7 +402,7 @@ bb13:                                             ; preds = %bb13, %bb
   %tmp12 = icmp slt i64 %iv, 1000
   br i1 %tmp12, label %bb13, label %bb74
 
-bb74:                                             ; preds = %bb13
+bb74:
   ret void
 }
 

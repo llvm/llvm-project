@@ -83,6 +83,8 @@ public:
   bool VisitCXXThisExpr(const CXXThisExpr *ThisE);
   bool VisitLambdaExpr(const LambdaExpr *Lambda);
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *POE);
+  bool VisitCoawaitExpr(const CoawaitExpr *E);
+  bool VisitCoyieldExpr(const CoyieldExpr *E);
 };
 
 /// VisitExpr - Visit all of the children of this expression.
@@ -98,7 +100,7 @@ bool CheckDefaultArgumentVisitor::VisitExpr(const Expr *Node) {
 /// determine whether this declaration can be used in the default
 /// argument expression.
 bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
-  const ValueDecl *Decl = dyn_cast<ValueDecl>(DRE->getDecl());
+  const ValueDecl *Decl = DRE->getDecl();
 
   if (!isa<VarDecl, BindingDecl>(Decl))
     return false;
@@ -178,6 +180,23 @@ bool CheckDefaultArgumentVisitor::VisitLambdaExpr(const LambdaExpr *Lambda) {
   }
   return Invalid;
 }
+
+bool CheckDefaultArgumentVisitor::VisitCoawaitExpr(const CoawaitExpr *E) {
+  // [expr.await] An await-expression shall not appear in a default argument.
+  // Note that this is generally diagnosed by isValidCoroutineContext,
+  // however isValidCoroutineContext misses default argument in nested
+  // function declarations.
+  S.Diag(E->getBeginLoc(), diag::err_coroutine_outside_function)
+      << "co_await" << E->getSourceRange();
+  return true;
+}
+
+bool CheckDefaultArgumentVisitor::VisitCoyieldExpr(const CoyieldExpr *E) {
+  S.Diag(E->getBeginLoc(), diag::err_coroutine_outside_function)
+      << "co_yield" << E->getSourceRange();
+  return true;
+}
+
 } // namespace
 
 void
@@ -5044,10 +5063,8 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
     }
 
     InitializedEntity Entity =
-        Indirect ? InitializedEntity::InitializeMember(Indirect, nullptr,
-                                                       /*Implicit*/ true)
-                 : InitializedEntity::InitializeMember(Field, nullptr,
-                                                       /*Implicit*/ true);
+        Indirect ? InitializedEntity::InitializeMemberImplicit(Indirect)
+                 : InitializedEntity::InitializeMemberImplicit(Field);
 
     // Direct-initialize to use the copy constructor.
     InitializationKind InitKind =
@@ -5078,10 +5095,8 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
 
   if (FieldBaseElementType->isRecordType()) {
     InitializedEntity InitEntity =
-        Indirect ? InitializedEntity::InitializeMember(Indirect, nullptr,
-                                                       /*Implicit*/ true)
-                 : InitializedEntity::InitializeMember(Field, nullptr,
-                                                       /*Implicit*/ true);
+        Indirect ? InitializedEntity::InitializeMemberImplicit(Indirect)
+                 : InitializedEntity::InitializeMemberImplicit(Field);
     InitializationKind InitKind =
       InitializationKind::CreateDefault(Loc);
 
@@ -5282,7 +5297,7 @@ static bool CollectFieldInitializer(Sema &SemaRef, BaseAndFieldInfo &Info,
     if (DIE.isInvalid())
       return true;
 
-    auto Entity = InitializedEntity::InitializeMember(Field, nullptr, true);
+    auto Entity = InitializedEntity::InitializeMemberImplicit(Field);
     SemaRef.checkInitializerLifetime(Entity, DIE.get());
 
     CXXCtorInitializer *Init;
@@ -6590,7 +6605,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
   // Inherited constructors are created lazily; force their creation now so the
   // loop below can propagate the DLL attribute to them.
-  if (ClassExported) {
+  if (ClassExported && getLangOpts().DllExportInlines) {
     SmallVector<ConstructorUsingShadowDecl *, 4> Shadows;
     for (Decl *D : Class->decls())
       if (auto *S = dyn_cast<ConstructorUsingShadowDecl>(D))
@@ -6631,7 +6646,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       if (MD->isDeleted())
         continue;
 
-      if (ClassExported) {
+      if (ClassExported && getLangOpts().DllExportInlines) {
         CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(MD);
         if (CD && CD->getInheritedConstructor()) {
           // Inherited constructors already had their base constructor's
@@ -6724,13 +6739,8 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
       // Do not export/import inline function when -fno-dllexport-inlines is
       // passed. But add attribute for later local static var check.
-      // Inherited constructors are marked inline but must still be exported
-      // to match MSVC behavior, so exclude them from this override.
-      bool IsInheritedCtor = false;
-      if (auto *CD = dyn_cast_or_null<CXXConstructorDecl>(MD))
-        IsInheritedCtor = (bool)CD->getInheritedConstructor();
       if (!getLangOpts().DllExportInlines && MD && MD->isInlined() &&
-          !IsInheritedCtor && TSK != TSK_ExplicitInstantiationDeclaration &&
+          TSK != TSK_ExplicitInstantiationDeclaration &&
           TSK != TSK_ExplicitInstantiationDefinition) {
         if (ClassExported) {
           NewAttr = ::new (getASTContext())
@@ -9044,7 +9054,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       } else {
         Loc = MD->getLocation();
         if (FunctionTypeLoc Loc = MD->getFunctionTypeLoc())
-          InsertLoc = Loc.getRParenLoc();
+          InsertLoc = getLocForEndOfToken(Loc.getRParenLoc());
       }
       // Don't diagnose an implicit 'operator=='; we will have diagnosed the
       // corresponding defaulted 'operator<=>' already.
@@ -18328,14 +18338,25 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       DiagnoseUnexpandedParameterPack(SS, UPPC_FriendDeclaration))
     return nullptr;
 
+  bool isTemplateId = D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId;
+
+  if (D.isFunctionDefinition() && SS.isNotEmpty() && !isTemplateId) {
+    auto Kind = SS.getScopeRep().getKind();
+    bool IsNamespaceOrGlobal = Kind == NestedNameSpecifier::Kind::Global ||
+                               Kind == NestedNameSpecifier::Kind::Namespace;
+    if (IsNamespaceOrGlobal) {
+      Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def)
+          << SS.getScopeRep() << FixItHint::CreateRemoval(SS.getRange());
+      SS.clear();
+    }
+  }
+
   // The context we found the declaration in, or in which we should
   // create the declaration.
   DeclContext *DC;
   Scope *DCScope = S;
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
                         RedeclarationKind::ForExternalRedeclaration);
-
-  bool isTemplateId = D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId;
 
   // There are five cases here.
   //   - There's no scope specifier and we're in a local class. Only look
@@ -18473,6 +18494,11 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     if (DiagArg >= 0) {
       Diag(Loc, diag::err_introducing_special_friend) << DiagArg;
       return nullptr;
+    }
+  } else {
+    CXXRecordDecl *RC = dyn_cast<CXXRecordDecl>(DC);
+    if (RC->isLambda()) {
+      Diag(NameInfo.getBeginLoc(), diag::err_friend_lambda_decl);
     }
   }
 
@@ -19481,9 +19507,9 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
     Expr *Arg = nullptr;
     ArrayRef<Expr *> Args;
     if (const auto *G = dyn_cast<GuardedByAttr>(A))
-      Arg = G->getArg();
+      Args = llvm::ArrayRef(G->args_begin(), G->args_size());
     else if (const auto *G = dyn_cast<PtGuardedByAttr>(A))
-      Arg = G->getArg();
+      Args = llvm::ArrayRef(G->args_begin(), G->args_size());
     else if (const auto *AA = dyn_cast<AcquiredAfterAttr>(A))
       Args = llvm::ArrayRef(AA->args_begin(), AA->args_size());
     else if (const auto *AB = dyn_cast<AcquiredBeforeAttr>(A))

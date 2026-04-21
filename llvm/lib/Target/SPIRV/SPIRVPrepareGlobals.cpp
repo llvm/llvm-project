@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The pass transforms IR globals that cannot be trivially mapped to SPIRV
-// into something that is trival to lower.
+// The pass:
+//   - transforms IR globals that cannot be trivially mapped to SPIRV into
+//     something that is trival to lower;
+//   - for AMDGCN flavoured SPIRV, it assigns unique IDs to the specialisation
+//     constants associated with feature predicates, which were inserted by the
+//     FE when expanding calls to __builtin_amdgcn_processor_is or
+//     __builtin_amdgcn_is_invocable
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,8 +20,14 @@
 #include "SPIRVUtils.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
+
+#include <climits>
+#include <string>
 
 #define DEBUG_TYPE "spirv-prepare-globals"
 
@@ -71,12 +82,67 @@ bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
   return true;
 }
 
+bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
+  StringMap<unsigned> IDs;
+  for (auto &&U : F->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    if (!CI)
+      continue;
+
+    auto *SpecID = dyn_cast<ConstantInt>(CI->getArgOperand(0));
+    if (!SpecID)
+      continue;
+
+    unsigned ID = SpecID->getZExtValue();
+    if (ID != UINT32_MAX)
+      continue;
+
+    // Replace placeholder Specialisation Constant IDs with unique IDs
+    // associated with the predicate being evaluated, which is encoded via
+    // spv_assign_name.
+    auto *MD =
+        cast<MDNode>(cast<MetadataAsValue>(CI->getOperand(2))->getMetadata());
+    auto *P = cast<MDString>(MD->getOperand(0));
+
+    ID = IDs.try_emplace(P->getString(), IDs.size()).first->second;
+    CI->setArgOperand(0, ConstantInt::get(CI->getArgOperand(0)->getType(), ID));
+  }
+
+  if (IDs.empty())
+    return false;
+
+  // Store the predicate -> ID mapping as a fixed format string
+  // (predicate ID\0...), for later use during SPIR-V consumption.
+  std::string Tmp;
+  for (auto &&[Predicate, SpecID] : IDs)
+    Tmp.append(Predicate).append(" ").append(utostr(SpecID)).push_back('\0');
+
+  Constant *PredSpecIDStr =
+      ConstantDataArray::getString(M.getContext(), Tmp, false);
+
+  new GlobalVariable(M, PredSpecIDStr->getType(), true,
+                     GlobalVariable::LinkageTypes::ExternalLinkage,
+                     PredSpecIDStr, "llvm.amdgcn.feature.predicate.ids");
+
+  return true;
+}
+
 bool SPIRVPrepareGlobals::runOnModule(Module &M) {
   bool Changed = false;
 
   for (GlobalAlias &GA : make_early_inc_range(M.aliases())) {
     Changed |= tryReplaceAliasWithAliasee(GA);
   }
+
+  if (M.getTargetTriple().getVendor() != Triple::AMD)
+    return Changed;
+
+  // TODO: Currently, for AMDGCN flavoured SPIR-V, the symbol can only be
+  //       inserted via feature predicate use, but in the future this will need
+  //       revisiting if we start making more liberal use of the intrinsic.
+  if (Function *F = Intrinsic::getDeclarationIfExists(
+          &M, Intrinsic::spv_named_boolean_spec_constant))
+    Changed |= tryAssignPredicateSpecConstIDs(M, F);
 
   return Changed;
 }

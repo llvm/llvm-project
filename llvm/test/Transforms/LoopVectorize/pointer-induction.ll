@@ -5,7 +5,6 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 ; Note: Most scalar pointer induction GEPs could be sunk into the conditional
 ;       blocks.
-; Function Attrs: nofree norecurse nounwind
 define void @a(ptr readnone %b) {
 ; CHECK-LABEL: @a(
 ; CHECK-NEXT:  entry:
@@ -32,10 +31,6 @@ define void @a(ptr readnone %b) {
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr null, i64 [[TMP11]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP14]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr null, i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x ptr> poison, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x ptr> [[TMP21]], ptr [[NEXT_GEP2]], i32 1
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> [[TMP22]], ptr [[NEXT_GEP3]], i32 2
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[NEXT_GEP4]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i64 -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP5]], align 1
@@ -44,8 +39,7 @@ define void @a(ptr readnone %b) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i64 -1
-; CHECK-NEXT:    store i8 95, ptr [[TMP9]], align 1
+; CHECK-NEXT:    store i8 95, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i32 1
@@ -100,27 +94,27 @@ entry:
   %cmp.not4 = icmp eq ptr %b, null
   br i1 %cmp.not4, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %if.end
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %if.end
+for.body:
   %c.05 = phi ptr [ %incdec.ptr, %if.end ], [ null, %for.body.preheader ]
   %incdec.ptr = getelementptr inbounds i8, ptr %c.05, i64 -1
   %0 = load i8, ptr %incdec.ptr, align 1
   %tobool.not = icmp eq i8 %0, 0
   br i1 %tobool.not, label %if.end, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   store i8 95, ptr %incdec.ptr, align 1
   br label %if.end
 
-if.end:                                           ; preds = %for.body, %if.then
+if.end:
   %cmp.not = icmp eq ptr %incdec.ptr, %b
   br i1 %cmp.not, label %for.cond.cleanup.loopexit, label %for.body
 }
@@ -185,7 +179,7 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 entry:
   br label %loop.body
 
-loop.body:                                    ; preds = %loop.body, %entry
+loop.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.body ]
   %ptr.iv.1 = phi ptr [ %start.1, %entry ], [ %ptr.iv.1.next, %loop.body ]
   %ptr.iv.2 = phi ptr [ %start.2, %entry ], [ %ptr.iv.2.next, %loop.body ]
@@ -199,7 +193,7 @@ loop.body:                                    ; preds = %loop.body, %entry
   %c = icmp ne i64 %iv.next, %N
   br i1 %c, label %loop.body, label %exit
 
-exit:                            ; preds = %loop.body
+exit:
   ret void
 }
 
@@ -265,7 +259,7 @@ entry:
   %mul = shl i32 %0, 1
   br label %for.cond
 
-for.cond:                                         ; preds = %for.body, %entry
+for.cond:
   %1 = phi i32 [ 0, %entry ], [ %inc, %for.cond ]
   %p.0 = phi ptr [ null, %entry ], [ %add.ptr, %for.cond ]
   %add.ptr = getelementptr i8, ptr %p.0, i32 %mul
@@ -276,7 +270,7 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 %tobool.not, label %for.end, label %for.cond
 
 
-for.end:                                          ; preds = %for.cond
+for.end:
   ret void
 }
 
@@ -394,7 +388,7 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv.ptr = phi ptr [ %p, %entry ], [ %iv.ptr.next, %for.body ]
   %iv.int = phi i32 [ 0, %entry ], [ %iv.int.next, %for.body ]
 
@@ -410,7 +404,7 @@ for.body:                                         ; preds = %for.body, %entry
   %done = icmp ult i32 %iv.int.next, %n
   br i1 %done, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
