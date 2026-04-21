@@ -171,8 +171,8 @@ protected:
               break;
             }
           } else {
-            result.AppendErrorWithFormat(
-                "invalid register set index: %" PRIu64, (uint64_t)set_idx);
+            result.AppendErrorWithFormat("invalid register set index: %" PRIu64,
+                                         (uint64_t)set_idx);
             break;
           }
         }

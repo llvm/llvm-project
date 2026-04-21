@@ -1242,8 +1242,8 @@ protected:
                                    m_options.show_args, m_options.verbose);
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat(
-              "no process found with pid = %" PRIu64, pid);
+          result.AppendErrorWithFormat("no process found with pid = %" PRIu64,
+                                       pid);
         }
       } else {
         ProcessInstanceInfoList proc_infos;
