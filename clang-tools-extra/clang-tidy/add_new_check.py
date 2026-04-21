@@ -512,11 +512,9 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
         for paragraph in paragraphs:
             if self_alias.search(paragraph) or named_alias.search(paragraph):
-                if match := re.search(r":doc:`[^`<]+?\s*<([^>]+)>`", paragraph):
+                if match := re.search(r":doc:`[^`<]+?<([^>]+)>`", paragraph):
                     return match.group(1)
-                if match := re.search(
-                    r"`[^`<]+?\s*<(.+?)\.html(?:#[^>]+)?>`_", paragraph
-                ):
+                if match := re.search(r"`[^`<]+?<(.+?)\.html(?:#[^>]+)?>`_", paragraph):
                     return match.group(1)
         return None
 
