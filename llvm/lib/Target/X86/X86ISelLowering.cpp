@@ -45892,11 +45892,6 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::GF2P8AFFINEQB:
   case X86ISD::GF2P8MULB:
     return false;
-  // SETCC/SETCC_CARRY always produces a well-defined result based on
-  // EFLAGS/carry flag.
-  case X86ISD::SETCC:
-  case X86ISD::SETCC_CARRY:
-    return false;
   case ISD::INTRINSIC_WO_CHAIN:
     switch (Op->getConstantOperandVal(0)) {
     case Intrinsic::x86_sse2_pmadd_wd:
