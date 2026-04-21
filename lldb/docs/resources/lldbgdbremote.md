@@ -154,10 +154,11 @@ information about the binary should not be included (the Mach-O
 header and load commands), and the newer key that supplants
 `report_load_commands`, `information-level` which takes a string
 argument that is one of `address-only`, `address-name`,
-`address-name-uuid`, `full`.
+`address-name-uuid`, `full`.  `full` will include the details of
+the mach header and segment virtual addresses for the binaries.
 
 `"report_load_commands":false` is equivalent to
-`"information-level":"address-only"` or so.
+`"information-level":"address-only"`.
 
 `information-level` allows the caller to limit the amount of data
 being returned to one of (address, address+name, address+name+uuid,
