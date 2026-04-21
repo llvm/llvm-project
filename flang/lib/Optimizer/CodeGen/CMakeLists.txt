@@ -48,5 +48,7 @@ add_flang_library(FIRCodeGen
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
+  MLIRUBDialect
+  MLIRUBToLLVM
   MLIRVectorToLLVM
 )
