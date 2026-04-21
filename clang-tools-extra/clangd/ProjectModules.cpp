@@ -7,12 +7,108 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProjectModules.h"
+#include "Compiler.h"
 #include "support/Logger.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanningTool.h"
+#include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace clang::clangd {
 namespace {
+
+llvm::SmallString<128> normalizePath(PathRef Path) {
+  llvm::SmallString<128> Result(Path);
+  llvm::sys::path::remove_dots(Result, /*remove_dot_dot=*/true);
+  llvm::sys::path::native(Result, llvm::sys::path::Style::posix);
+  return Result;
+}
+
+std::string normalizePath(PathRef Path, PathRef WorkingDir) {
+  if (Path.empty())
+    return {};
+
+  llvm::SmallString<128> Result;
+  if (llvm::sys::path::is_absolute(Path) || WorkingDir.empty())
+    Result = Path;
+  else {
+    Result = WorkingDir;
+    llvm::sys::path::append(Result, Path);
+  }
+
+  return normalizePath(Result).str().str();
+}
+
+/// The information related to modules parsed from compile commands.
+/// Including the source file, the module file it produces (if it is a
+/// producer), and the module and the corresponding module files it
+/// requires (if it is a consumer)
+struct ParsedCompileCommandInfo {
+  std::string SourceFile;
+  std::optional<std::string> OutputModuleFile;
+  // Map from required module name to the module file path.
+  llvm::StringMap<std::string> RequiredModuleFiles;
+};
+
+/// Get ParsedCompileCommandInfo by looking at the '--precompile',
+/// '-fmodule-file=' and '-fmodule-file=' commands in the compile command.
+std::optional<ParsedCompileCommandInfo>
+parseCompileCommandInfo(tooling::CompileCommand Cmd, const ThreadsafeFS &TFS) {
+  auto FS = TFS.view(std::nullopt);
+  auto Tokenizer = llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
+                       ? llvm::cl::TokenizeWindowsCommandLine
+                       : llvm::cl::TokenizeGNUCommandLine;
+  tooling::addExpandedResponseFiles(Cmd.CommandLine, Cmd.Directory, Tokenizer,
+                                    *FS);
+
+  ParsedCompileCommandInfo Result;
+  Result.SourceFile = normalizePath(Cmd.Filename, Cmd.Directory);
+
+  bool SawPrecompile = false;
+  for (size_t I = 1; I < Cmd.CommandLine.size(); ++I) {
+    llvm::StringRef Arg = Cmd.CommandLine[I];
+    if (Arg == "--precompile") {
+      SawPrecompile = true;
+      continue;
+    }
+
+    if (Arg.consume_front("-fmodule-output=")) {
+      Result.OutputModuleFile = normalizePath(Arg, Cmd.Directory);
+      continue;
+    }
+    if (Arg == "-fmodule-output" && I + 1 < Cmd.CommandLine.size()) {
+      Result.OutputModuleFile =
+          normalizePath(Cmd.CommandLine[++I], Cmd.Directory);
+      continue;
+    }
+    if (SawPrecompile && Arg == "-o" && I + 1 < Cmd.CommandLine.size()) {
+      Result.OutputModuleFile =
+          normalizePath(Cmd.CommandLine[++I], Cmd.Directory);
+      continue;
+    }
+    if (SawPrecompile && Arg.starts_with("-o") && Arg.size() > 2) {
+      Result.OutputModuleFile = normalizePath(Arg.drop_front(2), Cmd.Directory);
+      continue;
+    }
+
+    if (!Arg.consume_front("-fmodule-file="))
+      continue;
+
+    auto Sep = Arg.find('=');
+    if (Sep == llvm::StringRef::npos || Sep == 0 || Sep + 1 == Arg.size())
+      continue;
+
+    Result.RequiredModuleFiles[Arg.take_front(Sep)] =
+        normalizePath(Arg.drop_front(Sep + 1), Cmd.Directory);
+  }
+
+  return Result;
+}
 
 std::optional<tooling::CompileCommand>
 getCompileCommandForFile(const clang::tooling::CompilationDatabase &CDB,
@@ -250,10 +346,283 @@ private:
   CommandMangler Mangler;
 };
 
+/// Reads project module information directly from compile commands.
+///
+/// The key observation is that compile commands may already encode the mapping
+/// between a TU, the module names it imports, and the BMI paths it uses:
+/// - producers may spell the BMI path with `--precompile -o <bmi>` or
+///   `-fmodule-output=<bmi>`
+/// - consumers may spell the mapping from module name to BMI path with
+///   `-fmodule-file=<module>=<bmi>`
+///
+/// When that information is present, we can answer
+/// `getSourceForModuleName(ModuleName, RequiredSourceFile)` by first looking up
+/// the BMI path the consumer TU uses for `ModuleName`, and then mapping that
+/// BMI path back to the module unit source that produced it. This avoids the
+/// older scanning-only approach of guessing the module unit from the module
+/// name alone.
+///
+/// One subtle point is that producer commands alone do not reliably tell us the
+/// module name associated with a BMI path. In practice this backend learns that
+/// association from consumer `-fmodule-file=` entries, and then uses the BMI
+/// path to recover the producer source file. That is why indexing is built from
+/// both producer and consumer commands.
+///
+/// Note that compilation database can be stale, so results from this backend
+/// should be treated as preferred hints rather than unquestionable truth.
+/// The compound layer below validates or falls back when needed.
+class CompileCommandsProjectModules : public ProjectModules {
+public:
+  CompileCommandsProjectModules(
+      std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
+      const ThreadsafeFS &TFS)
+      : CDB(std::move(CDB)), TFS(TFS) {}
+
+  std::vector<std::string> getRequiredModules(PathRef File) override {
+    auto Parsed = parseFileCommand(File);
+    if (!Parsed)
+      return {};
+
+    std::vector<std::string> Result;
+    Result.reserve(Parsed->RequiredModuleFiles.size());
+    for (const auto &Required : Parsed->RequiredModuleFiles)
+      Result.push_back(Required.getKey().str());
+    return Result;
+  }
+
+  std::string getModuleNameForSource(PathRef File) override {
+    indexProducerCommands();
+    auto It = SourceToModuleName.find(
+        maybeCaseFoldPath(normalizePath(File, /*WorkingDir=*/{})));
+    if (It == SourceToModuleName.end() || It->second.Ambiguous)
+      return {};
+    return It->second.Name;
+  }
+
+  ModuleNameState getModuleNameState(llvm::StringRef ModuleName) override {
+    indexProducerCommands();
+    auto It = ModuleNameToDistinctSources.find(ModuleName);
+    if (It == ModuleNameToDistinctSources.end())
+      return ModuleNameState::Unknown;
+    return It->second.size() > 1 ? ModuleNameState::Multiple
+                                 : ModuleNameState::Unique;
+  }
+
+  std::string getSourceForModuleName(llvm::StringRef ModuleName,
+                                     PathRef RequiredSourceFile) override {
+    auto Parsed = parseFileCommand(RequiredSourceFile);
+    if (!Parsed)
+      return {};
+
+    auto It = Parsed->RequiredModuleFiles.find(ModuleName);
+    if (It == Parsed->RequiredModuleFiles.end())
+      return {};
+
+    indexProducerCommands();
+    auto SourceIt = PCMToSource.find(maybeCaseFoldPath(It->second));
+    if (SourceIt == PCMToSource.end())
+      return {};
+
+    return SourceIt->second;
+  }
+
+  void setCommandMangler(CommandMangler Mangler) override {
+    this->Mangler = std::move(Mangler);
+    ProducerCommandsIndexed = false;
+    PCMToSource.clear();
+    ModuleNameToDistinctSources.clear();
+    SourceToModuleName.clear();
+  }
+
+private:
+  /// Parses the compile command for \p File into the module information
+  /// encoded in the command line.
+  std::optional<ParsedCompileCommandInfo> parseFileCommand(PathRef File) const {
+    auto Cmd = getCompileCommandForFile(*CDB, File, Mangler);
+    if (!Cmd)
+      return std::nullopt;
+    return parseCompileCommandInfo(std::move(*Cmd), TFS);
+  }
+
+  /// Builds indexes from producer and consumer compile commands.
+  ///
+  /// Compile commands are parsed once up front. The first pass records which
+  /// source file produces each BMI path. The second pass walks consumer
+  /// commands, uses `-fmodule-file=` information to associate module names with
+  /// those BMI paths, and then records which producer source files are
+  /// referenced for each module name.
+  void indexProducerCommands() {
+    if (ProducerCommandsIndexed)
+      return;
+
+    std::vector<ParsedCompileCommandInfo> ParsedCommands;
+    auto AllFiles = CDB->getAllFiles();
+    ParsedCommands.reserve(AllFiles.size());
+    for (const auto &File : AllFiles) {
+      auto Parsed = parseFileCommand(File);
+      if (!Parsed)
+        continue;
+
+      if (Parsed->OutputModuleFile)
+        PCMToSource[maybeCaseFoldPath(*Parsed->OutputModuleFile)] =
+            Parsed->SourceFile;
+
+      ParsedCommands.push_back(std::move(*Parsed));
+    }
+
+    for (const auto &Parsed : ParsedCommands) {
+      for (const auto &Required : Parsed.RequiredModuleFiles) {
+        auto SourceIt =
+            PCMToSource.find(maybeCaseFoldPath(Required.getValue()));
+        if (SourceIt == PCMToSource.end())
+          continue;
+        ModuleNameToDistinctSources[Required.getKey()].insert(
+            maybeCaseFoldPath(SourceIt->second));
+
+        auto &Recovered =
+            SourceToModuleName[maybeCaseFoldPath(SourceIt->second)];
+        if (Recovered.Name.empty())
+          Recovered.Name = Required.getKey().str();
+        else if (Recovered.Name != Required.getKey()) {
+          if (!Recovered.Ambiguous) {
+            elog("Detected conflicting module names ('{0}' and '{1}') for "
+                 "the same module file {2} produced by source {3}",
+                 Recovered.Name, Required.getKey(), Required.getValue(),
+                 SourceIt->second);
+          }
+          Recovered.Ambiguous = true;
+        }
+      }
+    }
+
+    ProducerCommandsIndexed = true;
+  }
+
+  std::shared_ptr<const clang::tooling::CompilationDatabase> CDB;
+  const ThreadsafeFS &TFS;
+  CommandMangler Mangler;
+  bool ProducerCommandsIndexed = false;
+
+  llvm::StringMap<std::string> PCMToSource;
+
+  using DistinctSourceSet = llvm::StringSet<>;
+  llvm::StringMap<DistinctSourceSet> ModuleNameToDistinctSources;
+
+  struct RecoveredModuleName {
+    std::string Name;
+    bool Ambiguous = false;
+  };
+  llvm::StringMap<RecoveredModuleName> SourceToModuleName;
+};
+
+/// Combines the compile-commands backend with the scanning backend.
+///
+/// For getSourceForModuleName, it prefers compile-command-derived results when
+/// available to avoid scanning the whole project, but validates them against
+/// scanning results to avoid returning stale information. For other queries,
+/// it returns scanning results directly as scanning information is update to
+/// date.
+class CompoundProjectModules : public ProjectModules {
+public:
+  CompoundProjectModules(
+      std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
+      const ThreadsafeFS &TFS)
+      : CompileCommands(
+            std::make_unique<CompileCommandsProjectModules>(CDB, TFS)),
+        Scanning(
+            std::make_unique<ScanningAllProjectModules>(std::move(CDB), TFS)) {}
+
+  std::vector<std::string> getRequiredModules(PathRef File) override {
+    // Return scanning results directly as it is fast enough and up to date.
+    return Scanning->getRequiredModules(File);
+  }
+
+  std::string getModuleNameForSource(PathRef File) override {
+    // Return scanning results directly as it is fast enough and up to date.
+    return Scanning->getModuleNameForSource(File);
+  }
+
+  std::string getSourceForModuleName(llvm::StringRef ModuleName,
+                                     PathRef RequiredSourceFile) override {
+    auto FromCompileCommands =
+        CompileCommands->getSourceForModuleName(ModuleName, RequiredSourceFile);
+    // Check if the source still declares the module.
+    // This is to validate compile-command-derived results may be stale and
+    // scan a single file is fast enough. We just don't want to scan the project
+    // entirely.
+    if (!FromCompileCommands.empty() &&
+        Scanning->getModuleNameForSource(FromCompileCommands) == ModuleName)
+      return FromCompileCommands;
+
+    return Scanning->getSourceForModuleName(ModuleName, RequiredSourceFile);
+  }
+
+  ModuleNameState getModuleNameState(llvm::StringRef ModuleName) override {
+    auto FromCompileCommands = CompileCommands->getModuleNameState(ModuleName);
+    if (FromCompileCommands != ModuleNameState::Unknown)
+      return FromCompileCommands;
+    return Scanning->getModuleNameState(ModuleName);
+  }
+
+  void setCommandMangler(CommandMangler Mangler) override {
+    this->Mangler = std::move(Mangler);
+    auto ForwardMangler = [this](tooling::CompileCommand &Command,
+                                 PathRef CommandPath) {
+      if (this->Mangler)
+        this->Mangler(Command, CommandPath);
+    };
+    CompileCommands->setCommandMangler(ForwardMangler);
+    Scanning->setCommandMangler(std::move(ForwardMangler));
+  }
+
+private:
+  std::unique_ptr<CompileCommandsProjectModules> CompileCommands;
+  std::unique_ptr<ScanningAllProjectModules> Scanning;
+  CommandMangler Mangler;
+};
+
+/// Creates the project-modules facade used by clangd.
+///
+/// The implementation is intentionally layered:
+///
+///         CompoundProjectModules
+///            /              \
+///           v                v
+/// CompileCommands      ScanningAllProjectModules
+///   ProjectModules               |
+///      |                         v
+///      |               ModuleDependencyScanner
+///      |
+///      +-- preferred specifically for recovering the source file for a module
+///      |     name in the context of a consumer TU, because compile commands
+///      |     encode `module name -> BMI -> producer source`
+///      |
+///      +-- scanning remains fallback/validation for stale or missing data
+///
+/// - `CompileCommandsProjectModules` reads module relationships that the build
+///   system already made explicit in compile commands. In particular, it uses
+///   producer-side BMI output paths together with consumer-side
+///   `-fmodule-file=<module>=<bmi>` entries to recover the module unit source a
+///   TU actually depends on. This is the preferred source because it can
+///   distinguish different module producers for the same module name when
+///   different translation units reference different BMIs.
+/// - `ScanningAllProjectModules` derives module information by scanning source
+///   files. It is more expensive, but it can still answer queries that are not
+///   present in compile commands and validate compile-command-derived results.
+/// - `CompoundProjectModules` arbitrates between the two backends on a
+///   per-query basis. Compile commands are especially valuable for
+///   `getSourceForModuleName()` because they preserve the consumer TU's actual
+///   `module name -> BMI` choice. Other queries may still fall back to, or be
+///   validated by, scanning because compile-command information may be
+///   incomplete or stale.
+///
+/// This split keeps the logic simple: compile commands provide precision when
+/// available, while scanning preserves compatibility with projects that have
+/// incomplete module information in their compilation database.
 std::unique_ptr<ProjectModules> getProjectModules(
     std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
     const ThreadsafeFS &TFS) {
-  return std::make_unique<ScanningAllProjectModules>(CDB, TFS);
+  return std::make_unique<CompoundProjectModules>(std::move(CDB), TFS);
 }
 
 } // namespace clang::clangd
