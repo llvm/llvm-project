@@ -1445,7 +1445,7 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
 
   if (auto *ScalarInst = dyn_cast<Instruction>(Scalar)) {
     bool IsFoldOp = false;
-    for (auto Op: ScalarOps) {
+    for (auto Op : ScalarOps) {
       if (Op == Scalar) {
         IsFoldOp = true;
         break;
