@@ -3145,6 +3145,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrStores.clear();
   DeletedInstrs.clear();
 
+  processParamTypesByFunHeader(CurrF, B);
+
   // Fix GEP result types ahead of inference, and simplify if possible.
   // Data structure for dead instructions that were simplified and replaced.
   SmallPtrSet<Instruction *, 4> DeadInsts;
@@ -3175,8 +3177,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     assert(I->use_empty() && "Dead instruction should not have any uses left");
     I->eraseFromParent();
   }
-
-  processParamTypesByFunHeader(CurrF, B);
 
   // StoreInst's operand type can be changed during the next
   // transformations, so we need to store it in the set. Also store already
