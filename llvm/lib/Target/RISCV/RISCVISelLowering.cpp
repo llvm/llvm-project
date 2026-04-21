@@ -880,7 +880,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
 
     static const unsigned FloatingPointVPOps[] = {
-        ISD::VP_FADD,        ISD::VP_FSUB,        ISD::VP_FMUL,
+        ISD::VP_FADD,        ISD::VP_FMUL,
         ISD::VP_FNEG,
         ISD::VP_FMA,         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
         ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,
@@ -1202,7 +1202,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // TODO: support more vp ops.
     static const unsigned ZvfhminZvfbfminPromoteVPOps[] = {
         ISD::VP_FADD,
-        ISD::VP_FSUB,
         ISD::VP_FMUL,
         ISD::VP_FMA,
         ISD::VP_REDUCE_FMIN,
@@ -7550,7 +7549,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(UREM)       // VP_UREM
   VP_CASE(SHL)        // VP_SHL
   VP_CASE(FADD)       // VP_FADD
-  VP_CASE(FSUB)       // VP_FSUB
   VP_CASE(FMUL)       // VP_FMUL
   VP_CASE(FNEG)       // VP_FNEG
   VP_CASE(SETCC)      // VP_SETCC
@@ -8058,11 +8056,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerStrictFPExtendOrRoundLike(Op, DAG);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-    if (Op.getValueType().isVector() &&
+    // Fall back to zvfbfmin for bf16 case if source type is wider than 8 bits.
+    if (SDValue Op1 = Op.getOperand(0);
+        Op.getValueType().isVector() &&
         ((Op.getValueType().getScalarType() == MVT::f16 &&
           (Subtarget.hasVInstructionsF16Minimal() &&
            !Subtarget.hasVInstructionsF16())) ||
-         Op.getValueType().getScalarType() == MVT::bf16)) {
+         (Op.getValueType().getScalarType() == MVT::bf16 &&
+          (Subtarget.hasVInstructionsBF16Minimal() &&
+           (!Subtarget.hasVInstructionsBF16() ||
+            Op1.getValueType().getScalarSizeInBits() > 8))))) {
       MVT NVT =
           MVT::getVectorVT(MVT::f32, Op.getValueType().getVectorElementCount());
       if (!isTypeLegal(NVT))
@@ -8077,12 +8080,17 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     [[fallthrough]];
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+    // Fall back to zvfbfmin for bf16 case if destination type is wider than 8
+    // bits.
     if (SDValue Op1 = Op.getOperand(0);
         Op1.getValueType().isVector() &&
         ((Op1.getValueType().getScalarType() == MVT::f16 &&
           (Subtarget.hasVInstructionsF16Minimal() &&
            !Subtarget.hasVInstructionsF16())) ||
-         Op1.getValueType().getScalarType() == MVT::bf16)) {
+         (Op1.getValueType().getScalarType() == MVT::bf16 &&
+          (Subtarget.hasVInstructionsBF16Minimal() &&
+           (!Subtarget.hasVInstructionsBF16() ||
+            Op.getValueType().getScalarSizeInBits() > 8))))) {
       MVT NVT = MVT::getVectorVT(MVT::f32,
                                  Op1.getValueType().getVectorElementCount());
       if (!isTypeLegal(NVT))
@@ -8137,7 +8145,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         return DAG.getNode(Op.getOpcode(), DL, VT, Ext);
       }
       // FP2Int
-      assert(SrcEltVT == MVT::f16 && "Unexpected FP_TO_[US]INT lowering");
+      assert((SrcEltVT == MVT::f16 || SrcEltVT == MVT::bf16) &&
+             "Unexpected FP_TO_[US]INT lowering");
       // Do one doubling fp_extend then complete the operation by converting
       // to int.
       MVT InterimFVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
@@ -8154,7 +8163,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (SrcEltSize > (2 * EltSize)) {
       if (IsInt2FP) {
         // One narrowing int_to_fp, then an fp_round.
-        assert(EltVT == MVT::f16 && "Unexpected [US]_TO_FP lowering");
+        assert((EltVT == MVT::f16 || EltVT == MVT::bf16) &&
+               "Unexpected [US]_TO_FP lowering");
         MVT InterimFVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
         if (IsStrict) {
           SDValue Int2FP = DAG.getNode(Op.getOpcode(), DL,
@@ -8966,7 +8976,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_XOR:
     return lowerLogicVPOp(Op, DAG);
   case ISD::VP_FADD:
-  case ISD::VP_FSUB:
   case ISD::VP_FMUL:
   case ISD::VP_FNEG:
   case ISD::VP_SQRT:
@@ -18586,6 +18595,8 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root,
   case RISCVISD::FSUB_VL:
     // add|sub|fadd|fsub-> vwadd(u)|vwsub(u)|vfwadd|vfwsub
     Strategies.push_back(canFoldToVWWithSameExtension);
+    if (Subtarget.hasVInstructionsBF16())
+      Strategies.push_back(canFoldToVWWithSameExtBF16);
     // add|sub|fadd|fsub -> vwadd(u)_w|vwsub(u)_w}|vfwadd_w|vfwsub_w
     Strategies.push_back(canFoldToVW_W);
     break;
@@ -18595,13 +18606,9 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root,
   case RISCVISD::VFNMADD_VL:
   case RISCVISD::VFNMSUB_VL:
     Strategies.push_back(canFoldToVWWithSameExtension);
-    if (Subtarget.hasVInstructionsBF16() &&
-        Root->getOpcode() != RISCVISD::FMUL_VL)
-      // TODO: Once other widen operations are supported we can merge
-      // canFoldToVWWithSameExtension and canFoldToVWWithSameExtBF16.
-      Strategies.push_back(canFoldToVWWithSameExtBF16);
-    else if (Subtarget.hasStdExtZvfbfwma() &&
-             Root->getOpcode() == RISCVISD::VFMADD_VL)
+    if (Subtarget.hasVInstructionsBF16() ||
+        (Subtarget.hasStdExtZvfbfwma() &&
+         Root->getOpcode() == RISCVISD::VFMADD_VL))
       Strategies.push_back(canFoldToVWWithSameExtBF16);
     break;
   case ISD::MUL:

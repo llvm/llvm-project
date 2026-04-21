@@ -446,7 +446,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
            DstTy.getSizeInBits() < 32 &&
            "Expected a scalar smaller than 32 bits on a GPR.");
     Builder.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
-    Register ExtReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    Register ExtReg = MRI.createGenericVirtualRegister(LLT::integer(32));
     Builder.buildTrunc(Dst, ExtReg);
 
     APInt Val = MI.getOperand(1).getCImm()->getValue().zext(32);
@@ -465,7 +465,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     APInt Bits = Imm.bitcastToAPInt();
     Builder.setInsertPt(*MI.getParent(), MI.getIterator());
     if (Bits.getBitWidth() < 32) {
-      Register ExtReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      Register ExtReg = MRI.createGenericVirtualRegister(LLT::integer(32));
       Builder.buildConstant(ExtReg, Bits.zext(32));
       Builder.buildTrunc(Dst, ExtReg);
       MRI.setRegBank(ExtReg, AArch64::GPRRegBank);
@@ -486,7 +486,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
         return applyDefaultMapping(OpdMapper);
 
       Builder.setInsertPt(*MI.getParent(), MI.getIterator());
-      auto Ext = Builder.buildAnyExt(LLT::scalar(32), Dst);
+      auto Ext = Builder.buildAnyExt(LLT::integer(32), Dst);
       MI.getOperand(0).setReg(Ext.getReg(0));
       MRI.setRegBank(Ext.getReg(0), AArch64::GPRRegBank);
     }
@@ -498,7 +498,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     if (MRI.getRegBank(Dst) == &AArch64::GPRRegBank && Ty.isScalar() &&
         Ty.getSizeInBits() < 32) {
       Builder.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
-      Register ExtReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      Register ExtReg = MRI.createGenericVirtualRegister(LLT::integer(32));
       Builder.buildTrunc(Dst, ExtReg);
       MI.getOperand(0).setReg(ExtReg);
       MRI.setRegBank(ExtReg, AArch64::GPRRegBank);
@@ -518,7 +518,9 @@ void AArch64RegisterBankInfo::applyMappingImpl(
 
     // Extend smaller gpr operands to 32 bit.
     Builder.setInsertPt(*MI.getParent(), MI.getIterator());
-    auto Ext = Builder.buildAnyExt(LLT::scalar(32), MI.getOperand(2).getReg());
+    LLT OperandType = MRI.getType(MI.getOperand(2).getReg());
+    auto Ext = Builder.buildAnyExt(OperandType.changeElementSize(32),
+                                   MI.getOperand(2).getReg());
     MRI.setRegBank(Ext.getReg(0), getRegBank(AArch64::GPRRegBankID));
     MI.getOperand(2).setReg(Ext.getReg(0));
     return applyDefaultMapping(OpdMapper);
@@ -533,7 +535,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     Builder.setInsertPt(*MI.getParent(), MI.getIterator());
 
     Register ConstReg =
-        Builder.buildAnyExt(LLT::scalar(32), MI.getOperand(1).getReg())
+        Builder.buildAnyExt(LLT::integer(32), MI.getOperand(1).getReg())
             .getReg(0);
     MRI.setRegBank(ConstReg, getRegBank(AArch64::GPRRegBankID));
     MI.getOperand(1).setReg(ConstReg);
@@ -1291,7 +1293,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (getRegBank(MI.getOperand(2).getReg(), MRI, TRI) == &AArch64::FPRRegBank)
       OpRegBankIdx[2] = PMI_FirstFPR;
     else {
-      // If the type is i8/i16, and the regank will be GPR, then we change the
+      // If the type is i8/i16, and the regbank will be GPR, then we change the
       // type to i32 in applyMappingImpl.
       LLT Ty = MRI.getType(MI.getOperand(2).getReg());
       if (Ty.getSizeInBits() == 8 || Ty.getSizeInBits() == 16) {
