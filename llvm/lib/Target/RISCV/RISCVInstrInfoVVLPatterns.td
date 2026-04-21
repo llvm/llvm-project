@@ -1619,16 +1619,17 @@ multiclass VPatBinaryFPWVL_VV_VF<SDNode vop, string instruction_name> {
 
 multiclass VPatBinaryFPWVL_VV_VF_RM<SDNode vop, string instruction_name,
                                     bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableFloatVectors in {
+  foreach fvtiToFWti = AllWidenableFloatAndBF16Vectors in {
     defvar vti = fvtiToFWti.Vti;
     defvar wti = fvtiToFWti.Wti;
+    defvar alt = !if(!eq(vti.Scalar, bf16), "_ALT", "");
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<wti>.Predicates) in {
-      def : VPatBinaryVL_V_RM<vop, instruction_name, "VV",
+      def : VPatBinaryVL_V_RM<vop, instruction_name#alt, "VV",
                                        wti.Vector, vti.Vector, vti.Vector, vti.Mask,
                                        vti.Log2SEW, vti.LMul, wti.RegClass, vti.RegClass,
                                        vti.RegClass, isSEWAware>;
-      def : VPatBinaryVL_VF_RM<vop, instruction_name#"_V"#vti.ScalarSuffix,
+      def : VPatBinaryVL_VF_RM<vop, instruction_name#alt#"_V"#vti.ScalarSuffix,
                                         wti.Vector, vti.Vector, vti.Vector, vti.Mask,
                                         vti.Log2SEW, vti.LMul, wti.RegClass, vti.RegClass,
                                         vti.ScalarRegClass, isSEWAware>;
@@ -1661,20 +1662,21 @@ multiclass VPatBinaryFPWVL_VV_VF_WV_WF<SDNode vop, SDNode vop_w, string instruct
 multiclass VPatBinaryFPWVL_VV_VF_WV_WF_RM<
     SDNode vop, SDNode vop_w, string instruction_name, bit isSEWAware = 0>
     : VPatBinaryFPWVL_VV_VF_RM<vop, instruction_name, isSEWAware> {
-  foreach fvtiToFWti = AllWidenableFloatVectors in {
+  foreach fvtiToFWti = AllWidenableFloatAndBF16Vectors in {
     defvar vti = fvtiToFWti.Vti;
     defvar wti = fvtiToFWti.Wti;
+    defvar alt = !if(!eq(vti.Scalar, bf16), "_ALT", "");
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<wti>.Predicates) in {
-      defm : VPatTiedBinaryNoMaskVL_V_RM<vop_w, instruction_name, "WV",
+      defm : VPatTiedBinaryNoMaskVL_V_RM<vop_w, instruction_name#alt, "WV",
                                          wti.Vector, vti.Vector, vti.Log2SEW,
                                          vti.LMul, wti.RegClass, vti.RegClass,
                                          isSEWAware>;
-      def : VPatBinaryVL_V_RM<vop_w, instruction_name, "WV",
+      def : VPatBinaryVL_V_RM<vop_w, instruction_name#alt, "WV",
                                        wti.Vector, wti.Vector, vti.Vector, vti.Mask,
                                        vti.Log2SEW, vti.LMul, wti.RegClass, wti.RegClass,
                                        vti.RegClass, isSEWAware>;
-      def : VPatBinaryVL_VF_RM<vop_w, instruction_name#"_W"#vti.ScalarSuffix,
+      def : VPatBinaryVL_VF_RM<vop_w, instruction_name#alt#"_W"#vti.ScalarSuffix,
                                         wti.Vector, wti.Vector, vti.Vector, vti.Mask,
                                         vti.Log2SEW, vti.LMul, wti.RegClass, wti.RegClass,
                                         vti.ScalarRegClass, isSEWAware>;
