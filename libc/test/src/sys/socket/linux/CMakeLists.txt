@@ -165,3 +165,22 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_unittest(
+  shutdown_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    shutdown_test.cpp
+  DEPENDS
+    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.ssize_t
+    libc.src.errno.errno
+    libc.src.sys.socket.shutdown
+    libc.src.sys.socket.socketpair
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
