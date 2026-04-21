@@ -1141,10 +1141,8 @@ void CIRGenFunction::pushPendingCleanupToEHStack(
   if (entry.activeFlag.isValid()) {
     EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
     scope.setActiveFlag(entry.activeFlag);
-    if (scope.isNormalCleanup())
-      scope.setTestFlagInNormalCleanup();
-    if (scope.isEHCleanup())
-      scope.setTestFlagInEHCleanup();
+    scope.setTestFlagInNormalCleanup(scope.isNormalCleanup());
+    scope.setTestFlagInEHCleanup(scope.isEHCleanup());
   }
 }
 

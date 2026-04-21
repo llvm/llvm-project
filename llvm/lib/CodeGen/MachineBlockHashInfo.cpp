@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -76,7 +78,10 @@ struct CollectHashInfo {
   uint64_t NeighborHash;
 };
 
-bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
+MachineBlockHashInfoResult::MachineBlockHashInfoResult() = default;
+
+MachineBlockHashInfoResult::MachineBlockHashInfoResult(
+    const MachineFunction &F) {
   DenseMap<const MachineBasicBlock *, CollectHashInfo> HashInfos;
   uint16_t Offset = 0;
   // Initialize hash components
@@ -115,14 +120,43 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
         fold64To16(HashInfo.InstrHash), fold64To16(HashInfo.NeighborHash));
     MBBHashInfo[&MBB] = BlendedHash.combine();
   }
+}
 
+uint64_t
+MachineBlockHashInfoResult::getMBBHash(const MachineBasicBlock &MBB) const {
+  auto it = MBBHashInfo.find(&MBB);
+  return it->second;
+}
+
+bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
+  Result = MachineBlockHashInfoResult{F};
   return false;
 }
 
-uint64_t MachineBlockHashInfo::getMBBHash(const MachineBasicBlock &MBB) {
-  return MBBHashInfo[&MBB];
+uint64_t MachineBlockHashInfo::getMBBHash(const MachineBasicBlock &MBB) const {
+  return Result.getMBBHash(MBB);
 }
 
 MachineFunctionPass *llvm::createMachineBlockHashInfoPass() {
   return new MachineBlockHashInfo();
+}
+
+AnalysisKey MachineBlockHashInfoAnalysis::Key;
+
+MachineBlockHashInfoResult
+MachineBlockHashInfoAnalysis::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  return MachineBlockHashInfoResult{MF};
+}
+
+PreservedAnalyses
+MachineBlockHashInfoPrinterPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  auto &MBHI = MFAM.getResult<MachineBlockHashInfoAnalysis>(MF);
+  OS << "Machine Block Hash Info for function: " << MF.getName() << "\n";
+  for (const auto &MBB : MF) {
+    OS << "  BB#" << MBB.getNumber() << ": "
+       << format_hex(MBHI.getMBBHash(MBB), 16) << "\n";
+  }
+  return PreservedAnalyses::all();
 }
