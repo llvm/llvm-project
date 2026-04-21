@@ -807,11 +807,14 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                            : FortranForm::FreeForm;
   }
 
-  // Set fixedFormColumns based on -ffixed-line-length=<value>
+  // Set fixedFormColumns based on -ffixed-line-length=<value> or
+  // set freeFormColumns based on -ffree-line-length=<value>.
   if (const auto *arg =
           args.getLastArg(clang::options::OPT_ffixed_line_length_EQ,
                           clang::options::OPT_ffree_line_length_EQ)) {
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    bool isFixedLineFlag =
+        arg->getOption().matches(clang::options::OPT_ffixed_line_length_EQ);
     std::int64_t columns = -1;
     if (argValue == "none") {
       columns = 0;
@@ -823,11 +826,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
           << arg->getOption().getName() << arg->getValue();
     } else if (columns == 0) {
       columns = 1000000;
-    } else if (columns < 7) {
+    } else if (columns < 7 && isFixedLineFlag) {
+      // Specific to the fixed form
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
     }
-    if (arg->getOption().matches(clang::options::OPT_ffixed_line_length_EQ))
+    if (isFixedLineFlag)
       opts.fixedFormColumns = columns;
     else
       opts.freeFormColumns = columns;
