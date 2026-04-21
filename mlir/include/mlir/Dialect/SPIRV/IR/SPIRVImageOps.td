@@ -592,7 +592,8 @@ def SPIRV_ImageSampleProjDrefImplicitLodOp : SPIRV_Op<"ImageSampleProjDrefImplic
 def SPIRV_ImageFetchOp : SPIRV_Op<"ImageFetch",
     [SPIRV_DimIsNot<"image", ["Cube"]>,
      SPIRV_SampledOperandIs<"image", ["NeedSampler"]>,
-     SPIRV_NoneOrElementMatchImage<"result", "image">]> {
+     SPIRV_NoneOrElementMatchImage<"result", "image">,
+     DeclareOpInterfaceMethods<SPIRV_FetchOpInterface>]> {
   let summary = "Fetch a single texel from an image whose Sampled operand is 1. ";
 
   let description = [{

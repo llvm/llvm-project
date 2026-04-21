@@ -272,7 +272,8 @@ BuildModulesSection(Process &process, FileSpec directory) {
     FileSpec path_to_copy_module = directory;
     path_to_copy_module.AppendPathComponent("modules");
     path_to_copy_module.AppendPathComponent(system_path);
-    sys::fs::create_directories(path_to_copy_module.GetDirectory());
+    sys::fs::create_directories(
+        path_to_copy_module.GetDirectory().GetStringRef());
 
     if (std::error_code ec =
             llvm::sys::fs::copy_file(file, path_to_copy_module.GetPath()))

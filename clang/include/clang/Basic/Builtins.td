@@ -29,6 +29,11 @@ class F16F128MathTemplate : Template<["__fp16", "__float128"],
 class IntMathTemplate : Template<["int", "long int", "long long int"],
                                  ["",     "l",       "ll"], /*AsPrefix=*/1>;
 
+class IntBitUtilTemplate : Template<
+    ["unsigned char", "unsigned short", "unsigned int",
+     "unsigned long int", "unsigned long long int"],
+    ["_uc", "_us", "_ui", "_ul", "_ull"]>;
+
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
 
@@ -964,6 +969,95 @@ def StdcBitCeilLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
+
+// Typed variants of the C23 stdbit.h builtins (e.g. stdc_leading_zeros_uc).
+// IntBitUtilTemplate generates the _uc/_us/_ui/_ul/_ull spellings with
+// concrete prototypes so the compiler can match the <stdbit.h> declarations.
+
+def StdcLeadingZerosTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_leading_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcLeadingOnesTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_leading_ones"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcTrailingZerosTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_trailing_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcTrailingOnesTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_trailing_ones"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcFirstLeadingZeroTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_first_leading_zero"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcFirstLeadingOneTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_first_leading_one"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcFirstTrailingZeroTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_first_trailing_zero"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcFirstTrailingOneTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_first_trailing_one"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcCountZerosTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_count_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcCountOnesTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_count_ones"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcBitWidthTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_bit_width"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcHasSingleBitTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_has_single_bit"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "bool(T)";
+}
+
+def StdcBitFloorTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_bit_floor"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T)";
+}
+
+def StdcBitCeilTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_bit_ceil"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T)";
+}
+
 
 
 // Random GCC builtins

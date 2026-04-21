@@ -370,8 +370,8 @@ PreservedAnalyses SelectOptimizeImpl::run(Function &F,
   PSI = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
             .getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   if (!PSI)
-    reportFatalUsageError("This pass requires the profile-summary module "
-                          "analysis to be available.");
+    reportFatalUsageError("this pass requires the profile-summary module "
+                          "analysis to be available");
   BFI = &FAM.getResult<BlockFrequencyAnalysis>(F);
 
   // When optimizing for size, selects are preferable over branches.

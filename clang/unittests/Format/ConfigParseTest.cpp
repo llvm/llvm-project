@@ -168,7 +168,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortNamespacesOnASingleLine);
-  CHECK_PARSE_BOOL(BinPackArguments);
   CHECK_PARSE_BOOL(BinPackLongBracedList);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
@@ -534,18 +533,28 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeInheritanceComma: true", BreakInheritanceList,
               FormatStyle::BILS_BeforeComma);
 
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
-  CHECK_PARSE("BinPackParameters: BinPack", BinPackParameters,
-              FormatStyle::BPPS_BinPack);
-  CHECK_PARSE("BinPackParameters: OnePerLine", BinPackParameters,
-              FormatStyle::BPPS_OnePerLine);
-  CHECK_PARSE("BinPackParameters: AlwaysOnePerLine", BinPackParameters,
-              FormatStyle::BPPS_AlwaysOnePerLine);
-  // For backward compatibility.
-  CHECK_PARSE("BinPackParameters: true", BinPackParameters,
-              FormatStyle::BPPS_BinPack);
-  CHECK_PARSE("BinPackParameters: false", BinPackParameters,
-              FormatStyle::BPPS_OnePerLine);
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  CHECK_PARSE_NESTED_VALUE("BinPack: BinPack", PackArguments, BinPack,
+                           FormatStyle::BPAS_BinPack);
+  CHECK_PARSE_NESTED_VALUE("BinPack: OnePerLine", PackArguments, BinPack,
+                           FormatStyle::BPAS_OnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: UseBreakAfter", PackArguments, BinPack,
+                           FormatStyle::BPAS_UseBreakAfter);
+  CHECK_PARSE_NESTED_VALUE("BreakAfter: 1234", PackArguments, BreakAfter,
+                           1234u);
+  // For backward compatibility:
+  CHECK_PARSE("PackArguments:\n"
+              "  BinPack: OnePerLine\n"
+              "BinPackArguments: true",
+              PackArguments.BinPack, FormatStyle::BPAS_OnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: true", PackArguments, BinPack,
+                           FormatStyle::BPAS_BinPack);
+  CHECK_PARSE_NESTED_VALUE("BinPack: false", PackArguments, BinPack,
+                           FormatStyle::BPAS_OnePerLine);
+  CHECK_PARSE("BinPackArguments: true", PackArguments.BinPack,
+              FormatStyle::BPAS_BinPack);
+  CHECK_PARSE("BinPackArguments: false", PackArguments.BinPack,
+              FormatStyle::BPAS_OnePerLine);
 
   Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   CHECK_PARSE("PackConstructorInitializers: Never", PackConstructorInitializers,
@@ -574,6 +583,37 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("ConstructorInitializerAllOnOneLineOrOnePerLine: true\n"
               "AllowAllConstructorInitializersOnNextLine: false",
               PackConstructorInitializers, FormatStyle::PCIS_CurrentLine);
+
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
+  CHECK_PARSE_NESTED_VALUE("BinPack: BinPack", PackParameters, BinPack,
+                           FormatStyle::BPPS_BinPack);
+  CHECK_PARSE_NESTED_VALUE("BinPack: OnePerLine", PackParameters, BinPack,
+                           FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: AlwaysOnePerLine", PackParameters, BinPack,
+                           FormatStyle::BPPS_AlwaysOnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: UseBreakAfter", PackParameters, BinPack,
+                           FormatStyle::BPPS_UseBreakAfter);
+  CHECK_PARSE_NESTED_VALUE("BreakAfter: 1234", PackParameters, BreakAfter,
+                           1234u);
+  // For backward compatibility:
+  CHECK_PARSE("PackParameters:\n"
+              "  BinPack: OnePerLine\n"
+              "BinPackParameters: BinPack",
+              PackParameters.BinPack, FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: true", PackParameters, BinPack,
+                           FormatStyle::BPPS_BinPack);
+  CHECK_PARSE_NESTED_VALUE("BinPack: false", PackParameters, BinPack,
+                           FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE("BinPackParameters: BinPack", PackParameters.BinPack,
+              FormatStyle::BPPS_BinPack);
+  CHECK_PARSE("BinPackParameters: OnePerLine", PackParameters.BinPack,
+              FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE("BinPackParameters: AlwaysOnePerLine", PackParameters.BinPack,
+              FormatStyle::BPPS_AlwaysOnePerLine);
+  CHECK_PARSE("BinPackParameters: true", PackParameters.BinPack,
+              FormatStyle::BPPS_BinPack);
+  CHECK_PARSE("BinPackParameters: false", PackParameters.BinPack,
+              FormatStyle::BPPS_OnePerLine);
 
   Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
   CHECK_PARSE("EmptyLineBeforeAccessModifier: Never",

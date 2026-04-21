@@ -228,6 +228,9 @@ def IntrHasSideEffects : IntrinsicProperty;
 // poison.
 def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 
+// This property indicates that the intrinsic is trivially scalarizable.
+def IntrTriviallyScalarizable : IntrinsicProperty;
+
 //===----------------------------------------------------------------------===//
 // IIT constants and utils
 //===----------------------------------------------------------------------===//

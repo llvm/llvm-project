@@ -195,6 +195,22 @@ template<class T1, class T2>
 template<class T1, class T2>
     constexpr const T1&& get(const pair<T2, T1>&&) noexcept; // C++14
 
+// [const.wrap.class], class template constant_wrapper
+template<class T>
+  struct cw-fixed-value;                                    // exposition only, since C++26
+
+template<cw-fixed-value X, class = typename decltype(X)::type>
+  struct constant_wrapper;                                  // since C++26
+
+template<class T>
+  concept constexpr-param =                                 // exposition only, since C++26
+    requires { typename constant_wrapper<T::value>; };
+
+struct cw-operators;                                        // exposition only, since C++26
+
+template<cw-fixed-value X>
+  constexpr auto cw = constant_wrapper<X>{};                // since C++26
+
 // C++14
 
 template<class T, T... I>
@@ -292,6 +308,7 @@ template <class T>
 #  endif
 
 #  if _LIBCPP_STD_VER >= 26
+#    include <__utility/constant_wrapper.h>
 #    include <__variant/monostate.h>
 #  endif
 

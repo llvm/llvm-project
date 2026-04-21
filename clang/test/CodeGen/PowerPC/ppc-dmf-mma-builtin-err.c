@@ -28,6 +28,18 @@ void test_mma(unsigned char *vdmrpp, unsigned char *vdmrp, unsigned char *vpp, v
   __builtin_mma_dmsha2hash(&vdmr, &vdmr, 0);
   __builtin_mma_dmsha3hash(&vdmrpair, 0);
   __builtin_mma_dmxxshapad(&vdmr, vc, 0, 0, 0);
+  __builtin_dmsha256hash(&vdmr, &vdmr);
+  __builtin_dmsha512hash(&vdmr, &vdmr);
+  __builtin_dmsha3dw(&vdmrpair);
+  __builtin_dmcryshash(&vdmrpair);
+  __builtin_dmxxsha3512pad(&vdmr, vc, 0);
+  __builtin_dmxxsha3384pad(&vdmr, vc, 0);
+  __builtin_dmxxsha3256pad(&vdmr, vc, 0);
+  __builtin_dmxxsha3224pad(&vdmr, vc, 0);
+  __builtin_dmxxshake256pad(&vdmr, vc, 0);
+  __builtin_dmxxshake128pad(&vdmr, vc, 0);
+  __builtin_dmxxsha384512pad(&vdmr, vc);
+  __builtin_dmxxsha224256pad(&vdmr, vc);
 
 // CHECK: error: '__builtin_mma_dmxvi8gerx4' needs target feature mma,paired-vector-memops
 // CHECK: error: '__builtin_mma_pmdmxvi8gerx4' needs target feature mma,paired-vector-memops
@@ -43,6 +55,18 @@ void test_mma(unsigned char *vdmrpp, unsigned char *vdmrp, unsigned char *vpp, v
 // CHECK: error: '__builtin_mma_dmsha2hash' needs target feature mma,isa-future-instructions
 // CHECK: error: '__builtin_mma_dmsha3hash' needs target feature mma,isa-future-instructions
 // CHECK: error: '__builtin_mma_dmxxshapad' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmsha256hash' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmsha512hash' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmsha3dw' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmcryshash' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmxxsha3512pad' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmxxsha3384pad' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmxxsha3256pad' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmxxsha3224pad' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmxxshake256pad' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmxxshake128pad' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmxxsha384512pad' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmxxsha224256pad' needs target feature mma,isa-future-instructions
 
   // DMF VSX Vector bfloat16 GER 2x builtins.
 

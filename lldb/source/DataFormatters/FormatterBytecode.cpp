@@ -187,7 +187,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     return llvm::Error::success();
   // Since the only data types are single endian and ULEBs, the
   // endianness should not matter.
-  llvm::DataExtractor cur_block(control.back(), true, 64);
+  llvm::DataExtractor cur_block(control.back(), true);
   llvm::DataExtractor::Cursor pc(0);
 
   while (!control.empty()) {
@@ -196,7 +196,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       // Save the return address.
       if (control.size() > 1)
         control[control.size() - 2] = cur_block.getData().drop_front(pc.tell());
-      cur_block = llvm::DataExtractor(control.back(), true, 64);
+      cur_block = llvm::DataExtractor(control.back(), true);
       if (pc)
         pc = llvm::DataExtractor::Cursor(0);
     };

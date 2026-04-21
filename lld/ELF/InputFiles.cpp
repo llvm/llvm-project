@@ -207,7 +207,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 }
 
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
-    : ctx(ctx), mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {}
+    : ctx(ctx), mb(m), fileKind(k) {}
 
 InputFile::~InputFile() {}
 

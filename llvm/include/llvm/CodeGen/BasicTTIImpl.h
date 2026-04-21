@@ -931,10 +931,6 @@ public:
     return Cost;
   }
 
-  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const override {
-    return false;
-  }
-
   bool
   isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                      unsigned ScalarOpdIdx) const override {

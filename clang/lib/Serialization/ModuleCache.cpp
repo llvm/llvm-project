@@ -19,6 +19,23 @@
 
 using namespace clang;
 
+const ModuleCacheDirectory *ModuleCache::getDirectoryPtr(StringRef Path) {
+  auto [ByNameIt, ByNameInserted] = ByPath.insert({Path, nullptr});
+  if (!ByNameIt->second) {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    llvm::sys::fs::file_status Status;
+    if (llvm::sys::fs::status(Path, Status))
+      return nullptr;
+    llvm::sys::fs::UniqueID UID = Status.getUniqueID();
+    auto [ByUIDIt, ByUIDInserted] = ByUID.insert({UID, nullptr});
+    if (!ByUIDIt->second)
+      ByUIDIt->second = std::make_unique<ModuleCacheDirectory>();
+    ByNameIt->second = ByUIDIt->second.get();
+  }
+  return ByNameIt->second;
+}
+
 /// Write a new timestamp file with the given path.
 static void writeTimestampFile(StringRef TimestampFile) {
   std::error_code EC;

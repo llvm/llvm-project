@@ -1,25 +1,25 @@
 # RUN: llvm-objdump --macho -d %p/Inputs/hello.obj.macho-x86_64 --no-show-raw-insn --print-imm-hex --no-leading-addr | FileCheck --check-prefixes=CHECK,HEAD %s
 # RUN: llvm-otool -tVX %p/Inputs/hello.obj.macho-x86_64 | FileCheck --implicit-check-not=section %s
 
-# HEAD: (__TEXT,__text) section
-# CHECK: _main:
-# CHECK: 	pushq	%rbp
-# CHECK: 	movq	%rsp, %rbp
-# CHECK: 	subq	$0x20, %rsp
-# CHECK: 	leaq	L_.str(%rip), %rax ## literal pool for: "Hello world\n"
-# CHECK: 	movl	$_main, -0x4(%rbp)
-# CHECK: 	movl	%edi, -0x8(%rbp)
-# CHECK: 	movq	%rsi, -0x10(%rbp)
-# CHECK: 	movq	%rdx, -0x18(%rbp)
-# CHECK: 	movq	%rax, %rdi
-# CHECK: 	movb	$0x0, %al
-# CHECK: 	callq	_printf
-# CHECK: 	movl	$_main, %ecx
-# CHECK: 	movl	%eax, -0x1c(%rbp)
-# CHECK: 	movl	%ecx, %eax
-# CHECK: 	addq	$0x20, %rsp
-# CHECK: 	popq	%rbp
-# CHECK: 	retq
+# HEAD:      (__TEXT,__text) section
+# CHECK:      _main:
+# CHECK-NEXT: 	pushq	%rbp
+# CHECK-NEXT: 	movq	%rsp, %rbp
+# CHECK-NEXT: 	subq	$0x20, %rsp
+# CHECK-NEXT: 	leaq	L_.str(%rip), %rax ## literal pool for: "Hello world\n"
+# CHECK-NEXT: 	movl	$_main, -0x4(%rbp)
+# CHECK-NEXT: 	movl	%edi, -0x8(%rbp)
+# CHECK-NEXT: 	movq	%rsi, -0x10(%rbp)
+# CHECK-NEXT: 	movq	%rdx, -0x18(%rbp)
+# CHECK-NEXT: 	movq	%rax, %rdi
+# CHECK-NEXT: 	movb	$0x0, %al
+# CHECK-NEXT: 	callq	_printf
+# CHECK-NEXT: 	movl	$_main, %ecx
+# CHECK-NEXT: 	movl	%eax, -0x1c(%rbp)
+# CHECK-NEXT: 	movl	%ecx, %eax
+# CHECK-NEXT: 	addq	$0x20, %rsp
+# CHECK-NEXT: 	popq	%rbp
+# CHECK-NEXT: 	retq
 
-# CHECK-NOT: 0:
-# CHECK-NOT: 0000000000000000
+# CHECK-NOT:  0:
+# CHECK-NOT:  0000000000000000

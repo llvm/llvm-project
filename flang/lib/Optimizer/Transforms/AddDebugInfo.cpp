@@ -32,6 +32,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -73,6 +74,9 @@ private:
   llvm::DenseMap<fir::GlobalOp, llvm::SmallVector<mlir::Attribute>>
       globalToGlobalExprsMap;
 
+  /// Maps Fortran module name -> `fir.module_debug_imports`.
+  llvm::StringMap<fir::ModuleDebugImportsOp> moduleDebugImportsByName;
+
   mlir::LLVM::DIModuleAttr getOrCreateModuleAttr(
       const std::string &name, mlir::LLVM::DIFileAttr fileAttr,
       mlir::LLVM::DIScopeAttr scope, unsigned line, bool decl);
@@ -104,6 +108,13 @@ private:
       mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
       mlir::SymbolTable *symbolTable,
       llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities);
+  void buildModuleDebugImportsMap(mlir::ModuleOp module);
+  void expandUseStmtForDebug(
+      fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
+      mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
+      mlir::SymbolTable *symbolTable,
+      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
+      llvm::StringSet<> &seenModuleNames);
   std::optional<mlir::LLVM::DIImportedEntityAttr> createImportedDeclForGlobal(
       llvm::StringRef symbolName, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIFileAttr fileAttr, mlir::StringAttr localNameAttr,
@@ -842,42 +853,75 @@ void AddDebugInfoPass::handleRenamesWithoutOnly(
   importedModules.insert(moduleImport);
 }
 
-// Process all USE statements in a function and collect imported entities
+// Process all USE statements in a function and collect imported entities.
 void AddDebugInfoPass::handleUseStatements(
     mlir::func::FuncOp funcOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
     mlir::SymbolTable *symbolTable,
     llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities) {
-  mlir::MLIRContext *context = &getContext();
-
+  llvm::StringSet<> seenModuleNames;
   funcOp.walk([&](fir::UseStmtOp useOp) {
-    mlir::LLVM::DIModuleAttr modAttr = getOrCreateModuleAttr(
-        useOp.getModuleName().str(), fileAttr, cuAttr, /*line=*/1,
-        /*decl=*/true);
-
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedModules;
-
-    if (useOp.hasOnlyClause())
-      handleOnlyClause(useOp, spAttr, fileAttr, symbolTable, importedModules);
-    else if (useOp.hasRenames())
-      handleRenamesWithoutOnly(useOp, spAttr, modAttr, fileAttr, symbolTable,
-                               importedModules);
-    else {
-      // Simple module import
-      auto importedEntity = mlir::LLVM::DIImportedEntityAttr::get(
-          context, llvm::dwarf::DW_TAG_imported_module, spAttr, modAttr,
-          fileAttr, /*line=*/1, /*name=*/nullptr, /*elements*/ {});
-      importedModules.insert(importedEntity);
-    }
-
-    importedEntities.insert(importedModules.begin(), importedModules.end());
+    expandUseStmtForDebug(useOp, spAttr, fileAttr, cuAttr, symbolTable,
+                          importedEntities, seenModuleNames);
   });
+}
+
+void AddDebugInfoPass::buildModuleDebugImportsMap(mlir::ModuleOp module) {
+  moduleDebugImportsByName.clear();
+  module.walk([&](fir::ModuleDebugImportsOp op) {
+    moduleDebugImportsByName[op.getModuleName().str()] = op;
+  });
+}
+
+void AddDebugInfoPass::expandUseStmtForDebug(
+    fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
+    mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
+    mlir::SymbolTable *symbolTable,
+    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
+    llvm::StringSet<> &seenModuleNames) {
+  std::string modName = useOp.getModuleName().str();
+  if (seenModuleNames.contains(modName))
+    return;
+
+  mlir::MLIRContext *context = &getContext();
+  mlir::LLVM::DIModuleAttr modAttr =
+      getOrCreateModuleAttr(modName, fileAttr, cuAttr, /*line=*/1,
+                            /*decl=*/true);
+
+  llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedModules;
+  if (useOp.hasOnlyClause())
+    handleOnlyClause(useOp, spAttr, fileAttr, symbolTable, importedModules);
+  else if (useOp.hasRenames())
+    handleRenamesWithoutOnly(useOp, spAttr, modAttr, fileAttr, symbolTable,
+                             importedModules);
+  else {
+    auto importedEntity = mlir::LLVM::DIImportedEntityAttr::get(
+        context, llvm::dwarf::DW_TAG_imported_module, spAttr, modAttr, fileAttr,
+        /*line=*/1, /*name=*/nullptr, /*elements*/ {});
+    importedModules.insert(importedEntity);
+  }
+  importedEntities.insert(importedModules.begin(), importedModules.end());
+  seenModuleNames.insert(modName);
+
+  if (useOp.hasOnlyClause())
+    return;
+
+  auto it = moduleDebugImportsByName.find(modName);
+  if (it == moduleDebugImportsByName.end())
+    return;
+  fir::ModuleDebugImportsOp mdi = it->second;
+  if (mdi.getUses().empty())
+    return;
+  for (auto childUse : mdi.getUses().front().getOps<fir::UseStmtOp>())
+    expandUseStmtForDebug(childUse, spAttr, fileAttr, cuAttr, symbolTable,
+                          importedEntities, seenModuleNames);
 }
 
 void AddDebugInfoPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
   mlir::SymbolTable symbolTable(module);
+  buildModuleDebugImportsMap(module);
   llvm::StringRef fileName;
   std::string filePath;
   std::optional<mlir::DataLayout> dl =

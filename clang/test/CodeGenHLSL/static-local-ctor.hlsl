@@ -19,7 +19,6 @@ void InitBuf(RWBuffer<int> buf) {
 // CHECK-NOT: _Init_thread_epoch
 // CHECK: define internal void @main
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: [[Tmp0:%.*]] = alloca %"class.hlsl::RWBuffer"
 // CHECK-NEXT: [[Tmp1:%.*]] = alloca %"class.hlsl::RWBuffer"
 // CHECK-NEXT: [[Tmp2:%.*]] = load i8, ptr @guard variable for main()::mybuf

@@ -86,7 +86,10 @@ void test_core(void) {
   vf2 = vf;
   vf = vec_insert(f, vf2, 0);
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i64 0
-  // CHECK-ASM: vlef
+  // CHECK-ASM: vlef %{{.*}}, 0(%{{.*}}), 0
+  vf = vec_insert(f, vf2, 3);
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i64 3
+  // CHECK-ASM: vlef %{{.*}}, 0(%{{.*}}), 3
   vf = vec_insert(0.0f, vf, 1);
   // CHECK: insertelement <4 x float> %{{.*}}, float 0.000000e+00, i64 1
   // CHECK-ASM: vleif %{{.*}}, 0, 1

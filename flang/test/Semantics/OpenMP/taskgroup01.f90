@@ -21,9 +21,11 @@ use omp_lib
   !$omp end parallel
 
   !$omp parallel private(xyz)
+  !ERROR: The ALLOCATE clause requires that 'xyz' must be listed in a private data-sharing attribute clause on the same directive
     !$omp taskgroup allocate(xyz)
       !$omp task
         print *, "The "
+  !ERROR: The ALLOCATE clause requires that 'abc' must be listed in a private data-sharing attribute clause on the same directive
         !$omp taskgroup allocate(omp_large_cap_mem_space: abc)
           !$omp task
           print *, "almighty sun"

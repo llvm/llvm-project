@@ -13,7 +13,6 @@ RWBuffer<int> Y : register(u1);
 // CHECK: define {{.*}} @_Z6SomeFnA2_N4hlsl8RWBufferIiEEji(
 // CHECK-SAME: ptr noundef byval([2 x %"class.hlsl::RWBuffer"]) align 4 %B, i32 noundef %Idx, i32 noundef %Val0)
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: %[[Idx_addr:.*]] = alloca i32, align 4
 // CHECK-NEXT: %[[Val0_addr:.*]] = alloca i32, align 4
 // CHECK-NEXT: store i32 %Idx, ptr %[[Idx_addr]], align 4
@@ -36,7 +35,6 @@ void SomeFn(RWBuffer<int> B[2], uint Idx, int Val0) {
 
 // CHECK: define {{.*}} void @_Z4mainj(i32 noundef %GI)
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: %[[GI_addr:.*]] = alloca i32, align 4
 [numthreads(4,1,1)]
 void main(uint GI : SV_GroupIndex) {

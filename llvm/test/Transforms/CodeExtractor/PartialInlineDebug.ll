@@ -24,7 +24,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-LABEL: @caller
 ; CHECK: codeRepl.i:
 ; CHECK-NOT: br label
-; CHECK: call void @callee.2.if.then(i32 %v, ptr %mul.loc.i), !dbg ![[DBG2:[0-9]+]]
+; CHECK: call i32 @callee.2.if.then(i32 %v), !dbg ![[DBG2:[0-9]+]]
 define i32 @caller(i32 %v) !dbg !8 {
 entry:
   %call = call i32 @callee(i32 %v), !dbg !14
@@ -55,17 +55,17 @@ if.end:
 ; CHECK-LABEL: @caller2
 ; CHECK: codeRepl.i:
 ; CHECK-NOT: br label
-; CHECK: call void @callee2.1.if.then(i32 %v, ptr %sub.loc.i), !dbg ![[DBG4:[0-9]+]]
+; CHECK: call i32 @callee2.1.if.then(i32 %v), !dbg ![[DBG4:[0-9]+]]
 define i32 @caller2(i32 %v) !dbg !21 {
 entry:
   %call = call i32 @callee2(i32 %v), !dbg !22
   ret i32 %call
 }
 
-; CHECK-LABEL: define internal void @callee2.1.if.then
+; CHECK-LABEL: define internal i32 @callee2.1.if.then
 ; CHECK: br label %if.then, !dbg ![[DBG5:[0-9]+]]
 
-; CHECK-LABEL: define internal void @callee.2.if.then
+; CHECK-LABEL: define internal i32 @callee.2.if.then
 ; CHECK: br label %if.then, !dbg ![[DBG6:[0-9]+]]
 
 ; CHECK: ![[DBG1]] = !DILocation(line: 10, column: 7,

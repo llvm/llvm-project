@@ -1082,7 +1082,6 @@ private:
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
-  std::vector<const parser::Name *> allocateNames_; // on one directive
   UnorderedSymbolSet privateDataSharingAttributeObjects_; // on one directive
   UnorderedSymbolSet stmtFunctionExprSymbols_;
   std::multimap<const parser::Label,
@@ -1100,11 +1099,6 @@ private:
     ExecutionPart,
   };
   std::vector<PartKind> partStack_;
-
-  void AddAllocateName(const parser::Name *&object) {
-    allocateNames_.push_back(object);
-  }
-  void ClearAllocateNames() { allocateNames_.clear(); }
 
   void AddPrivateDataSharingAttributeObjects(SymbolRef object) {
     privateDataSharingAttributeObjects_.insert(object);
@@ -2006,35 +2000,10 @@ bool OmpAttributeVisitor::Pre(const parser::OmpBlockConstruct &x) {
     IssueNonConformanceWarning(dirId, dirSpec.source, 52);
   ClearDataSharingAttributeObjects();
   ClearPrivateDataSharingAttributeObjects();
-  ClearAllocateNames();
   return true;
 }
 
 void OmpAttributeVisitor::Post(const parser::OmpBlockConstruct &x) {
-  const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
-  llvm::omp::Directive dirId{dirSpec.DirId()};
-  unsigned version{context_.langOptions().OpenMPVersion};
-
-  if (llvm::omp::isPrivatizingConstruct(dirId, version)) {
-    bool hasPrivate;
-    for (const auto *allocName : allocateNames_) {
-      hasPrivate = false;
-      for (auto privateObj : privateDataSharingAttributeObjects_) {
-        const Symbol &symbolPrivate{*privateObj};
-        if (allocName->source == symbolPrivate.name()) {
-          hasPrivate = true;
-          break;
-        }
-      }
-      if (!hasPrivate) {
-        context_.Say(allocName->source,
-            "The ALLOCATE clause requires that '%s' must be listed in a "
-            "private "
-            "data-sharing attribute clause on the same directive"_err_en_US,
-            allocName->ToString());
-      }
-    }
-  }
   PopContext();
 }
 
@@ -2930,10 +2899,6 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
       }
       if (privateDataSharingAttributeFlags.test(ompFlag)) {
         CheckObjectIsPrivatizable(*name, *symbol, ompFlag);
-      }
-
-      if (ompFlag == Symbol::Flag::OmpAllocate) {
-        AddAllocateName(name);
       }
     }
     // Save the original symbol. For privatizing clauses, ensure enclosing

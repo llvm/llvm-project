@@ -15,25 +15,19 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i8_factor_2'
-; VF_2:          Found an estimated cost of 12 for VF 2 For instruction: %tmp2 = load i8, ptr %tmp0, align 1
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp3 = load i8, ptr %tmp1, align 1
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i8 %tmp2, ptr %tmp0, align 1
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i8 %tmp3, ptr %tmp1, align 1
+; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'i8_factor_2'
-; VF_4:          Found an estimated cost of 4 for VF 4 For instruction: %tmp2 = load i8, ptr %tmp0, align 1
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp3 = load i8, ptr %tmp1, align 1
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i8 %tmp2, ptr %tmp0, align 1
-; VF_4-NEXT:     Found an estimated cost of 4 for VF 4 For instruction: store i8 %tmp3, ptr %tmp1, align 1
+; VF_4:     Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_4:     Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'i8_factor_2'
-; VF_8:          Found an estimated cost of 4 for VF 8 For instruction: %tmp2 = load i8, ptr %tmp0, align 1
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load i8, ptr %tmp1, align 1
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store i8 %tmp2, ptr %tmp0, align 1
-; VF_8-NEXT:     Found an estimated cost of 4 for VF 8 For instruction: store i8 %tmp3, ptr %tmp1, align 1
-; VF_16-LABEL: Checking a loop in 'i8_factor_2'
-; VF_16:         Found an estimated cost of 4 for VF 16 For instruction: %tmp2 = load i8, ptr %tmp0, align 1
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp3 = load i8, ptr %tmp1, align 1
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store i8 %tmp2, ptr %tmp0, align 1
-; VF_16-NEXT:    Found an estimated cost of 4 for VF 16 For instruction: store i8 %tmp3, ptr %tmp1, align 1
+; VF_8:     Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_8:     Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_16-LABEL:  Checking a loop in 'i8_factor_2'
+; VF_16:    Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_16:    Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i8.2, ptr %data, i64 %i, i32 0
@@ -56,25 +50,19 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i16_factor_2'
-; VF_2:          Found an estimated cost of 12 for VF 2 For instruction: %tmp2 = load i16, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp3 = load i16, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i16 %tmp2, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i16 %tmp3, ptr %tmp1, align 2
+; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'i16_factor_2'
-; VF_4:          Found an estimated cost of 4 for VF 4 For instruction: %tmp2 = load i16, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp3 = load i16, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i16 %tmp2, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 4 for VF 4 For instruction: store i16 %tmp3, ptr %tmp1, align 2
+; VF_4:     Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_4:     Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'i16_factor_2'
-; VF_8:          Found an estimated cost of 4 for VF 8 For instruction: %tmp2 = load i16, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load i16, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store i16 %tmp2, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 4 for VF 8 For instruction: store i16 %tmp3, ptr %tmp1, align 2
-; VF_16-LABEL: Checking a loop in 'i16_factor_2'
-; VF_16:         Found an estimated cost of 8 for VF 16 For instruction: %tmp2 = load i16, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp3 = load i16, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store i16 %tmp2, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 8 for VF 16 For instruction: store i16 %tmp3, ptr %tmp1, align 2
+; VF_8:     Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_8:     Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_16-LABEL:  Checking a loop in 'i16_factor_2'
+; VF_16:    Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_16:    Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i16.2, ptr %data, i64 %i, i32 0
@@ -97,25 +85,19 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_2:          Found an estimated cost of 12 for VF 2 For instruction: %tmp2 = load i32, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 12  for VF 2 For instruction: %tmp3 = load i32, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp2, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp3, ptr %tmp1, align 4
+; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_4:          Found an estimated cost of 4 for VF 4 For instruction: %tmp2 = load i32, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp3 = load i32, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i32 %tmp2, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 4 for VF 4 For instruction: store i32 %tmp3, ptr %tmp1, align 4
+; VF_4:     Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_4:     Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_8:          Found an estimated cost of 8 for VF 8 For instruction: %tmp2 = load i32, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load i32, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store i32 %tmp2, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 8 for VF 8 For instruction: store i32 %tmp3, ptr %tmp1, align 4
-; VF_16-LABEL: Checking a loop in 'i32_factor_2'
-; VF_16:         Found an estimated cost of 16 for VF 16 For instruction: %tmp2 = load i32, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp3 = load i32, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store i32 %tmp2, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 16 for VF 16 For instruction: store i32 %tmp3, ptr %tmp1, align 4
+; VF_8:     Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_8:     Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_16-LABEL:  Checking a loop in 'i32_factor_2'
+; VF_16:    Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_16:    Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i32.2, ptr %data, i64 %i, i32 0
@@ -138,25 +120,25 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_2:          Found an estimated cost of 22 for VF 2 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 22 for VF 2 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: store i64 %tmp2, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: store i64 %tmp3, ptr %tmp1, align 8
+; VF_2:     Cost of 22 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_4:          Found an estimated cost of 44 for VF 4 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 44 for VF 4 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: store i64 %tmp2, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: store i64 %tmp3, ptr %tmp1, align 8
+; VF_4:     Cost of 44 for VF 4: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_8-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_8:          Found an estimated cost of 88 for VF 8 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 88 for VF 8 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: store i64 %tmp2, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: store i64 %tmp3, ptr %tmp1, align 8
-; VF_16-LABEL: Checking a loop in 'i64_factor_2'
-; VF_16:         Found an estimated cost of 176 for VF 16 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 176 for VF 16 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: store i64 %tmp2, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: store i64 %tmp3, ptr %tmp1, align 8
+; VF_8:     Cost of 88 for VF 8: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp1>
+; VF_16-LABEL:  Checking a loop in 'i64_factor_2'
+; VF_16:    Cost of 176 for VF 16: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp1>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i64.2, ptr %data, i64 %i, i32 0
@@ -179,25 +161,19 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f16_factor_2'
-; VF_2:          Found an estimated cost of 6 for VF 2 For instruction: %tmp2 = load half, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: %tmp3 = load half, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store half %tmp2, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store half %tmp3, ptr %tmp1, align 2
+; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'f16_factor_2'
-; VF_4:          Found an estimated cost of 18 for VF 4 For instruction: %tmp2 = load half, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp3 = load half, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store half %tmp2, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 18 for VF 4 For instruction: store half %tmp3, ptr %tmp1, align 2
+; VF_4:     Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_4:     Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'f16_factor_2'
-; VF_8:          Found an estimated cost of 4 for VF 8 For instruction: %tmp2 = load half, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load half, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store half %tmp2, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 4 for VF 8 For instruction: store half %tmp3, ptr %tmp1, align 2
-; VF_16-LABEL: Checking a loop in 'f16_factor_2'
-; VF_16:         Found an estimated cost of 8 for VF 16 For instruction: %tmp2 = load half, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp3 = load half, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store half %tmp2, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 8 for VF 16 For instruction: store half %tmp3, ptr %tmp1, align 2
+; VF_8:     Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_8:     Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_16-LABEL:  Checking a loop in 'f16_factor_2'
+; VF_16:    Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_16:    Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %f16.2, ptr %data, i64 %i, i32 0
@@ -220,25 +196,17 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f32_factor_2'
-; VF_2:          Found an estimated cost of 10 for VF 2 For instruction: %tmp2 = load float, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp3 = load float, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store float %tmp2, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 10 for VF 2 For instruction: store float %tmp3, ptr %tmp1, align 4
+; VF_2:     Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_2:     Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_4-LABEL:  Checking a loop in 'f32_factor_2'
-; VF_4:          Found an estimated cost of 4 for VF 4 For instruction: %tmp2 = load float, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp3 = load float, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store float %tmp2, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 4 for VF 4 For instruction: store float %tmp3, ptr %tmp1, align 4
+; VF_4:     Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_4:     Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'f32_factor_2'
-; VF_8:          Found an estimated cost of 8 for VF 8 For instruction: %tmp2 = load float, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load float, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store float %tmp2, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 8 for VF 8 For instruction: store float %tmp3, ptr %tmp1, align 4
-; VF_16-LABEL: Checking a loop in 'f32_factor_2'
-; VF_16:         Found an estimated cost of 16 for VF 16 For instruction: %tmp2 = load float, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp3 = load float, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store float %tmp2, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 16 for VF 16 For instruction: store float %tmp3, ptr %tmp1, align 4
+; VF_8:     Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_8:     Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_16-LABEL:  Checking a loop in 'f32_factor_2'
+; VF_16:    Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_16:    Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %f32.2, ptr %data, i64 %i, i32 0
@@ -261,25 +229,25 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f64_factor_2'
-; VF_2:          Found an estimated cost of 6 for VF 2 For instruction: %tmp2 = load double, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: %tmp3 = load double, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store double %tmp2, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store double %tmp3, ptr %tmp1, align 8
+; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'f64_factor_2'
-; VF_4:          Found an estimated cost of 12 for VF 4 For instruction: %tmp2 = load double, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: %tmp3 = load double, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store double %tmp2, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store double %tmp3, ptr %tmp1, align 8
+; VF_4:     Cost of 12 for VF 4: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_8-LABEL:  Checking a loop in 'f64_factor_2'
-; VF_8:          Found an estimated cost of 24 for VF 8 For instruction: %tmp2 = load double, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: %tmp3 = load double, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store double %tmp2, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store double %tmp3, ptr %tmp1, align 8
-; VF_16-LABEL: Checking a loop in 'f64_factor_2'
-; VF_16:         Found an estimated cost of 48 for VF 16 For instruction: %tmp2 = load double, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: %tmp3 = load double, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store double %tmp2, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store double %tmp3, ptr %tmp1, align 8
+; VF_8:     Cost of 24 for VF 8: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp1>
+; VF_16-LABEL:  Checking a loop in 'f64_factor_2'
+; VF_16:    Cost of 48 for VF 16: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp1>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %f64.2, ptr %data, i64 %i, i32 0
@@ -306,33 +274,33 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i8_factor_3'
-; VF_2:          Found an estimated cost of 12 for VF 2 For instruction: %tmp3 = load i8, ptr %tmp0, align 1
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp4 = load i8, ptr %tmp1, align 1
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp5 = load i8, ptr %tmp2, align 1
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i8 %tmp3, ptr %tmp0, align 1
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i8 %tmp4, ptr %tmp1, align 1
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i8 %tmp5, ptr %tmp2, align 1
+; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'i8_factor_3'
-; VF_4:          Found an estimated cost of 24 for VF 4 For instruction: %tmp3 = load i8, ptr %tmp0, align 1
-; VF_4-NEXT:     Found an estimated cost of 24 for VF 4 For instruction: %tmp4 = load i8, ptr %tmp1, align 1
-; VF_4-NEXT:     Found an estimated cost of 24 for VF 4 For instruction: %tmp5 = load i8, ptr %tmp2, align 1
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i8 %tmp3,  ptr %tmp0, align 1
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i8 %tmp4, ptr %tmp1, align 1
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i8 %tmp5, ptr %tmp2, align 1
+; VF_4:     Cost of 24 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_8-LABEL:  Checking a loop in 'i8_factor_3'
-; VF_8:          Found an estimated cost of 48 for VF 8 For instruction: %tmp3 = load i8, ptr %tmp0, align 1
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp4 = load i8, ptr %tmp1, align 1
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp5 = load i8, ptr %tmp2, align 1
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i8 %tmp3, ptr %tmp0, align 1
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i8 %tmp4, ptr %tmp1, align 1
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i8 %tmp5, ptr %tmp2, align 1
-; VF_16-LABEL: Checking a loop in 'i8_factor_3'
-; VF_16:         Found an estimated cost of 96 for VF 16 For instruction: %tmp3 = load i8, ptr %tmp0, align 1
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp4 = load i8, ptr %tmp1, align 1
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp5 = load i8, ptr %tmp2, align 1
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i8 %tmp3, ptr %tmp0, align 1
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i8 %tmp4, ptr %tmp1, align 1
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i8 %tmp5, ptr %tmp2, align 1
+; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
+; VF_16-LABEL:  Checking a loop in 'i8_factor_3'
+; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i8.3, ptr %data, i64 %i, i32 0
@@ -358,33 +326,33 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i16_factor_3'
-; VF_2:          Found an estimated cost of 12 for VF 2 For instruction: %tmp3 = load i16, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp4 = load i16, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp5 = load i16, ptr %tmp2, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i16 %tmp3, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i16 %tmp4, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i16 %tmp5, ptr %tmp2, align 2
+; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'i16_factor_3'
-; VF_4:          Found an estimated cost of 24 for VF 4 For instruction: %tmp3 = load i16, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 24 for VF 4 For instruction: %tmp4 = load i16, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 24 for VF 4 For instruction: %tmp5 = load i16, ptr %tmp2, align 2
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i16 %tmp3, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i16 %tmp4, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i16 %tmp5, ptr %tmp2, align 2
+; VF_4:     Cost of 24 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_8-LABEL:  Checking a loop in 'i16_factor_3'
-; VF_8:          Found an estimated cost of 48 for VF 8 For instruction: %tmp3 = load i16, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp4 = load i16, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp5 = load i16, ptr %tmp2, align 2
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i16 %tmp3, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i16 %tmp4, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i16 %tmp5, ptr %tmp2, align 2
-; VF_16-LABEL: Checking a loop in 'i16_factor_3'
-; VF_16:         Found an estimated cost of 96 for VF 16 For instruction: %tmp3 = load i16, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp4 = load i16, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp5 = load i16, ptr %tmp2, align 2
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i16 %tmp3, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i16 %tmp4, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i16 %tmp5, ptr %tmp2, align 2
+; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
+; VF_16-LABEL:  Checking a loop in 'i16_factor_3'
+; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i16.3, ptr %data, i64 %i, i32 0
@@ -410,33 +378,33 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i32_factor_3'
-; VF_2:          Found an estimated cost of 12 for VF 2 For instruction: %tmp3 = load i32, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp4 = load i32, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp5 = load i32, ptr %tmp2, align 4
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp3, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp4, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp5, ptr %tmp2, align 4
+; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'i32_factor_3'
-; VF_4:          Found an estimated cost of 8 for VF 4 For instruction: %tmp3 = load i32, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp4 = load i32, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp5 = load i32, ptr %tmp2, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i32 %tmp3, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i32 %tmp4, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i32 %tmp5, ptr %tmp2, align 4
+; VF_4:     Cost of 8 for VF 4: WIDEN ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp5> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp0>, ir<%tmp3>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp1>, ir<%tmp4>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp2>, ir<%tmp5>
 ; VF_8-LABEL:  Checking a loop in 'i32_factor_3'
-; VF_8:          Found an estimated cost of 48 for VF 8 For instruction: %tmp3 = load i32, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp4 = load i32, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp5 = load i32, ptr %tmp2, align 4
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i32 %tmp3, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i32 %tmp4, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i32 %tmp5, ptr %tmp2, align 4
-; VF_16-LABEL: Checking a loop in 'i32_factor_3'
-; VF_16:         Found an estimated cost of 96 for VF 16 For instruction: %tmp3 = load i32, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp4 = load i32, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp5 = load i32, ptr %tmp2, align 4
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i32 %tmp3, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i32 %tmp4, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i32 %tmp5, ptr %tmp2, align 4
+; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
+; VF_16-LABEL:  Checking a loop in 'i32_factor_3'
+; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i32.3, ptr %data, i64 %i, i32 0
@@ -462,33 +430,33 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i64_factor_3'
-; VF_2:          Found an estimated cost of 22 for VF 2 For instruction: %tmp3 = load i64, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 22 for VF 2 For instruction: %tmp4 = load i64, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 22 for VF 2 For instruction: %tmp5 = load i64, ptr %tmp2, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: store i64 %tmp3, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: store i64 %tmp4, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: store i64 %tmp5, ptr %tmp2, align 8
+; VF_2:     Cost of 22 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'i64_factor_3'
-; VF_4:          Found an estimated cost of 44 for VF 4 For instruction: %tmp3 = load i64, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 44 for VF 4 For instruction: %tmp4 = load i64, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 44 for VF 4 For instruction: %tmp5 = load i64, ptr %tmp2, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: store i64 %tmp3, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: store i64 %tmp4, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: store i64 %tmp5, ptr %tmp2, align 8
+; VF_4:     Cost of 44 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_8-LABEL:  Checking a loop in 'i64_factor_3'
-; VF_8:          Found an estimated cost of 88 for VF 8 For instruction: %tmp3 = load i64, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 88 for VF 8 For instruction: %tmp4 = load i64, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 88 for VF 8 For instruction: %tmp5 = load i64, ptr %tmp2, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: store i64 %tmp3, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: store i64 %tmp4, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: store i64 %tmp5, ptr %tmp2, align 8
-; VF_16-LABEL: Checking a loop in 'i64_factor_3'
-; VF_16:         Found an estimated cost of 176 for VF 16 For instruction: %tmp3 = load i64, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 176 for VF 16 For instruction: %tmp4 = load i64, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 176 for VF 16 For instruction: %tmp5 = load i64, ptr %tmp2, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: store i64 %tmp3, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: store i64 %tmp4, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: store i64 %tmp5, ptr %tmp2, align 8
+; VF_8:     Cost of 88 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
+; VF_16-LABEL:  Checking a loop in 'i64_factor_3'
+; VF_16:    Cost of 176 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i64.3, ptr %data, i64 %i, i32 0
@@ -514,33 +482,21 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f16_factor_3'
-; VF_2:          Found an estimated cost of 6 for VF 2 For instruction: %tmp3 = load half, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: %tmp4 = load half, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: %tmp5 = load half, ptr %tmp2, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store half %tmp3, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store half %tmp4, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store half %tmp5, ptr %tmp2, align 2
+; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'f16_factor_3'
-; VF_4:          Found an estimated cost of 28 for VF 4 For instruction: %tmp3 = load half, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp4 = load half, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp5 = load half, ptr %tmp2, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store half %tmp3, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store half %tmp4, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 28 for VF 4 For instruction: store half %tmp5, ptr %tmp2, align 2
+; VF_4:     Cost of 28 for VF 4: INTERLEAVE-GROUP with factor 3 at %tmp3, ir<%tmp0>
+; VF_4:     Cost of 28 for VF 4: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'f16_factor_3'
-; VF_8:          Found an estimated cost of 56 for VF 8 For instruction: %tmp3 = load half, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp4 = load half, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp5 = load half, ptr %tmp2, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store half %tmp3, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store half %tmp4, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 56 for VF 8 For instruction: store half %tmp5, ptr %tmp2, align 2
-; VF_16-LABEL: Checking a loop in 'f16_factor_3'
-; VF_16:         Found an estimated cost of 112 for VF 16 For instruction: %tmp3 = load half, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp4 = load half, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp5 = load half, ptr %tmp2, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store half %tmp3, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store half %tmp4, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 112 for VF 16 For instruction: store half %tmp5, ptr %tmp2, align 2
+; VF_8:     Cost of 56 for VF 8: INTERLEAVE-GROUP with factor 3 at %tmp3, ir<%tmp0>
+; VF_8:     Cost of 56 for VF 8: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%tmp0>
+; VF_16-LABEL:  Checking a loop in 'f16_factor_3'
+; VF_16:    Cost of 112 for VF 16: INTERLEAVE-GROUP with factor 3 at %tmp3, ir<%tmp0>
+; VF_16:    Cost of 112 for VF 16: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %f16.3, ptr %data, i64 %i, i32 0
@@ -566,33 +522,21 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f32_factor_3'
-; VF_2:          Found an estimated cost of 16 for VF 2 For instruction: %tmp3 = load float, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp4 = load float, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp5 = load float, ptr %tmp2, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store float %tmp3, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store float %tmp4, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 16 for VF 2 For instruction: store float %tmp5, ptr %tmp2, align 4
+; VF_2:     Cost of 16 for VF 2: INTERLEAVE-GROUP with factor 3 at %tmp3, ir<%tmp0>
+; VF_2:     Cost of 16 for VF 2: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%tmp0>
 ; VF_4-LABEL:  Checking a loop in 'f32_factor_3'
-; VF_4:          Found an estimated cost of 8 for VF 4 For instruction: %tmp3 = load float, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp4 = load float, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp5 = load float, ptr %tmp2, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store float %tmp3, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store float %tmp4, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store float %tmp5, ptr %tmp2, align 4
+; VF_4:     Cost of 8 for VF 4: WIDEN ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp5> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp0>, ir<%tmp3>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp1>, ir<%tmp4>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp2>, ir<%tmp5>
 ; VF_8-LABEL:  Checking a loop in 'f32_factor_3'
-; VF_8:          Found an estimated cost of 64 for VF 8 For instruction: %tmp3 = load float, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp4 = load float, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp5 = load float, ptr %tmp2, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store float %tmp3, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store float %tmp4, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 64 for VF 8 For instruction: store float %tmp5, ptr %tmp2, align 4
-; VF_16-LABEL: Checking a loop in 'f32_factor_3'
-; VF_16:         Found an estimated cost of 128 for VF 16 For instruction: %tmp3 = load float, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp4 = load float, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp5 = load float, ptr %tmp2, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store float %tmp3, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store float %tmp4, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 128 for VF 16 For instruction: store float %tmp5, ptr %tmp2, align 4
+; VF_8:     Cost of 64 for VF 8: INTERLEAVE-GROUP with factor 3 at %tmp3, ir<%tmp0>
+; VF_8:     Cost of 64 for VF 8: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%tmp0>
+; VF_16-LABEL:  Checking a loop in 'f32_factor_3'
+; VF_16:    Cost of 128 for VF 16: INTERLEAVE-GROUP with factor 3 at %tmp3, ir<%tmp0>
+; VF_16:    Cost of 128 for VF 16: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %f32.3, ptr %data, i64 %i, i32 0
@@ -618,33 +562,33 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f64_factor_3'
-; VF_2:          Found an estimated cost of 6 for VF 2 For instruction: %tmp3 = load double, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: %tmp4 = load double, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: %tmp5 = load double, ptr %tmp2, align 8
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store double %tmp3, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store double %tmp4, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store double %tmp5, ptr %tmp2, align 8
+; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'f64_factor_3'
-; VF_4:          Found an estimated cost of 12 for VF 4 For instruction: %tmp3 = load double, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: %tmp4 = load double, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: %tmp5 = load double, ptr %tmp2, align 8
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store double %tmp3, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store double %tmp4, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store double %tmp5, ptr %tmp2, align 8
+; VF_4:     Cost of 12 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_8-LABEL:  Checking a loop in 'f64_factor_3'
-; VF_8:          Found an estimated cost of 24 for VF 8 For instruction: %tmp3 = load double, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: %tmp4 = load double, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: %tmp5 = load double, ptr %tmp2, align 8
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store double %tmp3, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store double %tmp4, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store double %tmp5, ptr %tmp2, align 8
-; VF_16-LABEL: Checking a loop in 'f64_factor_3'
-; VF_16:         Found an estimated cost of 48 for VF 16 For instruction: %tmp3 = load double, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: %tmp4 = load double, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: %tmp5 = load double, ptr %tmp2, align 8
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store double %tmp3, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store double %tmp4, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store double %tmp5, ptr %tmp2, align 8
+; VF_8:     Cost of 24 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
+; VF_16-LABEL:  Checking a loop in 'f64_factor_3'
+; VF_16:    Cost of 48 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %f64.3, ptr %data, i64 %i, i32 0
@@ -673,41 +617,41 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i8_factor_4'
-; VF_2:          Found an estimated cost of 12 for VF 2 For instruction: %tmp4 = load i8, ptr %tmp0, align 1
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp5 = load i8, ptr %tmp1, align 1
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp6 = load i8, ptr %tmp2, align 1
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp7 = load i8, ptr %tmp3, align 1
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i8 %tmp4, ptr %tmp0, align 1
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i8 %tmp5, ptr %tmp1, align 1
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i8 %tmp6, ptr %tmp2, align 1
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i8 %tmp7, ptr %tmp3, align 1
-; VF_4-LABEL: Checking a loop in 'i8_factor_4'
-; VF_4:         Found an estimated cost of 24 for VF 4 For instruction: %tmp4 = load i8, ptr %tmp0, align 1
-; VF_4-NEXT:    Found an estimated cost of 24 for VF 4 For instruction: %tmp5 = load i8, ptr %tmp1, align 1
-; VF_4-NEXT:    Found an estimated cost of 24 for VF 4 For instruction: %tmp6 = load i8, ptr %tmp2, align 1
-; VF_4-NEXT:    Found an estimated cost of 24 for VF 4 For instruction: %tmp7 = load i8, ptr %tmp3, align 1
-; VF_4-NEXT:    Found an estimated cost of 8 for VF 4 For instruction: store i8 %tmp4, ptr %tmp0, align 1
-; VF_4-NEXT:    Found an estimated cost of 8 for VF 4 For instruction: store i8 %tmp5, ptr %tmp1, align 1
-; VF_4-NEXT:    Found an estimated cost of 8 for VF 4 For instruction: store i8 %tmp6, ptr %tmp2, align 1
-; VF_4-NEXT:    Found an estimated cost of 8 for VF 4 For instruction: store i8 %tmp7, ptr %tmp3, align 1
+; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp7>, ir<%tmp3>
+; VF_4-LABEL:  Checking a loop in 'i8_factor_4'
+; VF_4:     Cost of 24 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_8-LABEL:  Checking a loop in 'i8_factor_4'
-; VF_8:          Found an estimated cost of 48 for VF 8 For instruction: %tmp4 = load i8, ptr %tmp0, align 1
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp5 = load i8, ptr %tmp1, align 1
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp6 = load i8, ptr %tmp2, align 1
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp7 = load i8, ptr %tmp3, align 1
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i8 %tmp4, ptr %tmp0, align 1
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i8 %tmp5, ptr %tmp1, align 1
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i8 %tmp6, ptr %tmp2, align 1
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i8 %tmp7, ptr %tmp3, align 1
-; VF_16-LABEL: Checking a loop in 'i8_factor_4'
-; VF_16:         Found an estimated cost of 96 for VF 16 For instruction: %tmp4 = load i8, ptr %tmp0, align 1
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp5 = load i8, ptr %tmp1, align 1
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp6 = load i8, ptr %tmp2, align 1
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp7 = load i8, ptr %tmp3, align 1
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i8 %tmp4, ptr %tmp0, align 1
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i8 %tmp5, ptr %tmp1, align 1
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i8 %tmp6, ptr %tmp2, align 1
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i8 %tmp7, ptr %tmp3, align 1
+; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
+; VF_16-LABEL:  Checking a loop in 'i8_factor_4'
+; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp7>, ir<%tmp3>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i8.4, ptr %data, i64 %i, i32 0
@@ -736,41 +680,41 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i16_factor_4'
-; VF_2:          Found an estimated cost of 12 for VF 2 For instruction: %tmp4 = load i16, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp5 = load i16, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp6 = load i16, ptr %tmp2, align 2
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp7 = load i16, ptr %tmp3, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i16 %tmp4, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i16 %tmp5, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i16 %tmp6, ptr %tmp2, align 2
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i16 %tmp7, ptr %tmp3, align 2
+; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_4-LABEL:  Checking a loop in 'i16_factor_4'
-; VF_4:          Found an estimated cost of 24 for VF 4 For instruction: %tmp4 = load i16, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 24 for VF 4 For instruction: %tmp5 = load i16, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 24 for VF 4 For instruction: %tmp6 = load i16, ptr %tmp2, align 2
-; VF_4-NEXT:     Found an estimated cost of 24 for VF 4 For instruction: %tmp7 = load i16, ptr %tmp3, align 2
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i16 %tmp4, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i16 %tmp5, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i16 %tmp6, ptr %tmp2, align 2
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i16 %tmp7, ptr %tmp3, align 2
+; VF_4:     Cost of 24 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_8-LABEL:  Checking a loop in 'i16_factor_4'
-; VF_8:          Found an estimated cost of 48 for VF 8 For instruction: %tmp4 = load i16, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp5 = load i16, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp6 = load i16, ptr %tmp2, align 2
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp7 = load i16, ptr %tmp3, align 2
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i16 %tmp4, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i16 %tmp5, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i16 %tmp6, ptr %tmp2, align 2
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i16 %tmp7, ptr %tmp3, align 2
-; VF_16-LABEL: Checking a loop in 'i16_factor_4'
-; VF_16:         Found an estimated cost of 96 for VF 16 For instruction: %tmp4 = load i16, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp5 = load i16, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp6 = load i16, ptr %tmp2, align 2
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp7 = load i16, ptr %tmp3, align 2
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i16 %tmp4, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i16 %tmp5, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i16 %tmp6, ptr %tmp2, align 2
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i16 %tmp7, ptr %tmp3, align 2
+; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
+; VF_16-LABEL:  Checking a loop in 'i16_factor_4'
+; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp7>, ir<%tmp3>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i16.4, ptr %data, i64 %i, i32 0
@@ -799,41 +743,41 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i32_factor_4'
-; VF_2:          Found an estimated cost of 12 for VF 2 For instruction: %tmp4 = load i32, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp5 = load i32, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp6 = load i32, ptr %tmp2, align 4
-; VF_2-NEXT:     Found an estimated cost of 12 for VF 2 For instruction: %tmp7 = load i32, ptr %tmp3, align 4
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp4, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp5, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp6, ptr %tmp2, align 4
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp7, ptr %tmp3, align 4
+; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_4-LABEL:  Checking a loop in 'i32_factor_4'
-; VF_4:          Found an estimated cost of 8 for VF 4 For instruction: %tmp4 = load i32, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp5 = load i32, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp6 = load i32, ptr %tmp2, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp7 = load i32, ptr %tmp3, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i32 %tmp4, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i32 %tmp5, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i32 %tmp6, ptr %tmp2, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store i32 %tmp7, ptr %tmp3, align 4
+; VF_4:     Cost of 8 for VF 4: WIDEN ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp7> = load ir<%tmp3>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp0>, ir<%tmp4>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp1>, ir<%tmp5>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp2>, ir<%tmp6>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp3>, ir<%tmp7>
 ; VF_8-LABEL:  Checking a loop in 'i32_factor_4'
-; VF_8:          Found an estimated cost of 48 for VF 8 For instruction: %tmp4 = load i32, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp5 = load i32, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp6 = load i32, ptr %tmp2, align 4
-; VF_8-NEXT:     Found an estimated cost of 48 for VF 8 For instruction: %tmp7 = load i32, ptr %tmp3, align 4
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i32 %tmp4, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i32 %tmp5, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i32 %tmp6, ptr %tmp2, align 4
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store i32 %tmp7, ptr %tmp3, align 4
-; VF_16-LABEL: Checking a loop in 'i32_factor_4'
-; VF_16:         Found an estimated cost of 96 for VF 16 For instruction: %tmp4 = load i32, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp5 = load i32, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp6 = load i32, ptr %tmp2, align 4
-; VF_16-NEXT:    Found an estimated cost of 96 for VF 16 For instruction: %tmp7 = load i32, ptr %tmp3, align 4
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i32 %tmp4, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i32 %tmp5, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i32 %tmp6, ptr %tmp2, align 4
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store i32 %tmp7, ptr %tmp3, align 4
+; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
+; VF_16-LABEL:  Checking a loop in 'i32_factor_4'
+; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp7>, ir<%tmp3>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i32.4, ptr %data, i64 %i, i32 0
@@ -862,41 +806,41 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i64_factor_4'
-; VF_2:          Found an estimated cost of 22 for VF 2 For instruction: %tmp4 = load i64, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 22 for VF 2 For instruction: %tmp5 = load i64, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 22 for VF 2 For instruction: %tmp6 = load i64, ptr %tmp2, align 8
-; VF_2-NEXT:     Found an estimated cost of 22 for VF 2 For instruction: %tmp7 = load i64, ptr %tmp3, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: store i64 %tmp4, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: store i64 %tmp5, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: store i64 %tmp6, ptr %tmp2, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: store i64 %tmp7, ptr %tmp3, align 8
+; VF_2:     Cost of 22 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_4-LABEL:  Checking a loop in 'i64_factor_4'
-; VF_4:          Found an estimated cost of 44 for VF 4 For instruction: %tmp4 = load i64, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 44 for VF 4 For instruction: %tmp5 = load i64, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 44 for VF 4 For instruction: %tmp6 = load i64, ptr %tmp2, align 8
-; VF_4-NEXT:     Found an estimated cost of 44 for VF 4 For instruction: %tmp7 = load i64, ptr %tmp3, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: store i64 %tmp4, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: store i64 %tmp5, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: store i64 %tmp6, ptr %tmp2, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: store i64 %tmp7, ptr %tmp3, align 8
+; VF_4:     Cost of 44 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_8-LABEL:  Checking a loop in 'i64_factor_4'
-; VF_8:          Found an estimated cost of 88 for VF 8 For instruction: %tmp4 = load i64, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 88 for VF 8 For instruction: %tmp5 = load i64, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 88 for VF 8 For instruction: %tmp6 = load i64, ptr %tmp2, align 8
-; VF_8-NEXT:     Found an estimated cost of 88 for VF 8 For instruction: %tmp7 = load i64, ptr %tmp3, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: store i64 %tmp4, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: store i64 %tmp5, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: store i64 %tmp6, ptr %tmp2, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: store i64 %tmp7, ptr %tmp3, align 8
-; VF_16-LABEL: Checking a loop in 'i64_factor_4'
-; VF_16:         Found an estimated cost of 176 for VF 16 For instruction: %tmp4 = load i64, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 176 for VF 16 For instruction: %tmp5 = load i64, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 176 for VF 16 For instruction: %tmp6 = load i64, ptr %tmp2, align 8
-; VF_16-NEXT:    Found an estimated cost of 176 for VF 16 For instruction: %tmp7 = load i64, ptr %tmp3, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: store i64 %tmp4, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: store i64 %tmp5, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: store i64 %tmp6, ptr %tmp2, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: store i64 %tmp7, ptr %tmp3, align 8
+; VF_8:     Cost of 88 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
+; VF_16-LABEL:  Checking a loop in 'i64_factor_4'
+; VF_16:    Cost of 176 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp7>, ir<%tmp3>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i64.4, ptr %data, i64 %i, i32 0
@@ -925,41 +869,17 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f16_factor_4'
-; VF_2:          Found an estimated cost of 18 for VF 2 For instruction: %tmp4 = load half, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp5 = load half, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp6 = load half, ptr %tmp2, align 2
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp7 = load half, ptr %tmp3, align 2
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store half %tmp4, ptr %tmp0, align 2
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store half %tmp5, ptr %tmp1, align 2
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store half %tmp6, ptr %tmp2, align 2
-; VF_2-NEXT:     Found an estimated cost of 18 for VF 2 For instruction: store half %tmp7, ptr %tmp3, align 2
+; VF_2:     Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4 at %tmp4, ir<%tmp0>
+; VF_2:     Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%tmp0>
 ; VF_4-LABEL:  Checking a loop in 'f16_factor_4'
-; VF_4:          Found an estimated cost of 36 for VF 4 For instruction: %tmp4 = load half, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp5 = load half, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp6 = load half, ptr %tmp2, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp7 = load half, ptr %tmp3, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store half %tmp4, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store half %tmp5, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store half %tmp6, ptr %tmp2, align 2
-; VF_4-NEXT:     Found an estimated cost of 36 for VF 4 For instruction: store half %tmp7, ptr %tmp3, align 2
+; VF_4:     Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4 at %tmp4, ir<%tmp0>
+; VF_4:     Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'f16_factor_4'
-; VF_8:          Found an estimated cost of 72 for VF 8 For instruction: %tmp4 = load half, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp5 = load half, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp6 = load half, ptr %tmp2, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp7 = load half, ptr %tmp3, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store half %tmp4, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store half %tmp5, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store half %tmp6, ptr %tmp2, align 2
-; VF_8-NEXT:     Found an estimated cost of 72 for VF 8 For instruction: store half %tmp7, ptr %tmp3, align 2
-; VF_16-LABEL: Checking a loop in 'f16_factor_4'
-; VF_16:         Found an estimated cost of 144 for VF 16 For instruction: %tmp4 = load half, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp5 = load half, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp6 = load half, ptr %tmp2, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp7 = load half, ptr %tmp3, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store half %tmp4, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store half %tmp5, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store half %tmp6, ptr %tmp2, align 2
-; VF_16-NEXT:    Found an estimated cost of 144 for VF 16 For instruction: store half %tmp7, ptr %tmp3, align 2
+; VF_8:     Cost of 72 for VF 8: INTERLEAVE-GROUP with factor 4 at %tmp4, ir<%tmp0>
+; VF_8:     Cost of 72 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%tmp0>
+; VF_16-LABEL:  Checking a loop in 'f16_factor_4'
+; VF_16:    Cost of 144 for VF 16: INTERLEAVE-GROUP with factor 4 at %tmp4, ir<%tmp0>
+; VF_16:    Cost of 144 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %f16.4, ptr %data, i64 %i, i32 0
@@ -988,41 +908,23 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f32_factor_4'
-; VF_2:          Found an estimated cost of 20 for VF 2 For instruction: %tmp4 = load float, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp5 = load float, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp6 = load float, ptr %tmp2, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp7 = load float, ptr %tmp3, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store float %tmp4, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store float %tmp5, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store float %tmp6, ptr %tmp2, align 4
-; VF_2-NEXT:     Found an estimated cost of 20 for VF 2 For instruction: store float %tmp7, ptr %tmp3, align 4
+; VF_2:     Cost of 20 for VF 2: INTERLEAVE-GROUP with factor 4 at %tmp4, ir<%tmp0>
+; VF_2:     Cost of 20 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%tmp0>
 ; VF_4-LABEL:  Checking a loop in 'f32_factor_4'
-; VF_4:          Found an estimated cost of 8 for VF 4 For instruction: %tmp4 = load float, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp5 = load float, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp6 = load float, ptr %tmp2, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: %tmp7 = load float, ptr %tmp3, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store float %tmp4, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store float %tmp5, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store float %tmp6, ptr %tmp2, align 4
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store float %tmp7, ptr %tmp3, align 4
+; VF_4:     Cost of 8 for VF 4: WIDEN ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN ir<%tmp7> = load ir<%tmp3>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp0>, ir<%tmp4>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp1>, ir<%tmp5>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp2>, ir<%tmp6>
+; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp3>, ir<%tmp7>
 ; VF_8-LABEL:  Checking a loop in 'f32_factor_4'
-; VF_8:          Found an estimated cost of 80 for VF 8 For instruction: %tmp4 = load float, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp5 = load float, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp6 = load float, ptr %tmp2, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp7 = load float, ptr %tmp3, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store float %tmp4, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store float %tmp5, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store float %tmp6, ptr %tmp2, align 4
-; VF_8-NEXT:     Found an estimated cost of 80 for VF 8 For instruction: store float %tmp7, ptr %tmp3, align 4
-; VF_16-LABEL: Checking a loop in 'f32_factor_4'
-; VF_16:         Found an estimated cost of 160 for VF 16 For instruction: %tmp4 = load float, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp5 = load float, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp6 = load float, ptr %tmp2, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp7 = load float, ptr %tmp3, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store float %tmp4, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store float %tmp5, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store float %tmp6, ptr %tmp2, align 4
-; VF_16-NEXT:    Found an estimated cost of 160 for VF 16 For instruction: store float %tmp7, ptr %tmp3, align 4
+; VF_8:     Cost of 80 for VF 8: INTERLEAVE-GROUP with factor 4 at %tmp4, ir<%tmp0>
+; VF_8:     Cost of 80 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%tmp0>
+; VF_16-LABEL:  Checking a loop in 'f32_factor_4'
+; VF_16:    Cost of 160 for VF 16: INTERLEAVE-GROUP with factor 4 at %tmp4, ir<%tmp0>
+; VF_16:    Cost of 160 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %f32.4, ptr %data, i64 %i, i32 0
@@ -1051,41 +953,41 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f64_factor_4'
-; VF_2:          Found an estimated cost of 6 for VF 2 For instruction: %tmp4 = load double, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: %tmp5 = load double, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: %tmp6 = load double, ptr %tmp2, align 8
-; VF_2-NEXT:     Found an estimated cost of 6 for VF 2 For instruction: %tmp7 = load double, ptr %tmp3, align 8
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store double %tmp4, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store double %tmp5, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store double %tmp6, ptr %tmp2, align 8
-; VF_2-NEXT:     Found an estimated cost of 4 for VF 2 For instruction: store double %tmp7, ptr %tmp3, align 8
+; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_4-LABEL:  Checking a loop in 'f64_factor_4'
-; VF_4:          Found an estimated cost of 12 for VF 4 For instruction: %tmp4 = load double, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: %tmp5 = load double, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: %tmp6 = load double, ptr %tmp2, align 8
-; VF_4-NEXT:     Found an estimated cost of 12 for VF 4 For instruction: %tmp7 = load double, ptr %tmp3, align 8
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store double %tmp4, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store double %tmp5, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store double %tmp6, ptr %tmp2, align 8
-; VF_4-NEXT:     Found an estimated cost of 8 for VF 4 For instruction: store double %tmp7, ptr %tmp3, align 8
+; VF_4:     Cost of 12 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_8-LABEL:  Checking a loop in 'f64_factor_4'
-; VF_8:          Found an estimated cost of 24 for VF 8 For instruction: %tmp4 = load double, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: %tmp5 = load double, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: %tmp6 = load double, ptr %tmp2, align 8
-; VF_8-NEXT:     Found an estimated cost of 24 for VF 8 For instruction: %tmp7 = load double, ptr %tmp3, align 8
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store double %tmp4, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store double %tmp5, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store double %tmp6, ptr %tmp2, align 8
-; VF_8-NEXT:     Found an estimated cost of 16 for VF 8 For instruction: store double %tmp7, ptr %tmp3, align 8
-; VF_16-LABEL: Checking a loop in 'f64_factor_4'
-; VF_16:         Found an estimated cost of 48 for VF 16 For instruction: %tmp4 = load double, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: %tmp5 = load double, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: %tmp6 = load double, ptr %tmp2, align 8
-; VF_16-NEXT:    Found an estimated cost of 48 for VF 16 For instruction: %tmp7 = load double, ptr %tmp3, align 8
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store double %tmp4, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store double %tmp5, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store double %tmp6, ptr %tmp2, align 8
-; VF_16-NEXT:    Found an estimated cost of 32 for VF 16 For instruction: store double %tmp7, ptr %tmp3, align 8
+; VF_8:     Cost of 24 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
+; VF_16-LABEL:  Checking a loop in 'f64_factor_4'
+; VF_16:    Cost of 48 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp7>, ir<%tmp3>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %f64.4, ptr %data, i64 %i, i32 0

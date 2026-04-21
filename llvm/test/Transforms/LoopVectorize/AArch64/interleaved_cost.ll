@@ -13,15 +13,11 @@ entry:
   br label %for.body
 
 ; VF_8-LABEL:  Checking a loop in 'i8_factor_2'
-; VF_8:          Found an estimated cost of 2 for VF 8 For instruction: %tmp2 = load i8, ptr %tmp0, align 1
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load i8, ptr %tmp1, align 1
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store i8 %tmp2, ptr %tmp0, align 1
-; VF_8-NEXT:     Found an estimated cost of 2 for VF 8 For instruction: store i8 %tmp3, ptr %tmp1, align 1
+; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_16-LABEL: Checking a loop in 'i8_factor_2'
-; VF_16:         Found an estimated cost of 2 for VF 16 For instruction: %tmp2 = load i8, ptr %tmp0, align 1
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp3 = load i8, ptr %tmp1, align 1
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store i8 %tmp2, ptr %tmp0, align 1
-; VF_16-NEXT:    Found an estimated cost of 2 for VF 16 For instruction: store i8 %tmp3, ptr %tmp1, align 1
+; VF_16:         Cost of 2 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_16:         Cost of 2 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i8.2, ptr %data, i64 %i, i32 0
@@ -44,20 +40,14 @@ entry:
   br label %for.body
 
 ; VF_4-LABEL: Checking a loop in 'i16_factor_2'
-; VF_4:          Found an estimated cost of 2 for VF 4 For instruction: %tmp2 = load i16, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp3 = load i16, ptr %tmp1, align 2
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i16 %tmp2, ptr %tmp0, align 2
-; VF_4-NEXT:     Found an estimated cost of 2 for VF 4 For instruction: store i16 %tmp3, ptr %tmp1, align 2
+; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'i16_factor_2'
-; VF_8:          Found an estimated cost of 2 for VF 8 For instruction: %tmp2 = load i16, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load i16, ptr %tmp1, align 2
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store i16 %tmp2, ptr %tmp0, align 2
-; VF_8-NEXT:     Found an estimated cost of 2 for VF 8 For instruction: store i16 %tmp3, ptr %tmp1, align 2
+; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_16-LABEL: Checking a loop in 'i16_factor_2'
-; VF_16:         Found an estimated cost of 4 for VF 16 For instruction: %tmp2 = load i16, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp3 = load i16, ptr %tmp1, align 2
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store i16 %tmp2, ptr %tmp0, align 2
-; VF_16-NEXT:    Found an estimated cost of 4 for VF 16 For instruction: store i16 %tmp3, ptr %tmp1, align 2
+; VF_16:         Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_16:         Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i16.2, ptr %data, i64 %i, i32 0
@@ -80,25 +70,17 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_2:          Found an estimated cost of 2 for VF 2 For instruction: %tmp2 = load i32, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp3 = load i32, ptr %tmp1, align 4
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store i32 %tmp2, ptr %tmp0, align 4
-; VF_2-NEXT:     Found an estimated cost of 2 for VF 2 For instruction: store i32 %tmp3, ptr %tmp1, align 4
+; VF_2:          Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_2:          Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_4-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_4:          Found an estimated cost of 2 for VF 4 For instruction: %tmp2 = load i32, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp3 = load i32, ptr %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i32 %tmp2, ptr %tmp0, align 4
-; VF_4-NEXT:     Found an estimated cost of 2 for VF 4 For instruction: store i32 %tmp3, ptr %tmp1, align 4
+; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_8:          Found an estimated cost of 4 for VF 8 For instruction: %tmp2 = load i32, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load i32, ptr %tmp1, align 4
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store i32 %tmp2, ptr %tmp0, align 4
-; VF_8-NEXT:     Found an estimated cost of 4 for VF 8 For instruction: store i32 %tmp3, ptr %tmp1, align 4
+; VF_8:          Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_8:          Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_16-LABEL: Checking a loop in 'i32_factor_2'
-; VF_16:         Found an estimated cost of 8 for VF 16 For instruction: %tmp2 = load i32, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp3 = load i32, ptr %tmp1, align 4
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store i32 %tmp2, ptr %tmp0, align 4
-; VF_16-NEXT:    Found an estimated cost of 8 for VF 16 For instruction: store i32 %tmp3, ptr %tmp1, align 4
+; VF_16:         Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_16:         Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i32.2, ptr %data, i64 %i, i32 0
@@ -121,25 +103,17 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_2:          Found an estimated cost of 2 for VF 2 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
-; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store i64 %tmp2, ptr %tmp0, align 8
-; VF_2-NEXT:     Found an estimated cost of 2 for VF 2 For instruction: store i64 %tmp3, ptr %tmp1, align 8
+; VF_2:          Cost of 1 for VF 2: WIDEN ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT:     Cost of 1 for VF 2: WIDEN store ir<%tmp0>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_4:          Found an estimated cost of 4 for VF 4 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
-; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i64 %tmp2, ptr %tmp0, align 8
-; VF_4-NEXT:     Found an estimated cost of 4 for VF 4 For instruction: store i64 %tmp3, ptr %tmp1, align 8
+; VF_4:          Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_4:          Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_8:          Found an estimated cost of 8 for VF 8 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
-; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: store i64 %tmp2, ptr %tmp0, align 8
-; VF_8-NEXT:     Found an estimated cost of 8 for VF 8 For instruction: store i64 %tmp3, ptr %tmp1, align 8
+; VF_8:          Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_8:          Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ; VF_16-LABEL: Checking a loop in 'i64_factor_2'
-; VF_16:         Found an estimated cost of 16 for VF 16 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
-; VF_16-NEXT:    Found an estimated cost of 0 for VF 16 For instruction: store i64 %tmp2, ptr %tmp0, align 8
-; VF_16-NEXT:    Found an estimated cost of 16 for VF 16 For instruction: store i64 %tmp3, ptr %tmp1, align 8
+; VF_16:         Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
+; VF_16:         Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i64.2, ptr %data, i64 %i, i32 0
@@ -168,10 +142,10 @@ entry:
 ; gaps.
 ;
 ; VF_2-LABEL: Checking a loop in 'i64_factor_8'
-; VF_2:         Found an estimated cost of 8 for VF 2 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_2-NEXT:    Found an estimated cost of 8 for VF 2 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
-; VF_2-NEXT:    Found an estimated cost of 8 for VF 2 For instruction: store i64 %tmp2, ptr %tmp0, align 8
-; VF_2-NEXT:    Found an estimated cost of 8 for VF 2 For instruction: store i64 %tmp3, ptr %tmp1, align 8
+; VF_2:         Cost of 8 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT:    Cost of 8 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2-NEXT:    Cost of 8 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
+; VF_2-NEXT:    Cost of 8 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i64.8, ptr %data, i64 %i, i32 2

@@ -3121,6 +3121,7 @@ add_header_library(
   powf
   HDRS
     powf.h
+    powf_small_tables.h
   DEPENDS
     .common_constants
     .exp10f

@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 define void @sqrt_f32(i32 %n, ptr %y, ptr %x) {
 ; CHECK-LABEL: @sqrt_f32(

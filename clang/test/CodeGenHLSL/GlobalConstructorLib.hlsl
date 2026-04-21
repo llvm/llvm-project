@@ -12,7 +12,6 @@ void FirstEntry() {}
 
 // CHECK: define void @FirstEntry()
 // CHECK-NEXT: entry:
-// CHECK:   %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // NOINLINE-NEXT:   call void @_GLOBAL__sub_I_GlobalConstructorLib.hlsl()
 // NOINLINE-NEXT:   call void @FirstEntry()
 // Verify inlining leaves only calls to "llvm." intrinsics
@@ -25,7 +24,6 @@ void SecondEntry() {}
 
 // CHECK: define void @SecondEntry()
 // CHECK-NEXT: entry:
-// CHECK:   %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // NOINLINE-NEXT:   call void @_GLOBAL__sub_I_GlobalConstructorLib.hlsl()
 // NOINLINE-NEXT:   call void @SecondEntry()
 // Verify inlining leaves only calls to "llvm." intrinsics

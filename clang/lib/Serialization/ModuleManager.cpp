@@ -41,6 +41,23 @@
 using namespace clang;
 using namespace serialization;
 
+std::optional<ModuleFileKey>
+ModuleManager::makeKey(const ModuleFileName &Name) const {
+  if (unsigned SuffixLen = Name.getImplicitModuleSuffixLength()) {
+    StringRef ModuleCachePath = StringRef(Name).drop_back(SuffixLen);
+    StringRef ImplicitModuleSuffix = StringRef(Name).take_back(SuffixLen);
+    if (auto *ModuleCacheDir = ModCache.getDirectoryPtr(ModuleCachePath))
+      return ModuleFileKey(ModuleCacheDir, ImplicitModuleSuffix);
+  } else {
+    if (auto ModuleFile = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/true,
+                                                     /*CacheFailure=*/false,
+                                                     /*IsText=*/false))
+      return ModuleFileKey(*ModuleFile);
+  }
+
+  return std::nullopt;
+}
+
 ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
   if (const Module *Mod = HeaderSearchInfo.getModuleMap().findModule(Name))
     if (const ModuleFileName *FileName = Mod->getASTFileName())
@@ -50,7 +67,7 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
 }
 
 ModuleFile *ModuleManager::lookupByFileName(ModuleFileName Name) const {
-  std::optional<ModuleFileKey> Key = Name.makeKey(FileMgr);
+  std::optional<ModuleFileKey> Key = makeKey(Name);
   return Key ? lookup(*Key) : nullptr;
 }
 
@@ -134,7 +151,7 @@ AddModuleResult ModuleManager::addModule(
     ExpectedModTime = 0;
   }
 
-  std::optional<ModuleFileKey> FileKey = FileName.makeKey(FileMgr);
+  std::optional<ModuleFileKey> FileKey = makeKey(FileName);
   if (!FileKey) {
     Result.K = AddModuleResult::Missing;
     return Result;

@@ -590,7 +590,10 @@ bool ScriptInterpreterPythonImpl::SetStdHandle(FileSP file_sp,
 
   auto new_file = PythonFile::FromFile(file, mode);
   if (!new_file) {
-    llvm::consumeError(new_file.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), new_file.takeError(),
+                   "ScriptInterpreterPythonImpl::SetStdHandle failed to wrap "
+                   "sys.{1}: {0}",
+                   py_name);
     return false;
   }
 

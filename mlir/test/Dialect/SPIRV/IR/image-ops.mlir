@@ -405,7 +405,17 @@ func.func @lod_with_rect(%arg0 : !spirv.sampled_image<!spirv.image<f32, Rect, No
 
 // TODO: We cannot currently test Lod with MS != 0 as all implemented explicit operations already check for that.
 
-// TODO: Add Lod tests for fetch operations once available.
+// -----
+
+// Lod is valid for spirv.ImageFetch (fetch instruction).
+func.func @lod_with_image_fetch(%arg0: !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>,
+                                %arg1: vector<2xsi32>, %arg2: si32) -> () {
+  // CHECK: {{%.*}} = spirv.ImageFetch {{%.*}}, {{%.*}} ["Lod"], {{%.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>, vector<2xsi32>, si32 -> vector<4xf32>
+  %0 = spirv.ImageFetch %arg0, %arg1 ["Lod"], %arg2 :
+      !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>,
+      vector<2xsi32>, si32 -> vector<4xf32>
+  spirv.Return
+}
 
 // -----
 

@@ -7,7 +7,7 @@
 ; using this directly (as it would happen under -O2)
 define ptr @f_direct(i64 %this) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f_direct, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @myAlloc(i64 %this, i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -45,7 +45,7 @@ declare void @free(ptr)
 ; CHECK-LABEL: define ptr @f_direct(
 ; CHECK-SAME: i64 [[THIS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f_direct.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f_direct, ptr @f_direct.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @myAlloc(i64 [[THIS]], i32 32)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f_direct.resume, ptr [[HDL]], align 8

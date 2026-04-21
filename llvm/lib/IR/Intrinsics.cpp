@@ -623,6 +623,11 @@ bool Intrinsic::isOverloaded(ID id) {
 #include "llvm/IR/IntrinsicImpl.inc"
 }
 
+bool Intrinsic::isTriviallyScalarizable(ID id) {
+#define GET_INTRINSIC_SCALARIZABLE_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+}
+
 bool Intrinsic::hasPrettyPrintedArgs(ID id){
 #define GET_INTRINSIC_PRETTY_PRINT_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"

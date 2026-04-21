@@ -162,14 +162,16 @@ public:
   Address getActiveFlag() const { return activeFlag; }
   void setActiveFlag(Address var) { activeFlag = var; }
 
-  void setTestFlagInNormalCleanup() {
-    cleanupBits.testFlagInNormalCleanup = true;
+  void setTestFlagInNormalCleanup(bool value) {
+    cleanupBits.testFlagInNormalCleanup = value;
   }
   bool shouldTestFlagInNormalCleanup() const {
     return cleanupBits.testFlagInNormalCleanup;
   }
 
-  void setTestFlagInEHCleanup() { cleanupBits.testFlagInEHCleanup = true; }
+  void setTestFlagInEHCleanup(bool value) {
+    cleanupBits.testFlagInEHCleanup = value;
+  }
   bool shouldTestFlagInEHCleanup() const {
     return cleanupBits.testFlagInEHCleanup;
   }

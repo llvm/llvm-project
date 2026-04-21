@@ -310,6 +310,12 @@ let Definition = "process", Path = "target.process" in {
   def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
     DefaultTrue,
     Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
+  def AlwaysRunThreadNames
+      : Property<"always-run-thread-names", "Array">,
+        ElementType<"String">,
+        Desc<"A list of thread names. Threads with any of these names will "
+             "always be resumed when the process resumes, even when other "
+             "threads are suspended during single-stepping operations.">;
 }
 
 let Definition = "platform", Path = "platform" in {

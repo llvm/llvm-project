@@ -174,6 +174,8 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
     if (R.isVirtual()) {
       LiveInterval &SrcLI = LIS.getInterval(R);
       LIS.shrinkToUses(&SrcLI);
+    } else {
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
     }
   }
   return true;

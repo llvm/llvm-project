@@ -25,6 +25,9 @@
 #define SOCK_SEQPACKET 5
 #define SOCK_PACKET 10
 
+#define SOCK_CLOEXEC 0x80000
+#define SOCK_NONBLOCK 0x800
+
 #define SOL_SOCKET 1
 
 #define SO_DEBUG 1
@@ -42,5 +45,9 @@
 #define SO_LINGER 13
 #define SO_BSDCOMPAT 14
 #define SO_REUSEPORT 15
+
+#define SHUT_RD 0
+#define SHUT_WR 1
+#define SHUT_RDWR 2
 
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H

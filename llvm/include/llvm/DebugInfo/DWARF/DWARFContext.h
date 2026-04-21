@@ -357,13 +357,13 @@ public:
   void clearLineTableForUnit(DWARFUnit *U);
 
   DataExtractor getStringExtractor() const {
-    return DataExtractor(DObj->getStrSection(), false, 0);
+    return DataExtractor(DObj->getStrSection(), false);
   }
   DataExtractor getStringDWOExtractor() const {
-    return DataExtractor(DObj->getStrDWOSection(), false, 0);
+    return DataExtractor(DObj->getStrDWOSection(), false);
   }
   DataExtractor getLineStringExtractor() const {
-    return DataExtractor(DObj->getLineStrSection(), false, 0);
+    return DataExtractor(DObj->getLineStrSection(), false);
   }
 
   /// Wraps the returned DIEs for a given address.

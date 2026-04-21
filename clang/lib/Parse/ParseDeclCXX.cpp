@@ -1694,8 +1694,12 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   PreserveAtomicIdentifierInfoRAII AtomicTokenGuard(
       Tok, ShouldChangeAtomicToIdentifier);
 
+  // We use a temporary scope when parsing the name specifier for a
+  // declaration with additional invalid type specifiers.
+  CXXScopeSpec InvalidDeclScope;
+  CXXScopeSpec &SS =
+      DS.hasTypeSpecifier() ? InvalidDeclScope : DS.getTypeSpecScope();
   // Parse the (optional) nested-name-specifier.
-  CXXScopeSpec &SS = DS.getTypeSpecScope();
   if (getLangOpts().CPlusPlus) {
     // "FOO : BAR" is not a potential typo for "FOO::BAR".  In this context it
     // is a base-specifier-list.

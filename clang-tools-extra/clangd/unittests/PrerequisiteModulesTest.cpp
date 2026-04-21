@@ -15,13 +15,17 @@
 #include "CodeComplete.h"
 #include "Compiler.h"
 #include "ModulesBuilder.h"
-#include "ScanningProjectModules.h"
+#include "ProjectModules.h"
 #include "TestTU.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -54,9 +58,96 @@ public:
     return Underlying->getSourceForModuleName(ModuleName, RequiredSrcFile);
   }
 
+  ModuleNameState getModuleNameState(llvm::StringRef ModuleName) override {
+    return Underlying->getModuleNameState(ModuleName);
+  }
+
 private:
   std::unique_ptr<ProjectModules> Underlying;
   std::atomic<unsigned> &Count;
+};
+
+class PerFileModulesCompilationDatabase : public GlobalCompilationDatabase {
+public:
+  PerFileModulesCompilationDatabase(StringRef TestDir, const ThreadsafeFS &TFS)
+      : Directory(TestDir), TFS(TFS),
+        ToolingCDB(std::make_shared<IndexedCompilationDatabase>(*this)) {}
+
+  void addFile(llvm::StringRef Path, llvm::StringRef Contents,
+               std::vector<std::string> ExtraFlags = {}) {
+    ASSERT_FALSE(llvm::sys::path::is_absolute(Path));
+
+    SmallString<256> AbsPath(Directory);
+    llvm::sys::path::append(AbsPath, Path);
+
+    ASSERT_FALSE(llvm::sys::fs::create_directories(
+        llvm::sys::path::parent_path(AbsPath)));
+
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(AbsPath, EC);
+    ASSERT_FALSE(EC);
+    OS << Contents;
+
+    std::vector<std::string> CommandLine = {"clang", "-std=c++20", "-c"};
+    CommandLine.insert(CommandLine.end(), ExtraFlags.begin(), ExtraFlags.end());
+    CommandLine.push_back(std::string(AbsPath));
+
+    Commands[maybeCaseFoldPath(AbsPath)] = tooling::CompileCommand(
+        Directory, std::string(AbsPath), std::move(CommandLine), "");
+    Files.push_back(std::string(AbsPath));
+  }
+
+  std::optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override {
+    auto It = Commands.find(maybeCaseFoldPath(File));
+    if (It == Commands.end())
+      return std::nullopt;
+    tooling::CompileCommand Cmd = It->second;
+    if (llvm::any_of(Cmd.CommandLine, [](llvm::StringRef Arg) {
+          return Arg.starts_with("@");
+        })) {
+      auto FS = llvm::vfs::getRealFileSystem();
+      auto Tokenizer = llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
+                           ? llvm::cl::TokenizeWindowsCommandLine
+                           : llvm::cl::TokenizeGNUCommandLine;
+      tooling::addExpandedResponseFiles(Cmd.CommandLine, Cmd.Directory,
+                                        Tokenizer, *FS);
+    }
+    return Cmd;
+  }
+
+  std::optional<ProjectInfo> getProjectInfo(PathRef) const override {
+    return ProjectInfo{std::string(Directory)};
+  }
+
+  std::unique_ptr<ProjectModules> getProjectModules(PathRef) const override {
+    return clang::clangd::getProjectModules(ToolingCDB, TFS);
+  }
+
+private:
+  class IndexedCompilationDatabase : public tooling::CompilationDatabase {
+  public:
+    IndexedCompilationDatabase(const PerFileModulesCompilationDatabase &CDB)
+        : CDB(CDB) {}
+
+    std::vector<tooling::CompileCommand>
+    getCompileCommands(StringRef FilePath) const override {
+      if (auto Cmd = CDB.getCompileCommand(FilePath))
+        return {*Cmd};
+      return {};
+    }
+
+    std::vector<std::string> getAllFiles() const override { return CDB.Files; }
+
+  private:
+    const PerFileModulesCompilationDatabase &CDB;
+  };
+
+  std::string Directory;
+  const ThreadsafeFS &TFS;
+  llvm::StringMap<tooling::CompileCommand> Commands;
+  std::vector<std::string> Files;
+  std::shared_ptr<IndexedCompilationDatabase> ToolingCDB;
 };
 
 class MockDirectoryCompilationDatabase : public MockCompilationDatabase {
@@ -73,7 +164,8 @@ public:
 
   std::unique_ptr<ProjectModules> getProjectModules(PathRef) const override {
     return std::make_unique<GlobalScanningCounterProjectModules>(
-        scanningProjectModules(MockedCDBPtr, TFS), GlobalScanningCount);
+        clang::clangd::getProjectModules(MockedCDBPtr, TFS),
+        GlobalScanningCount);
   }
 
   unsigned getGlobalScanningCount() const { return GlobalScanningCount; }
@@ -830,6 +922,166 @@ int use() { return m_value; }
       << "Expected absolute path: " << NewBMPath
       << "\nGot: " << HS2.PrebuiltModuleFiles["M"]
       << "\nRelative path used: " << RelativeBMPath;
+}
+
+TEST_F(PrerequisiteModulesTests,
+       UniqueModuleNameStateResolvedFromCompileCommands) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  SmallString<256> MPcm(TestDir);
+  llvm::sys::path::append(MPcm, "build", "M.pcm");
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int value = 1;
+  )cpp",
+              {"--precompile", "-o", std::string(MPcm)});
+  CDB.addFile("A.cpp", R"cpp(
+import M;
+int useA() { return value; }
+  )cpp",
+              {"-fmodule-file=M=" + std::string(MPcm)});
+  CDB.addFile("B.cpp", R"cpp(
+import M;
+int useB() { return value; }
+  )cpp",
+              {"-fmodule-file=M=" + std::string(MPcm)});
+
+  auto ProjectModules = CDB.getProjectModules(getFullPath("A.cpp"));
+  ASSERT_TRUE(ProjectModules);
+
+  EXPECT_EQ(ProjectModules->getModuleNameState("M"),
+            ProjectModules::ModuleNameState::Unique);
+}
+
+TEST_F(PrerequisiteModulesTests,
+       DuplicateModuleNamesResolvedFromCompileCommands) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  SmallString<256> APcm(TestDir);
+  llvm::sys::path::append(APcm, "build", "a", "M.pcm");
+  SmallString<256> BPcm(TestDir);
+  llvm::sys::path::append(BPcm, "build", "b", "M.pcm");
+
+  CDB.addFile("a/M.cppm", R"cpp(
+export module M;
+export int onlyA = 1;
+  )cpp",
+              {"--precompile", "-o", std::string(APcm)});
+  CDB.addFile("b/M.cppm", R"cpp(
+export module M;
+export int onlyB = 2;
+  )cpp",
+              {"--precompile", "-o", std::string(BPcm)});
+  CDB.addFile("a/Use.cpp", R"cpp(
+import M;
+int useA() { return onlyA; }
+  )cpp",
+              {"-fmodule-file=M=" + std::string(APcm)});
+  CDB.addFile("b/Use.cpp", R"cpp(
+import M;
+int useB() { return onlyB; }
+  )cpp",
+              {"-fmodule-file=M=" + std::string(BPcm)});
+
+  auto ProjectModules = CDB.getProjectModules(getFullPath("a/Use.cpp"));
+  ASSERT_TRUE(ProjectModules);
+  EXPECT_EQ(ProjectModules->getModuleNameState("M"),
+            ProjectModules::ModuleNameState::Multiple);
+
+  EXPECT_EQ(
+      ProjectModules->getSourceForModuleName("M", getFullPath("a/Use.cpp")),
+      getFullPath("a/M.cppm"));
+  EXPECT_EQ(
+      ProjectModules->getSourceForModuleName("M", getFullPath("b/Use.cpp")),
+      getFullPath("b/M.cppm"));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       DuplicateModuleNamesResolvedFromResponseFiles) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  SmallString<256> APcm(TestDir);
+  llvm::sys::path::append(APcm, "build", "a", "M.pcm");
+  SmallString<256> BPcm(TestDir);
+  llvm::sys::path::append(BPcm, "build", "b", "M.pcm");
+
+  SmallString<256> RspDir(TestDir);
+  llvm::sys::path::append(RspDir, "build", "rsp");
+  ASSERT_FALSE(llvm::sys::fs::create_directories(RspDir));
+
+  SmallString<256> AMRsp(RspDir);
+  llvm::sys::path::append(AMRsp, "a-m.rsp");
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(AMRsp, EC);
+    ASSERT_FALSE(EC);
+    OS << "-x c++-module -fmodule-output=" << APcm;
+    OS.close();
+  }
+
+  SmallString<256> BMRsp(RspDir);
+  llvm::sys::path::append(BMRsp, "b-m.rsp");
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(BMRsp, EC);
+    ASSERT_FALSE(EC);
+    OS << "-x c++-module -fmodule-output=" << BPcm;
+    OS.close();
+  }
+
+  SmallString<256> AUseRsp(RspDir);
+  llvm::sys::path::append(AUseRsp, "a-use.rsp");
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(AUseRsp, EC);
+    ASSERT_FALSE(EC);
+    OS << "-fmodule-file=M=" << APcm;
+    OS.close();
+  }
+
+  SmallString<256> BUseRsp(RspDir);
+  llvm::sys::path::append(BUseRsp, "b-use.rsp");
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(BUseRsp, EC);
+    ASSERT_FALSE(EC);
+    OS << "-fmodule-file=M=" << BPcm;
+    OS.close();
+  }
+
+  CDB.addFile("a/M.cppm", R"cpp(
+export module M;
+export int onlyA = 1;
+  )cpp",
+              {"@" + std::string(AMRsp)});
+  CDB.addFile("b/M.cppm", R"cpp(
+export module M;
+export int onlyB = 2;
+  )cpp",
+              {"@" + std::string(BMRsp)});
+  CDB.addFile("a/Use.cpp", R"cpp(
+import M;
+int useA() { return onlyA; }
+  )cpp",
+              {"@" + std::string(AUseRsp)});
+  CDB.addFile("b/Use.cpp", R"cpp(
+import M;
+int useB() { return onlyB; }
+  )cpp",
+              {"@" + std::string(BUseRsp)});
+
+  auto ProjectModules = CDB.getProjectModules(getFullPath("a/Use.cpp"));
+  ASSERT_TRUE(ProjectModules);
+  EXPECT_EQ(ProjectModules->getModuleNameState("M"),
+            ProjectModules::ModuleNameState::Multiple);
+
+  EXPECT_EQ(
+      ProjectModules->getSourceForModuleName("M", getFullPath("a/Use.cpp")),
+      getFullPath("a/M.cppm"));
+  EXPECT_EQ(
+      ProjectModules->getSourceForModuleName("M", getFullPath("b/Use.cpp")),
+      getFullPath("b/M.cppm"));
 }
 
 TEST_F(PrerequisiteModulesTests, ModuleImportThroughInclude) {

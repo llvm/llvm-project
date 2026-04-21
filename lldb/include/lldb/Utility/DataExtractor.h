@@ -1034,15 +1034,8 @@ public:
     return {GetDataStart(), size_t(GetByteSize())};
   }
 
-  llvm::DWARFDataExtractor GetAsLLVMDWARF() const {
-    return llvm::DWARFDataExtractor(GetData(),
-                                    GetByteOrder() == lldb::eByteOrderLittle,
-                                    GetAddressByteSize());
-  }
-
   llvm::DataExtractor GetAsLLVM() const {
-    return {GetData(), GetByteOrder() == lldb::eByteOrderLittle,
-            uint8_t(GetAddressByteSize())};
+    return {GetData(), GetByteOrder() == lldb::eByteOrderLittle};
   }
 
 protected:

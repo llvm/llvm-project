@@ -299,6 +299,8 @@ public:
       } else
         break;
     }
+    if (WordText.ends_with(':'))
+      WordText.pop_back();
     const unsigned Length = WordText.size();
     if (Length == 0) {
       Pos = SavedPos;

@@ -4,7 +4,6 @@
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z24getFloatVecMatrixDynamicu11matrix_typeILm4ELm4EfEi(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <16 x float> [[M]], ptr [[M_ADDR]], align 4
@@ -32,7 +31,6 @@ float4 getFloatVecMatrixDynamic(float4x4 M, int index) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z27getFloatScalarMatrixDynamicu11matrix_typeILm2ELm1EfEi(
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [1 x <2 x float>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <2 x float> [[M]], ptr [[M_ADDR]], align 4
@@ -52,7 +50,6 @@ float getFloatScalarMatrixDynamic(float2x1 M, int index) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z28getFloatScalarMatrixConstantu11matrix_typeILm2ELm1EfE(
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [1 x <2 x float>], align 4
 // CHECK-NEXT:    store <2 x float> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[M_ADDR]], align 4
@@ -68,7 +65,6 @@ float getFloatScalarMatrixConstant(float2x1 M) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z29getFloatScalarMatrixConstant2u11matrix_typeILm2ELm1EfE(
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [1 x <2 x float>], align 4
 // CHECK-NEXT:    store <2 x float> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[M_ADDR]], align 4
@@ -84,7 +80,6 @@ float getFloatScalarMatrixConstant2(float2x1 M) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z19getIntMatrixDynamicu11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: <16 x i32> noundef [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <16 x i32> [[M]], ptr [[M_ADDR]], align 4
@@ -112,7 +107,6 @@ int4 getIntMatrixDynamic(int4x4 M, int index) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z22AddFloatMatrixConstantu11matrix_typeILm4ELm4EfE(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[M_ADDR]], align 4
@@ -163,7 +157,6 @@ float4 AddFloatMatrixConstant(float4x4 M) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z20AddIntMatrixConstantu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[M_ADDR]], align 4
@@ -214,7 +207,6 @@ int4 AddIntMatrixConstant(int4x4 M) {
 // CHECK-LABEL: define hidden noundef <3 x i1> @_Z23getBoolVecMatrixDynamicu11matrix_typeILm2ELm3EbEi(
 // CHECK-SAME: <6 x i1> noundef [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <6 x i1> [[M]] to <6 x i32>
@@ -241,7 +233,6 @@ bool3 getBoolVecMatrixDynamic(bool2x3 M, int index) {
 // CHECK-LABEL: define hidden noundef <4 x i1> @_Z24getBoolVecMatrixConstantu11matrix_typeILm4ELm4EbE(
 // CHECK-SAME: <16 x i1> noundef [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i1> [[M]] to <16 x i32>
 // CHECK-NEXT:    store <16 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
@@ -264,7 +255,6 @@ bool4 getBoolVecMatrixConstant(bool4x4 M) {
 // CHECK-LABEL: define hidden noundef i1 @_Z27getBoolScalarMatrixConstantu11matrix_typeILm3ELm1EbE(
 // CHECK-SAME: <3 x i1> noundef [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [1 x <3 x i32>], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[M]] to <3 x i32>
 // CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[M_ADDR]], align 4

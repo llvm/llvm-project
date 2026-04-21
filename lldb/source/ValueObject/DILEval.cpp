@@ -22,28 +22,6 @@
 
 namespace lldb_private::dil {
 
-lldb::ValueObjectSP
-GetDynamicOrSyntheticValue(lldb::ValueObjectSP value_sp,
-                           lldb::DynamicValueType use_dynamic,
-                           bool use_synthetic) {
-  if (!value_sp)
-    return nullptr;
-
-  if (use_dynamic != lldb::eNoDynamicValues) {
-    lldb::ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(use_dynamic);
-    if (dynamic_sp)
-      value_sp = dynamic_sp;
-  }
-
-  if (use_synthetic) {
-    lldb::ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
-    if (synthetic_sp)
-      value_sp = synthetic_sp;
-  }
-
-  return value_sp;
-}
-
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
                                  lldb::BasicType basic_type) {
   if (type_system)
@@ -62,6 +40,16 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       name, addr, exe_ctx,
       valobj.GetCompilerType().GetArrayElementType(&ctx).GetPointerType(),
       /* do_deref */ false);
+}
+
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
 llvm::Expected<lldb::ValueObjectSP>

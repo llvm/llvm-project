@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
+; RUN: opt -passes=loop-vectorize -mtriple aarch64-linux-gnu -mattr=+sve \
 ; RUN:   -tail-folding-policy=dont-fold-tail < %s -S | FileCheck %s
 
 

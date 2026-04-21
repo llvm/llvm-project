@@ -10,7 +10,7 @@ declare void @fakeresume1(ptr align 8)
 
 define void @g() #0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @g, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %alloc.var = alloca i64
   call void @llvm.lifetime.start.p0(ptr %alloc.var)
@@ -48,7 +48,7 @@ exit:
 ; It has a cleanup bb.
 define void @f() #0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %alloc.var = alloca i64
   call void @llvm.lifetime.start.p0(ptr %alloc.var)

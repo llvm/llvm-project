@@ -24,6 +24,15 @@ functions:
       - type: int
       - type: struct sockaddr *__restrict
       - type: socklen_t *__restrict
+  - name: accept4
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct sockaddr *__restrict
+      - type: socklen_t *__restrict
+      - type: int
   - name: bind
     standards:
       - POSIX
@@ -123,6 +132,13 @@ functions:
       - type: int
       - type: const void *
       - type: socklen_t
+  - name: shutdown
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
   - name: socket
     standards:
       - POSIX

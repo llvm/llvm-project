@@ -108,7 +108,24 @@ def finalize_build_dictionary(dictionary):
 
     if dictionary is None:
         dictionary = {}
-    if target_is_android():
+
+    if configuration.triple:
+        # When cross-compiling with an explicit triple, derive OS from it
+        # rather than from the selected platform.
+        triple_os = (
+            configuration.triple.split("-")[1] if "-" in configuration.triple else ""
+        )
+        if triple_os.startswith("wasi"):
+            dictionary["OS"] = "WASI"
+        elif triple_os == "linux" or triple_os.startswith("linux"):
+            dictionary["OS"] = "Linux"
+        elif triple_os == "windows" or triple_os.startswith("windows"):
+            dictionary["OS"] = "Windows_NT"
+        elif triple_os == "apple":
+            dictionary["OS"] = "Darwin"
+        else:
+            dictionary["OS"] = triple_os
+    elif target_is_android():
         dictionary["OS"] = "Android"
         dictionary["PIE"] = 1
     elif platformIsDarwin():

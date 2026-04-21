@@ -206,13 +206,27 @@ Error NativeRecordReplayTy::recordDescImpl(
   json::Object JsonKernelInfo;
   JsonKernelInfo["Name"] = Kernel.getName();
   JsonKernelInfo["NumArgs"] = KernelArgs.NumArgs;
-  JsonKernelInfo["NumTeamsClause"] = Instance.NumTeams;
-  JsonKernelInfo["ThreadLimitClause"] = Instance.NumThreads;
+  JsonKernelInfo["NumTeams"] = Instance.NumTeams;
+  JsonKernelInfo["NumThreads"] = Instance.NumThreads;
   JsonKernelInfo["SharedMemorySize"] = Instance.SharedMemorySize;
   JsonKernelInfo["LoopTripCount"] = KernelArgs.Tripcount;
   JsonKernelInfo["DeviceId"] = Device.getDeviceId();
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
+
+  // Add minimum and maximum for allowed number of teams. If zero, it means
+  // there was no restriction provided by the program.
+  json::Array JsonTeamsLimits;
+  JsonTeamsLimits.push_back(KernelArgs.NumTeams[0]);
+  JsonTeamsLimits.push_back(KernelArgs.NumTeams[0]);
+  JsonKernelInfo["TeamsLimits"] = json::Value(std::move(JsonTeamsLimits));
+
+  // Add minimum and maximum for allowed number of threads. If zero, it means
+  // there was no restriction provided by the program.
+  json::Array JsonThreadsLimits;
+  JsonThreadsLimits.push_back(uint32_t(KernelArgs.ThreadLimit[0] > 0));
+  JsonThreadsLimits.push_back(KernelArgs.ThreadLimit[0]);
+  JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;
   for (uint32_t I = 0; I < KernelArgs.NumArgs; ++I)

@@ -96,8 +96,7 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
          "bad FORM for location expression");
   DWARFContext &Ctx = U->getContext();
   ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
-  DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                     Ctx.isLittleEndian(), 0);
+  DataExtractor Data(Expr, Ctx.isLittleEndian());
   DWARFExpression DE(Data, U->getAddressByteSize(), U->getFormParams().Format);
   printDwarfExpression(&DE, OS, DumpOpts, U);
 }

@@ -16557,26 +16557,34 @@ SDValue AArch64TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
                                    !Subtarget->isNeonAvailable()))
     return LowerFixedLengthInsertVectorElt(Op, DAG);
 
-  EVT VT = Op.getOperand(0).getValueType();
+  EVT VT = Op.getValueType();
+  SDValue Vec = Op.getOperand(0);
+  SDValue Elt = Op.getOperand(1);
+  SDValue Idx = Op.getOperand(2);
 
   if (VT.getScalarType() == MVT::i1) {
-    EVT VectorVT = getPromotedVTForPredicate(VT);
     SDLoc DL(Op);
-    SDValue ExtendedVector =
-        DAG.getAnyExtOrTrunc(Op.getOperand(0), DL, VectorVT);
-    SDValue ExtendedValue =
-        DAG.getAnyExtOrTrunc(Op.getOperand(1), DL,
-                             VectorVT.getScalarType().getSizeInBits() < 32
-                                 ? MVT::i32
-                                 : VectorVT.getScalarType());
-    ExtendedVector =
-        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VectorVT, ExtendedVector,
-                    ExtendedValue, Op.getOperand(2));
-    return DAG.getAnyExtOrTrunc(ExtendedVector, DL, VT);
+
+    // MVT::nxv1i8 is not a legal type so widen->insert->shrink instead.
+    if (VT == MVT::nxv1i1) {
+      SDValue WidenVec =
+          DAG.getInsertSubvector(DL, DAG.getPOISON(MVT::nxv2i1), Vec, 0);
+      SDValue Insert = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::nxv2i1,
+                                   WidenVec, Elt, Idx);
+      return DAG.getExtractSubvector(DL, MVT::nxv1i1, Insert, 0);
+    }
+
+    EVT PromoteVT = getPromotedVTForPredicate(VT);
+    SDValue PromoteVec = DAG.getNode(ISD::ANY_EXTEND, DL, PromoteVT, Vec);
+    if (PromoteVT.getVectorElementType() == MVT::i64)
+      Elt = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Elt);
+    SDValue Insert = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, PromoteVT,
+                                 PromoteVec, Elt, Idx);
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, Insert);
   }
 
   // Check for non-constant or out of range lane.
-  ConstantSDNode *CI = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+  ConstantSDNode *CI = dyn_cast<ConstantSDNode>(Idx);
   if (!CI || CI->getZExtValue() >= VT.getVectorNumElements())
     return SDValue();
 

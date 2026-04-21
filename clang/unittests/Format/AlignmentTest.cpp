@@ -613,7 +613,7 @@ TEST_F(AlignmentTest, ConsecutiveAssignments) {
   // See https://llvm.org/PR55360
   Alignment = getLLVMStyleWithColumns(50);
   Alignment.AlignConsecutiveAssignments.Enabled = true;
-  Alignment.BinPackArguments = false;
+  Alignment.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
   verifyFormat("int a_long_name = 1;\n"
                "auto b          = B({a_long_name, a_long_name},\n"
                "                    {a_longer_name_for_wrap,\n"
@@ -1596,7 +1596,7 @@ TEST_F(AlignmentTest, ConsecutiveDeclarations) {
 
   auto Style = AlignmentLeft;
   Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("int function_name(const wchar_t*  title,\n"
                "                  int             x          = 0,\n"
                "                  long            extraStyle = 0,\n"
@@ -1804,7 +1804,7 @@ TEST_F(AlignmentTest, ConsecutiveDeclarations) {
   Alignment.AlignConsecutiveAssignments.Enabled = false;
 
   Alignment.ColumnLimit = 30;
-  Alignment.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Alignment.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void foo(float     a,\n"
                "         float     b,\n"
                "         int       c,\n"
@@ -1818,7 +1818,7 @@ TEST_F(AlignmentTest, ConsecutiveDeclarations) {
                "         uint32_t *c,\n"
                "         bool      d) {}",
                Alignment);
-  Alignment.BinPackParameters = FormatStyle::BPPS_BinPack;
+  Alignment.PackParameters.BinPack = FormatStyle::BPPS_BinPack;
   Alignment.ColumnLimit = 80;
 
   // Bug 33507
@@ -2555,7 +2555,7 @@ TEST_F(AlignmentTest, AlignWithLineBreaks) {
                Style);
   // clang-format on
 
-  Style.BinPackArguments = false;
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
 
   // clang-format off
   verifyFormat("void SomeFunc() {\n"

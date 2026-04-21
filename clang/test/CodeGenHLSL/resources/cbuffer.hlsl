@@ -421,7 +421,6 @@ void main() {
 
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer.hlsl()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @_init_buffer_CBScalars.cb()
 // CHECK-NEXT: call void @_init_buffer_CBVectors.cb()
 // CHECK-NEXT: call void @_init_buffer_CBArrays.cb()

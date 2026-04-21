@@ -323,6 +323,8 @@ if is_configured("lldb_platform_working_dir"):
     dotest_cmd += ["--platform-working-dir", config.lldb_platform_working_dir]
 if is_configured("cmake_sysroot"):
     dotest_cmd += ["--sysroot", config.cmake_sysroot]
+if is_configured("test_resource_dir"):
+    dotest_cmd += ["--resource-dir", config.test_resource_dir]
 
 if is_configured("dotest_user_args_str"):
     dotest_cmd.extend(config.dotest_user_args_str.split(";"))

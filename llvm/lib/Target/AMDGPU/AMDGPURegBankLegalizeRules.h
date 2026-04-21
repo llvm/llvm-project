@@ -297,11 +297,14 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
+  ApplyBVH_INTERSECT_RAY,
   SplitBitCount64To32,
   ExtrVecEltToSel,
   ExtrVecEltTo32,
   InsVecEltToSel,
-  InsVecEltTo32
+  InsVecEltTo32,
+  AbsToNegMax,
+  AbsToS32
 };
 
 enum FastRulesTypes {

@@ -164,3 +164,22 @@ void null_cast(long) {
 // CIR:    cir.store{{.*}} %{{.*}}, %[[NULLPTR]] : !s32i, !cir.ptr<!s32i>
 // CIR:    %[[NULLPTR_A:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_A>
 // CIR:    %[[A_X:.*]] = cir.get_member %[[NULLPTR_A]][0] {name = "x"} : !cir.ptr<!rec_A> -> !cir.ptr<!s32i>
+
+struct B {
+  int *p;
+  operator int *() const { return p; }
+};
+
+int test_unser_defined_cast_with_aligned_load(B x) {
+  return *x;
+}
+
+// CIR: cir.func{{.*}} @_Z41test_unser_defined_cast_with_aligned_load1B
+// CIR:   cir.store %{{.*}}, %[[B_PTR:.*]] : !rec_B, !cir.ptr<!rec_B>
+// CIR:   %[[CAST:.*]] = cir.call @_ZNK1BcvPiEv(%[[B_PTR]])
+// CIR:   %[[LOAD:.*]] = cir.load{{.*}} %[[CAST]]
+
+// LLVM: define{{.*}} i32 @_Z41test_unser_defined_cast_with_aligned_load1B
+// LLVM:   store %struct.B %{{.*}}, ptr %[[B_PTR:.*]], align 8
+// LLVM:   %[[CAST:.*]] = call {{.*}} ptr @_ZNK1BcvPiEv(ptr {{.*}} %[[B_PTR]])
+// LLVM:   %[[LOAD:.*]] = load i32, ptr %[[CAST]]

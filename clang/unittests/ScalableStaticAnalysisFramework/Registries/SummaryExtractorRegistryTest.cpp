@@ -21,7 +21,8 @@ using namespace ssaf;
 
 [[nodiscard]]
 static TUSummary makeFakeSummary() {
-  return BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
+  return TUSummary(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp"));
 }
 
 namespace {

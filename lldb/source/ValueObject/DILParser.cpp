@@ -59,16 +59,6 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   m_detail.rendered = std::move(rendered_str);
 }
 
-llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
-  SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
-}
-
 static CompilerType ResolveTypeByName(const std::string &name,
                                       ExecutionContextScope &ctx_scope) {
   // Internally types don't have global scope qualifier in their names and

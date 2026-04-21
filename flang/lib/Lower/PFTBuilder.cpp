@@ -215,16 +215,27 @@ public:
 
   /// Process USE statements for debug info generation.
   /// Captures USE statement information and stores it in the current
-  /// FunctionLikeUnit for later use.
+  /// FunctionLikeUnit or ModuleLikeUnit for later use.
   void processUseStmt(const parser::UseStmt &useStmt) {
     if (!loweringOptions.getPreserveUseDebugInfo())
       return;
 
-    // Only process USE statements in specification part of function-like units
-    if (specificationPartLevel == 0 || !currentFunctionUnit)
+    if (!currentFunctionUnit && !currentModuleUnit)
+      return;
+
+    // For function-like units, only process USE statements in specification
+    // part.
+    if (currentFunctionUnit && specificationPartLevel == 0)
       return;
 
     std::string moduleName{useStmt.moduleName.source.ToString()};
+
+    auto addUseStmt = [&](Fortran::semantics::PreservedUseStmt &&stmt) {
+      if (currentFunctionUnit)
+        currentFunctionUnit->preservedUseStmts.push_back(std::move(stmt));
+      else if (currentModuleUnit)
+        currentModuleUnit->preservedUseStmts.push_back(std::move(stmt));
+    };
 
     if (const auto *onlyList{
             std::get_if<std::list<parser::Only>>(&useStmt.u)}) {
@@ -275,14 +286,14 @@ public:
             only.u);
       }
 
-      currentFunctionUnit->preservedUseStmts.push_back(std::move(stmt));
+      addUseStmt(std::move(stmt));
     } else if (const auto *renameList{
                    std::get_if<std::list<parser::Rename>>(&useStmt.u)}) {
       // USE mod with optional renames (not ONLY)
       if (renameList->empty()) {
         // USE mod (import all, no renames)
         Fortran::semantics::PreservedUseStmt stmt{moduleName};
-        currentFunctionUnit->preservedUseStmts.push_back(std::move(stmt));
+        addUseStmt(std::move(stmt));
       } else {
         // USE mod, renames (import all with some renames)
         Fortran::semantics::PreservedUseStmt stmt{moduleName};
@@ -302,7 +313,7 @@ public:
               rename.u);
         }
 
-        currentFunctionUnit->preservedUseStmts.push_back(std::move(stmt));
+        addUseStmt(std::move(stmt));
       }
     }
   }
@@ -411,11 +422,13 @@ private:
     containedUnitList = &unit.containedUnitList;
     pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
+    currentModuleUnit = &unit;
     LLVM_DEBUG(dumpScope(&unit.getScope()));
     return true;
   }
 
   void exitModule() {
+    currentModuleUnit = nullptr; // Clear when exiting module
     containsStmtStack.pop_back();
     if (!evaluationListStack.empty())
       popEvaluationList();
@@ -1250,6 +1263,8 @@ private:
   lower::pft::Evaluation *lastLexicalEvaluation{};
   /// Current function-like unit being processed (for USE statement tracking)
   lower::pft::FunctionLikeUnit *currentFunctionUnit{nullptr};
+  /// Current module-like unit being processed (for USE statement tracking)
+  lower::pft::ModuleLikeUnit *currentModuleUnit{nullptr};
 };
 
 #ifndef NDEBUG

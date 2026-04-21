@@ -500,7 +500,7 @@ unsigned DWARFVerifier::verifyIndex(StringRef Name,
     return 0;
   OS << "Verifying " << Name << "...\n";
   DWARFUnitIndex Index(InfoColumnKind);
-  DataExtractor D(IndexStr, DCtx.isLittleEndian(), 0);
+  DataExtractor D(IndexStr, DCtx.isLittleEndian());
   if (!Index.parse(D))
     return 1;
   using MapType = IntervalMap<uint64_t, uint64_t>;
@@ -771,7 +771,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     if (Expected<std::vector<DWARFLocationExpression>> Loc =
             Die.getLocations(DW_AT_location)) {
       for (const auto &Entry : *Loc) {
-        DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(), 0);
+        DataExtractor Data(Entry.Expr, DCtx.isLittleEndian());
         DWARFExpression Expression(Data, U->getAddressByteSize(),
                                    U->getFormParams().Format);
         bool Error =
@@ -1913,8 +1913,7 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
   }
   DWARFUnit *U = Die.getDwarfUnit();
   for (const auto &Entry : *Loc) {
-    DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(),
-                       U->getAddressByteSize());
+    DataExtractor Data(Entry.Expr, DCtx.isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     bool IsInteresting =
@@ -2184,7 +2183,7 @@ void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
 
 bool DWARFVerifier::handleAccelTables() {
   const DWARFObject &D = DCtx.getDWARFObj();
-  DataExtractor StrData(D.getStrSection(), DCtx.isLittleEndian(), 0);
+  DataExtractor StrData(D.getStrSection(), DCtx.isLittleEndian());
   if (!D.getAppleNamesSection().Data.empty())
     verifyAppleAccelTable(&D.getAppleNamesSection(), &StrData, ".apple_names");
   if (!D.getAppleTypesSection().Data.empty())

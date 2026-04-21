@@ -9,7 +9,6 @@ RWStructuredBuffer<float> Out;
 // CHECK: define {{.*}} float @foo(hlsl::RWBuffer<float> [3][2])
 // CHECK-SAME: (ptr noundef byval([3 x [2 x %"class.hlsl::RWBuffer"]]) align 4 %Arr)
 // CHECK-NEXT: entry:
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 float foo(RWBuffer<float> Arr[3][2]) {
 // CHECK-NEXT: %[[Arr_1_Ptr:.*]] = getelementptr inbounds [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %Arr, i32 0, i32 1
 // CHECK-NEXT: %[[Arr_1_0_Ptr:.*]] = getelementptr inbounds [2 x %"class.hlsl::RWBuffer"], ptr %[[Arr_1_Ptr]], i32 0, i32 0
@@ -21,8 +20,7 @@ float foo(RWBuffer<float> Arr[3][2]) {
 
 // CHECK: define internal void @main(unsigned int)(i32 noundef %GI)
 // CHECK-NEXT: entry:
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
-// CHECK-NEXT:    %[[GI_alloca:.*]] = alloca i32, align 4
+// CHECK-NEXT: %[[GI_alloca:.*]] = alloca i32, align 4
 // CHECK-NEXT: %Sub = alloca [3 x [2 x %"class.hlsl::RWBuffer"]], align 4
 // CHECK-NEXT: %[[Tmp0:.*]] = alloca [3 x [2 x %"class.hlsl::RWBuffer"]], align 4
 // CHECK-NEXT: %a = alloca float, align 4
@@ -68,18 +66,6 @@ void main(uint GI : SV_GroupThreadID) {
 
 // After this Tmp0 values are copied to %Sub using the standard array loop initializaion
 // (generated from ArrayInitLoopExpr AST node)
-// CHECK: br label %arrayinit.body
-// CHECK: arrayinit.body:
-// CHECK-NEXT: %{{.*}} = phi i32 [ 0, %entry ], [ %arrayinit.next{{.*}}, %arrayinit.end ]
-// CHECK-NEXT: %[[#CV_LOOP:]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %[[#C_ENTRY]]) ]
-// CHECK: br label %arrayinit.body2
-// CHECK: arrayinit.body2:
-// CHECK-NEXT: %{{.*}} = phi i32 [ 0, %arrayinit.body ], [ %arrayinit.next, %arrayinit.body2 ]
-// CHECK-NEXT: %[[#CV_INNER_LOOP:]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %[[#CV_LOOP]]) ]
-// CHECK: call void @hlsl::RWBuffer<float>::RWBuffer(hlsl::RWBuffer<float> const&){{.*}} [ "convergencectrl"(token %[[#CV_INNER_LOOP]]) ]
-// CHECK: br i1 %arrayinit.done, label %arrayinit.end, label %arrayinit.body2
-// CHECK: arrayinit.end:
-// CHECK: br i1 %arrayinit.done{{.*}}, label %arrayinit.end{{.*}}, label %arrayinit.body
   RWBuffer<float> Sub[3][2] = A[4][1];
 
 // CHECK: %[[Ptr_Sub_2:.*]] = getelementptr inbounds  [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %Sub, i32 0, i32 2

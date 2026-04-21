@@ -24,7 +24,7 @@ define ptr @f() presplitcoroutine {
 ; CHECK-NEXT:    call void @use(ptr [[Z_ADDR]])
 ; CHECK-NEXT:    br label %[[FLAG_MERGE]]
 ; CHECK:       [[FLAG_MERGE]]:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @myAlloc(i32 56)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
@@ -58,7 +58,7 @@ flag_true:
   br label %flag_merge
 
 flag_merge:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @myAlloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)

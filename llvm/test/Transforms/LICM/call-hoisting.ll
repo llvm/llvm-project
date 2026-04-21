@@ -254,7 +254,7 @@ define i32 @neg_conflicting_read(ptr noalias %loc, ptr noalias %otherloc) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @load(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @load(ptr [[LOC]])
 ; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
@@ -268,7 +268,38 @@ entry:
   br label %loop
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
-  %val = call i32 @load(i32 0, ptr %loc)
+  %val = call i32 @load(ptr %loc)
+  call void @store(i32 0, ptr %loc)
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret i32 %val
+}
+
+define i32 @unrelated_read(ptr noalias %loc, ptr noalias %otherloc) {
+; CHECK-LABEL: define i32 @unrelated_read(
+; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[OTHERLOC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OTHERLOC_GEP:%.*]] = getelementptr i32, ptr [[OTHERLOC]], i32 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @load(ptr [[OTHERLOC_GEP]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[VAL_LCSSA:%.*]] = phi i32 [ [[VAL]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[VAL_LCSSA]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  %otherloc.gep = getelementptr i32, ptr %otherloc, i32 %iv
+  %val = call i32 @load(ptr %otherloc.gep)
   call void @store(i32 0, ptr %loc)
   %iv.next = add i32 %iv, 1
   %cmp = icmp slt i32 %iv, 200
@@ -514,7 +545,7 @@ define i32 @neg_not_argmemonly(ptr %loc, ptr %loc2) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[VAL_LE:%.*]] = call i32 @load(i32 0, ptr [[LOC2]])
+; CHECK-NEXT:    [[VAL_LE:%.*]] = call i32 @load(ptr [[LOC2]])
 ; CHECK-NEXT:    ret i32 [[VAL_LE]]
 ;
 entry:
@@ -523,7 +554,7 @@ entry:
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
   call void @not_argmemonly(i32 0, ptr %loc)
-  %val = call i32 @load(i32 0, ptr %loc2)
+  %val = call i32 @load(ptr %loc2)
   %iv.next = add i32 %iv, 1
   %cmp = icmp slt i32 %iv, 200
   br i1 %cmp, label %loop, label %exit

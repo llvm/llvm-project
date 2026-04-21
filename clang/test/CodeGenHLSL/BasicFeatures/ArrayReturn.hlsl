@@ -3,14 +3,12 @@
 typedef int Foo[2];
 
 // CHECK-LABEL: define void {{.*}}boop{{.*}}(ptr dead_on_unwind noalias writable sret([2 x i32]) align 4 %agg.result)
-// CHECK:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK: [[G:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[G]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: [[AIB:%.*]] = getelementptr inbounds [2 x i32], ptr %agg.result, i32 0, i32 0
 // CHECK-NEXT: br label %arrayinit.body
 // CHECK: arrayinit.body:
 // CHECK-NEXT: [[AII:%.*]] = phi i32 [ 0, %entry ], [ %arrayinit.next, %arrayinit.body ]
-// CHECK-NEXT: %[[#CV_LOOP:]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // CHECK-NEXT: [[X:%.*]] = getelementptr inbounds i32, ptr [[AIB]], i32 [[AII]]
 // CHECK-NEXT: [[AI:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[G]], i32 0, i32 [[AII]]
 // CHECK-NEXT: [[Y:%.*]] = load i32, ptr [[AI]], align 4

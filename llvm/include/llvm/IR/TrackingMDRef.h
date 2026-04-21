@@ -33,7 +33,7 @@ public:
   TrackingMDRef(const TrackingMDRef &X) : MD(X.MD) { track(); }
 
   TrackingMDRef &operator=(TrackingMDRef &&X) {
-    if (&X == this)
+    if (&X == this || MD == X.MD)
       return *this;
 
     untrack();
@@ -43,7 +43,7 @@ public:
   }
 
   TrackingMDRef &operator=(const TrackingMDRef &X) {
-    if (&X == this)
+    if (&X == this || MD == X.MD)
       return *this;
 
     untrack();

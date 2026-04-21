@@ -13,8 +13,8 @@ define internal i32 @test(ptr %p) {
 ; CHECK-SAME: (ptr nofree readonly captures(none) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], ptr [[P]], i64 0, i32 3
 ; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], ptr [[P]], i64 0, i32 2
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
-; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4, !invariant.load [[META0:![0-9]+]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -65,8 +65,8 @@ define internal i32 @test2(ptr %p, i32 %p2) {
 ; CGSCC-SAME: (ptr nofree readonly captures(none) [[P:%.*]], i32 [[P2:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], ptr [[P]], i64 0, i32 3
 ; CGSCC-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], ptr [[P]], i64 0, i32 2
-; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
-; CGSCC-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4
+; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4, !invariant.load [[META0]]
+; CGSCC-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4, !invariant.load [[META0]]
 ; CGSCC-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @foo(ptr nofree undef, i32 [[V]]) #[[ATTR6:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CA]]
@@ -124,8 +124,8 @@ define internal i32 @test2b(ptr %p, i32 %p2) {
 ; TUNIT-SAME: (ptr nofree readonly captures(none) [[P:%.*]], i32 [[P2:%.*]]) #[[ATTR3:[0-9]+]] {
 ; TUNIT-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], ptr [[P]], i64 0, i32 3
 ; TUNIT-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], ptr [[P]], i64 0, i32 2
-; TUNIT-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
-; TUNIT-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4
+; TUNIT-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4, !invariant.load [[META0]]
+; TUNIT-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4, !invariant.load [[META0]]
 ; TUNIT-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; TUNIT-NEXT:    [[CA:%.*]] = musttail call i32 @bar(ptr undef, i32 [[V]]) #[[ATTR5:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[CA]]
@@ -135,8 +135,8 @@ define internal i32 @test2b(ptr %p, i32 %p2) {
 ; CGSCC-SAME: (ptr nofree readonly captures(none) [[P:%.*]], i32 [[P2:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CGSCC-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], ptr [[P]], i64 0, i32 3
 ; CGSCC-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], ptr [[P]], i64 0, i32 2
-; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
-; CGSCC-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4
+; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4, !invariant.load [[META0]]
+; CGSCC-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4, !invariant.load [[META0]]
 ; CGSCC-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @bar(ptr nofree nonnull undef, i32 [[V]]) #[[ATTR7:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CA]]
@@ -184,4 +184,8 @@ define i32 @caller2b(ptr %g) {
 ; CGSCC: attributes #[[ATTR6]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR7]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR8]] = { nofree nounwind willreturn }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.

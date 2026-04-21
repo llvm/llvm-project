@@ -41,6 +41,7 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleCache.h"
+#include "clang/Serialization/ModuleManager.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1945,7 +1946,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
     // Check whether M refers to the file in the prebuilt module path.
     if (M && M->getASTFileKey() &&
-        *M->getASTFileKey() == ModuleFilename.makeKey(*FileMgr))
+        *M->getASTFileKey() ==
+            getASTReader()->getModuleManager().makeKey(ModuleFilename))
       return M;
 
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)

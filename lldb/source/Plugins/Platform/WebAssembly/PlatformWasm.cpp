@@ -175,7 +175,9 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
 
   launch_info.SetArguments(args, true);
   launch_info.SetLaunchInSeparateProcessGroup(true);
-  launch_info.GetFlags().Clear(eLaunchFlagDebug);
+  // We're launching the Wasm runtime (a native host binary), not the target
+  // being debugged. Clear flags that don't apply to the runtime process.
+  launch_info.GetFlags().Clear(eLaunchFlagDebug | eLaunchFlagDisableASLR);
   launch_info.GetEnvironment() = Host::GetEnvironment();
 
   auto exit_code = std::make_shared<std::optional<int>>();

@@ -1,3 +1,4 @@
+; TODO: The non-loop-vectorizer tests should be moved elsewhere.
 ; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_4_1 %s
 ; RUN: opt -S -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=3 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_2_3 %s
 ; RUN: opt -S -passes=loop-unroll  -unroll-count=5 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPUNROLL_5 %s

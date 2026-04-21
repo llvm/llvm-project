@@ -6,7 +6,6 @@
 // CHECK-LABEL: define hidden void @_Z20ZerosSwizzleToScalarRu11matrix_typeILm4ELm4EdEd(
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], double noundef nofpclass(nan inf) [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -35,7 +34,6 @@ void ZerosSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-LABEL: define hidden void @_Z20ZerosSwizzleToVectorRu11matrix_typeILm4ELm4EdEDv4_d(
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], <4 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -62,7 +60,6 @@ void ZerosSwizzleToVector(out double4x4 A, double4 V) {
 // CHECK-LABEL: define hidden void @_Z19OnesSwizzleToScalarRu11matrix_typeILm4ELm4EdEd(
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], double noundef nofpclass(nan inf) [[D:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -92,7 +89,6 @@ void OnesSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-LABEL: define hidden void @_Z19OnesSwizzleToVectorRu11matrix_typeILm4ELm4EdEDv4_d(
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], <4 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -120,7 +116,6 @@ void OnesSwizzleToVector(out double4x4 A, double4 V) {
 // CHECK-LABEL: define hidden void @_Z19TwosSwizzleToScalarRu11matrix_typeILm4ELm4EdEd(
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], double noundef nofpclass(nan inf) [[D:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -150,7 +145,6 @@ void TwosSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-LABEL: define hidden void @_Z19TwosSwizzleToVectorRu11matrix_typeILm4ELm4EdEDv4_d(
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], <4 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -178,7 +172,6 @@ void TwosSwizzleToVector(out double4x4 A, double4 V) {
 // CHECK-LABEL: define hidden void @_Z21ThreesSwizzleToScalarRu11matrix_typeILm4ELm4EdEd(
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], double noundef nofpclass(nan inf) [[D:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -208,7 +201,6 @@ void ThreesSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-LABEL: define hidden void @_Z21ThreesSwizzleToVectorRu11matrix_typeILm4ELm4EdEDv4_d(
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], <4 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4

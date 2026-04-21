@@ -91,8 +91,8 @@ void PrintTo(const MockSummaryData3 &S, std::ostream *OS) {
 }
 
 struct TUSummaryBuilderTest : ssaf::TestFixture {
-  TUSummary Summary =
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
+  TUSummary Summary{
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
   TUSummaryBuilder Builder = TUSummaryBuilder(this->Summary);
 
   [[nodiscard]] static SmallVector<SummaryName>

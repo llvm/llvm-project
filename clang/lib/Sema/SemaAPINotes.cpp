@@ -577,6 +577,14 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   if (Info.NullabilityAudited)
     applyNullability(S, D, Info.getReturnTypeInfo(), Metadata);
 
+  // Add [[clang::unsafe_buffer_usage]]
+  if (Info.UnsafeBufferUsage && !D->getAttr<UnsafeBufferUsageAttr>()) {
+    handleAPINotedAttribute<UnsafeBufferUsageAttr>(S, D, true, Metadata, [&]() {
+      return UnsafeBufferUsageAttr::Create(S.getASTContext(),
+                                           getPlaceholderAttrInfo());
+    });
+  }
+
   // Parameters.
   unsigned NumParams = FD ? FD->getNumParams() : MD->param_size();
 

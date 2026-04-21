@@ -235,28 +235,24 @@ gpu.func @gemm_with_postop(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x102
 gpu.module @xevm_module{
   gpu.func @load_dpas_postop_store(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
     %c0 = arith.constant 0 : index
-    %cst = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.0> : vector<8x16xf32>
+    %cst = arith.constant dense<0.0> : vector<8x16xf32>
     %0 = xegpu.create_nd_tdesc %arg0 : memref<8x16xf16>
       -> !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     %1 = xegpu.load_nd %0[%c0, %c0]
-      {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
+      {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
       !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x16xf16>
     %2 = xegpu.create_nd_tdesc %arg1: memref<16x16xf16>
       -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
     %3 = xegpu.load_nd %2[%c0, %c0]
-      {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
-       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+      {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
       : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
       -> vector<16x16xf16>
     %4 = xegpu.dpas %1, %3, %cst
       {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
        layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
-       layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+       layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
       : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
     %5 = math.exp %4
-      {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
       : vector<8x16xf32>
     %6 = xegpu.create_nd_tdesc %arg2 : memref<8x16xf32> ->
       !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -279,7 +275,7 @@ gpu.module @xevm_module{
 // CHECK-NEXT:        scf.yield %[[LD_CAST]] : vector<1x8xf16>
 // CHECK-NEXT:      } else {
 // CHECK-NEXT:        scf.yield %[[CST]] : vector<1x8xf16>
-// CHECK-NEXT:      } {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>}
+// CHECK-NEXT:      }
 // CHECK-NEXT:      %[[IF_CAST:.*]] = vector.shape_cast %[[IF]] : vector<1x8xf16> to vector<8xf16>
 // CHECK-NEXT:      xegpu.store %[[IF_CAST]], %{{.*}}[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
 // CHECK-SAME:        vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
@@ -289,16 +285,13 @@ gpu.module @xevm_module{
     %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16xindex>
     %loaded = scf.if %pred -> (vector<16x8xf16>) {
       %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}> {
-        layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>,
-        layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
+        layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
       } : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
       scf.yield %3 : vector<16x8xf16>
     } else {
-      %3 = arith.constant {
-        layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
-      } dense<12.> : vector<16x8xf16>
+      %3 = arith.constant dense<12.> : vector<16x8xf16>
       scf.yield %3 : vector<16x8xf16>
-    } { layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]> }
+    }
     xegpu.store %loaded, %src[%offset], %1 <{chunk_size=8}> {layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>} : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
     gpu.return
   }
@@ -318,12 +311,11 @@ gpu.module @xevm_module{
 gpu.module @xevm_module{
   gpu.func @scatter_ops_scf_non_yield(%src: memref<256xf16>) {
     %pred = llvm.mlir.poison : i1
-    %1 = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<1>: vector<16xi1>
-    %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16xindex>
+    %1 = arith.constant dense<1>: vector<16xi1>
+    %offset = arith.constant dense<12> : vector<16xindex>
     scf.if %pred  {
       %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}> {
-        layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>,
-        layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
+        layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
       } : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
       xegpu.store %3, %src[%offset], %1 <{chunk_size=8}> {layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>} : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
     }

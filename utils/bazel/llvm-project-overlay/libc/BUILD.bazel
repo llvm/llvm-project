@@ -5544,7 +5544,10 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_math_powf",
-    hdrs = ["src/__support/math/powf.h"],
+    hdrs = [
+        "src/__support/math/powf.h",
+        "src/__support/math/powf_small_tables.h",
+    ],
     deps = [
         ":__support_common",
         ":__support_cpp_bit",

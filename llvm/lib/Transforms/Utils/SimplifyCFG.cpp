@@ -6963,6 +6963,7 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     // Set the alignment to that of an array items. We will be only loading one
     // value out of it.
     Table->setAlignment(DL.getPrefTypeAlign(ValueType));
+    Table->setComdat(Func->getComdat());
     Type *IndexTy = DL.getIndexType(Table->getType());
     auto *ArrayTy = cast<ArrayType>(Table->getValueType());
 

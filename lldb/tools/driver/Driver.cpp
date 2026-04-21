@@ -449,12 +449,7 @@ int Driver::MainLoop() {
     atexit(reset_stdin_termios);
   }
 
-#ifndef _MSC_VER
-  // Disabling stdin buffering with MSVC's 2015 CRT exposes a bug in fgets
-  // which causes it to miss newlines depending on whether there have been an
-  // odd or even number of characters.  Bug has been reported to MS via Connect.
   ::setbuf(stdin, nullptr);
-#endif
   ::setbuf(stdout, nullptr);
 
   m_debugger.SetErrorFileHandle(stderr, false);

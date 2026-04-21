@@ -146,8 +146,7 @@ LLVM_ABI bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// intrinsic is redundant, but we want to implement scalarization of the
 /// vector. To prevent the requirement that an intrinsic also implements
 /// vectorization we provide this separate function.
-LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID,
-                                      const TargetTransformInfo *TTI);
+LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 /// \p TTI is used to consider target specific intrinsics, if no target specific

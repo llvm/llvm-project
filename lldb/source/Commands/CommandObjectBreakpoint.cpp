@@ -3717,13 +3717,13 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
             &id_str, cur_bp_id.GetBreakpointID(), cur_bp_id.GetLocationID());
         i = valid_ids->GetSize() + 1;
         result.AppendErrorWithFormat(
-            "'%s' is not a currently valid breakpoint/location id.\n",
+            "'%s' is not a currently valid breakpoint/location id.",
             id_str.GetData());
       }
     } else {
       i = valid_ids->GetSize() + 1;
       result.AppendErrorWithFormat(
-          "'%d' is not a currently valid breakpoint ID.\n",
+          "'%d' is not a currently valid breakpoint ID.",
           cur_bp_id.GetBreakpointID());
     }
   }

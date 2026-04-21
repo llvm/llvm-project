@@ -108,6 +108,7 @@ template<> class numeric_limits<cv long double>;
 #  include <__config>
 #  include <__type_traits/is_arithmetic.h>
 #  include <__type_traits/is_same.h>
+#  include <__type_traits/make_unsigned.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -184,9 +185,16 @@ protected:
 
   static _LIBCPP_CONSTEXPR const bool is_specialized = true;
 
-  static _LIBCPP_CONSTEXPR const bool is_signed   = type(-1) < type(0);
-  static _LIBCPP_CONSTEXPR const int digits       = static_cast<int>(sizeof(type) * __CHAR_BIT__ - is_signed);
-  static _LIBCPP_CONSTEXPR const int digits10     = digits * 3 / 10;
+  static _LIBCPP_CONSTEXPR const bool is_signed = type(-1) < type(0);
+  // Number of value bits in type. Works for any integer type, including
+  // _BitInt(N), whose sizeof(type) * CHAR_BIT may include padding.
+  static _LIBCPP_CONSTEXPR const int digits =
+      __builtin_popcountg(static_cast<__make_unsigned_t<type> >(~__make_unsigned_t<type>(0))) - is_signed;
+  // digits10 = floor(digits * log10(2)). 1936274/6432163 is a continued-fraction
+  // convergent of log10(2) and matches floor(digits * log10(2)) exactly for every
+  // digits in [1, 8388608], i.e. up to __BITINT_MAXWIDTH__ on x86.
+  // TODO: switch to __builtin_log10 once it becomes constexpr.
+  static _LIBCPP_CONSTEXPR const int digits10     = static_cast<int>((digits * 1936274LL) / 6432163);
   static _LIBCPP_CONSTEXPR const int max_digits10 = 0;
   static _LIBCPP_CONSTEXPR const type __min       = is_signed ? _Tp(_Tp(1) << digits) : 0;
   static _LIBCPP_CONSTEXPR const type __max       = is_signed ? type(type(~0) ^ __min) : type(~0);

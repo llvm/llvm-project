@@ -822,7 +822,7 @@ class Base(unittest.TestCase):
 
         # Set any user-overridden settings.
         for setting, value in configuration.settings:
-            commands.append("setting set %s %s" % (setting, value))
+            commands.append("settings set -- %s %s" % (setting, value))
 
         # Make sure that a sanitizer LLDB's environment doesn't get passed on.
         if (

@@ -2474,7 +2474,7 @@ define internal void @dead_with_blockaddress_users(ptr nocapture %pc) nounwind r
 ; CGSCC-NEXT:    [[TMP1_PN:%.*]] = load i32, ptr [[PC_ADDR_0]], align 4
 ; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x ptr], ptr @dead_with_blockaddress_users.l, i32 0, i32 [[TMP1_PN]]
 ; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load ptr, ptr [[INDIRECT_GOTO_DEST_IN]], align 8
-; CGSCC-NEXT:    indirectbr ptr [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
+; CGSCC-NEXT:    indirectbr ptr [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label [[END:%.*]]]
 ;
 entry:
   br label %indirectgoto

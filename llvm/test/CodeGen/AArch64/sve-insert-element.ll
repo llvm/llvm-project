@@ -452,6 +452,23 @@ define <vscale x 2 x double> @test_insert_with_index_nxv2f64(<vscale x 2 x doubl
 }
 
 ;Predicate insert
+define <vscale x 1 x i1> @test_predicate_insert_1xi1_immediate(<vscale x 1 x i1> %vec, i1 %elt) {
+; CHECK-LABEL: test_predicate_insert_1xi1_immediate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p0.d
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    mov z0.d, p0/m, x0
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 1 x i1> %vec, i1 %elt, i32 0
+  ret <vscale x 1 x i1> %res
+}
+
 define <vscale x 2 x i1> @test_predicate_insert_2xi1_immediate (<vscale x 2 x i1> %val, i1 %elt) {
 ; CHECK-LABEL: test_predicate_insert_2xi1_immediate:
 ; CHECK:       // %bb.0:
@@ -520,6 +537,25 @@ define <vscale x 16 x i1> @test_predicate_insert_16xi1_immediate (<vscale x 16 x
   ret <vscale x 16 x i1> %res
 }
 
+define <vscale x 1 x i1> @test_predicate_insert_1xi1(<vscale x 1 x i1> %vec, i1 %elt, i32 %idx) {
+; CHECK-LABEL: test_predicate_insert_1xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    mov w8, w1
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p0.d
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    cmpeq p2.d, p1/z, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov z0.d, p2/m, x0
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    cmpne p0.d, p1/z, z0.d, #0
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 1 x i1> %vec, i1 %elt, i32 %idx
+  ret <vscale x 1 x i1> %res
+}
 
 define <vscale x 2 x i1> @test_predicate_insert_2xi1(<vscale x 2 x i1> %val, i1 %elt, i32 %idx) {
 ; CHECK-LABEL: test_predicate_insert_2xi1:

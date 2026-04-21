@@ -9,7 +9,7 @@ entry:
 
 define void @f() #0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 

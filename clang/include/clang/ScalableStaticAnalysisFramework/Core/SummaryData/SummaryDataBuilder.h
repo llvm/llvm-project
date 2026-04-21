@@ -60,7 +60,7 @@ template <typename DataT, typename SummaryT>
 class SummaryDataBuilder : public SummaryDataBuilderBase {
   static_assert(std::is_base_of_v<SummaryData, DataT>,
                 "DataT must derive from SummaryData");
-  static_assert(HasSummaryName<DataT>::value,
+  static_assert(HasSummaryName_v<DataT>,
                 "DataT must have a static summaryName() method");
   static_assert(std::is_base_of_v<EntitySummary, SummaryT>,
                 "SummaryT must derive from EntitySummary");

@@ -61,6 +61,11 @@ void removeLayoutAttr(const T &operandOrResult);
 /// applied recursively to the contained operations
 void removeLayoutAttrs(Operation *op);
 
+/// Removes the temporary layout attributes for each OpOperand and OpResult of
+/// the given operation. Recursive for contained operations if the given
+/// operation contains regions.
+void removeTemporaryLayoutAttrs(Operation *op);
+
 /// Updates the NamedAttribute sequence by dropping sg-layout and
 /// sg-data information from any DistributeLayoutAttr found.
 SmallVector<NamedAttribute>
@@ -117,6 +122,11 @@ inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
 DistributeLayoutAttr
 inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
                                   int chunkSize);
+
+/// Infers the source layout attribute for an operand using result layout
+/// attribute
+DistributeLayoutAttr
+inferSourceLayoutFromResult(OpOperand &operand, DistributeLayoutAttr resLayout);
 
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.
@@ -192,7 +202,7 @@ setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
 /// Gets the expected layout for a given consumer operand. This will check if
 /// the owning operation of the consumer operand is one of the special layout
 /// users and determine the expected layout accordingly.
-xegpu::DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
+DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
 
 } // namespace xegpu
 

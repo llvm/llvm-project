@@ -371,8 +371,7 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
       return;
     }
 
-    cir::GlobalLinkageKind linkage =
-        cgm.getCIRLinkageVarDefinition(&d, /*IsConstant=*/false);
+    cir::GlobalLinkageKind linkage = cgm.getCIRLinkageVarDefinition(&d);
 
     // FIXME: We need to force the emission/use of a guard variable for
     // some variables even if we can constant-evaluate them because
@@ -1141,10 +1140,8 @@ void CIRGenFunction::pushPendingCleanupToEHStack(
   if (entry.activeFlag.isValid()) {
     EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
     scope.setActiveFlag(entry.activeFlag);
-    if (scope.isNormalCleanup())
-      scope.setTestFlagInNormalCleanup();
-    if (scope.isEHCleanup())
-      scope.setTestFlagInEHCleanup();
+    scope.setTestFlagInNormalCleanup(scope.isNormalCleanup());
+    scope.setTestFlagInEHCleanup(scope.isEHCleanup());
   }
 }
 

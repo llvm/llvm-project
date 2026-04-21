@@ -349,7 +349,7 @@ TEST_F(FormatTestComments, KeepsParameterWithTrailingCommentsOnTheirOwnLine) {
                "aaaa, bbbbb);");
 
   FormatStyle BreakAlways = getLLVMStyle();
-  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  BreakAlways.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("int SomeFunction(a,\n"
                "                 b, // comment\n"
                "                 c,\n"
@@ -405,7 +405,7 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
       "                  /* 3rd */ int dddddddddddd);");
 
   auto Style = getLLVMStyle();
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("aaaaaaaa(/* parameter 1 */ aaaaaa,\n"
                "         /* parameter 2 */ aaaaaa,\n"
                "         /* parameter 3 */ aaaaaa,\n"
@@ -417,7 +417,7 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
                "                  /* 3rd */ int dddddddddddd);",
                Style);
 
-  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("int a(/* 1st */ int b,\n"
                "      /* 2nd */ int c);",
                Style);
@@ -2444,7 +2444,7 @@ TEST_F(FormatTestComments, BlockComments) {
                getLLVMStyleWithColumns(50));
 
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  NoBinPacking.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("someFunction(1, /* comment 1 */\n"
                "             2, /* comment 2 */\n"
                "             3, /* comment 3 */\n"

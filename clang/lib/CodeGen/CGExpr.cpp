@@ -5516,18 +5516,10 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
     EmitIgnoredExpr(E->getBase());
     return EmitDeclRefLValue(DRE);
   }
-
-  if (getLangOpts().HLSL) {
-    QualType QT = E->getType();
-    if (QT.getAddressSpace() == LangAS::hlsl_constant)
-      return CGM.getHLSLRuntime().emitBufferMemberExpr(*this, E);
-
-    if (QT->isHLSLResourceRecord() || QT->isHLSLResourceRecordArray()) {
-      std::optional<LValue> LV;
-      LV = CGM.getHLSLRuntime().emitResourceMemberExpr(*this, E);
-      if (LV.has_value())
-        return *LV;
-    }
+  if (getLangOpts().HLSL &&
+      E->getType().getAddressSpace() == LangAS::hlsl_constant) {
+    // We have an HLSL buffer - emit using HLSL's layout rules.
+    return CGM.getHLSLRuntime().emitBufferMemberExpr(*this, E);
   }
 
   Expr *BaseExpr = E->getBase();

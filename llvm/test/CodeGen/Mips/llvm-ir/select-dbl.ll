@@ -30,6 +30,8 @@
 ; RUN:    -check-prefix=MM32R3
 ; RUN: llc < %s -mtriple=mips-unknown-linux-gnu -mcpu=mips32r6 -mattr=+micromips -verify-machineinstrs | FileCheck %s \
 ; RUN:    -check-prefix=MM32R6
+; RUN: llc < %s -mtriple=mipsel-sony-psx -mcpu=mips1 -verify-machineinstrs | FileCheck %s \
+; RUN:    -check-prefixes=MIPS1-PSX
 
 define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; M2-LABEL: tst_select_i1_double:
@@ -99,12 +101,28 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_i1_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3:       mtc1 $7, $f2 # <MCInst #{{.*}} MTC1
-; MM32R3:       mthc1 $6, $f2 # <MCInst #{{.*}} MTHC1_D32_MM
-; MM32R3:       andi16 $2, $4, 1 # <MCInst #{{.*}} ANDI16_MM
-; MM32R3:       ldc1 $f0, 16($sp) # <MCInst #{{.*}} LDC1_MM
-; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
-; MM32R3:       movn.d $f0, $f2, $2 # <MCInst #{{.*}} MOVN_I_D32_MM
+; MM32R3-NEXT:    mtc1 $7, $f2 # <MCInst #[[#MCINST1:]] MTC1
+; MM32R3-NEXT:    # <MCOperand Reg:F2>
+; MM32R3-NEXT:    # <MCOperand Reg:A3>>
+; MM32R3-NEXT:    mthc1 $6, $f2 # <MCInst #[[#MCINST2:]] MTHC1_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D1>
+; MM32R3-NEXT:    # <MCOperand Reg:D1>
+; MM32R3-NEXT:    # <MCOperand Reg:A2>>
+; MM32R3-NEXT:    andi16 $2, $4, 1 # <MCInst #[[#MCINST3:]] ANDI16_MM
+; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:A0>
+; MM32R3-NEXT:    # <MCOperand Imm:1>>
+; MM32R3-NEXT:    ldc1 $f0, 16($sp) # <MCInst #[[#MCINST4:]] LDC1_MM_D32
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:SP>
+; MM32R3-NEXT:    # <MCOperand Imm:16>>
+; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5:]] JR_MM
+; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    movn.d $f0, $f2, $2 # <MCInst #[[#MCINST6:]] MOVN_I_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D1>
+; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_i1_double:
 ; MM32R6:       # %bb.0: # %entry
@@ -114,6 +132,20 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; MM32R6-NEXT:    mtc1 $4, $f0
 ; MM32R6-NEXT:    sel.d $f0, $f2, $f1
 ; MM32R6-NEXT:    jrc $ra
+;
+; MIPS1-PSX-LABEL: tst_select_i1_double:
+; MIPS1-PSX:       # %bb.0: # %entry
+; MIPS1-PSX-NEXT:    andi $1, $4, 1
+; MIPS1-PSX-NEXT:    bnez $1, $BB0_2
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:  # %bb.1: # %entry
+; MIPS1-PSX-NEXT:    ldc1 $f0, 16($sp)
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:  $BB0_2:
+; MIPS1-PSX-NEXT:    mtc1 $6, $f0
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    mtc1 $7, $f1
 entry:
   %r = select i1 %s, double %x, double %y
   ret double %r
@@ -181,11 +213,24 @@ define double @tst_select_i1_double_reordered(double %x, double %y,
 ;
 ; MM32R3-LABEL: tst_select_i1_double_reordered:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
-; MM32R3:       lw $2, 16($sp) # <MCInst #{{.*}} LWSP_MM
-; MM32R3:       andi16 $2, $2, 1 # <MCInst #{{.*}} ANDI16_MM
-; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
-; MM32R3:       movn.d $f0, $f12, $2 # <MCInst #{{.*}} MOVN_I_D32_MM
+; MM32R3-NEXT:    mov.d $f0, $f14 # <MCInst #[[#MCINST7:]] FMOV_D32
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>>
+; MM32R3-NEXT:    lw $2, 16($sp) # <MCInst #[[#MCINST8:]] LWSP_MM
+; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:SP>
+; MM32R3-NEXT:    # <MCOperand Imm:16>>
+; MM32R3-NEXT:    andi16 $2, $2, 1 # <MCInst #[[#MCINST3]] ANDI16_MM
+; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Imm:1>>
+; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
+; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    movn.d $f0, $f12, $2 # <MCInst #[[#MCINST6]] MOVN_I_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_i1_double_reordered:
 ; MM32R6:       # %bb.0: # %entry
@@ -193,6 +238,19 @@ define double @tst_select_i1_double_reordered(double %x, double %y,
 ; MM32R6-NEXT:    mtc1 $1, $f0
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
+;
+; MIPS1-PSX-LABEL: tst_select_i1_double_reordered:
+; MIPS1-PSX:       # %bb.0: # %entry
+; MIPS1-PSX-NEXT:    lw $1, 16($sp)
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    andi $1, $1, 1
+; MIPS1-PSX-NEXT:    bnez $1, $BB1_2
+; MIPS1-PSX-NEXT:    mov.d $f0, $f12
+; MIPS1-PSX-NEXT:  # %bb.1: # %entry
+; MIPS1-PSX-NEXT:    mov.d $f0, $f14
+; MIPS1-PSX-NEXT:  $BB1_2: # %entry
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
                                               i1 signext %s) {
 entry:
   %r = select i1 %s, double %x, double %y
@@ -259,16 +317,38 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_olt_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
-; MM32R3:       c.olt.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
-; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
-; MM32R3:       movt.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVT_D32_MM
+; MM32R3-NEXT:    mov.d $f0, $f14 # <MCInst #[[#MCINST7]] FMOV_D32
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>>
+; MM32R3-NEXT:    c.olt.d $f12, $f14 # <MCInst #[[#MCINST9:]] FCMP_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>
+; MM32R3-NEXT:    # <MCOperand Imm:4>>
+; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
+; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST10:]] MOVT_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:FCC0>
+; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_fcmp_olt_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.lt.d $f0, $f12, $f14
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
+;
+; MIPS1-PSX-LABEL: tst_select_fcmp_olt_double:
+; MIPS1-PSX:       # %bb.0: # %entry
+; MIPS1-PSX-NEXT:    c.olt.d $f12, $f14
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    bc1t $BB2_2
+; MIPS1-PSX-NEXT:    mov.d $f0, $f12
+; MIPS1-PSX-NEXT:  # %bb.1: # %entry
+; MIPS1-PSX-NEXT:    mov.d $f0, $f14
+; MIPS1-PSX-NEXT:  $BB2_2: # %entry
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
 entry:
   %s = fcmp olt double %x, %y
   %r = select i1 %s, double %x, double %y
@@ -335,16 +415,38 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_ole_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
-; MM32R3:       c.ole.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
-; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
-; MM32R3:       movt.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVT_D32_MM
+; MM32R3-NEXT:    mov.d $f0, $f14 # <MCInst #[[#MCINST7]] FMOV_D32
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>>
+; MM32R3-NEXT:    c.ole.d $f12, $f14 # <MCInst #[[#MCINST9]] FCMP_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>
+; MM32R3-NEXT:    # <MCOperand Imm:6>>
+; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
+; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST10]] MOVT_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:FCC0>
+; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_fcmp_ole_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.le.d $f0, $f12, $f14
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
+;
+; MIPS1-PSX-LABEL: tst_select_fcmp_ole_double:
+; MIPS1-PSX:       # %bb.0: # %entry
+; MIPS1-PSX-NEXT:    c.ole.d $f12, $f14
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    bc1t $BB3_2
+; MIPS1-PSX-NEXT:    mov.d $f0, $f12
+; MIPS1-PSX-NEXT:  # %bb.1: # %entry
+; MIPS1-PSX-NEXT:    mov.d $f0, $f14
+; MIPS1-PSX-NEXT:  $BB3_2: # %entry
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
 entry:
   %s = fcmp ole double %x, %y
   %r = select i1 %s, double %x, double %y
@@ -411,16 +513,38 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_ogt_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
-; MM32R3:       c.ule.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
-; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
-; MM32R3:       movf.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVF_D32_MM
+; MM32R3-NEXT:    mov.d $f0, $f14 # <MCInst #[[#MCINST7]] FMOV_D32
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>>
+; MM32R3-NEXT:    c.ule.d $f12, $f14 # <MCInst #[[#MCINST9]] FCMP_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>
+; MM32R3-NEXT:    # <MCOperand Imm:23>>
+; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
+; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST11:]] MOVF_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:FCC0>
+; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_fcmp_ogt_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.lt.d $f0, $f14, $f12
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
+;
+; MIPS1-PSX-LABEL: tst_select_fcmp_ogt_double:
+; MIPS1-PSX:       # %bb.0: # %entry
+; MIPS1-PSX-NEXT:    c.ule.d $f12, $f14
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    bc1f $BB4_2
+; MIPS1-PSX-NEXT:    mov.d $f0, $f12
+; MIPS1-PSX-NEXT:  # %bb.1: # %entry
+; MIPS1-PSX-NEXT:    mov.d $f0, $f14
+; MIPS1-PSX-NEXT:  $BB4_2: # %entry
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
 entry:
   %s = fcmp ogt double %x, %y
   %r = select i1 %s, double %x, double %y
@@ -487,16 +611,38 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_oge_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
-; MM32R3:       c.ult.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
-; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
-; MM32R3:       movf.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVF_D32_MM
+; MM32R3-NEXT:    mov.d $f0, $f14 # <MCInst #[[#MCINST7]] FMOV_D32
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>>
+; MM32R3-NEXT:    c.ult.d $f12, $f14 # <MCInst #[[#MCINST9]] FCMP_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>
+; MM32R3-NEXT:    # <MCOperand Imm:21>>
+; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
+; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST11]] MOVF_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:FCC0>
+; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_fcmp_oge_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.le.d $f0, $f14, $f12
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
+;
+; MIPS1-PSX-LABEL: tst_select_fcmp_oge_double:
+; MIPS1-PSX:       # %bb.0: # %entry
+; MIPS1-PSX-NEXT:    c.ult.d $f12, $f14
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    bc1f $BB5_2
+; MIPS1-PSX-NEXT:    mov.d $f0, $f12
+; MIPS1-PSX-NEXT:  # %bb.1: # %entry
+; MIPS1-PSX-NEXT:    mov.d $f0, $f14
+; MIPS1-PSX-NEXT:  $BB5_2: # %entry
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
 entry:
   %s = fcmp oge double %x, %y
   %r = select i1 %s, double %x, double %y
@@ -563,16 +709,38 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_oeq_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
-; MM32R3:       c.eq.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
-; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
-; MM32R3:       movt.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVT_D32_MM
+; MM32R3-NEXT:    mov.d $f0, $f14 # <MCInst #[[#MCINST7]] FMOV_D32
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>>
+; MM32R3-NEXT:    c.eq.d $f12, $f14 # <MCInst #[[#MCINST9]] FCMP_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>
+; MM32R3-NEXT:    # <MCOperand Imm:2>>
+; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
+; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST10]] MOVT_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:FCC0>
+; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_fcmp_oeq_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.eq.d $f0, $f12, $f14
 ; MM32R6-NEXT:    sel.d $f0, $f14, $f12
 ; MM32R6-NEXT:    jrc $ra
+;
+; MIPS1-PSX-LABEL: tst_select_fcmp_oeq_double:
+; MIPS1-PSX:       # %bb.0: # %entry
+; MIPS1-PSX-NEXT:    c.eq.d $f12, $f14
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    bc1t $BB6_2
+; MIPS1-PSX-NEXT:    mov.d $f0, $f12
+; MIPS1-PSX-NEXT:  # %bb.1: # %entry
+; MIPS1-PSX-NEXT:    mov.d $f0, $f14
+; MIPS1-PSX-NEXT:  $BB6_2: # %entry
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
 entry:
   %s = fcmp oeq double %x, %y
   %r = select i1 %s, double %x, double %y
@@ -639,16 +807,38 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_one_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
-; MM32R3:       c.ueq.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
-; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
-; MM32R3:       movf.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVF_D32_MM
+; MM32R3-NEXT:    mov.d $f0, $f14 # <MCInst #[[#MCINST7]] FMOV_D32
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>>
+; MM32R3-NEXT:    c.ueq.d $f12, $f14 # <MCInst #[[#MCINST9]] FCMP_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:D7>
+; MM32R3-NEXT:    # <MCOperand Imm:19>>
+; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
+; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST11]] MOVF_D32_MM
+; MM32R3-NEXT:    # <MCOperand Reg:D0>
+; MM32R3-NEXT:    # <MCOperand Reg:D6>
+; MM32R3-NEXT:    # <MCOperand Reg:FCC0>
+; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_fcmp_one_double:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.ueq.d $f0, $f12, $f14
 ; MM32R6-NEXT:    sel.d $f0, $f12, $f14
 ; MM32R6-NEXT:    jrc $ra
+;
+; MIPS1-PSX-LABEL: tst_select_fcmp_one_double:
+; MIPS1-PSX:       # %bb.0: # %entry
+; MIPS1-PSX-NEXT:    c.ueq.d $f12, $f14
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    bc1f $BB7_2
+; MIPS1-PSX-NEXT:    mov.d $f0, $f12
+; MIPS1-PSX-NEXT:  # %bb.1: # %entry
+; MIPS1-PSX-NEXT:    mov.d $f0, $f14
+; MIPS1-PSX-NEXT:  $BB7_2: # %entry
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
 entry:
   %s = fcmp one double %x, %y
   %r = select i1 %s, double %x, double %y

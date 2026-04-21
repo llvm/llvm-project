@@ -897,6 +897,26 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   SelectCode(N);
 }
 
+bool AMDGPUDAGToDAGISel::isSDWAOperand(const SDNode *N) const {
+  if (!Subtarget->hasSDWA())
+    return false;
+
+  if (N->getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    EVT VT = cast<VTSDNode>(N->getOperand(1))->getVT();
+    return VT.getScalarSizeInBits() == 8 || VT.getScalarSizeInBits() == 16;
+  }
+
+  if (N->getOpcode() == ISD::AND)
+    if (auto *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+      return RHS->getZExtValue() == 0xFF || RHS->getZExtValue() == 0xFFFF;
+
+  if (N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL)
+    if (auto *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+      return (RHS->getZExtValue() % 8) == 0;
+
+  return false;
+}
+
 bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
   const BasicBlock *BB = FuncInfo->MBB->getBasicBlock();
   const Instruction *Term = BB->getTerminator();
