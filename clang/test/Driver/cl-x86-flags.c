@@ -105,7 +105,7 @@
 
 // RUN: %clang_cl -m32 -arch:AVX10.2 --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_32_ARCH_AVX10_2_ADD -- %s
 #if defined(TEST_32_ARCH_AVX10_2_ADD)
-#if !__AVX10_2__
+#if !__AVX10_2__ || __APX_F__
 #error fail
 #endif
 #endif
@@ -169,7 +169,7 @@
 
 // RUN: %clang_cl -m64 -arch:AVX10.2 --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_64_ARCH_AVX10_2_ADD -- %s
 #if defined(TEST_64_ARCH_AVX10_2_ADD)
-#if !__AVX10_2__
+#if !__AVX10_2__ || __APX_F__
 #error fail
 #endif
 #endif
