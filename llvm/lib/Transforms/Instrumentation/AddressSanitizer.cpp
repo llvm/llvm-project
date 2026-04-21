@@ -299,6 +299,11 @@ static cl::opt<bool> ClRedzoneByvalArgs("asan-redzone-byval-args",
                                                  "required)"), cl::Hidden,
                                         cl::init(true));
 
+static cl::opt<bool> ClInstrumentAssumeDereferenceable(
+    "asan-instrument-assume-dereferenceable",
+    cl::desc("instrument llvm.assume(dereferenceable)"), cl::Hidden,
+    cl::init(true));
+
 static cl::opt<bool> ClUseAfterScope("asan-use-after-scope",
                                      cl::desc("Check stack-use-after-scope"),
                                      cl::Hidden, cl::init(false));
@@ -924,6 +929,7 @@ private:
   // These arrays is indexed by AccessIsWrite and Experiment.
   FunctionCallee AsanErrorCallbackSized[2][2];
   FunctionCallee AsanMemoryAccessCallbackSized[2][2];
+  FunctionCallee AsanAssumeDereferenceableCallback;
 
   FunctionCallee AsanMemmove, AsanMemcpy, AsanMemset;
   Value *LocalDynamicShadow = nullptr;
@@ -2881,6 +2887,12 @@ bool ModuleAddressSanitizer::instrumentModule() {
 
 void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
   IRBuilder<> IRB(*C);
+
+  const std::string EndingStr = Recover ? "_noabort" : "";
+  AsanAssumeDereferenceableCallback = M.getOrInsertFunction(
+      "__asan_report_assume_dereferenceable" + EndingStr,
+      FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false));
+
   // Create __asan_report* callbacks.
   // IsWrite, TypeSize and Exp are encoded in the function name.
   for (int Exp = 0; Exp < 2; Exp++) {
@@ -3099,6 +3111,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   SmallVector<Instruction *, 8> NoReturnCalls;
   SmallVector<BasicBlock *, 16> AllBlocks;
   SmallVector<Instruction *, 16> PointerComparisonsOrSubtracts;
+  SmallVector<AssumeInst *, 8> DerefAssumptions;
 
   // Fill the set of memory operations to instrument.
   for (auto &BB : F) {
@@ -3113,6 +3126,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
       getInterestingMemoryOperands(&Inst, InterestingOperands, TTI);
 
+      AssumeInst *AI;
       if (!InterestingOperands.empty()) {
         for (auto &Operand : InterestingOperands) {
           if (ClOpt && ClOptSameTemp) {
@@ -3140,6 +3154,12 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         // ok, take it.
         IntrinToInstrument.push_back(MI);
         NumInsnsPerBB++;
+      } else if (ClInstrumentAssumeDereferenceable &&
+                 (AI = dyn_cast<AssumeInst>(&Inst))) {
+        if (AI->getOperandBundle("dereferenceable")) {
+          DerefAssumptions.push_back(AI);
+          NumInsnsPerBB++;
+        }
       } else {
         if (auto *CB = dyn_cast<CallBase>(&Inst)) {
           // A call inside BB.
@@ -3187,6 +3207,28 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   for (auto *Inst : PointerComparisonsOrSubtracts) {
     instrumentPointerComparisonOrSubtraction(Inst, RTCI);
     FunctionModified = true;
+  }
+
+  for (auto *AI : DerefAssumptions) {
+    if (auto Bundle = AI->getOperandBundle("dereferenceable")) {
+      Value *Ptr = Bundle->Inputs[0];
+      Value *Size = Bundle->Inputs[1];
+
+      // Skip if size is exactly 0 without generating IR.
+      if (auto *CI = dyn_cast<ConstantInt>(Size)) {
+        if (CI->getValue().zextOrTrunc(IntptrTy->getIntegerBitWidth()).isZero())
+          continue;
+      }
+
+      IRBuilder<> IRB(AI);
+      Value *AddrLong = IRB.CreatePointerCast(Ptr, IntptrTy);
+      Value *SizeExt = IRB.CreateZExtOrTrunc(Size, IntptrTy);
+
+      RTCI.createRuntimeCall(IRB, AsanAssumeDereferenceableCallback,
+                             {AddrLong, SizeExt});
+
+      FunctionModified = true;
+    }
   }
 
   if (ChangedStack || !NoReturnCalls.empty())

@@ -1,5 +1,7 @@
 #! .
 __asan_report_load_n
+__asan_report_assume_dereferenceable
+__asan_report_assume_dereferenceable_noabort
 __asan_loadN
 __asan_report_load1
 __asan_load1
