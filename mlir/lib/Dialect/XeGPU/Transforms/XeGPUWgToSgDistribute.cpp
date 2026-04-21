@@ -498,9 +498,6 @@ struct WgToSgVectorBroadcastOp
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
-    if (!layout.isDistributable(SmallVector<int64_t>(wgShape)))
-      return failure();
-
     SmallVector<Value> newBroadcastOps;
     auto distSource = adaptor.getOperands().front();
     int numDistributions = count / distSource.size();
@@ -1778,17 +1775,5 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
 
-  // Remove layout attributes from SCF ops
-  getOperation()->walk([](Operation *op) {
-    if (!isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(op))
-      return;
-
-    SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : op->getDiscardableAttrs()) {
-      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
-        attrsToRemove.push_back(namedAttr.getName());
-    }
-    for (auto attrName : attrsToRemove)
-      op->removeDiscardableAttr(attrName);
-  });
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
 }
