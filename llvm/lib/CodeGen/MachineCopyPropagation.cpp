@@ -1343,9 +1343,7 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
             return;
 
         auto CheckCopyConstraint = [this](Register Dst, Register Src) {
-          if (TRI->getCommonMinimalPhysRegClass(Dst, Src))
-            return true;
-          return false;
+          return TRI->getCommonMinimalPhysRegClass(Dst, Src);
         };
 
         auto UpdateReg = [](MachineInstr *MI, const MachineOperand *Old,
