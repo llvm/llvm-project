@@ -480,24 +480,7 @@ public:
   /// Returns true if the two subregisters are equal or overlap.
   /// The registers may be virtual registers.
   bool checkSubRegInterference(Register RegA, unsigned SubA, Register RegB,
-                               unsigned SubB) const {
-    if (RegA == RegB && SubA == SubB)
-      return true;
-    if (RegA.isVirtual() && RegB.isVirtual()) {
-      if (RegA != RegB)
-        return false;
-      LaneBitmask LA = getSubRegIndexLaneMask(SubA);
-      LaneBitmask LB = getSubRegIndexLaneMask(SubB);
-      return (LA & LB).any();
-    }
-    if (RegA.isPhysical() && RegB.isPhysical()) {
-      MCRegister MCRegA = SubA ? getSubReg(RegA, SubA) : RegA.asMCReg();
-      MCRegister MCRegB = SubB ? getSubReg(RegB, SubB) : RegB.asMCReg();
-      assert(MCRegB.isValid() && MCRegA.isValid() && "invalid subregister");
-      return MCRegisterInfo::regsOverlap(MCRegA, MCRegB);
-    }
-    llvm_unreachable("mixed virtual and physical registers");
-  }
+                               unsigned SubB) const;
 
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
