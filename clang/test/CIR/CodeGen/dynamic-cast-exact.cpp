@@ -83,7 +83,7 @@ Derived &ref_cast(Base1 &ref) {
 // CIR-NEXT:   %[[SRC_VPTR_PTR:.*]] = cir.cast bitcast %[[SRC]] : !cir.ptr<!rec_Base1> -> !cir.ptr<!cir.vptr>
 // CIR-NEXT:   %[[SRC_VPTR:.*]] = cir.load{{.*}} %[[SRC_VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR-NEXT:   %[[SUCCESS:.*]] = cir.cmp eq %[[SRC_VPTR]], %[[EXPECTED_VPTR]] : !cir.vptr
-// CIR-NEXT:   %[[FAILED:.*]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
+// CIR-NEXT:   %[[FAILED:.*]] = cir.not %[[SUCCESS]] : !cir.bool
 // CIR-NEXT:   cir.if %[[FAILED]] {
 // CIR-NEXT:     cir.call @__cxa_bad_cast() : () -> ()
 // CIR-NEXT:     cir.unreachable

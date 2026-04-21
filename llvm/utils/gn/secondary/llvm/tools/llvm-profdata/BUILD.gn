@@ -6,6 +6,7 @@ executable("llvm-profdata") {
     "//llvm/lib/IR",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
+    "//llvm/lib/Support/HTTP",
   ]
   sources = [ "llvm-profdata.cpp" ]
 }

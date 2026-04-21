@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 // Tests non-contiguous array sections with variable stride on heap-allocated
 // pointers.
 

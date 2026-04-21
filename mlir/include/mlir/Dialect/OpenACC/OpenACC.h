@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACC_H_
 #define MLIR_DIALECT_OPENACC_OPENACC_H_
 
+#include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -52,6 +53,8 @@
       mlir::acc::UpdateDeviceOp, mlir::acc::UseDeviceOp,                       \
       mlir::acc::ReductionOp, mlir::acc::DeclareDeviceResidentOp,              \
       mlir::acc::DeclareLinkOp, mlir::acc::CacheOp
+#define ACC_DATA_ENTRY_AND_INIT_OPS                                            \
+  ACC_DATA_ENTRY_OPS, mlir::acc::ReductionInitOp
 #define ACC_DATA_EXIT_OPS                                                      \
   mlir::acc::CopyoutOp, mlir::acc::DeleteOp, mlir::acc::DetachOp,              \
       mlir::acc::UpdateHostOp

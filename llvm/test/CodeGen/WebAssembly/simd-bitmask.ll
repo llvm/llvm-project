@@ -196,3 +196,123 @@ define i32 @bitmask_v32i8(<32 x i8> %v) {
   %bitmask = bitcast <32 x i1> %cmp to i32
   ret i32 %bitmask
 }
+
+define i32 @manual_bitmask_i8x16(<16 x i8> %v) {
+; CHECK-LABEL: manual_bitmask_i8x16:
+; CHECK:         .functype manual_bitmask_i8x16 (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.bitmask
+; CHECK-NEXT:    # fallthrough-return
+  %1 = icmp slt <16 x i8> %v, zeroinitializer
+  %2 = bitcast <16 x i1> %1 to i16
+  %3 = zext i16 %2 to i32
+  ret i32 %3
+}
+
+define i32 @manual_bitmask_i16x8(<8 x i16> %v) {
+; CHECK-LABEL: manual_bitmask_i16x8:
+; CHECK:         .functype manual_bitmask_i16x8 (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    # fallthrough-return
+  %1 = icmp slt <8 x i16> %v, zeroinitializer
+  %2 = bitcast <8 x i1> %1 to i8
+  %3 = zext i8 %2 to i32
+  ret i32 %3
+}
+
+define i32 @manual_bitmask_i32x4(<4 x i32> %v) {
+; CHECK-LABEL: manual_bitmask_i32x4:
+; CHECK:         .functype manual_bitmask_i32x4 (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.bitmask
+; CHECK-NEXT:    # fallthrough-return
+  %1 = icmp slt <4 x i32> %v, zeroinitializer
+  %2 = bitcast <4 x i1> %1 to i4
+  %3 = zext i4 %2 to i32
+  ret i32 %3
+}
+
+define i32 @manual_bitmask_i64x2(<2 x i64> %v) {
+; CHECK-LABEL: manual_bitmask_i64x2:
+; CHECK:         .functype manual_bitmask_i64x2 (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i64x2.bitmask
+; CHECK-NEXT:    # fallthrough-return
+  %1 = icmp slt <2 x i64> %v, zeroinitializer
+  %2 = bitcast <2 x i1> %1 to i2
+  %3 = zext i2 %2 to i32
+  ret i32 %3
+}
+
+define i32 @manual_bitmask_v8i8(<8 x i8> %v) {
+; CHECK-LABEL: manual_bitmask_v8i8:
+; CHECK:         .functype manual_bitmask_v8i8 (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.lt_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i16x8.bitmask
+; CHECK-NEXT:    # fallthrough-return
+  %1 = icmp slt <8 x i8> %v, zeroinitializer
+  %2 = bitcast <8 x i1> %1 to i8
+  %3 = zext i8 %2 to i32
+  ret i32 %3
+}
+
+define i32 @manual_bitmask_v32i8(<32 x i8> %v) {
+; CHECK-LABEL: manual_bitmask_v32i8:
+; CHECK:         .functype manual_bitmask_v32i8 (v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.bitmask
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.bitmask
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    # fallthrough-return
+  %1 = icmp slt <32 x i8> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
+define i64 @manual_bitmask_v64i8(<64 x i8> %v) {
+; CHECK-LABEL: manual_bitmask_v64i8:
+; CHECK:         .functype manual_bitmask_v64i8 (v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i64.const 16
+; CHECK-NEXT:    i64.const 16
+; CHECK-NEXT:    i64.const 16
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 16
+; CHECK-NEXT:    i64.add
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.add
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i8x16.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.add
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i8x16.bitmask
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.add
+; CHECK-NEXT:    # fallthrough-return
+  %1 = icmp slt <64 x i8> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  ret i64 %2
+}

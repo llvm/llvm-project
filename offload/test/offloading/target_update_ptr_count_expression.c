@@ -1,7 +1,9 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 // Tests non-contiguous array sections with expression-based count on
 // heap-allocated pointer arrays with both FROM and TO directives.
+
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

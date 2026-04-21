@@ -114,8 +114,7 @@ subroutine check_exteremum()
 ! CHECK:    %[[VAL_38:.*]] = hlfir.designate %{{.*}} (%[[ARG0]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:    %[[VAL_39:.*]] = fir.load %[[VAL_37]] : !fir.ref<i32>
 ! CHECK:    %[[VAL_40:.*]] = fir.load %[[VAL_38]] : !fir.ref<i32>
-! CHECK:    %[[VAL_41:.*]] = arith.cmpi slt, %[[VAL_39]], %[[VAL_40]] : i32
-! CHECK:    %[[VAL_42:.*]] = arith.select %[[VAL_41]], %[[VAL_39]], %[[VAL_40]] : i32
+! CHECK:    %[[VAL_42:.*]] = arith.minsi %[[VAL_39]], %[[VAL_40]] : i32
 ! CHECK:    hlfir.yield_element %[[VAL_42]] : i32
 ! CHECK:  }
 ! CHECK:  %[[VAL_30:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32> {

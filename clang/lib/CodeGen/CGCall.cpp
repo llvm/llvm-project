@@ -2107,8 +2107,6 @@ static void getTrivialDefaultFunctionAttributes(
 
     // TODO: Are these all needed?
     // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
-    if (LangOpts.NoHonorNaNs)
-      FuncAttrs.addAttribute("no-nans-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
       FuncAttrs.addAttribute("use-soft-float", "true");
     FuncAttrs.addAttribute("stack-protector-buffer-size",
@@ -2880,19 +2878,22 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         CalleeInfo.getCalleeDecl().getDecl());
     // Do not annotate vector deleting destructors with dead_on_return as the
     // this pointer in that case points to an array which we cannot
-    // statically know the size of.
+    // statically know the size of. Also do not mark deleting destructors
+    // dead_on_return as then we might delete stores inside of a user-defined
+    // operator delete implementation if it gets inlined, which would be
+    // incorrect as the object's lifetime has already ended and the operator
+    // delete implementation is allowed to manipulate the underlying storage.
     if (DD &&
         CalleeInfo.getCalleeDecl().getDtorType() !=
             CXXDtorType::Dtor_VectorDeleting &&
+        CalleeInfo.getCalleeDecl().getDtorType() !=
+            CXXDtorType::Dtor_Deleting &&
         CodeGenOpts.StrictLifetimes) {
       const CXXRecordDecl *ClassDecl =
           dyn_cast<CXXRecordDecl>(DD->getDeclContext());
-      // TODO(boomanaiden154): We are being intentionally conservative here
-      // as we gain experience with this optimization. We should remove the
-      // condition for non-virtual bases after more testing. We cannot add
-      // dead_on_return if we have virtual base classes because they will
-      // generally still be live after the base object destructor.
-      if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0)
+      // We cannot add dead_on_return if we have virtual base classes because
+      // they will generally still be live after the base object destructor.
+      if (ClassDecl->getNumVBases() == 0)
         Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo(
             Context.getASTRecordLayout(ClassDecl).getDataSize().getQuantity()));
     }
@@ -3108,6 +3109,11 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
   assert(ArgNo == FI.arg_size());
 
+  // We can't see all potential arguments in a varargs declaration; treat them
+  // as if they can access memory.
+  if (!AttrOnCallSite && FI.isVariadic())
+    AddPotentialArgAccess();
+
   ArgNo = 0;
   if (AddedPotentialArgAccess && MemAttrForPtrArgs) {
     llvm::FunctionType *FunctionType = getTypes().GetFunctionType(FI);
@@ -3119,7 +3125,14 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         unsigned FirstIRArg, NumIRArgs;
         std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
         for (unsigned i = FirstIRArg; i < FirstIRArg + NumIRArgs; ++i) {
-          if (FunctionType->getParamType(i)->isPointerTy()) {
+          // The index may be out-of-bounds if the callee is a varargs
+          // function.
+          //
+          // FIXME: We can compute the types of varargs arguments without going
+          // through the function type, but the relevant code isn't exposed
+          // in a way that can be called from here.
+          if (i < FunctionType->getNumParams() &&
+              FunctionType->getParamType(i)->isPointerTy()) {
             ArgAttrs[i] =
                 ArgAttrs[i].addAttribute(getLLVMContext(), *MemAttrForPtrArgs);
           }
@@ -6161,13 +6174,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (getDebugInfo() && TargetDecl && TargetDecl->hasAttr<MSAllocatorAttr>())
     getDebugInfo()->addHeapAllocSiteMetadata(CI, RetTy->getPointeeType(), Loc);
 
-  // Add metadata if calling an __attribute__((error(""))) or warning fn.
-  if (TargetDecl && TargetDecl->hasAttr<ErrorAttr>()) {
-    llvm::ConstantInt *Line =
-        llvm::ConstantInt::get(Int64Ty, Loc.getRawEncoding());
-    llvm::ConstantAsMetadata *MD = llvm::ConstantAsMetadata::get(Line);
-    llvm::MDTuple *MDT = llvm::MDNode::get(getLLVMContext(), {MD});
-    CI->setMetadata("srcloc", MDT);
+  // Add srcloc metadata for [[gnu::error/warning]] diagnostics. When
+  // ShowInliningChain is enabled, also track inline/static calls for the
+  // heuristic fallback when debug info is not available. This heuristic is
+  // conservative and best-effort since static or inline-annotated functions
+  // are still not guaranteed to be inlined.
+  if (TargetDecl) {
+    bool NeedSrcLoc = TargetDecl->hasAttr<ErrorAttr>();
+    if (!NeedSrcLoc && CGM.getCodeGenOpts().ShowInliningChain) {
+      if (const auto *FD = dyn_cast<FunctionDecl>(TargetDecl))
+        NeedSrcLoc = FD->isInlined() || FD->hasAttr<AlwaysInlineAttr>() ||
+                     FD->getStorageClass() == SC_Static ||
+                     FD->isInAnonymousNamespace();
+    }
+    if (NeedSrcLoc) {
+      auto *Line = llvm::ConstantInt::get(Int64Ty, Loc.getRawEncoding());
+      auto *MD = llvm::ConstantAsMetadata::get(Line);
+      CI->setMetadata("srcloc", llvm::MDNode::get(getLLVMContext(), {MD}));
+    }
   }
 
   // 4. Finish the call.

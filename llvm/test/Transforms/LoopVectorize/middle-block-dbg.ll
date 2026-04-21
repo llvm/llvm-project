@@ -27,10 +27,10 @@
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 
-@"?x@@3HA" = external dso_local local_unnamed_addr global i32, align 4
-@"?y@@3HA" = external dso_local local_unnamed_addr global i32, align 4
+@"?x@@3HA" = external global i32, align 4
+@"?y@@3HA" = external global i32, align 4
 
-define dso_local void @"?a@@YAXXZ"() local_unnamed_addr #0 !dbg !8 {
+define void @"?a@@YAXXZ"() #0 !dbg !8 {
 entry:
   %0 = load i32, ptr @"?x@@3HA", align 4, !dbg !23, !tbaa !24
   %1 = zext i32 %0 to i64, !dbg !28

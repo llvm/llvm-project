@@ -37,6 +37,7 @@ Math
 ----
 | Tue Ly
 | lntue\@google.com (email), `lntue <https://github.com/lntue>`_ (github)
+
 | Nicolas Celik
 | its.overmighty\@gmail.com (email), `OverMighty <https://github.com/overmighty>`_ (github)
 
@@ -44,6 +45,11 @@ Threading
 ---------
 | Yifan Zhu
 | yifanzhu\@rochester.edu (email), `Schrodinger ZHU Yifan <https://github.com/schrodingerzhu>`_ (github)
+
+Runtime Safety, Threading, Math
+-------------------------------
+| Muhammad Bassiouni
+| muhammad.m.bassiouni\@gmail.com (email), `bassiounix <https://github.com/bassiounix>`_ (github)
 
 RISC-V
 ------
@@ -54,6 +60,11 @@ Public Headers / hdrgen
 -----------------------
 | Roland McGrath
 | mcgrathr\@google.com (email), `frobtech <https://github.com/frobtech>`_ (github)
+
+General Maintenance and Documentation
+-------------------------------------
+| Jeff Bailey
+| jbailey\@raspberryginger.com (email), `kaladron <https://github.com/kaladron>`_ (github), kaladron (discourse), kaladron725 (discord)
 
 
 Inactive Maintainers

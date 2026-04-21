@@ -149,8 +149,9 @@ public:
 
   /// Print the given integer value. This is useful to force a uint8_t/int8_t to
   /// be printed as an integer instead of a char.
-  template <typename IntT>
-  std::enable_if_t<std::is_integral_v<IntT>, void> printInteger(IntT value) {
+  template <typename IntT,
+            typename = std::enable_if_t<std::is_integral_v<IntT>>>
+  void printInteger(IntT value) {
     // Handle int8_t/uint8_t specially to avoid printing as char
     if constexpr (std::is_same_v<IntT, int8_t> ||
                   std::is_same_v<IntT, uint8_t>) {
@@ -350,39 +351,39 @@ private:
   Impl *impl{nullptr};
 };
 
-template <typename AsmPrinterT>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, Type type) {
+template <typename AsmPrinterT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, Type type) {
   p.printType(type);
   return p;
 }
 
-template <typename AsmPrinterT>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, Attribute attr) {
+template <typename AsmPrinterT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, Attribute attr) {
   p.printAttribute(attr);
   return p;
 }
 
-template <typename AsmPrinterT>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, const APFloat &value) {
+template <typename AsmPrinterT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, const APFloat &value) {
   p.printFloat(value);
   return p;
 }
-template <typename AsmPrinterT>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, float value) {
+template <typename AsmPrinterT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, float value) {
   return p << APFloat(value);
 }
-template <typename AsmPrinterT>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, double value) {
+template <typename AsmPrinterT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, double value) {
   return p << APFloat(value);
 }
 
@@ -396,33 +397,34 @@ template <typename AsmPrinterT, typename T,
                                !std::is_convertible<T &, ValueRange>::value &&
                                !std::is_convertible<T &, APFloat &>::value &&
                                !llvm::is_one_of<T, bool, float, double>::value,
-                           T> * = nullptr>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, const T &other) {
+                           T> * = nullptr,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, const T &other) {
   p.getStream() << other;
   return p;
 }
 
-template <typename AsmPrinterT>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, bool value) {
+template <typename AsmPrinterT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, bool value) {
   return p << (value ? StringRef("true") : "false");
 }
 
-template <typename AsmPrinterT, typename ValueRangeT>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, const ValueTypeRange<ValueRangeT> &types) {
+template <typename AsmPrinterT, typename ValueRangeT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p,
+                               const ValueTypeRange<ValueRangeT> &types) {
   llvm::interleaveComma(types, p);
   return p;
 }
 
-template <typename AsmPrinterT>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, const TypeRange &types) {
+template <typename AsmPrinterT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, const TypeRange &types) {
   llvm::interleaveComma(types, p);
   return p;
 }
@@ -432,16 +434,16 @@ operator<<(AsmPrinterT &p, const TypeRange &types) {
 // ValueRange printing behaviour does not change from printing
 // the SSA values to printing the types for the operands when
 // using AsmPrinter instead of OpAsmPrinter.
-template <typename AsmPrinterT, typename T>
-inline std::enable_if_t<std::is_same<AsmPrinter, AsmPrinterT>::value &&
-                            std::is_convertible<T &, ValueRange>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, const T &other) = delete;
+template <
+    typename AsmPrinterT, typename T,
+    typename = std::enable_if_t<std::is_same<AsmPrinter, AsmPrinterT>::value &&
+                                std::is_convertible<T &, ValueRange>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, const T &other) = delete;
 
-template <typename AsmPrinterT, typename ElementT>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, ArrayRef<ElementT> types) {
+template <typename AsmPrinterT, typename ElementT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, ArrayRef<ElementT> types) {
   llvm::interleaveComma(types, p);
   return p;
 }
@@ -879,9 +881,9 @@ public:
     /// Case that invokes the provided functor when true. The parameters passed
     /// to the functor are the keyword, and the location of the keyword (in case
     /// any errors need to be emitted).
-    template <typename FnT>
-    std::enable_if_t<!std::is_convertible<FnT, ResultT>::value, KeywordSwitch &>
-    Case(StringLiteral str, FnT &&fn) {
+    template <typename FnT, typename = std::enable_if_t<
+                                !std::is_convertible<FnT, ResultT>::value>>
+    KeywordSwitch &Case(StringLiteral str, FnT &&fn) {
       if (result)
         return *this;
 
@@ -892,9 +894,9 @@ public:
         result.emplace(std::move(fn(keyword, loc)));
       return *this;
     }
-    template <typename FnT>
-    std::enable_if_t<!std::is_convertible<FnT, ResultT>::value, KeywordSwitch &>
-    Default(FnT &&fn) {
+    template <typename FnT, typename = std::enable_if_t<
+                                !std::is_convertible<FnT, ResultT>::value>>
+    KeywordSwitch &Default(FnT &&fn) {
       if (!result)
         result.emplace(fn(keyword, loc));
       return *this;
@@ -950,6 +952,12 @@ public:
   parseOptionalKeyword(StringRef *keyword,
                        ArrayRef<StringRef> allowedValues) = 0;
 
+  /// Parse a string into 'string' if it is present and one of the
+  /// 'allowedValues'.
+  virtual ParseResult
+  parseOptionalString(std::string *string,
+                      ArrayRef<StringRef> allowedValues) = 0;
+
   /// Parse a keyword or a quoted string.
   ParseResult parseKeywordOrString(std::string *result) {
     if (failed(parseOptionalKeywordOrString(result)))
@@ -960,6 +968,12 @@ public:
 
   /// Parse an optional keyword or string.
   virtual ParseResult parseOptionalKeywordOrString(std::string *result) = 0;
+
+  /// Parse an optional keyword or string into `result` if it is present and one
+  /// of the 'allowedValues'.
+  virtual ParseResult
+  parseOptionalKeywordOrString(std::string *result,
+                               ArrayRef<StringRef> allowedValues) = 0;
 
   //===--------------------------------------------------------------------===//
   // Attribute/Type Parsing
@@ -1141,6 +1155,27 @@ public:
   /// Parse an optional symbol ref attribute and return it in result.
   virtual OptionalParseResult parseOptionalAttribute(SymbolRefAttr &result,
                                                      Type type = {}) = 0;
+
+  /// Parse an optional attribute of a specific typed result. This overload
+  /// handles concrete attribute types (e.g. FloatAttr) that are not covered by
+  /// a dedicated virtual overload. It parses any attribute and then validates
+  /// that the result is of the expected type, emitting an error if not.
+  template <
+      typename AttrType,
+      typename = std::enable_if_t<!llvm::is_one_of<
+          AttrType, Attribute, ArrayAttr, StringAttr, SymbolRefAttr>::value>>
+  OptionalParseResult parseOptionalAttribute(AttrType &result, Type type = {}) {
+    llvm::SMLoc loc = getCurrentLocation();
+    Attribute attr;
+    OptionalParseResult parseResult = parseOptionalAttribute(attr, type);
+    if (!parseResult.has_value() || failed(*parseResult))
+      return parseResult;
+    result = dyn_cast<AttrType>(attr);
+    if (!result)
+      return emitError(loc) << "expected attribute of type '" << AttrType::name
+                            << "', but found attribute '" << attr << "'";
+    return success();
+  }
 
   /// Parse an optional attribute of a specific type and add it to the list with
   /// the specified name.
@@ -1649,11 +1684,12 @@ public:
   /// Resolve a list of operands and a list of operand types to SSA values,
   /// emitting an error and returning failure, or appending the results
   /// to the list on success.
-  template <typename Operands = ArrayRef<UnresolvedOperand>,
-            typename Types = ArrayRef<Type>>
-  std::enable_if_t<!std::is_convertible<Types, Type>::value, ParseResult>
-  resolveOperands(Operands &&operands, Types &&types, SMLoc loc,
-                  SmallVectorImpl<Value> &result) {
+  template <
+      typename Operands = ArrayRef<UnresolvedOperand>,
+      typename Types = ArrayRef<Type>,
+      typename = std::enable_if_t<!std::is_convertible<Types, Type>::value>>
+  ParseResult resolveOperands(Operands &&operands, Types &&types, SMLoc loc,
+                              SmallVectorImpl<Value> &result) {
     size_t operandSize = llvm::range_size(operands);
     size_t typeSize = llvm::range_size(types);
     if (operandSize != typeSize) {

@@ -46,10 +46,6 @@ class Value;
 /// vectors it is an expression determined at runtime.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 
-/// Return a value for Step multiplied by VF.
-Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
-                       int64_t Step);
-
 /// Compute the transformed value of Index at offset StartValue using step
 /// StepValue.
 /// For integer induction, returns StartValue + Index * StepValue.
@@ -366,7 +362,7 @@ struct VPCostContext {
 
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
-  unsigned getPredBlockCostDivisor(BasicBlock *BB) const;
+  uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;

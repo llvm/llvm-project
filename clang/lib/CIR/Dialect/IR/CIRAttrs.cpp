@@ -350,6 +350,66 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// CmpThreeWayInfoAttr definitions
+//===----------------------------------------------------------------------===//
+
+std::string CmpThreeWayInfoAttr::getAlias() const {
+  std::string alias = "cmpinfo";
+
+  switch (getOrdering()) {
+  case CmpOrdering::Strong:
+    alias.append("_strong_");
+    break;
+  case CmpOrdering::Weak:
+    alias.append("_weak_");
+    break;
+  case CmpOrdering::Partial:
+    alias.append("_partial_");
+    break;
+  }
+
+  auto appendInt = [&](int64_t value) {
+    if (value < 0) {
+      alias.push_back('n');
+      value = -value;
+    }
+    alias.append(std::to_string(value));
+  };
+
+  alias.append("lt");
+  appendInt(getLt());
+  alias.append("eq");
+  appendInt(getEq());
+  alias.append("gt");
+  appendInt(getGt());
+
+  if (std::optional<int> unordered = getUnordered()) {
+    alias.append("un");
+    appendInt(unordered.value());
+  }
+
+  return alias;
+}
+
+LogicalResult
+CmpThreeWayInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            CmpOrdering ordering, int64_t lt, int64_t eq,
+                            int64_t gt, std::optional<int64_t> unordered) {
+  // The presence of unordered must match the value of ordering.
+  if ((ordering == CmpOrdering::Strong || ordering == CmpOrdering::Weak) &&
+      unordered) {
+    emitError() << "strong and weak ordering do not include unordered";
+    return failure();
+  }
+  if (ordering == CmpOrdering::Partial && !unordered) {
+    emitError() << "partial ordering requires unordered value";
+    return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr definitions
 //===----------------------------------------------------------------------===//
 
@@ -556,13 +616,12 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
   unsigned zeros = 0;
   if (parser.parseOptionalComma().succeeded()) {
     if (parser.parseOptionalKeyword("trailing_zeros").succeeded()) {
-      unsigned typeSize =
-          mlir::cast<cir::ArrayType>(resultTy.value()).getSize();
+      unsigned totalSize = mlir::cast<cir::ArrayType>(type).getSize();
       mlir::Attribute elts = resultVal.value();
       if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
-        zeros = typeSize - str.size();
+        zeros = totalSize - str.size();
       else
-        zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
+        zeros = totalSize - mlir::cast<mlir::ArrayAttr>(elts).size();
     } else {
       return {};
     }
@@ -572,9 +631,9 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseGreater())
     return {};
 
-  return parser.getChecked<ConstArrayAttr>(
-      parser.getCurrentLocation(), parser.getContext(), resultTy.value(),
-      resultVal.value(), zeros);
+  return parser.getChecked<ConstArrayAttr>(parser.getCurrentLocation(),
+                                           parser.getContext(), type,
+                                           resultVal.value(), zeros);
 }
 
 void ConstArrayAttr::print(AsmPrinter &printer) const {

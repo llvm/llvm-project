@@ -535,10 +535,6 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
 
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
-
     // Collect the list of modules to search.
     m_module_list.Clear();
     if (!m_options.modules.empty()) {

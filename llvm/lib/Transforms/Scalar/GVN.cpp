@@ -2704,10 +2704,7 @@ bool GVNPass::processInstruction(Instruction *I) {
 
   // For conditional branches, we can perform simple conditional propagation on
   // the condition value itself.
-  if (BranchInst *BI = dyn_cast<BranchInst>(I)) {
-    if (!BI->isConditional())
-      return false;
-
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(I)) {
     if (isa<Constant>(BI->getCondition()))
       return processFoldableCondBr(BI);
 
@@ -2971,12 +2968,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
     if (CallB->isInlineAsm())
       return false;
   }
-
-  // Protected pointer field loads/stores should be paired with the intrinsic
-  // to avoid unnecessary address escapes.
-  if (auto *II = dyn_cast<IntrinsicInst>(CurInst))
-    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
-      return false;
 
   uint32_t ValNo = VN.lookup(CurInst);
 
@@ -3309,10 +3300,7 @@ void GVNPass::addDeadBlock(BasicBlock *BB) {
 //     dead blocks with "UndefVal" in an hope these PHIs will optimized away.
 //
 // Return true iff *NEW* dead code are found.
-bool GVNPass::processFoldableCondBr(BranchInst *BI) {
-  if (!BI || BI->isUnconditional())
-    return false;
-
+bool GVNPass::processFoldableCondBr(CondBrInst *BI) {
   // If a branch has two identical successors, we cannot declare either dead.
   if (BI->getSuccessor(0) == BI->getSuccessor(1))
     return false;

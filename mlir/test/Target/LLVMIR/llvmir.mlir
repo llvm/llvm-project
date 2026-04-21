@@ -1227,6 +1227,41 @@ llvm.func @alignstackattr_decl(!llvm.ptr {llvm.alignstack = 32 : i64})
 // CHECK-LABEL: declare void @writeonlyattr_decl(ptr writeonly)
 llvm.func @writeonlyattr_decl(!llvm.ptr {llvm.writeonly})
 
+// CHECK-LABEL: define void @writableattr(ptr writable %
+llvm.func @writableattr(%arg0: !llvm.ptr {llvm.writable}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @writableattr_decl(ptr writable)
+llvm.func @writableattr_decl(!llvm.ptr {llvm.writable})
+
+// CHECK-LABEL: define void @deadonunwindattr(ptr dead_on_unwind %
+llvm.func @deadonunwindattr(%arg0: !llvm.ptr {llvm.dead_on_unwind}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @deadonunwindattr_decl(ptr dead_on_unwind)
+llvm.func @deadonunwindattr_decl(!llvm.ptr {llvm.dead_on_unwind})
+
+// CHECK-LABEL: define void @deadonreturnattr(ptr dead_on_return(8) %
+llvm.func @deadonreturnattr(%arg0: !llvm.ptr {llvm.dead_on_return = 8 : i64}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @deadonreturnattr_decl(ptr dead_on_return(8))
+llvm.func @deadonreturnattr_decl(!llvm.ptr {llvm.dead_on_return = 8 : i64})
+
+// CHECK-LABEL: define void @nofpclassattr(float nofpclass(nan inf) %
+llvm.func @nofpclassattr(%arg0: f32 {llvm.nofpclass = 519 : i64}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @nofpclassattr_decl(float nofpclass(nan inf))
+llvm.func @nofpclassattr_decl(f32 {llvm.nofpclass = 519 : i64})
+
+// CHECK-LABEL: declare nofpclass(nan inf) float @nofpclassattr_ret_decl()
+llvm.func @nofpclassattr_ret_decl() -> (f32 {llvm.nofpclass = 519 : i64})
+
 // CHECK-LABEL: declare align 4 ptr @alignattr_ret_decl()
 llvm.func @alignattr_ret_decl() -> (!llvm.ptr {llvm.align = 4})
 
@@ -2394,7 +2429,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 llvm.func @arg_mem_none_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none, target_mem0: none, target_mem1: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none, target_mem: none) }
 
 // -----
 
@@ -2402,7 +2437,7 @@ llvm.func @arg_mem_none_func() attributes {
 llvm.func @readwrite_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none, target_mem0: none, target_mem1: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none, target_mem: none) }
 
 // -----
 
@@ -3165,11 +3200,11 @@ llvm.func @mem_effects_call() {
 // CHECK: #[[ATTRS_0]]
 // CHECK-SAME: memory(none)
 // CHECK: #[[ATTRS_1]]
-// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_2]]
-// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_3]]
-// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none, target_mem: none)
 
 // -----
 

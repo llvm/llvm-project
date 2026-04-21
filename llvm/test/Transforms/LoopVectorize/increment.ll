@@ -13,7 +13,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: add nsw <4 x i32>
 ;CHECK: store <4 x i32>
 ;CHECK: ret void
-define void @inc(i32 %n) nounwind uwtable noinline ssp {
+define void @inc(i32 %n) noinline {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
@@ -41,7 +41,7 @@ define void @inc(i32 %n) nounwind uwtable noinline ssp {
 ;CHECK-LABEL: @histogram(
 ;CHECK-NOT: <4 x i32>
 ;CHECK: ret i32
-define i32 @histogram(ptr nocapture noalias %A, ptr nocapture noalias %B, i32 %n) nounwind uwtable ssp {
+define i32 @histogram(ptr nocapture noalias %A, ptr nocapture noalias %B, i32 %n) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end

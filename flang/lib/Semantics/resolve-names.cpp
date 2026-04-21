@@ -1510,10 +1510,12 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // clause. These new symbols have the CUDA Fortran device
   // attribute.
   if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
-      name->symbol) {
-    name->symbol = currScope().CopySymbol(*name->symbol);
-    if (auto *object{name->symbol->detailsIf<ObjectEntityDetails>()}) {
-      object->set_cudaDataAttr(common::CUDADataAttr::Device);
+      name && name->symbol) {
+    if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
+      name->symbol = copy;
+      if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
+        object->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
     }
   }
 }
@@ -1527,17 +1529,24 @@ bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
               if (const auto *name{
                       parser::GetDesignatorNameIfDataRef(designator)}) {
                 CopySymbolWithDevice(name);
-              } else {
-                if (const auto *dataRef{
-                        std::get_if<parser::DataRef>(&designator.u)}) {
-                  using ElementIndirection =
-                      common::Indirection<parser::ArrayElement>;
-                  if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
-                    const parser::ArrayElement &arrayElement{ind->value()};
-                    const parser::DataRef &base{arrayElement.Base()};
-                    if (auto *name{std::get_if<parser::Name>(&base.u)}) {
-                      CopySymbolWithDevice(name);
-                    }
+              } else if (const auto *dataRef{
+                             std::get_if<parser::DataRef>(&designator.u)}) {
+                using ElementIndirection =
+                    common::Indirection<parser::ArrayElement>;
+                using ComponentIndirection =
+                    common::Indirection<parser::StructureComponent>;
+                if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
+                  const parser::ArrayElement &arrayElement{ind->value()};
+                  const parser::DataRef &base{arrayElement.Base()};
+                  if (auto *name{std::get_if<parser::Name>(&base.u)}) {
+                    CopySymbolWithDevice(name);
+                  }
+                } else if (auto *ind{std::get_if<ComponentIndirection>(
+                               &dataRef->u)}) {
+                  const parser::StructureComponent &comp{ind->value()};
+                  const parser::DataRef &base{comp.Base()};
+                  if (auto *name{std::get_if<parser::Name>(&base.u)}) {
+                    CopySymbolWithDevice(name);
                   }
                 }
               }
@@ -1904,11 +1913,12 @@ void OmpVisitor::ResolveMapperModifier(const parser::OmpMapper &mapper) {
     auto &ultimate{symbol->GetUltimate()};
     auto *misc{ultimate.detailsIf<MiscDetails>()};
     auto *md{ultimate.detailsIf<MapperDetails>()};
-    if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
+    if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName)) {
       context().Say(mapper.v.source,
           "Name '%s' should be a mapper name"_err_en_US, mapper.v.source);
-    else
+    } else {
       mapper.v.symbol = symbol;
+    }
   } else {
     // Allow the special 'default' mapper identifier without prior
     // declaration so lowering can recognize and handle it. Emit an

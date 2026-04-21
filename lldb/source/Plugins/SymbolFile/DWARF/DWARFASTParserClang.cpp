@@ -685,7 +685,7 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
     return {};
   }
 
-  return memberOffset->ResolveValue(nullptr).UInt();
+  return memberOffset->GetScalar().UInt();
 }
 
 static TypePayloadClang GetPtrAuthMofidierPayload(const DWARFDIE &die) {

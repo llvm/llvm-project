@@ -1,3 +1,7 @@
+; Test that ptrtoint and inttoptr on vectors of pointers are correctly lowered
+; to OpConvertPtrToU and OpConvertUToPtr when SPV_INTEL_masked_gather_scatter
+; extension is enabled.
+
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_masked_gather_scatter %s -o - | FileCheck %s
 ; TODO: spirv-val does not support vector operands in OpConvertPtrToU and OpConvertUToPtr with SPV_INTEL_masked_gather_scatter
 ; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_masked_gather_scatter %s -o - -filetype=obj | spirv-val %}

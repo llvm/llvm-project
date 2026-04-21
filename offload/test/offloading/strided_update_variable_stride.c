@@ -2,7 +2,6 @@
 // Tests data[0:5:stride] where stride is a variable, making it non-contiguous.
 
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 #include <omp.h>
 #include <stdio.h>
 

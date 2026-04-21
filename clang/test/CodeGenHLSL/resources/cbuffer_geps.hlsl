@@ -32,7 +32,7 @@ void cbarrays() {
   use(c3[9][5]);
   // CHECK: load i64, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c4, i32 96), align 16
   use(c4[6]);
-  // CHECK:  load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c5, i32 27120), align 16
+  // CHECK:  load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c5, i32 27120), align 4
   use(c5[1][12][15]);
   // CHECK: load i16, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c6, i32 64), align 16
   use(c6[4]);

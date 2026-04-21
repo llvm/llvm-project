@@ -1,5 +1,6 @@
 // Tests for clang-ssaf-linker input validation requiring file permission support.
 // UNSUPPORTED: system-windows
+// REQUIRES: non-root-user
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t

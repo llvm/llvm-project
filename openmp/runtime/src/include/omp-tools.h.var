@@ -1402,6 +1402,7 @@ typedef struct ompt_record_ompt_t {
     ompt_record_target_map_t target_map;
     ompt_record_target_kernel_t target_kernel;
     ompt_record_control_tool_t control_tool;
+    ompt_record_error_t error;
   } record;
 } ompt_record_ompt_t;
 

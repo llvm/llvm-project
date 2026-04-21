@@ -525,6 +525,20 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1171``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
+     ``gfx1172``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      **GCN GFX12 (RDNA 4)** [AMD-GCN-GFX12-RDNA4]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 9060
@@ -2000,11 +2014,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       "amdgpu-flat-work-group-size" value, the implied occupancy
                                                       bounds by the workgroup size takes precedence.
 
-     "amdgpu-ieee" true/false.                        GFX6-GFX11 (Except GFX1170) Only
+     "amdgpu-ieee" true/false.                        GFX6-GFX11 (Except GFX11.7) Only
                                                       Specify whether the function expects the IEEE field of the
                                                       mode register to be set on entry. Overrides the default for
                                                       the calling convention.
-     "amdgpu-dx10-clamp" true/false.                  GFX6-GFX11 (Except GFX1170) Only
+     "amdgpu-dx10-clamp" true/false.                  GFX6-GFX11 (Except GFX11.7) Only
                                                       Specify whether the function expects the DX10_CLAMP field of
                                                       the mode register to be set on entry. Overrides the default
                                                       for the calling convention.
@@ -2052,6 +2066,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-no-dispatch-id"                          The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.dispatch.id intrinsic.
+
+     "amdgpu-no-wwm"                                  The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.strict.wwm intrinsic.
 
      "amdgpu-no-queue-ptr"                            Similar to amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
@@ -2760,7 +2777,9 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC``  0x05b      ``gfx12-5-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1172``          0x05c      ``gfx1172``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1171``          0x05e      ``gfx1171``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      *reserved*                                 0x060      Reserved.
      *reserved*                                 0x070      Reserved.
@@ -5789,7 +5808,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.PRIV``.
-     21      1 bit   ENABLE_DX10_CLAMP               GFX9-GFX11 (except GFX1170)
+     21      1 bit   ENABLE_DX10_CLAMP               GFX9-GFX11 (except GFX11.7)
                                                        Wavefront starts execution
                                                        with DX10 clamp mode
                                                        enabled. Used by the vector
@@ -5801,7 +5820,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.DX10_CLAMP``.
-                                                     GFX1170
+                                                     GFX11.7
                                                        Reserved. Must be 0.
                      WG_RR_EN                        GFX12
                                                        If 1, wavefronts are scheduled
@@ -5820,7 +5839,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.DEBUG_MODE``.
-     23      1 bit   ENABLE_IEEE_MODE                GFX9-GFX11 (except GFX1170)
+     23      1 bit   ENABLE_IEEE_MODE                GFX9-GFX11 (except GFX11.7)
                                                        Wavefront starts execution
                                                        with IEEE mode
                                                        enabled. Floating point
@@ -5836,7 +5855,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.IEEE_MODE``.
-                                                     GFX1170
+                                                     GFX11.7
                                                        Reserved. Must be 0.
                      DISABLE_PERF                    GFX12
                                                        Reserved. Must be 0.
@@ -21534,10 +21553,10 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
      ``.amdhsa_dx10_clamp``                                   1                   GFX6-GFX11   Controls ENABLE_DX10_CLAMP in
                                                                                   (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-                                                                                  GFX1170)
+                                                                                  GFX11.7)
      ``.amdhsa_ieee_mode``                                    1                   GFX6-GFX11   Controls ENABLE_IEEE_MODE in
                                                                                   (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-                                                                                  GFX1170)
+                                                                                  GFX11.7)
      ``.amdhsa_round_robin_scheduling``                       0                   GFX12        Controls ENABLE_WG_RR_EN in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_fp16_overflow``                                0                   GFX9-GFX12   Controls FP16_OVFL in

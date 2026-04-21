@@ -529,6 +529,20 @@ func.func @fold_store_keep_nontemporal(%arg0 : memref<12x32xf32>, %arg1 : index,
 
 // -----
 
+func.func @fold_prefetch_expand_shape(%src: memref<32xf32>, %i0: index, %i1: index) {
+  %expand = memref.expand_shape %src [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  memref.prefetch %expand[%i0, %i1], read, locality<2>, data : memref<4x8xf32>
+  return
+}
+
+//      CHECK: func.func @fold_prefetch_expand_shape
+// CHECK-SAME: (%[[SRC:.+]]: memref<32xf32>, %[[I0:.+]]: index, %[[I1:.+]]: index)
+//      CHECK: %[[LIN:.+]] = affine.linearize_index disjoint [%[[I0]], %[[I1]]] by (4, 8)
+//      CHECK: memref.prefetch %[[SRC]][%[[LIN]]], read, locality<2>, data : memref<32xf32>
+//  CHECK-NOT: memref.expand_shape
+
+// -----
+
 func.func @fold_gpu_subgroup_mma_load_matrix_1d(%src: memref<?xvector<4xf32>>, %offset: index, %i: index) -> !gpu.mma_matrix<16x16xf16, "COp"> {
   %subview = memref.subview %src[%offset] [81920] [1] : memref<?xvector<4xf32>> to memref<81920xvector<4xf32>, strided<[1], offset: ?>>
   %matrix = gpu.subgroup_mma_load_matrix %subview[%i] {leadDimension = 160 : index} : memref<81920xvector<4xf32>, strided<[1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "COp">
@@ -968,3 +982,134 @@ func.func @fold_vector_maskedstore_collapse_shape(
 //  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
 //       CHECK:   vector.maskedstore %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @fold_dma_start_subview_src(
+    %src : memref<128x64xf32>, %dst : memref<32xf32, 1>, %tag : memref<1xi32>,
+    %off0 : index, %off1 : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 32 : index
+  %subview = memref.subview %src[%off0, %off1][32, 32][1, 1] : memref<128x64xf32> to memref<32x32xf32, strided<[64, 1], offset: ?>>
+  memref.dma_start %subview[%c0, %c0], %dst[%c0], %num_elements, %tag[%c0] : memref<32x32xf32, strided<[64, 1], offset: ?>>, memref<32xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_subview_src
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<128x64xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<32xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[OFF0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[OFF1:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 32
+//      CHECK:   memref.dma_start %[[SRC]][%[[OFF0]], %[[OFF1]]], %[[DST]][%[[C0]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_subview_dst(
+    %src : memref<32xf32>, %dst : memref<128x64xf32, 1>, %tag : memref<1xi32>,
+    %off0 : index, %off1 : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 32 : index
+  %subview = memref.subview %dst[%off0, %off1][32, 32][1, 1] : memref<128x64xf32, 1> to memref<32x32xf32, strided<[64, 1], offset: ?>, 1>
+  memref.dma_start %src[%c0], %subview[%c0, %c0], %num_elements, %tag[%c0] : memref<32xf32>, memref<32x32xf32, strided<[64, 1], offset: ?>, 1>, memref<1xi32>
+  return
+}
+// CHECK-LABEL: func @fold_dma_start_subview_dst
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<32xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<128x64xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[OFF0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[OFF1:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 32
+//      CHECK:   memref.dma_start %[[SRC]][%[[C0]]], %[[DST]][%[[OFF0]], %[[OFF1]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_expand_shape_src(
+    %src : memref<32xf32>, %dst : memref<8xf32, 1>, %tag : memref<1xi32>,
+    %idx : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 8 : index
+  %expand = memref.expand_shape %src [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  memref.dma_start %expand[%idx, %c0], %dst[%c0], %num_elements, %tag[%c0] : memref<4x8xf32>, memref<8xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_expand_shape_src
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<32xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<8xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 8
+//      CHECK:   %[[I:.*]] = affine.linearize_index disjoint [%[[IDX]], %[[C0]]] by (4, 8)
+//      CHECK:   memref.dma_start %[[SRC]][%[[I]]], %[[DST]][%[[C0]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_expand_shape_dst(
+    %src : memref<8xf32>, %dst : memref<32xf32, 1>, %tag : memref<1xi32>,
+    %idx : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 8 : index
+  %expand = memref.expand_shape %dst [[0, 1]] output_shape [4, 8] : memref<32xf32, 1> into memref<4x8xf32, 1>
+  memref.dma_start %src[%c0], %expand[%idx, %c0], %num_elements, %tag[%c0] : memref<8xf32>, memref<4x8xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_expand_shape_dst
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<8xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<32xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 8
+//      CHECK:   %[[I:.*]] = affine.linearize_index disjoint [%[[IDX]], %[[C0]]] by (4, 8)
+//      CHECK:   memref.dma_start %[[SRC]][%[[C0]]], %[[DST]][%[[I]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_collapse_shape_src(
+    %src : memref<4x8xf32>, %dst : memref<8xf32, 1>, %tag : memref<1xi32>,
+    %idx : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 8 : index
+  %collapse = memref.collapse_shape %src [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  memref.dma_start %collapse[%idx], %dst[%c0], %num_elements, %tag[%c0] : memref<32xf32>, memref<8xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_collapse_shape_src
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<8xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 8
+//      CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[IDX]] into (4, 8)
+//      CHECK:   memref.dma_start %[[SRC]][%[[IDXS]]#0, %[[IDXS]]#1], %[[DST]][%[[C0]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_collapse_shape_dst(
+    %src : memref<8xf32>, %dst : memref<4x8xf32, 1>, %tag : memref<1xi32>,
+    %idx : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 8 : index
+  %collapse = memref.collapse_shape %dst [[0, 1]] : memref<4x8xf32, 1> into memref<32xf32, 1>
+  memref.dma_start %src[%c0], %collapse[%idx], %num_elements, %tag[%c0] : memref<8xf32>, memref<32xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_collapse_shape_dst
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<8xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<4x8xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 8
+//      CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[IDX]] into (4, 8)
+//      CHECK:   memref.dma_start %[[SRC]][%[[C0]]], %[[DST]][%[[IDXS]]#0, %[[IDXS]]#1], %[[NUM]], %[[TAG]][%[[C0]]]

@@ -320,6 +320,8 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
       "insert", "insert_or_assign", "push", "push_front", "push_back"};
   if (!CapturingMethods.contains(MD->getName()))
     return;
+  if (MD->getName() == "insert" && MD->getParent()->getName() == "basic_string")
+    return;
   Annotate(MD);
 }
 

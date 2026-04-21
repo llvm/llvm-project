@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
+#include "clc/internal/clc.h"
 
 #define __CLC_FUNCTION __clc_recip_fast
-#define __CLC_BODY <clc_recip_fast.inc>
+#define __CLC_BODY "clc_recip_fast.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

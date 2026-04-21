@@ -546,7 +546,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   let extraClassDeclaration = [{
     static llvm::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
           std::optional<::mlir::Location> location, mlir::ValueRange operands,
-          mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, mlir::RegionRange regions,
+          mlir::DictionaryAttr attributes, mlir::PropertyRef properties, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({mlir::IntegerType::get(context, 16)});
       return mlir::success();
@@ -2244,7 +2244,8 @@ def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
 // emits an error, but getMutableSuccessorOperands() calls report_fatal_error
 // to expose the fact that FuncOp::verify() runs before the region is checked.
 def TestCrashingReturnOp : TEST_Op<"crashing_return", [
-    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+       ["getMutableSuccessorOperands"]>,
     Terminator]> {
   let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
   let assemblyFormat = "($args^ `:` type($args))? attr-dict";
@@ -2298,6 +2299,19 @@ def TestSignatureConversionUndoOp : TEST_Op<"signature_conversion_undo"> {
 def TestSignatureConversionNoConverterOp
   : TEST_Op<"signature_conversion_no_converter"> {
   let regions = (region AnyRegion);
+}
+
+// A return-like operation with override on the successor operand getter
+// interface method.
+def TestReturnWithIgnoredValueOp : TEST_Op<"return_with_ignored_value", [
+    Pure,
+    ReturnLike,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+      "getMutableSuccessorOperands"
+    ]>,
+    Terminator
+]> {
+  let arguments = (ins Variadic<AnyType>:$values, AnyType:$unwanted_value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2455,6 +2469,13 @@ def ArrayOfAttrOp : TEST_Op<"array_of_attr_op"> {
 def SideEffectOp : TEST_Op<"side_effect_op",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
+  let results = (outs AnyType:$result);
+}
+
+def ConditionalSideEffectOp
+    : TEST_Op<"conditional_side_effect_op", [DeclareOpInterfaceMethods<
+                                                MemoryEffectsOpInterface>]> {
+  let arguments = (ins BoolAttr:$has_effects);
   let results = (outs AnyType:$result);
 }
 
@@ -2707,8 +2728,9 @@ def LoopBlockOp : TEST_Op<"loop_block",
 }
 
 def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
-    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Pure,
-     Terminator]> {
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>,
+     Pure, Terminator]> {
   let arguments = (ins I32:$nextIterArg, F32:$exitArg);
 
   let assemblyFormat = [{
@@ -2814,7 +2836,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({operands[0].getType()});
       return ::mlir::success();

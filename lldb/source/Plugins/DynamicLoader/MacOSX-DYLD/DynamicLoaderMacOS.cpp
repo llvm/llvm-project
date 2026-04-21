@@ -691,11 +691,13 @@ Status DynamicLoaderMacOS::CanLoadImage() {
 
 bool DynamicLoaderMacOS::GetSharedCacheInformation(
     lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
-    LazyBool &private_shared_cache, FileSpec &shared_cache_path) {
+    LazyBool &private_shared_cache, FileSpec &shared_cache_path,
+    std::optional<uint64_t> &size) {
   base_address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   using_shared_cache = eLazyBoolCalculate;
   private_shared_cache = eLazyBoolCalculate;
+  size.reset();
 
   if (m_process) {
     StructuredData::ObjectSP info = m_process->GetSharedCacheInfo();
@@ -704,9 +706,13 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
       info_dict = info->GetAsDictionary();
     }
 
-    // {"shared_cache_base_address":140735683125248,"shared_cache_uuid
-    // ":"DDB8D70C-
-    // C9A2-3561-B2C8-BE48A4F33F96","no_shared_cache":false,"shared_cache_private_cache":false}
+    // { "shared_cache_base_address":6580879360,
+    //   "shared_cache_uuid":"71E62C65-D8D9-32D0-9A0B-7F5154C8049F",
+    //   "no_shared_cache":false,
+    //   "shared_cache_private_cache":false,
+    //   "shared_cache_path":"/S/V/P/C/OS/Sm/L/dyld/dyld_shared_cache_arm64e",
+    //   "shared_cache_size":6012010496
+    // }
 
     if (info_dict && info_dict->HasKey("shared_cache_uuid") &&
         info_dict->HasKey("no_shared_cache") &&
@@ -731,6 +737,12 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
         llvm::StringRef filepath =
             info_dict->GetValueForKey("shared_cache_path")->GetStringValue();
         shared_cache_path.SetPath(filepath);
+      }
+      if (info_dict->HasKey("shared_cache_size")) {
+        uint64_t val = info_dict->GetValueForKey("shared_cache_size")
+                           ->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+        if (val != LLDB_INVALID_ADDRESS)
+          size = val;
       }
       return true;
     }

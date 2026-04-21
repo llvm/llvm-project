@@ -253,7 +253,6 @@ exit:
 ; CHECK-NOT: x i32>
 ; CHECK: ret
 
-; Function Attrs: nounwind uwtable
 define i32 @test_multiple_failures(ptr nocapture readonly %A) #0 !dbg !46 {
 entry:
   br label %loop, !dbg !38

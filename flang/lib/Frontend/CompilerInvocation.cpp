@@ -170,6 +170,9 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
           args.getLastArg(clang::options::OPT_dwarf_debug_flags))
     opts.DwarfDebugFlags = arg->getValue();
 
+  opts.DebugInfoForProfiling =
+      args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
   return true;
 }
 
@@ -465,6 +468,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
     opts.ProfileInstrumentUsePath = A->getValue();
   }
+
+  opts.SampleProfileFile =
+      args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
 
   // -mcmodel option.
   if (const llvm::opt::Arg *a =

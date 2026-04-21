@@ -383,7 +383,6 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
   // numbering, shrink MBBNumbering now.
   assert(BlockNo <= MBBNumbering.size() && "Mismatch!");
   MBBNumbering.resize(BlockNo);
-  MBBNumberingEpoch++;
 }
 
 int64_t MachineFunction::estimateFunctionSizeInBytes() {

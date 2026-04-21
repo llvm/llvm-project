@@ -1,0 +1,11 @@
+# RUN: not llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# Test parsing error when a register class or memory constraint name is expected after ':'.
+
+# CHECK: [[@LINE+5]]:{{[0-9]+}}: expected register class or memory constraint name after ':'
+---
+name: foo
+body: |
+  bb.0:
+    INLINEASM &"", 0 /* attdialect */, regdef:123
+...

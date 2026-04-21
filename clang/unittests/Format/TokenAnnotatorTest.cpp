@@ -416,11 +416,23 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[16], tok::star, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 
+  Tokens = annotate("Foo foo{bar, bar * bar};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::star, TT_BinaryOperator);
+  // Not TT_StartOfName.
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_Unknown);
+
   Tokens = annotate("NSError *__autoreleasing *foo;",
                     getLLVMStyle(FormatStyle::LK_ObjC));
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("using FuncPointerType = MCStreamer *(*)(MCContext &Ctx);");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_Unknown); // Not TT_CastRParen
+  EXPECT_TOKEN(Tokens[10], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[11], tok::identifier, TT_StartOfName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -799,7 +811,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsTemplateTemplateParameters) {
   EXPECT_TOKEN(Tokens[23], tok::identifier, TT_ClassHeadName);
 }
 
-TEST_F(TokenAnnotatorTest, UnderstandsCommonCppTemplates) {
+TEST_F(TokenAnnotatorTest, UnderstandsAnglesInStaticAssert) {
   auto Tokens =
       annotate("static_assert(std::conditional_t<A || B, C, D>::value);");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
@@ -821,6 +833,19 @@ TEST_F(TokenAnnotatorTest, UnderstandsCommonCppTemplates) {
   ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("static_assert(foo < -bar && foo > -baz);");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[9], tok::minus, TT_UnaryOperator);
+
+  Tokens = annotate("static_assert(foo < bar && foo > baz);");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[7], tok::greater, TT_BinaryOperator);
+  // Not TT_StartOfName.
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsWhitespaceSensitiveMacros) {
@@ -4034,6 +4059,18 @@ TEST_F(TokenAnnotatorTest, JavaRecord) {
   EXPECT_TOKEN(Tokens[6], tok::r_brace, TT_RecordRBrace);
 }
 
+TEST_F(TokenAnnotatorTest, JavaSynchronizedBlock) {
+  auto Tokens = annotate("() -> {\n"
+                         "  synchronized { x; }\n"
+                         "};",
+                         getLLVMStyle(FormatStyle::LK_Java));
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[3], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+}
+
 TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   auto Tokens = annotate("a = b and c;");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -4308,10 +4345,26 @@ TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
   EXPECT_EQ(Tokens[3]->TokenText, "2_$");
 }
 
-TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
-  auto Tokens = annotate("typedef enum : int {} foo;");
+TEST_F(TokenAnnotatorTest, EnumColon) {
+  auto Tokens = annotate("enum A : int {};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("enum class B : int {};");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("enum : int { E1 };");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("typedef enum : int {} foo;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_EnumUnderlyingTypeColon);
+
+  Tokens = annotate("typedef enum A : int {} foo;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_EnumUnderlyingTypeColon);
 }
 
 TEST_F(TokenAnnotatorTest, BitFieldColon) {

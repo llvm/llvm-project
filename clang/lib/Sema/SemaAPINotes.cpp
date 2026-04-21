@@ -271,7 +271,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
               /*Strict=*/false,
               /*Replacement=*/StringRef(),
               /*Priority=*/Sema::AP_Explicit,
-              /*Environment=*/nullptr);
+              /*Environment=*/nullptr,
+              /*OrigAnyAppleOSVersion=*/VersionTuple());
         },
         [](const Decl *D) {
           return llvm::find_if(D->attrs(), [](const Attr *next) -> bool {

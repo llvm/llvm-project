@@ -413,7 +413,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
 
     const Declaration &decl = v->GetDeclaration();
     if (decl.GetFile()) {
-      decl_file = decl.GetFile().GetFilename().AsCString();
+      decl_file = decl.GetFile().GetFilename().GetString();
       if (decl.GetLine() > 0)
         decl_line = decl.GetLine();
     }

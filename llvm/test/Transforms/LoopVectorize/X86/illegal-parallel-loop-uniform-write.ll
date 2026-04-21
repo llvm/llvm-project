@@ -18,7 +18,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ;   }
 ; }
 
-; Function Attrs: nounwind uwtable
 define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
@@ -214,7 +213,7 @@ for.end15:                                        ; preds = %for.end.us, %entry
   ret void
 }
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 
 !3 = !{!4, !5}
 !4 = !{!4}

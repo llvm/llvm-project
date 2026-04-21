@@ -122,12 +122,12 @@ class CustomOperandProps<bit optional = 0, string name = NAME> {
   string OperandType = "OPERAND_IMMEDIATE";
 }
 
-class CustomOperand<ValueType type, bit optional = 0, string name = NAME>
+class CustomOperand<bit optional = 0, string name = NAME, ValueType type = i32>
   : Operand<type>, CustomOperandProps<optional, name>;
 
 class ImmOperand<ValueType type, string name = NAME, bit optional = 0,
                  string printer = "print"#name>
-    : CustomOperand<type, optional, name> {
+    : CustomOperand<optional, name, type=type> {
   let ImmTy = "ImmTyNone";
   let ParserMethod = "";
   let PrintMethod = printer;
@@ -140,7 +140,7 @@ def u16imm : ImmOperand<i16, "U16Imm", 0, "printU16ImmOperand">;
 
 class ValuePredicatedOperand<CustomOperand op, string valuePredicate,
                              bit optional = 0>
-    : CustomOperand<op.Type, optional> {
+    : CustomOperand<optional, type=op.Type> {
   let ImmTy = op.ImmTy;
   defvar OpPredicate = op.ParserMatchClass.PredicateMethod;
   let PredicateMethod =

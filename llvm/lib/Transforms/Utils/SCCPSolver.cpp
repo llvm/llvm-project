@@ -393,8 +393,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
 
   // SCCP can only determine non-feasible edges for br, switch and indirectbr.
   Instruction *TI = BB->getTerminator();
-  assert((isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
-          isa<IndirectBrInst>(TI)) &&
+  assert((isa<UncondBrInst, CondBrInst, SwitchInst, IndirectBrInst>(TI)) &&
          "Terminator must be a br, switch or indirectbr");
 
   if (FeasibleSuccessors.size() == 0) {
@@ -426,7 +425,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
       Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
 
-    Instruction *BI = BranchInst::Create(OnlyFeasibleSuccessor, BB);
+    Instruction *BI = UncondBrInst::Create(OnlyFeasibleSuccessor, BB);
     BI->setDebugLoc(TI->getDebugLoc());
     TI->eraseFromParent();
     DTU.applyUpdatesPermissive(Updates);
@@ -1251,12 +1250,12 @@ bool SCCPInstVisitor::markEdgeExecutable(BasicBlock *Source, BasicBlock *Dest) {
 void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
                                             SmallVectorImpl<bool> &Succs) {
   Succs.resize(TI.getNumSuccessors());
-  if (auto *BI = dyn_cast<BranchInst>(&TI)) {
-    if (BI->isUnconditional()) {
-      Succs[0] = true;
-      return;
-    }
+  if (isa<UncondBrInst>(TI)) {
+    Succs[0] = true;
+    return;
+  }
 
+  if (auto *BI = dyn_cast<CondBrInst>(&TI)) {
     const ValueLatticeElement &BCValue = getValueState(BI->getCondition());
     ConstantInt *CI = getConstantInt(BCValue, BI->getCondition()->getType());
     if (!CI) {

@@ -1411,6 +1411,8 @@ enum NodeType {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAXIMUM,
   ATOMIC_LOAD_FMINIMUM,
+  ATOMIC_LOAD_FMAXIMUMNUM,
+  ATOMIC_LOAD_FMINIMUMNUM,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
   ATOMIC_LOAD_USUB_COND,
@@ -1576,6 +1578,13 @@ enum NodeType {
   /// Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
   /// Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
+
+  /// Returns the number of number of trailing (least significant) zero elements
+  /// in a vector. Has a single mask vector operand. The result is poison if the
+  /// return type isn't wide enough to hold the maximum number of elements in
+  /// the input vector.
+  CTTZ_ELTS,
+  CTTZ_ELTS_ZERO_POISON,
 
   /// Finds the index of the last active mask element
   /// Operands: Mask

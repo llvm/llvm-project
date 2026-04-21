@@ -5,10 +5,10 @@
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], <4 x float> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 15
@@ -32,10 +32,10 @@ void setMatrix1(out float4x4 M, float4 V) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 2
@@ -59,10 +59,10 @@ void setMatrix2(out int4x4 M, int4 V) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <3 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <3 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <3 x i32>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <3 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <3 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <3 x i32> <i32 2, i32 1, i32 0>
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
@@ -84,10 +84,10 @@ void setMatrixVectorSwizzle(out int2x3 M, int3 V) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <3 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <3 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <3 x i32>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <3 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <3 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i32> [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <6 x i32>, ptr [[TMP1]], i32 0, i32 1

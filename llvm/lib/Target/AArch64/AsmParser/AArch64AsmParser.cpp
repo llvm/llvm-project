@@ -4092,11 +4092,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = TLBI->NeedsReg;
-    bool hasTLBID = getSTI().hasFeature(AArch64::FeatureTLBID);
-    if (hasAll || hasTLBID) {
-      OptionalRegister = TLBI->OptionalReg;
-    }
+    ExpectRegister = TLBI->RegUse == REG_REQUIRED;
+    if (hasAll || hasTLBID)
+      OptionalRegister = TLBI->RegUse == REG_OPTIONAL;
     createSysAlias(TLBI->Encoding, Operands, S);
   } else if (Mnemonic == "mlbi") {
     const AArch64MLBI::MLBI *MLBI = AArch64MLBI::lookupMLBIByName(Op);
@@ -4140,10 +4138,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(PLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = PLBI->NeedsReg;
-    if (hasAll || hasTLBID) {
-      OptionalRegister = PLBI->OptionalReg;
-    }
+    ExpectRegister = PLBI->RegUse == REG_REQUIRED;
+    if (hasAll || hasTLBID)
+      OptionalRegister = PLBI->RegUse == REG_OPTIONAL;
     createSysAlias(PLBI->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" ||
              Mnemonic == "cosp") {
@@ -4264,12 +4261,10 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
     const AArch64TLBIP::TLBIP *TLBIP = AArch64TLBIP::lookupTLBIPByName(Op);
     if (!TLBIP)
       return TokError("invalid operand for TLBIP instruction");
-    if (!getSTI().hasFeature(AArch64::FeatureD128) &&
-        !getSTI().hasFeature(AArch64::FeatureAll))
-      return TokError("instruction requires: d128");
+
     if (!TLBIP->haveFeatures(getSTI().getFeatureBits())) {
       std::string Str("instruction requires: ");
-      setRequiredFeatureString(TLBIP->getRequiredFeatures(), Str);
+      Str += TLBIP->AllowWithTLBID ? "tlbid or d128" : "d128";
       return TokError(Str);
     }
     createSysAlias(TLBIP->Encoding, Operands, S);
@@ -4659,6 +4654,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
                   .Case("prel_g1_nc", AArch64::S_PREL_G1_NC)
                   .Case("prel_g0", AArch64::S_PREL_G0)
                   .Case("prel_g0_nc", AArch64::S_PREL_G0_NC)
+                  .Case("dtprel", AArch64::S_DTPREL)
                   .Case("dtprel_g2", AArch64::S_DTPREL_G2)
                   .Case("dtprel_g1", AArch64::S_DTPREL_G1)
                   .Case("dtprel_g1_nc", AArch64::S_DTPREL_G1_NC)

@@ -91,3 +91,33 @@ add_libc_test(
   DEPENDS
     libc.src.wctype.iswalnum
 )
+
+add_libc_test(
+  iswupper_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswupper_test.cpp
+  DEPENDS
+    libc.src.wctype.iswupper
+)
+
+add_libc_test(
+  iswpunct_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswpunct_test.cpp
+  DEPENDS
+    libc.src.wctype.iswpunct
+)
+
+add_libc_test(
+  iswprint_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswprint_test.cpp
+  DEPENDS
+    libc.src.wctype.iswprint
+)

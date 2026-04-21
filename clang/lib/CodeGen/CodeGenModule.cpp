@@ -340,7 +340,7 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
                                        const LangOptions &Opts) {
 #ifndef NDEBUG
   // Don't verify non-standard ABI configurations.
-  if (Opts.AlignDouble || Opts.OpenCL || Opts.HLSL)
+  if (Opts.AlignDouble || Opts.OpenCL)
     return;
 
   llvm::Triple Triple = Target.getTriple();
@@ -393,6 +393,15 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
 
   Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
+
+  if (Target.vectorsAreElementAligned() != DL.vectorsAreElementAligned()) {
+    llvm::errs() << "Datalayout for target " << Triple.str()
+                 << " sets element-aligned vectors to '"
+                 << Target.vectorsAreElementAligned()
+                 << "' but clang specifies '" << DL.vectorsAreElementAligned()
+                 << "'\n";
+    abort();
+  }
 #endif
 }
 
@@ -442,6 +451,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       llvm::PointerType::get(LLVMContext, DL.getAllocaAddrSpace());
   GlobalsInt8PtrTy =
       llvm::PointerType::get(LLVMContext, DL.getDefaultGlobalsAddressSpace());
+  ProgramPtrTy =
+      llvm::PointerType::get(LLVMContext, DL.getProgramAddressSpace());
   ConstGlobalsPtrTy = llvm::PointerType::get(
       LLVMContext, C.getTargetAddressSpace(GetGlobalConstantAddressSpace()));
   ASTAllocaAddressSpace = getTargetCodeGenInfo().getASTAllocaAddressSpace();
@@ -1890,6 +1901,27 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
     return;
   }
 
+  // CUDA/HIP device kernels and global variables must be visible to the host
+  // so they can be registered / initialized. We require protected visibility
+  // unless the user explicitly requested hidden via an attribute.
+  if (Context.getLangOpts().CUDAIsDevice &&
+      LV.getVisibility() == HiddenVisibility && !LV.isVisibilityExplicit() &&
+      !D->hasAttr<OMPDeclareTargetDeclAttr>()) {
+    bool NeedsProtected = false;
+    if (isa<FunctionDecl>(D))
+      NeedsProtected =
+          D->hasAttr<CUDAGlobalAttr>() || D->hasAttr<DeviceKernelAttr>();
+    else if (const auto *VD = dyn_cast<VarDecl>(D))
+      NeedsProtected = VD->hasAttr<CUDADeviceAttr>() ||
+                       VD->hasAttr<CUDAConstantAttr>() ||
+                       VD->getType()->isCUDADeviceBuiltinSurfaceType() ||
+                       VD->getType()->isCUDADeviceBuiltinTextureType();
+    if (NeedsProtected) {
+      GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+      return;
+    }
+  }
+
   if (Context.getLangOpts().HLSL && !D->isInExportDeclContext()) {
     GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
     return;
@@ -3051,11 +3083,13 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
 
     // Now add the target-cpu and target-features to the function.
     // While we populated the feature map above, we still need to
-    // get and parse the target attribute so we can get the cpu for
-    // the function.
-    if (TD) {
-      ParsedTargetAttr ParsedAttr =
-          Target.parseTargetAttr(TD->getFeaturesStr());
+    // get and parse the target/target_clones attribute so we can
+    // get the cpu for the function.
+    StringRef FeatureStr = TD ? TD->getFeaturesStr() : StringRef();
+    if (TC && (getTriple().isOSAIX() || getTriple().isX86()))
+      FeatureStr = TC->getFeatureStr(GD.getMultiVersionIndex());
+    if (!FeatureStr.empty()) {
+      ParsedTargetAttr ParsedAttr = Target.parseTargetAttr(FeatureStr);
       if (!ParsedAttr.CPU.empty() &&
           getTarget().isValidCPUName(ParsedAttr.CPU)) {
         TargetCPU = ParsedAttr.CPU;
@@ -3267,8 +3301,12 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 
 void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
                                                      llvm::CallBase *CB) {
-  // Only if needed for call graph section and only for indirect calls.
-  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall())
+  // Only if needed for call graph section and only for indirect calls that are
+  // visible externally.
+  // TODO: Handle local linkage symbols so they are not left out of call graph
+  // reducing precision.
+  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall() ||
+      !isExternallyVisible(QT->getLinkage()))
     return;
 
   llvm::Metadata *TypeIdMD = CreateMetadataIdentifierGeneralized(QT);
@@ -4407,13 +4445,15 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
           bool UnifiedMemoryEnabled =
               getOpenMPRuntime().hasRequiresUnifiedSharedMemory();
           if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-               *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+               *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+               *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
               !UnifiedMemoryEnabled) {
             (void)GetAddrOfGlobalVar(VD);
           } else {
             assert(((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
                     ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                      *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+                      *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+                      *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
                      UnifiedMemoryEnabled)) &&
                    "Link clause or to clause with unified memory expected.");
             (void)getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
@@ -4422,6 +4462,17 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
           return;
         }
       }
+
+      // HLSL extern globals can be read/written to by the pipeline. Those
+      // are declared, but never defined.
+      if (LangOpts.HLSL) {
+        if (VD->getStorageClass() == SC_Extern) {
+          auto GV = cast<llvm::GlobalVariable>(GetAddrOfGlobalVar(VD));
+          getHLSLRuntime().handleGlobalVarDefinition(VD, GV);
+          return;
+        }
+      }
+
       // If this declaration may have caused an inline variable definition to
       // change linkage, make sure that it's emitted.
       if (Context.getInlineVariableDefinitionKind(VD) ==
@@ -4754,7 +4805,7 @@ getFMVPriority(const TargetInfo &TI,
 static llvm::GlobalValue::LinkageTypes
 getMultiversionLinkage(CodeGenModule &CGM, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-  if (FD->getFormalLinkage() == Linkage::Internal)
+  if (FD->getFormalLinkage() == Linkage::Internal || CGM.getTriple().isOSAIX())
     return llvm::GlobalValue::InternalLinkage;
   return llvm::GlobalValue::WeakODRLinkage;
 }
@@ -4788,7 +4839,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     // For AArch64, a resolver is only emitted if a function marked with
     // target_version("default")) or target_clones("default") is defined
     // in this TU. For other architectures it is always emitted.
-    bool ShouldEmitResolver = !getTarget().getTriple().isAArch64();
+    bool ShouldEmitResolver = !getTriple().isAArch64();
     SmallVector<CodeGenFunction::FMVResolverOption, 10> Options;
     llvm::DenseMap<llvm::Function *, const FunctionDecl *> DeclMap;
 
@@ -4840,7 +4891,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
     if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
       if (FD->isTargetClonesMultiVersion() &&
-          !getTarget().getTriple().isAArch64()) {
+          !getTarget().getTriple().isAArch64() &&
+          !getTarget().getTriple().isOSAIX()) {
         std::string MangledName = getMangledNameImpl(
             *this, GD, FD, /*OmitMultiVersionMangling=*/true);
         if (!GetGlobalValue(MangledName + ".ifunc")) {
@@ -5140,9 +5192,14 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
     llvm::Constant *Resolver = GetOrCreateLLVMFunction(
         MangledName + ".resolver", ResolverType, GlobalDecl{},
         /*ForVTable=*/false);
-    llvm::GlobalIFunc *GIF =
-        llvm::GlobalIFunc::create(DeclTy, AS, getMultiversionLinkage(*this, GD),
-                                  "", Resolver, &getModule());
+
+    // on AIX, the FMV is ignored on a declaration, and so we don't need the
+    // ifunc, which is only generated on FMV definitions, to be weak.
+    auto Linkage = getTriple().isOSAIX() ? getFunctionLinkage(GD)
+                                         : getMultiversionLinkage(*this, GD);
+
+    llvm::GlobalIFunc *GIF = llvm::GlobalIFunc::create(DeclTy, AS, Linkage, "",
+                                                       Resolver, &getModule());
     GIF->setName(ResolverName);
     SetCommonAttributes(FD, GIF);
     if (ResolverGV)
@@ -5161,6 +5218,7 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
 void CodeGenModule::setMultiVersionResolverAttributes(llvm::Function *Resolver,
                                                       GlobalDecl GD) {
   const NamedDecl *D = dyn_cast_or_null<NamedDecl>(GD.getDecl());
+
   Resolver->setLinkage(getMultiversionLinkage(*this, GD));
 
   // Function body has to be emitted before calling setGlobalVisibility
@@ -5238,6 +5296,15 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
         // without FMV mangling (it may or may not be replaced later).
         if (getTarget().getTriple().isAArch64()) {
           AddDeferredMultiVersionResolverToEmit(GD);
+          NameWithoutMultiVersionMangling = getMangledNameImpl(
+              *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+        }
+        // On AIX, a declared (but not defined) FMV shall be treated like a
+        // regular non-FMV function. If a definition is later seen, then
+        // GetOrCreateMultiVersionResolver will get called (when processing said
+        // definition) which will replace the IR declaration we're creating here
+        // with the FMV ifunc (see replaceDeclarationWith).
+        else if (getTriple().isOSAIX() && !FD->isDefined()) {
           NameWithoutMultiVersionMangling = getMangledNameImpl(
               *this, GD, FD, /*OmitMultiVersionMangling=*/true);
         } else
@@ -6698,6 +6765,9 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   auto *Fn = cast<llvm::Function>(GV);
   setFunctionLinkage(GD, Fn);
 
+  if (getTriple().isOSAIX() && D->isTargetClonesMultiVersion())
+    Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
+
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
   setGVProperties(Fn, GD);
 
@@ -7321,10 +7391,15 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
           E->getStorageDuration() == SD_Thread) && "not a global temporary");
   const auto *VD = cast<VarDecl>(E->getExtendingDecl());
 
-  // If we're not materializing a subobject of the temporary, keep the
-  // cv-qualifiers from the type of the MaterializeTemporaryExpr.
+  // Use the MaterializeTemporaryExpr's type if it has the same unqualified
+  // base type as Init. This preserves cv-qualifiers (e.g. const from a
+  // constexpr or const-ref binding) that skipRValueSubobjectAdjustments may
+  // have dropped via NoOp casts, while correctly falling back to Init's type
+  // when a real subobject adjustment changed the type (e.g. member access or
+  // base-class cast in C++98), where E->getType() reflects the reference type,
+  // not the actual storage type.
   QualType MaterializedType = Init->getType();
-  if (Init == E->getSubExpr())
+  if (getContext().hasSameUnqualifiedType(E->getType(), MaterializedType))
     MaterializedType = E->getType();
 
   CharUnits Align = getContext().getTypeAlignInChars(MaterializedType);
@@ -8240,8 +8315,7 @@ void CodeGenModule::EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
     auto *VD = cast<VarDecl>(cast<DeclRefExpr>(RefExpr)->getDecl());
     bool PerformInit =
         VD->getAnyInitializer() &&
-        !VD->getAnyInitializer()->isConstantInitializer(getContext(),
-                                                        /*ForRef=*/false);
+        !VD->getAnyInitializer()->isConstantInitializer(getContext());
 
     Address Addr(GetAddrOfGlobalVar(VD),
                  getTypes().ConvertTypeForMem(VD->getType()),
@@ -8524,4 +8598,56 @@ std::string CodeGenModule::getPFPFieldName(const FieldDecl *FD) {
       getContext().getCanonicalTagType(FD->getParent()), Out, false);
   Out << "." << FD->getName();
   return OutName;
+}
+
+bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
+  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
+    return false;
+  CXXDestructorDecl *Dtor = RD->getDestructor();
+  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
+  // so just force vector deleting destructor emission if dllexport is present.
+  // This matches MSVC behavior.
+  if (Dtor && Dtor->isVirtual() && Dtor->hasAttr<DLLExportAttr>())
+    return true;
+
+  return RequireVectorDeletingDtor.count(RD);
+}
+
+void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
+  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
+    return;
+  RequireVectorDeletingDtor.insert(RD);
+
+  // To reduce code size in general case we lazily emit scalar deleting
+  // destructor definition and an alias from vector deleting destructor to
+  // scalar deleting destructor. It may happen that we first emitted the scalar
+  // deleting destructor definition and the alias and then discovered that the
+  // definition of the vector deleting destructor is required. Then we need to
+  // remove the alias and the scalar deleting destructor and queue vector
+  // deleting destructor body for emission. Check if that is the case.
+  CXXDestructorDecl *DtorD = RD->getDestructor();
+  GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
+  StringRef MangledName = getMangledName(ScalarDtorGD);
+  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+  GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
+  if (Entry && !Entry->isDeclaration()) {
+    StringRef VDName = getMangledName(VectorDtorGD);
+    llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
+    // It exists and it should be an alias.
+    assert(VDEntry && isa<llvm::GlobalAlias>(VDEntry));
+    auto *NewFn = llvm::Function::Create(
+        cast<llvm::FunctionType>(VDEntry->getValueType()),
+        llvm::Function::ExternalLinkage, VDName, &getModule());
+    SetFunctionAttributes(VectorDtorGD, NewFn, /*IsIncompleteFunction*/ false,
+                          /*IsThunk*/ false);
+    NewFn->takeName(VDEntry);
+    VDEntry->replaceAllUsesWith(NewFn);
+    VDEntry->eraseFromParent();
+    Entry->replaceAllUsesWith(NewFn);
+    Entry->eraseFromParent();
+  }
+  // Always add a deferred decl to emit once we confirmed that vector deleting
+  // destructor definition is required. That helps to enforse its generation
+  // even if destructor is only declared.
+  addDeferredDeclToEmit(VectorDtorGD);
 }

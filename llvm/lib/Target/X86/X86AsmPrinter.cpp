@@ -899,6 +899,11 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       }
       return false;
     }
+  } else {
+    // Constraint 'p' requires modifier 'a'.
+    const InlineAsm::Flag Flags(MI->getOperand(OpNo - 1).getImm());
+    if (Flags.getMemoryConstraintID() == InlineAsm::ConstraintCode::p)
+      return true;
   }
   if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
     PrintIntelMemReference(MI, OpNo, O);
@@ -958,7 +963,9 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   }
 
   // TODO: Support prefixed registers for the Intel syntax.
-  const bool IntelSyntax = MAI->getAssemblerDialect() == InlineAsm::AD_Intel;
+  unsigned Dialect = TM.Options.MCOptions.OutputAsmVariant.value_or(
+      MAI->getAssemblerDialect());
+  const bool IntelSyntax = Dialect == InlineAsm::AD_Intel;
   OutStreamer->emitSyntaxDirective(IntelSyntax ? "intel" : "att",
                                    IntelSyntax ? "noprefix" : "");
 

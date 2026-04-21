@@ -596,7 +596,7 @@ static void PrivateAutoComplete(
 
         if (variable_list) {
           for (const VariableSP &var_sp : *variable_list)
-            request.AddCompletion(var_sp->GetName().AsCString());
+            request.AddCompletion(var_sp->GetName());
         }
       }
     }

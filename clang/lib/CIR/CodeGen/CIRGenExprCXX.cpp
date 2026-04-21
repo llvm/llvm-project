@@ -534,39 +534,97 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // Create a value for the variable number of elements
     numElements = cgf.emitScalarExpr(*e->getArraySize());
     auto numElementsType = mlir::cast<cir::IntType>(numElements.getType());
-    [[maybe_unused]] unsigned numElementsWidth = numElementsType.getWidth();
+    unsigned numElementsWidth = numElementsType.getWidth();
 
-    // We might need check for overflow.
+    // The number of elements can have an arbitrary integer type;
+    // essentially, we need to multiply it by a constant factor, add a
+    // cookie size, and verify that the result is representable as a
+    // size_t.  That's just a gloss, though, and it's wrong in one
+    // important way: if the count is negative, it's an error even if
+    // the cookie size would bring the total size >= 0.
+    bool isSigned =
+        (*e->getArraySize())->getType()->isSignedIntegerOrEnumerationType();
 
-    mlir::Value hasOverflow;
-    // Classic codegen checks for the size variable being signed, having a
-    // smaller width than size_t, and having a larger width than size_t.
-    // However, the AST implicitly casts the size variable to size_t so none of
-    // these conditions will ever be met.
-    assert(
-        !(*e->getArraySize())->getType()->isSignedIntegerOrEnumerationType() &&
-        (numElementsWidth == sizeWidth) &&
-        (numElements.getType() == cgf.sizeTy) &&
-        "Expected array size to be implicitly cast to size_t!");
-
-    // There are up to three conditions we need to test for:
-    // 1) if minElements > 0, we need to check whether numElements is smaller
+    // There are up to five conditions we need to test for:
+    // 1) if isSigned, we need to check whether numElements is negative;
+    // 2) if numElementsWidth > sizeWidth, we need to check whether
+    //    numElements is larger than something representable in size_t;
+    // 3) if minElements > 0, we need to check whether numElements is smaller
     //    than that.
-    // 2) we need to compute
+    // 4) we need to compute
     //      sizeWithoutCookie := numElements * typeSizeMultiplier
     //    and check whether it overflows; and
-    // 3) if we need a cookie, we need to compute
+    // 5) if we need a cookie, we need to compute
     //      size := sizeWithoutCookie + cookieSize
     //    and check whether it overflows.
+
+    mlir::Value hasOverflow;
+
+    // If numElementsWidth > sizeWidth, then one way or another, we're
+    // going to have to do a comparison for (2), and this happens to
+    // take care of (1), too.
+    if (numElementsWidth > sizeWidth) {
+      llvm::APInt threshold =
+          llvm::APInt::getOneBitSet(numElementsWidth, sizeWidth);
+
+      // Use an unsigned comparison regardless of the sign of numElements.
+      mlir::Value unsignedNumElements = numElements;
+      if (isSigned)
+        unsignedNumElements = cgf.getBuilder().createIntCast(
+            numElements, cgf.getBuilder().getUIntNTy(numElementsWidth));
+
+      mlir::Value thresholdV =
+          cgf.getBuilder().getConstInt(loc, threshold, /*isUnsigned=*/true);
+      hasOverflow = cgf.getBuilder().createCompare(
+          loc, cir::CmpOpKind::ge, unsignedNumElements, thresholdV);
+      numElements = cgf.getBuilder().createIntCast(
+          unsignedNumElements, mlir::cast<cir::IntType>(cgf.sizeTy));
+
+      // Otherwise, if we're signed, we want to sext up to size_t.
+    } else if (isSigned) {
+      if (numElementsWidth < sizeWidth)
+        numElements = cgf.getBuilder().createIntCast(
+            numElements, cgf.getBuilder().getSIntNTy(sizeWidth));
+
+      // If there's a non-1 type size multiplier, then we can do the
+      // signedness check at the same time as we do the multiply
+      // because a negative number times anything will cause an
+      // unsigned overflow.  Otherwise, we have to do it here. But at
+      // least in this case, we can subsume the >= minElements check.
+      if (typeSizeMultiplier == 1)
+        hasOverflow = cgf.getBuilder().createCompare(
+            loc, cir::CmpOpKind::lt, numElements,
+            cgf.getBuilder().getConstInt(loc, numElements.getType(),
+                                         minElements));
+
+      numElements = cgf.getBuilder().createIntCast(
+          numElements, mlir::cast<cir::IntType>(cgf.sizeTy));
+
+      // Otherwise, zext up to size_t if necessary.
+    } else if (numElementsWidth < sizeWidth) {
+      numElements = cgf.getBuilder().createIntCast(
+          numElements, mlir::cast<cir::IntType>(cgf.sizeTy));
+    }
+
+    assert(numElements.getType() == cgf.sizeTy);
 
     if (minElements) {
       // Don't allow allocation of fewer elements than we have initializers.
       if (!hasOverflow) {
-        // FIXME: Avoid creating this twice. It may happen above.
         mlir::Value minElementsV = cgf.getBuilder().getConstInt(
             loc, llvm::APInt(sizeWidth, minElements));
         hasOverflow = cgf.getBuilder().createCompare(loc, cir::CmpOpKind::lt,
                                                      numElements, minElementsV);
+      } else if (numElementsWidth > sizeWidth) {
+        // The other existing overflow subsumes this check.
+        // We do an unsigned comparison, since any signed value < -1 is
+        // taken care of either above or below.
+        mlir::Value minElementsV = cgf.getBuilder().getConstInt(
+            loc, llvm::APInt(sizeWidth, minElements));
+        hasOverflow = cgf.getBuilder().createOr(
+            loc, hasOverflow,
+            cgf.getBuilder().createCompare(loc, cir::CmpOpKind::lt, numElements,
+                                           minElementsV));
       }
     }
 
@@ -581,9 +639,9 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // allocation fails.
     if (typeSizeMultiplier != 1) {
       mlir::Value tsmV = cgf.getBuilder().getConstInt(loc, typeSizeMultiplier);
-      auto mulOp = cir::BinOpOverflowOp::create(
-          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
-          cir::BinOpOverflowKind::Mul, size, tsmV);
+      auto mulOp = cir::MulOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy), size,
+          tsmV);
 
       if (hasOverflow)
         hasOverflow =
@@ -617,9 +675,9 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     if (cookieSize != 0) {
       sizeWithoutCookie = size;
       mlir::Value cookieSizeV = cgf.getBuilder().getConstInt(loc, cookieSize);
-      auto addOp = cir::BinOpOverflowOp::create(
-          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
-          cir::BinOpOverflowKind::Add, size, cookieSizeV);
+      auto addOp = cir::AddOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy), size,
+          cookieSizeV);
 
       if (hasOverflow)
         hasOverflow =
@@ -1046,8 +1104,52 @@ void CIRGenFunction::emitNewArrayInitializer(
       return;
     }
 
-    cgm.errorNYI(cce->getSourceRange(),
-                 "emitNewArrayInitializer: ctor initializer");
+    // Store the new Cleanup position for irregular Cleanups.
+    //
+    // FIXME: Share this cleanup with the constructor call emission rather than
+    // having it create a cleanup of its own.
+    if (endOfInit.isValid())
+      builder.createStore(getLoc(e->getSourceRange()), curPtr.emitRawPointer(),
+                          endOfInit);
+
+    mlir::Type initType = convertType(cce->getType());
+    // Emit a constructor call loop to initialize the remaining elements.
+    if (initListElements) {
+      // If the number of elements is a constant, we will have already gotten
+      // the constant op above. Here we use it to get the number of remaining
+      // elements as a new constant.
+      if (constOp) {
+        auto constIntAttr = mlir::cast<cir::IntAttr>(constOp.getValue());
+        uint64_t numRemainingElements =
+            constIntAttr.getUInt() - initListElements;
+        numElements =
+            builder.getConstInt(getLoc(e->getSourceRange()),
+                                numElements.getType(), numRemainingElements);
+        // Currently, the AST gives us a pointer to the element type here
+        // rather than an array. That's inconsistent with what it does
+        // without an explicit initializer list, so we need to create an
+        // array type here. That will decay back to a pointer when we lower
+        // the cir.array.ctor op, but we need an array type for the initial
+        // representation.
+        if (!mlir::isa<cir::ArrayType>(initType))
+          initType = cir::ArrayType::get(initType, numRemainingElements);
+      } else {
+        cgm.errorNYI(e->getSourceRange(),
+                     "emitNewArrayInitializer: numRemainingElements with "
+                     "non-constant count");
+        return;
+      }
+    }
+
+    curPtr = curPtr.withElementType(builder, initType);
+    emitCXXAggrConstructorCall(ctor, numElements, curPtr, cce,
+                               /*newPointerIsChecked=*/true,
+                               cce->requiresZeroInitialization());
+    if (getContext().getTargetInfo().emitVectorDeletingDtors(
+            getContext().getLangOpts())) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitNewArrayInitializer: emitVectorDeletingDtors");
+    }
     return;
   }
 
@@ -1182,11 +1284,6 @@ static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
     cgf.cgm.errorNYI(de->getSourceRange(), "emitObjectDelete: ObjCLifetime");
   }
 
-  // In traditional LLVM codegen null checks are emitted to save a delete call.
-  // In CIR we optimize for size by default, the null check should be added into
-  // this function callers.
-  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
-
   cgf.popCleanupBlock();
 }
 
@@ -1201,10 +1298,21 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // unconditionally perform the operator delete call in that case. For now, we
   // assume that deleted pointers are null rarely enough that it's better to
   // keep the branch. This might be worth revisiting for a -O0 code size win.
-  //
-  // CIR note: emit the code size friendly by default for now, such as mentioned
-  // in `emitObjectDelete`.
   assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
+  cir::YieldOp thenYield;
+  mlir::Value notNull = builder.createPtrIsNotNull(ptr.getPointer());
+  cir::IfOp::create(builder, getLoc(e->getExprLoc()), notNull,
+                    /*withElseRegion=*/false,
+                    /*thenBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      thenYield = builder.createYield(loc);
+                    });
+
+  // Emit the rest of the CIR inside the if-op's then region, but restore the
+  // insertion point to the point after the if when this function returns.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(thenYield);
+
   QualType deleteTy = e->getDestroyedType();
 
   // A destroying operator delete overrides the entire operation of the
@@ -1227,12 +1335,6 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   }
 
   if (e->isArrayForm()) {
-    // This will be handled in CXXABILowering, but we can emit a better
-    // diagnostic here.
-    if (deleteTy.isDestructedType()) {
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXDeleteExpr: array delete of destructed type");
-    }
     const FunctionDecl *operatorDelete = e->getOperatorDelete();
     cir::FuncOp operatorDeleteFn = cgm.getAddrOfFunction(operatorDelete);
     auto deleteFn =
@@ -1241,8 +1343,24 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
     auto deleteParams = cir::UsualDeleteParamsAttr::get(
         builder.getContext(), udp.Size, isAlignedAllocation(udp.Alignment),
         isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+
+    mlir::FlatSymbolRefAttr elementDtor;
+    if (const auto *rd = deleteTy->getAsCXXRecordDecl()) {
+      if (rd->hasDefinition() && !rd->hasTrivialDestructor()) {
+        const CXXDestructorDecl *dtor = rd->getDestructor();
+        if (dtor->getType()->castAs<FunctionProtoType>()->canThrow())
+          cgm.errorNYI(e->getSourceRange(),
+                       "emitCXXDeleteExpr: throwing destructor");
+        cir::FuncOp dtorFn =
+            cgm.getAddrOfCXXStructor(GlobalDecl(dtor, Dtor_Complete));
+        elementDtor = mlir::FlatSymbolRefAttr::get(builder.getContext(),
+                                                   dtorFn.getSymNameAttr());
+      }
+    }
+
     cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
-                               ptr.getPointer(), deleteFn, deleteParams);
+                               ptr.getPointer(), deleteFn, deleteParams,
+                               elementDtor);
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }

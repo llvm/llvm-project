@@ -23,7 +23,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 ;UNROLL: store <4 x i32>
 ;UNROLL: store <4 x i32>
 ;UNROLL: ret void
-define void @example1() nounwind uwtable ssp {
+define void @example1() {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -56,7 +56,7 @@ define void @example1() nounwind uwtable ssp {
 ;UNROLL: store <4 x i32>
 ;UNROLL: store <4 x i32>
 ;UNROLL: ret void
-define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) nounwind uwtable ssp {
+define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0

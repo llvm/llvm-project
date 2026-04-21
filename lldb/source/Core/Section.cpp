@@ -13,8 +13,6 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/VMRange.h"
-
 #include <cinttypes>
 #include <limits>
 #include <utility>
@@ -254,8 +252,7 @@ bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
       return child_section->ResolveContainedAddress(offset - child_offset,
                                                     so_addr, allow_section_end);
   }
-  so_addr.SetOffset(offset);
-  so_addr.SetSection(const_cast<Section *>(this)->shared_from_this());
+  so_addr = Address(const_cast<Section *>(this)->shared_from_this(), offset);
 
   // Ensure that there are no orphaned (i.e., moduleless) sections.
   assert(GetModule().get());
@@ -292,8 +289,7 @@ void Section::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
       addr = GetFileAddress();
     }
 
-    VMRange range(addr, addr + m_byte_size);
-    range.Dump(s, 0);
+    DumpAddressRange(s, addr, addr + m_byte_size, 8);
   }
 
   s << llvm::format("%c %c%c%c  0x%8.8" PRIx64 " 0x%8.8" PRIx64 " 0x%8.8x ",

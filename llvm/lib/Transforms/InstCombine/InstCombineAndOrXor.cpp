@@ -4208,6 +4208,16 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateMul(X, IncrementY);
   }
 
+  // Canonicalization to achieve lowering to Bit Manipulation Instructions (BMI)
+  // ~X | (X-1) => ~(X & -X)
+  Value *Op;
+  if (match(&I, m_c_Or(m_OneUse(m_Not(m_Value(Op))),
+                       m_OneUse(m_Add(m_Deferred(Op), m_AllOnes()))))) {
+    Value *NegX = Builder.CreateNeg(Op);
+    Value *And = Builder.CreateAnd(Op, NegX);
+    return BinaryOperator::CreateNot(And);
+  }
+
   // (C && A) || (C && B) => select C, A, B (and similar cases)
   //
   // Note: This is the same transformation used in `foldSelectOfBools`,

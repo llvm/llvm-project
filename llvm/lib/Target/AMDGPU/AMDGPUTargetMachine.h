@@ -27,6 +27,10 @@ namespace llvm {
 // AMDGPU Target Machine (R600+)
 //===----------------------------------------------------------------------===//
 
+namespace AMDGPU {
+StringRef getSchedStrategy(const Function &F);
+}
+
 class AMDGPUTargetMachine : public CodeGenTargetMachineImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
@@ -54,9 +58,6 @@ public:
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
-
-  /// Get the integer value of a null pointer in the given address space.
-  static int64_t getNullPointerValue(unsigned AddrSpace);
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 

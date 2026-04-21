@@ -18,15 +18,18 @@ A list of non-standard directives supported by Flang
   directive allow actual arguments that would otherwise be diagnosed as
   incompatible in type (T), kind (K), rank (R), CUDA device (D), or managed (M)
   status. The letter (A) is a shorthand for (TKRDM), and is the default when no
-  letters appear. The letter (C) checks for contiguity, for example allowing an
-  element of an assumed-shape array to be passed as a dummy argument. It also
-  specifies that dummy arguments passed by descriptor should not have their
-  descriptor copied or reboxed, allowing the original descriptor to be passed
+  letters appear.   The letter (C) checks for contiguity, for example allowing
+  an element of an assumed-shape array to be passed as a dummy argument. When
+  the dummy argument is passed by descriptor, (C) specifies that the descriptor
+  should not be copied or reboxed, allowing the original descriptor to be passed
   directly even if attributes like ALLOCATABLE or POINTER don't match exactly.
-  The letter (P) ignores pointer and allocatable matching, so that one can pass an
-  allocatable array to routine with pointer array argument and vice versa. For
-  example, if one wanted to call a "set all bytes to zero" utility that could
-  be applied to arrays of any type or rank:
+  When the dummy argument is not passed by descriptor (e.g., an assumed-size
+  array in a BIND(C) interface), the base address is extracted from the actual
+  argument's descriptor and passed as a raw pointer.
+  The letter (P) ignores pointer and allocatable matching, so that one can pass
+  an allocatable array to routine with pointer array argument and vice versa.
+  For example, if one wanted to call a "set all bytes to zero" utility that
+  could be applied to arrays of any type or rank:
 ```
   interface
     subroutine clear(arr,bytes)

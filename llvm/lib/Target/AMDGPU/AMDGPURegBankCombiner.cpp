@@ -52,8 +52,8 @@ protected:
 
 public:
   AMDGPURegBankCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
       const GCNSubtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -115,11 +115,11 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AMDGPURegBankCombinerImpl::AMDGPURegBankCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
     const GCNSubtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo), RuleConfig(RuleConfig), STI(STI),
+    : Combiner(MF, CInfo, &VT, CSEInfo), RuleConfig(RuleConfig), STI(STI),
       RBI(*STI.getRegBankInfo()), TRI(*STI.getRegisterInfo()),
       TII(*STI.getInstrInfo()),
       Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
@@ -529,7 +529,6 @@ private:
 } // end anonymous namespace
 
 void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
@@ -550,7 +549,6 @@ AMDGPURegBankCombiner::AMDGPURegBankCombiner(bool IsOptNone)
 bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
@@ -572,7 +570,7 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
   // RegBankSelect seems not to leave dead instructions, so a full DCE pass is
   // unnecessary.
   CInfo.EnableFullDCE = false;
-  AMDGPURegBankCombinerImpl Impl(MF, CInfo, TPC, *VT, /*CSEInfo*/ nullptr,
+  AMDGPURegBankCombinerImpl Impl(MF, CInfo, *VT, /*CSEInfo*/ nullptr,
                                  RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
@@ -581,7 +579,6 @@ char AMDGPURegBankCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AMDGPURegBankCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after regbankselect",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPURegBankCombiner, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after regbankselect", false,

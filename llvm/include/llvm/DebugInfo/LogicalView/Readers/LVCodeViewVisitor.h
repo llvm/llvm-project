@@ -175,6 +175,8 @@ class LVSymbolVisitor final : public SymbolVisitorCallbacks {
     Symbol->setIsVariable();
   }
 
+  void setLocalVariableType(LVSymbol *Symbol, TypeIndex TI);
+
 public:
   LVSymbolVisitor(LVCodeViewReader *Reader, ScopedPrinter &W,
                   LVLogicalVisitor *LogicalVisitor,
@@ -206,6 +208,9 @@ public:
       DefRangeFramePointerRelSym &DefRangeFramePointerRel) override;
   Error visitKnownRecord(CVSymbol &Record,
                          DefRangeRegisterRelSym &DefRangeRegisterRel) override;
+  Error visitKnownRecord(
+      CVSymbol &Record,
+      DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) override;
   Error visitKnownRecord(CVSymbol &Record,
                          DefRangeRegisterSym &DefRangeRegister) override;
   Error visitKnownRecord(

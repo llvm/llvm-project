@@ -144,6 +144,9 @@ if "native" in config.available_features:
 if config.lldb_enable_python:
     config.available_features.add("python")
 
+if getattr(config, "lldb_enable_mte", False):
+    config.available_features.add("lldb-mte")
+
 if config.lldb_enable_lua:
     config.available_features.add("lua")
 

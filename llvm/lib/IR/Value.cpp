@@ -53,7 +53,7 @@ static inline Type *checkType(Type *Ty) {
 Value::Value(Type *ty, unsigned scid)
     : SubclassID(scid), HasValueHandle(0), SubclassOptionalData(0),
       SubclassData(0), NumUserOperands(0), IsUsedByMD(false), HasName(false),
-      HasMetadata(false), VTy(checkType(ty)) {
+      VTy(checkType(ty)) {
   static_assert(ConstantFirstVal == 0, "!(SubclassID < ConstantFirstVal)");
   // FIXME: Why isn't this in the subclass gunk??
   // Note, we cannot call isa<CallInst> before the CallInst has been
@@ -79,10 +79,6 @@ Value::~Value() {
     ValueHandleBase::ValueIsDeleted(this);
   if (isUsedByMetadata())
     ValueAsMetadata::handleDeletion(this);
-
-  // Remove associated metadata from context.
-  if (HasMetadata)
-    clearMetadata();
 
 #ifndef NDEBUG      // Only in -g mode...
   // Check to make sure that there are no uses of this value that are still
@@ -646,11 +642,12 @@ static const Value *stripPointerCastsAndOffsets(
     return V;
 
   // Even though we don't look through PHI nodes, we could be called on an
-  // instruction in an unreachable block, which may be on a cycle.
-  SmallPtrSet<const Value *, 4> Visited;
-
-  Visited.insert(V);
-  do {
+  // instruction in an unreachable block, which may be on a cycle. E.g.:
+  //   %gep = getelementptr inbounds nuw i8, ptr %gep, i64 32
+  //
+  // Bound against that case with a simple iteration counter. Practically, more
+  // than 10 iterations are almost never needed.
+  for (unsigned N = 0; N < 12; ++N) {
     Func(V);
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       switch (StripKind) {
@@ -670,7 +667,11 @@ static const Value *stripPointerCastsAndOffsets(
           return V;
         break;
       }
-      V = GEP->getPointerOperand();
+      const Value *NewV = GEP->getPointerOperand();
+      // Quick exit for degenerate IR, which can happen in unreachable blocks.
+      if (NewV == V)
+        return V;
+      V = NewV;
     } else if (Operator::getOpcode(V) == Instruction::BitCast) {
       Value *NewV = cast<Operator>(V)->getOperand(0);
       if (!NewV->getType()->isPointerTy())
@@ -705,7 +706,7 @@ static const Value *stripPointerCastsAndOffsets(
       return V;
     }
     assert(V->getType()->isPointerTy() && "Unexpected operand type!");
-  } while (Visited.insert(V).second);
+  }
 
   return V;
 }
@@ -848,7 +849,8 @@ bool Value::canBeFreed() const {
       return false;
   }
 
-  if (isa<IntToPtrInst>(this) && getMetadata(LLVMContext::MD_nofree))
+  if (auto *ITP = dyn_cast<IntToPtrInst>(this);
+      ITP && ITP->hasMetadata(LLVMContext::MD_nofree))
     return false;
 
   const Function *F = nullptr;

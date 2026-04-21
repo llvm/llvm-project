@@ -16,5 +16,5 @@
 #include "clc/relational/clc_isfinite.h"
 #include "clc/relational/clc_select.h"
 
-#define __CLC_BODY <clc_logb.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_logb.inc"
+#include "clc/math/gentype.inc"

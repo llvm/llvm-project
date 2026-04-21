@@ -591,6 +591,11 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return "histogram";
 
+  case ISD::CTTZ_ELTS:
+    return "cttz_elts";
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    return "cttz_elts_zero_poison";
+
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     return "find_last_active";
 
@@ -1086,6 +1091,8 @@ static void DumpNodes(const SDNode *N, unsigned indent, const SelectionDAG *G) {
   dbgs().indent(indent);
   N->dump(G);
 }
+
+LLVM_DUMP_METHOD void SelectionDAG::dump() const { dump(false); }
 
 LLVM_DUMP_METHOD void SelectionDAG::dump(bool Sorted) const {
   dbgs() << "SelectionDAG has " << AllNodes.size() << " nodes:\n";

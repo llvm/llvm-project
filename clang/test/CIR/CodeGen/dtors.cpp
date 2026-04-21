@@ -264,11 +264,14 @@ struct D {
 };
 
 // CIR: cir.func {{.*}} @_ZN1DD2Ev
-// CIR:   %[[C:.*]] = cir.get_member %{{.*}}[1] {name = "c"}
+// CIR:   %[[BASE:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_D> -> !cir.ptr<!u8i>
+// CIR:   %[[OFFSET:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:   %[[PTR:.*]] = cir.ptr_stride %[[BASE]], %[[OFFSET]] : (!cir.ptr<!u8i>, !u64i) -> !cir.ptr<!u8i>
+// CIR:   %[[C:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_C>
 // CIR:   cir.call @_ZN1CD1Ev(%[[C]])
 
 // LLVM: define {{.*}} void @_ZN1DD2Ev
-// LLVM:   %[[C:.*]] = getelementptr %struct.D, ptr %{{.*}}, i32 0, i32 1
+// LLVM:   %[[C:.*]] = getelementptr i8, ptr %{{.*}}, i64 4
 // LLVM:   call void @_ZN1CD1Ev(ptr {{.*}} %[[C]])
 
 // This destructor is defined after the calling function in OGCG.
@@ -340,7 +343,7 @@ int test_temp_in_condition(G &obj) {
   return 0;
 }
 
-// CIR: cir.func {{.*}} @_Z22test_temp_in_conditionR1G(%[[ARG0:.*]]: !cir.ptr<!rec_G> {{.*}}) -> (!s32i {{.*}}) {
+// CIR: cir.func {{.*}} @_Z22test_temp_in_conditionR1G(%[[ARG0:.*]]: !cir.ptr<!rec_G> {{.*}}) -> (!s32i {{.*}}) {{.*}} {
 // CIR:   %[[OBJ:.*]] = cir.alloca !cir.ptr<!rec_G>, !cir.ptr<!cir.ptr<!rec_G>>, ["obj", init, const]
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[ARG0]], %[[OBJ]]

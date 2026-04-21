@@ -3,7 +3,6 @@
 // from the device to the host using dynamically allocated memory.
 
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>

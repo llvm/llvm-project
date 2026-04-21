@@ -771,16 +771,8 @@ bool BranchRelaxation::relaxBranchInstructions() {
 PreservedAnalyses
 BranchRelaxationPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
-  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
-
   if (BranchRelaxation().run(MF))
     return getMachineFunctionPassPreservedAnalyses();
-
-  if (MDT)
-    MDT->updateBlockNumbers();
-  if (MPDT)
-    MPDT->updateBlockNumbers();
   return PreservedAnalyses::all();
 }
 

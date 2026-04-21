@@ -23,7 +23,6 @@
 @arrX = external global [8 x i64], align 16
 @arrY = external global [8 x [8 x i64]], align 16
 
-; Function Attrs: norecurse nounwind uwtable
 define void @foo_i32(i32 %n) {
 ; CHECK-LABEL: define void @foo_i32(
 ; CHECK-SAME: i32 [[N:%.*]]) {

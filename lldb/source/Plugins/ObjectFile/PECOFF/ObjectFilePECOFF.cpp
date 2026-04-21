@@ -254,14 +254,12 @@ ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFilePECOFF::GetModuleSpecifications(
+ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+    lldb::offset_t file_offset, lldb::offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData() ||
       !ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
-    return initial_count;
+    return {};
 
   Log *log = GetLog(LLDBLog::Object);
 
@@ -275,12 +273,12 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", file);
-    return initial_count;
+    return {};
   }
 
   auto *COFFObj = llvm::dyn_cast<llvm::object::COFFObjectFile>(binary->get());
   if (!COFFObj)
-    return initial_count;
+    return {};
 
   ModuleSpec module_spec(file);
   ArchSpec &spec = module_spec.GetArchitecture();
@@ -334,6 +332,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   if (env == llvm::Triple::UnknownEnvironment)
     env = default_env;
 
+  ModuleSpecList specs;
   switch (COFFObj->getMachine()) {
   case MachineAmd64:
     spec.SetTriple("x86_64-pc-windows");
@@ -360,7 +359,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     break;
   }
 
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
 bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
@@ -1106,6 +1105,27 @@ std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))
     return FileSpec(gnu_debuglink_file);
   return std::nullopt;
+}
+
+std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
+  llvm::StringRef pdb_file;
+  const llvm::codeview::DebugInfo *pdb_info = nullptr;
+  if (llvm::Error Err = m_binary->getDebugPDBInfo(pdb_info, pdb_file)) {
+    // DebugInfo section is corrupt.
+    Log *log = GetLog(LLDBLog::Object);
+    llvm::StringRef file = m_binary->getFileName();
+    LLDB_LOG_ERROR(
+        log, std::move(Err),
+        "Failed to read Codeview record for PDB debug info file ({1}): {0}",
+        file);
+    return std::nullopt;
+  }
+  if (pdb_file.empty()) {
+    // No DebugInfo section present.
+    return std::nullopt;
+  }
+  return FileSpec(pdb_file, FileSpec::GuessPathStyle(pdb_file).value_or(
+                                FileSpec::Style::native));
 }
 
 uint32_t ObjectFilePECOFF::ParseDependentModules() {

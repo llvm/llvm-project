@@ -60,10 +60,6 @@ private:
   bool HasFinalLayout = false;
   bool RelaxAll = false;
 
-  // Cumulative upstream size change during `relaxOnce`. Used to compensate
-  // forward-reference displacements in `evaluateFixup`.
-  int64_t Stretch = 0;
-
   SectionListType Sections;
 
   SmallVector<const MCSymbol *, 0> Symbols;
@@ -112,8 +108,7 @@ private:
   unsigned relaxOnce(unsigned FirstStable);
 
   /// Perform relaxation on a single fragment.
-  void relaxFragment(MCFragment &F);
-  void relaxAlign(MCFragment &F);
+  bool relaxFragment(MCFragment &F);
   void relaxInstruction(MCFragment &F);
   void relaxLEB(MCFragment &F);
   void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);

@@ -19,8 +19,14 @@
 using namespace lldb;
 using namespace lldb_fuzzer;
 
+extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
+  SBDebugger::Initialize();
+  return 0;
+}
+
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
-  static SBDebuggerContextManager ctx_manager = SBDebuggerContextManager();
+  static thread_local SBDebuggerContextManager ctx_manager =
+      SBDebuggerContextManager();
 
   // Convert the data into a null-terminated string
   std::string str((char *)data, size);

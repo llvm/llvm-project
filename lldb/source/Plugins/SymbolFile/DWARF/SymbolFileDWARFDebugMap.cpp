@@ -345,8 +345,8 @@ void SymbolFileDWARFDebugMap::InitOSO() {
     if (so_symbol && oso_symbol &&
         so_symbol->GetType() == eSymbolTypeSourceFile &&
         oso_symbol->GetType() == eSymbolTypeObjectFile) {
-      m_compile_unit_infos[i].so_file.SetFile(so_symbol->GetName().AsCString(),
-                                              FileSpec::Style::native);
+      m_compile_unit_infos[i].so_file.SetFile(
+          so_symbol->GetName().GetStringRef(), FileSpec::Style::native);
       m_compile_unit_infos[i].oso_path = oso_symbol->GetName();
       m_compile_unit_infos[i].oso_mod_time =
           llvm::sys::toTimePoint(oso_symbol->GetIntegerValue(0));
@@ -600,6 +600,15 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
     if (oso_module) {
       FileSpec so_file_spec;
       if (GetFileSpecForSO(cu_idx, so_file_spec)) {
+        // Apply the module's source path remappings so that compile units
+        // created from N_SO stabs (which may contain paths rewritten by
+        // -fdebug-prefix-map at build time) report their real on-disk paths.
+        // This mirrors what MakeAbsoluteAndRemap does for the dSYM case.
+        if (ModuleSP module_sp = m_objfile_sp->GetModule())
+          if (auto remapped =
+                  module_sp->RemapSourceFile(so_file_spec.GetPath()))
+            so_file_spec.SetFile(*remapped, FileSpec::Style::native);
+
         // User zero as the ID to match the compile unit at offset zero in each
         // .o file.
         lldb::user_id_t cu_id = 0;

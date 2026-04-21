@@ -307,7 +307,7 @@ let Defs = [CR0] in {
 }
 
 // Instructions to support atomic operations
-let mayLoad = 1, hasSideEffects = 0 in {
+let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
 def LDARX : XForm_1_memOp<31,  84, (outs g8rc:$RST), (ins (memrr $RA, $RB):$addr),
                           "ldarx $RST, $addr", IIC_LdStLDARX, []>;
 // TODO: Add scheduling info.
@@ -348,7 +348,7 @@ def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
     [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
                                             u5imm_timm:$fc))]>;
 
-let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
+let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stdcx. $RST, $addr", IIC_LdStSTDCX, []>, isRecordForm;
 // TODO: Add scheduling info.
@@ -1619,6 +1619,7 @@ def ADDIdtprelL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm
                          [(set i64:$rD,
                            (PPCaddiDtprelL i64:$reg, tglobaltlsaddr:$disp))]>,
                   isPPC64;
+let Size = 8 in
 def PADDIdtprel : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
                           "#PADDIdtprel",
                           [(set i64:$rD,

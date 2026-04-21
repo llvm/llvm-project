@@ -17,6 +17,7 @@
 #include "ModulesBuilder.h"
 #include "ScanningProjectModules.h"
 #include "TestTU.h"
+#include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -644,6 +645,78 @@ import M;
   EXPECT_EQ(CDB.getGlobalScanningCount(), 1u);
 }
 
+// Test that canReuse detects changes to headers included in module units.
+// This verifies that the ASTReader correctly tracks header file dependencies
+// in BMI files and that IsModuleFileUpToDate correctly validates them.
+TEST_F(PrerequisiteModulesTests, CanReuseWithHeadersInModuleUnit) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  // Create a header file that will be included in a module unit
+  CDB.addFile("header1.h", R"cpp(
+inline int getValue() { return 42; }
+  )cpp");
+
+  // Module M includes header1.h in the global module fragment
+  CDB.addFile("M.cppm", R"cpp(
+module;
+#include "header1.h"
+export module M;
+export int m_value = getValue();
+  )cpp");
+
+  // Module N imports M (similar structure to ReusabilityTest)
+  CDB.addFile("N.cppm", R"cpp(
+export module N;
+import :Part;
+import M;
+  )cpp");
+
+  // Add a module partition (similar to ReusabilityTest)
+  CDB.addFile("N-part.cppm", R"cpp(
+export module N:Part;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  // Build prerequisite modules for N (which depends on M)
+  auto NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), FS);
+  ASSERT_TRUE(NInfo);
+
+  ParseInputs NInput = getInputs("N.cppm", CDB);
+  std::unique_ptr<CompilerInvocation> Invocation =
+      buildCompilerInvocation(NInput, DiagConsumer);
+
+  // Initially, canReuse should return true
+  EXPECT_TRUE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+
+  // Test 1: Modify header1.h (included by M)
+  // canReuse should detect this change since M's BMI records header1.h as input
+  CDB.addFile("header1.h", R"cpp(
+inline int getValue() { return 43; }
+  )cpp");
+  EXPECT_FALSE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+
+  // Rebuild and verify canReuse returns true again
+  NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), FS);
+  ASSERT_TRUE(NInfo);
+  EXPECT_TRUE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+
+  // Test 2: Modify the module source file itself
+  CDB.addFile("M.cppm", R"cpp(
+module;
+#include "header1.h"
+export module M;
+export int m_value = getValue();
+export int m_new_value = 10;
+  )cpp");
+  EXPECT_FALSE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+
+  // Rebuild after module source change
+  NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), FS);
+  ASSERT_TRUE(NInfo);
+  EXPECT_TRUE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+}
+
 TEST_F(PrerequisiteModulesTests, PrebuiltModuleFileTest) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
 
@@ -671,6 +744,90 @@ import M;
   ModuleInfo2->adjustHeaderSearchOptions(HS2);
 
   EXPECT_EQ(HS.PrebuiltModuleFiles, HS2.PrebuiltModuleFiles);
+}
+
+// Test that prebuilt module files with relative paths are correctly resolved.
+// This tests the fix for the issue where clangd couldn't find BMI files when
+// the compilation database contained relative paths in -fmodule-file=
+// arguments.
+TEST_F(PrerequisiteModulesTests, PrebuiltModuleFileWithRelativePath) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int m_value = 42;
+  )cpp");
+
+  CDB.addFile("U.cpp", R"cpp(
+import M;
+int use() { return m_value; }
+  )cpp");
+
+  // Step 1: Build the module file using ModulesBuilder
+  ModulesBuilder Builder(CDB);
+  auto ModuleInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("U.cpp"), FS);
+  ASSERT_TRUE(ModuleInfo);
+
+  HeaderSearchOptions HS(TestDir);
+  ModuleInfo->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+  // Get the absolute path of the built module file
+  std::string OriginalBMPath = HS.PrebuiltModuleFiles["M"];
+  ASSERT_TRUE(llvm::sys::path::is_absolute(OriginalBMPath));
+  ASSERT_TRUE(llvm::sys::fs::exists(OriginalBMPath));
+
+  // Step 2: Create a subdirectory in TestDir and copy the BMI there
+  SmallString<256> BMSubDir(TestDir);
+  llvm::sys::path::append(BMSubDir, "prebuilt_modules");
+  ASSERT_FALSE(llvm::sys::fs::create_directories(BMSubDir));
+
+  SmallString<256> NewBMPath(BMSubDir);
+  llvm::sys::path::append(NewBMPath, "M.pcm");
+
+  // Copy the BMI file to the new location
+  ASSERT_FALSE(llvm::sys::fs::copy_file(OriginalBMPath, NewBMPath));
+  ASSERT_TRUE(llvm::sys::fs::exists(NewBMPath));
+
+  // Step 3: Create a relative path from the new absolute path
+  std::string RelativeBMPath =
+      llvm::StringRef(NewBMPath).drop_front(TestDir.size() + 1).str();
+  ASSERT_FALSE(RelativeBMPath.empty());
+  ASSERT_TRUE(llvm::sys::path::is_relative(RelativeBMPath));
+
+  // Step 4: Create a new CDB with relative path in -fmodule-file=
+  MockDirectoryCompilationDatabase CDBWithRelativePath(TestDir, FS);
+
+  CDBWithRelativePath.addFile("M.cppm", R"cpp(
+export module M;
+export int m_value = 42;
+  )cpp");
+
+  CDBWithRelativePath.addFile("U.cpp", R"cpp(
+import M;
+int use() { return m_value; }
+  )cpp");
+
+  // Use relative path in -fmodule-file= argument
+  CDBWithRelativePath.ExtraClangFlags.push_back("-fmodule-file=M=" +
+                                                RelativeBMPath);
+
+  // Step 5: Verify that clangd can find and reuse the prebuilt module file
+  ModulesBuilder BuilderWithRelativePath(CDBWithRelativePath);
+  auto ModuleInfo2 = BuilderWithRelativePath.buildPrerequisiteModulesFor(
+      getFullPath("U.cpp"), FS);
+  ASSERT_TRUE(ModuleInfo2);
+
+  HeaderSearchOptions HS2(TestDir);
+  ModuleInfo2->adjustHeaderSearchOptions(HS2);
+
+  // The module file should be found and the paths should match
+  ASSERT_EQ(HS2.PrebuiltModuleFiles.count("M"), 1u);
+  EXPECT_EQ(HS2.PrebuiltModuleFiles["M"], std::string(NewBMPath))
+      << "Expected absolute path: " << NewBMPath
+      << "\nGot: " << HS2.PrebuiltModuleFiles["M"]
+      << "\nRelative path used: " << RelativeBMPath;
 }
 
 } // namespace

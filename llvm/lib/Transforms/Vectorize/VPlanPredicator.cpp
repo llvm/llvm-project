@@ -28,6 +28,9 @@ class VPPredicator {
   /// Builder to construct recipes to compute masks.
   VPBuilder Builder;
 
+  /// Dominator tree for the VPlan.
+  VPDominatorTree VPDT;
+
   /// Post-dominator tree for the VPlan.
   VPPostDominatorTree VPPDT;
 
@@ -67,7 +70,7 @@ class VPPredicator {
   }
 
 public:
-  VPPredicator(VPlan &Plan) : VPPDT(Plan) {}
+  VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan) {}
 
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
@@ -133,12 +136,13 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // Start inserting after the block's phis, which be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
 
-  // Reuse the mask of the header if the VPBB post-dominates the header.
-  // TODO: Generalize to reuse mask of immediate dominator.
-  VPBasicBlock *Header =
-      VPBB->getPlan()->getVectorLoopRegion()->getEntryBasicBlock();
-  if (VPPDT.properlyDominates(VPBB, Header)) {
-    setBlockInMask(VPBB, getBlockInMask(Header));
+  // Reuse the mask of the immediate dominator if the VPBB post-dominates the
+  // immediate dominator.
+  auto *IDom = VPDT.getNode(VPBB)->getIDom();
+  assert(IDom && "Block in loop must have immediate dominator");
+  auto *IDomBB = cast<VPBasicBlock>(IDom->getBlock());
+  if (VPPDT.properlyDominates(VPBB, IDomBB)) {
+    setBlockInMask(VPBB, getBlockInMask(IDomBB));
     return;
   }
   // All-one mask is modelled as no-mask following the convention for masked

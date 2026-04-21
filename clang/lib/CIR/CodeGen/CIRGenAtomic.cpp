@@ -637,6 +637,20 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     return;
   }
 
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::UIncWrap);
+    break;
+
+  case AtomicExpr::AO__atomic_fetch_udec:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::UDecWrap);
+    break;
+
   case AtomicExpr::AO__opencl_atomic_init:
 
   case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
@@ -674,11 +688,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__hip_atomic_fetch_xor:
   case AtomicExpr::AO__opencl_atomic_fetch_xor:
-
-  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
-  case AtomicExpr::AO__scoped_atomic_fetch_udec:
-  case AtomicExpr::AO__atomic_fetch_uinc:
-  case AtomicExpr::AO__atomic_fetch_udec:
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
     return;
   }
@@ -1000,6 +1009,10 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__atomic_fetch_udec:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
     val1 = emitValToTemp(*this, e->getVal1());
     break;
   }

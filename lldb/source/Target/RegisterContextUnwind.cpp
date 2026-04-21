@@ -109,7 +109,7 @@ bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
 
   // check pc - 1 to see if it's valid
   Address pc_minus_one(m_current_pc);
-  pc_minus_one.SetOffset(m_current_pc.GetOffset() - 1);
+  pc_minus_one.Slide(-1);
   if (unwind_plan_sp->PlanValidAtAddress(pc_minus_one)) {
     return true;
   }

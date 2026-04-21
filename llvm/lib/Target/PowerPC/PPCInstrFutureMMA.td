@@ -476,17 +476,17 @@ let Predicates = [MMA, IsISAFuture] in {
 
   def DMMR
       : XForm_ATB3<31, 6, 177, (outs dmr:$AT), (ins dmr:$AB), "dmmr $AT, $AB",
-                   [(set v1024i1:$AT, (int_ppc_mma_dmmr v1024i1:$AB))]>;
+                   [(set v1024i1:$AT, (int_ppc_dmmr v1024i1:$AB))]>;
 
   def DMXOR : XForm_ATB3<31, 7, 177, (outs dmr:$AT), (ins dmr:$ATi, dmr:$AB),
                          "dmxor $AT, $AB",
-                         [(set v1024i1:$AT, (int_ppc_mma_dmxor v1024i1:$ATi,
+                         [(set v1024i1:$AT, (int_ppc_dmxor v1024i1:$ATi,
                                                 v1024i1:$AB))]>,
               RegConstraint<"$ATi = $AT">;
 
   def DMSETDMRZ
       : XForm_AT3<31, 2, 177, (outs dmr:$AT), (ins), "dmsetdmrz $AT",
-                  NoItinerary, [(set v1024i1:$AT, (int_ppc_mma_dmsetdmrz))]>;
+                  NoItinerary, [(set v1024i1:$AT, (int_ppc_dmsetdmrz))]>;
 
   // DMXVI8GERX4, DMXVI8GERX4PP, PMDMXVI8GERX4,  PMDMXVI8GERX4PP
   defm DMXVI8GERX4 : DMR_UM_M448_XOEO<59, 10, (ins vsrprc:$XAp, vsrc:$XB),
