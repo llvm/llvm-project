@@ -11591,6 +11591,27 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
                          DAG.getNode(ISD::SRL, SDLoc(N0), VT, X, N1), ZExtY);
   }
 
+  // fold (srl (bitcast (build_vector e1, ..., eN)), (N-1) * eltsize)
+  //   -> (zext eN)
+  if (N1C && VT.isScalarInteger() && DAG.getDataLayout().isLittleEndian()) {
+    SDValue BV = peekThroughBitcasts(N0);
+    if (BV.getOpcode() == ISD::BUILD_VECTOR) {
+      EVT BVVT = BV.getValueType();
+      unsigned EltSizeInBits = BVVT.getScalarSizeInBits();
+      unsigned NumElts = BVVT.getVectorNumElements();
+      if (N1C->getZExtValue() == (NumElts - 1) * EltSizeInBits) {
+        SDValue LastElt = BV.getOperand(NumElts - 1);
+        assert(LastElt.getScalarValueSizeInBits() >= EltSizeInBits &&
+               "Expected BUILD_VECTOR operand as wide as element type");
+        EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
+        LastElt = DAG.getBitcast(LastElt.getValueType().changeTypeToInteger(),
+                                 LastElt);
+        return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT), DL,
+                                  VT);
+      }
+    }
+  }
+
   // fold operands of srl based on knowledge that the low bits are not
   // demanded.
   if (SimplifyDemandedBits(SDValue(N, 0)))
