@@ -12568,6 +12568,67 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case clang::X86::BI__builtin_ia32_dbpsadbw128:
+  case clang::X86::BI__builtin_ia32_dbpsadbw256:
+  case clang::X86::BI__builtin_ia32_dbpsadbw512: {
+    APValue SourceA, SourceB, SourceImm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceB) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceImm))
+      return false;
+
+    unsigned SourceLen = SourceA.getVectorLength();
+    constexpr unsigned LaneSize = 16; // 128-bit lane = 16 bytes
+    unsigned Imm = SourceImm.getInt().getZExtValue();
+
+    auto *DestTy = E->getType()->castAs<VectorType>();
+    QualType DestEltTy = DestTy->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    // Phase 1: Shuffle SourceB using all four 2-bit fields of imm8.
+    // Within each 128-bit lane, for group j (0..3), select a 4-byte block
+    // from SourceB based on bits [2*j+1:2*j] of imm8.
+    SmallVector<uint8_t, 64> Shuffled(SourceLen);
+    for (unsigned I = 0; I < SourceLen; I += LaneSize) {
+      for (unsigned J = 0; J < 4; ++J) {
+        unsigned Part = (Imm >> (2 * J)) & 3;
+        for (unsigned K = 0; K < 4; ++K) {
+          Shuffled[I + 4 * J + K] = static_cast<uint8_t>(
+              SourceB.getVectorElt(I + 4 * Part + K).getInt().getZExtValue());
+        }
+      }
+    }
+
+    // Phase 2: Sliding SAD computation.
+    // For every group of 4 output u16 values, compute absolute differences
+    // using overlapping windows into SourceA and the shuffled array.
+    unsigned Size = SourceLen / 2; // number of output u16 elements
+    for (unsigned I = 0; I < Size; I += 4) {
+      unsigned Sad[4] = {0, 0, 0, 0};
+      for (unsigned J = 0; J < 4; ++J) {
+        uint8_t A1 = static_cast<uint8_t>(
+            SourceA.getVectorElt(2 * I + J).getInt().getZExtValue());
+        uint8_t A2 = static_cast<uint8_t>(
+            SourceA.getVectorElt(2 * I + J + 4).getInt().getZExtValue());
+        uint8_t B0 = Shuffled[2 * I + J];
+        uint8_t B1 = Shuffled[2 * I + J + 1];
+        uint8_t B2 = Shuffled[2 * I + J + 2];
+        uint8_t B3 = Shuffled[2 * I + J + 3];
+        Sad[0] += (A1 > B0) ? (A1 - B0) : (B0 - A1);
+        Sad[1] += (A1 > B1) ? (A1 - B1) : (B1 - A1);
+        Sad[2] += (A2 > B2) ? (A2 - B2) : (B2 - A2);
+        Sad[3] += (A2 > B3) ? (A2 - B3) : (B3 - A2);
+      }
+      for (unsigned R = 0; R < 4; ++R)
+        ResultElements.push_back(
+            APValue(APSInt(APInt(16, Sad[R]), DestUnsigned)));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:

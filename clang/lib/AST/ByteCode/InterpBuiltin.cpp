@@ -2816,6 +2816,74 @@ static bool interp__builtin_ia32_pmul(
   return true;
 }
 
+static bool interp__builtin_ia32_dbpsadbw(InterpState &S, CodePtr OpPC,
+                                          const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+  unsigned Imm = popToUInt64(S, Call->getArg(2));
+
+  const Pointer &Src2 = S.Stk.pop<Pointer>();
+  const Pointer &Src1 = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto *SrcVT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType SrcElemT = *S.getContext().classify(SrcVT->getElementType());
+  unsigned SourceLen = SrcVT->getNumElements();
+
+  const auto *DestVT = Call->getType()->castAs<VectorType>();
+  PrimType DestElemT = *S.getContext().classify(DestVT->getElementType());
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
+
+  constexpr unsigned LaneSize = 16; // 128-bit lane = 16 bytes
+
+  // Phase 1: Shuffle Src2 using all four 2-bit fields of imm8.
+  // Within each 128-bit lane, for group j (0..3), select a 4-byte block
+  // from Src2 based on bits [2*j+1:2*j] of imm8.
+  SmallVector<uint8_t, 64> Shuffled(SourceLen);
+  for (unsigned I = 0; I < SourceLen; I += LaneSize) {
+    for (unsigned J = 0; J < 4; ++J) {
+      unsigned Part = (Imm >> (2 * J)) & 3;
+      for (unsigned K = 0; K < 4; ++K) {
+        INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
+          Shuffled[I + 4 * J + K] =
+              static_cast<uint8_t>(Src2.elem<T>(I + 4 * Part + K));
+        });
+      }
+    }
+  }
+
+  // Phase 2: Sliding SAD computation.
+  // For every group of 4 output u16 values, compute absolute differences
+  // using overlapping windows into Src1 and the shuffled array.
+  unsigned Size = SourceLen / 2; // number of output u16 elements
+  for (unsigned I = 0; I < Size; I += 4) {
+    unsigned Sad[4] = {0, 0, 0, 0};
+    for (unsigned J = 0; J < 4; ++J) {
+      uint8_t A1, A2;
+      INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
+        A1 = static_cast<uint8_t>(Src1.elem<T>(2 * I + J));
+        A2 = static_cast<uint8_t>(Src1.elem<T>(2 * I + J + 4));
+      });
+      uint8_t B0 = Shuffled[2 * I + J];
+      uint8_t B1 = Shuffled[2 * I + J + 1];
+      uint8_t B2 = Shuffled[2 * I + J + 2];
+      uint8_t B3 = Shuffled[2 * I + J + 3];
+      Sad[0] += (A1 > B0) ? (A1 - B0) : (B0 - A1);
+      Sad[1] += (A1 > B1) ? (A1 - B1) : (B1 - A1);
+      Sad[2] += (A2 > B2) ? (A2 - B2) : (B2 - A2);
+      Sad[3] += (A2 > B3) ? (A2 - B3) : (B3 - A2);
+    }
+    for (unsigned R = 0; R < 4; ++R) {
+      INT_TYPE_SWITCH_NO_BOOL(DestElemT, {
+        Dst.elem<T>(I + R) =
+            static_cast<T>(APSInt(APInt(16, Sad[R]), DestUnsigned));
+      });
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp_builtin_horizontal_int_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
@@ -5062,6 +5130,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return (LoLHS.sext(BitWidth) * LoRHS.sext(BitWidth)) +
                  (HiLHS.sext(BitWidth) * HiRHS.sext(BitWidth));
         });
+
+  case clang::X86::BI__builtin_ia32_dbpsadbw128:
+  case clang::X86::BI__builtin_ia32_dbpsadbw256:
+  case clang::X86::BI__builtin_ia32_dbpsadbw512:
+    return interp__builtin_ia32_dbpsadbw(S, OpPC, Call);
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
