@@ -21,6 +21,24 @@ struct S {
 typedef row_major float4x4 RowMajorFloat4x4;
 typedef column_major float4x4 ColMajorFloat4x4;
 
+// Valid: layout order conversion
+row_major float4x4 Row2Col1(float4x4 M) {
+    return M;
+}
+
+float4x4 Row2Col2(column_major float4x4 M) {
+    return M;
+}
+
+row_major float4x4 Row2Col(column_major float4x4 M) {
+    return M;
+}
+
+column_major float4x4 Col2Row(row_major float4x4 M) {
+    return M;
+}
+
+
 template <typename T>
 struct Wrapper {
   row_major T mat; // expected-error 2 {{'row_major' attribute can only be applied to a matrix type}}

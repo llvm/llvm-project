@@ -6034,6 +6034,10 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_groupshared:
     return true;
 
+  case tok::kw_row_major:
+  case tok::kw_column_major:
+    return getLangOpts().HLSL;
+
   case tok::kw_private:
     return getLangOpts().OpenCL;
   }

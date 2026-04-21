@@ -2684,6 +2684,12 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
+static bool isMatrixOrArrayOfMatrix(const ASTContext &Ctx, QualType Ty) {
+  if (const auto *AT = Ctx.getAsArrayType(Ty))
+    Ty = AT->getElementType();
+  return Ty->isDependentType() || Ty->isConstantMatrixType();
+}
+
 static bool diagnoseMatrixLayoutOnNonMatrix(Sema &SemaRef, Decl *D,
                                             SourceLocation Loc,
                                             const IdentifierInfo *AttrName) {
@@ -2696,11 +2702,18 @@ static bool diagnoseMatrixLayoutOnNonMatrix(Sema &SemaRef, Decl *D,
   if (Ty.isNull() || Ty->isDependentType())
     return false;
 
-  QualType ElemTy = Ty;
-  if (const auto *AT = SemaRef.getASTContext().getAsArrayType(Ty))
-    ElemTy = AT->getElementType();
+  // For functions, the qualifier can apply to the return type or any parameter.
+  if (const auto *FPT = Ty->getAs<FunctionProtoType>()) {
+    if (isMatrixOrArrayOfMatrix(SemaRef.getASTContext(), FPT->getReturnType()))
+      return false;
+    for (QualType ParamTy : FPT->param_types())
+      if (isMatrixOrArrayOfMatrix(SemaRef.getASTContext(), ParamTy))
+        return false;
+    SemaRef.Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << AttrName;
+    return true;
+  }
 
-  if (ElemTy->isDependentType() || ElemTy->isConstantMatrixType())
+  if (isMatrixOrArrayOfMatrix(SemaRef.getASTContext(), Ty))
     return false;
 
   SemaRef.Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << AttrName;

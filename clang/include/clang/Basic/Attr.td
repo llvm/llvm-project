@@ -5288,7 +5288,7 @@ def HLSLVkLocation : HLSLAnnotationAttr {
 
 def HLSLMatrixLayout : InheritableAttr {
   let Spellings = [CustomKeyword<"row_major">, CustomKeyword<"column_major">];
-  let Subjects = SubjectList<[Var, TypedefName, Field]>;
+  let Subjects = SubjectList<[Var, TypedefName, Field, Function]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLMatrixLayoutDocs];
 }
