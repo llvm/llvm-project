@@ -500,7 +500,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when explicitly casting a scalar to an atomic complex. (#GH114885)
 - Fixed an assertion failure when parsing an invalid out-of-line enum definition with template parameters. (#GH187909)
 - Fixed an assertion failure on invalid template template parameter during typo correction. (#GH183983)
-- Fixed an assertion failure when using CTAD for alias templates where the RHS resolves to a non-dependent class template specialization. (#GH190517)
+- Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
 
 OpenACC Specific Changes
 ------------------------
