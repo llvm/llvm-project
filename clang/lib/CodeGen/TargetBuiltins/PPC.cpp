@@ -1169,14 +1169,12 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       break;
     }
     case PPC::BI__builtin_disassemble_dmr: {
-      Address Addr = EmitPointerWithAlignment(E->getArg(1));
-      Ops[1] = Builder.CreateLoad(Addr);
+      Ops[1] = Builder.CreateLoad(EmitPointerWithAlignment(E->getArg(1)));
       return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
     }
     case PPC::BI__builtin_dmsha256hash:
     case PPC::BI__builtin_dmsha512hash: {
-      Address Addr = EmitPointerWithAlignment(E->getArg(1));
-      Ops[1] = Builder.CreateLoad(Addr);
+      Ops[1] = Builder.CreateLoad(EmitPointerWithAlignment(E->getArg(1)));
       int Imm = (BuiltinID == PPC::BI__builtin_dmsha256hash) ? 0 : 1;
       Ops.push_back(llvm::ConstantInt::get(Int32Ty, Imm));
       break;
