@@ -455,7 +455,7 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
   return dyld_instance->GetStopWhenImagesChange();
 }
 
-static size_t library_infos_count(StructuredData::ObjectSP binaries_info_sp) {
+static size_t LibraryInfosCount(StructuredData::ObjectSP binaries_info_sp) {
   if (binaries_info_sp && binaries_info_sp->GetAsDictionary() &&
       binaries_info_sp->GetAsDictionary()->HasKey("images") &&
       binaries_info_sp->GetAsDictionary()
@@ -480,7 +480,7 @@ void DynamicLoaderMacOS::AddBinaries(
   // If the expedited detailed binaries information covers
   // all of the newly added binaries, use that info and
   // return.
-  if (library_infos_count(expedited_binary_infos) == load_addresses.size() &&
+  if (LibraryInfosCount(expedited_binary_infos) == load_addresses.size() &&
       JSONImageInformationIntoImageInfo(expedited_binary_infos, image_infos)) {
     auto new_images = PreloadModulesFromImageInfos(image_infos);
     UpdateSpecialBinariesFromPreloadedModules(new_images);
@@ -509,7 +509,7 @@ void DynamicLoaderMacOS::AddBinaries(
     StructuredData::ObjectSP binaries_info_sp =
         m_process->GetLoadedDynamicLibrariesInfos(eBinaryInformationLevelFull,
                                                   fetch_binaries);
-    if (library_infos_count(binaries_info_sp) == fetch_binaries.size()) {
+    if (LibraryInfosCount(binaries_info_sp) == fetch_binaries.size()) {
       if (JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
         auto new_images = PreloadModulesFromImageInfos(image_infos);
         UpdateSpecialBinariesFromPreloadedModules(new_images);
