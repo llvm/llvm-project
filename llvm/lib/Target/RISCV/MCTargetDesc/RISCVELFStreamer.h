@@ -28,12 +28,12 @@ class RISCVELFStreamer : public MCELFStreamer {
 
   // Active ISA string propagated from RISCVTargetELFStreamer. When non-empty,
   // it is used as the suffix for "$x<ISA>" mapping symbols.
-  std::string CurrentISAString;
+  std::string MappingSymbolISA;
 
   // ISA suffix last emitted via "$x<ISA>" in the current section, and the
   // per-section history preserved across changeSection. A new mapping symbol
   // is emitted whenever LastEMS != EMS_Instructions or
-  // LastEmittedISA != CurrentISAString, so the ISA in effect at each
+  // LastEmittedISA != MappingSymbolISA, so the ISA in effect at each
   // instruction run is always recorded.
   std::string LastEmittedISA;
   DenseMap<const MCSection *, std::string> LastEmittedISAInSection;
@@ -49,7 +49,7 @@ public:
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
 
-  void setCurrentISAString(StringRef Arch);
+  void setMappingSymbolISA(StringRef Arch);
 };
 
 class RISCVTargetELFStreamer : public RISCVTargetStreamer {
@@ -77,22 +77,20 @@ private:
 
   void reset() override;
 
-  // Update ISAString and propagate the change to the streamer so the next
-  // instruction-run emits an ISA-specific mapping symbol. A no-op when
-  // Arch == ISAString (deduplication).
-  void setArchString(StringRef Arch);
-
 public:
   RISCVELFStreamer &getStreamer();
   RISCVTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
-  void emitISAMappingSymbol(StringRef ISAString) override;
-  void emitDirectiveOptionPush() override;
-  void emitDirectiveOptionPop() override;
+  // Update ISAString and propagate the change to the streamer so the next
+  // instruction-run emits an ISA-specific mapping symbol. A no-op when
+  // Arch == ISAString (deduplication).
+  void setISAString(StringRef Arch) override;
   void emitDirectiveOptionExact() override;
   void emitDirectiveOptionNoExact() override;
   void emitDirectiveOptionPIC() override;
   void emitDirectiveOptionNoPIC() override;
+  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionPush() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
   void emitDirectiveOptionRVC() override;

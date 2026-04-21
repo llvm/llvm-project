@@ -3217,7 +3217,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
     if (auto ParseResult =
             RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
-      getTargetStreamer().emitISAMappingSymbol((*ParseResult)->toString());
+      getTargetStreamer().setISAString((*ParseResult)->toString());
     return false;
   }
 
@@ -3249,7 +3249,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
     setFeatureBits(RISCV::FeatureStdExtC, "c");
     if (auto ParseResult =
             RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
-      getTargetStreamer().emitISAMappingSymbol((*ParseResult)->toString());
+      getTargetStreamer().setISAString((*ParseResult)->toString());
     return false;
   }
 
@@ -3262,7 +3262,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
     clearFeatureBits(RISCV::FeatureStdExtZca, "zca");
     if (auto ParseResult =
             RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
-      getTargetStreamer().emitISAMappingSymbol((*ParseResult)->toString());
+      getTargetStreamer().setISAString((*ParseResult)->toString());
     return false;
   }
 
@@ -3386,8 +3386,9 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
     // Then emit the arch string.
     getTargetStreamer().emitTextAttribute(Tag, Result);
 
-    // And then emit mapping symbol with arch string.
-    getTargetStreamer().emitISAMappingSymbol(Result);
+    // And then update the active ISA so the next instruction-run emits
+    // an ISA-specific mapping symbol.
+    getTargetStreamer().setISAString(Result);
   }
 
   return false;

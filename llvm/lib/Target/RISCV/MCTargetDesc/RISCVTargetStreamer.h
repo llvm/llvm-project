@@ -52,7 +52,7 @@ public:
   virtual void emitDirectiveOptionNoRelax();
   virtual void emitDirectiveOptionRVC();
   virtual void emitDirectiveOptionNoRVC();
-  virtual void emitISAMappingSymbol(StringRef ISAString) {}
+  virtual void setISAString(StringRef Arch) {}
   virtual void emitDirectiveVariantCC(MCSymbol &Symbol);
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
