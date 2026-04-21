@@ -2,6 +2,8 @@
 ; RUN: llc -march=nvptx64 -mcpu=sm_100 -O2 < %s | FileCheck %s
 ; RUN: %if ptxas-sm_100 %{ llc < %s -march=nvptx64 -mcpu=sm_100 -O2 | %ptxas-verify -arch=sm_100 %}
 
+; NOTE: Currently SETP inversions require all users to be CBranch. However other users like selects
+;       can also be processed.
 target triple = "nvptx64-nvidia-cuda"
 
 define i32 @test_multiple_users(i32 %a, i32 %b) {
@@ -21,7 +23,7 @@ define i32 @test_multiple_users(i32 %a, i32 %b) {
 ; CHECK-NEXT:  $L__BB0_2: // %merge1
 ; CHECK-NEXT:    setp.ne.b32 %p2, %r2, %r3;
 ; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p2;
-; CHECK-NEXT:    @%p1 bra $L__BB0_4;
+; CHECK-NEXT:    @%p2 bra $L__BB0_4;
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r5, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
@@ -40,7 +42,7 @@ merge1:
   %phi1 = phi i32 [ 1, %then ], [ 0, %entry ]
   %cmp2 = icmp ne i32 %a, %b
   %val = select i1 %cmp2, i32 1, i32 0
-  br i1 %cmp2, label %else, label %merge2
+  br i1 %cmp2, label %merge2, label %else
 
 else:
   br label %merge2
