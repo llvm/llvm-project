@@ -166,7 +166,7 @@ public:
 
     void SetValue(uint64_t value) { m_value = value; }
 
-    uint64_t GetValue() { return m_value; }
+    uint64_t GetValue() const { return m_value; }
 
     void Dump(std::ostream &s) const override { s << m_value; }
 
