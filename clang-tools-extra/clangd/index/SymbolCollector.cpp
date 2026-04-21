@@ -1103,6 +1103,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   if (ND.getAvailability() == AR_Deprecated)
     S.Flags |= Symbol::Deprecated;
 
+  S.Tags = computeSymbolTags(ND);
+
   // Add completion info.
   // FIXME: we may want to choose a different redecl, or combine from several.
   assert(ASTCtx && PP && "ASTContext and Preprocessor must be set.");
@@ -1139,7 +1141,6 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   getSignature(*CCS, &Signature, &SnippetSuffix, SymbolCompletion.Kind,
                SymbolCompletion.CursorKind);
   S.Signature = Signature;
-  S.Tags = computeSymbolTags(ND);
   S.CompletionSnippetSuffix = SnippetSuffix;
   std::string ReturnType = getReturnType(*CCS);
   S.ReturnType = ReturnType;

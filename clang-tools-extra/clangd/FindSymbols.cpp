@@ -194,43 +194,32 @@ bool isUniqueDefinition(const NamedDecl *Decl) {
 }
 
 // Filter symbol tags based on the presence of other tags and the kind of
-// symbol. This is needed to avoid redundant tags, e.g. final implies override,
-// override implies virtual, etc.
-SymbolTags filterSymbolTags(const SymbolTags ST) {
-  SymbolTags Result = ST;
+// symbol. This is needed to avoid redundant tags, e.g. Overrides implies
+// Virtual and Implements implies Overrides/Virtual.
+SymbolTags filterSymbolTags(SymbolTags ST) {
+  const SymbolTags VirtualMask = toSymbolTagBitmask(SymbolTag::Virtual);
+  const SymbolTags OverridesMask = toSymbolTagBitmask(SymbolTag::Overrides);
+  const SymbolTags ImplementsMask = toSymbolTagBitmask(SymbolTag::Implements);
+  const SymbolTags AbstractMask = toSymbolTagBitmask(SymbolTag::Abstract);
+  const SymbolTags FinalMask = toSymbolTagBitmask(SymbolTag::Final);
 
-  if (ST & toSymbolTagBitmask(SymbolTag::Overrides)) {
-    // Overrides means that ND overrides an existing implementation of a virtual
-    // method in a base class. If a symbol is marked as Overrides, the tags
-    // Virtual, Declaration and Definition should be removed, as the Overrides
-    // tag implies that the symbol has/is virtual/declaration/definition.
-    Result &= ~toSymbolTagBitmask(SymbolTag::Virtual);
-  }
-  if (ST & toSymbolTagBitmask(SymbolTag::Implements)) {
-    // Implements means that ND implements an existing pure virtual method in a
-    // base class. If a symbol is marked as Implements, the tags Virtual,
-    // Declaration, Definition and Overrides should be removed, as the
-    // Implements tag implies that the symbol is virtual, is a declaration, is a
-    // definition, and overrides a method.
-    Result &= ~toSymbolTagBitmask(SymbolTag::Virtual);
-    Result &= ~toSymbolTagBitmask(SymbolTag::Overrides);
-  }
-  if (ST & toSymbolTagBitmask(SymbolTag::Abstract)) {
-    // Abstract means that ND is a pure virtual method. If a symbol is marked as
-    // Abstract, the tags Virtual, Declaration and Definition should be removed,
-    // as the Abstract tag implies that the symbol is virtual and a
-    // declaration/definition.
-    Result &= ~toSymbolTagBitmask(SymbolTag::Virtual);
-  }
-  if (ST & toSymbolTagBitmask(SymbolTag::Final)) {
-    // Final means that ND is a method that cannot be overridden by any method
-    // in a derived class. If a symbol is marked as Final, the tags Virtual and
-    // Overrides should be removed, as the Final tag implies that the symbol is
-    // virtual.
-    Result &= ~toSymbolTagBitmask(SymbolTag::Virtual);
-    Result &= ~toSymbolTagBitmask(SymbolTag::Overrides);
-  }
-  return Result;
+  // Implements implies Overrides + Virtual.
+  if (ST & ImplementsMask)
+    ST &= ~(OverridesMask | VirtualMask);
+
+  // Overrides implies Virtual.
+  if (ST & OverridesMask)
+    ST &= ~VirtualMask;
+
+  // Abstract implies Virtual.
+  if (ST & AbstractMask)
+    ST &= ~VirtualMask;
+
+  // Final implies Virtual; Overrides is also redundant as Final overrides are still overrides.
+  if (ST & FinalMask)
+    ST &= ~(VirtualMask | OverridesMask);
+
+  return ST;
 }
 
 bool isCXXClassMethod(const clang::clangd::Symbol &S) {
@@ -253,7 +242,7 @@ template <typename E> constexpr E enumIncrement(E Value) {
 } // namespace
 
 SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
-  return (1 << static_cast<unsigned>(ST));
+  return (1 << static_cast<uint32_t>(ST));
 }
 
 SymbolTags computeSymbolTags(const NamedDecl &ND) {
@@ -324,9 +313,9 @@ std::vector<SymbolTag> expandTagBitmask(const SymbolTags STGS) {
   // Iterate through SymbolTag enum values and collect any that are present in
   // the bitmask. SymbolTag values are in the numeric range
   // [FirstTag .. LastTag].
-  constexpr unsigned MinTag = static_cast<unsigned>(SymbolTag::FirstTag);
-  constexpr unsigned MaxTag = static_cast<unsigned>(SymbolTag::LastTag);
-  for (unsigned I = MinTag; I <= MaxTag; ++I) {
+  constexpr uint32_t MinTag = static_cast<uint32_t>(SymbolTag::FirstTag);
+  constexpr uint32_t MaxTag = static_cast<uint32_t>(SymbolTag::LastTag);
+  for (uint32_t I = MinTag; I <= MaxTag; ++I) {
     auto ST = static_cast<SymbolTag>(I);
     if (STGS & toSymbolTagBitmask(ST))
       Tags.push_back(ST);
