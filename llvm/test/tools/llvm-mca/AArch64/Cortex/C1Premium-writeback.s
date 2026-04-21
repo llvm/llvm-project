@@ -2320,7 +2320,7 @@ ldr  x2, [x1], #254
 # CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    2.96
 # CHECK-NEXT: IPC:               0.99
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: Block RThroughput: 1.8
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -2350,23 +2350,23 @@ ldr  x2, [x1], #254
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      1903
-# CHECK-NEXT: Total uOps:        700
+# CHECK-NEXT: Total Cycles:      1107
+# CHECK-NEXT: Total uOps:        1100
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    0.37
-# CHECK-NEXT: IPC:               0.26
+# CHECK-NEXT: uOps Per Cycle:    0.99
+# CHECK-NEXT: IPC:               0.45
 # CHECK-NEXT: Block RThroughput: 2.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01
+# CHECK-NEXT:                     01234567
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    ..   ldp	x1, x2, [x27], #496
-# CHECK-NEXT: [0,1]     D====eeeeER    .    ..   ldp	w1, w2, [x27, #248]!
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    ..   ldp	x1, x2, [x27, #496]!
-# CHECK-NEXT: [0,3]     D=========eeeeeER   ..   ldpsw	x1, x2, [x27], #248
-# CHECK-NEXT: [0,4]     D==============eeeeeER   ldpsw	x1, x2, [x27, #248]!
+# CHECK:      [0,0]     DeeeeER   .    . .   ldp	x1, x2, [x27], #496
+# CHECK-NEXT: [0,1]     D====eeeeER    . .   ldp	w1, w2, [x27, #248]!
+# CHECK-NEXT: [0,2]     D=====eeeeER   . .   ldp	x1, x2, [x27, #496]!
+# CHECK-NEXT: [0,3]     D=========eeeeeER.   ldpsw	x1, x2, [x27], #248
+# CHECK-NEXT: [0,4]     .D=========eeeeeER   ldpsw	x1, x2, [x27, #248]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2379,8 +2379,8 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 1.     1     5.0    0.0    0.0       ldp	w1, w2, [x27, #248]!
 # CHECK-NEXT: 2.     1     6.0    0.0    0.0       ldp	x1, x2, [x27, #496]!
 # CHECK-NEXT: 3.     1     10.0   0.0    0.0       ldpsw	x1, x2, [x27], #248
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       ldpsw	x1, x2, [x27, #248]!
-# CHECK-NEXT:        1     7.4    0.2    0.0       <total>
+# CHECK-NEXT: 4.     1     10.0   0.0    0.0       ldpsw	x1, x2, [x27, #248]!
+# CHECK-NEXT:        1     6.4    0.2    0.0       <total>
 
 # CHECK:      [46] Code Region - G47
 
@@ -3748,7 +3748,7 @@ ldr  x2, [x1], #254
 # CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    1.14
 # CHECK-NEXT: IPC:               0.71
-# CHECK-NEXT: Block RThroughput: 2.5
+# CHECK-NEXT: Block RThroughput: 3.5
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     0123456789

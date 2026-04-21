@@ -20,7 +20,7 @@ xaflag
 # CHECK-NEXT:  1      1     0.13                  U     setf8	w1
 # CHECK-NEXT:  1      1     0.13                  U     setf16	w1
 # CHECK-NEXT:  1      1     0.13                  U     rmif	x0, #0, #0
-# CHECK-NEXT:  1      1     0.13                  U     cfinv
+# CHECK-NEXT:  1      1     0.10                  U     cfinv
 # CHECK-NEXT:  1      1     0.13                  U     axflag
 # CHECK-NEXT:  1      1     0.13                  U     xaflag
 
@@ -52,13 +52,13 @@ xaflag
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.75   0.75   0.75   0.75   0.75   0.75    -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.63   0.63   0.63   0.63   0.63   0.63   0.63   0.63    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     setf8	w1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     setf16	w1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     rmif	x0, #0, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     cfinv
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cfinv
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     axflag
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     xaflag

@@ -1656,19 +1656,19 @@
 # CHECK-NEXT:  1      2     1.00                        movs	p0.b, p0/z, p0.b
 # CHECK-NEXT:  1      2     1.00                        movs	p15.b, p15.b
 # CHECK-NEXT:  1      2     1.00                        movs	p15.b, p15/z, p15.b
-# CHECK-NEXT:  1      1     0.13                  U     mrs	x3, ID_AA64ZFR0_EL1
-# CHECK-NEXT:  1      1     0.13                  U     mrs	x3, ZCR_EL1
-# CHECK-NEXT:  1      1     0.13                  U     mrs	x3, ZCR_EL12
-# CHECK-NEXT:  1      1     0.13                  U     mrs	x3, ZCR_EL2
-# CHECK-NEXT:  1      1     0.13                  U     mrs	x3, ZCR_EL3
+# CHECK-NEXT:  1      1     0.10                  U     mrs	x3, ID_AA64ZFR0_EL1
+# CHECK-NEXT:  1      1     0.10                  U     mrs	x3, ZCR_EL1
+# CHECK-NEXT:  1      1     0.10                  U     mrs	x3, ZCR_EL12
+# CHECK-NEXT:  1      1     0.10                  U     mrs	x3, ZCR_EL2
+# CHECK-NEXT:  1      1     0.10                  U     mrs	x3, ZCR_EL3
 # CHECK-NEXT:  1      4     0.50                        msb	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  1      4     0.50                        msb	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  1      4     0.50                        msb	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  1      4     0.50                        msb	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  1      1     0.13                  U     msr	ZCR_EL1, x3
-# CHECK-NEXT:  1      1     0.13                  U     msr	ZCR_EL12, x3
-# CHECK-NEXT:  1      1     0.13                  U     msr	ZCR_EL2, x3
-# CHECK-NEXT:  1      1     0.13                  U     msr	ZCR_EL3, x3
+# CHECK-NEXT:  1      1     0.10                  U     msr	ZCR_EL1, x3
+# CHECK-NEXT:  1      1     0.10                  U     msr	ZCR_EL12, x3
+# CHECK-NEXT:  1      1     0.10                  U     msr	ZCR_EL2, x3
+# CHECK-NEXT:  1      1     0.10                  U     msr	ZCR_EL3, x3
 # CHECK-NEXT:  1      4     0.50                        mul	z0.b, p7/m, z0.b, z31.b
 # CHECK-NEXT:  1      4     0.50                        mul	z0.b, z1.b, z2.b
 # CHECK-NEXT:  1      4     0.50                        mul	z0.d, p7/m, z0.d, z31.d
@@ -3453,7 +3453,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     194.75 194.75 297.75 297.75 429.13 346.13 25.63  25.63  25.63  25.63  25.63  25.63  1704.00 1412.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     194.75 194.75 297.75 297.75 428.00 345.00 24.50  24.50  24.50  24.50  24.50  24.50  1704.00 1412.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
@@ -5103,19 +5103,19 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -     movs	p0.b, p0/z, p0.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -     movs	p15.b, p15.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -     movs	p15.b, p15/z, p15.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     mrs	x3, ID_AA64ZFR0_EL1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     mrs	x3, ZCR_EL1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     mrs	x3, ZCR_EL12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     mrs	x3, ZCR_EL2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     mrs	x3, ZCR_EL3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mrs	x3, ID_AA64ZFR0_EL1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mrs	x3, ZCR_EL1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mrs	x3, ZCR_EL12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mrs	x3, ZCR_EL2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mrs	x3, ZCR_EL3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   msb	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   msb	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   msb	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   msb	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     msr	ZCR_EL1, x3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     msr	ZCR_EL12, x3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     msr	ZCR_EL2, x3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -     msr	ZCR_EL3, x3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     msr	ZCR_EL1, x3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     msr	ZCR_EL12, x3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     msr	ZCR_EL2, x3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     msr	ZCR_EL3, x3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mul	z0.b, p7/m, z0.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mul	z0.b, z1.b, z2.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mul	z0.d, p7/m, z0.d, z31.d

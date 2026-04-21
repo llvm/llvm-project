@@ -102,6 +102,7 @@ def C1UWrite_0c : SchedWriteRes<[]> { let Latency = 0; }
 // Define a small set of generic 1 micro-op types as placeholders.
 def C1UWrite_1c_1B      : SchedWriteRes<[C1UUnitB]>  { let Latency = 1; }
 def C1UWrite_2c_1B      : SchedWriteRes<[C1UUnitB]>  { let Latency = 2; }
+def C1UWrite_2c_1B_1I   : SchedWriteRes<[C1UUnitB, C1UUnitI]>  { let Latency = 2; }
 def C1UWrite_1c_1I      : SchedWriteRes<[C1UUnitI]>  { let Latency = 1; }
 def C1UWrite_1c_2I      : SchedWriteRes<[C1UUnitI, C1UUnitI]>  { let Latency = 1; }
 def C1UWrite_2c_1I      : SchedWriteRes<[C1UUnitI]>  { let Latency = 2; }
@@ -162,6 +163,7 @@ def C1UWrite_6c_1V0134   : SchedWriteRes<[C1UUnitV0134]>  { let Latency = 6; }
 def C1UWrite_6c_4V0134   : SchedWriteRes<[C1UUnitV0134, C1UUnitV0134, C1UUnitV0134, C1UUnitV0134]>  { let Latency = 6;}
 def C1UWrite_1c_1L      : SchedWriteRes<[C1UUnitL]>  { let Latency = 1; }
 def C1UWrite_4c_1L      : SchedWriteRes<[C1UUnitL]>  { let Latency = 4; }
+def C1UWrite_4c_1L_1I   : SchedWriteRes<[C1UUnitL, C1UUnitI]>  { let Latency = 4; }
 def C1UWrite_6c_1L      : SchedWriteRes<[C1UUnitL]>  { let Latency = 6; }
 def C1UWrite_1c_1SA     : SchedWriteRes<[C1UUnitSA]> { let Latency = 1; }
 
@@ -726,7 +728,7 @@ def : SchedAlias<WriteBrReg, C1UWrite_2c_1B>;
 
 // Branch and link, immed
 // Branch and link, register
-def : InstRW<[C1UWrite_2c_1B_1S], (instrs BL, BLR)>;
+def : InstRW<[C1UWrite_2c_1B_1I], (instrs BL, BLR)>;
 
 
 // Arithmetic and logical operations
@@ -871,7 +873,7 @@ def : InstRW<[C1UWrite_1c_1I],
 // -----------------------------------------------------------------------------
 
 def : SchedAlias<WriteLD,    C1UWrite_4c_1L>;
-def : SchedAlias<WriteLDIdx, C1UWrite_4c_1L>;
+def : SchedAlias<WriteLDIdx, C1UWrite_4c_1L_1I>;
 
 // Load register, literal
 def : InstRW<[C1UWrite_5c_1L_1I], (instrs LDRWl, LDRXl, LDRSWl, PRFMl)>;

@@ -96,7 +96,6 @@ def C1PWrite_1c_1I          : SchedWriteRes<[C1PUnitI]>  { let Latency = 1; }
 def C1PWrite_2c_1I          : SchedWriteRes<[C1PUnitI]>  { let Latency = 2; }
 def C1PWrite_3c_1I          : SchedWriteRes<[C1PUnitI]>  { let Latency = 3; }
 def C1PWrite_2c_1I4         : SchedWriteRes<[C1PUnitI4]> { let Latency = 2; }
-def C1PWrite_3c_1I4         : SchedWriteRes<[C1PUnitI4]> { let Latency = 3; }
 def C1PWrite_1c_1M          : SchedWriteRes<[C1PUnitM]>  { let Latency = 1; }
 def C1PWrite_1c_2M          : SchedWriteRes<[C1PUnitM, C1PUnitM]>  { let Latency = 1; }
 def C1PWrite_2c_1M          : SchedWriteRes<[C1PUnitM]>  { let Latency = 2; }
@@ -160,8 +159,10 @@ def C1PWrite_1c_1SA_1D      : SchedWriteRes<[C1PUnitSA, C1PUnitD]> { let Latency
 def C1PWrite_1c_1SA_1D_1I   : SchedWriteRes<[C1PUnitSA, C1PUnitD, C1PUnitI]> { let Latency = 1; }
 def C1PWrite_2c_1B_1I       : SchedWriteRes<[C1PUnitB, C1PUnitI]> { let Latency = 2; }
 def C1PWrite_5c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 5; }
+def C1PWrite_5c_2L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI]> { let Latency = 5; }
 def C1PWrite_5c_2L_2I       : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI, C1PUnitI]> { let Latency = 5; }
 def C1PWrite_6c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 6; }
+def C1PWrite_6c_2L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitL, C1PUnitI]> { let Latency = 6; }
 def C1PWrite_7c_1L_1I       : SchedWriteRes<[C1PUnitL, C1PUnitI]> { let Latency = 7; }
 def C1PWrite_5c_1M0_1V      : SchedWriteRes<[C1PUnitM0, C1PUnitV]> { let Latency = 5; }
 def C1PWrite_6c_1M0_1B      : SchedWriteRes<[C1PUnitM0, C1PUnitB]> { let Latency = 6; }
@@ -190,6 +191,13 @@ def C1PWrite_2c_4SA_4V01    : SchedWriteRes<[
 }
 
 def C1PWrite_2c_1SA_1V01_1I : SchedWriteRes<[C1PUnitSA, C1PUnitV01, C1PUnitI]> { let Latency = 2; }
+def C1PWrite_2c_2SA_2V01_2I : SchedWriteRes<[
+    C1PUnitSA, C1PUnitSA,
+    C1PUnitV01, C1PUnitV01,
+    C1PUnitI, C1PUnitI]> {
+    let Latency = 2;
+}
+
 def C1PWrite_8c_1L_1V       : SchedWriteRes<[C1PUnitL, C1PUnitV]> { let Latency =  8; }
 def C1PWrite_7c_1M0_1V      : SchedWriteRes<[C1PUnitM0, C1PUnitV]> { let Latency = 7; }
 def C1PWrite_5c_1V_1M0      : SchedWriteRes<[C1PUnitM0, C1PUnitV]> { let Latency = 5; }
@@ -388,7 +396,7 @@ def C1PWrite_13c_1V1_2rc : SchedWriteRes<[C1PUnitV1]> {
 
 
 // Predicate Controlled types
-def C1PWrite_1or2c_1I : SchedWriteVariant<[
+def C1PWrite_Extr: SchedWriteVariant<[
                           SchedVar<IsRORImmIdiomPred, [C1PWrite_1c_1I]>,
                           SchedVar<NoSchedPred,       [C1PWrite_3c_1I]>]>;
 def C1PWrite_1c_1I_1Flg     : SchedWriteRes<[C1PUnitI, C1PUnitFlg]> { let Latency = 1; }
@@ -412,6 +420,14 @@ def C1PWrite_StrQ : SchedWriteVariant<[
 def C1PWrite_PredCmp : SchedWriteVariant<[
                          SchedVar<IsPredDestSameAsPgPred, [C1PWrite_3c_1V0_1M]>,
                          SchedVar<NoSchedPred,            [C1PWrite_2c_1V0]>]>;
+
+def C1PWrite_1or2c_1I : SchedWriteVariant<[
+                      SchedVar<IsXOrWDest, [C1PWrite_1c_1I]>,
+                      SchedVar<NoSchedPred, [C1PWrite_2c_1I]>]>;
+
+def C1PWrite_1or2c_1I_1Flg : SchedWriteVariant<[
+                      SchedVar<IsXOrWDest, [C1PWrite_1c_1I_1Flg]>,
+                      SchedVar<NoSchedPred, [C1PWrite_2c_1I_1Flg]>]>;
 
 //===----------------------------------------------------------------------===//
 // Define forwarded types
@@ -543,23 +559,24 @@ def : SchedAlias<WriteI, C1PWrite_1c_1I>;
 
 // ALU, basic, flagset
 def : InstRW<[C1PWrite_1c_1I_1Flg],
-             (instregex "^(ADD|SUB)S[WX]r[ir]$",
-                        "^(ADC|SBC)S[WX]r$",
+             (instregex "^(ADC|SBC)S[WX]r$",
                         "^ANDS[WX]ri$",
                         "^(AND|BIC)S[WX]rr$")>;
 
 // ALU, extend and shift
-def : SchedAlias<WriteIEReg, C1PWrite_ArithIE>;
+def : SchedAlias<WriteIEReg, C1PWrite_1or2c_1I>;
+
+// ALU, extend and shift, flagset
+def : InstRW<[C1PWrite_1or2c_1I_1Flg],
+             (instregex "^(ADD|SUB)S[WX]r[irx]$",
+                        "^(ADD|SUB)SXrx64$")>;
+def : InstRW<[C1PWrite_2c_1I_1Flg],
+             (instregex "^(ADD|SUB)S[WX]rs$")>;
 
 // Arithmetic, LSL shift, shift <= 4
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
 def : SchedAlias<WriteISReg, C1PWrite_ArithI>;
-def : InstRW<[C1PWrite_ArithI_1Flg],
-             (instregex "^(ADD|SUB)S[WX]rs$")>;
-def : InstRW<[C1PWrite_2c_1I_1Flg],
-             (instregex "^(ADD|SUB)S[WX]rx(64)?$")>;
-
 
 // Arithmetic, immediate to logical address tag
 def : InstRW<[C1PWrite_2c_1I], (instrs ADDG, SUBG)>;
@@ -573,7 +590,8 @@ def : InstRW<[C1PWrite_1c_1I],
 
 // Convert floating-point condition flags
 // Flag manipulation instructions
-def : SchedAlias<WriteSys, C1PWrite_1c_1I>;
+def : WriteRes<WriteSys, []> { let Latency = 1; }
+def : InstRW<[C1PWrite_1c_1I], (instrs AXFLAG, XAFLAG)>;
 
 // Insert Random Tags
 // NOTE: SOG reports 2c on M (RRND=1) and 3c on M0 (RRND=0); model 2c on M.
@@ -603,21 +621,19 @@ def : SchedAlias<WriteImm, C1PWrite_1c_1I>;
 // -----------------------------------------------------------------------------
 
 // SDIV, UDIV
-// Exec latency reported as a 5..N range; model the minimum latency.
-def : SchedAlias<WriteID32,  C1PWrite_5c_1M0_5rc>;
-def : SchedAlias<WriteID64,  C1PWrite_5c_1M0_5rc>;
+def : SchedAlias<WriteID32,  C1PWrite_12c_1M0>;
+def : SchedAlias<WriteID64,  C1PWrite_20c_1M0>;
 
-def : SchedAlias<WriteIM32, C1PWrite_2c_1M>;
-def : SchedAlias<WriteIM64, C1PWrite_2c_1M>;
+def : SchedAlias<WriteIM32, C1PWrite_2c_1I4>;
+def : SchedAlias<WriteIM64, C1PWrite_2c_1I4>;
 
-// Multiply
 // Multiply accumulate, W-form
 // Multiply accumulate, X-form
-def : InstRW<[C1PWrite_MAOrMul, ReadDefault, ReadDefault, C1PRd_MA],
+def : InstRW<[C1PWrite_MAOrMul, ReadIM, ReadIM, C1PRd_MA],
              (instregex "^M(ADD|SUB)[WX]rrr$")>;
 
 // Multiply accumulate long
-def : InstRW<[C1PWrite_MAOrMul, ReadDefault, ReadDefault, C1PRd_MA],
+def : InstRW<[C1PWrite_MAOrMul, ReadIM, ReadIM, C1PRd_MA],
              (instregex "^(S|U)M(ADD|SUB)Lrrr$")>;
 
 // Multiply high
@@ -656,8 +672,8 @@ def : InstRW<[C1PWrite_1c_1I], (instrs ADR, ADRP)>;
 
 // Bitfield extract, one reg
 // Bitfield extract, two regs
-def : SchedAlias<WriteExtr, C1PWrite_1or2c_1I>;
-def : InstRW<[C1PWrite_1or2c_1I], (instrs EXTRWrri, EXTRXrri)>;
+def : SchedAlias<WriteExtr, C1PWrite_Extr>;
+def : InstRW<[C1PWrite_Extr], (instrs EXTRWrri, EXTRXrri)>;
 
 // Bitfield move, basic
 def : SchedAlias<WriteIS, C1PWrite_1c_1I>;
@@ -683,17 +699,18 @@ def : SchedAlias<WriteLDIdx, C1PWrite_4c_1L_1I>;
 // Load register, literal
 def : InstRW<[C1PWrite_5c_1L_1I], (instrs LDRWl, LDRXl, LDRSWl, PRFMl)>;
 
-
-
 // Load pair, signed immed offset, normal X form
 // Load pair, signed immed post-index or immed pre-index, normal X form
 def : InstRW<[C1PWrite_4c_2L], (instrs LDPXi, LDNPXi)>;
 def : InstRW<[C1PWrite_4c_2L_1I], (instrs LDPXpre, LDPXpost)>;
 
+
 // Load pair, signed immed offset, signed words
+def : InstRW<[C1PWrite_5c_2L_1I, WriteLDHi], (instrs LDPSWi)>;
+
 // Load pair, immed post-index or immed pre-index, signed words
-def : InstRW<[C1PWrite_5c_2L_2I],
-             (instregex "^LDPSW(i|post|pre)$")>;
+def : InstRW<[WriteAdr, C1PWrite_5c_2L_2I, WriteLDHi],
+             (instregex "^LDPSW(post|pre)$")>;
 
 // Store instructions
 // -----------------------------------------------------------------------------
@@ -836,10 +853,13 @@ def : InstRW<[C1PWrite_6c_1L, WriteLDHi], (instregex "^LDN?P[SDQ]i$")>;
 
 // Load vector pair, immed post-index, S/D-form
 // Load vector pair, immed pre-index, S/D-form
+def : InstRW<[WriteAdr, C1PWrite_6c_1L_1I, WriteLDHi],
+             (instregex "^LDP[SD](pre|post)$")>;
+
 // Load vector pair, immed post-index, Q-form
 // Load vector pair, immed pre-index, Q-form
-def : InstRW<[WriteAdr, C1PWrite_6c_1L_1I, WriteLDHi],
-             (instregex "^LDP[SDQ](pre|post)$")>;
+def : InstRW<[WriteAdr, C1PWrite_6c_2L_1I, WriteLDHi],
+             (instregex "^LDPQ(pre|post)$")>;
 
 // FP store instructions
 // -----------------------------------------------------------------------------
@@ -874,8 +894,10 @@ def : InstRW<[C1PWrite_StrQ, ReadAdrBase],
 
 // Store vector pair, immed offset, S-form
 // Store vector pair, immed offset, D-form
+def : InstRW<[C1PWrite_2c_1SA_1V01], (instregex "^STN?P[SD]i$")>;
+
 // Store vector pair, immed offset, Q-form
-def : InstRW<[C1PWrite_2c_1SA_1V01], (instregex "^STN?P[SDQ]i$")>;
+def : InstRW<[C1PWrite_2c_2SA_2V01], (instregex "^STN?PQi$")>;
 
 // Store vector pair, immed post-index, S-form
 // Store vector pair, immed post-index, D-form
@@ -886,7 +908,7 @@ def : InstRW<[WriteAdr, C1PWrite_2c_1SA_1V01_1I],
 
 // Store vector pair, immed post-index, Q-form
 // Store vector pair, immed pre-index, Q-form
-def : InstRW<[C1PWrite_2c_1SA_1V01_1I], (instregex "^STPQ(post|pre)")>;
+def : InstRW<[C1PWrite_2c_2SA_2V01_2I], (instregex "^STPQ(post|pre)")>;
 
 // ASIMD integer instructions
 // -----------------------------------------------------------------------------
@@ -899,20 +921,15 @@ def : InstRW<[C1PWrite_2c_1SA_1V01_1I], (instregex "^STPQ(post|pre)")>;
 // ASIMD compare
 // ASIMD logical
 // ASIMD max/min, basic and pair-wise
-// ASIMD max/min, reduce, 4H/4S
-// ASIMD arith, reduce, 4H/4S
-// ASIMD shift by register, basic
 def : SchedAlias<WriteVd, C1PWrite_2c_1V>;
 def : SchedAlias<WriteVq, C1PWrite_2c_1V>;
-def : InstRW<[C1PWrite_2c_1V], (instregex "^[SU](MAX|MIN)Vv4i16v$",
-                                           "^[SU](MAX|MIN)Vv4i32v$")>;
-def : InstRW<[C1PWrite_2c_1V], (instregex "^(ADDV|[SU]ADDLV)v4(i16|i32)v$")>;
-def : InstRW<[C1PWrite_2c_1V], (instregex "^[SU]SHLv")>;
 
 // ASIMD absolute diff accum
 // ASIMD absolute diff accum long
 def : InstRW<[C1PWr_VA, C1PRd_VA, C1PRd_VA], (instregex "^[SU]ABAL?v")>;
 
+// ASIMD arith, reduce, 4H/4S
+def : InstRW<[C1PWrite_2c_1V], (instregex "^(ADDV|[SU]ADDLV)v4(i16|i32)v$")>;
 
 // ASIMD arith, reduce, 8B/8H
 def : InstRW<[C1PWrite_4c_1V],
@@ -929,6 +946,9 @@ def : InstRW<[C1PWr_VDOT, C1PRd_VDOT],
 // ASIMD matrix multiply-accumulate
 def : InstRW<[C1PWr_VMMA, C1PRd_VMMA], (instrs SMMLA, UMMLA, USMMLA)>;
 
+// ASIMD max/min, reduce, 4H/4S
+def : InstRW<[C1PWrite_2c_1V], (instregex "^[SU](MAX|MIN)Vv4i16v$",
+                                           "^[SU](MAX|MIN)Vv4i32v$")>;
 
 // ASIMD max/min, reduce, 8B/8H
 def : InstRW<[C1PWrite_4c_1V], (instregex "^[SU](MAX|MIN)Vv8i8v$",
@@ -982,6 +1002,8 @@ def : InstRW<[C1PWrite_4c_1V],
                         "^[SU]RSHLv", "^[SU]QRSHLv",
                         "^[SU]QSHL(v1i8|v1i16|v1i32|v1i64|v8i8|v16i8|v4i16|v8i16|v2i32|v4i32|v2i64)$")>;
 
+// ASIMD shift by register, basic
+def : InstRW<[C1PWrite_2c_1V], (instregex "^[SU]SHLv")>;
 
 // ASIMD floating-point instructions
 // -----------------------------------------------------------------------------
