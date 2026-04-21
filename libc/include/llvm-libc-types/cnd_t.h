@@ -15,6 +15,7 @@ typedef struct {
   void *__qfront;
   void *__qback;
   __futex_word __qmtx;
+  char __is_shared;
 } cnd_t;
 
 #endif // LLVM_LIBC_TYPES_CND_T_H

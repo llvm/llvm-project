@@ -16,10 +16,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static_assert(sizeof(PrivateCndVar) == sizeof(cnd_t));
+static_assert(sizeof(CndVar) == sizeof(cnd_t));
 
 LLVM_LIBC_FUNCTION(int, cnd_broadcast, (cnd_t * cond)) {
-  PrivateCndVar *cndvar = reinterpret_cast<PrivateCndVar *>(cond);
+  CndVar *cndvar = reinterpret_cast<CndVar *>(cond);
   cndvar->broadcast();
   return thrd_success;
 }

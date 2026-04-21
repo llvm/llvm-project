@@ -1,4 +1,4 @@
-//===-- Integration test for PrivateCndVar with C11 threads --------------===//
+//===-- Integration test for CndVar with C11 threads ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ constexpr int THREAD_COUNT = 16;
 constexpr int NUM_ITERATIONS = 250;
 
 struct QueueState {
-  LIBC_NAMESPACE::PrivateCndVar cnd{};
+  LIBC_NAMESPACE::CndVar cnd{false};
   LIBC_NAMESPACE::Mutex m{false, false, false, false};
   size_t consumed = 0;
   size_t produced = 0;
@@ -43,45 +43,44 @@ void stress_test(bool use_broadcast, bool allow_timeout) {
     thrd_t producer_threads[PRODUCER];
     thrd_t consumer_threads[CONSUMER];
     using TimeoutOpt =
-        LIBC_NAMESPACE::cpp::optional<LIBC_NAMESPACE::PrivateCndVar::Timeout>;
+        LIBC_NAMESPACE::cpp::optional<LIBC_NAMESPACE::CndVar::Timeout>;
     for (size_t i = 0; i < CONSUMER; ++i)
-      ASSERT_EQ(
-          LIBC_NAMESPACE::thrd_create(
-              &consumer_threads[i],
-              [](void *arg) {
-                auto *state = static_cast<QueueState *>(arg);
-                state->m.lock();
-                while (state->consumed != PRODUCER * ITEMS_PER_PRODUCER) {
-                  TimeoutOpt timeout = LIBC_NAMESPACE::cpp::nullopt;
-                  if (state->allow_timeout) {
-                    timespec now{};
-                    LIBC_NAMESPACE::internal::clock_gettime(CLOCK_MONOTONIC,
-                                                            &now);
-                    size_t sleep_ns = 1000;
-                    now.tv_nsec += sleep_ns;
-                    if (now.tv_nsec >= 1'000'000'000) {
-                      now.tv_sec++;
-                      now.tv_nsec -= 1'000'000'000;
-                    }
-                    timeout = TimeoutOpt(
-                        LIBC_NAMESPACE::PrivateCndVar::Timeout::from_timespec(
-                            now,
-                            /*realtime=*/false)
-                            .value());
-                  }
-                  ASSERT_NE(state->cnd.wait(&state->m, timeout),
-                            LIBC_NAMESPACE::CndVarResult::MutexError);
-                  if (state->produced == 0)
-                    continue;
-                  state->produced--;
-                  state->consumed++;
-                }
-                state->m.unlock();
-                state->exited_consumers.fetch_add(1);
-                return 0;
-              },
-              &state),
-          int(thrd_success));
+      ASSERT_EQ(LIBC_NAMESPACE::thrd_create(
+                    &consumer_threads[i],
+                    [](void *arg) {
+                      auto *state = static_cast<QueueState *>(arg);
+                      state->m.lock();
+                      while (state->consumed != PRODUCER * ITEMS_PER_PRODUCER) {
+                        TimeoutOpt timeout = LIBC_NAMESPACE::cpp::nullopt;
+                        if (state->allow_timeout) {
+                          timespec now{};
+                          LIBC_NAMESPACE::internal::clock_gettime(
+                              CLOCK_MONOTONIC, &now);
+                          size_t sleep_ns = 1000;
+                          now.tv_nsec += sleep_ns;
+                          if (now.tv_nsec >= 1'000'000'000) {
+                            now.tv_sec++;
+                            now.tv_nsec -= 1'000'000'000;
+                          }
+                          timeout = TimeoutOpt(
+                              LIBC_NAMESPACE::CndVar::Timeout::from_timespec(
+                                  now,
+                                  /*realtime=*/false)
+                                  .value());
+                        }
+                        ASSERT_NE(state->cnd.wait(&state->m, timeout),
+                                  LIBC_NAMESPACE::CndVarResult::MutexError);
+                        if (state->produced == 0)
+                          continue;
+                        state->produced--;
+                        state->consumed++;
+                      }
+                      state->m.unlock();
+                      state->exited_consumers.fetch_add(1);
+                      return 0;
+                    },
+                    &state),
+                int(thrd_success));
     for (size_t i = 0; i < PRODUCER; ++i)
       ASSERT_EQ(LIBC_NAMESPACE::thrd_create(
                     &producer_threads[i],

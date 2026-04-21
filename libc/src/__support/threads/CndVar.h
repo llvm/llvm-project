@@ -343,11 +343,6 @@ public:
   LIBC_INLINE void broadcast() { notify(/*is_broadcast=*/true); }
 };
 
-class PrivateCndVar final : public CndVar {
-public:
-  LIBC_INLINE constexpr PrivateCndVar() : CndVar(false) {}
-};
-
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_CNDVAR_H
