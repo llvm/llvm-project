@@ -161,7 +161,7 @@ static constexpr uint64_t k3 = 0xc949d7c7509e6557ULL;
 /// Bitwise right rotate.
 /// Normally this will compile to a single instruction, especially if the
 /// shift is a manifest constant.
-inline constexpr uint64_t rotate(uint64_t val, size_t shift) {
+constexpr uint64_t rotate(uint64_t val, size_t shift) {
   // Avoid shifting by 64: doing so yields an undefined result.
   return shift == 0 ? val : ((val >> shift) | (val << (64 - shift)));
 }
