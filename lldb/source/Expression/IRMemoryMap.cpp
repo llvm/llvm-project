@@ -114,8 +114,7 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   //
   // Skip this when the process can't JIT. In that case, allocations are
   // host-only and never written to process memory, so there's no need to probe
-  // the process's memory map (which may not cover the full address space for
-  // targets like WebAssembly).
+  // the process's memory map.
   if (process_is_alive && process_sp->CanJIT()) {
     MemoryRegionInfo region_info;
     Status err = process_sp->GetMemoryRegionInfo(ret, region_info);
@@ -142,6 +141,8 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
           // ret stays the same.  We just need to walk a bit further.
         }
 
+        // FIXME: When we're able to JIT WebAssembly, this strategy won't work
+        // because we might probe beyond its linear memory.
         err = process_sp->GetMemoryRegionInfo(
             region_info.GetRange().GetRangeEnd(), region_info);
         if (err.Fail()) {
