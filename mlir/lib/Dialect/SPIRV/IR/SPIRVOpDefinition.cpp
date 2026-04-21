@@ -49,8 +49,9 @@ static bool isDirectInModuleLikeOp(Operation *op) {
   return op && op->hasTrait<OpTrait::SymbolTable>();
 }
 
-/// Result of a logical op must be a scalar or vector of boolean type.
-static Type getUnaryOpResultType(Type operandType) {
+/// Returns a boolean scalar or vector type matching the shape of the given
+/// type. Scalar inputs yield i1, vector inputs yield vector<Nxi1>.
+static Type getMatchingBoolType(Type operandType) {
   Builder builder(operandType.getContext());
   Type resultType = builder.getIntegerType(1);
   if (auto vecType = dyn_cast<VectorType>(operandType))

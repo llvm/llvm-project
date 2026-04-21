@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/DebugInfo/GSYM/GsymTypes.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
@@ -25,6 +26,7 @@ class raw_ostream;
 
 namespace gsym {
 
+class GsymCreator;
 class GsymReader;
 /// Function information in GSYM files encodes information for one contiguous
 /// address range. If a function has discontiguous address ranges, they will
@@ -92,7 +94,7 @@ class GsymReader;
 /// Where "N" is the number of tuples.
 struct FunctionInfo {
   AddressRange Range;
-  uint32_t Name; ///< String table offset in the string table.
+  gsym_strp_t Name; ///< String table offset in the string table.
   std::optional<LineTable> OptLineTable;
   std::optional<InlineInfo> Inline;
   std::optional<MergedFunctionsInfo> MergedFunctions;
@@ -102,8 +104,8 @@ struct FunctionInfo {
   /// GSYM file.
   SmallString<32> EncodingCache;
 
-  FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, uint32_t N = 0)
-      : Range(Addr, Addr + Size), Name(N) {}
+  FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, gsym_strp_t Name = 0)
+      : Range(Addr, Addr + Size), Name(Name) {}
 
   /// Query if a FunctionInfo has rich debug info.
   ///
@@ -139,7 +141,7 @@ struct FunctionInfo {
   ///
   /// \returns An FunctionInfo or an error describing the issue that was
   /// encountered during decoding.
-  LLVM_ABI static llvm::Expected<FunctionInfo> decode(DataExtractor &Data,
+  LLVM_ABI static llvm::Expected<FunctionInfo> decode(GsymDataExtractor &Data,
                                                       uint64_t BaseAddr);
 
   /// Encode this object into FileWriter stream.
@@ -169,7 +171,7 @@ struct FunctionInfo {
   ///
   /// \returns The size in bytes of the FunctionInfo if it were to be encoded
   /// into a byte stream.
-  LLVM_ABI uint64_t cacheEncoding();
+  LLVM_ABI uint64_t cacheEncoding(GsymCreator &GC);
 
   /// Lookup an address within a FunctionInfo object's data stream.
   ///
@@ -189,7 +191,7 @@ struct FunctionInfo {
   ///
   /// \param Addr The address to lookup.
   ///
-  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// \param MergedFuncsData A pointer to an optional GsymDataExtractor that, if
   /// non-null, will be set to the raw data of the MergedFunctionInfo, if
   /// present.
   ///
@@ -197,9 +199,9 @@ struct FunctionInfo {
   /// encountered during decoding. An error should only be returned if the
   /// address is not contained in the FunctionInfo or if the data is corrupted.
   LLVM_ABI static llvm::Expected<LookupResult>
-  lookup(DataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
+  lookup(GsymDataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
          uint64_t Addr,
-         std::optional<DataExtractor> *MergedFuncsData = nullptr);
+         std::optional<GsymDataExtractor> *MergedFuncsData = nullptr);
 
   uint64_t startAddress() const { return Range.start(); }
   uint64_t endAddress() const { return Range.end(); }

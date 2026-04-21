@@ -142,6 +142,10 @@ private:
   bool lowerUnpackAExt(MachineInstr &MI);
   bool lowerExtrVecEltToSel(MachineInstr &MI);
   bool lowerExtrVecEltTo32(MachineInstr &MI);
+  bool lowerInsVecEltToSel(MachineInstr &MI);
+  bool lowerInsVecEltTo32(MachineInstr &MI);
+  bool lowerAbsToNegMax(MachineInstr &MI);
+  bool lowerAbsToS32(MachineInstr &MI);
   bool applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI);
 };
 

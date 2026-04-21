@@ -11,6 +11,10 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   add_definitions("-D_ALL_SOURCE")
 endif()
 
+lldb_tablegen(ProcessGDBRemoteProperties.json -dump-json
+  SOURCE ProcessGDBRemoteProperties.td
+  TARGET LLDBPluginProcessGDBRemotePropertiesJsonGen)
+
 set(LLDB_PLUGINS
   lldbPluginProcessUtility
 )

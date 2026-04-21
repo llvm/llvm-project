@@ -875,14 +875,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
         ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_SETCC,
         ISD::VP_SIGN_EXTEND,
-        ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,    ISD::VP_SMIN,
-        ISD::VP_SMAX,        ISD::VP_UMIN,        ISD::VP_UMAX,
+        ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,
         ISD::VP_ABS, ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
-        ISD::VP_SADDSAT,     ISD::VP_UADDSAT,     ISD::VP_SSUBSAT,
-        ISD::VP_USUBSAT,     ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
+        ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
 
     static const unsigned FloatingPointVPOps[] = {
-        ISD::VP_FADD,        ISD::VP_FSUB,        ISD::VP_FMUL,
+        ISD::VP_FADD,        ISD::VP_FMUL,
         ISD::VP_FNEG,
         ISD::VP_FMA,         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
         ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,
@@ -1087,17 +1085,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       if (Subtarget.hasStdExtZvkb()) {
         setOperationAction(ISD::BSWAP, VT, Legal);
-        setOperationAction(ISD::VP_BSWAP, VT, Custom);
       } else {
-        setOperationAction({ISD::BSWAP, ISD::VP_BSWAP}, VT, Expand);
+        setOperationAction(ISD::BSWAP, VT, Expand);
         setOperationAction({ISD::ROTL, ISD::ROTR}, VT, Expand);
       }
 
       if (Subtarget.hasStdExtZvbb()) {
         setOperationAction(ISD::BITREVERSE, VT, Legal);
-        setOperationAction(ISD::VP_BITREVERSE, VT, Custom);
       } else {
-        setOperationAction({ISD::BITREVERSE, ISD::VP_BITREVERSE}, VT, Expand);
+        setOperationAction(ISD::BITREVERSE, VT, Expand);
         setOperationAction({ISD::CTLZ, ISD::CTTZ, ISD::CTPOP}, VT, Expand);
 
         // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
@@ -1127,6 +1123,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
 
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      setOperationAction({ISD::MASKED_UDIV, ISD::MASKED_SDIV, ISD::MASKED_UREM,
+                          ISD::MASKED_SREM},
+                         VT, Legal);
     }
 
     for (MVT VT : VecTupleVTs) {
@@ -1203,7 +1202,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // TODO: support more vp ops.
     static const unsigned ZvfhminZvfbfminPromoteVPOps[] = {
         ISD::VP_FADD,
-        ISD::VP_FSUB,
         ISD::VP_FMUL,
         ISD::VP_FMA,
         ISD::VP_REDUCE_FMIN,
@@ -1620,6 +1618,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+        setOperationAction({ISD::MASKED_UDIV, ISD::MASKED_SDIV,
+                            ISD::MASKED_UREM, ISD::MASKED_SREM},
+                           VT, Custom);
       }
 
       for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
@@ -7548,20 +7549,9 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(UREM)       // VP_UREM
   VP_CASE(SHL)        // VP_SHL
   VP_CASE(FADD)       // VP_FADD
-  VP_CASE(FSUB)       // VP_FSUB
   VP_CASE(FMUL)       // VP_FMUL
   VP_CASE(FNEG)       // VP_FNEG
-  VP_CASE(SMIN)       // VP_SMIN
-  VP_CASE(SMAX)       // VP_SMAX
-  VP_CASE(UMIN)       // VP_UMIN
-  VP_CASE(UMAX)       // VP_UMAX
   VP_CASE(SETCC)      // VP_SETCC
-  VP_CASE(BITREVERSE) // VP_BITREVERSE
-  VP_CASE(SADDSAT)    // VP_SADDSAT
-  VP_CASE(UADDSAT)    // VP_UADDSAT
-  VP_CASE(SSUBSAT)    // VP_SSUBSAT
-  VP_CASE(USUBSAT)    // VP_USUBSAT
-  VP_CASE(BSWAP)      // VP_BSWAP
   case ISD::CTLZ_ZERO_UNDEF:
     return RISCVISD::CTLZ_VL;
   case ISD::CTTZ_ZERO_UNDEF:
@@ -7617,6 +7607,14 @@ static unsigned getRISCVVLOp(SDValue Op) {
   case ISD::LRINT:
   case ISD::LLRINT:
     return RISCVISD::VFCVT_RM_X_F_VL;
+  case ISD::MASKED_UDIV:
+    return RISCVISD::UDIV_VL;
+  case ISD::MASKED_UREM:
+    return RISCVISD::UREM_VL;
+  case ISD::MASKED_SDIV:
+    return RISCVISD::SDIV_VL;
+  case ISD::MASKED_SREM:
+    return RISCVISD::SREM_VL;
   }
   // clang-format on
 #undef OP_CASE
@@ -8058,11 +8056,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerStrictFPExtendOrRoundLike(Op, DAG);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-    if (Op.getValueType().isVector() &&
+    // Fall back to zvfbfmin for bf16 case if source type is wider than 8 bits.
+    if (SDValue Op1 = Op.getOperand(0);
+        Op.getValueType().isVector() &&
         ((Op.getValueType().getScalarType() == MVT::f16 &&
           (Subtarget.hasVInstructionsF16Minimal() &&
            !Subtarget.hasVInstructionsF16())) ||
-         Op.getValueType().getScalarType() == MVT::bf16)) {
+         (Op.getValueType().getScalarType() == MVT::bf16 &&
+          (Subtarget.hasVInstructionsBF16Minimal() &&
+           (!Subtarget.hasVInstructionsBF16() ||
+            Op1.getValueType().getScalarSizeInBits() > 8))))) {
       MVT NVT =
           MVT::getVectorVT(MVT::f32, Op.getValueType().getVectorElementCount());
       if (!isTypeLegal(NVT))
@@ -8077,12 +8080,17 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     [[fallthrough]];
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+    // Fall back to zvfbfmin for bf16 case if destination type is wider than 8
+    // bits.
     if (SDValue Op1 = Op.getOperand(0);
         Op1.getValueType().isVector() &&
         ((Op1.getValueType().getScalarType() == MVT::f16 &&
           (Subtarget.hasVInstructionsF16Minimal() &&
            !Subtarget.hasVInstructionsF16())) ||
-         Op1.getValueType().getScalarType() == MVT::bf16)) {
+         (Op1.getValueType().getScalarType() == MVT::bf16 &&
+          (Subtarget.hasVInstructionsBF16Minimal() &&
+           (!Subtarget.hasVInstructionsBF16() ||
+            Op.getValueType().getScalarSizeInBits() > 8))))) {
       MVT NVT = MVT::getVectorVT(MVT::f32,
                                  Op1.getValueType().getVectorElementCount());
       if (!isTypeLegal(NVT))
@@ -8137,7 +8145,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         return DAG.getNode(Op.getOpcode(), DL, VT, Ext);
       }
       // FP2Int
-      assert(SrcEltVT == MVT::f16 && "Unexpected FP_TO_[US]INT lowering");
+      assert((SrcEltVT == MVT::f16 || SrcEltVT == MVT::bf16) &&
+             "Unexpected FP_TO_[US]INT lowering");
       // Do one doubling fp_extend then complete the operation by converting
       // to int.
       MVT InterimFVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
@@ -8154,7 +8163,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (SrcEltSize > (2 * EltSize)) {
       if (IsInt2FP) {
         // One narrowing int_to_fp, then an fp_round.
-        assert(EltVT == MVT::f16 && "Unexpected [US]_TO_FP lowering");
+        assert((EltVT == MVT::f16 || EltVT == MVT::bf16) &&
+               "Unexpected [US]_TO_FP lowering");
         MVT InterimFVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
         if (IsStrict) {
           SDValue Int2FP = DAG.getNode(Op.getOpcode(), DL,
@@ -8810,6 +8820,18 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return DAG.getNode(RISCVISD::PSSLAI, DL, VT, Op.getOperand(0),
                        DAG.getTargetConstant(ShAmt, DL, Subtarget.getXLenVT()));
   }
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UREM:
+  case ISD::MASKED_SREM: {
+    SDLoc DL(Op);
+    MVT VT = Op.getSimpleValueType();
+    MVT ContainerVT = getContainerForFixedLengthVector(VT);
+    SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
+    return DAG.getNode(getRISCVVLOp(Op), DL, ContainerVT, Op.getOperand(0),
+                       Op.getOperand(1), DAG.getUNDEF(ContainerVT),
+                       Op.getOperand(2), VL);
+  }
   case ISD::FABS:
   case ISD::FNEG:
     if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
@@ -8948,17 +8970,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_UDIV:
   case ISD::VP_SREM:
   case ISD::VP_UREM:
-  case ISD::VP_UADDSAT:
-  case ISD::VP_USUBSAT:
-  case ISD::VP_SADDSAT:
-  case ISD::VP_SSUBSAT:
     return lowerVPOp(Op, DAG);
   case ISD::VP_AND:
   case ISD::VP_OR:
   case ISD::VP_XOR:
     return lowerLogicVPOp(Op, DAG);
   case ISD::VP_FADD:
-  case ISD::VP_FSUB:
   case ISD::VP_FMUL:
   case ISD::VP_FNEG:
   case ISD::VP_SQRT:
@@ -8987,13 +9004,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return SplitVPOp(Op, DAG);
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPSetCCMaskOp(Op, DAG);
-    [[fallthrough]];
-  case ISD::VP_SMIN:
-  case ISD::VP_SMAX:
-  case ISD::VP_UMIN:
-  case ISD::VP_UMAX:
-  case ISD::VP_BITREVERSE:
-  case ISD::VP_BSWAP:
     return lowerVPOp(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     return lowerVPStridedLoad(Op, DAG);
@@ -9077,10 +9087,9 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   //     28: <FunctionAddressOffset>
   //     36:
 
+  const MachineFunction &MF = DAG.getMachineFunction();
   const bool HasCFBranch =
-      Subtarget.hasStdExtZicfilp() &&
-      DAG.getMachineFunction().getFunction().getParent()->getModuleFlag(
-          "cf-protection-branch");
+      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
   const unsigned StaticChainIdx = HasCFBranch ? 5 : 4;
   const unsigned StaticChainOffset = StaticChainIdx * 4;
   const unsigned FunctionAddressOffset = StaticChainOffset + 8;
@@ -14171,7 +14180,7 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
       MVT EltVT = ContainerVT.getVectorElementType();
       SDValue Result;
       if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
-          EltVT == MVT::bf16) {
+          (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
         EltVT = EltVT.changeTypeToInteger();
         ContainerVT = ContainerVT.changeVectorElementType(EltVT);
         Op2 = DAG.getBitcast(ContainerVT, Op2);
@@ -18586,6 +18595,8 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root,
   case RISCVISD::FSUB_VL:
     // add|sub|fadd|fsub-> vwadd(u)|vwsub(u)|vfwadd|vfwsub
     Strategies.push_back(canFoldToVWWithSameExtension);
+    if (Subtarget.hasVInstructionsBF16())
+      Strategies.push_back(canFoldToVWWithSameExtBF16);
     // add|sub|fadd|fsub -> vwadd(u)_w|vwsub(u)_w}|vfwadd_w|vfwsub_w
     Strategies.push_back(canFoldToVW_W);
     break;
@@ -18595,13 +18606,9 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root,
   case RISCVISD::VFNMADD_VL:
   case RISCVISD::VFNMSUB_VL:
     Strategies.push_back(canFoldToVWWithSameExtension);
-    if (Subtarget.hasVInstructionsBF16() &&
-        Root->getOpcode() != RISCVISD::FMUL_VL)
-      // TODO: Once other widen operations are supported we can merge
-      // canFoldToVWWithSameExtension and canFoldToVWWithSameExtBF16.
-      Strategies.push_back(canFoldToVWWithSameExtBF16);
-    else if (Subtarget.hasStdExtZvfbfwma() &&
-             Root->getOpcode() == RISCVISD::VFMADD_VL)
+    if (Subtarget.hasVInstructionsBF16() ||
+        (Subtarget.hasStdExtZvfbfwma() &&
+         Root->getOpcode() == RISCVISD::VFMADD_VL))
       Strategies.push_back(canFoldToVWWithSameExtBF16);
     break;
   case ISD::MUL:
@@ -24814,7 +24821,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // way to determine the callsite type
   bool NeedSWGuarded = false;
   if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      Subtarget.hasStdExtZicfilp() &&
+      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
       ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
     NeedSWGuarded = true;
 
@@ -26453,9 +26460,10 @@ SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                     SDValue Value, SDValue Addr,
                                                     int JTI,
                                                     SelectionDAG &DAG) const {
-  if (Subtarget.hasStdExtZicfilp()) {
-    // When Zicfilp enabled, we need to use software guarded branch for jump
-    // table branch.
+  const MachineFunction &MF = DAG.getMachineFunction();
+  if (MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch()) {
+    // When cf-protection-branch enabled, we need to use software guarded
+    // branch for jump table branch.
     SDValue Chain = Value;
     // Jump table debug info is only needed if CodeView is enabled.
     if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
@@ -26593,8 +26601,8 @@ RISCVTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
       .addReg(SPReg)
       .addImm(0);
 
-  //  BLT TargetReg, SP, LoopTest
-  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(RISCV::BLT))
+  //  BLTU TargetReg, SP, LoopTest
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(RISCV::BLTU))
       .addReg(TargetReg)
       .addReg(SPReg)
       .addMBB(LoopTestMBB);

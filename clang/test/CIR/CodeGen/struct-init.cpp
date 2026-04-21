@@ -125,10 +125,10 @@ void init_var(int a, int b) {
 // LLVM:   %[[S:.*]] = alloca %struct.S
 // LLVM:   store i32 %[[A_ARG]], ptr %[[A_PTR]]
 // LLVM:   store i32 %[[B_ARG]], ptr %[[B_PTR]]
-// LLVM:   %[[S_A:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 0
+// LLVM:   %[[S_A:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 0
 // LLVM:   %[[A:.*]] = load i32, ptr %[[A_PTR]] 
 // LLVM:   store i32 %[[A]], ptr %[[S_A]]
-// LLVM:   %[[S_B:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 1
+// LLVM:   %[[S_B:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 1
 // LLVM:   %[[B:.*]] = load i32, ptr %[[B_PTR]]
 // LLVM:   store i32 %[[B]], ptr %[[S_B]]
 // LLVM:   ret void
@@ -186,15 +186,15 @@ void init_expr(int a, int b, int c) {
 // LLVM:   store i32 %[[A_ARG]], ptr %[[A_PTR]]
 // LLVM:   store i32 %[[B_ARG]], ptr %[[B_PTR]]
 // LLVM:   store i32 %[[C_ARG]], ptr %[[C_PTR]]
-// LLVM:   %[[S_A:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 0
+// LLVM:   %[[S_A:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 0
 // LLVM:   %[[A:.*]] = load i32, ptr %[[A_PTR]] 
 // LLVM:   %[[A_PLUS_ONE:.*]] = add nsw i32 %[[A]], 1
 // LLVM:   store i32 %[[A_PLUS_ONE]], ptr %[[S_A]]
-// LLVM:   %[[S_B:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 1
+// LLVM:   %[[S_B:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 1
 // LLVM:   %[[B:.*]] = load i32, ptr %[[B_PTR]]
 // LLVM:   %[[B_PLUS_TWO:.*]] = add nsw i32 %[[B]], 2
 // LLVM:   store i32 %[[B_PLUS_TWO]], ptr %[[S_B]]
-// LLVM:   %[[S_C:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 2
+// LLVM:   %[[S_C:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 2
 // LLVM:   %[[C:.*]] = load i32, ptr %[[C_PTR]]
 // LLVM:   %[[C_PLUS_THREE:.*]] = add nsw i32 %[[C]], 3
 // LLVM:   store i32 %[[C_PLUS_THREE]], ptr %[[S_C]]
@@ -236,7 +236,7 @@ void cxx_default_init_with_struct_field() {
 // CIR: cir.store{{.*}} %[[METHOD_CALL]], %[[P_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, i64 1, align 4
-// LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
+// LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
 // LLVM: %[[METHOD_CALL:.*]] = call noundef i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr {{.*}} %[[P_ADDR]])
 // LLVM: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4
 
