@@ -2236,11 +2236,19 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   const auto *TLI = TM.getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
       TLI->getLoadMemOperandFlags(I, CurrF->getDataLayout());
-  auto *NewI =
-      B.CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
-                        {I.getPointerOperand(), B.getInt16(Flags),
-                         B.getInt32(I.getAlign().value()),
-                         B.getInt8(static_cast<uint8_t>(I.getOrdering()))});
+
+  unsigned IntrinsicId;
+  SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt16(Flags)};
+  if (!I.isAtomic()) {
+    IntrinsicId = Intrinsic::spv_load;
+    Args.push_back(B.getInt32(I.getAlign().value()));
+  } else {
+    IntrinsicId = Intrinsic::spv_atomic_load;
+    Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
+  }
+  CallInst *NewI =
+      B.CreateIntrinsic(IntrinsicId, {I.getOperand(0)->getType()}, Args);
+
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
@@ -2268,11 +2276,18 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
     CB->mutateType(B.getInt32Ty());
   }
 
+  unsigned IntrinsicId;
+  SmallVector<Value *, 4> Args = {I.getValueOperand(), PtrOp,
+                                  B.getInt16(Flags)};
+  if (!I.isAtomic()) {
+    IntrinsicId = Intrinsic::spv_store;
+    Args.push_back(B.getInt32(I.getAlign().value()));
+  } else {
+    IntrinsicId = Intrinsic::spv_atomic_store;
+    Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
+  }
   auto *NewI = B.CreateIntrinsic(
-      Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
-      {I.getValueOperand(), PtrOp, B.getInt16(Flags),
-       B.getInt32(I.getAlign().value()),
-       B.getInt8(static_cast<uint8_t>(I.getOrdering()))});
+      IntrinsicId, {I.getValueOperand()->getType(), PtrOp->getType()}, Args);
   NewI->copyMetadata(I);
   I.eraseFromParent();
   return NewI;
@@ -2559,7 +2574,9 @@ bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
   // Add aliasing decorations to internal load and store intrinsics
   // and atomic instructions, skipping atomic store as it won't have ID to
   // attach the decoration.
-  if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>()))
+  if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store,
+                                 Intrinsic::spv_atomic_load,
+                                 Intrinsic::spv_atomic_store>()))
     return true;
   auto *CI = dyn_cast<CallInst>(Inst);
   if (!CI)

@@ -160,13 +160,10 @@ private:
 
   bool selectLoad(Register ResVReg, SPIRVTypeInst ResType,
                   MachineInstr &I) const;
-  bool selectAtomicLoad(Register ResVReg, SPIRVTypeInst ResType, Register Ptr,
-                        const MachineMemOperand &MemOp,
-                        MachineIRBuilder &MIRBuilder, MachineInstr &L) const;
+  bool selectAtomicLoad(Register ResVReg, SPIRVTypeInst ResType,
+                        MachineInstr &I) const;
   bool selectStore(MachineInstr &I) const;
-  bool selectAtomicStore(Register StoreVal, Register Ptr,
-                         const MachineMemOperand &MemOp,
-                         MachineIRBuilder &MIRBuilder, MachineInstr &S) const;
+  bool selectAtomicStore(MachineInstr &I) const;
 
   bool selectStackSave(Register ResVReg, SPIRVTypeInst ResType,
                        MachineInstr &I) const;
@@ -1909,7 +1906,7 @@ bool SPIRVInstructionSelector::selectLoad(Register ResVReg,
   if (I.getNumMemOperands()) {
     const MachineMemOperand *MemOp = *I.memoperands_begin();
     if (MemOp->isAtomic())
-      return selectAtomicLoad(ResVReg, ResType, Ptr, *MemOp, MIRBuilder, I);
+      return selectAtomicLoad(ResVReg, ResType, I);
   }
 
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpLoad)
@@ -1930,30 +1927,33 @@ bool SPIRVInstructionSelector::selectLoad(Register ResVReg,
 
 bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
                                                 SPIRVTypeInst ResType,
-                                                Register Ptr,
-                                                const MachineMemOperand &MemOp,
-                                                MachineIRBuilder &MIRBuilder,
-                                                MachineInstr &L) const {
-  LLVMContext &Context = L.getMF()->getFunction().getContext();
+                                                MachineInstr &I) const {
+  LLVMContext &Context = I.getMF()->getFunction().getContext();
+
+  unsigned OpOffset = isa<GIntrinsic>(I) ? 1 : 0;
+  Register Ptr = I.getOperand(1 + OpOffset).getReg();
 
   if (!ResType.isTypeIntOrFloat())
     return diagnoseUnsupported(
-        L, "atomic load is only allowed for integer or floating point types");
+        I, "atomic load is only allowed for integer or floating point types");
 
+  const MachineMemOperand &MemOp = **I.memoperands_begin();
+  assert(MemOp.isAtomic());
   // This could be relaxed since the volatile attribute on atomic load is
   // supported with the VulkanMemoryModelKHR capability.
   if (MemOp.isVolatile())
     return diagnoseUnsupported(
-        L, "atomic load of volatile memory is not supported");
+        I, "atomic load of volatile memory is not supported");
 
   uint32_t Scope =
       static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
-  Register ScopeReg = buildI32Constant(Scope, L);
+  Register ScopeReg = buildI32Constant(Scope, I);
 
   AtomicOrdering AO = MemOp.getSuccessOrdering();
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
-  Register MemSemReg = buildI32Constant(MemSem, L);
+  Register MemSemReg = buildI32Constant(MemSem, I);
 
+  MachineIRBuilder MIRBuilder(I);
   auto AtomicLoad = MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
                         .addDef(ResVReg)
                         .addUse(GR.getSPIRVTypeID(ResType))
@@ -1999,14 +1999,13 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
     }
   }
 
-  MachineIRBuilder MIRBuilder(I);
-
   if (I.getNumMemOperands()) {
     const MachineMemOperand *MemOp = *I.memoperands_begin();
     if (MemOp->isAtomic())
-      return selectAtomicStore(StoreVal, Ptr, *MemOp, MIRBuilder, I);
+      return selectAtomicStore(I);
   }
 
+  MachineIRBuilder MIRBuilder(I);
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpStore).addUse(Ptr).addUse(StoreVal);
   if (!I.getNumMemOperands()) {
     assert(I.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS ||
@@ -2020,33 +2019,37 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
   return true;
 }
 
-bool SPIRVInstructionSelector::selectAtomicStore(Register StoreVal,
-                                                 Register Ptr,
-                                                 const MachineMemOperand &MemOp,
-                                                 MachineIRBuilder &MIRBuilder,
-                                                 MachineInstr &S) const {
-  LLVMContext &Context = S.getMF()->getFunction().getContext();
+bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
+  LLVMContext &Context = I.getMF()->getFunction().getContext();
+
+  unsigned OpOffset = isa<GIntrinsic>(I) ? 1 : 0;
+  Register StoreVal = I.getOperand(0 + OpOffset).getReg();
+  Register Ptr = I.getOperand(1 + OpOffset).getReg();
 
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(Ptr);
   SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
   if (!PointeeType.isTypeIntOrFloat())
     return diagnoseUnsupported(
-        S, "atomic store is only allowed for integer or floating point types");
+        I, "atomic store is only allowed for integer or floating point types");
+
+  const MachineMemOperand &MemOp = **I.memoperands_begin();
+  assert(MemOp.isAtomic());
 
   // This could be relaxed since the volatile attribute on atomic store is
   // supported with the VulkanMemoryModelKHR capability.
   if (MemOp.isVolatile())
     return diagnoseUnsupported(
-        S, "atomic store of volatile memory is not supported");
+        I, "atomic store of volatile memory is not supported");
 
   uint32_t Scope =
       static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
-  Register ScopeReg = buildI32Constant(Scope, S);
+  Register ScopeReg = buildI32Constant(Scope, I);
 
   AtomicOrdering AO = MemOp.getSuccessOrdering();
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
-  Register MemSemReg = buildI32Constant(MemSem, S);
+  Register MemSemReg = buildI32Constant(MemSem, I);
 
+  MachineIRBuilder MIRBuilder(I);
   auto AtomicStore = MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
                          .addUse(Ptr)
                          .addUse(ScopeReg)
@@ -4514,8 +4517,12 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   switch (IID) {
   case Intrinsic::spv_load:
     return selectLoad(ResVReg, ResType, I);
+  case Intrinsic::spv_atomic_load:
+    return selectAtomicLoad(ResVReg, ResType, I);
   case Intrinsic::spv_store:
     return selectStore(I);
+  case Intrinsic::spv_atomic_store:
+    return selectAtomicStore(I);
   case Intrinsic::spv_extractv:
     return selectExtractVal(ResVReg, ResType, I);
   case Intrinsic::spv_insertv:
