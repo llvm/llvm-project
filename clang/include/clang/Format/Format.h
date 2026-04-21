@@ -5765,6 +5765,10 @@ struct FormatStyle {
     LS_Cpp17, // c++17
     /// Parse and format as C++20.
     LS_Cpp20, // c++20
+    /// Parse and format as C++23.
+    LS_Cpp23, // c++23
+    /// Parse and format as C++26.
+    LS_Cpp26, // c++26
     /// Parse and format using the latest supported language version.
     /// ``Cpp11`` is a deprecated alias for ``Latest``
     LS_Latest,
