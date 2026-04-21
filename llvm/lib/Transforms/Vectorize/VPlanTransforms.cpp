@@ -4001,15 +4001,11 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
 }
 
 void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
-  // Replace loop regions with explicity CFG.
-  SmallVector<VPRegionBlock *> LoopRegions;
+  // Replace loop regions with explicit CFG.
   for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
+           vp_depth_first_deep(Plan.getEntry())))
     if (!R->isReplicator())
-      LoopRegions.push_back(R);
-  }
-  for (VPRegionBlock *R : LoopRegions)
-    R->dissolveToCFGLoop();
+      R->dissolveToCFGLoop();
 }
 
 void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
