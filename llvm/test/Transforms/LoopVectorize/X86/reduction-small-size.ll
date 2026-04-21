@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mcpu=core-axv2 -force-vector-interleave=1 -debug-only=loop-vectorize -S %s 2>&1  | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mcpu=core-axv2 -force-vector-interleave=1 -debug-only=loop-vectorize -S %s 2>&1  | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -30,9 +30,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   br
 ; CHECK: Cost of 1 for VF 2: induction instruction   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
 ; CHECK: Cost of 1 for VF 2: induction instruction   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-; CHECK: Cost of 0 for VF 2: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%sum.013> = phi vp<{{.+}}>, vp<[[EXT:%.+]]>
-; CHECK: Cost of 0 for VF 2: vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 2: vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK: Cost of 0 for VF 2: vp<[[VECP1:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%0> = load vp<[[VECP1]]>

@@ -342,6 +342,13 @@ bool ProcessProperties::GetSteppingRunsAllThreads() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+Args ProcessProperties::GetAlwaysRunThreadNames() const {
+  Args args;
+  const uint32_t idx = ePropertyAlwaysRunThreadNames;
+  m_collection_sp->GetPropertyAtIndexAsArgs(idx, args);
+  return args;
+}
+
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
   const Property *exp_property =
@@ -6088,6 +6095,7 @@ void Process::Flush() {
   m_extended_thread_stop_id = 0;
   m_queue_list.Clear();
   m_queue_list_stop_id = 0;
+  GetTarget().GetDebugger().FlushStatusLine();
 }
 
 lldb::addr_t Process::GetCodeAddressMask() {

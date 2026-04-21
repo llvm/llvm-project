@@ -41,7 +41,7 @@ public:
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N);
-  void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
+  void VisitCastExpr(const CastExpr *CE);
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);

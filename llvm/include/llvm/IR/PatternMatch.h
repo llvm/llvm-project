@@ -803,116 +803,79 @@ inline cstfp_pred_ty<is_non_zero_not_denormal_fp> m_NonZeroNotDenormalFP() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-template <typename Class> struct bind_ty {
-  Class *&VR;
-
-  bind_ty(Class *&V) : VR(V) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (auto *CV = dyn_cast<Class>(V)) {
-      VR = CV;
-      return true;
-    }
-    return false;
-  }
-};
-
-/// Check whether the value has the given Class and matches the nested
-/// pattern. Capture it into the provided variable if successful.
-template <typename Class, typename MatchTy> struct bind_and_match_ty {
-  Class *&VR;
-  MatchTy Match;
-
-  bind_and_match_ty(Class *&V, const MatchTy &Match) : VR(V), Match(Match) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    auto *CV = dyn_cast<Class>(V);
-    if (CV && Match.match(V)) {
-      VR = CV;
-      return true;
-    }
-    return false;
-  }
-};
-
 /// Match a value, capturing it if we match.
-inline bind_ty<Value> m_Value(Value *&V) { return V; }
-inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
+inline match_bind<Value> m_Value(Value *&V) { return V; }
+inline match_bind<const Value> m_Value(const Value *&V) { return V; }
 
 /// Match against the nested pattern, and capture the value if we match.
-template <typename MatchTy>
-inline bind_and_match_ty<Value, MatchTy> m_Value(Value *&V,
-                                                 const MatchTy &Match) {
-  return {V, Match};
+template <typename Pattern> inline auto m_Value(Value *&V, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<Value>(V));
 }
 
 /// Match against the nested pattern, and capture the value if we match.
-template <typename MatchTy>
-inline bind_and_match_ty<const Value, MatchTy> m_Value(const Value *&V,
-                                                       const MatchTy &Match) {
-  return {V, Match};
+template <typename Pattern>
+inline auto m_Value(const Value *&V, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<const Value>(V));
 }
 
 /// Match an instruction, capturing it if we match.
-inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
-inline bind_ty<const Instruction> m_Instruction(const Instruction *&I) {
+inline match_bind<Instruction> m_Instruction(Instruction *&I) { return I; }
+inline match_bind<const Instruction> m_Instruction(const Instruction *&I) {
   return I;
 }
 
 /// Match against the nested pattern, and capture the instruction if we match.
-template <typename MatchTy>
-inline bind_and_match_ty<Instruction, MatchTy>
-m_Instruction(Instruction *&I, const MatchTy &Match) {
-  return {I, Match};
+template <typename Pattern>
+inline auto m_Instruction(Instruction *&I, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<Instruction>(I));
 }
-template <typename MatchTy>
-inline bind_and_match_ty<const Instruction, MatchTy>
-m_Instruction(const Instruction *&I, const MatchTy &Match) {
-  return {I, Match};
+template <typename Pattern>
+inline auto m_Instruction(const Instruction *&I, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<const Instruction>(I));
 }
 
 /// Match a unary operator, capturing it if we match.
-inline bind_ty<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
-inline bind_ty<const UnaryOperator> m_UnOp(const UnaryOperator *&I) {
+inline match_bind<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
+inline match_bind<const UnaryOperator> m_UnOp(const UnaryOperator *&I) {
   return I;
 }
 /// Match a binary operator, capturing it if we match.
-inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
-inline bind_ty<const BinaryOperator> m_BinOp(const BinaryOperator *&I) {
+inline match_bind<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
+inline match_bind<const BinaryOperator> m_BinOp(const BinaryOperator *&I) {
   return I;
 }
 /// Match any intrinsic call, capturing it if we match.
-inline bind_ty<IntrinsicInst> m_AnyIntrinsic(IntrinsicInst *&I) { return I; }
-inline bind_ty<const IntrinsicInst> m_AnyIntrinsic(const IntrinsicInst *&I) {
+inline match_bind<IntrinsicInst> m_AnyIntrinsic(IntrinsicInst *&I) { return I; }
+inline match_bind<const IntrinsicInst> m_AnyIntrinsic(const IntrinsicInst *&I) {
   return I;
 }
 /// Match a with overflow intrinsic, capturing it if we match.
-inline bind_ty<WithOverflowInst> m_WithOverflowInst(WithOverflowInst *&I) {
+inline match_bind<WithOverflowInst> m_WithOverflowInst(WithOverflowInst *&I) {
   return I;
 }
-inline bind_ty<const WithOverflowInst>
+inline match_bind<const WithOverflowInst>
 m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
 
 /// Match an UndefValue, capturing the value if we match.
-inline bind_ty<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
+inline match_bind<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
 
 /// Match a Constant, capturing the value if we match.
-inline bind_ty<Constant> m_Constant(Constant *&C) { return C; }
+inline match_bind<Constant> m_Constant(Constant *&C) { return C; }
 
 /// Match a ConstantInt, capturing the value if we match.
-inline bind_ty<ConstantInt> m_ConstantInt(ConstantInt *&CI) { return CI; }
+inline match_bind<ConstantInt> m_ConstantInt(ConstantInt *&CI) { return CI; }
 
 /// Match a ConstantFP, capturing the value if we match.
-inline bind_ty<ConstantFP> m_ConstantFP(ConstantFP *&C) { return C; }
+inline match_bind<ConstantFP> m_ConstantFP(ConstantFP *&C) { return C; }
 
 /// Match a ConstantExpr, capturing the value if we match.
-inline bind_ty<ConstantExpr> m_ConstantExpr(ConstantExpr *&C) { return C; }
+inline match_bind<ConstantExpr> m_ConstantExpr(ConstantExpr *&C) { return C; }
 
 /// Match a basic block value, capturing it if we match.
-inline bind_ty<BasicBlock> m_BasicBlock(BasicBlock *&V) { return V; }
-inline bind_ty<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
+inline match_bind<BasicBlock> m_BasicBlock(BasicBlock *&V) { return V; }
+inline match_bind<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
   return V;
 }
 
@@ -963,7 +926,7 @@ inline bind_immconstant_ty m_ImmConstant(Constant *&C) {
   return bind_immconstant_ty(C);
 }
 
-/// Match a specified Value*.
+/// Matcher for specified Value*.
 struct specificval_ty {
   const Value *Val;
 
@@ -975,24 +938,14 @@ struct specificval_ty {
 /// Match if we have a specific specified value.
 inline specificval_ty m_Specific(const Value *V) { return V; }
 
-/// Stores a reference to the Value *, not the Value * itself,
-/// thus can be used in commutative matchers.
-template <typename Class> struct deferredval_ty {
-  Class *const &Val;
-
-  deferredval_ty(Class *const &V) : Val(V) {}
-
-  template <typename ITy> bool match(ITy *const V) const { return V == Val; }
-};
-
 /// Like m_Specific(), but works if the specific value to match is determined
 /// as part of the same match() expression. For example:
 /// m_Add(m_Value(X), m_Specific(X)) is incorrect, because m_Specific() will
 /// bind X before the pattern match starts.
 /// m_Add(m_Value(X), m_Deferred(X)) is correct, and will check against
 /// whichever value m_Value(X) populated.
-inline deferredval_ty<Value> m_Deferred(Value *const &V) { return V; }
-inline deferredval_ty<const Value> m_Deferred(const Value *const &V) {
+inline match_deferred<Value> m_Deferred(Value *const &V) { return V; }
+inline match_deferred<const Value> m_Deferred(const Value *const &V) {
   return V;
 }
 
@@ -1110,10 +1063,10 @@ inline specific_bbval m_SpecificBB(BasicBlock *BB) {
 }
 
 /// A commutative-friendly version of m_Specific().
-inline deferredval_ty<BasicBlock> m_Deferred(BasicBlock *const &BB) {
+inline match_deferred<BasicBlock> m_Deferred(BasicBlock *const &BB) {
   return BB;
 }
-inline deferredval_ty<const BasicBlock>
+inline match_deferred<const BasicBlock>
 m_Deferred(const BasicBlock *const &BB) {
   return BB;
 }
@@ -2314,6 +2267,35 @@ template <typename OpTy> inline auto m_ZExtOrTruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), m_Trunc(Op), Op);
 }
 
+template <typename LHS_t, typename RHS_t> struct ICmpLike_match {
+  CmpPredicate &Pred;
+  LHS_t L;
+  RHS_t R;
+
+  ICmpLike_match(CmpPredicate &P, const LHS_t &Left, const RHS_t &Right)
+      : Pred(P), L(Left), R(Right) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    if (PatternMatch::match(V, m_ICmp(Pred, L, R)))
+      return true;
+    Value *A;
+    // trunc nuw x to i1 is equivalent to icmp ne x, 0
+    if (V->getType()->isIntOrIntVectorTy(1) &&
+        PatternMatch::match(V, m_NUWTrunc(m_Value(A))) && L.match(A) &&
+        R.match(ConstantInt::getNullValue(A->getType()))) {
+      Pred = ICmpInst::ICMP_NE;
+      return true;
+    }
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline ICmpLike_match<LHS, RHS> m_ICmpLike(CmpPredicate &Pred, const LHS &L,
+                                           const RHS &R) {
+  return ICmpLike_match<LHS, RHS>(Pred, L, R);
+}
+
 template <typename CondTy, typename LTy, typename RTy> struct SelectLike_match {
   CondTy Cond;
   LTy TrueC;
@@ -2444,9 +2426,9 @@ struct brc_match {
 };
 
 template <typename Cond_t>
-inline brc_match<Cond_t, bind_ty<BasicBlock>, bind_ty<BasicBlock>>
+inline brc_match<Cond_t, match_bind<BasicBlock>, match_bind<BasicBlock>>
 m_Br(const Cond_t &C, BasicBlock *&T, BasicBlock *&F) {
-  return brc_match<Cond_t, bind_ty<BasicBlock>, bind_ty<BasicBlock>>(
+  return brc_match<Cond_t, match_bind<BasicBlock>, match_bind<BasicBlock>>(
       C, m_BasicBlock(T), m_BasicBlock(F));
 }
 

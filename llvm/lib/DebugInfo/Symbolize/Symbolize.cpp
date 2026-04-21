@@ -335,7 +335,7 @@ bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
         consumeError(ContentsOrErr.takeError());
         return false;
       }
-      DataExtractor DE(*ContentsOrErr, Obj->isLittleEndian(), 0);
+      DataExtractor DE(*ContentsOrErr, Obj->isLittleEndian());
       uint64_t Offset = 0;
       if (const char *DebugNameStr = DE.getCStr(&Offset)) {
         // 4-byte align the offset.
@@ -490,14 +490,17 @@ bool LLVMSymbolizer::getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
   }
   if (!BIDFetcher)
     return false;
-  if (std::optional<std::string> Path = BIDFetcher->fetch(BuildID)) {
+  Expected<std::string> Path = BIDFetcher->fetch(BuildID);
+  if (Path) {
     Result = *Path;
     auto InsertResult = BuildIDPaths.insert({BuildIDStr, Result});
     assert(InsertResult.second);
     (void)InsertResult;
     return true;
   }
-
+  // Failure to fetch debuginfod is rarely an error and most users will not care
+  // why this failed.
+  consumeError(Path.takeError());
   return false;
 }
 

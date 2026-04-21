@@ -119,6 +119,7 @@ MODULE_PASS("memprof-remove-attributes", MemProfRemoveInfo())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
+MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass())
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
@@ -216,6 +217,11 @@ MODULE_PASS_WITH_PARAMS(
     "hwasan", "HWAddressSanitizerPass",
     [](HWAddressSanitizerOptions Opts) { return HWAddressSanitizerPass(Opts); },
     parseHWASanPassOptions, "kernel;recover")
+MODULE_PASS_WITH_PARAMS(
+    "drop-type-tests", "DropTypeTestsPass",
+    [](lowertypetests::DropTestKind Kind) { return DropTypeTestsPass(Kind); },
+    parseDropTypeTestsPassOptions,
+    "assume;all")
 MODULE_PASS_WITH_PARAMS(
     "internalize", "InternalizePass",
     [](SmallVector<std::string, 0> PreservedGVs) {
@@ -542,6 +548,7 @@ FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass(TM))
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("stack-protector", StackProtectorPass(*TM))
+FUNCTION_PASS("strip-convergence-intrinsics", StripConvergenceIntrinsicsPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())

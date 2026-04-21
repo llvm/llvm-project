@@ -191,11 +191,13 @@ add_header(
     libc.include.llvm-libc-macros.stdint_macros
 )
 add_header(wint_t HDR wint_t.h)
+add_header(wctype_t HDR wctype_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
 add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
+add_header(struct_linger HDR struct_linger.h)
 add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)

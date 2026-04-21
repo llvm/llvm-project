@@ -53,3 +53,22 @@ void cast3() {
   // LLVM: %[[TO_ARR_ALLOCA:.*]] = alloca ptr
   // LLVM: store ptr %[[ARR_ALLOCA]], ptr %[[TO_ARR_ALLOCA]]
 }
+
+void cast4() {
+  Arr4Ty* const *arrPP;
+  CArrNTy* const volatile *const constArrPP = arrPP;
+
+  // CIR-LABEL: cir.func {{.*}}@_Z5cast4v()
+  // CIR: %[[ARR_PP_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.array<!s32i x 4>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.array<!s32i x 4>>>>, ["arrPP"]
+  // CIR: %[[CONST_ARR_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.array<!s32i x 0>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.array<!s32i x 0>>>>, ["constArrPP", init, const]
+  // CIR: %[[LOAD_ARR_PP:.*]] = cir.load align(8) %[[ARR_PP_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.array<!s32i x 4>>>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 4>>>
+  // CIR: %[[CONST_ARR_CAST:.*]] = cir.cast bitcast %[[CONST_ARR_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.array<!s32i x 0>>>> -> !cir.ptr<!cir.ptr<!cir.ptr<!cir.array<!s32i x 4>>>>
+  // CIR: cir.store{{.*}} %[[LOAD_ARR_PP]], %[[CONST_ARR_CAST]] : !cir.ptr<!cir.ptr<!cir.array<!s32i x 4>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.array<!s32i x 4>>>>
+  //
+  // LLVM-LABEL: define {{.*}}@_Z5cast4v()
+  // LLVM: %[[ARR_PP_ALLOCA:.*]] = alloca ptr
+  // LLVM: %[[CONST_ARR_ALLOCA:.*]] = alloca ptr
+  // LLVM: %[[LOAD_ARR_PP:.*]] = load ptr, ptr %[[ARR_PP_ALLOCA]]
+  // LLVM: store ptr %[[LOAD_ARR_PP]], ptr %[[CONST_ARR_ALLOCA]]
+
+}

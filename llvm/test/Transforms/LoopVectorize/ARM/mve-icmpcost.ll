@@ -21,7 +21,6 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: LV: Scalar loop costs: 5.
 ; CHECK: Cost of 1 for VF 2: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 2: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-; CHECK: Cost of 0 for VF 2: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>
 ; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<{{.+}}>
 ; CHECK: Cost of 0 for VF 2: vp<{{.+}}> = vector-pointer inbounds ir<%arrayidx>
@@ -37,7 +36,6 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost for VF 2: 86 (Estimated cost per lane: 43.
 ; CHECK: Cost of 1 for VF 4: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 4: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-; CHECK: Cost of 0 for VF 4: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 4: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>
 ; CHECK: Cost of 0 for VF 4: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<{{.+}}>
 ; CHECK: Cost of 0 for VF 4: vp<{{.+}}> = vector-pointer inbounds ir<%arrayidx>
@@ -53,7 +51,6 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost for VF 4: 10 (Estimated cost per lane: 2.
 ; CHECK: Cost of 1 for VF 8: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 8: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-; CHECK: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 8: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>
 ; CHECK: Cost of 0 for VF 8: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<{{.+}}>
 ; CHECK: Cost of 0 for VF 8: vp<{{.+}}> = vector-pointer inbounds ir<%arrayidx>
@@ -131,8 +128,7 @@ for.inc:
 ; CHECK: Cost of 0 for VF 2: induction instruction   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 2: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 2: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK: Cost of 0 for VF 2: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost of 0 for VF 2: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 2: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
 ; CHECK: Cost of 0 for VF 2: vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[STEPS2]]>
@@ -162,8 +158,7 @@ for.inc:
 ; CHECK: Cost of 0 for VF 4: induction instruction   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 4: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 4: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK: Cost of 0 for VF 4: EMIT vp<[[CAN_IV:%.]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost of 0 for VF 4: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 4: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
 ; CHECK: Cost of 0 for VF 4: vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[STEPS2]]>
@@ -193,8 +188,7 @@ for.inc:
 ; CHECK: Cost of 0 for VF 8: induction instruction   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 8: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 8: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK: Cost of 0 for VF 8: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost of 0 for VF 8: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 8: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
 ; CHECK: Cost of 0 for VF 8: vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[STEPS2]]>
@@ -224,8 +218,7 @@ for.inc:
 ; CHECK: Cost of 0 for VF 16: induction instruction   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 16: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 16: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK: Cost of 0 for VF 16: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost of 0 for VF 16: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK: Cost of 0 for VF 16: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV:%.+]]>, ir<1>
 ; CHECK: Cost of 0 for VF 16: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
 ; CHECK: Cost of 0 for VF 16: vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 16: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[STEPS2]]>

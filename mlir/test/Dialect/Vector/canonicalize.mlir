@@ -2839,6 +2839,16 @@ func.func @shuffle_poison_unused(%1: vector<2xi32>) -> vector<4xi32> {
 
 // -----
 
+// CHECK-LABEL: @fold_poison_into_mask
+//       CHECK:   vector.shuffle %{{.*}}, %{{.*}} [-1, -1, 2, -1] : vector<2xi32>, vector<2xi32>
+func.func @fold_poison_into_mask(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, 2, 1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @transpose_splatlike_constant
 //       CHECK:   %[[CST:.+]] = arith.constant dense<5.000000e+00> : vector<8x4xf32>
 //       CHECK:   return %[[CST]]
