@@ -78,7 +78,11 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
             clEnumValN(
                 LoopVectorizeHints::SK_PreferScalable, "on",
                 "Scalable vectorization is available and favored when the "
-                "cost is inconclusive.")));
+                "cost is inconclusive."),
+            clEnumValN(
+                LoopVectorizeHints::SK_AlwaysScalable, "always",
+                "Scalable vectorization is available and always favored when "
+                "feasible")));
 
 static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
