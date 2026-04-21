@@ -200,19 +200,19 @@ define <4 x i32> @add_v4i32(ptr %addr, <4 x i32> %val) {
 ; SM90PTX83-SAME: ptr [[ADDR:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
 ; SM90PTX83-NEXT:  [[ENTRY:.*:]]
 ; SM90PTX83-NEXT:    [[LANE_VAL:%.*]] = extractelement <4 x i32> [[VAL]], i64 0
-; SM90PTX83-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LANE_VAL]] monotonic, align 16
+; SM90PTX83-NEXT:    [[TMP0:%.*]] = atomicrmw volatile add ptr [[ADDR]], i32 [[LANE_VAL]] monotonic, align 16
 ; SM90PTX83-NEXT:    [[LANE_OLD:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[TMP0]], i64 0
 ; SM90PTX83-NEXT:    [[LANE_PTR:%.*]] = getelementptr inbounds <4 x i32>, ptr [[ADDR]], i64 0, i64 1
 ; SM90PTX83-NEXT:    [[LANE_VAL1:%.*]] = extractelement <4 x i32> [[VAL]], i64 1
-; SM90PTX83-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[LANE_PTR]], i32 [[LANE_VAL1]] monotonic, align 4
+; SM90PTX83-NEXT:    [[TMP1:%.*]] = atomicrmw volatile add ptr [[LANE_PTR]], i32 [[LANE_VAL1]] monotonic, align 4
 ; SM90PTX83-NEXT:    [[LANE_OLD2:%.*]] = insertelement <4 x i32> [[LANE_OLD]], i32 [[TMP1]], i64 1
 ; SM90PTX83-NEXT:    [[LANE_PTR3:%.*]] = getelementptr inbounds <4 x i32>, ptr [[ADDR]], i64 0, i64 2
 ; SM90PTX83-NEXT:    [[LANE_VAL4:%.*]] = extractelement <4 x i32> [[VAL]], i64 2
-; SM90PTX83-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[LANE_PTR3]], i32 [[LANE_VAL4]] monotonic, align 8
+; SM90PTX83-NEXT:    [[TMP2:%.*]] = atomicrmw volatile add ptr [[LANE_PTR3]], i32 [[LANE_VAL4]] monotonic, align 8
 ; SM90PTX83-NEXT:    [[LANE_OLD5:%.*]] = insertelement <4 x i32> [[LANE_OLD2]], i32 [[TMP2]], i64 2
 ; SM90PTX83-NEXT:    [[LANE_PTR6:%.*]] = getelementptr inbounds <4 x i32>, ptr [[ADDR]], i64 0, i64 3
 ; SM90PTX83-NEXT:    [[LANE_VAL7:%.*]] = extractelement <4 x i32> [[VAL]], i64 3
-; SM90PTX83-NEXT:    [[TMP3:%.*]] = atomicrmw add ptr [[LANE_PTR6]], i32 [[LANE_VAL7]] monotonic, align 4
+; SM90PTX83-NEXT:    [[TMP3:%.*]] = atomicrmw volatile add ptr [[LANE_PTR6]], i32 [[LANE_VAL7]] monotonic, align 4
 ; SM90PTX83-NEXT:    [[LANE_OLD8:%.*]] = insertelement <4 x i32> [[LANE_OLD5]], i32 [[TMP3]], i64 3
 ; SM90PTX83-NEXT:    ret <4 x i32> [[LANE_OLD8]]
 ;
@@ -220,19 +220,19 @@ define <4 x i32> @add_v4i32(ptr %addr, <4 x i32> %val) {
 ; SM90PTX81-SAME: ptr [[ADDR:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
 ; SM90PTX81-NEXT:  [[ENTRY:.*:]]
 ; SM90PTX81-NEXT:    [[LANE_VAL:%.*]] = extractelement <4 x i32> [[VAL]], i64 0
-; SM90PTX81-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LANE_VAL]] monotonic, align 16
+; SM90PTX81-NEXT:    [[TMP0:%.*]] = atomicrmw volatile add ptr [[ADDR]], i32 [[LANE_VAL]] monotonic, align 16
 ; SM90PTX81-NEXT:    [[LANE_OLD:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[TMP0]], i64 0
 ; SM90PTX81-NEXT:    [[LANE_PTR:%.*]] = getelementptr inbounds <4 x i32>, ptr [[ADDR]], i64 0, i64 1
 ; SM90PTX81-NEXT:    [[LANE_VAL1:%.*]] = extractelement <4 x i32> [[VAL]], i64 1
-; SM90PTX81-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[LANE_PTR]], i32 [[LANE_VAL1]] monotonic, align 4
+; SM90PTX81-NEXT:    [[TMP1:%.*]] = atomicrmw volatile add ptr [[LANE_PTR]], i32 [[LANE_VAL1]] monotonic, align 4
 ; SM90PTX81-NEXT:    [[LANE_OLD2:%.*]] = insertelement <4 x i32> [[LANE_OLD]], i32 [[TMP1]], i64 1
 ; SM90PTX81-NEXT:    [[LANE_PTR3:%.*]] = getelementptr inbounds <4 x i32>, ptr [[ADDR]], i64 0, i64 2
 ; SM90PTX81-NEXT:    [[LANE_VAL4:%.*]] = extractelement <4 x i32> [[VAL]], i64 2
-; SM90PTX81-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[LANE_PTR3]], i32 [[LANE_VAL4]] monotonic, align 8
+; SM90PTX81-NEXT:    [[TMP2:%.*]] = atomicrmw volatile add ptr [[LANE_PTR3]], i32 [[LANE_VAL4]] monotonic, align 8
 ; SM90PTX81-NEXT:    [[LANE_OLD5:%.*]] = insertelement <4 x i32> [[LANE_OLD2]], i32 [[TMP2]], i64 2
 ; SM90PTX81-NEXT:    [[LANE_PTR6:%.*]] = getelementptr inbounds <4 x i32>, ptr [[ADDR]], i64 0, i64 3
 ; SM90PTX81-NEXT:    [[LANE_VAL7:%.*]] = extractelement <4 x i32> [[VAL]], i64 3
-; SM90PTX81-NEXT:    [[TMP3:%.*]] = atomicrmw add ptr [[LANE_PTR6]], i32 [[LANE_VAL7]] monotonic, align 4
+; SM90PTX81-NEXT:    [[TMP3:%.*]] = atomicrmw volatile add ptr [[LANE_PTR6]], i32 [[LANE_VAL7]] monotonic, align 4
 ; SM90PTX81-NEXT:    [[LANE_OLD8:%.*]] = insertelement <4 x i32> [[LANE_OLD5]], i32 [[TMP3]], i64 3
 ; SM90PTX81-NEXT:    ret <4 x i32> [[LANE_OLD8]]
 ;
@@ -240,23 +240,23 @@ define <4 x i32> @add_v4i32(ptr %addr, <4 x i32> %val) {
 ; SM90-SAME: ptr [[ADDR:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
 ; SM90-NEXT:  [[ENTRY:.*:]]
 ; SM90-NEXT:    [[LANE_VAL:%.*]] = extractelement <4 x i32> [[VAL]], i64 0
-; SM90-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LANE_VAL]] monotonic, align 16
+; SM90-NEXT:    [[TMP0:%.*]] = atomicrmw volatile add ptr [[ADDR]], i32 [[LANE_VAL]] monotonic, align 16
 ; SM90-NEXT:    [[LANE_OLD:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[TMP0]], i64 0
 ; SM90-NEXT:    [[LANE_PTR:%.*]] = getelementptr inbounds <4 x i32>, ptr [[ADDR]], i64 0, i64 1
 ; SM90-NEXT:    [[LANE_VAL1:%.*]] = extractelement <4 x i32> [[VAL]], i64 1
-; SM90-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[LANE_PTR]], i32 [[LANE_VAL1]] monotonic, align 4
+; SM90-NEXT:    [[TMP1:%.*]] = atomicrmw volatile add ptr [[LANE_PTR]], i32 [[LANE_VAL1]] monotonic, align 4
 ; SM90-NEXT:    [[LANE_OLD2:%.*]] = insertelement <4 x i32> [[LANE_OLD]], i32 [[TMP1]], i64 1
 ; SM90-NEXT:    [[LANE_PTR3:%.*]] = getelementptr inbounds <4 x i32>, ptr [[ADDR]], i64 0, i64 2
 ; SM90-NEXT:    [[LANE_VAL4:%.*]] = extractelement <4 x i32> [[VAL]], i64 2
-; SM90-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[LANE_PTR3]], i32 [[LANE_VAL4]] monotonic, align 8
+; SM90-NEXT:    [[TMP2:%.*]] = atomicrmw volatile add ptr [[LANE_PTR3]], i32 [[LANE_VAL4]] monotonic, align 8
 ; SM90-NEXT:    [[LANE_OLD5:%.*]] = insertelement <4 x i32> [[LANE_OLD2]], i32 [[TMP2]], i64 2
 ; SM90-NEXT:    [[LANE_PTR6:%.*]] = getelementptr inbounds <4 x i32>, ptr [[ADDR]], i64 0, i64 3
 ; SM90-NEXT:    [[LANE_VAL7:%.*]] = extractelement <4 x i32> [[VAL]], i64 3
-; SM90-NEXT:    [[TMP3:%.*]] = atomicrmw add ptr [[LANE_PTR6]], i32 [[LANE_VAL7]] monotonic, align 4
+; SM90-NEXT:    [[TMP3:%.*]] = atomicrmw volatile add ptr [[LANE_PTR6]], i32 [[LANE_VAL7]] monotonic, align 4
 ; SM90-NEXT:    [[LANE_OLD8:%.*]] = insertelement <4 x i32> [[LANE_OLD5]], i32 [[TMP3]], i64 3
 ; SM90-NEXT:    ret <4 x i32> [[LANE_OLD8]]
 ;
 entry:
-  %old = atomicrmw elementwise add ptr %addr, <4 x i32> %val monotonic, align 16
+  %old = atomicrmw volatile elementwise add ptr %addr, <4 x i32> %val monotonic, align 16
   ret <4 x i32> %old
 }
