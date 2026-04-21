@@ -644,9 +644,8 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
       if (F.isIntrinsic()) {
         LLVMContext &Ctx = F.getContext();
         Ctx.diagnose(DiagnosticInfoUnsupported(
-            F, Twine("unknown intrinsic '") + F.getName() +
-                   "' is not supported by this version of the NVPTX "
-                   "backend; may result in invalid PTX."));
+            F, "unknown intrinsic '" + F.getName() +
+                   "' cannot be lowered by the NVPTX backend"));
         continue;
       }
       emitDeclaration(&F, O);
