@@ -36,9 +36,8 @@ collectLifetimeIntrinsicsUsing(Instruction &I) {
   SmallVector<LifetimeIntrinsic *> Output;
 
   for (User *U : I.users()) {
-    auto II = dyn_cast<IntrinsicInst>(U);
-    if (II && isLifetimeIntrinsic(II->getIntrinsicID()))
-      Output.push_back(cast<LifetimeIntrinsic>(II));
+    if (auto LI = dyn_cast<LifetimeIntrinsic>(U))
+      Output.push_back(cast<LifetimeIntrinsic>(LI));
   }
 
   return Output;
