@@ -1595,6 +1595,32 @@ def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
   ASTVarDeclInterface
 ]>;
 
+//===----------------------------------------------------------------------===//
+// AnnotationAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
+  let summary = "Annotation attribute for global variables and functions";
+  let description = [{
+    Represents a C/C++ `__attribute__((annotate(...)))` in CIR.
+
+    Example C code:
+    ```c
+    int *a __attribute__((annotate("testptr", "21", 12)));
+    ```
+
+    In CIR, the attribute for above annotation looks like:
+    ```
+    [#cir.annotation<name = "testptr", args = ["21", 12 : i32]>]
+    ```
+  }];
+
+  let parameters = (ins "::mlir::StringAttr":$name,
+                        "::mlir::ArrayAttr":$args);
+
+  let assemblyFormat = "`<` struct($name, $args) `>`";
+}
+
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

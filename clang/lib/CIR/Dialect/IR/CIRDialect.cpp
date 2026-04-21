@@ -2339,6 +2339,15 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
   }
 
+  // Parse optional annotations attribute (an ArrayAttr of AnnotationAttr).
+  mlir::StringAttr annotationsNameAttr = getAnnotationsAttrName(state.name);
+  mlir::ArrayAttr annotationsAttr;
+  if (!parser.parseOptionalAttribute(annotationsAttr).has_value()) {
+    // No annotations array present, that's fine.
+  } else if (annotationsAttr) {
+    state.addAttribute(annotationsNameAttr, annotationsAttr);
+  }
+
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
@@ -2512,6 +2521,11 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " side_effect(";
     p << stringifySideEffect(*sideEffect);
     p << ")";
+  }
+
+  if (mlir::ArrayAttr annotations = getAnnotationsAttr()) {
+    p << ' ';
+    p.printAttribute(annotations);
   }
 
   function_interface_impl::printFunctionAttributes(

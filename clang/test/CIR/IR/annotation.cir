@@ -1,0 +1,92 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+// Verify that cir.annotation attributes on globals and functions parse and
+// print correctly through cir-opt round-trip. This bullet-proofs the custom
+// parser/printer added for FuncOp annotations and the assemblyFormat
+// extension of GlobalOp.
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module {
+
+// -----------------------------------------------------------------------------
+// Globals
+// -----------------------------------------------------------------------------
+
+// Single annotation, no args.
+cir.global external @g_basic = #cir.int<1> : !s32i [#cir.annotation<name = "basic", args = []>]
+// CHECK: cir.global external @g_basic = #cir.int<1> : !s32i [#cir.annotation<name = "basic", args = []>]
+
+// Multiple annotations on one global.
+cir.global external @g_multi = #cir.int<2> : !s32i [#cir.annotation<name = "ann1", args = []>, #cir.annotation<name = "ann2", args = []>]
+// CHECK: cir.global external @g_multi = #cir.int<2> : !s32i [#cir.annotation<name = "ann1", args = []>, #cir.annotation<name = "ann2", args = []>]
+
+// Annotation with string arg.
+cir.global external @g_str = #cir.int<3> : !s32i [#cir.annotation<name = "with_str", args = ["hello"]>]
+// CHECK: cir.global external @g_str = #cir.int<3> : !s32i [#cir.annotation<name = "with_str", args = ["hello"]>]
+
+// Annotation with mixed string + integer args of different widths.
+cir.global external @g_mixed = #cir.int<4> : !s32i [#cir.annotation<name = "mixed", args = ["s", 7 : i32, 9 : i64]>]
+// CHECK: cir.global external @g_mixed = #cir.int<4> : !s32i [#cir.annotation<name = "mixed", args = ["s", 7 : i32, 9]>]
+
+// No-init external declaration with annotation (different linkage).
+cir.global "private" external @g_decl : !s32i [#cir.annotation<name = "decl_only", args = []>]
+// CHECK: cir.global "private" external @g_decl : !s32i [#cir.annotation<name = "decl_only", args = []>]
+
+// -----------------------------------------------------------------------------
+// Functions
+// -----------------------------------------------------------------------------
+
+// Single annotation on a function declaration (private linkage).
+cir.func private @f_decl() [#cir.annotation<name = "decl_func", args = []>]
+// CHECK: cir.func private @f_decl() [#cir.annotation<name = "decl_func", args = []>]
+
+// Single annotation, defined function.
+cir.func @f_def() [#cir.annotation<name = "def_func", args = []>] {
+  cir.return
+}
+// CHECK: cir.func{{.*}} @f_def() [#cir.annotation<name = "def_func", args = []>]
+
+// Multiple annotations.
+cir.func @f_multi() [#cir.annotation<name = "ann1", args = []>, #cir.annotation<name = "ann2", args = []>] {
+  cir.return
+}
+// CHECK: cir.func{{.*}} @f_multi() [#cir.annotation<name = "ann1", args = []>, #cir.annotation<name = "ann2", args = []>]
+
+// Annotation with arguments (string + int).
+cir.func @f_args() [#cir.annotation<name = "with_args", args = ["s", 21 : i32, 12 : i64]>] {
+  cir.return
+}
+// CHECK: cir.func{{.*}} @f_args() [#cir.annotation<name = "with_args", args = ["s", 21 : i32, 12]>]
+
+// Function with both an annotation AND another keyword attribute (no_inline)
+// to exercise that the annotation parser/printer composes with the rest of
+// the FuncOp print pipeline.
+cir.func no_inline @f_no_inline_ann() [#cir.annotation<name = "with_no_inline", args = []>] {
+  cir.return
+}
+// CHECK: cir.func no_inline{{.*}} @f_no_inline_ann() [#cir.annotation<name = "with_no_inline", args = []>]
+
+// Function with arguments and an annotation — verifies parser/printer for the
+// annotation does not get confused with arg attribute syntax.
+cir.func @f_with_args_and_ann(%a: !s32i, %b: !s64i) [#cir.annotation<name = "argful", args = []>] {
+  cir.return
+}
+// CHECK: cir.func{{.*}} @f_with_args_and_ann(%{{.*}}: !s32i, %{{.*}}: !s64i) [#cir.annotation<name = "argful", args = []>]
+
+// Function with return type and annotation.
+cir.func @f_ret_ann() -> !s32i [#cir.annotation<name = "ret_ann", args = []>] {
+  %0 = cir.const #cir.int<0> : !s32i
+  cir.return %0 : !s32i
+}
+// CHECK: cir.func{{.*}} @f_ret_ann() -> !s32i [#cir.annotation<name = "ret_ann", args = []>]
+
+// Function without any annotation — sanity that the optional parser doesn't
+// consume something it shouldn't.
+cir.func @f_no_ann() {
+  cir.return
+}
+// CHECK: cir.func{{.*}} @f_no_ann() {
+
+}

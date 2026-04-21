@@ -106,6 +106,23 @@ private:
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
+  /// -------
+  /// Annotations
+  /// -------
+
+  /// We store each annotation as an attribute of GlobalOp and FuncOp rather
+  /// than collecting them into a single module-level list.  The deferred map
+  /// lets us attach annotations at the end of codegen so the most up-to-date
+  /// ValueDecl (which carries all inherited annotations) is used.
+
+  /// Used for uniquing of annotation arguments.
+  llvm::DenseMap<unsigned, mlir::ArrayAttr> annotationArgs;
+
+  /// Store deferred function annotations so they can be emitted at the end
+  /// with the most up to date ValueDecl that will have all the inherited
+  /// annotations.
+  llvm::DenseMap<llvm::StringRef, const clang::ValueDecl *> deferredAnnotations;
+
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const CXXRecordDecl *> deferredVTables;
 
@@ -797,6 +814,9 @@ public:
   /// Emits AMDGPU specific Metadata.
   void emitAMDGPUMetadata();
 
+  /// Add global annotations for a global value (GlobalOp or FuncOp).
+  void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
@@ -811,6 +831,15 @@ private:
 
   /// Map source language used to a CIR attribute.
   std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
+
+  /// Emit all the global annotations.
+  void emitGlobalAnnotations();
+
+  /// Emit additional args of the annotation.
+  mlir::ArrayAttr emitAnnotationArgs(const clang::AnnotateAttr *attr);
+
+  /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
+  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
 
   /// Return the AST address space of the underlying global variable for D, as
   /// determined by its declaration. Normally this is the same as the address
