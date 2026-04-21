@@ -8,7 +8,7 @@
 ; CHECK-DAG: OpName [[SCALAR_FDIV:%.+]] "scalar_fdiv"
 ; CHECK-DAG: OpName [[SCALAR_FREM:%.+]] "scalar_frem"
 ; CHECK-DAG: OpName [[SCALAR_FMA:%.+]] "scalar_fma"
-;; FIXME: add test for OpFMod
+; CHECK-DAG: OpName [[SCALAR_FMOD:%.+]] "scalar_fmod"
 
 ; CHECK-NOT: DAG-FENCE
 
@@ -106,6 +106,20 @@ define float @scalar_frem(float %a, float %b) {
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
 ; CHECK:      OpLabel
 ; CHECK:      [[C:%.+]] = OpFRem [[SCALAR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+;; Test fmod on scalar:
+define float @scalar_fmod(float %a, float %b) {
+    %c = call float @llvm.spv.fmod.f32(float %a, float %b)
+    ret float %c
+}
+
+; CHECK:      [[SCALAR_FMOD]] = OpFunction [[SCALAR]] None [[SCALAR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpFMod [[SCALAR]] [[A]] [[B]]
 ; CHECK:      OpReturnValue [[C]]
 ; CHECK-NEXT: OpFunctionEnd
 

@@ -7,7 +7,7 @@
 ; CHECK-DAG: OpName [[VECTOR_FMUL:%.+]] "vector_fmul"
 ; CHECK-DAG: OpName [[VECTOR_FDIV:%.+]] "vector_fdiv"
 ; CHECK-DAG: OpName [[VECTOR_FREM:%.+]] "vector_frem"
-;; TODO: add test for OpFMod
+; CHECK-DAG: OpName [[VECTOR_FMOD:%.+]] "vector_fmod"
 
 ; CHECK-NOT: DAG-FENCE
 
@@ -104,5 +104,20 @@ define <2 x half> @vector_frem(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[VECTOR]]
 ; CHECK:      OpLabel
 ; CHECK:      [[C:%.+]] = OpFRem [[VECTOR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test fmod on vector:
+define <2 x half> @vector_fmod(<2 x half> %a, <2 x half> %b) {
+    %c = call <2 x half> @llvm.spv.fmod.v2f16(<2 x half> %a, <2 x half> %b)
+    ret <2 x half> %c
+}
+
+; CHECK:      [[VECTOR_FMOD]] = OpFunction [[VECTOR]] None [[VECTOR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[VECTOR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[VECTOR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpFMod [[VECTOR]] [[A]] [[B]]
 ; CHECK:      OpReturnValue [[C]]
 ; CHECK-NEXT: OpFunctionEnd
