@@ -35,7 +35,6 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
-class AssumptionCache;
 class LoopInfo;
 class DominatorTree;
 class LoopVectorizationLegality;
@@ -59,19 +58,11 @@ extern cl::opt<bool> PreferInLoopReductions;
 std::optional<unsigned> getMaxVScale(const Function &F,
                                      const TargetTransformInfo &TTI);
 
-/// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
-/// is passed, the message relates to that particular instruction.
-#ifndef NDEBUG
-void debugVectorizationMessage(const StringRef Prefix, const StringRef DebugMsg,
-                               Instruction *I);
-#endif
-
 /// Reports an informative message: print \p Msg for debugging purposes as well
 /// as an optimization remark. Uses either \p I as location of the remark, or
 /// otherwise \p TheLoop. If \p DL is passed, use it as debug location for the
-/// remark. \p PassName is the name to use for the optimization remark.
-void reportVectorizationInfo(const char *PassName, const StringRef Msg,
-                             const StringRef ORETag,
+/// remark.
+void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
                              OptimizationRemarkEmitter *ORE,
                              const Loop *TheLoop, Instruction *I = nullptr,
                              DebugLoc DL = {});
@@ -519,11 +510,12 @@ struct FixedScalableVFPair {
 /// including the maximum VFs.
 class VFSelectionContext {
   /// \return True if maximizing vector bandwidth is enabled by the target or
-  /// user options, for the given register kind.
-  bool useMaxBandwidth(TargetTransformInfo::RegisterKind RegKind) const;
+  /// user options, for the given register kind (scalable or fixed-width).
+  bool useMaxBandwidth(bool IsScalable) const;
 
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
+  /// This is a helper function of computeFeasibleMaxVF.
   ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
                                        unsigned SmallestType,
                                        unsigned WidestType,
@@ -537,27 +529,32 @@ class VFSelectionContext {
                                      unsigned UserIC, bool FoldTailByMasking,
                                      bool RequiresScalarEpilogue) const;
 
-  /// \return True if scalable vectorization is supported and enabled.
+  /// Checks if scalable vectorization is supported and enabled. Caches the
+  /// result to avoid repeated debug dumps for repeated queries.
   bool isScalableVectorizationAllowed();
 
-  /// \return The maximum legal scalable VF, based on the safe dependence
-  /// distance.
+  /// \return the maximum legal scalable VF, based on the safe max number
+  /// of elements.
   ElementCount getMaxLegalScalableVF(unsigned MaxSafeElements);
 
-  /// Initialize the vscale value used for cost tuning.
+  /// Initializes the value of vscale used for tuning the cost model. If
+  /// vscale_range.min == vscale_range.max then return vscale_range.max, else
+  /// return the value returned by the corresponding TTI method.
   void initializeVScaleForTuning();
 
   const TargetTransformInfo &TTI;
   const LoopVectorizationLegality *Legal;
   const Loop *TheLoop;
   const Function &F;
+  PredicatedScalarEvolution &PSE;
   OptimizationRemarkEmitter *ORE;
   const LoopVectorizeHints *Hints;
 
   /// Cached result of isScalableVectorizationAllowed.
   std::optional<bool> IsScalableVectorizationAllowed;
 
-  /// The vscale value to tune the cost model for.
+  /// Used to store the value of vscale used for tuning the cost model. It is
+  /// initialized during object construction.
   std::optional<unsigned> VScaleForTuning;
 
   /// The highest VF possible for this loop, without using MaxBandwidth.
@@ -566,31 +563,45 @@ class VFSelectionContext {
   /// All element types found in the loop.
   SmallPtrSet<Type *, 16> ElementTypesInLoop;
 
-  /// Ephemeral values collected before cost modeling, reused by the cost
-  /// model's collectValuesToIgnore to avoid recomputation.
-  SmallPtrSet<const Value *, 16> EphemeralValues;
+  /// PHINodes of the reductions that should be expanded in-loop. Set by
+  /// collectInLoopReductions.
+  SmallPtrSet<PHINode *, 4> InLoopReductions;
+
+  /// A Map of inloop reduction operations and their immediate chain operand.
+  /// FIXME: This can be removed once reductions can be costed correctly in
+  /// VPlan. This was added to allow quick lookup of the inloop operations.
+  /// Set by collectInLoopReductions.
+  DenseMap<Instruction *, Instruction *> InLoopReductionImmediateChains;
 
   /// Maximum safe number of elements to be processed per vector iteration,
   /// which do not prevent store-load forwarding and are safe with regard to the
-  /// memory dependencies. Set by computeFeasibleMaxVF.
+  /// memory dependencies. Required for EVL-based vectorization, where this
+  /// value is used as the upper bound of the safe AVL. Set by
+  /// computeFeasibleMaxVF.
   std::optional<unsigned> MaxSafeElements;
 
 public:
+  /// The kind of cost that we are calculating.
   const TTI::TargetCostKind CostKind;
+
+  /// Whether this loop should be optimized for size based on function attribute
+  /// or profile information.
   const bool OptForSize;
 
   VFSelectionContext(const TargetTransformInfo &TTI,
                      const LoopVectorizationLegality *Legal,
                      const Loop *TheLoop, const Function &F,
+                     PredicatedScalarEvolution &PSE,
                      OptimizationRemarkEmitter *ORE,
                      const LoopVectorizeHints *Hints, bool OptForSize)
-      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), ORE(ORE), Hints(Hints),
+      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), ORE(ORE),
+        Hints(Hints),
         CostKind(F.hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput),
         OptForSize(OptForSize) {
     initializeVScaleForTuning();
   }
 
-  /// \return The vscale value to tune the cost model for.
+  /// \return The vscale value used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
 
   /// \return True if register pressure should be considered for the given VF.
@@ -599,39 +610,79 @@ public:
   /// \return True if scalable vectors are supported by the target or forced.
   bool supportsScalableVectors() const;
 
-  /// Collect ephemeral values in the loop.
-  void collectEphemeralValues(AssumptionCache *AC);
-
   /// Collect element types in the loop that need widening.
   void collectElementTypesForWidening(
       const SmallPtrSetImpl<const Value *> *ValuesToIgnore = nullptr);
 
   /// \return The size (in bits) of the smallest and widest types in the code
-  /// that needs to be vectorized. We ignore values that remain scalar such as
+  /// that need to be vectorized. We ignore values that remain scalar such as
   /// 64 bit loop indices.
   std::pair<unsigned, unsigned> getSmallestAndWidestTypes() const;
 
-  /// Compute the maximum feasible VF for both fixed and scalable
-  /// vectorization. Also sets MaxSafeElements.
+  /// \return An upper bound for the vectorization factors for both
+  /// fixed and scalable vectorization, where the minimum-known number of
+  /// elements is a power-of-2 larger than zero. If scalable vectorization is
+  /// disabled or unsupported, then the scalable part will be equal to
+  /// ElementCount::getScalable(0). Also sets MaxSafeElements.
   FixedScalableVFPair computeFeasibleMaxVF(unsigned MaxTripCount,
                                            ElementCount UserVF, unsigned UserIC,
                                            bool FoldTailByMasking,
                                            bool RequiresScalarEpilogue);
 
-  /// \return The ephemeral values collected by collectEphemeralValues.
-  const SmallPtrSetImpl<const Value *> &getEphemeralValues() const {
-    return EphemeralValues;
-  }
-
-  /// \return Maximum safe number of elements to be processed per vector
+  /// Return maximum safe number of elements to be processed per vector
   /// iteration, which do not prevent store-load forwarding and are safe with
-  /// regard to the memory dependencies. Set by computeFeasibleMaxVF.
+  /// regard to the memory dependencies. Required for EVL-based VPlans to
+  /// correctly calculate AVL (application vector length) as min(remaining AVL,
+  /// MaxSafeElements). Set by computeFeasibleMaxVF.
+  /// TODO: need to consider adjusting cost model to use this value as a
+  /// vectorization factor for EVL-based vectorization.
   std::optional<unsigned> getMaxSafeElements() const { return MaxSafeElements; }
 
   /// Returns true if we should use strict in-order reductions for the given
-  /// RdxDesc. This is true if the IsOrdered flag of RdxDesc is set and we do
-  /// not allow reordering of FP operations.
+  /// RdxDesc. This is true if the -enable-strict-reductions flag is passed,
+  /// the IsOrdered flag of RdxDesc is set and we do not allow reordering
+  /// of FP operations.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
+
+  /// Returns true if the target machine supports masked store operation
+  /// for the given \p DataType and kind of access to \p Ptr.
+  bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment,
+                          unsigned AddressSpace) const;
+
+  /// Returns true if the target machine supports masked load operation
+  /// for the given \p DataType and kind of access to \p Ptr.
+  bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment,
+                         unsigned AddressSpace) const;
+
+  /// Returns true if the target machine can represent \p V as a masked gather
+  /// or scatter operation.
+  bool isLegalGatherOrScatter(Value *V, ElementCount VF) const;
+
+  /// Split reductions into those that happen in the loop, and those that
+  /// happen outside. In-loop reductions are collected into InLoopReductions.
+  /// InLoopReductionImmediateChains is filled with each in-loop reduction
+  /// operation and its immediate chain operand for use during cost modelling.
+  void collectInLoopReductions();
+
+  /// Returns true if the Phi is part of an inloop reduction.
+  bool isInLoopReduction(PHINode *Phi) const {
+    return InLoopReductions.contains(Phi);
+  }
+
+  /// Returns the set of in-loop reduction PHIs.
+  const SmallPtrSetImpl<PHINode *> &getInLoopReductions() const {
+    return InLoopReductions;
+  }
+
+  /// Returns the immediate chain operand of in-loop reduction operation \p I,
+  /// or nullptr if \p I is not an in-loop reduction operation.
+  Instruction *getInLoopReductionImmediateChain(Instruction *I) const {
+    return InLoopReductionImmediateChains.lookup(I);
+  }
+
+  /// Check whether vectorization would require runtime checks. When optimizing
+  /// for size, returning true here aborts vectorization.
+  bool runtimeChecksRequired();
 };
 
 /// Planner drives the vectorization process after having passed

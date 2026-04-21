@@ -13,14 +13,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
-#include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 
 using namespace llvm;
 
@@ -51,12 +52,51 @@ cl::opt<bool> llvm::PreferInLoopReductions(
     cl::desc("Prefer in-loop vector reductions, "
              "overriding the targets preference."));
 
+/// Note: This currently only applies to `llvm.masked.load` and
+/// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
+static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
+    "force-target-supports-masked-memory-ops", cl::init(false), cl::Hidden,
+    cl::desc("Assume the target supports masked memory operations (used for "
+             "testing)."));
+
+bool VFSelectionContext::isLegalMaskedStore(Type *DataType, Value *Ptr,
+                                            Align Alignment,
+                                            unsigned AddressSpace) const {
+  return Legal->isConsecutivePtr(DataType, Ptr) &&
+         (ForceTargetSupportsMaskedMemoryOps ||
+          TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace));
+}
+
+bool VFSelectionContext::isLegalMaskedLoad(Type *DataType, Value *Ptr,
+                                           Align Alignment,
+                                           unsigned AddressSpace) const {
+  return Legal->isConsecutivePtr(DataType, Ptr) &&
+         (ForceTargetSupportsMaskedMemoryOps ||
+          TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace));
+}
+
+bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
+                                                ElementCount VF) const {
+  bool LI = isa<LoadInst>(V);
+  bool SI = isa<StoreInst>(V);
+  if (!LI && !SI)
+    return false;
+  auto *Ty = getLoadStoreType(V);
+  Align Align = getLoadStoreAlignment(V);
+  if (VF.isVector())
+    Ty = VectorType::get(Ty, VF);
+  return (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
+         (SI && TTI.isLegalMaskedScatter(Ty, Align));
+}
+
 bool VFSelectionContext::supportsScalableVectors() const {
   return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors;
 }
 
-bool VFSelectionContext::useMaxBandwidth(
-    TargetTransformInfo::RegisterKind RegKind) const {
+bool VFSelectionContext::useMaxBandwidth(bool IsScalable) const {
+  TargetTransformInfo::RegisterKind RegKind =
+      IsScalable ? TargetTransformInfo::RGK_ScalableVector
+                 : TargetTransformInfo::RGK_FixedWidthVector;
   return MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
                                (TTI.shouldMaximizeVectorBandwidth(RegKind) ||
                                 (UseWiderVFIfCallVariantsPresent &&
@@ -72,9 +112,7 @@ bool VFSelectionContext::shouldConsiderRegPressureForVF(ElementCount VF) const {
   if (TTI.shouldConsiderVectorizationRegPressure())
     return true;
 
-  if (!useMaxBandwidth(VF.isScalable()
-                           ? TargetTransformInfo::RGK_ScalableVector
-                           : TargetTransformInfo::RGK_FixedWidthVector))
+  if (!useMaxBandwidth(VF.isScalable()))
     return false;
   // Only calculate register pressure for VFs enabled by MaxBandwidth.
   return ElementCount::isKnownGT(
@@ -163,16 +201,12 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   if (MaxVF != MaxVectorElementCount)
     return MaxVF;
 
-  TargetTransformInfo::RegisterKind RegKind =
-      ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
-                           : TargetTransformInfo::RGK_FixedWidthVector;
-
   if (MaxVF.isScalable())
     MaxPermissibleVFWithoutMaxBW.ScalableVF = MaxVF;
   else
     MaxPermissibleVFWithoutMaxBW.FixedVF = MaxVF;
 
-  if (useMaxBandwidth(RegKind)) {
+  if (useMaxBandwidth(ComputeScalableMaxVF)) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
         ComputeScalableMaxVF);
@@ -213,8 +247,7 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
     return false;
 
   if (Hints->isScalableVectorizationDisabled()) {
-    reportVectorizationInfo(Hints->vectorizeAnalysisPassName(),
-                            "Scalable vectorization is explicitly disabled",
+    reportVectorizationInfo("Scalable vectorization is explicitly disabled",
                             "ScalableVectorizationDisabled", ORE, TheLoop);
     return false;
   }
@@ -235,7 +268,6 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
         return TTI.isLegalToVectorizeReduction(Reduction.second, MaxScalableVF);
       })) {
     reportVectorizationInfo(
-        Hints->vectorizeAnalysisPassName(),
         "Scalable vectorization not supported for the reduction "
         "operations found in this loop.",
         "ScalableVFUnfeasible", ORE, TheLoop);
@@ -247,16 +279,14 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
   if (any_of(ElementTypesInLoop, [&](Type *Ty) {
         return !Ty->isVoidTy() && !TTI.isElementTypeLegalForScalableVector(Ty);
       })) {
-    reportVectorizationInfo(Hints->vectorizeAnalysisPassName(),
-                            "Scalable vectorization is not supported "
+    reportVectorizationInfo("Scalable vectorization is not supported "
                             "for all element types found in this loop.",
                             "ScalableVFUnfeasible", ORE, TheLoop);
     return false;
   }
 
   if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(F, TTI)) {
-    reportVectorizationInfo(Hints->vectorizeAnalysisPassName(),
-                            "The target does not provide maximum vscale value "
+    reportVectorizationInfo("The target does not provide maximum vscale value "
                             "for safe distance analysis.",
                             "ScalableVFUnfeasible", ORE, TheLoop);
     return false;
@@ -282,7 +312,6 @@ VFSelectionContext::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 
   if (!MaxScalableVF)
     reportVectorizationInfo(
-        Hints->vectorizeAnalysisPassName(),
         "Max legal vector width too small, scalable vectorization "
         "unfeasible.",
         "ScalableVFUnfeasible", ORE, TheLoop);
@@ -432,11 +461,6 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
   return {MinWidth, MaxWidth};
 }
 
-void VFSelectionContext::collectEphemeralValues(AssumptionCache *AC) {
-  EphemeralValues.clear();
-  CodeMetrics::collectEphemeralValues(TheLoop, AC, EphemeralValues);
-}
-
 void VFSelectionContext::collectElementTypesForWidening(
     const SmallPtrSetImpl<const Value *> *ValuesToIgnore) {
   ElementTypesInLoop.clear();
@@ -500,4 +524,93 @@ void VFSelectionContext::initializeVScaleForTuning() {
 bool VFSelectionContext::useOrderedReductions(
     const RecurrenceDescriptor &RdxDesc) const {
   return !Hints->allowReordering() && RdxDesc.isOrdered();
+}
+
+bool VFSelectionContext::runtimeChecksRequired() {
+  LLVM_DEBUG(dbgs() << "LV: Performing code size checks.\n");
+
+  Loop *L = const_cast<Loop *>(TheLoop);
+  if (Legal->getRuntimePointerChecking()->Need) {
+    reportVectorizationFailure(
+        "Runtime ptr check is required with -Os/-Oz",
+        "runtime pointer checks needed. Enable vectorization of this "
+        "loop with '#pragma clang loop vectorize(enable)' when "
+        "compiling with -Os/-Oz",
+        "CantVersionLoopWithOptForSize", ORE, L);
+    return true;
+  }
+
+  if (!PSE.getPredicate().isAlwaysTrue()) {
+    reportVectorizationFailure(
+        "Runtime SCEV check is required with -Os/-Oz",
+        "runtime SCEV checks needed. Enable vectorization of this "
+        "loop with '#pragma clang loop vectorize(enable)' when "
+        "compiling with -Os/-Oz",
+        "CantVersionLoopWithOptForSize", ORE, L);
+    return true;
+  }
+
+  // FIXME: Avoid specializing for stride==1 instead of bailing out.
+  if (!Legal->getLAI()->getSymbolicStrides().empty()) {
+    reportVectorizationFailure(
+        "Runtime stride check for small trip count",
+        "runtime stride == 1 checks needed. Enable vectorization of "
+        "this loop without such check by compiling with -Os/-Oz",
+        "CantVersionLoopWithOptForSize", ORE, L);
+    return true;
+  }
+
+  return false;
+}
+
+void VFSelectionContext::collectInLoopReductions() {
+  // Avoid duplicating work finding in-loop reductions.
+  if (!InLoopReductions.empty())
+    return;
+
+  for (const auto &Reduction : Legal->getReductionVars()) {
+    PHINode *Phi = Reduction.first;
+    const RecurrenceDescriptor &RdxDesc = Reduction.second;
+
+    // Multi-use reductions (e.g., used in FindLastIV patterns) are handled
+    // separately and should not be considered for in-loop reductions.
+    if (RdxDesc.hasUsesOutsideReductionChain())
+      continue;
+
+    // We don't collect reductions that are type promoted (yet).
+    if (RdxDesc.getRecurrenceType() != Phi->getType())
+      continue;
+
+    // In-loop AnyOf and FindIV reductions are not yet supported.
+    RecurKind Kind = RdxDesc.getRecurrenceKind();
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) ||
+        RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) ||
+        RecurrenceDescriptor::isFindLastRecurrenceKind(Kind))
+      continue;
+
+    // If the target would prefer this reduction to happen "in-loop", then we
+    // want to record it as such.
+    if (!PreferInLoopReductions && !useOrderedReductions(RdxDesc) &&
+        !TTI.preferInLoopReduction(Kind, Phi->getType()))
+      continue;
+
+    // Check that we can correctly put the reductions into the loop, by
+    // finding the chain of operations that leads from the phi to the loop
+    // exit value.
+    SmallVector<Instruction *, 4> ReductionOperations =
+        RdxDesc.getReductionOpChain(Phi, const_cast<Loop *>(TheLoop));
+    bool InLoop = !ReductionOperations.empty();
+
+    if (InLoop) {
+      InLoopReductions.insert(Phi);
+      // Add the elements to InLoopReductionImmediateChains for cost modelling.
+      Instruction *LastChain = Phi;
+      for (auto *I : ReductionOperations) {
+        InLoopReductionImmediateChains[I] = LastChain;
+        LastChain = I;
+      }
+    }
+    LLVM_DEBUG(dbgs() << "LV: Using " << (InLoop ? "inloop" : "out of loop")
+                      << " reduction for phi: " << *Phi << "\n");
+  }
 }
