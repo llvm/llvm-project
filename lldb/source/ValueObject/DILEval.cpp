@@ -22,28 +22,6 @@
 
 namespace lldb_private::dil {
 
-lldb::ValueObjectSP
-GetDynamicOrSyntheticValue(lldb::ValueObjectSP value_sp,
-                           lldb::DynamicValueType use_dynamic,
-                           bool use_synthetic) {
-  if (!value_sp)
-    return nullptr;
-
-  if (use_dynamic != lldb::eNoDynamicValues) {
-    lldb::ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(use_dynamic);
-    if (dynamic_sp)
-      value_sp = dynamic_sp;
-  }
-
-  if (use_synthetic) {
-    lldb::ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
-    if (synthetic_sp)
-      value_sp = synthetic_sp;
-  }
-
-  return value_sp;
-}
-
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
                                  lldb::BasicType basic_type) {
   if (type_system)
