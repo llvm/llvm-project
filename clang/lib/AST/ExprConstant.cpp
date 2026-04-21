@@ -2038,19 +2038,22 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
 void CallStackFrame::describe(raw_ostream &Out) const {
   bool IsMemberCall = false;
   bool ExplicitInstanceParam = false;
+  clang::PrintingPolicy PrintingPolicy = Info.Ctx.getPrintingPolicy();
+  PrintingPolicy.SuppressLambdaBody = true;
+
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee)) {
     IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
     ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
   }
 
   if (!IsMemberCall)
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
 
   if (This && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
-      Object->printPretty(Out, /*Helper=*/nullptr, Info.Ctx.getPrintingPolicy(),
+      Object->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                           /*Indentation=*/0);
       if (Object->getType()->isPointerType())
           Out << "->";
@@ -2058,8 +2061,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Out << ".";
     } else if (const auto *OCE =
                    dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
-      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr,
-                                  Info.Ctx.getPrintingPolicy(),
+      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                                   /*Indentation=*/0);
       Out << ".";
     } else {
@@ -2070,7 +2072,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
       Out << ".";
     }
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
   }
 
