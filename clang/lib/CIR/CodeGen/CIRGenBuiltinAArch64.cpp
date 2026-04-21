@@ -691,10 +691,9 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     llvm::StringRef llvmIntrName =
         getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
             usgn ? llvmIntrinsic : altLLVMIntrinsic));
-    ops[0] = cgf.getBuilder().createBitcast(
-        ops[0], getNeonPairwiseWidenInputType(vTy, usgn));
     return emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
-                        /*argTypes=*/{ops[0].getType()}, ops, llvmIntrName,
+                        /*argTypes=*/{getNeonPairwiseWidenInputType(vTy, usgn)},
+                        ops, llvmIntrName,
                         /*funcResTy=*/vTy, loc);
   }
   case NEON::BI__builtin_neon_vqdmlal_v:
@@ -2487,12 +2486,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v: {
     intrName = usgn ? "aarch64.neon.uaddlp" : "aarch64.neon.saddlp";
-    mlir::Value src = builder.createBitcast(
-        loc, ops[1], getNeonPairwiseWidenInputType(ty, usgn));
-    llvm::SmallVector<mlir::Value> vsrc{src};
+    llvm::SmallVector<mlir::Value> vsrc{ops[1]};
     mlir::Type mTy = ty;
     mlir::Value pw =
-        emitNeonCall(cgm, builder, {src.getType()}, vsrc, intrName, mTy, loc);
+        emitNeonCall(cgm, builder, {getNeonPairwiseWidenInputType(ty, usgn)},
+                     vsrc, intrName, mTy, loc);
     mlir::Value accum = ops[0] = builder.createBitcast(loc, ops[0], ty);
     return cir::AddOp::create(builder, loc, ty, pw, accum);
   }
