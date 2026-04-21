@@ -1610,6 +1610,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   cir::GlobalOp gv =
       CIRGenModule::createGlobalOp(cgm, loc, name, init.getType(),
                                    /*isConstant=*/true);
+  gv.setLinkage(linkage);
 
   // Export the typeinfo in the same circumstances as the vtable is
   // exported.
@@ -1629,11 +1630,8 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     oldGV->erase();
   }
 
-  if (cgm.supportsCOMDAT() && cir::isWeakForLinker(gv.getLinkage())) {
-    assert(!cir::MissingFeatures::setComdat());
-    cgm.errorNYI("buildTypeInfo: supportsCOMDAT & isWeakForLinker");
-    return {};
-  }
+  if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
+    gv.setComdat(true);
 
   CharUnits align = cgm.getASTContext().toCharUnitsFromBits(
       cgm.getTarget().getPointerAlign(LangAS::Default));
@@ -2326,9 +2324,9 @@ static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
                                                     QualType srcRecordTy,
                                                     QualType destRecordTy) {
   auto srcRtti = mlir::cast<cir::GlobalViewAttr>(
-      cgf.cgm.getAddrOfRTTIDescriptor(loc, srcRecordTy));
+      cgf.cgm.getAddrOfRTTIDescriptor(loc, srcRecordTy.getUnqualifiedType()));
   auto destRtti = mlir::cast<cir::GlobalViewAttr>(
-      cgf.cgm.getAddrOfRTTIDescriptor(loc, destRecordTy));
+      cgf.cgm.getAddrOfRTTIDescriptor(loc, destRecordTy.getUnqualifiedType()));
 
   cir::FuncOp runtimeFuncOp = getItaniumDynamicCastFn(cgf);
   cir::FuncOp badCastFuncOp = getBadCastFn(cgf);

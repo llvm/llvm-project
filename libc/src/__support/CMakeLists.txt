@@ -106,15 +106,6 @@ add_header_library(
 )
 
 add_header_library(
-  bit
-  HDRS
-    bit.h
-  DEPENDS
-    libc.src.__support.macros.attributes
-    libc.src.__support.CPP.type_traits
-)
-
-add_header_library(
   math_extras
   HDRS
     math_extras.h
@@ -173,6 +164,19 @@ add_header_library(
     wctype_utils.h
   DEPENDS
     ${wctype_utils_deps}
+)
+
+add_header_library(
+  wctype_impl
+  HDRS
+    wctype_impl.h
+  DEPENDS
+    .wctype_utils
+    libc.hdr.types.wctype_t
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(

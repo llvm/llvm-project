@@ -4549,11 +4549,16 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
   }
 
-  // If there's no chance of borrowing from adjacent bits, then sub is xor:
-  // sub C0, X --> xor X, C0
   if (ConstantSDNode *C0 = isConstOrConstSplat(N0)) {
+    const APInt &C0Val = C0->getAPIntValue();
+
+    // sub nuw C, x --> xor x, C when C is a mask (2^k - 1)
+    if (N->getFlags().hasNoUnsignedWrap() && C0Val.isMask())
+      return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
+
+    // If there's no chance of borrowing from adjacent bits, then sub is xor:
+    // sub C0, X --> xor X, C0
     if (!C0->isOpaque()) {
-      const APInt &C0Val = C0->getAPIntValue();
       const APInt &MaybeOnes = ~DAG.computeKnownBits(N1).Zero;
       if ((C0Val - MaybeOnes) == (C0Val ^ MaybeOnes))
         return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
@@ -4832,7 +4837,11 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
       SDValue Trunc = DAG.getZExtOrTrunc(LogBase2, DL, ShiftVT);
       SDNodeFlags Flags;
       Flags.setNoUnsignedWrap(N->getFlags().hasNoUnsignedWrap());
-      // TODO: Preserve setNoSignedWrap if LogBase2 isn't BitWidth - 1.
+      // Preserve nsw when the shift amount is strictly less than BitWidth - 1,
+      // i.e. the multiplier is not the signed minimum value.
+      if (N->getFlags().hasNoSignedWrap() && N1IsConst &&
+          ConstValue1.logBase2() < BitWidth - 1)
+        Flags.setNoSignedWrap(true);
       return Matcher.getNode(ISD::SHL, DL, VT, N0, Trunc, Flags);
     }
   }
@@ -24907,11 +24916,11 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     return InOp;
   }
 
-  // extract_vector_elt of out-of-bounds element -> UNDEF
+  // extract_vector_elt of out-of-bounds element -> POISON
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
   if (IndexC && VecVT.isFixedLengthVector() &&
       IndexC->getAPIntValue().uge(VecVT.getVectorNumElements()))
-    return DAG.getUNDEF(ScalarVT);
+    return DAG.getPOISON(ScalarVT);
 
   // extract_vector_elt (build_vector x, y), 1 -> y
   if (((IndexC && VecOp.getOpcode() == ISD::BUILD_VECTOR) ||
