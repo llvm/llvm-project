@@ -37,12 +37,20 @@ static const T *Find(StringRef S, ArrayRef<T> A) {
 static
 void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
                     ArrayRef<SubtargetFeatureKV> FeatureTable) {
-  // OR the Implies bits in outside the loop. This allows the Implies for CPUs
-  // which might imply features not in FeatureTable to use this.
-  Bits |= Implies;
-  for (const SubtargetFeatureKV &FE : FeatureTable)
-    if (Implies.test(FE.Value))
-      SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
+  // Transitively set all features implied. We don't assume that the features in
+  // Bits have already had their implied features set.
+  FeatureBitset NewBits = Implies;
+  while (NewBits.any()) {
+    FeatureBitset Implied;
+    for (const SubtargetFeatureKV &FE : FeatureTable) {
+      if (NewBits.test(FE.Value))
+        Implied |= FE.Implies.getAsBitset();
+    }
+
+    // Only continue for bits that haven't been set yet.
+    NewBits = Implied & ~Bits;
+    Bits |= NewBits;
+  }
 }
 
 /// For each feature that (transitively) implies this feature, clear it.
