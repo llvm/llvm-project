@@ -54,6 +54,16 @@ define void @compressstore_v8i8(ptr %base, <8 x i8> %v, <8 x i1> %mask) {
   ret void
 }
 
+define void @compressstore_v7i8(ptr %base, <7 x i8> %v, <7 x i1> %mask) {
+; CHECK-LABEL: compressstore_v7i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 7, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  call void @llvm.masked.compressstore.v7i8(<7 x i8> %v, ptr %base, <7 x i1> %mask)
+  ret void
+}
+
 define void @compressstore_v1i16(ptr %base, <1 x i16> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v1i16:
 ; CHECK:       # %bb.0:
