@@ -312,14 +312,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   Clang->getFrontendOpts().MayEmitDiagnosticsAfterProcessingSourceFiles = true;
 
   // Execute the frontend actions.
-  {
-    llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-    bool TimePasses = Clang->getCodeGenOpts().TimePasses;
-    if (TimePasses)
-      Clang->createFrontendTimer();
-    llvm::TimeRegion Timer(TimePasses ? &Clang->getFrontendTimer() : nullptr);
-    Success = ExecuteCompilerInvocation(Clang.get());
-  }
+  Success = ExecuteCompilerInvocation(Clang.get());
 
   // Cache the result, and decanonicalize and finish outputs.
   Success = JobCache.finishComputedResult(*Clang, Success);
