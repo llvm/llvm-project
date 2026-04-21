@@ -22,10 +22,14 @@
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
+#include <dirent.h>
 #include <sstream>
 #include <string>
 #include <sys/ptrace.h>
 #include <unistd.h>
+#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
+#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -279,13 +283,90 @@ llvm::Error NativeProcessAIX::Detach(lldb::tid_t tid) {
   return PtraceWrapper(PT_DETACH, tid).takeError();
 }
 
+template <typename GPR_T, typename PTSPRS_T>
+llvm::Expected<int> GetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
+  PTSPRS_T sprs;
+
+  int ret = ptrace64(req, tid, (long long)&sprs, 0, 0);
+
+  if (ret != -1) {
+    gpr->cr = sprs.pt_cr;
+    gpr->msr = sprs.pt_msr;
+    gpr->xer = sprs.pt_xer;
+    gpr->lr = sprs.pt_lr;
+    gpr->ctr = sprs.pt_ctr;
+    gpr->pc = sprs.pt_iar;
+  }
+  return ret;
+}
+
+template <typename GPR_T, typename PTSPRS_T>
+llvm::Expected<int> SetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
+  PTSPRS_T sprs;
+
+  sprs.pt_cr = gpr->cr;
+  sprs.pt_msr = gpr->msr;
+  sprs.pt_xer = gpr->xer;
+  sprs.pt_lr = gpr->lr;
+  sprs.pt_ctr = gpr->ctr;
+  sprs.pt_iar = gpr->pc;
+
+  return (ptrace64(req, tid, (long long)&sprs, 0, 0));
+}
+
 llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
                                                     void *addr, void *data,
                                                     size_t data_size) {
   int ret;
-
   Log *log = GetLog(POSIXLog::Ptrace);
+  // for PTT_*
+  const char procdir[] = "/proc/";
+  const char lwpdir[] = "/lwp/";
+  std::string process_task_dir = procdir + std::to_string(pid) + lwpdir;
+  DIR *dirproc = opendir(process_task_dir.c_str());
+
+  lldb::tid_t tid = 0;
+  if (dirproc) {
+    struct dirent *direntry = nullptr;
+    while ((direntry = readdir(dirproc)) != nullptr) {
+      if (strcmp(direntry->d_name, ".") == 0 ||
+          strcmp(direntry->d_name, "..") == 0) {
+        continue;
+      }
+      tid = atoi(direntry->d_name);
+      break;
+    }
+    closedir(dirproc);
+  }
+
   switch (req) {
+  case PTT_READ_GPRS:
+    if (data_size == sizeof(GPR_PPC)) // 32bit SPRs read
+      ret = GetSPRs<GPR_PPC, ptsprs>(PTT_READ_SPRS, tid,
+                                     static_cast<GPR_PPC *>(data))
+                .get();
+    else if (data_size == sizeof(GPR_PPC64)) // 64bit SPRs read
+      ret = GetSPRs<GPR_PPC64, ptxsprs>(PTT_READ_SPRS, tid,
+                                        static_cast<GPR_PPC64 *>(data))
+                .get();
+
+    if (ret != -1)
+      ret = ptrace64(req, tid, (long long)data, 0, 0); // read GPRs
+    break;
+
+  case PTT_WRITE_GPRS:
+    if (data_size == sizeof(GPR_PPC)) // 32bit SPRs write
+      ret = SetSPRs<GPR_PPC, ptsprs>(PTT_WRITE_SPRS, tid,
+                                     static_cast<GPR_PPC *>(data))
+                .get();
+    else if (data_size == sizeof(GPR_PPC64)) // 64bit SPRS write
+      ret = SetSPRs<GPR_PPC64, ptxsprs>(PTT_WRITE_SPRS, tid,
+                                        static_cast<GPR_PPC64 *>(data))
+                .get();
+
+    if (ret != -1)
+      ret = ptrace64(req, tid, (long long)data, 0, 0); // write GPRs
+    break;
   case PT_ATTACH:
   case PT_DETACH:
   case PT_KILL:

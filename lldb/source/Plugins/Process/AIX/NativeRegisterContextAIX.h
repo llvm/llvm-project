@@ -13,8 +13,20 @@
 
 namespace lldb_private::process_aix {
 
+class NativeThreadAIX;
+
 class NativeRegisterContextAIX
     : public virtual NativeRegisterContextRegisterInfo {
+public:
+  // This function is implemented in the NativeRegisterContextAIX_ppc64
+  // subclasses to create a new instance of the host specific
+  // NativeRegisterContextAIX. The implementations can't collide as only one
+  // NativeRegisterContextAIX_ppc64 variant should be compiled into the final
+  // executable.
+  static std::unique_ptr<NativeRegisterContextAIX>
+  CreateHostNativeRegisterContextAIX(const ArchSpec &target_arch,
+                                     NativeThreadAIX &native_thread);
+
 protected:
   NativeRegisterContextAIX(NativeThreadProtocol &thread)
       : NativeRegisterContextRegisterInfo(thread, nullptr) {}
@@ -50,7 +62,9 @@ protected:
 
   virtual void *GetGPRBuffer() = 0;
 
-  virtual size_t GetGPRSize() = 0;
+  virtual size_t GetGPRSize() const {
+    return GetRegisterInfoInterface().GetGPRSize();
+  }
 
   virtual void *GetFPRBuffer() = 0;
 
