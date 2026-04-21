@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c2y -Wall -pedantic -Wno-unused %s
 
-/* WG14 N3410: Yes
+/* WG14 N3410: Clang 23
  * Slay Some Earthly Demons XI
  *
  * It is now ill-formed for the same identifier within a TU to have both
