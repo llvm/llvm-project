@@ -2771,3 +2771,69 @@ define i1 @fabs_no_fold_i32_half(i32 %a, i32 %b) {
   %cmp = fcmp olt half %abs, 1.0
   ret i1 %cmp
 }
+
+; Vector case, unsigned fold
+define <2 x i1> @fabs_uitofp_sub_vec_olt_one(<2 x i16> %x, <2 x i16> %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_vec_olt_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i16> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %fx = uitofp <2 x i16> %x to <2 x float>
+  %fy = uitofp <2 x i16> %y to <2 x float>
+  %sub = fsub <2 x float> %fx, %fy
+  %abs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %sub)
+  %cmp = fcmp olt <2 x float> %abs, <float 1.0, float 1.0>
+  ret <2 x i1> %cmp
+}
+
+; Vector case, signed fold
+define <2 x i1> @fabs_sitofp_sub_vec_ult_one(<2 x i16> %x, <2 x i16> %y) {
+; CHECK-LABEL: @fabs_sitofp_sub_vec_ult_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i16> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %fx = sitofp <2 x i16> %x to <2 x float>
+  %fy = sitofp <2 x i16> %y to <2 x float>
+  %sub = fsub <2 x float> %fx, %fy
+  %abs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %sub)
+  %cmp = fcmp ult <2 x float> %abs, <float 1.0, float 1.0>
+  ret <2 x i1> %cmp
+}
+
+; Vector case, exactness test with small mantissa FP type
+define <2 x i1> @fabs_uitofp_sub_vec_half_no_fold(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_vec_half_no_fold(
+; CHECK-NEXT:    [[FX:%.*]] = uitofp <2 x i32> [[X:%.*]] to <2 x half>
+; CHECK-NEXT:    [[FY:%.*]] = uitofp <2 x i32> [[Y:%.*]] to <2 x half>
+; CHECK-NEXT:    [[SUB:%.*]] = fsub <2 x half> [[FX]], [[FY]]
+; CHECK-NEXT:    [[ABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <2 x half> [[ABS]], splat (half 0xH3C00)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %fx = uitofp <2 x i32> %x to <2 x half>
+  %fy = uitofp <2 x i32> %y to <2 x half>
+  %sub = fsub <2 x half> %fx, %fy
+  %abs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %sub)
+  %cmp = fcmp olt <2 x half> %abs, <half 0xH3C00, half 0xH3C00>
+  ret <2 x i1> %cmp
+}
+
+; Vector case, no fold due to failed exactness
+define <2 x i1> @fabs_uitofp_sub_vec_bf16_no_fold(<2 x i16> %x, <2 x i16> %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_vec_bf16_no_fold(
+; CHECK-NEXT:    [[FX:%.*]] = uitofp <2 x i16> [[X:%.*]] to <2 x bfloat>
+; CHECK-NEXT:    [[FY:%.*]] = uitofp <2 x i16> [[Y:%.*]] to <2 x bfloat>
+; CHECK-NEXT:    [[SUB:%.*]] = fsub <2 x bfloat> [[FX]], [[FY]]
+; CHECK-NEXT:    [[ABS:%.*]] = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <2 x bfloat> [[ABS]], splat (bfloat 0xR3F80)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %fx = uitofp <2 x i16> %x to <2 x bfloat>
+  %fy = uitofp <2 x i16> %y to <2 x bfloat>
+  %sub = fsub <2 x bfloat> %fx, %fy
+  %abs = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> %sub)
+  %cmp = fcmp olt <2 x bfloat> %abs, <bfloat 0xR3F80, bfloat 0xR3F80>
+  ret <2 x i1> %cmp
+}
+
+

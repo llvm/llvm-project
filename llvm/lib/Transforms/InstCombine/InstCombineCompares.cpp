@@ -8782,10 +8782,7 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
     return nullptr;
 
   const APFloat *C;
-  if (!match(I.getOperand(1), m_APFloat(C)))
-    return nullptr;
-
-  if (!match(I.getOperand(1), PatternMatch::m_FiniteNonZero()))
+  if (!match(I.getOperand(1), PatternMatch::m_FiniteNonZero(C)))
     return nullptr;
 
   FCmpInst::Predicate Pred = I.getPredicate();
@@ -8805,7 +8802,7 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
     return nullptr;
   if (IsGe && Cmp == APFloat::cmpGreaterThan)
     return nullptr;
-  if (IsLe && Cmp == APFloat::cmpGreaterThan)
+  if (IsLe && Cmp != APFloat::cmpGreaterThan)
     return nullptr;
   if (IsStrictGt && Cmp != APFloat::cmpLessThan)
     return nullptr;
@@ -8831,7 +8828,7 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
       !IC.canBeCastedExactlyIntToFP(B, FPTy, IsSigned, &I))
     return nullptr;
   ICmpInst::Predicate ResultPred =
-      IsStrictLt ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+      IsStrictLt || IsLe ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
   return new ICmpInst(ResultPred, A, B);
 }
 
