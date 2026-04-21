@@ -1521,11 +1521,12 @@ static void createAndConnectRoot(CompilationGraph &Graph) {
 /// Creates a temporary output path for \p ModuleName.
 static std::string createModuleOutputPath(const Compilation &C,
                                           StringRef ModuleName) {
-  auto ModuleOutputPath = C.getDriver().GetTemporaryPath(
-      ModuleName, types::getTypeTempSuffix(types::TY_ModuleFile));
   // Sanitize the ':' included in parition names. It is illegal for filenames on
   // Windows.
-  llvm::replace(ModuleOutputPath, ':', '_');
+  SmallString<32> SanitizedModuleName(ModuleName);
+  llvm::replace(SanitizedModuleName, ':', '_');
+  auto ModuleOutputPath = C.getDriver().GetTemporaryPath(
+      SanitizedModuleName, types::getTypeTempSuffix(types::TY_ModuleFile));
   return ModuleOutputPath;
 }
 
