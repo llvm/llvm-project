@@ -2256,6 +2256,7 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:CoreHeaders",
+        "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:InterpreterHeaders",
