@@ -258,8 +258,19 @@ _LIBCPP_HIDE_FROM_ABI inline size_t __hash_memory(const void* __ptr, size_t __si
 }
 #endif
 
+// Primary template covers any width not handled by the explicit
+// specializations below (in particular _BitInt(N) with sizeof > 4 * sizeof(size_t)).
 template <class _Tp, size_t = sizeof(_Tp) / sizeof(size_t)>
-struct __scalar_hash;
+struct __scalar_hash : public __unary_function<_Tp, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
+    union {
+      _Tp __t;
+      char __bytes[sizeof(_Tp)];
+    } __u;
+    __u.__t = __v;
+    return std::__hash_memory(std::addressof(__u), sizeof(__u));
+  }
+};
 
 template <class _Tp>
 struct __scalar_hash<_Tp, 0> : public __unary_function<_Tp, size_t> {
