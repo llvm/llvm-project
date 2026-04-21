@@ -195,60 +195,49 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
+static unsigned getWasmArgumentOpcode(MVT ArgType) {
+  switch (ArgType.SimpleTy) {
+  case MVT::i32:
+    return WebAssembly::ARGUMENT_i32;
+  case MVT::i64:
+    return WebAssembly::ARGUMENT_i64;
+  case MVT::f32:
+    return WebAssembly::ARGUMENT_f32;
+  case MVT::f64:
+    return WebAssembly::ARGUMENT_f64;
+
+  case MVT::funcref:
+    return WebAssembly::ARGUMENT_funcref;
+  case MVT::externref:
+    return WebAssembly::ARGUMENT_externref;
+  case MVT::exnref:
+    return WebAssembly::ARGUMENT_exnref;
+
+  case MVT::v16i8:
+    return WebAssembly::ARGUMENT_v16i8;
+  case MVT::v8i16:
+    return WebAssembly::ARGUMENT_v8i16;
+  case MVT::v4i32:
+    return WebAssembly::ARGUMENT_v4i32;
+  case MVT::v2i64:
+    return WebAssembly::ARGUMENT_v2i64;
+  case MVT::v8f16:
+    return WebAssembly::ARGUMENT_v8f16;
+  case MVT::v4f32:
+    return WebAssembly::ARGUMENT_v4f32;
+  case MVT::v2f64:
+    return WebAssembly::ARGUMENT_v2f64;
+  default:
+    break;
+  }
+
+  llvm_unreachable("Found unexpected type for Wasm argument");
+}
+
 static Register buildWasmArgument(unsigned Idx, MVT ArgVT, LLT ArgLLT,
                                   MachineIRBuilder &MIRBuilder,
                                   Register Def = Register()) {
-  unsigned Op;
-
-  switch (ArgVT.SimpleTy) {
-  case MVT::i32:
-    Op = WebAssembly::ARGUMENT_i32;
-    break;
-  case MVT::i64:
-    Op = WebAssembly::ARGUMENT_i64;
-    break;
-  case MVT::f32:
-    Op = WebAssembly::ARGUMENT_f32;
-    break;
-  case MVT::f64:
-    Op = WebAssembly::ARGUMENT_f64;
-    break;
-
-  case MVT::funcref:
-    Op = WebAssembly::ARGUMENT_funcref;
-    break;
-  case MVT::externref:
-    Op = WebAssembly::ARGUMENT_externref;
-    break;
-  case MVT::exnref:
-    Op = WebAssembly::ARGUMENT_exnref;
-    break;
-
-  case MVT::v16i8:
-    Op = WebAssembly::ARGUMENT_v16i8;
-    break;
-  case MVT::v8i16:
-    Op = WebAssembly::ARGUMENT_v8i16;
-    break;
-  case MVT::v4i32:
-    Op = WebAssembly::ARGUMENT_v4i32;
-    break;
-  case MVT::v2i64:
-    Op = WebAssembly::ARGUMENT_v2i64;
-    break;
-  case MVT::v8f16:
-    Op = WebAssembly::ARGUMENT_v8f16;
-    break;
-  case MVT::v4f32:
-    Op = WebAssembly::ARGUMENT_v4f32;
-    break;
-  case MVT::v2f64:
-    Op = WebAssembly::ARGUMENT_v2f64;
-    break;
-  default:
-    llvm_unreachable("Found unexpected type for Wasm argument");
-    break;
-  }
+  unsigned Op = getWasmArgumentOpcode(ArgVT);
 
   const TargetInstrInfo &TII = MIRBuilder.getTII();
   MachineFunction &MF = MIRBuilder.getMF();
