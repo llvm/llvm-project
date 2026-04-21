@@ -107,11 +107,10 @@ static OpType getSingleOpOfType(Block &block) {
 
 /// Helper function to extract the input slices after filter is unrolled along
 /// kw.
-static SmallVector<Value>
-extractConvInputSlices(RewriterBase &rewriter, Location loc, Value input,
-                       int64_t nSize, int64_t wSize, int64_t cSize,
-                       int64_t kwSize, int strideW, int dilationW,
-                       int64_t wSizeStep, bool isSingleChanneled) {
+static SmallVector<Value> extractConvInputSlices(
+    RewriterBase &rewriter, Location loc, Value input, int64_t nSize,
+    int64_t wSize, int64_t cSize, int64_t kwSize, int strideW, int dilationW,
+    int64_t wSizeStep, bool isSingleChanneled, bool isNCWPooling = false) {
   SmallVector<Value> result;
   if (isSingleChanneled) {
     // Extract input slice of size {wSizeStep} @ [w + kw] for non-channeled
@@ -123,6 +122,19 @@ extractConvInputSlices(RewriterBase &rewriter, Location loc, Value input,
         result.push_back(vector::ExtractStridedSliceOp::create(
             rewriter, loc, input, /*offsets=*/ArrayRef<int64_t>{w + kw}, sizes,
             strides));
+      }
+    }
+  } else if (isNCWPooling) {
+    // Extract lhs slice of size {n, c, wSizeStep} @ [0, 0, sw * w + dw * kw]
+    // for NCW pooling.
+    SmallVector<int64_t> sizes = {nSize, cSize, wSizeStep};
+    SmallVector<int64_t> strides = {1, 1, 1};
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      for (int64_t w = 0; w < wSize; w += wSizeStep) {
+        result.push_back(vector::ExtractStridedSliceOp::create(
+            rewriter, loc, input,
+            /*offsets=*/ArrayRef<int64_t>{0, 0, w * strideW + kw * dilationW},
+            sizes, strides));
       }
     }
   } else {
@@ -162,7 +174,8 @@ static SmallVector<Value> extractConvFilterSlices(RewriterBase &rewriter,
 static SmallVector<Value>
 extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
                         int64_t nSize, int64_t wSize, int64_t fSize,
-                        int64_t wSizeStep, bool isSingleChanneled) {
+                        int64_t wSizeStep, bool isSingleChanneled,
+                        bool isNCWPooling = false) {
   SmallVector<Value> result;
   if (isSingleChanneled) {
     // Extract res slice: {wSizeStep} @ [w] for non-channeled convolution.
@@ -171,6 +184,15 @@ extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       result.push_back(vector::ExtractStridedSliceOp::create(
           rewriter, loc, res, /*offsets=*/ArrayRef<int64_t>{w}, sizes,
+          strides));
+    }
+  } else if (isNCWPooling) {
+    // Extract res slice: {n, f, wSizeStep} @ [0, 0, w] for NCW pooling.
+    SmallVector<int64_t> sizes = {nSize, fSize, wSizeStep};
+    SmallVector<int64_t> strides = {1, 1, 1};
+    for (int64_t w = 0; w < wSize; w += wSizeStep) {
+      result.push_back(vector::ExtractStridedSliceOp::create(
+          rewriter, loc, res, /*offsets=*/ArrayRef<int64_t>{0, 0, w}, sizes,
           strides));
     }
   } else {
@@ -191,7 +213,8 @@ extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
 static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
                                     Value res, int64_t wSize, int64_t wSizeStep,
                                     SmallVectorImpl<Value> &resVals,
-                                    bool isSingleChanneled) {
+                                    bool isSingleChanneled,
+                                    bool isNCWPooling = false) {
 
   if (isSingleChanneled) {
     // Write back res slice: {wSizeStep} @ [w] for non-channeled convolution.
@@ -201,6 +224,14 @@ static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
       res = vector::InsertStridedSliceOp::create(
           rewriter, loc, resVals[w], res, /*offsets=*/ArrayRef<int64_t>{w},
           strides);
+    }
+  } else if (isNCWPooling) {
+    // Write back res slice: {n, f, wSizeStep} @ [0, 0, w] for NCW pooling.
+    SmallVector<int64_t> strides = {1, 1, 1};
+    for (int64_t w = 0; w < wSize; w += wSizeStep) {
+      res = vector::InsertStridedSliceOp::create(
+          rewriter, loc, resVals[w], res,
+          /*offsets=*/ArrayRef<int64_t>{0, 0, w}, strides);
     }
   } else {
     // Write back res slice: {n, wSizeStep, f} @ [0, w, 0] for channeled
@@ -3436,6 +3467,8 @@ public:
     int64_t nSize, wSize, cSize, kwSize, fSize;
     SmallVector<int64_t, 3> lhsShape, rhsShape, resShape;
     bool isSingleChanneled = (conv1DOpOrder == Conv1DOpOrder::W);
+    bool isNCWPooling = (oper == ConvOperationKind::Pool &&
+                         conv1DOpOrder == Conv1DOpOrder::Ncw);
     switch (conv1DOpOrder) {
     case Conv1DOpOrder::W:
       // Initialize unused dimensions
@@ -3555,6 +3588,8 @@ public:
       // Base case, so no transposes necessary.
       break;
     case Conv1DOpOrder::Ncw: {
+      if (isNCWPooling)
+        break;
       // To match base vectorization case, we pre-transpose current case.
       // ncw -> nwc
       static constexpr std::array<int64_t, 3> permLhs = {0, 2, 1};
@@ -3579,12 +3614,13 @@ public:
     SmallVector<Value> lhsVals, rhsVals, resVals;
     lhsVals = extractConvInputSlices(rewriter, loc, lhs, nSize, wSize, cSize,
                                      kwSize, strideW, dilationW, wSizeStep,
-                                     isSingleChanneled);
+                                     isSingleChanneled, isNCWPooling);
     // Do not do for pooling.
     if (oper == ConvOperationKind::Conv)
       rhsVals = extractConvFilterSlices(rewriter, loc, rhs, kwSize);
-    resVals = extractConvResultSlices(rewriter, loc, res, nSize, wSize, fSize,
-                                      wSizeStep, isSingleChanneled);
+    resVals =
+        extractConvResultSlices(rewriter, loc, res, nSize, wSize, fSize,
+                                wSizeStep, isSingleChanneled, isNCWPooling);
 
     auto linearIndex = [&](int64_t kw, int64_t w) {
       return kw * (wSize / wSizeStep) + w;
@@ -3616,7 +3652,7 @@ public:
     }
 
     res = insertConvResultSlices(rewriter, loc, res, wSize, wSizeStep, resVals,
-                                 isSingleChanneled);
+                                 isSingleChanneled, isNCWPooling);
     //===------------------------------------------------------------------===//
     // End vector-only rewrite part
     //===------------------------------------------------------------------===//
@@ -3630,6 +3666,8 @@ public:
       // Base case, so no transposes necessary.
       break;
     case Conv1DOpOrder::Ncw: {
+      if (isNCWPooling)
+        break;
       // nwf -> nfw
       static constexpr std::array<int64_t, 3> perm = {0, 2, 1};
       res = vector::TransposeOp::create(rewriter, loc, res, perm);
