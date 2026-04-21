@@ -6,6 +6,7 @@ add_clang_library(clangScalableStaticAnalysisFrameworkAnalyses
   CallGraph/CallGraphExtractor.cpp
   CallGraph/CallGraphJSONFormat.cpp
   EntityPointerLevel/EntityPointerLevel.cpp
+  SSAFAnalysesCommon.cpp
   UnsafeBufferUsage/UnsafeBufferUsage.cpp
   UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp
 
