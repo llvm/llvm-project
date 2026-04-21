@@ -2102,28 +2102,6 @@ bool RegBankLegalizeHelper::applyMappingSrc(
   return true;
 }
 
-void RegBankLegalizeHelper::applyMappingTrivial(MachineInstr &MI) {
-  const RegisterBank *RB = MRI.getRegBank(MI.getOperand(0).getReg());
-  // Put RB on all registers
-  unsigned NumDefs = MI.getNumDefs();
-  unsigned NumOperands = MI.getNumOperands();
-
-  assert(verifyRegBankOnOperands(MI, RB, MRI, 0, NumDefs - 1));
-  if (RB == SgprRB)
-    assert(verifyRegBankOnOperands(MI, RB, MRI, NumDefs, NumOperands - 1));
-
-  if (RB == VgprRB) {
-    B.setInstr(MI);
-    for (unsigned i = NumDefs; i < NumOperands; ++i) {
-      Register Reg = MI.getOperand(i).getReg();
-      if (MRI.getRegBank(Reg) != RB) {
-        auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
-        MI.getOperand(i).setReg(Copy.getReg(0));
-      }
-    }
-  }
-}
-
 bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
   const AMDGPU::RsrcIntrinsic *RSrcIntrin =
       AMDGPU::lookupRsrcIntrinsic(AMDGPU::getIntrinsicID(MI));
