@@ -762,19 +762,11 @@ Printable Rematerializer::printUser(const MachineInstr *MI,
   });
 }
 
-Rollbacker::RollbackInfo::RollbackInfo(const Rematerializer &Remater,
-                                       RegisterIdx RegIdx) {
-  const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
-  DefReg = Reg.getDefReg();
-  DefRegion = Reg.DefRegion;
-  Dependencies = Reg.Dependencies;
-
-  InsertPos = std::next(Reg.DefMI->getIterator());
-  if (InsertPos != Reg.DefMI->getParent()->end())
-    NextRegIdx = Remater.getDefRegIdx(*InsertPos);
-  else
-    NextRegIdx = Rematerializer::NoReg;
-}
+Rollbacker::RollbackInfo::RollbackInfo(const Rematerializer::Reg &Reg,
+                                       RegisterIdx NextRegIdx)
+    : DefReg(Reg.getDefReg()), DefRegion(Reg.DefRegion),
+      Dependencies(Reg.Dependencies),
+      InsertPos(std::next(Reg.DefMI->getIterator())), NextRegIdx(NextRegIdx) {}
 
 void Rollbacker::rematerializerNoteRegCreated(const Rematerializer &Remater,
                                               RegisterIdx RegIdx) {
@@ -787,7 +779,34 @@ void Rollbacker::rematerializerNoteRegDeleted(const Rematerializer &Remater,
                                               RegisterIdx RegIdx) {
   if (RollingBack || Remater.isRematerializedRegister(RegIdx))
     return;
-  DeadRegs.try_emplace(RegIdx, Remater, RegIdx);
+  const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
+
+  // If the MI that was originally after the one defining the register is
+  // rematerializable, derive its corresponding register index.
+  RegisterIdx NextRegIdx = Rematerializer::NoReg;
+  auto KnownNextRegIdx = AdjacentDeletedMIs.find(RegIdx);
+  if (KnownNextRegIdx != AdjacentDeletedMIs.end()) {
+    NextRegIdx = KnownNextRegIdx->second;
+  } else {
+    MachineBasicBlock::iterator InsertPos = std::next(Reg.DefMI->getIterator());
+    if (InsertPos != Reg.DefMI->getParent()->end())
+      NextRegIdx = Remater.getDefRegIdx(*InsertPos);
+  }
+  DeadRegs.try_emplace(RegIdx, Reg, NextRegIdx);
+
+  // Keep track of adjacent rematerializable MIs to allow re-creation in the
+  // same exact order regardless of rematerialization order.
+  MachineBasicBlock::iterator DefMI = Reg.DefMI->getIterator();
+  if (Reg.DefMI->getParent()->begin() != DefMI) {
+    RegisterIdx PrevRegIdx = Remater.getDefRegIdx(*std::prev(DefMI));
+    if (PrevRegIdx != Rematerializer::NoReg) {
+      // The key might already be in the map, which indicates that there were
+      // originally instructions in between the MIs which have since then been
+      // deleted. In these cases we leave the value untouched, as we care about
+      // MIs that were adjacent in the original instruction order.
+      AdjacentDeletedMIs.try_emplace(PrevRegIdx, RegIdx);
+    }
+  }
 }
 
 void Rollbacker::rollback(Rematerializer &Remater) {
@@ -804,11 +823,16 @@ void Rollbacker::rollback(Rematerializer &Remater) {
     MachineBasicBlock::iterator InsertPos = Info.InsertPos;
     RegisterIdx NextRegIdx = Info.NextRegIdx;
     while (NextRegIdx != Rematerializer::NoReg) {
-      const auto *NextRegRollback = DeadRegs.find(NextRegIdx);
-      if (NextRegRollback == DeadRegs.end())
+      const Rematerializer::Reg &MaybeAliveReg = Remater.getReg(NextRegIdx);
+      // When the next MI is alive (including when it was dead and already
+      // re-created), we must use it as the position to insert before.
+      if (MaybeAliveReg.isAlive()) {
+        InsertPos = MaybeAliveReg.DefMI->getIterator();
         break;
-      InsertPos = NextRegRollback->second.InsertPos;
-      NextRegIdx = NextRegRollback->second.NextRegIdx;
+      }
+      RollbackInfo NextInfo = DeadRegs.at(NextRegIdx);
+      InsertPos = NextInfo.InsertPos;
+      NextRegIdx = NextInfo.NextRegIdx;
     }
     Remater.recreateReg(RegIdx, Info.DefRegion, InsertPos, Info.DefReg,
                         std::move(Info.Dependencies));
@@ -829,5 +853,6 @@ void Rollbacker::rollback(Rematerializer &Remater) {
   Remater.updateLiveIntervals();
   DeadRegs.clear();
   Rematerializations.clear();
+  AdjacentDeletedMIs.clear();
   RollingBack = false;
 }
