@@ -13463,20 +13463,29 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
 SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDLoc DL(N);
   auto *Context = DAG.getContext();
-  SDValue Pred;
+  SDValue Tmp;
   SDValue Acc = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
   unsigned Opc = Op1->getOpcode();
 
   // Handle predication by moving the SELECT into the operand of the MUL.
-  (void)sd_match(Op1, m_VSelect(m_Value(Pred), m_Value(Op1), m_Zero()));
+  SDValue Pred;
+  if (Opc == ISD::VSELECT && (isZeroOrZeroSplat(Op1->getOperand(2)) ||
+                              isZeroOrZeroSplatFP(Op1->getOperand(2)))) {
+    Pred = Op1->getOperand(0);
+    Op1 = Op1->getOperand(1);
+    Opc = Op1->getOpcode();
+  }
 
   // Handle negation (sub-reduction).
-  bool IsMLS =
-      sd_match(Op1, m_AnyOf(m_Neg(m_Value(Op1)), m_FNeg(m_Value(Op1))));
+  bool IsMLS = false;
+  if (sd_match(Op1, m_AnyOf(m_Neg(m_Value(Tmp)), m_FNeg(m_Value(Tmp))))) {
+    Op1 = Tmp;
+    Opc = Op1->getOpcode();
+    IsMLS = true;
+  }
 
-  Opc = Op1->getOpcode();
   if (Opc != ISD::MUL && Opc != ISD::FMUL && Opc != ISD::SHL)
     return SDValue();
 
@@ -13610,7 +13619,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 // -> partial.reduce.*mla(acc, sel(p, op, splat(0)), splat(trunc(1)))
 SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   SDLoc DL(N);
-  SDValue Pred;
+  SDValue Tmp;
   SDValue Acc = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
@@ -13618,14 +13627,23 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   if (!llvm::isOneOrOneSplat(Op2) && !llvm::isOneOrOneSplatFP(Op2))
     return SDValue();
 
-  // Handle predication.
-  (void)sd_match(Op1, m_VSelect(m_Value(Pred), m_Value(Op1), m_Zero()));
+  SDValue Pred;
+  unsigned Op1Opcode = Op1.getOpcode();
+  if (Op1Opcode == ISD::VSELECT && (isZeroOrZeroSplat(Op1->getOperand(2)) ||
+                                    isZeroOrZeroSplatFP(Op1->getOperand(2)))) {
+    Pred = Op1->getOperand(0);
+    Op1 = Op1->getOperand(1);
+    Op1Opcode = Op1->getOpcode();
+  }
 
   // Handle negation (sub-reduction).
-  bool IsMLS =
-      sd_match(Op1, m_AnyOf(m_Neg(m_Value(Op1)), m_FNeg(m_Value(Op1))));
+  bool IsMLS = false;
+  if (sd_match(Op1, m_AnyOf(m_Neg(m_Value(Tmp)), m_FNeg(m_Value(Tmp))))) {
+    Op1 = Tmp;
+    Op1Opcode = Op1.getOpcode();
+    IsMLS = true;
+  }
 
-  unsigned Op1Opcode = Op1.getOpcode();
   if (!ISD::isExtOpcode(Op1Opcode) && Op1Opcode != ISD::FP_EXTEND)
     return SDValue();
 
