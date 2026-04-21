@@ -340,12 +340,13 @@ define i32 @test_phi_load_volatile(ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB:%.*]]
 ; CHECK:       bb:
+; CHECK-NEXT:    [[C:%.*]] = load volatile i32, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb1:
+; CHECK-NEXT:    [[D:%.*]] = load volatile i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[E_IN:%.*]] = phi ptr [ [[B:%.*]], [[BB]] ], [ [[A]], [[BB1]] ]
-; CHECK-NEXT:    [[E:%.*]] = load volatile i32, ptr [[E_IN]], align 4
+; CHECK-NEXT:    [[E:%.*]] = phi i32 [ [[C]], [[BB]] ], [ [[D]], [[BB1]] ]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
 entry:
@@ -373,13 +374,14 @@ define i32 @test_phi_load_volatile_inaccessiblemem_call(ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB:%.*]]
 ; CHECK:       bb:
+; CHECK-NEXT:    [[C:%.*]] = load volatile i32, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb1:
+; CHECK-NEXT:    [[D:%.*]] = load volatile i32, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @inaccessiblemem()
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[E_IN:%.*]] = phi ptr [ [[B:%.*]], [[BB]] ], [ [[A]], [[BB1]] ]
-; CHECK-NEXT:    [[E:%.*]] = load volatile i32, ptr [[E_IN]], align 4
+; CHECK-NEXT:    [[E:%.*]] = phi i32 [ [[C]], [[BB]] ], [ [[D]], [[BB1]] ]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
 entry:
@@ -406,14 +408,15 @@ define i32 @test_phi_load_volatile_non_speculatable(ptr %A, ptr %B, ptr %X) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB:%.*]]
 ; CHECK:       bb:
+; CHECK-NEXT:    [[C:%.*]] = load volatile i32, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb1:
+; CHECK-NEXT:    [[D:%.*]] = load volatile i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[E_IN:%.*]] = phi ptr [ [[B:%.*]], [[BB]] ], [ [[A]], [[BB1]] ]
+; CHECK-NEXT:    [[E:%.*]] = phi i32 [ [[C]], [[BB]] ], [ [[D]], [[BB1]] ]
 ; CHECK-NEXT:    [[F:%.*]] = phi i32 [ 0, [[BB]] ], [ [[Y]], [[BB1]] ]
-; CHECK-NEXT:    [[E:%.*]] = load volatile i32, ptr [[E_IN]], align 4
 ; CHECK-NEXT:    [[G:%.*]] = add i32 [[E]], [[F]]
 ; CHECK-NEXT:    ret i32 [[G]]
 ;
