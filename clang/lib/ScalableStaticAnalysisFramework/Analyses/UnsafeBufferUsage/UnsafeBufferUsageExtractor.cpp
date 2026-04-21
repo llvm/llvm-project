@@ -114,8 +114,9 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     if (!ContributorName)
       llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
 
-    auto [Ignored, InsertionSucceeded] = SummaryBuilder.addSummary(
-        SummaryBuilder.addEntity(*ContributorName), std::move(*EntitySummary));
+    [[maybe_unused]] auto [Ignored, InsertionSucceeded] =
+        SummaryBuilder.addSummary(SummaryBuilder.addEntity(*ContributorName),
+                                  std::move(*EntitySummary));
 
     assert(InsertionSucceeded && "duplicated contributor extraction");
   }
