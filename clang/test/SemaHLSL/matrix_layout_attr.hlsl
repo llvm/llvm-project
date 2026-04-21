@@ -42,6 +42,14 @@ column_major float4x4 Col2Row(row_major float4x4 M) {
     return M;
 }
 
+void bar(row_major float4x4 M, column_major float4x4 M2) {}
+
+//Invalid: 
+// expected-error@+1 {{'row_major' attribute can only be applied to a matrix type}}
+void foo(column_major float4x4 mat, row_major int i) {}
+// expected-error@+1 {{'row_major' attribute can only be applied to a matrix type}}
+void foo2(float4x4 mat, row_major int i) {}
+
 
 template <typename T>
 struct Wrapper {

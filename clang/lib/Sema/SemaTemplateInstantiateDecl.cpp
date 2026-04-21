@@ -1044,9 +1044,9 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     }
 
     if (auto *A = dyn_cast<HLSLMatrixLayoutAttr>(TmplAttr)) {
-      if (!New->hasAttr<HLSLMatrixLayoutAttr>())
+      if (!HLSL().diagnoseInstantiatedMatrixLayoutAttr(New, A) &&
+          !New->hasAttr<HLSLMatrixLayoutAttr>())
         New->addAttr(A->clone(Context));
-      HLSL().diagnoseInstantiatedMatrixLayoutAttr(New, A);
       continue;
     }
 

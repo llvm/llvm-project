@@ -2744,10 +2744,10 @@ void SemaHLSL::handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (getASTContext()) HLSLMatrixLayoutAttr(getASTContext(), AL));
 }
 
-void SemaHLSL::diagnoseInstantiatedMatrixLayoutAttr(
+bool SemaHLSL::diagnoseInstantiatedMatrixLayoutAttr(
     Decl *D, const HLSLMatrixLayoutAttr *Attr) {
-  diagnoseMatrixLayoutOnNonMatrix(SemaRef, D, Attr->getLoc(),
-                                  Attr->getAttrName());
+  return diagnoseMatrixLayoutOnNonMatrix(SemaRef, D, Attr->getLoc(),
+                                         Attr->getAttrName());
 }
 
 namespace {
