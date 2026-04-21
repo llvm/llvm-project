@@ -504,44 +504,32 @@ bool Pointer::isElementAlive(unsigned Index) const {
   return IM->isElementAlive(Index);
 }
 
-void Pointer::startLifetime() const {
+void Pointer::startLifetime() const { setLifeState(Lifetime::Started); }
+
+void Pointer::endLifetime() const { setLifeState(Lifetime::Ended); }
+
+void Pointer::setLifeState(Lifetime L) const {
   if (!isBlockPointer())
     return;
   if (BS.Base < sizeof(InlineDescriptor))
     return;
 
-  if (inArray()) {
+  if (inArray() && !isArrayRoot()) {
+    assert(L == Lifetime::Started || L == Lifetime::Ended);
     const Descriptor *Desc = getFieldDesc();
     InitMapPtr &IM = getInitMap();
     if (!IM.hasInitMap())
       IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
 
-    IM->startElementLifetime(getIndex());
-    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Started));
+    if (L == Lifetime::Ended)
+      IM->endElementLifetime(getIndex());
+    else if (L == Lifetime::Started)
+      IM->startElementLifetime(getIndex());
+    assert(isArrayRoot() || (this->getLifetime() == L));
     return;
   }
 
-  getInlineDesc()->LifeState = Lifetime::Started;
-}
-
-void Pointer::endLifetime() const {
-  if (!isBlockPointer())
-    return;
-  if (BS.Base < sizeof(InlineDescriptor))
-    return;
-
-  if (inArray()) {
-    const Descriptor *Desc = getFieldDesc();
-    InitMapPtr &IM = getInitMap();
-    if (!IM.hasInitMap())
-      IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
-
-    IM->endElementLifetime(getIndex());
-    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Ended));
-    return;
-  }
-
-  getInlineDesc()->LifeState = Lifetime::Ended;
+  getInlineDesc()->LifeState = L;
 }
 
 void Pointer::initialize() const {
