@@ -393,3 +393,71 @@ void vla_subscript_expr() {
 // OGCG: %[[VLA_A_PTR:.*]] = getelementptr inbounds i32, ptr %[[TMP_COMPOUND]], i64 %[[VLA_IDX]]
 // OGCG: %[[ELEM_5_PTR:.*]] = getelementptr inbounds i32, ptr %[[VLA_A_PTR]], i64 5
 // OGCG: store i32 0, ptr %[[ELEM_5_PTR]], align 4
+
+double vla_param_2d(int n, double m[n][n], int i, int j) {
+  return m[i][j];
+}
+
+// CIR: cir.func{{.*}} @vla_param_2d(%[[N_ARG:.*]]: !s32i {{.*}}, %[[M_ARG:.*]]: !cir.ptr<!cir.double> {{.*}}, %[[I_ARG:.*]]: !s32i {{.*}}, %[[J_ARG:.*]]: !s32i {{.*}}) -> !cir.double
+// CIR:   %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
+// CIR:   %[[M_ADDR:.*]] = cir.alloca !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>, ["m", init]
+// CIR:   %[[I_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
+// CIR:   %[[J_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["j", init]
+// CIR:   cir.store{{.*}} %[[N_ARG]], %[[N_ADDR]]
+// CIR:   cir.store{{.*}} %[[M_ARG]], %[[M_ADDR]]
+// CIR:   cir.store{{.*}} %[[I_ARG]], %[[I_ADDR]]
+// CIR:   cir.store{{.*}} %[[J_ARG]], %[[J_ADDR]]
+// CIR:   %[[N:.*]] = cir.load{{.*}} %[[N_ADDR]]
+// CIR:   %[[VLA_SIZE:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
+// CIR:   %[[J:.*]] = cir.load{{.*}} %[[J_ADDR]]
+// CIR:   %[[I:.*]] = cir.load{{.*}} %[[I_ADDR]]
+// CIR:   %[[M:.*]] = cir.load{{.*}} %[[M_ADDR]]
+// CIR:   %[[I_EXT:.*]] = cir.cast integral %[[I]] : !s32i -> !u64i
+// CIR:   %[[ROW_OFF:.*]] = cir.mul nsw %[[I_EXT]], %[[VLA_SIZE]] : !u64i
+// CIR:   %[[ROW_PTR:.*]] = cir.ptr_stride %[[M]], %[[ROW_OFF]]
+// CIR:   %[[ELEM_PTR:.*]] = cir.ptr_stride %[[ROW_PTR]], %[[J]]
+// CIR:   %[[ELEM:.*]] = cir.load{{.*}} %[[ELEM_PTR]] : !cir.ptr<!cir.double>, !cir.double
+
+// LLVM: define{{.*}} double @vla_param_2d(i32 {{.*}} %[[N_ARG:.*]], ptr {{.*}} %[[M_ARG:.*]], i32 {{.*}} %[[I_ARG:.*]], i32 {{.*}} %[[J_ARG:.*]])
+// LLVM:   %[[N_ADDR:.*]] = alloca i32
+// LLVM:   %[[M_ADDR:.*]] = alloca ptr
+// LLVM:   %[[I_ADDR:.*]] = alloca i32
+// LLVM:   %[[J_ADDR:.*]] = alloca i32
+// LLVM:   store i32 %[[N_ARG]], ptr %[[N_ADDR]]
+// LLVM:   store ptr %[[M_ARG]], ptr %[[M_ADDR]]
+// LLVM:   store i32 %[[I_ARG]], ptr %[[I_ADDR]]
+// LLVM:   store i32 %[[J_ARG]], ptr %[[J_ADDR]]
+// LLVM:   %[[N:.*]] = load i32, ptr %[[N_ADDR]]
+// LLVM:   %[[VLA_SIZE:.*]] = sext i32 %[[N]] to i64
+// LLVM:   %[[J:.*]] = load i32, ptr %[[J_ADDR]]
+// LLVM:   %[[I:.*]] = load i32, ptr %[[I_ADDR]]
+// LLVM:   %[[M:.*]] = load ptr, ptr %[[M_ADDR]]
+// LLVM:   %[[I_EXT:.*]] = sext i32 %[[I]] to i64
+// LLVM:   %[[ROW_OFF:.*]] = mul nsw i64 %[[I_EXT]], %[[VLA_SIZE]]
+// LLVM:   %[[ROW_PTR:.*]] = getelementptr double, ptr %[[M]], i64 %[[ROW_OFF]]
+// LLVM:   %[[J_EXT:.*]] = sext i32 %[[J]] to i64
+// LLVM:   %[[ELEM_PTR:.*]] = getelementptr double, ptr %[[ROW_PTR]], i64 %[[J_EXT]]
+// LLVM:   %[[ELEM:.*]] = load double, ptr %[[ELEM_PTR]]
+
+// OGCG: define{{.*}} double @vla_param_2d(i32 {{.*}} %[[N_ARG:.*]], ptr {{.*}} %[[M_ARG:.*]], i32 {{.*}} %[[I_ARG:.*]], i32 {{.*}} %[[J_ARG:.*]])
+// OGCG:   %[[N_ADDR:.*]] = alloca i32
+// OGCG:   %[[M_ADDR:.*]] = alloca ptr
+// OGCG:   %[[I_ADDR:.*]] = alloca i32
+// OGCG:   %[[J_ADDR:.*]] = alloca i32
+// OGCG:   store i32 %[[N_ARG]], ptr %[[N_ADDR]]
+// OGCG:   store ptr %[[M_ARG]], ptr %[[M_ADDR]]
+// OGCG:   store i32 %[[I_ARG]], ptr %[[I_ADDR]]
+// OGCG:   store i32 %[[J_ARG]], ptr %[[J_ADDR]]
+// OGCG:   %[[N0:.*]] = load i32, ptr %[[N_ADDR]]
+// OGCG:   %{{.*}} = zext i32 %[[N0]] to i64
+// OGCG:   %[[N1:.*]] = load i32, ptr %[[N_ADDR]]
+// OGCG:   %[[VLA_SIZE:.*]] = zext i32 %[[N1]] to i64
+// OGCG:   %[[M:.*]] = load ptr, ptr %[[M_ADDR]]
+// OGCG:   %[[I:.*]] = load i32, ptr %[[I_ADDR]]
+// OGCG:   %[[I_EXT:.*]] = sext i32 %[[I]] to i64
+// OGCG:   %[[ROW_OFF:.*]] = mul nsw i64 %[[I_EXT]], %[[VLA_SIZE]]
+// OGCG:   %[[ROW_PTR:.*]] = getelementptr inbounds double, ptr %[[M]], i64 %[[ROW_OFF]]
+// OGCG:   %[[J:.*]] = load i32, ptr %[[J_ADDR]]
+// OGCG:   %[[J_EXT:.*]] = sext i32 %[[J]] to i64
+// OGCG:   %[[ELEM_PTR:.*]] = getelementptr inbounds double, ptr %[[ROW_PTR]], i64 %[[J_EXT]]
+// OGCG:   %[[ELEM:.*]] = load double, ptr %[[ELEM_PTR]]
