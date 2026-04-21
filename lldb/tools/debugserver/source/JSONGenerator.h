@@ -296,7 +296,7 @@ public:
       AddItem(key, ObjectSP(new Boolean(value)));
     }
 
-    ObjectSP GetValueForKey(const std::string& key) const {
+    ObjectSP GetValueForKey(const std::string &key) const {
       for (const auto &kv : m_dict)
         if (kv.first == key)
           return kv.second;
