@@ -566,6 +566,73 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerTextureLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(1);
+      Value *MipLevel = CI->getArgOperand(2);
+      Value *Offsets = CI->getArgOperand(3);
+
+      Type *OldTy = CI->getType();
+      Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
+
+      std::array<Value *, 3> CoordArgs = {UndefValue::get(Int32Ty),
+                                          UndefValue::get(Int32Ty),
+                                          UndefValue::get(Int32Ty)};
+
+      Type *CoordTy = Coords->getType();
+      if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy)) {
+        unsigned NumCoords = VecTy->getNumElements();
+        assert(NumCoords < 3 &&
+               "Expected at most 3 elements in coordinate vector");
+        for (unsigned I = 0; I < NumCoords; ++I)
+          CoordArgs[I] = IRB.CreateExtractElement(Coords, uint64_t(I));
+      } else {
+        CoordArgs[0] = Coords;
+      }
+
+      std::array<Value *, 3> OffsetArgs = {UndefValue::get(Int32Ty),
+                                           UndefValue::get(Int32Ty),
+                                           UndefValue::get(Int32Ty)};
+
+      Type *OffsetTy = Offsets->getType();
+      bool IsZeroOffset = false;
+      if (auto *C = dyn_cast<Constant>(Offsets))
+        IsZeroOffset = C->isNullValue();
+
+      if (!IsZeroOffset) {
+        if (auto *VecTy = dyn_cast<FixedVectorType>(OffsetTy)) {
+          unsigned NumOffsets = VecTy->getNumElements();
+          assert(NumOffsets < 3 &&
+                 "Expected at most 3 elements in offsets vector");
+          for (unsigned I = 0; I < NumOffsets; ++I)
+            OffsetArgs[I] = IRB.CreateExtractElement(Offsets, uint64_t(I));
+        } else {
+          OffsetArgs[0] = Offsets;
+        }
+      }
+
+      std::array<Value *, 8> Args{Handle,        MipLevel,     CoordArgs[0],
+                                  CoordArgs[1],  CoordArgs[2], OffsetArgs[0],
+                                  OffsetArgs[1], OffsetArgs[2]};
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
+        return E;
+
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -979,6 +1046,9 @@ public:
         break;
       case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
+        break;
+      case Intrinsic::dx_resource_load_level:
+        HasErrors |= lowerTextureLoad(F);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);
