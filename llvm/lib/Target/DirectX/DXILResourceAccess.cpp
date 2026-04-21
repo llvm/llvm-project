@@ -260,7 +260,7 @@ static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
 }
 
 static void createTextureLoad(IntrinsicInst *II, LoadInst *LI,
-                               dxil::ResourceTypeInfo &RTI) {
+                              dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = LI->getDataLayout();
   IRBuilder<> Builder(LI);
   Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
