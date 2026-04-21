@@ -526,7 +526,7 @@ define void @test3_neg(i64 %start) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
