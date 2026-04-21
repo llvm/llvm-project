@@ -70,7 +70,7 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_LAUNCHER=",  # FIXME: set on mac when needed
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_PYTHON_API_TEST_EXECUTABLE=$python_path",
-    "LLDB_TEST_ARCH=$current_cpu",
+    "LLDB_TEST_TRIPLE=$llvm_current_triple",
     "LLDB_TEST_COMPILER=" + rebase_path("$root_build_dir/bin/clang"),
     "LLDB_TEST_BUILD_DIRECTORY=" + rebase_path("$target_gen_dir/test_build"),
     "LLDB_TEST_DSYMUTIL=" + rebase_path("$root_build_dir/bin/dsymutil"),
@@ -84,6 +84,7 @@ write_lit_cfg("lit_api_site_cfg") {
             "$target_gen_dir/lldb-test-build.noindex/module-cache-lldb"),
     "LLDB_TEST_PLATFORM_URL=",
     "LLDB_TEST_PLATFORM_WORKING_DIR=",
+    "LLDB_TEST_RESOURCE_DIR=",
     "LLDB_TEST_SYSROOT=",
     "LLVM_BUILD_MODE=.",
     "LLVM_ENABLE_SHARED_LIBS=0",

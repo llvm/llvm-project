@@ -41,7 +41,7 @@ body:             |
 
     %0:gpr(s32) = G_IMPLICIT_DEF
     %4:gpr(p0) = G_IMPLICIT_DEF
-    %8:fpr(s32) = G_FCONSTANT float 0x7FF8000000000000
+    %8:fpr(f32) = G_FCONSTANT float 0x7FF8000000000000
 
   bb.1:
     successors: %bb.2(0x80000000)
@@ -54,7 +54,7 @@ body:             |
     successors: %bb.2(0x80000000)
 
     %3:gpr(s16) = G_PHI %1(s16), %bb.1, %5(s16), %bb.2
-    %5:fpr(s16) = G_FPTRUNC %8(s32)
+    %5:fpr(f16) = G_FPTRUNC %8(s32)
     G_STORE %3(s16), %4(p0) :: (store (s16) into `ptr undef`)
     G_BR %bb.2
 
@@ -100,7 +100,7 @@ body:             |
 
     %0:gpr(s32) = G_IMPLICIT_DEF
     %4:gpr(p0) = G_IMPLICIT_DEF
-    %8:fpr(s32) = G_FCONSTANT float 0x7FF8000000000000
+    %8:fpr(f32) = G_FCONSTANT float 0x7FF8000000000000
 
   bb.1:
     successors: %bb.2(0x80000000)
@@ -113,7 +113,7 @@ body:             |
     successors: %bb.2(0x80000000)
 
     %3:fpr(s16) = G_PHI %5(s16), %bb.2, %1(s16), %bb.1
-    %5:fpr(s16) = G_FPTRUNC %8(s32)
+    %5:fpr(f16) = G_FPTRUNC %8(s32)
     G_STORE %3(s16), %4(p0) :: (store (s16) into `ptr undef`)
     G_BR %bb.2
 

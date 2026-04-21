@@ -464,7 +464,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Patch->apply(*CI);
   }
   auto Clang = prepareCompilerInstance(
-      std::move(CI), PreamblePCH,
+      std::move(CI), Inputs.Opts.SkipPreambleBuild ? nullptr : PreamblePCH,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, Filename), VFS,
       *DiagConsumer);
 
