@@ -107,9 +107,9 @@ EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
 /// \param IsFunRet true iff the created EPL is associated with the return type
 /// of a function entity.
 llvm::Expected<EntityPointerLevel>
-creatEntityPointerLevel(const NamedDecl *ND,
-                        llvm::function_ref<EntityId(EntityName EN)> AddEntity,
-                        bool IsFunRet = false);
+createEntityPointerLevel(const NamedDecl *ND,
+                         llvm::function_ref<EntityId(EntityName EN)> AddEntity,
+                         bool IsFunRet = false);
 
 /// Creates a new EntityPointerLevel (EPL) from `E` by incrementing `E`'s
 /// pointer level.
