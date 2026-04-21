@@ -15,9 +15,11 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,7 +30,11 @@ using namespace llvm;
 #define STPSUPPRESS_PASS_NAME "AArch64 Store Pair Suppression"
 
 namespace {
-class AArch64StorePairSuppress : public MachineFunctionPass {
+class AArch64StorePairSuppressImpl {
+public:
+  bool run(MachineFunction &MF, MachineTraceMetrics *Traces);
+
+private:
   const AArch64InstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
@@ -36,18 +42,19 @@ class AArch64StorePairSuppress : public MachineFunctionPass {
   MachineTraceMetrics *Traces;
   MachineTraceMetrics::Ensemble *MinInstr;
 
+  bool shouldAddSTPToBlock(const MachineBasicBlock *BB);
+  bool isNarrowFPStore(const MachineInstr &MI);
+};
+
+class AArch64StorePairSuppressLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  AArch64StorePairSuppress() : MachineFunctionPass(ID) {}
+  AArch64StorePairSuppressLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return STPSUPPRESS_PASS_NAME; }
 
+protected:
   bool runOnMachineFunction(MachineFunction &F) override;
-
-private:
-  bool shouldAddSTPToBlock(const MachineBasicBlock *BB);
-
-  bool isNarrowFPStore(const MachineInstr &MI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -56,14 +63,14 @@ private:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-char AArch64StorePairSuppress::ID = 0;
+char AArch64StorePairSuppressLegacy::ID = 0;
 } // anonymous
 
-INITIALIZE_PASS(AArch64StorePairSuppress, "aarch64-stp-suppress",
+INITIALIZE_PASS(AArch64StorePairSuppressLegacy, "aarch64-stp-suppress",
                 STPSUPPRESS_PASS_NAME, false, false)
 
 FunctionPass *llvm::createAArch64StorePairSuppressPass() {
-  return new AArch64StorePairSuppress();
+  return new AArch64StorePairSuppressLegacy();
 }
 
 /// Return true if an STP can be added to this block without increasing the
@@ -72,7 +79,8 @@ FunctionPass *llvm::createAArch64StorePairSuppressPass() {
 /// critical path. If the critical path is longer than the resource height, the
 /// extra vector ops can limit physreg renaming. Otherwise, it could simply
 /// oversaturate the vector units.
-bool AArch64StorePairSuppress::shouldAddSTPToBlock(const MachineBasicBlock *BB) {
+bool AArch64StorePairSuppressImpl::shouldAddSTPToBlock(
+    const MachineBasicBlock *BB) {
   if (!MinInstr)
     MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
 
@@ -113,7 +121,7 @@ bool AArch64StorePairSuppress::shouldAddSTPToBlock(const MachineBasicBlock *BB) 
 ///
 /// FIXME: We plan to develop a decent Target abstraction for simple loads and
 /// stores. Until then use a nasty switch similar to AArch64LoadStoreOptimizer.
-bool AArch64StorePairSuppress::isNarrowFPStore(const MachineInstr &MI) {
+bool AArch64StorePairSuppressImpl::isNarrowFPStore(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     return false;
@@ -125,22 +133,18 @@ bool AArch64StorePairSuppress::isNarrowFPStore(const MachineInstr &MI) {
   }
 }
 
-bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()) || MF.getFunction().hasOptSize())
-    return false;
-
+bool AArch64StorePairSuppressImpl::run(MachineFunction &MF,
+                                       MachineTraceMetrics *Traces) {
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
-  if (!ST.enableStorePairSuppress())
-    return false;
-
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
-  Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+  this->Traces = Traces;
   MinInstr = nullptr;
 
-  LLVM_DEBUG(dbgs() << "*** " << getPassName() << ": " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "*** " << STPSUPPRESS_PASS_NAME << ": " << MF.getName()
+                    << '\n');
 
   if (!SchedModel.hasInstrSchedModel()) {
     LLVM_DEBUG(dbgs() << "  Skipping pass: no machine model present.\n");
@@ -181,4 +185,34 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   // This pass just sets some internal MachineMemOperand flags. It can't really
   // invalidate anything.
   return false;
+}
+
+bool AArch64StorePairSuppressLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()) || MF.getFunction().hasOptSize())
+    return false;
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (!ST.enableStorePairSuppress())
+    return false;
+
+  MachineTraceMetrics *Traces =
+      &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+  return AArch64StorePairSuppressImpl().run(MF, Traces);
+}
+
+PreservedAnalyses
+llvm::AArch64StorePairSuppressPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  if (MF.getFunction().hasOptSize())
+    return PreservedAnalyses::all();
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (!ST.enableStorePairSuppress())
+    return PreservedAnalyses::all();
+
+  MachineTraceMetrics *Traces =
+      &MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
+  AArch64StorePairSuppressImpl().run(MF, Traces);
+
+  return PreservedAnalyses::all();
 }

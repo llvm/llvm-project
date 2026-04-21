@@ -168,7 +168,7 @@ void initializeAArch64SLSHardeningPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);
 void initializeAArch64StackTaggingPass(PassRegistry &);
 void initializeAArch64StackTaggingPreRAPass(PassRegistry &);
-void initializeAArch64StorePairSuppressPass(PassRegistry&);
+void initializeAArch64StorePairSuppressLegacyPass(PassRegistry &);
 void initializeFalkorHWPFFixPass(PassRegistry&);
 void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
 void initializeLDTLSCleanupPass(PassRegistry &);
@@ -280,6 +280,13 @@ public:
 
 class AArch64ConditionalComparesPass
     : public PassInfoMixin<AArch64ConditionalComparesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64StorePairSuppressPass
+    : public PassInfoMixin<AArch64StorePairSuppressPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
