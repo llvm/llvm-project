@@ -881,7 +881,7 @@ def CBufferLoadLegacy : DXILOp<59, cbufferLoadLegacy> {
 }
 
 def TextureLoad : DXILOp<66, textureLoad> {
-  let Doc = "reads from a Texture";
+  let Doc = "reads from a texture resource";
   // Handle, MipLevelOrSampleCount, Coord0, Coord1, Coord2, Offset0, Offset1, Offset2
   let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, Int32Ty,
                    Int32Ty, Int32Ty];
@@ -1181,7 +1181,7 @@ def WaveActiveBit : DXILOp<120, waveActiveBit> {
   let intrinsics = [
     IntrinSelect<int_dx_wave_reduce_or,
                  [
-                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,                   
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,
                  ]>,
     IntrinSelect<int_dx_wave_reduce_xor,
                  [
