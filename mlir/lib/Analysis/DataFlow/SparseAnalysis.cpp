@@ -374,8 +374,10 @@ void AbstractSparseForwardDataFlowAnalysis::join(
 //===----------------------------------------------------------------------===//
 
 AbstractSparseBackwardDataFlowAnalysis::AbstractSparseBackwardDataFlowAnalysis(
-    DataFlowSolver &solver, SymbolTableCollection &symbolTable)
-    : DataFlowAnalysis(solver), symbolTable(symbolTable) {
+    DataFlowSolver &solver, SymbolTableCollection &symbolTable,
+    TypeID stateTypeID)
+    : DataFlowAnalysis(solver), symbolTable(symbolTable),
+      stateTypeID(stateTypeID) {
   registerAnchorKind<CFGEdge>();
 }
 
@@ -689,5 +691,9 @@ void AbstractSparseBackwardDataFlowAnalysis::setAllToExitStates(
 
 void AbstractSparseBackwardDataFlowAnalysis::meet(
     AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs) {
-  propagateIfChanged(lhs, lhs->meet(rhs));
+  ChangeResult changed = lhs->meet(rhs);
+  DataFlowSolver &s = getSolver();
+  if (LLVM_UNLIKELY(s.hasWideningEnabled()))
+    changed |= s.tryWidenAtMerge(lhs, stateTypeID, changed);
+  propagateIfChanged(lhs, changed);
 }

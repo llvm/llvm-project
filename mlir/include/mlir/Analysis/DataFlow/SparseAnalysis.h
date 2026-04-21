@@ -429,8 +429,19 @@ public:
   LogicalResult visit(ProgramPoint *point) override;
 
 protected:
+  /// Construct the analysis. `stateTypeID` identifies the concrete lattice
+  /// type used by this analysis; it routes the merge-site widening lookup in
+  /// the solver. The CRTP wrapper `SparseBackwardDataFlowAnalysis<StateT>`
+  /// fills it in from the template parameter.
+  AbstractSparseBackwardDataFlowAnalysis(DataFlowSolver &solver,
+                                         SymbolTableCollection &symbolTable,
+                                         TypeID stateTypeID);
+
+  /// Legacy constructor. Using this disables widening for this analysis
+  /// because the state TypeID is unknown. Prefer the three-argument ctor.
   explicit AbstractSparseBackwardDataFlowAnalysis(
-      DataFlowSolver &solver, SymbolTableCollection &symbolTable);
+      DataFlowSolver &solver, SymbolTableCollection &symbolTable)
+      : AbstractSparseBackwardDataFlowAnalysis(solver, symbolTable, TypeID()) {}
 
   /// The operation transfer function. Given the result lattices, this
   /// function is expected to set the operand lattices.
@@ -519,6 +530,11 @@ private:
   getLatticeElementsFor(ProgramPoint *point, ValueRange values);
 
   SymbolTableCollection &symbolTable;
+
+  /// TypeID of the concrete lattice type used by this analysis. Threaded
+  /// through from the CRTP derived class so that merge-site widening lookups
+  /// know which `WideningConfig` to consult. Empty TypeID disables widening.
+  TypeID stateTypeID;
 };
 
 //===----------------------------------------------------------------------===//
@@ -543,7 +559,8 @@ class SparseBackwardDataFlowAnalysis
 public:
   explicit SparseBackwardDataFlowAnalysis(DataFlowSolver &solver,
                                           SymbolTableCollection &symbolTable)
-      : AbstractSparseBackwardDataFlowAnalysis(solver, symbolTable) {}
+      : AbstractSparseBackwardDataFlowAnalysis(solver, symbolTable,
+                                               TypeID::get<StateT>()) {}
 
   /// Visit an operation with the lattices of its results. This function is
   /// expected to set the lattices of the operation's operands.

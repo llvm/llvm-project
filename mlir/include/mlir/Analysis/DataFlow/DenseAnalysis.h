@@ -67,7 +67,18 @@ public:
 /// Visit a program point at the begining of block will visit the block itself.
 class AbstractDenseForwardDataFlowAnalysis : public DataFlowAnalysis {
 public:
-  using DataFlowAnalysis::DataFlowAnalysis;
+  /// Construct the analysis. `stateTypeID` identifies the concrete lattice
+  /// type used by this analysis; it routes the merge-site widening lookup in
+  /// the solver. The CRTP wrapper `DenseForwardDataFlowAnalysis<LatticeT>`
+  /// fills it in from the template parameter.
+  AbstractDenseForwardDataFlowAnalysis(DataFlowSolver &solver,
+                                       TypeID stateTypeID)
+      : DataFlowAnalysis(solver), stateTypeID(stateTypeID) {}
+
+  /// Legacy constructor. Using this disables widening for this analysis
+  /// because the state TypeID is unknown. Prefer the two-argument ctor.
+  explicit AbstractDenseForwardDataFlowAnalysis(DataFlowSolver &solver)
+      : AbstractDenseForwardDataFlowAnalysis(solver, TypeID()) {}
 
   /// Initialize the analysis by visiting every program point whose execution
   /// may modify the program state; that is, every operation and block.
@@ -113,7 +124,11 @@ protected:
 
   /// Join a lattice with another and propagate an update if it changed.
   void join(AbstractDenseLattice *lhs, const AbstractDenseLattice &rhs) {
-    propagateIfChanged(lhs, lhs->join(rhs));
+    ChangeResult changed = lhs->join(rhs);
+    DataFlowSolver &s = getSolver();
+    if (LLVM_UNLIKELY(s.hasWideningEnabled()))
+      changed |= s.tryWidenAtMerge(lhs, stateTypeID, changed);
+    propagateIfChanged(lhs, changed);
   }
 
   /// Visit an operation. If this is a call operation or region control-flow
@@ -189,6 +204,11 @@ private:
   void visitCallOperation(CallOpInterface call,
                           const AbstractDenseLattice &before,
                           AbstractDenseLattice *after);
+
+  /// TypeID of the concrete lattice type used by this analysis. Threaded
+  /// through from the CRTP derived class so that merge-site widening lookups
+  /// know which `WideningConfig` to consult. Empty TypeID disables widening.
+  TypeID stateTypeID;
 };
 
 //===----------------------------------------------------------------------===//
@@ -208,8 +228,9 @@ class DenseForwardDataFlowAnalysis
       "analysis state class expected to subclass AbstractDenseLattice");
 
 public:
-  using AbstractDenseForwardDataFlowAnalysis::
-      AbstractDenseForwardDataFlowAnalysis;
+  explicit DenseForwardDataFlowAnalysis(DataFlowSolver &solver)
+      : AbstractDenseForwardDataFlowAnalysis(solver,
+                                             TypeID::get<LatticeT>()) {}
 
   /// Visit an operation with the dense lattice before its execution. This
   /// function is expected to set the dense lattice after its execution and
@@ -358,10 +379,22 @@ class AbstractDenseBackwardDataFlowAnalysis : public DataFlowAnalysis {
 public:
   /// Construct the analysis in the given solver. Takes a symbol table
   /// collection that is used to cache symbol resolution in interprocedural part
-  /// of the analysis. The symbol table need not be prefilled.
+  /// of the analysis. The symbol table need not be prefilled. `stateTypeID`
+  /// identifies the concrete lattice type used by this analysis; it routes the
+  /// merge-site widening lookup in the solver. The CRTP wrapper
+  /// `DenseBackwardDataFlowAnalysis<LatticeT>` fills it in from the template
+  /// parameter.
+  AbstractDenseBackwardDataFlowAnalysis(DataFlowSolver &solver,
+                                        SymbolTableCollection &symbolTable,
+                                        TypeID stateTypeID)
+      : DataFlowAnalysis(solver), symbolTable(symbolTable),
+        stateTypeID(stateTypeID) {}
+
+  /// Legacy constructor. Using this disables widening for this analysis
+  /// because the state TypeID is unknown. Prefer the three-argument ctor.
   AbstractDenseBackwardDataFlowAnalysis(DataFlowSolver &solver,
                                         SymbolTableCollection &symbolTable)
-      : DataFlowAnalysis(solver), symbolTable(symbolTable) {}
+      : AbstractDenseBackwardDataFlowAnalysis(solver, symbolTable, TypeID()) {}
 
   /// Initialize the analysis by visiting every program point whose execution
   /// may modify the program state; that is, every operation and block.
@@ -410,7 +443,11 @@ protected:
 
   /// Meet a lattice with another lattice and propagate an update if it changed.
   void meet(AbstractDenseLattice *lhs, const AbstractDenseLattice &rhs) {
-    propagateIfChanged(lhs, lhs->meet(rhs));
+    ChangeResult changed = lhs->meet(rhs);
+    DataFlowSolver &s = getSolver();
+    if (LLVM_UNLIKELY(s.hasWideningEnabled()))
+      changed |= s.tryWidenAtMerge(lhs, stateTypeID, changed);
+    propagateIfChanged(lhs, changed);
   }
 
   /// Visit an operation. Dispatches to specialized methods for call or region
@@ -497,6 +534,11 @@ private:
 
   /// Symbol table for call-level control flow.
   SymbolTableCollection &symbolTable;
+
+  /// TypeID of the concrete lattice type used by this analysis. Threaded
+  /// through from the CRTP derived class so that merge-site widening lookups
+  /// know which `WideningConfig` to consult. Empty TypeID disables widening.
+  TypeID stateTypeID;
 };
 
 //===----------------------------------------------------------------------===//
@@ -515,8 +557,10 @@ class DenseBackwardDataFlowAnalysis
                 "analysis state expected to subclass AbstractDenseLattice");
 
 public:
-  using AbstractDenseBackwardDataFlowAnalysis::
-      AbstractDenseBackwardDataFlowAnalysis;
+  DenseBackwardDataFlowAnalysis(DataFlowSolver &solver,
+                                SymbolTableCollection &symbolTable)
+      : AbstractDenseBackwardDataFlowAnalysis(solver, symbolTable,
+                                              TypeID::get<LatticeT>()) {}
 
   /// Transfer function. Visits an operation with the dense lattice after its
   /// execution. This function is expected to set the dense lattice before its
