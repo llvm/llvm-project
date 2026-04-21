@@ -5787,30 +5787,6 @@ SDValue PPCTargetLowering::FinishCall(
                             ? NumBytes
                             : 0;
 
-  if (!TM.Options.XCOFFInlineGlueCode) {
-    const Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
-    const MCRegister TOCReg = Subtarget.getTOCPointerRegister();
-    const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();
-    const unsigned TOCSaveOffset =
-        Subtarget.getFrameLowering()->getTOCSaveOffset();
-    const MVT RegVT = Subtarget.getScalarIntVT();
-
-    // Load the original toc value from the stack save slot.
-    SDValue PtrOffset = DAG.getIntPtrConstant(TOCSaveOffset, dl);
-    SDValue StackPtr = DAG.getRegister(StackPtrReg, RegVT);
-    SDValue AddPtr = DAG.getNode(ISD::ADD, dl, RegVT, StackPtr, PtrOffset);
-    SDValue TOCLoad = DAG.getLoad(
-        RegVT, dl, Chain, AddPtr,
-        MachinePointerInfo::getStack(DAG.getMachineFunction(), TOCSaveOffset),
-        Alignment, MachineMemOperand::MONone);
-
-    // TODO FIXME Causing scheduling overflow ...
-    // Copy back to the physical toc register.
-    // SDValue TOCVal = DAG.getCopyToReg(Chain, dl, TOCReg, TOCLoad, Glue);
-    // Chain = TOCVal.getValue(0);
-    // Glue = TOCVal.getValue(1);
-  }
-
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, BytesCalleePops, Glue, dl);
   Glue = Chain.getValue(1);
 
