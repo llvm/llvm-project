@@ -2617,8 +2617,14 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     intrName = "aarch64.neon.fminnmp";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vsqrth_f16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vsqrt_v:
   case NEON::BI__builtin_neon_vsqrtq_v:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return emitNeonCall(cgm, builder, {ty}, ops, "sqrt", ty, loc);
   case NEON::BI__builtin_neon_vrbit_v:
   case NEON::BI__builtin_neon_vrbitq_v:
   case NEON::BI__builtin_neon_vmaxv_f16:
@@ -2651,6 +2657,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vrsra_n_v:
   case NEON::BI__builtin_neon_vrsraq_n_v: {
     intrName = usgn ? "aarch64.neon.urshl" : "aarch64.neon.srshl";
+    // The llvm intrinsic is expecting negative shift amount for right shift.
+    // Thus we have to make shift amount vec type to be signed.
     cir::VectorType shiftAmtVecTy =
         usgn ? getSignChangedVectorType(builder, ty) : ty;
     llvm::SmallVector<mlir::Value, 2> tmpOps = {ops[1], ops[2]};

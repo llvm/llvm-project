@@ -22,28 +22,6 @@
 
 namespace lldb_private::dil {
 
-lldb::ValueObjectSP
-GetDynamicOrSyntheticValue(lldb::ValueObjectSP value_sp,
-                           lldb::DynamicValueType use_dynamic,
-                           bool use_synthetic) {
-  if (!value_sp)
-    return nullptr;
-
-  if (use_dynamic != lldb::eNoDynamicValues) {
-    lldb::ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(use_dynamic);
-    if (dynamic_sp)
-      value_sp = dynamic_sp;
-  }
-
-  if (use_synthetic) {
-    lldb::ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
-    if (synthetic_sp)
-      value_sp = synthetic_sp;
-  }
-
-  return value_sp;
-}
-
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
                                  lldb::BasicType basic_type) {
   if (type_system)
@@ -62,6 +40,16 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       name, addr, exe_ctx,
       valobj.GetCompilerType().GetArrayElementType(&ctx).GetPointerType(),
       /* do_deref */ false);
+}
+
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -394,11 +382,14 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
       (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
   const bool allow_var_updates =
       (options & StackFrame::eExpressionPathOptionsAllowVarUpdates) != 0;
+  const bool disallow_globals =
+      (options & StackFrame::eExpressionPathOptionsDisallowGlobals) != 0;
 
   m_use_synthetic = !no_synth_child;
   m_fragile_ivar = !no_fragile_ivar;
   m_check_ptr_vs_member = check_ptr_vs_member;
   m_allow_var_updates = allow_var_updates;
+  m_allow_globals = !disallow_globals;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -436,7 +427,7 @@ Interpreter::Visit(const IdentifierNode &node) {
   lldb::ValueObjectSP identifier =
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
-  if (!identifier)
+  if (!identifier && m_allow_globals)
     identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
                                         m_target, use_dynamic);
   if (!identifier) {
