@@ -179,7 +179,7 @@ constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
   return b;
 }
 
-inline constexpr uint64_t hash_1to3_bytes(const char *s, size_t len,
+constexpr uint64_t hash_1to3_bytes(const char *s, size_t len,
                                           uint64_t seed) {
   uint8_t a = s[0];
   uint8_t b = s[len >> 1];
