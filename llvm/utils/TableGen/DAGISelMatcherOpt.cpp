@@ -443,10 +443,8 @@ static void FactorNodes(MatcherList &ML) {
         std::next(J) != E) {
       LLVM_DEBUG(
           errs() << "Couldn't merge this:\n";
-          EqualMatchers[0].print(errs(), indent(4)); 
-          errs() << "into this:\n";
-          J->print(errs(), indent(4)); 
-          std::next(J)->front()->printOne(errs());
+          EqualMatchers[0].print(errs(), indent(4)); errs() << "into this:\n";
+          J->print(errs(), indent(4)); std::next(J)->front()->printOne(errs());
           if (std::next(J, 2) != E) std::next(J, 2)->front()->printOne(errs());
           errs() << "\n");
     }
