@@ -350,6 +350,15 @@ class SPIRVEmitIntrinsics
       const std::function<void(Type *ElementType, Value *Offset,
                                uint64_t Multiplier)> &OnDynamicIndexing);
 
+  bool walkLogicalAccessChainDynamic(
+      Type *CurType, Value *Operand, uint64_t Multiplier,
+      const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
+      const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing);
+
+  bool walkLogicalAccessChainConstant(
+      Type *CurType, ConstantInt *CI, uint64_t Multiplier,
+      const std::function<void(Type *, uint64_t)> &OnLiteralIndexing);
+
   // Returns the type accessed using the given GEP instruction by relying
   // on the GEP type.
   // FIXME: GEP types are not supposed to be used to retrieve the pointed
@@ -733,50 +742,38 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
   Ty = RefTy;
 }
 
-bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
-    GetElementPtrInst &GEP,
+bool SPIRVEmitIntrinsics::walkLogicalAccessChainDynamic(
+    Type *CurType, Value *Operand, uint64_t Multiplier,
     const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
     const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing) {
-  // We only rewrite byte-addressing GEP. Other should be left as-is.
-  // Valid byte-addressing GEP must always have a single index.
-  std::optional<uint64_t> MultiplierOpt =
-      getByteAddressingMultiplier(GEP.getSourceElementType());
-  assert(MultiplierOpt && "We only rewrite byte-addressing GEP");
-  uint64_t Multiplier = *MultiplierOpt;
-  assert(GEP.getNumIndices() == 1);
-
-  auto &DL = CurrF->getDataLayout();
-  Value *Src = getPointerRoot(GEP.getPointerOperand());
-  Type *CurType = deduceElementType(Src, true);
-
-  Value *Operand = *GEP.idx_begin();
-  ConstantInt *CI = dyn_cast<ConstantInt>(Operand);
-  if (!CI) {
-    // Dynamic indexing into a struct is not possible.
-    // We know that we must be accessing the first element
-    // of the struct if the current type is a struct.
-    // Try to find the first array type that is at offset 0 in the struct.
-    while (CurType && !CurType->isArrayTy()) {
-      if (auto *ST = dyn_cast<StructType>(CurType)) {
-        if (ST->getNumElements() > 0) {
-          CurType = ST->getElementType(0);
-          OnLiteralIndexing(CurType, 0);
-          continue;
-        }
+  // Dynamic indexing into a struct is not possible.
+  // We know that we must be accessing the first element
+  // of the struct if the current type is a struct.
+  // Try to find the first array type that is at offset 0 in the struct.
+  while (CurType && !CurType->isArrayTy()) {
+    if (auto *ST = dyn_cast<StructType>(CurType)) {
+      if (ST->getNumElements() > 0) {
+        CurType = ST->getElementType(0);
+        OnLiteralIndexing(CurType, 0);
+        continue;
       }
-      break;
     }
-
-    assert(CurType);
-    ArrayType *AT = dyn_cast<ArrayType>(CurType);
-    // Operand is not constant. Either we have an array and accept it, or we
-    // give up.
-    if (AT)
-      OnDynamicIndexing(AT->getElementType(), Operand, Multiplier);
-    return AT == nullptr;
+    break;
   }
 
-  assert(CI);
+  assert(CurType);
+  ArrayType *AT = dyn_cast<ArrayType>(CurType);
+  // Operand is not constant. Either we have an array and accept it, or we
+  // give up.
+  if (AT)
+    OnDynamicIndexing(AT->getElementType(), Operand, Multiplier);
+  return AT == nullptr;
+}
+
+bool SPIRVEmitIntrinsics::walkLogicalAccessChainConstant(
+    Type *CurType, ConstantInt *CI, uint64_t Multiplier,
+    const std::function<void(Type *, uint64_t)> &OnLiteralIndexing) {
+  auto &DL = CurrF->getDataLayout();
   uint64_t Offset = CI->getZExtValue() * Multiplier;
 
   do {
@@ -807,7 +804,6 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
       Offset -= Index * EltTypeSize;
       CurType = EltTy;
       OnLiteralIndexing(CurType, Index);
-
     } else {
       // Unknown composite kind; give up.
       return true;
@@ -815,6 +811,30 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
   } while (Offset > 0);
 
   return false;
+}
+
+bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
+    GetElementPtrInst &GEP,
+    const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
+    const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing) {
+  // We only rewrite byte-addressing GEP. Other should be left as-is.
+  // Valid byte-addressing GEP must always have a single index.
+  std::optional<uint64_t> MultiplierOpt =
+      getByteAddressingMultiplier(GEP.getSourceElementType());
+  assert(MultiplierOpt && "We only rewrite byte-addressing GEP");
+  uint64_t Multiplier = *MultiplierOpt;
+  assert(GEP.getNumIndices() == 1);
+
+  Value *Src = getPointerRoot(GEP.getPointerOperand());
+  Type *CurType = deduceElementType(Src, true);
+
+  Value *Operand = *GEP.idx_begin();
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(Operand))
+    return walkLogicalAccessChainConstant(CurType, CI, Multiplier,
+                                          OnLiteralIndexing);
+
+  return walkLogicalAccessChainDynamic(CurType, Operand, Multiplier,
+                                       OnLiteralIndexing, OnDynamicIndexing);
 }
 
 Instruction *
