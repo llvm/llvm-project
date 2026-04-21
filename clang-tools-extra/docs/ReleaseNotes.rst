@@ -242,10 +242,16 @@ Changes in existing checks
   correctly ignoring function templates.
 
 - Improved :doc:`bugprone-exception-escape
-  <clang-tidy/checks/bugprone/exception-escape>` check by adding
-  `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
-  for unannotated functions, enabling reporting when no explicit ``throw``
-  is seen and allowing separate tuning for known and unknown implementations.
+  <clang-tidy/checks/bugprone/exception-escape>` check:
+
+  - Added ``TreatFunctionsWithoutSpecificationAsThrowing`` to support
+    reporting for unannotated functions, enabling reporting when no explicit
+    ``throw`` is seen and allowing separate tuning for known and unknown
+    implementations.
+
+  - Added ``AssumedNonThrowingFunctions`` to suppress diagnostics for
+    user-specified functions that should be treated as non-throwing during
+    exception analysis.
 
 - Improved :doc:`bugprone-fold-init-type
   <clang-tidy/checks/bugprone/fold-init-type>` check by detecting precision
