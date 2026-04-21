@@ -722,9 +722,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             /* BPI */ nullptr, AC, /* AllowVarArgs */ false,
             /* AllowAlloca */ false, /* AllocaBlock */ nullptr,
             /* DeallocationBlocks */ {},
-            /* Suffix */ "cold." + std::to_string(OutlinedFunctionID),
-            /* ArgsInZeroAddressSpace */ false,
-            /* VoidReturnWithSingleOutput */ false);
+            /* Suffix */ "cold." + std::to_string(OutlinedFunctionID));
 
         if (CE.isEligible() && isSplittingBeneficial(CE, SubRegion, TTI) &&
             // If this outlining region intersects with another, drop the new

@@ -142,13 +142,6 @@ class LLVM_ABI CodeExtractor {
   /// space.
   bool ArgsInZeroAddressSpace;
 
-  // If true, the outlined function always return void even when there is only
-  // one output.
-  bool VoidReturnWithSingleOutput;
-
-  // If set, the return value of the outline function.
-  Value *FuncRetVal = nullptr;
-
 public:
   /// Create a code extractor for a sequence of blocks.
   ///
@@ -162,19 +155,18 @@ public:
   /// however code extractor won't validate whether extraction is legal. Any new
   /// allocations will be placed in the AllocationBlock, unless it is null, in
   /// which case it will be placed in the entry block of the function from which
-  /// the code is being extracted. If ArgsInZeroAddressSpace param is set to
-  /// true, then the aggregate param pointer of the outlined function is
-  /// declared in zero address space. If VoidReturnWithSingleOutput is set to
-  /// true, then the return type of the outlined function is set void even if
-  /// there is only one output.
+  /// the code is being extracted. Explicit deallocations for the aforementioned
+  /// allocations will be placed, if needed, in all blocks in DeallocationBlocks
+  /// or the end of the replacement block. If ArgsInZeroAddressSpace param is
+  /// set to true, then the aggregate param pointer of the outlined function is
+  /// declared in zero address space.
   CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                 bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                 BranchProbabilityInfo *BPI = nullptr,
                 AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                 bool AllowAlloca = false, BasicBlock *AllocationBlock = nullptr,
                 ArrayRef<BasicBlock *> DeallocationBlocks = {},
-                std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
-                bool VoidReturnWithSingleOutput = true);
+                std::string Suffix = "", bool ArgsInZeroAddressSpace = false);
 
   virtual ~CodeExtractor() = default;
 
@@ -224,7 +216,7 @@ public:
   /// on the cost however.
   void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
                          const ValueSet &Allocas,
-                         bool CollectGlobalInputs = false);
+                         bool CollectGlobalInputs = false) const;
 
   /// Check if life time marker nodes can be hoisted/sunk into the outline
   /// region.
@@ -334,7 +326,7 @@ private:
   /// into the original function's control flow.
   void
   insertReplacerCall(Function *oldFunction, BasicBlock *header,
-                     CallInst *ReplacerCall, const ValueSet &outputs,
+                     BasicBlock *codeReplacer, const ValueSet &outputs,
                      ArrayRef<Value *> Reloads,
                      const DenseMap<BasicBlock *, BlockFrequency> &ExitWeights);
 };

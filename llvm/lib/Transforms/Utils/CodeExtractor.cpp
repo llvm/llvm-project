@@ -264,14 +264,12 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AllowVarArgs, bool AllowAlloca,
                              BasicBlock *AllocationBlock,
                              ArrayRef<BasicBlock *> DeallocationBlocks,
-                             std::string Suffix, bool ArgsInZeroAddressSpace,
-                             bool VoidReturnWithSingleOutput)
+                             std::string Suffix, bool ArgsInZeroAddressSpace)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
       DeallocationBlocks(DeallocationBlocks), AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
-      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace),
-      VoidReturnWithSingleOutput(VoidReturnWithSingleOutput) {}
+      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -686,7 +684,7 @@ bool CodeExtractor::isEligible() const {
 
 void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
                                       const ValueSet &SinkCands,
-                                      bool CollectGlobalInputs) {
+                                      bool CollectGlobalInputs) const {
   for (BasicBlock *BB : Blocks) {
     // If a used value is defined outside the region, it's an input.  If an
     // instruction is used outside the region, it's an output.
@@ -705,12 +703,6 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
           break;
         }
     }
-  }
-
-  if (!VoidReturnWithSingleOutput && !AggregateArgs && Outputs.size() == 1 &&
-      getCommonExitBlock(Blocks)) {
-    FuncRetVal = Outputs[0];
-    Outputs.clear();
   }
 }
 
@@ -907,7 +899,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
         M->getContext(), ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
   }
 
-  Type *RetTy = FuncRetVal ? FuncRetVal->getType() : getSwitchType();
+  Type *RetTy = getSwitchType();
   LLVM_DEBUG({
     dbgs() << "Function type: " << *RetTy << " f(";
     for (Type *i : ParamTy)
@@ -1551,8 +1543,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       inputs, outputs, StructValues, newFunction, StructTy, oldFunction, ReplIP,
       EntryFreq, LifetimesStart.getArrayRef(), Reloads);
 
-  insertReplacerCall(oldFunction, header, TheCall, outputs, Reloads,
-                     ExitWeights);
+  insertReplacerCall(oldFunction, header, TheCall->getParent(), outputs,
+                     Reloads, ExitWeights);
 
   fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall, inputs,
                                NewValues);
@@ -1731,16 +1723,13 @@ void CodeExtractor::emitFunctionBody(
     ExitBlockMap[OldTarget] = NewTarget;
 
     Value *brVal = nullptr;
-    Type *RetTy = FuncRetVal ? FuncRetVal->getType() : getSwitchType();
+    Type *RetTy = getSwitchType();
     assert(ExtractedFuncRetVals.size() < 0xffff &&
            "too many exit blocks for switch");
     switch (ExtractedFuncRetVals.size()) {
     case 0:
-      // No value needed.
-      break;
     case 1:
-      if (FuncRetVal)
-        brVal = FuncRetVal;
+      // No value needed.
       break;
     case 2: // Conditional branch, return a bool
       brVal = ConstantInt::get(RetTy, !SuccNum);
@@ -2074,14 +2063,13 @@ CallInst *CodeExtractor::emitReplacerCall(
 }
 
 void CodeExtractor::insertReplacerCall(
-    Function *oldFunction, BasicBlock *header, CallInst *ReplacerCall,
+    Function *oldFunction, BasicBlock *header, BasicBlock *codeReplacer,
     const ValueSet &outputs, ArrayRef<Value *> Reloads,
     const DenseMap<BasicBlock *, BlockFrequency> &ExitWeights) {
 
   // Rewrite branches to basic blocks outside of the loop to new dummy blocks
   // within the new function. This must be done before we lose track of which
   // blocks were originally in the code region.
-  BasicBlock *codeReplacer = ReplacerCall->getParent();
   std::vector<User *> Users(header->user_begin(), header->user_end());
   for (auto &U : Users)
     // The BasicBlock which contains the branch is not in the region
@@ -2122,13 +2110,6 @@ void CodeExtractor::insertReplacerCall(
         inst->replaceUsesOfWith(outputs[i], load);
     }
   }
-
-  if (FuncRetVal)
-    for (User *U : FuncRetVal->users()) {
-      Instruction *inst = cast<Instruction>(U);
-      if (inst->getParent()->getParent() == oldFunction)
-        inst->replaceUsesOfWith(FuncRetVal, ReplacerCall);
-    }
 
   // Update the branch weights for the exit block.
   if (BFI && ExtractedFuncRetVals.size() > 1)
