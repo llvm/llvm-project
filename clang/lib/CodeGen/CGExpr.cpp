@@ -3801,6 +3801,10 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     if (E->refersToEnclosingVariableOrCapture()) {
       // OpenMP case: binding was captured via its decomposed decl.
       if (auto *DD = dyn_cast<VarDecl>(BD->getDecomposedDecl())) {
+        assert(CapturedStmtInfo && "Expected to be in a captured statement");
+        assert(CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
+               "Expected OpenMP captured region");
+        assert(CGM.getLangOpts().OpenMP && "OpenMP not enabled");
         auto I = LocalDeclMap.find(DD);
         if (I != LocalDeclMap.end()) {
           Address DDAddr = I->second;
