@@ -30,10 +30,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "logical-sroa"
 
-namespace {
-
 // Return all lifetime intrinsics with the instruction I as operand.
-SmallVector<LifetimeIntrinsic *>
+static SmallVector<LifetimeIntrinsic *>
 collectLifetimeIntrinsicsUsing(Instruction &I) {
   SmallVector<LifetimeIntrinsic *> Output;
 
@@ -52,7 +50,7 @@ collectLifetimeIntrinsicsUsing(Instruction &I) {
 // If any user of SAI is not an SGEP, or an SGEP referencing the whole struct,
 // this function returns an empty array. This function ignores lifetime
 // intrinsics.
-SmallVector<SmallVector<StructuredGEPInst *>>
+static SmallVector<SmallVector<StructuredGEPInst *>>
 collectPerFieldSGEP(StructuredAllocaInst &SAI) {
   StructType *ST = cast<StructType>(SAI.getAllocationType());
   SmallVector<SmallVector<StructuredGEPInst *>> Output(ST->getNumElements());
@@ -83,7 +81,8 @@ collectPerFieldSGEP(StructuredAllocaInst &SAI) {
 
 // For each lifetime intrinsic in LifetimeIntrinsics, creates a new one, but
 // uses V as operand.
-void copyLifetimeIntrinsicFor(IRBuilder<> &B, LifetimeIntrinsic *II, Value *V) {
+static void copyLifetimeIntrinsicFor(IRBuilder<> &B, LifetimeIntrinsic *II,
+                                     Value *V) {
   B.SetInsertPoint(II);
 
   if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
@@ -94,8 +93,8 @@ void copyLifetimeIntrinsicFor(IRBuilder<> &B, LifetimeIntrinsic *II, Value *V) {
     llvm_unreachable("invalid argument: expected a lifetime intrinsic");
 }
 
-void rewriteSGEPChain(IRBuilder<> &B, StructuredGEPInst *SGEP,
-                      StructuredAllocaInst *FieldAlloca) {
+static void rewriteSGEPChain(IRBuilder<> &B, StructuredGEPInst *SGEP,
+                             StructuredAllocaInst *FieldAlloca) {
   if (SGEP->getNumIndices() == 1) {
     SGEP->replaceAllUsesWith(FieldAlloca);
     SGEP->eraseFromParent();
@@ -110,7 +109,7 @@ void rewriteSGEPChain(IRBuilder<> &B, StructuredGEPInst *SGEP,
   SGEP->eraseFromParent();
 }
 
-bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
+static bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
   // For now, LogicalSROA only handles SGEP on structs.
   StructType *ST = dyn_cast<StructType>(SAI.getAllocationType());
   if (!ST)
@@ -143,7 +142,7 @@ bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
   return true;
 }
 
-bool runLogicalSROA(Function &F) {
+static bool runLogicalSROA(Function &F) {
   SmallVector<StructuredAllocaInst *> Worklist;
   for (auto &BB : F) {
     for (auto &I : BB) {
@@ -157,8 +156,6 @@ bool runLogicalSROA(Function &F) {
     Changed |= runOnStructuredAlloca(*SAI);
   return Changed;
 }
-
-} // end anonymous namespace
 
 PreservedAnalyses LogicalSROAPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
