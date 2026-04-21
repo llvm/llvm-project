@@ -46,17 +46,17 @@ static StringRef getImageName(const OffloadBinary &OB) {
 
 /// Print metadata from an OffloadBinary.
 static void printOffloadBinaryMetadata(const OffloadBinary &OB,
-                                       uint64_t level) {
-  outs().indent(level * 2) << left_justify("kind", 16) << getImageName(OB)
+                                       uint64_t Level) {
+  outs().indent(Level * 2) << left_justify("kind", 16) << getImageName(OB)
                            << "\n";
-  outs().indent(level * 2) << left_justify("arch", 16) << OB.getArch() << "\n";
-  outs().indent(level * 2) << left_justify("triple", 16) << OB.getTriple()
+  outs().indent(Level * 2) << left_justify("arch", 16) << OB.getArch() << "\n";
+  outs().indent(Level * 2) << left_justify("triple", 16) << OB.getTriple()
                            << "\n";
-  outs().indent(level * 2) << left_justify("producer", 16)
+  outs().indent(Level * 2) << left_justify("producer", 16)
                            << getOffloadKindName(OB.getOffloadKind()) << "\n";
 
   StringRef InnerImage = OB.getImage();
-  outs().indent(level * 2) << left_justify("image size", 16)
+  outs().indent(Level * 2) << left_justify("image size", 16)
                            << InnerImage.size() << " bytes\n";
 }
 
