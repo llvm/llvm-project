@@ -10963,7 +10963,7 @@ def warn_lifetime_safety_use_after_scope_moved : Warning<
    InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_use_after_free : Warning<
-    "allocated object does not live long enough">,
+    "%select{allocated object|parameter}0 does not live long enough">,
     InGroup<LifetimeSafetyUseAfterFree>, DefaultIgnore;
 
 def warn_lifetime_safety_return_stack_addr

@@ -70,12 +70,6 @@ public:
                                     const Expr *MovedExpr,
                                     SourceLocation ExpiryLoc) {}
 
-  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                                  const Expr *FreedExpr) {}
-
-  virtual void reportUseAfterFree(const ParmVarDecl *IssueExpr,
-                                  const Expr *UseExpr, const Expr *FreedExpr) {}
-
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
                                    const Expr *MovedExpr,

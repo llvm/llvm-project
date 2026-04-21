@@ -2814,7 +2814,7 @@ void delete_pointer_propagation_use_after_free() {
   (void)(*pp)->id;      // expected-note {{later used here}}
 }
 
-void delete_param_pointer(int* x) { // expected-warning {{allocated object does not live long enough}}
+void delete_param_pointer(int* x) { // expected-warning {{parameter does not live long enough}}
   delete x;                         // expected-note {{freed here}}
   (void)x;                          // expected-note {{later used here}}
 }
@@ -2828,7 +2828,7 @@ struct S {
   }
 };
 
-void use_inner_origin_after_delete(MyObj* obj) { // expected-warning {{allocated object does not live long enough}}
+void use_inner_origin_after_delete(MyObj* obj) { // expected-warning {{parameter does not live long enough}}
     int* p = &obj->id;
     delete obj;                                   // expected-note {{freed here}}
     (void)*p;                                     // expected-note {{later used here}}

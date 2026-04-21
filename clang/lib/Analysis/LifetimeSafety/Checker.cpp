@@ -185,20 +185,17 @@ public:
     }
   }
 
-  /// Records warnings for live loans whose access paths match loans directly
-  /// held by the `InvalidatedOrigin`.
-  /// \param InvalidatingExpr The invalidating expression.
-  /// \param InvalidatedOrigin The origin being invalidated.
-  /// \param PP The fact where the invalidation happens.
-  void checkLiveLoansForInvalidation(const Expr *InvalidatingExpr,
-                                     OriginID InvalidatedOrigin,
-                                     ProgramPoint PP) {
-
+  /// Checks for use-after-invalidation errors when a container is modified.
+  ///
+  /// This method identifies origins that are live at the point of invalidation
+  /// and checks if they hold loans that are invalidated by the operation
+  /// (e.g., iterators into a vector that is being pushed to).
+  void checkInvalidation(const InvalidateOriginFact *IOF) {
+    OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
+    /// Get loans directly pointing to the invalidated container
     LoanSet DirectlyInvalidatedLoans =
-        LoanPropagation.getLoans(InvalidatedOrigin, PP);
-
-    auto IsInvalidated = [&](const LoanID LID) {
-      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+        LoanPropagation.getLoans(InvalidatedOrigin, IOF);
+    auto IsInvalidated = [&](const Loan *L) {
       for (LoanID InvalidID : DirectlyInvalidatedLoans) {
         const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
         if (InvalidL->getAccessPath() == L->getAccessPath())
@@ -206,37 +203,25 @@ public:
       }
       return false;
     };
-
     // For each live origin, check if it holds an invalidated loan and report.
-    for (auto &[OID, LiveInfo] : LiveOrigins.getLiveOriginsAt(PP)) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, PP);
-      for (LoanID HeldLoan : HeldLoans) {
-        if (!IsInvalidated(HeldLoan))
-          continue;
-
-        bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
-        bool LastDomination =
-            FinalWarningsMap.lookup(HeldLoan).CausingFactDominatesExpiry;
-        if (!LastDomination) {
-          FinalWarningsMap[HeldLoan] = {
-              /*ExpiryLoc=*/{},
-              /*CausingFact=*/LiveInfo.CausingFact,
-              /*MovedExpr=*/nullptr,
-              /*InvalidatedByExpr=*/InvalidatingExpr,
-              /*CausingFactDominatesExpiry=*/CurDomination};
+    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
+    for (auto &[OID, LiveInfo] : Origins) {
+      LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
+      for (LoanID LiveLoanID : HeldLoans)
+        if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
+          bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
+          bool LastDomination =
+              FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
+          if (!LastDomination) {
+            FinalWarningsMap[LiveLoanID] = {
+                /*ExpiryLoc=*/{},
+                /*CausingFact=*/LiveInfo.CausingFact,
+                /*MovedExpr=*/nullptr,
+                /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
+                /*CausingFactDominatesExpiry=*/CurDomination};
+          }
         }
-      }
     }
-  }
-
-  /// Checks for use-after-invalidation errors when a container is modified.
-  ///
-  /// This method identifies origins that are live at the point of invalidation
-  /// and checks if they hold loans that are invalidated by the operation
-  /// (e.g., iterators into a vector that is being pushed to).
-  void checkInvalidation(const InvalidateOriginFact *IOF) {
-    checkLiveLoansForInvalidation(IOF->getInvalidationExpr(),
-                                  IOF->getInvalidatedOrigin(), IOF);
   }
 
   void issuePendingWarnings() {
@@ -254,14 +239,7 @@ public:
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
         if (Warning.InvalidatedByExpr) {
-          if (isa<CXXDeleteExpr>(Warning.InvalidatedByExpr))
-            if (InvalidatedPVD)
-              SemaHelper->reportUseAfterFree(InvalidatedPVD, UF->getUseExpr(),
-                                             Warning.InvalidatedByExpr);
-            else
-              SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(),
-                                             Warning.InvalidatedByExpr);
-          else if (IssueExpr)
+          if (IssueExpr)
             // Use-after-invalidation of an object on stack.
             SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
                                                    Warning.InvalidatedByExpr);
