@@ -20,7 +20,7 @@
 using namespace clang;
 
 const ModuleCacheDirectory *ModuleCache::getDirectoryPtr(StringRef Path) {
-  auto [ByNameIt, ByNameInserted] = ByName.insert({Path, nullptr});
+  auto [ByNameIt, ByNameInserted] = ByPath.insert({Path, nullptr});
   if (!ByNameIt->second) {
     // This is a compiler-internal input/output, let's bypass the sandbox.
     auto BypassSandbox = llvm::sys::sandbox::scopedDisable();

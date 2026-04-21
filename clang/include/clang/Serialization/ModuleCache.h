@@ -36,7 +36,7 @@ class ModuleCacheDirectory {};
 /// operations the compiler might want to perform on the cache.
 class ModuleCache {
   /// Mapping from a path to the module cache directory identity.
-  llvm::StringMap<const ModuleCacheDirectory *> ByName;
+  llvm::StringMap<const ModuleCacheDirectory *> ByPath;
 
   /// Mapping from the filesystem entity to the module cache directory identity.
   llvm::DenseMap<llvm::sys::fs::UniqueID, std::unique_ptr<ModuleCacheDirectory>>
