@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SSAFAnalysesCommon.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -25,15 +26,6 @@
 namespace {
 using namespace clang;
 using namespace ssaf;
-
-llvm::Error makeCreateEntityNameError(const NamedDecl *FailedDecl,
-                                      ASTContext &Ctx) {
-  std::string LocStr = FailedDecl->getSourceRange().getBegin().printToString(
-      Ctx.getSourceManager());
-  return llvm::createStringError(
-      "failed to create entity name for %s declared at %s",
-      FailedDecl->getNameAsString().c_str(), LocStr.c_str());
-}
 
 Expected<EntityPointerLevelSet>
 buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
@@ -147,7 +139,7 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     auto ContributorName = getEntityName(CD);
 
     if (!ContributorName)
-      llvm::reportFatalInternalError(makeCreateEntityNameError(CD, Ctx));
+      llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
 
     auto [Ignored, InsertionSucceeded] = SummaryBuilder.addSummary(
         addEntity(*ContributorName), std::move(*EntitySummary));
