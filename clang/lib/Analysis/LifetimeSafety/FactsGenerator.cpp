@@ -94,7 +94,7 @@ static const Loan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan(Path, MTE);
 }
 
-/// Creates a loan for a `new` allocation
+/// Creates a loan for an allocation through 'new'
 /// \param NE The CXXNewExpr that represents the allocation
 /// \return The new Loan on success, nullptr otherwise
 static const Loan *createLoan(FactManager &FactMgr, const CXXNewExpr *NE) {
