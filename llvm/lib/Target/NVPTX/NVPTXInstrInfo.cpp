@@ -344,30 +344,28 @@ MachineInstr *NVPTXInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   if (!isIntegerSetp(MI) && !isScalarFloatSetp(MI))
     return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
 
-  invertScalarCompareInstr(MI);
-
   // For now all users must be invertible conditional branches.
   // TODO: Support other users such as selects.
-  bool AllInverted = true;
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  SmallVector<MachineBasicBlock *, 4> BranchMBBs;
   for (MachineInstr &UseMI :
        MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
-    if (!(UseMI.isConditionalBranch() &&
-          invertPredicateBranchInstr(*UseMI.getParent()))) {
-      AllInverted = false;
-      break;
-    }
+    if (!UseMI.isConditionalBranch())
+      return nullptr;
+    BranchMBBs.push_back(UseMI.getParent());
   }
 
-  if (!AllInverted) {
-    for (MachineInstr &UseMI :
-         MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
-      if (!(UseMI.isConditionalBranch() &&
-            invertPredicateBranchInstr(*UseMI.getParent())))
-        break;
-    }
-    invertScalarCompareInstr(MI);
-    return nullptr;
-  }
-  return &MI;
+  invertScalarCompareInstr(MI);
+  auto *Failed = llvm::find_if(BranchMBBs, [this](MachineBasicBlock *MBB) {
+    return !invertPredicateBranchInstr(*MBB);
+  });
+  if (Failed == BranchMBBs.end())
+    return &MI;
+
+  // Couldn't invert one of the branches. Roll back the prefix we
+  // already inverted and the compare-mode flip.
+  for (MachineBasicBlock *MBB : make_range(BranchMBBs.begin(), Failed))
+    invertPredicateBranchInstr(*MBB);
+  invertScalarCompareInstr(MI);
+  return nullptr;
 }

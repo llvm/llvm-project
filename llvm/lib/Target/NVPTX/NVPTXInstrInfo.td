@@ -77,7 +77,7 @@ def FTZFlag : OperandWithDefaultOps<i1, (ops (getFTZFlag (i1 0)))> {
   let PrintMethod = "printFTZFlag";
 }
 
-def BranchFlag : OperandWithDefaultOps<i32, (ops (i32 0))> {
+def BranchFlag : OperandWithDefaultOps<i32, (ops (i1 0))> {
   let PrintMethod = "printNegatedPredicate";
 }
 

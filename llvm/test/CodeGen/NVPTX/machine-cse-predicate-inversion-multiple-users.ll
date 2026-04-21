@@ -7,7 +7,7 @@ target triple = "nvptx64-nvidia-cuda"
 define i32 @test_multiple_users(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_multiple_users(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
@@ -19,8 +19,9 @@ define i32 @test_multiple_users(i32 %a, i32 %b) {
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    mov.b32 %r5, 1;
 ; CHECK-NEXT:  $L__BB0_2: // %merge1
-; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
-; CHECK-NEXT:    @!%p1 bra $L__BB0_4;
+; CHECK-NEXT:    setp.ne.b32 %p2, %r2, %r3;
+; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p2;
+; CHECK-NEXT:    @%p1 bra $L__BB0_4;
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r5, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
@@ -28,8 +29,8 @@ define i32 @test_multiple_users(i32 %a, i32 %b) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
 entry:
-  %cmp = icmp eq i32 %a, %b
-  br i1 %cmp, label %merge1, label %then
+  %cmp1 = icmp eq i32 %a, %b
+  br i1 %cmp1, label %merge1, label %then
 
 then:
   %tmp = load i32, ptr addrspace(1) null, align 4
@@ -37,8 +38,9 @@ then:
 
 merge1:
   %phi1 = phi i32 [ 1, %then ], [ 0, %entry ]
-  %val = select i1 %cmp, i32 1, i32 0
-  br i1 %cmp, label %else, label %merge2
+  %cmp2 = icmp ne i32 %a, %b
+  %val = select i1 %cmp2, i32 1, i32 0
+  br i1 %cmp2, label %else, label %merge2
 
 else:
   br label %merge2
