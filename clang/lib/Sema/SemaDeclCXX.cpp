@@ -19269,7 +19269,8 @@ bool Sema::DefineUsedVTables() {
     // no key function or the key function is inlined. Don't warn in C++ ABIs
     // that lack key functions, since the user won't be able to make one.
     if (Context.getTargetInfo().getCXXABI().hasKeyFunctions() &&
-        Class->isExternallyVisible() && ClassTSK != TSK_ImplicitInstantiation &&
+        Class->isExternallyVisible() && !Class->isInCurrentModuleUnit() &&
+        ClassTSK != TSK_ImplicitInstantiation &&
         ClassTSK != TSK_ExplicitInstantiationDefinition) {
       const FunctionDecl *KeyFunctionDef = nullptr;
       if (!KeyFunction || (KeyFunction->hasBody(KeyFunctionDef) &&
