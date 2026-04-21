@@ -1,11 +1,15 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -std=hlsl202x -verify %s
 
-// Valid uses: row_major and column_major on matrix types.
+// Valid: row_major and column_major on matrix types.
 row_major float3x3 rm_mat;
 column_major float4x4 cm_mat;
 
 row_major int2x3 rm_int_mat;
 column_major bool2x2 cm_bool_mat;
+
+// Valid: row_major and column_major on matrix arrays
+row_major float3x3 rm_mat_arr[2];
+column_major float4x4 cm_mat_arr[3];
 
 // Valid: on struct fields with matrix type.
 struct S {
@@ -16,6 +20,21 @@ struct S {
 // Valid: typedef of a matrix type.
 typedef row_major float4x4 RowMajorFloat4x4;
 typedef column_major float4x4 ColMajorFloat4x4;
+
+template <typename T>
+struct Wrapper {
+  row_major T mat; // expected-error 2 {{'row_major' attribute can only be applied to a matrix type}}
+};
+
+Wrapper<float4x4> valid;
+
+// expected-note@+1 {{in instantiation of template class 'Wrapper<float>' requested here}}
+Wrapper<float> invalid;
+
+// expected-note@+1 {{in instantiation of template class 'Wrapper<vector<float, 2>>' requested here}}
+Wrapper<float2> invalid2;
+
+
 
 // Invalid: scalar types.
 // expected-error@+1 {{'row_major' attribute can only be applied to a matrix type}}

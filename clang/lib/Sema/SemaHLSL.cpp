@@ -2684,19 +2684,34 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-void SemaHLSL::handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL) {
-  // row_major and column_major are only valid on matrix types.
+static bool diagnoseMatrixLayoutOnNonMatrix(Sema &SemaRef, Decl *D,
+                                            SourceLocation Loc,
+                                            const IdentifierInfo *AttrName) {
   QualType Ty;
   if (auto *VD = dyn_cast<ValueDecl>(D))
     Ty = VD->getType();
   else if (auto *TD = dyn_cast<TypedefNameDecl>(D))
     Ty = TD->getUnderlyingType();
 
-  if (!Ty.isNull() && !Ty->isDependentType() && !Ty->isConstantMatrixType()) {
-    Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_non_matrix)
-        << AL.getAttrName();
+  if (Ty.isNull() || Ty->isDependentType())
+    return false;
+
+  QualType ElemTy = Ty;
+  if (const auto *AT = SemaRef.getASTContext().getAsArrayType(Ty))
+    ElemTy = AT->getElementType();
+
+  if (ElemTy->isDependentType() || ElemTy->isConstantMatrixType())
+    return false;
+
+  SemaRef.Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << AttrName;
+  return true;
+}
+
+void SemaHLSL::handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL) {
+  // row_major and column_major are only valid on matrix types.
+  if (diagnoseMatrixLayoutOnNonMatrix(SemaRef, D, AL.getLoc(),
+                                      AL.getAttrName()))
     return;
-  }
 
   // Check for conflicting or duplicate matrix layout attributes.
   if (const auto *Existing = D->getAttr<HLSLMatrixLayoutAttr>()) {
@@ -2705,13 +2720,20 @@ void SemaHLSL::handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL) {
           << AL.getAttrName() << Existing->getAttrName();
       Diag(Existing->getLoc(), diag::note_conflicting_attribute);
     } else {
-      Diag(AL.getLoc(), diag::warn_duplicate_attribute) << AL.getAttrName();
+      Diag(AL.getLoc(), diag::warn_duplicate_attribute_exact)
+          << AL.getAttrName();
       Diag(Existing->getLoc(), diag::note_previous_attribute);
     }
     return;
   }
 
   D->addAttr(::new (getASTContext()) HLSLMatrixLayoutAttr(getASTContext(), AL));
+}
+
+void SemaHLSL::diagnoseInstantiatedMatrixLayoutAttr(
+    Decl *D, const HLSLMatrixLayoutAttr *Attr) {
+  diagnoseMatrixLayoutOnNonMatrix(SemaRef, D, Attr->getLoc(),
+                                  Attr->getAttrName());
 }
 
 namespace {

@@ -4641,6 +4641,7 @@ void Parser::ParseDeclarationSpecifiers(
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
+
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case tok::kw_##Name:                                                         \
     isInvalid = DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec,        \
