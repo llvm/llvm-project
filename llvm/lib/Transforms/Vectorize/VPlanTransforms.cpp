@@ -4633,8 +4633,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   // Try to match reduce.add(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
-    auto *RecipeA = dyn_cast_if_present<VPWidenCastRecipe>(A);
-    auto *RecipeB = dyn_cast_if_present<VPWidenCastRecipe>(B);
+    auto *RecipeA = dyn_cast<VPWidenCastRecipe>(A);
+    auto *RecipeB = dyn_cast<VPWidenCastRecipe>(B);
     auto *Mul = cast<VPWidenRecipe>(VecOp);
 
     // Convert reduce.add(mul(ext, const)) to reduce.add(mul(ext, ext(const)))
@@ -4663,8 +4663,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
       match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp);
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
-    auto *Ext0 = dyn_cast_if_present<VPWidenCastRecipe>(A);
-    auto *Ext1 = dyn_cast_if_present<VPWidenCastRecipe>(B);
+    auto *Ext0 = dyn_cast<VPWidenCastRecipe>(A);
+    auto *Ext1 = dyn_cast<VPWidenCastRecipe>(B);
 
     // reduce.add(ext(mul(ext, const)))
     // -> reduce.add(ext(mul(ext, ext(const))))
