@@ -138,6 +138,29 @@ public:
     return *this;
   }
 
+  /// If set to "true", full common-subexpression elimination is run on the
+  /// scoped region between each pattern-application iteration. Unlike
+  /// `cseConstants` (which only deduplicates constant ops via the operation
+  /// folder) this runs the standard CSE algorithm and can unblock further
+  /// canonicalizations on the next iteration. Off by default because it
+  /// rebuilds dominance info each iteration.
+  ///
+  /// Caveats when enabling this option:
+  /// - Any listener attached via `setListener` will be notified of
+  ///   `notifyOperationReplaced` / `notifyOperationErased` events generated
+  ///   by CSE. Pattern authors relying on operation identity (e.g., the
+  ///   transform dialect's handle tracking) must account for this.
+  /// - CSE-driven changes feed back into the iteration loop: a pattern that
+  ///   re-materializes duplicates that CSE keeps collapsing can extend the
+  ///   iteration count and, in the worst case, hit `maxIterations`. Under
+  ///   `testConvergence=true` such pipelines will be reported as
+  ///   non-convergent.
+  bool isCSEBetweenIterationsEnabled() const { return cseBetweenIterations; }
+  GreedyRewriteConfig &enableCSEBetweenIterations(bool enable = true) {
+    cseBetweenIterations = enable;
+    return *this;
+  }
+
 private:
   Region *scope = nullptr;
   bool useTopDownTraversal = false;
@@ -149,6 +172,7 @@ private:
   RewriterBase::Listener *listener = nullptr;
   bool fold = true;
   bool cseConstants = true;
+  bool cseBetweenIterations = false;
 };
 
 //===----------------------------------------------------------------------===//

@@ -14,12 +14,14 @@
 
 #include "mlir/Config/mlir-config.h"
 #include "mlir/IR/Action.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
+#include "mlir/Transforms/CSE.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/BitVector.h"
@@ -906,6 +908,16 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
                 rewriter, region,
                 /*mergeBlocks=*/config.getRegionSimplificationLevel() ==
                     GreedySimplifyRegionLevel::Aggressive));
+          }
+
+          // Optionally run full CSE. If CSE changes the IR we iterate again so
+          // that patterns can fire on the deduplicated operations.
+          if (config.isCSEBetweenIterationsEnabled()) {
+            DominanceInfo domInfo;
+            bool cseChanged = false;
+            eliminateCommonSubExpressions(rewriter, domInfo, region,
+                                          &cseChanged);
+            continueRewrites |= cseChanged;
           }
         },
         {&region}, iteration);
