@@ -1549,11 +1549,11 @@ static void configureNamedModuleOutputArgs(Compilation &C,
   Job.replaceArguments(std::move(JobArgs));
 }
 
-/// Propagates -fmodule-file mappings to dependent jobs of the named module
-/// described by \p Node.
-static void propagateModuleFileMappingArgs(Compilation &C,
-                                           NamedModuleJobNode &Node,
-                                           StringRef ModuleOutputPath) {
+/// Propagates the -fmodule-file mapping for the named module described by \p
+/// Node to each dependent job.
+static void propagateModuleFileMappingArg(Compilation &C,
+                                          NamedModuleJobNode &Node,
+                                          StringRef ModuleOutputPath) {
   const StringRef ModuleName = Node.InputDeps.ModuleName;
 
   auto DependentNodes = llvm::drop_begin(llvm::depth_first<CGNode *>(&Node));
@@ -1588,7 +1588,7 @@ static void fixupNamedModuleCommandLines(Compilation &C,
     C.addTempFile(C.getArgs().MakeArgString(ModuleOutputPath));
 
     configureNamedModuleOutputArgs(C, *Node, ModuleOutputPath);
-    propagateModuleFileMappingArgs(C, *Node, ModuleOutputPath);
+    propagateModuleFileMappingArg(C, *Node, ModuleOutputPath);
   }
 }
 
