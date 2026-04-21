@@ -7,7 +7,6 @@
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return11u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -21,7 +20,6 @@ int Return11(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return12u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -35,7 +33,6 @@ int Return12(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return13u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -49,7 +46,6 @@ int Return13(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return14u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -63,7 +59,6 @@ int Return14(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return21u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -77,7 +72,6 @@ int Return21(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return22u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -91,7 +85,6 @@ int Return22(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return23u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -105,7 +98,6 @@ int Return23(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return24u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -119,7 +111,6 @@ int Return24(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return31u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -133,7 +124,6 @@ int Return31(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return32u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -147,7 +137,6 @@ int Return32(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return33u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -161,7 +150,6 @@ int Return33(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return34u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -175,7 +163,6 @@ int Return34(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return41u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -189,7 +176,6 @@ int Return41(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return42u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -203,7 +189,6 @@ int Return42(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return43u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
@@ -217,7 +202,6 @@ int Return43(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return44u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
