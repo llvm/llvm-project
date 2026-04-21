@@ -247,6 +247,17 @@ void testCastCRTPUpcast(L& value) {
   (void)a24;
 }
 
+namespace mlir {
+using llvm::cast;
+void testCastUsing(A& value) {
+  A& a30 = cast<A>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:20: note: source expression has type 'A'
+  // CHECK-FIXES: A& a30 = value;
+  (void)a30;
+}
+}
+
 CAST_FUNCTION(cast)
 CAST_FUNCTION(dyn_cast)
 

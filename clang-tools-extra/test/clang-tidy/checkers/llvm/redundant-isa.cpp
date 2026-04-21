@@ -159,6 +159,15 @@ void testIsaImplicitlyLLVMUnresolve(T* value) {
 } // namespace magic
 } // namespace llvm
 
+namespace mlir {
+using llvm::isa;
+void testIsaUsing(A& value) {
+  bool b20 = isa<A>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: call to 'isa' always succeeds [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:21: note: source expression has type 'A'
+  (void)b20;
+}
+}
 
 ISA_FUNCTION(isa)
 
