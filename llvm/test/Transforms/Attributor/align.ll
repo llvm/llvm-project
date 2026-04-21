@@ -538,13 +538,13 @@ define i64 @test11(ptr %p) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@test11
 ; TUNIT-SAME: (ptr nofree nonnull readonly align 8 captures(none) dereferenceable(8) [[P:%.*]]) #[[ATTR4:[0-9]+]] {
-; TUNIT-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 8
+; TUNIT-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 8, !invariant.load [[META0:![0-9]+]]
 ; TUNIT-NEXT:    ret i64 [[RET]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@test11
 ; CGSCC-SAME: (ptr nofree nonnull readonly align 8 captures(none) dereferenceable(8) [[P:%.*]]) #[[ATTR5:[0-9]+]] {
-; CGSCC-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 8
+; CGSCC-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 8, !invariant.load [[META0:![0-9]+]]
 ; CGSCC-NEXT:    ret i64 [[RET]]
 ;
   %p-cast = bitcast ptr %p to ptr
@@ -562,7 +562,7 @@ define i64 @test12-1(ptr align 4 %p) {
 ; TUNIT-SAME: (ptr nofree readonly align 16 captures(none) [[P:%.*]]) #[[ATTR4]] {
 ; TUNIT-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr i64, ptr [[P]], i64 1
 ; TUNIT-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i64, ptr [[ARRAYIDX0]], i64 3
-; TUNIT-NEXT:    [[RET:%.*]] = load i64, ptr [[ARRAYIDX1]], align 16
+; TUNIT-NEXT:    [[RET:%.*]] = load i64, ptr [[ARRAYIDX1]], align 16, !invariant.load [[META0]]
 ; TUNIT-NEXT:    ret i64 [[RET]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
@@ -570,7 +570,7 @@ define i64 @test12-1(ptr align 4 %p) {
 ; CGSCC-SAME: (ptr nofree readonly align 16 captures(none) [[P:%.*]]) #[[ATTR5]] {
 ; CGSCC-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr i64, ptr [[P]], i64 1
 ; CGSCC-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i64, ptr [[ARRAYIDX0]], i64 3
-; CGSCC-NEXT:    [[RET:%.*]] = load i64, ptr [[ARRAYIDX1]], align 16
+; CGSCC-NEXT:    [[RET:%.*]] = load i64, ptr [[ARRAYIDX1]], align 16, !invariant.load [[META0]]
 ; CGSCC-NEXT:    ret i64 [[RET]]
 ;
   %p-cast = bitcast ptr %p to ptr
@@ -584,13 +584,13 @@ define i64 @test12-2(ptr align 4 %p) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@test12-2
 ; TUNIT-SAME: (ptr nofree nonnull readonly align 16 captures(none) dereferenceable(8) [[P:%.*]]) #[[ATTR4]] {
-; TUNIT-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 16
+; TUNIT-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 16, !invariant.load [[META0]]
 ; TUNIT-NEXT:    ret i64 [[RET]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@test12-2
 ; CGSCC-SAME: (ptr nofree nonnull readonly align 16 captures(none) dereferenceable(8) [[P:%.*]]) #[[ATTR5]] {
-; CGSCC-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 16
+; CGSCC-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 16, !invariant.load [[META0]]
 ; CGSCC-NEXT:    ret i64 [[RET]]
 ;
   %p-cast = bitcast ptr %p to ptr
@@ -1253,4 +1253,8 @@ attributes #2 = { null_pointer_is_valid }
 ; CGSCC: attributes #[[ATTR15]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR16]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR17]] = { nofree willreturn memory(read) }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.
