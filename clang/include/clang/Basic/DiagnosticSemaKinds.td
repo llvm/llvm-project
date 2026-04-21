@@ -10965,6 +10965,10 @@ def warn_lifetime_safety_use_after_scope_moved : Warning<
    "This could be false positive as the storage may have been moved later">,
    InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
+def warn_lifetime_safety_use_after_free : Warning<
+    "%select{allocated object|parameter}0 does not live long enough">,
+    InGroup<LifetimeSafetyUseAfterFree>, DefaultIgnore;
+
 def warn_lifetime_safety_return_stack_addr
     : Warning<"address of stack memory is returned later">,
       InGroup<LifetimeSafetyReturnStackAddr>,
@@ -11005,6 +11009,7 @@ def warn_lifetime_safety_dangling_global_moved
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
+def note_lifetime_safety_freed_here : Note<"freed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
