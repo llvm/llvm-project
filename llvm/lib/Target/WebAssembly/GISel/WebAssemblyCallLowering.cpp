@@ -230,7 +230,6 @@ static unsigned getWasmArgumentOpcode(MVT ArgType) {
   default:
     break;
   }
-
   llvm_unreachable("Found unexpected type for Wasm argument");
 }
 
@@ -242,23 +241,16 @@ static Register buildWasmArgument(unsigned Idx, MVT ArgVT, LLT ArgLLT,
   const TargetInstrInfo &TII = MIRBuilder.getTII();
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const WebAssemblySubtarget &Subtarget =
-      MF.getSubtarget<WebAssemblySubtarget>();
-  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
-
   const TargetRegisterClass &RegClass = *TII.getRegClass(TII.get(Op), 0);
 
   Register NewReg;
 
   if (Def.isValid()) {
+    assert(MRI.getRegClassOrRegBank(Def).isNull() &&
+           "Def already has reg bank or reg class?");
+    MRI.setRegClass(Def, &RegClass);
+
     NewReg = Def;
-
-    if (!RBI.constrainGenericRegister(Def, RegClass, MRI)) {
-      NewReg = MRI.createVirtualRegister(&RegClass);
-      MRI.setType(NewReg, ArgLLT);
-
-      MIRBuilder.buildCopy(NewReg, Def);
-    }
   } else {
     NewReg = MRI.createVirtualRegister(&RegClass);
     MRI.setType(NewReg, ArgLLT);
