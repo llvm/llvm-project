@@ -24,13 +24,6 @@ add_header_library(
     libc.src.__support.time.abs_timeout
 )
 
-set(monotonicity_flags)
-if (LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
-  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
-else()
-  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
-endif()
-
 add_object_library(
   thread
   SRCS

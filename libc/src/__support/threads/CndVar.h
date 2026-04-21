@@ -19,12 +19,8 @@
 #include "src/__support/threads/raw_mutex.h"   // RawMutex
 #include "src/__support/threads/sleep.h"
 
-#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #include "src/__support/time/monotonicity.h"
-#endif
-
-#ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
-#define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -247,7 +243,7 @@ public:
   // TODO: register callback for pthread cancellation
   LIBC_INLINE CndVarResult wait(Mutex *mutex,
                                 cpp::optional<Timeout> timeout = cpp::nullopt) {
-#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
     if (timeout)
       ensure_monotonicity(*timeout);
 #endif

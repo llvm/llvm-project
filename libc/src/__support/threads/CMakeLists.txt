@@ -38,8 +38,6 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
     raw_mutex
     HDRS
       raw_mutex.h
-    COMPILE_OPTIONS
-      ${monotonicity_flags}
     DEPENDS
       .futex_utils
       libc.src.__support.threads.sleep
@@ -55,7 +53,6 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
       raw_rwlock.h
     COMPILE_OPTIONS
       ${rwlock_default_spin_count}
-      ${monotonicity_flags}
     DEPENDS
       .raw_mutex
       libc.src.__support.common

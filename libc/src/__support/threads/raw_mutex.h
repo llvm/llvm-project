@@ -21,12 +21,8 @@
 
 #include <stdio.h>
 
-#ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
-#define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
-#endif
-
 // TODO(bojle): check this for darwin impl
-#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #include "src/__support/time/monotonicity.h"
 #endif
 
@@ -75,7 +71,7 @@ private:
         futex.compare_exchange_strong(state, LOCKED, cpp::MemoryOrder::ACQUIRE,
                                       cpp::MemoryOrder::RELAXED))
       return true;
-#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
     /* ADL should kick in */
     if (timeout)
       ensure_monotonicity(*timeout);
