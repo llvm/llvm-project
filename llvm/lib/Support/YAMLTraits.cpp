@@ -398,7 +398,8 @@ void Input::releaseHNodeBuffers() {
 }
 
 void Input::saveAliasHNode(Node *N, HNode *HN) {
-  if (auto Anchor = N->getAnchor(); !Anchor.empty())
+  StringRef Anchor = N->getAnchor();
+  if (!Anchor.empty())
     // YAML 1.2.2 - 3.2.2.2. Anchors and Aliases:
     //
     // An alias event refers to the most recent event in the serialization
