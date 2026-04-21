@@ -622,7 +622,7 @@ KnownBits KnownBits::fshl(const KnownBits &LHS, const KnownBits &RHS,
     if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
       continue;
-    APInt SA = APInt(BitWidth, ShiftAmt % BitWidth);
+    APInt SA(BitWidth, ShiftAmt % BitWidth);
     KnownBits Tmp(APIntOps::fshl(LHS.Zero, RHS.Zero, SA),
                   APIntOps::fshl(LHS.One, RHS.One, SA));
     Known = Known.intersectWith(Tmp);
@@ -649,7 +649,7 @@ KnownBits KnownBits::fshr(const KnownBits &LHS, const KnownBits &RHS,
     if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
       continue;
-    APInt SA = APInt(BitWidth, ShiftAmt % BitWidth);
+    APInt SA(BitWidth, ShiftAmt % BitWidth);
     KnownBits Tmp(APIntOps::fshr(LHS.Zero, RHS.Zero, SA),
                   APIntOps::fshr(LHS.One, RHS.One, SA));
     Known = Known.intersectWith(Tmp);
