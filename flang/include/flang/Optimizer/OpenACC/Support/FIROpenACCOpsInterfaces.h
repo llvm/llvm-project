@@ -89,9 +89,7 @@ template <typename Op>
 struct OutlineRematerializationModel
     : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
           OutlineRematerializationModel<Op>, Op> {
-  bool isRematerializationCandidate(mlir::Operation *op) const {
-    return true;
-  }
+  bool isRematerializationCandidate(mlir::Operation *op) const { return true; }
 };
 
 template <>
