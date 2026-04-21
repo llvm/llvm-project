@@ -31,8 +31,8 @@ define <4 x i16> @test_reconstructshuffle(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; CHECKBE-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECKBE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECKBE-NEXT:    ret
-  %tmp1 = shufflevector <16 x i8> %a, <16 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-  %tmp2 = shufflevector <16 x i8> %b, <16 x i8> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %tmp1 = shufflevector <16 x i8> %a, <16 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %tmp2 = shufflevector <16 x i8> %b, <16 x i8> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   %tmp3 = add <4 x i8> %tmp1, %tmp2
   %tmp4 = zext <4 x i8> %tmp3 to <4 x i16>
   ret <4 x i16> %tmp4
@@ -41,18 +41,17 @@ define <4 x i16> @test_reconstructshuffle(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; a shufflevector of even elements can become xtn on little-endian, but not on big-endian.
 define <8 x i8> @xtn_shuffle_even_v16i8(<16 x i8> %a) {
 ; CHECKLE-LABEL: xtn_shuffle_even_v16i8:
-; CHECKLE:       // %bb.0: // %entry
+; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    xtn v0.8b, v0.8h
 ; CHECKLE-NEXT:    ret
 ;
 ; CHECKBE-LABEL: xtn_shuffle_even_v16i8:
-; CHECKBE:       // %bb.0: // %entry
+; CHECKBE:       // %bb.0:
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    uzp1 v0.16b, v0.16b, v0.16b
 ; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECKBE-NEXT:    ret
-entry:
   %r = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   ret <8 x i8> %r
 }
@@ -60,38 +59,36 @@ entry:
 ; a shufflevector of even elements can become xtn on little-endian, but not on big-endian.
 define <4 x i16> @xtn_shuffle_even_v8i16(<8 x i16> %a) {
 ; CHECKLE-LABEL: xtn_shuffle_even_v8i16:
-; CHECKLE:       // %bb.0: // %entry
+; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    xtn v0.4h, v0.4s
 ; CHECKLE-NEXT:    ret
 ;
 ; CHECKBE-LABEL: xtn_shuffle_even_v8i16:
-; CHECKBE:       // %bb.0: // %entry
+; CHECKBE:       // %bb.0:
 ; CHECKBE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    uzp1 v0.8h, v0.8h, v0.8h
 ; CHECKBE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECKBE-NEXT:    ret
-entry:
   %r = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   ret <4 x i16> %r
 }
 
 ; a shufflevector of even elements can become xtn on little-endian, but not on big-endian.
-define <4 x i32> @xtn_suffle_uzp1_undef_v4i32(<4 x i32> %a) {
-; CHECKLE-LABEL: xtn_suffle_uzp1_undef_v4i32:
-; CHECKLE:       // %bb.0: // %entry
+define <4 x i32> @xtn_shuffle_uzp1_poison_v4i32(<4 x i32> %a) {
+; CHECKLE-LABEL: xtn_shuffle_uzp1_poison_v4i32:
+; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    xtn v0.2s, v0.2d
 ; CHECKLE-NEXT:    ret
 ;
-; CHECKBE-LABEL: xtn_suffle_uzp1_undef_v4i32:
-; CHECKBE:       // %bb.0: // %entry
+; CHECKBE-LABEL: xtn_shuffle_uzp1_poison_v4i32:
+; CHECKBE:       // %bb.0:
 ; CHECKBE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
 ; CHECKBE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ret
-entry:
   %r = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
   ret <4 x i32> %r
 

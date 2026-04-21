@@ -25377,7 +25377,7 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
       break;
     }
     if (BCVT != MVT::Other) {
-      SDValue BC = DAG.getNode(AArch64ISD::NVCAST, DL, BCVT, Op0);
+      SDValue BC = DAG.getBitcast(BCVT, Op0);
       SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, HalfVT, BC);
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Trunc,
                          DAG.getPOISON(HalfVT));
