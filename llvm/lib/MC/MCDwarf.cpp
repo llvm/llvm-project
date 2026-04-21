@@ -1969,11 +1969,10 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   // but the Android libunwindstack rejects eh_frame sections where
   // an FDE refers to a CIE other than the closest previous CIE.
   std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
-  llvm::stable_sort(FrameArrayX,
-                    [IsEH](const MCDwarfFrameInfo &X,
-                           const MCDwarfFrameInfo &Y) {
-                      return CIEKey(X, IsEH) < CIEKey(Y, IsEH);
-                    });
+  llvm::stable_sort(FrameArrayX, [IsEH](const MCDwarfFrameInfo &X,
+                                        const MCDwarfFrameInfo &Y) {
+    return CIEKey(X, IsEH) < CIEKey(Y, IsEH);
+  });
   CIEKey LastKey;
   const MCSymbol *LastCIEStart = nullptr;
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
