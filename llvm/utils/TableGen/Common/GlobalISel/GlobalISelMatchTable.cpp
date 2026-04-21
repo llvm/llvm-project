@@ -694,10 +694,12 @@ bool SwitchMatcher::addMatcher(Matcher &Candidate) {
 
 void SwitchMatcher::finalize() {
   assert(Condition == nullptr && "Already finalized");
+#ifndef NDEBUG
   unsigned NumBucketedMatchers = 0;
   for (const auto &Entry : Buckets)
     NumBucketedMatchers += Entry.second.Matchers.size();
   assert(NumBucketedMatchers == Matchers.size() && "Broken SwitchMatcher");
+#endif
   if (empty())
     return;
 
@@ -748,10 +750,12 @@ void SwitchMatcher::emitPredicateSpecificOpcodes(const PredicateMatcher &P,
 }
 
 void SwitchMatcher::emit(MatchTable &Table) {
+#ifndef NDEBUG
   unsigned NumBucketedMatchers = 0;
   for (const auto &Entry : Buckets)
     NumBucketedMatchers += Entry.second.Matchers.size();
   assert(NumBucketedMatchers == Matchers.size() && "Broken SwitchMatcher");
+#endif
   if (empty())
     return;
   assert(Condition != nullptr &&
