@@ -2878,7 +2878,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
 
     if (Instruction *NewMinMax = factorizeMinMaxTree(II))
-       return NewMinMax;
+      return NewMinMax;
 
     // m(m(X, C2), C1) -> m(X, C)
     const APFloat *C1, *C2;
