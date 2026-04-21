@@ -99,3 +99,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.recvmsg
 )
+
+add_entrypoint_object(
+  shutdown
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.shutdown
+)
