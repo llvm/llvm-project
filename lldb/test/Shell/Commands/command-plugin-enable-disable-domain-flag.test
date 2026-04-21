@@ -46,13 +46,30 @@ plugin enable --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
 # (instrumentation-runtime.UndefinedBehaviorSanitizer).
 
 # RUN: %lldb -o "plugin enable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_ENABLE_IR_DEBUGGER
-# ERROR_ENABLE_IR_DEBUGGER: error: failed to enable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: debugger domain is not supported
+# ERROR_ENABLE_IR_DEBUGGER: error: failed to enable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: debugger has no targets
 
 # RUN: %lldb -o "plugin enable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_ENABLE_IR_TARGET
-# ERROR_ENABLE_IR_TARGET: error: failed to enable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: target domain is not supported
+# ERROR_ENABLE_IR_TARGET: error: failed to enable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: no target is selected
 
 # RUN: %lldb -o "plugin disable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_DISABLE_IR_DEBUGGER
-# ERROR_DISABLE_IR_DEBUGGER: error: failed to disable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: debugger domain is not supported
+# ERROR_DISABLE_IR_DEBUGGER: error: failed to disable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: debugger has no targets
 
 # RUN: %lldb -o "plugin disable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_DISABLE_IR_TARGET
-# ERROR_DISABLE_IR_TARGET: error: failed to disable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: target domain is not supported
+# ERROR_DISABLE_IR_TARGET: error: failed to disable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: no target is selected
+
+# Error cases for plugin that supports all domains when a target exists but
+# has no alive process.
+
+# RUN: %clang_host %S/Inputs/main.c -o %t
+
+# RUN: %lldb -o "target create %t" -o "plugin enable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer" -o exit 2>&1 | FileCheck %s --check-prefix=ERROR_ENABLE_IR_TARGET_NO_PROCESS
+# ERROR_ENABLE_IR_TARGET_NO_PROCESS: error: failed to enable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: failed to find alive process for selected target
+
+# RUN: %lldb -o "target create %t" -o "plugin disable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer" -o exit 2>&1 | FileCheck %s --check-prefix=ERROR_DISABLE_IR_TARGET_NO_PROCESS
+# ERROR_DISABLE_IR_TARGET_NO_PROCESS: error: failed to disable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: failed to find alive process for selected target
+
+# RUN: %lldb -o "target create %t" -o "plugin enable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer" -o exit 2>&1 | FileCheck %s --check-prefix=ERROR_ENABLE_IR_DEBUGGER_NO_PROCESS
+# ERROR_ENABLE_IR_DEBUGGER_NO_PROCESS: error: failed to enable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: no alive processes in debugger
+
+# RUN: %lldb -o "target create %t" -o "plugin disable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer" -o exit 2>&1 | FileCheck %s --check-prefix=ERROR_DISABLE_IR_DEBUGGER_NO_PROCESS
+# ERROR_DISABLE_IR_DEBUGGER_NO_PROCESS: error: failed to disable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: no alive processes in debugger

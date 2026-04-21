@@ -23,34 +23,79 @@ plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
 
 # Test plugin list --domain debugger returns an error (text format).
 # RUN: %lldb -o "plugin list --domain debugger language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_DEBUGGER
-# ERROR_LIST_DEBUGGER: error: debugger domain is not supported
+# ERROR_LIST_DEBUGGER: error: language.cplusplus: plugin namespace language does not support querying enablement in the debugger domain
 
 # Test plugin list --domain target returns an error (text format).
 # RUN: %lldb -o "plugin list --domain target language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_TARGET
-# ERROR_LIST_TARGET: error: target domain is not supported
+# ERROR_LIST_TARGET: error: language.cplusplus: plugin namespace language does not support querying enablement in the target domain
 
 # Test plugin list --domain debugger --json returns an error (json format).
 # RUN: %lldb -o "plugin list --domain debugger --json language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_JSON_DEBUGGER
-# ERROR_LIST_JSON_DEBUGGER: error: debugger domain is not supported
+# ERROR_LIST_JSON_DEBUGGER: error: language.cplusplus: plugin namespace language does not support querying enablement in the debugger domain
 
 # Test plugin list --domain target --json returns an error (json format).
 # RUN: %lldb -o "plugin list --domain target --json language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_JSON_TARGET
-# ERROR_LIST_JSON_TARGET: error: target domain is not supported
+# ERROR_LIST_JSON_TARGET: error: language.cplusplus: plugin namespace language does not support querying enablement in the target domain
 
 # Error cases with on a plugin that supports all domains.
 
 # Test plugin list --domain debugger returns an error for instrumentation-runtime plugin (text format).
 # RUN: %lldb -o "plugin list --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_DEBUGGER_IR
-# ERROR_LIST_DEBUGGER_IR: error: debugger domain is not supported
+# ERROR_LIST_DEBUGGER_IR: error: instrumentation-runtime.UndefinedBehaviorSanitizer: plugin namespace instrumentation-runtime does not support querying enablement in the debugger domain
 
 # Test plugin list --domain target returns an error for instrumentation-runtime plugin (text format).
 # RUN: %lldb -o "plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_TARGET_IR
-# ERROR_LIST_TARGET_IR: error: target domain is not supported
+# ERROR_LIST_TARGET_IR: error: instrumentation-runtime.UndefinedBehaviorSanitizer: target not available
 
 # Test plugin list --domain debugger --json returns an error for instrumentation-runtime plugin (json format).
 # RUN: %lldb -o "plugin list --domain debugger --json instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_JSON_DEBUGGER_IR
-# ERROR_LIST_JSON_DEBUGGER_IR: error: debugger domain is not supported
+# ERROR_LIST_JSON_DEBUGGER_IR: error: instrumentation-runtime.UndefinedBehaviorSanitizer: plugin namespace instrumentation-runtime does not support querying enablement in the debugger domain
 
 # Test plugin list --domain target --json returns an error for instrumentation-runtime plugin (json format).
 # RUN: %lldb -o "plugin list --domain target --json instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_JSON_TARGET_IR
-# ERROR_LIST_JSON_TARGET_IR: error: target domain is not supported
+# ERROR_LIST_JSON_TARGET_IR: error: instrumentation-runtime.UndefinedBehaviorSanitizer: target not available
+
+# Errors are accumulated rather than stopping at the first error. With no
+# target, querying the enablement of each instrumentation-runtime plugin in the
+# target domain fails, so an error is reported for each plugin. The text and
+# JSON formats report the same errors.
+
+# RUN: %lldb -o "plugin list --domain target instrumentation-runtime" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_TARGET_ALL_IR
+# RUN: %lldb -o "plugin list --domain target --json instrumentation-runtime" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_TARGET_ALL_IR
+# ERROR_LIST_TARGET_ALL_IR: error: instrumentation-runtime.AddressSanitizer: target not available
+# ERROR_LIST_TARGET_ALL_IR: error: instrumentation-runtime.UndefinedBehaviorSanitizer: target not available
+
+# The enablement of plugins that can be queried is still listed when querying
+# the enablement of other plugins fails. The results are written to stdout and
+# the errors to stderr so they are checked separately.
+
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+# RUN: %lldb -o "target create %t" -o "b main" -o "run" -o "plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer language.cplusplus" 2>%t.text.stderr | FileCheck %s --check-prefix=LIST_TARGET_PARTIAL
+# RUN: FileCheck %s --check-prefix=LIST_TARGET_PARTIAL_ERR --input-file=%t.text.stderr
+# LIST_TARGET_PARTIAL: (lldb) plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer language.cplusplus
+# LIST_TARGET_PARTIAL-NEXT: instrumentation-runtime
+# LIST_TARGET_PARTIAL-NEXT:  [+] UndefinedBehaviorSanitizer
+# LIST_TARGET_PARTIAL-NEXT: language
+# LIST_TARGET_PARTIAL-NOT: cplusplus
+# LIST_TARGET_PARTIAL_ERR: error: language.cplusplus: plugin namespace language does not support querying enablement in the target domain
+
+# In the JSON format the error is also stored in the plugin's entry instead of
+# its enablement.
+# RUN: %lldb -o "target create %t" -o "b main" -o "run" -o "plugin list --domain target --json instrumentation-runtime.UndefinedBehaviorSanitizer language.cplusplus" 2>%t.json.stderr | FileCheck %s --check-prefix=LIST_JSON_TARGET_PARTIAL
+# RUN: FileCheck %s --check-prefix=LIST_JSON_TARGET_PARTIAL_ERR --input-file=%t.json.stderr
+# LIST_JSON_TARGET_PARTIAL: (lldb) plugin list --domain target --json instrumentation-runtime.UndefinedBehaviorSanitizer language.cplusplus
+# LIST_JSON_TARGET_PARTIAL-NEXT: {
+# LIST_JSON_TARGET_PARTIAL-NEXT:   "instrumentation-runtime": [
+# LIST_JSON_TARGET_PARTIAL-NEXT:     {
+# LIST_JSON_TARGET_PARTIAL-NEXT:       "enabled": true,
+# LIST_JSON_TARGET_PARTIAL-NEXT:       "name": "UndefinedBehaviorSanitizer"
+# LIST_JSON_TARGET_PARTIAL-NEXT:     }
+# LIST_JSON_TARGET_PARTIAL-NEXT:   ],
+# LIST_JSON_TARGET_PARTIAL-NEXT:   "language": [
+# LIST_JSON_TARGET_PARTIAL-NEXT:     {
+# LIST_JSON_TARGET_PARTIAL-NEXT:       "error": "plugin namespace language does not support querying enablement in the target domain",
+# LIST_JSON_TARGET_PARTIAL-NEXT:       "name": "cplusplus"
+# LIST_JSON_TARGET_PARTIAL-NEXT:     }
+# LIST_JSON_TARGET_PARTIAL-NEXT:   ]
+# LIST_JSON_TARGET_PARTIAL-NEXT: }
+# LIST_JSON_TARGET_PARTIAL_ERR: error: language.cplusplus: plugin namespace language does not support querying enablement in the target domain
