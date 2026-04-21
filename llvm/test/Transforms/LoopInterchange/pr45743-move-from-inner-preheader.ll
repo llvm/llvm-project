@@ -36,7 +36,7 @@ define void @test1() local_unnamed_addr #0 {
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 400
+; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 40
 ; CHECK-NEXT:    br i1 [[EC_2]], label %[[INNER_SPLIT]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -66,7 +66,7 @@ inner:                                              ; preds = %bb5, %bb3
 outer.latch:                                             ; preds = %bb5
   %red.next.lcssa = phi i32 [ %red.next, %inner ]
   %outer.iv.next = add nsw i64 %outer.iv, 1
-  %ec.2 = icmp eq i64 %outer.iv.next, 400
+  %ec.2 = icmp eq i64 %outer.iv.next, 40
   br i1 %ec.2, label %exit, label %outer.header
 
 exit:                                             ; preds = %bb11
@@ -102,7 +102,7 @@ define void @test2() {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[RED_NEXT_LCSSA]] = phi i32 [ [[RED_NEXT]], %[[INNER]] ]
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 400
+; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 40
 ; CHECK-NEXT:    br i1 [[EC_2]], label %[[EXIT:.*]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -133,7 +133,7 @@ inner:                                              ; preds = %bb5, %bb3
 outer.latch:                                             ; preds = %bb5
   %red.next.lcssa = phi i32 [ %red.next, %inner ]
   %outer.iv.next = add nsw i64 %outer.iv, 1
-  %ec.2 = icmp eq i64 %outer.iv.next, 400
+  %ec.2 = icmp eq i64 %outer.iv.next, 40
   br i1 %ec.2, label %exit, label %outer.header
 
 exit:                                             ; preds = %bb11
