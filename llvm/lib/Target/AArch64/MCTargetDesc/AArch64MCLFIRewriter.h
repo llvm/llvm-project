@@ -70,8 +70,6 @@ private:
   // Control flow.
   void rewriteIndirectBranch(const MCInst &Inst, MCStreamer &Out,
                              const MCSubtargetInfo &STI);
-  void rewriteCall(const MCInst &Inst, MCStreamer &Out,
-                   const MCSubtargetInfo &STI);
   void rewriteReturn(const MCInst &Inst, MCStreamer &Out,
                      const MCSubtargetInfo &STI);
 
