@@ -25925,6 +25925,9 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
                                         const SDLoc &DL, SelectionDAG &DAG,
                                         SDValue &CompareLHS,
                                         SDValue &CompareRHS) {
+  if (DAG.getDataLayout().isBigEndian())
+    return false;
+
   EVT VecVT = Vec.getValueType();
   assert(VecVT.isFixedLengthVector() &&
          VecVT.getVectorElementType() == MVT::i1 &&

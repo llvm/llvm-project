@@ -105,6 +105,71 @@ bb1:
   ret i64 %5
 }
 
+define i64 @match_not_all_byte_16(<16 x i8> %haystack, i8 %needle) {
+; CHECK-LABEL: match_not_all_byte_16:
+; CHECK:       // %bb.0: // %bb1
+; CHECK-NEXT:    dup v1.16b, w0
+; CHECK-NEXT:    mov w8, #999 // =0x3e7
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    cmn x9, #2
+; CHECK-NEXT:    mov w9, #777 // =0x309
+; CHECK-NEXT:    csel x0, x9, x8, ne
+; CHECK-NEXT:    ret
+bb1:
+  %0 = insertelement <16 x i8> poison, i8 %needle, i64 0
+  %1 = shufflevector <16 x i8> %0, <16 x i8> poison, <16 x i32> zeroinitializer
+  %2 = icmp eq <16 x i8> %haystack, %1
+  %3 = bitcast <16 x i1> %2 to i16
+  %4 = icmp ne i16 %3, -1
+  %5 = select i1 %4, i64 777, i64 999
+  ret i64 %5
+}
+
+define i1 @match_all_i64_2(<2 x i64> %haystack, i64 %needle) {
+; CHECK-LABEL: match_all_i64_2:
+; CHECK:       // %bb.0: // %bb1
+; CHECK-NEXT:    dup v1.2d, x0
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmn x8, #2
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+bb1:
+  %0 = insertelement <2 x i64> poison, i64 %needle, i64 0
+  %1 = shufflevector <2 x i64> %0, <2 x i64> poison, <2 x i32> zeroinitializer
+  %2 = icmp eq <2 x i64> %haystack, %1
+  %3 = bitcast <2 x i1> %2 to i2
+  %4 = icmp eq i2 %3, -1
+  ret i1 %4
+}
+
+define i1 @match_all_i32_8_from_and(<8 x i32> %a, <8 x i32> %b) {
+; CHECK-LABEL: match_all_i32_8_from_and:
+; CHECK:       // %bb.0: // %bb1
+; CHECK-NEXT:    cmgt v1.4s, v1.4s, #0
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, #0
+; CHECK-NEXT:    cmgt v3.4s, v3.4s, #0
+; CHECK-NEXT:    cmgt v2.4s, v2.4s, #0
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmn x8, #1
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+bb1:
+  %0 = icmp sgt <8 x i32> %a, zeroinitializer
+  %1 = icmp sgt <8 x i32> %b, zeroinitializer
+  %2 = and <8 x i1> %0, %1
+  %3 = bitcast <8 x i1> %2 to i8
+  %4 = icmp eq i8 %3, -1
+  ret i1 %4
+}
+
 define i64 @match_any_byte_4(<4 x i8> %haystack, i8 %needle) {
 ; CHECK-LABEL: match_any_byte_4:
 ; CHECK:       // %bb.0: // %bb1
