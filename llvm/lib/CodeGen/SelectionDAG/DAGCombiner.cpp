@@ -13470,7 +13470,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   unsigned Opc = Op1->getOpcode();
 
   // Handle predication by moving the SELECT into the operand of the MUL.
-  sd_match(Op1, m_VSelect(m_Value(Pred), m_Value(Op1), m_Zero()));
+  (void)sd_match(Op1, m_VSelect(m_Value(Pred), m_Value(Op1), m_Zero()));
 
   // Handle negation (sub-reduction).
   bool IsMLS =
@@ -13619,7 +13619,7 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
     return SDValue();
 
   // Handle predication.
-  sd_match(Op1, m_VSelect(m_Value(Pred), m_Value(Op1), m_Zero()));
+  (void)sd_match(Op1, m_VSelect(m_Value(Pred), m_Value(Op1), m_Zero()));
 
   // Handle negation (sub-reduction).
   bool IsMLS =
