@@ -2782,7 +2782,7 @@ define <2 x i1> @fabs_uitofp_sub_vec_olt_one(<2 x i16> %x, <2 x i16> %y) {
   %fy = uitofp <2 x i16> %y to <2 x float>
   %sub = fsub <2 x float> %fx, %fy
   %abs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %sub)
-  %cmp = fcmp olt <2 x float> %abs, splat(float 1.0)
+  %cmp = fcmp olt <2 x float> %abs, splat (float 1.0)
   ret <2 x i1> %cmp
 }
 
@@ -2796,7 +2796,7 @@ define <2 x i1> @fabs_sitofp_sub_vec_ult_one(<2 x i16> %x, <2 x i16> %y) {
   %fy = sitofp <2 x i16> %y to <2 x float>
   %sub = fsub <2 x float> %fx, %fy
   %abs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %sub)
-  %cmp = fcmp ult <2 x float> %abs, splat(float 1.0)
+  %cmp = fcmp ult <2 x float> %abs, splat (float 1.0)
   ret <2 x i1> %cmp
 }
 
@@ -2814,7 +2814,7 @@ define <2 x i1> @fabs_uitofp_sub_vec_half_no_fold(<2 x i32> %x, <2 x i32> %y) {
   %fy = uitofp <2 x i32> %y to <2 x half>
   %sub = fsub <2 x half> %fx, %fy
   %abs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %sub)
-  %cmp = fcmp olt <2 x half> %abs, splat(half 0xH3C00)
+  %cmp = fcmp olt <2 x half> %abs, splat (half 0xH3C00)
   ret <2 x i1> %cmp
 }
 
@@ -2832,6 +2832,6 @@ define <2 x i1> @fabs_uitofp_sub_vec_bf16_no_fold(<2 x i16> %x, <2 x i16> %y) {
   %fy = uitofp <2 x i16> %y to <2 x bfloat>
   %sub = fsub <2 x bfloat> %fx, %fy
   %abs = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> %sub)
-  %cmp = fcmp olt <2 x bfloat> %abs, splat(bfloat 0xR3F80)
+  %cmp = fcmp olt <2 x bfloat> %abs, splat (bfloat 0xR3F80)
   ret <2 x i1> %cmp
 }
