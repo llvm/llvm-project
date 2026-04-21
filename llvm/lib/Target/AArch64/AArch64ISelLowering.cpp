@@ -31035,6 +31035,11 @@ bool AArch64TargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
   return TargetLowering::shouldConvertFpToSat(Op, FPVT, VT);
 }
 
+bool AArch64TargetLowering::preferSubOfZextForUsubSatOne(EVT /*VT*/) const {
+  // See https://github.com/llvm/llvm-project/issues/191488
+  return false;
+}
+
 bool AArch64TargetLowering::preferSelectsOverBooleanArithmetic(EVT VT) const {
   // Expand scalar and SVE operations using selects. Neon vectors prefer sub to
   // avoid vselect becoming bsl / unrolling.
