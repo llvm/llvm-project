@@ -1717,7 +1717,7 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
   return std::move(DC);
 }
 
-Error llvm::objcopy::runExtractBundleEntry(SmallVector<StringRef, 256> args) {
+Error llvm::objcopy::runExtractBundleEntry(SmallVector<StringRef> args) {
   for (StringRef Input : args)
     if (Error Err = object::extractOffloadBundleByURI(Input))
       return Err;
@@ -1725,7 +1725,7 @@ Error llvm::objcopy::runExtractBundleEntry(SmallVector<StringRef, 256> args) {
   return Error::success();
 }
 
-Expected<SmallVector<StringRef, 256>>
+Expected<SmallVector<StringRef>>
 objcopy::parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr) {
   ExtractBundleEntryOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
@@ -1752,8 +1752,7 @@ objcopy::parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr) {
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
                              Arg->getAsString(InputArgs).c_str());
 
-  DriverConfig DC;
-  SmallVector<StringRef, 256> Arguments;
+  SmallVector<StringRef> Arguments;
 
   for (auto *Arg : InputArgs.filtered(EXTRACT_BUNDLE_ENTRY_INPUT))
     Arguments.push_back(Arg->getValue());

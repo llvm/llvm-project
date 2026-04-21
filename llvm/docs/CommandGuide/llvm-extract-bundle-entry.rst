@@ -56,4 +56,4 @@ Otherwise, it exits with code 0.
 BUGS
 ----
 
-To report bugs, please visit <https://github.com/llvm/llvm-project/labels/tools:llvm-objcopy%2Fextract-offload-entry>.
+To report bugs, please visit <https://github.com/llvm/llvm-project/issues?q=state%3Aopen%20label%3Allvm-extract-bundle-entry>.

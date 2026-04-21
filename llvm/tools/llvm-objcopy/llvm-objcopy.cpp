@@ -81,7 +81,7 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
     return parseInstallNameToolOptions(Args);
 
   if (Is("llvm-extract-bundle-entry")) {
-    Expected<SmallVector<StringRef, 256>> ArgsOrErr =
+    Expected<SmallVector<StringRef>> ArgsOrErr =
         parseExtractBundleEntryOptions(Args);
     if (!ArgsOrErr)
       return ArgsOrErr.takeError();

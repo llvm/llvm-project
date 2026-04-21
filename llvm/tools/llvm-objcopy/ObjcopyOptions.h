@@ -54,11 +54,10 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
 
 // ParseExtractBundleEntryOptions sets the input arguments. If a help flag is
 // set then ParseExtractBundleEntryOptions will print the help messege and exit.
-// print the help messege and exit.  All functionality of the
-// llvm-extract-bundle-entry utility is performed in runExtractBundleEntry and
-// the Driver Config is not used.
-Error runExtractBundleEntry(SmallVector<StringRef, 256> args);
-Expected<SmallVector<StringRef, 256>>
+// All functionality of the llvm-extract-bundle-entry utility is performed in
+// runExtractBundleEntry and the Driver Config is not used.
+Error runExtractBundleEntry(SmallVector<StringRef> Args);
+Expected<SmallVector<StringRef>>
 parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr);
 } // namespace objcopy
 } // namespace llvm
