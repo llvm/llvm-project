@@ -3,13 +3,6 @@
 
 ! CHECK-NOT: Object in DEALLOCATE statement is not deallocatable
 
-module not_iso_fortran_env
-  type event_type
-  end type
-  type lock_type
-  end type
-end module
-
 subroutine deallocate_lock_event_type()
   use iso_fortran_env
 
@@ -44,12 +37,13 @@ subroutine deallocate_lock_event_type()
   type(event_type), allocatable :: event[:]
   type(lock_type), allocatable :: lock(:)[:]
 
-
-  deallocate(okt1)
-  deallocate(okt2)
-  deallocate(okt3)
-  deallocate(okt4)
-  deallocate(okt5)
-  deallocate(lock)
-  deallocate(event)
+  if (.false.) then
+    deallocate(okt1)
+    deallocate(okt2)
+    deallocate(okt3)
+    deallocate(okt4)
+    deallocate(okt5)
+    deallocate(lock)
+    deallocate(event)
+  endif
 end subroutine
