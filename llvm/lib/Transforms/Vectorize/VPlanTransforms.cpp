@@ -1217,13 +1217,14 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case([](const VPWidenIntrinsicRecipe *I) {
         return std::make_pair(true, I->getVectorIntrinsicID());
       })
-      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
-        // For recipes that do not directly map to LLVM IR instructions,
-        // assign opcodes after the last VPInstruction opcode (which is also
-        // after the last IR Instruction opcode), based on the VPRecipeID.
-        return std::make_pair(false,
-                              VPInstruction::OpsEnd + 1 + I->getVPRecipeID());
-      })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
+          [](auto *I) {
+            // For recipes that do not directly map to LLVM IR instructions,
+            // assign opcodes after the last VPInstruction opcode (which is also
+            // after the last IR Instruction opcode), based on the VPRecipeID.
+            return std::make_pair(false, VPInstruction::OpsEnd + 1 +
+                                             I->getVPRecipeID());
+          })
       .Default([](auto *) { return std::nullopt; });
 }
 
@@ -1475,6 +1476,19 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Builder.createSub(Plan->getZero(TypeInfo.inferScalarType(A)), A,
                           Def->getDebugLoc(), "", NW));
+  }
+
+  if (CanCreateNewRecipe &&
+      match(Def, m_c_Add(m_VPValue(X), m_Sub(m_ZeroInt(), m_VPValue(Y))))) {
+    // Preserve nsw from the Add and the Sub, if it's present on both, on the
+    // new Sub.
+    VPIRFlags::WrapFlagsTy NW = {
+        false,
+        cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap() &&
+            cast<VPRecipeWithIRFlags>(Def->getOperand(Def->getOperand(0) == X))
+                ->hasNoSignedWrap()};
+    return Def->replaceAllUsesWith(
+        Builder.createSub(X, Y, Def->getDebugLoc(), "", NW));
   }
 
   const APInt *APC;
@@ -2611,6 +2625,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
       if (RFlags->hasPredicate())
         return hash_combine(Result, RFlags->getPredicate());
+    if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
+      return hash_combine(Result, SIVSteps->getInductionOpcode());
     return Result;
   }
 
@@ -2630,6 +2646,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LFlags->hasPredicate() &&
           LFlags->getPredicate() !=
               cast<VPRecipeWithIRFlags>(R)->getPredicate())
+        return false;
+    if (auto *LSIV = dyn_cast<VPScalarIVStepsRecipe>(L))
+      if (LSIV->getInductionOpcode() !=
+          cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
     // Recipes in replicate regions implicitly depend on predicate. If either
     // recipe is in a replicate region, only consider them equal if both have
@@ -6326,11 +6346,6 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
 
   if (!Op->hasOneUse())
     return std::nullopt;
-
-  // Handle neg(...) pattern (aka sub(0, ...)).
-  VPValue *NegatedOp = nullptr;
-  if (match(Op, m_Sub(m_ZeroInt(), m_VPValue(NegatedOp))))
-    Op = NegatedOp;
 
   VPWidenRecipe *BinOp = dyn_cast<VPWidenRecipe>(Op);
   if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))

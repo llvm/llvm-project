@@ -32363,6 +32363,33 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
 
+  if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
+    Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
+    SDValue StackPtr =
+        DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
+
+    SmallVector<SDValue, 6> Ops;
+    Ops.push_back(DAG.getEntryNode());
+    Ops.push_back(
+        DAG.getTargetConstant(Intrinsic::aarch64_neon_st3, DL, MVT::i64));
+    for (SDValue V : Op->ops())
+      Ops.push_back(V);
+    Ops.push_back(StackPtr);
+
+    SDValue Chain = DAG.getMemIntrinsicNode(
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, OpVT,
+        MachinePointerInfo(), Alignment, MachineMemOperand::MOStore);
+
+    SmallVector<SDValue, 3> Results;
+    for (unsigned I = 0; I < 3; ++I) {
+      SDValue Ptr =
+          DAG.getMemBasePlusOffset(StackPtr, OpVT.getStoreSize() * I, DL);
+      Results.push_back(
+          DAG.getLoad(OpVT, DL, Chain, Ptr, MachinePointerInfo()));
+    }
+    return DAG.getMergeValues(Results, DL);
+  }
+
   if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
     // aarch64_sve_st3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
