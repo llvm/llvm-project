@@ -31,13 +31,13 @@ define amdgpu_ps float @execz_side_effect_wqm_propagation(float %FragCoordY, i32
 ; CHECK-NEXT:    s_mov_b32 s15, s0
 ; CHECK-NEXT:    image_sample v2, [v0, v0, v3], s[8:15], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_CUBE
 ; CHECK-NEXT:    image_atomic_add_uint v0, [v0, v0], s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_2D
-; CHECK-NEXT:    v_med3_num_f32 v3, 0, 0, 0
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s6
+; CHECK-NEXT:    v_med3_num_f32 v3, 0, 0, 0
 ; CHECK-NEXT:    s_buffer_load_b32 s6, s[0:3], 0x0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_3)
-; CHECK-NEXT:    v_readfirstlane_b32 s7, v3
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; CHECK-NEXT:    v_readfirstlane_b32 s7, v3
 ; CHECK-NEXT:    s_mul_f32 s7, s7, 0
 ; CHECK-NEXT:    s_mul_f32 s7, s7, 0
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
