@@ -498,11 +498,6 @@ Changes in existing checks
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
 
-- Improved :doc:`readability-identifier-length
-  <clang-tidy/checks/readability/identifier-length>` check by adding a new
-  option, named `LineCountThreshold`, to silence warnings for short-lived
-  variables, based on distance between declaration and last use.
-
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
 

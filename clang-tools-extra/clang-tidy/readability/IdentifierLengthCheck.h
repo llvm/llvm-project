@@ -42,8 +42,6 @@ private:
 
   std::string IgnoredParameterNamesInput;
   llvm::Regex IgnoredParameterNames;
-
-  const unsigned LineCountThreshold;
 };
 
 } // namespace clang::tidy::readability
