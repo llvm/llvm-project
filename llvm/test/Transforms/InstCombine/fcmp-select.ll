@@ -4,6 +4,7 @@
 declare void @use(i1)
 declare void @usef64(double)
 declare double @llvm.fabs.f64(double)
+declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 
 ; X == 42.0 ? X : 42.0 --> 42.0
 
@@ -408,12 +409,10 @@ define double @test_fcmp_ord_select_fabs_fcmp_une_select_var_const(double %x) {
 
 define double @test_fcmp_ord_select_fabs_fcmp_nnan_one_select_var_var(double %x, double %y) {
 ; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_nnan_one_select_var_var(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], double [[X]], double [[Y:%.*]]
-; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SEL1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp nnan one double [[ABS]], 0x7FF0000000000000
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], double [[SEL1]], double [[Y]]
-; CHECK-NEXT:    ret double [[SEL2]]
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
 ;
   %cmp1 = fcmp ord double %x, 0.000000e+00
   %sel1 = select i1 %cmp1, double %x, double %y
@@ -436,6 +435,52 @@ define double @test_fcmp_ord_select_fabs_rhs_fcmp_ogt_select_var_var(double %x, 
   %cmp2 = fcmp ninf ogt double %k, %abs
   %sel2 = select nnan i1 %cmp2, double %sel1, double %y
   ret double %sel2
+}
+
+define <2 x double> @test_fcmp_ord_select_fabs_fcmp_one_select_v2f64(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_one_select_v2f64(
+; CHECK-NEXT:    [[ABS:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x double> [[ABS]], splat (double 0x7FF0000000000000)
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x double> [[X]], <2 x double> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x double> [[SEL]]
+;
+  %cmp1 = fcmp ord <2 x double> %x, zeroinitializer
+  %sel1 = select <2 x i1> %cmp1, <2 x double> %x, <2 x double> %y
+  %abs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %sel1)
+  %cmp2 = fcmp one <2 x double> %abs, <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %sel2 = select <2 x i1> %cmp2, <2 x double> %sel1, <2 x double> %y
+  ret <2 x double> %sel2
+}
+
+define <2 x double> @test_fcmp_ord_select_fabs_fcmp_one_select_uitofp_v2f64(<2 x double> %x, <2 x double> %y, <2 x i32> %i) {
+; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_one_select_uitofp_v2f64(
+; CHECK:         [[ABS:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x double> [[ABS]], splat (double 0x7FF0000000000000)
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x double> [[X]], <2 x double> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x double> [[SEL]]
+;
+  %nonnan = uitofp <2 x i32> %i to <2 x double>
+  %cmp1 = fcmp ord <2 x double> %x, %nonnan
+  %sel1 = select <2 x i1> %cmp1, <2 x double> %x, <2 x double> %y
+  %abs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %sel1)
+  %cmp2 = fcmp one <2 x double> %abs, <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %sel2 = select <2 x i1> %cmp2, <2 x double> %sel1, <2 x double> %y
+  ret <2 x double> %sel2
+}
+
+define <2 x double> @test_fcmp_ord_select_fabs_fcmp_nnan_one_select_v2f64(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_nnan_one_select_v2f64(
+; CHECK-NEXT:    [[ABS:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x double> [[ABS]], splat (double 0x7FF0000000000000)
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x double> [[X]], <2 x double> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x double> [[SEL]]
+;
+  %cmp1 = fcmp ord <2 x double> %x, zeroinitializer
+  %sel1 = select <2 x i1> %cmp1, <2 x double> %x, <2 x double> %y
+  %abs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %sel1)
+  %cmp2 = fcmp nnan one <2 x double> %abs, <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %sel2 = select <2 x i1> %cmp2, <2 x double> %sel1, <2 x double> %y
+  ret <2 x double> %sel2
 }
 
 ; Make sure that we recognize the SPF correctly.

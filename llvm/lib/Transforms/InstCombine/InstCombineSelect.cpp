@@ -3348,23 +3348,28 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
 }
 
 static bool matchIsNotNaNTest(Value *Cond, Value *X, InstCombinerImpl &IC) {
-  Instruction *CmpI;
-  Value *Cmp0, *Cmp1;
-  if (!match(Cond, m_OneUse(m_Instruction(
-                       CmpI, m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(Cmp0),
-                                            m_Value(Cmp1))))))
-    return false;
-
-  if (Cmp0 == X && Cmp1 == X)
+  // Match: fcmp ord X, X
+  if (match(Cond, m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Specific(X),
+                                          m_Specific(X)))))
     return true;
 
-  auto IsKnownNeverNaN = [&](Value *V) {
-    return match(V, m_NonNaN()) ||
-           isKnownNeverNaN(V, IC.getSimplifyQuery().getWithInstruction(CmpI));
-  };
+  Instruction *CmpI;
+  Value *Other;
 
-  return (Cmp0 == X && IsKnownNeverNaN(Cmp1)) ||
-         (Cmp1 == X && IsKnownNeverNaN(Cmp0));
+  // Match:
+  //   fcmp ord X, Other
+  //   fcmp ord Other, X
+  // where Other is known non-NaN.
+  if (!match(Cond,
+             m_OneUse(m_Instruction(
+                 CmpI,
+                 m_CombineOr(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Specific(X),
+                                            m_Value(Other)),
+                             m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(Other),
+                                            m_Specific(X)))))))
+    return false;
+
+  return isKnownNeverNaN(Other, IC.getSimplifyQuery().getWithInstruction(CmpI));
 }
 
 // Match a select that returns X when X is not NaN, and Y otherwise.
@@ -3399,11 +3404,6 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   if (!FCmpInst::isOrdered(OuterCmp->getPredicate()))
     return nullptr;
 
-  // The NaN path now evaluates fabs(X) instead of fabs(Y), so preserving nnan
-  // on the fcmp could introduce poison when X is NaN.
-  if (OuterCmp->hasNoNaNs())
-    return nullptr;
-
   Value *Y = SI.getFalseValue();
   Value *InnerSel = SI.getTrueValue();
   Value *X = matchNaNScrubbedValue(InnerSel, Y, IC);
@@ -3422,10 +3422,18 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   }
 
   Value *NewAbs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X);
-  Value *NewCmp = Swapped ? IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(),
-                                                     OtherOp, NewAbs, OuterCmp)
-                          : IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(),
-                                                     NewAbs, OtherOp, OuterCmp);
+
+  // Do not preserve nnan on the new fcmp: when X is NaN, the old compare
+  // evaluated fabs(Y), while the new compare evaluates fabs(X).
+  FastMathFlags NewCmpFMF = OuterCmp->getFastMathFlags();
+  NewCmpFMF.setNoNaNs(false);
+
+  Value *NewCmp =
+      Swapped ? IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(), OtherOp,
+                                         NewAbs, FMFSource(NewCmpFMF))
+              : IC.Builder.CreateFCmpFMF(OuterCmp->getPredicate(), NewAbs,
+                                         OtherOp, FMFSource(NewCmpFMF));
+
   Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
   return IC.replaceInstUsesWith(SI, NewSel);
 }
