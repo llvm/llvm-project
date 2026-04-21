@@ -72,6 +72,22 @@ class VPBuilder {
   VPBasicBlock *BB = nullptr;
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
+  /// Lightweight SCEV-to-VPlan expander. Converts SCEVConstant, SCEVUnknown,
+  /// SCEVVScale and SCEVMulExpr into VPInstructions, falling back to
+  /// VPExpandSCEVRecipe for other, unsupported expressions
+  class VPSCEVExpander {
+    VPBuilder &Builder;
+    VPlan &Plan;
+    DebugLoc DL;
+
+  public:
+    VPSCEVExpander(VPBuilder &Builder, VPlan &Plan, DebugLoc DL)
+        : Builder(Builder), Plan(Plan), DL(DL) {}
+
+    /// Expand \p S into recipes and live-ins using the builder.
+    VPValue *expand(const SCEV *S);
+  };
+
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (BB)
@@ -428,6 +444,12 @@ public:
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
         IV, Step, VF, InductionOpcode,
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
+  }
+
+  /// Expand \p Expr using VPSCEVExpander.
+  VPValue *expandSCEV(const SCEV *Expr, DebugLoc DL) {
+    VPlan &Plan = *getInsertBlock()->getPlan();
+    return VPSCEVExpander(*this, Plan, DL).expand(Expr);
   }
 
   VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {

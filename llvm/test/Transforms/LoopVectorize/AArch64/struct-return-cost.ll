@@ -143,10 +143,10 @@ exit:
 define void @struct_return_scalable(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) #2 {
 ; CHECK-LABEL: define void @struct_return_scalable(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK:  [[VECTOR_PH1:.*:]]
+; CHECK:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK:  [[VECTOR_BODY1:.*:]]
-; CHECK:  [[VECTOR_BODY2:.*:]]
 ; CHECK:    [[TMP12:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @scalable_vec_masked_foo(<vscale x 8 x half> [[WIDE_LOAD:%.*]], <vscale x 8 x i1> splat (i1 true))
 ; CHECK:    [[TMP13:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @scalable_vec_masked_foo(<vscale x 8 x half> [[WIDE_LOAD1:%.*]], <vscale x 8 x i1> splat (i1 true))
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]

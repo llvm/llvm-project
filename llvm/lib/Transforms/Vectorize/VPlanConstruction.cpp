@@ -1435,10 +1435,10 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
 }
 
 void VPlanTransforms::addMinimumIterationCheck(
-    VPlan &Plan, VPBasicBlock *CheckBlock, ElementCount VF, unsigned UF,
+    VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
     bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
-    DebugLoc DL, PredicatedScalarEvolution &PSE) {
+    DebugLoc DL, PredicatedScalarEvolution &PSE, VPBasicBlock *CheckBlock) {
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
@@ -1483,7 +1483,7 @@ void VPlanTransforms::addMinimumIterationCheck(
                                     TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
-      VPValue *MinTripCountVPV = VPSCEVExpander(Builder, Plan, DL).expand(Step);
+      VPValue *MinTripCountVPV = Builder.expandSCEV(Step, DL);
       TripCountCheck = Builder.createICmp(
           CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
     } // else step known to be < trip count, use TripCountCheck preset to false.
@@ -1504,9 +1504,10 @@ void VPlanTransforms::addIterationCountCheckBlock(
     PredicatedScalarEvolution &PSE) {
   auto *CheckBlock = Plan.createVPBasicBlock("vector.main.loop.iter.check");
   insertCheckBlockBeforeVectorLoop(Plan, CheckBlock);
-  addMinimumIterationCheck(Plan, CheckBlock, VF, UF, ElementCount::getFixed(0),
+  addMinimumIterationCheck(Plan, VF, UF, ElementCount::getFixed(0),
                            RequiresScalarEpilogue, /*TailFolded=*/false,
-                           OrigLoop, MinItersBypassWeights, DL, PSE);
+                           OrigLoop, MinItersBypassWeights, DL, PSE,
+                           CheckBlock);
 }
 
 void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(

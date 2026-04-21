@@ -170,10 +170,10 @@ struct VPlanTransforms {
   // Create a check in \p CheckBlock to see if the vector loop should be
   // executed.
   static void addMinimumIterationCheck(
-      VPlan &Plan, VPBasicBlock *CheckBlock, ElementCount VF, unsigned UF,
+      VPlan &Plan, ElementCount VF, unsigned UF,
       ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
       bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
-      DebugLoc DL, PredicatedScalarEvolution &PSE);
+      DebugLoc DL, PredicatedScalarEvolution &PSE, VPBasicBlock *CheckBlock);
 
   /// Add a new check block before the vector preheader to \p Plan to check if
   /// the main vector loop should be executed (TC >= VF * UF).

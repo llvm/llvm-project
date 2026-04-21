@@ -840,14 +840,16 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
   }
 }
 
-VPValue *VPSCEVExpander::expand(const SCEV *S) {
-  if (auto *C = dyn_cast<SCEVConstant>(S))
-    return Plan.getOrAddLiveIn(C->getValue());
-  if (auto *U = dyn_cast<SCEVUnknown>(S))
-    return Plan.getOrAddLiveIn(U->getValue());
-  if (isa<SCEVVScale>(S))
+VPValue *VPBuilder::VPSCEVExpander::expand(const SCEV *S) {
+  switch (S->getSCEVType()) {
+  case scConstant:
+    return Plan.getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
+  case scUnknown:
+    return Plan.getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
+  case scVScale:
     return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
-  if (auto *Mul = dyn_cast<SCEVMulExpr>(S)) {
+  case scMulExpr: {
+    auto *Mul = cast<SCEVMulExpr>(S);
     VPIRFlags::WrapFlagsTy WrapFlags(Mul->hasNoUnsignedWrap(),
                                      Mul->hasNoSignedWrap());
     // Chain the operands with Mul, matching SCEVExpander behavior of applying
@@ -858,10 +860,13 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
                                            {Result, expand(Op)}, WrapFlags, DL);
     return Result;
   }
-  // Unsupported SCEV kind; fall back to VPExpandSCEVRecipe. This is only
-  // valid when the builder's insertion point is in the entry block, as
-  // expandSCEVs only processes VPExpandSCEVRecipes there.
-  assert(Builder.getInsertBlock() == Plan.getEntry() &&
-         "VPExpandSCEVRecipe fallback requires insertion in the entry block");
-  return Builder.createExpandSCEV(S);
+  default:
+    // Unsupported SCEV kind; fall back to VPExpandSCEVRecipe, which must be
+    // inserted in the entry block only, as expandSCEVs can process
+    // VPExpandSCEVRecipes only there.
+    assert(Builder.getInsertBlock() == Plan.getEntry() &&
+           "VPExpandSCEVRecipe fallback requires insertion in the entry block");
+    return Builder.createExpandSCEV(S);
+  }
+  llvm_unreachable("all expressions must be handled by switch");
 }
