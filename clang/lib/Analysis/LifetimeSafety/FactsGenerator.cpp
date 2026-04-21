@@ -635,8 +635,8 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   if (!NewList)
     return;
 
-  // FIXME: Once arrays are handled properly, remove the check for Init is
-  // non-null.
+  // FIXME: OriginList is null for `new[]` initializers. Remove this `Init`
+  // check once array origins are supported.
   if (OriginList *Init = getOriginsList(*NE->getInitializer()); Init)
     flow(NewList, Init, true);
 }
