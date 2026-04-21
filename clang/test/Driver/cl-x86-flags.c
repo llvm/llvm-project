@@ -95,7 +95,8 @@
 // RUN: %clang_cl -m32 -arch:AVX10.2 --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_32_ARCH_AVX10_1_ADD -- %s
 #if defined(TEST_32_ARCH_AVX10_1_ADD)
 #if !__AVX512VL__  || !__AVX512CD__ || !__AVX512DQ__ || !__AVX512VBMI__ || !__AVX512IFMA__ || !__AVX512VNNI__ ||\
-    !__AVX512BF16__ || !__AVX512VPOPCNTDQ__ || !__AVX512VBMI2__ || !__AVX512VPOPCNTDQ__ || !__AVX512BITALG__ || !__AVX512FP16__
+    !__AVX512BF16__ || !__AVX512VPOPCNTDQ__ || !__AVX512VBMI2__ || !__AVX512VPOPCNTDQ__ || !__AVX512BITALG__ ||\
+    !__AVX512FP16__ || __AMX_TILE__
 #error fail
 #endif
 #endif
@@ -159,7 +160,8 @@
 // RUN: %clang_cl -m64 -arch:AVX10.2 --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_64_ARCH_AVX10_1_ADD -- %s
 #if defined(TEST_64_ARCH_AVX10_1_ADD)
 #if !__AVX512VL__  || !__AVX512CD__ || !__AVX512DQ__ || !__AVX512VBMI__ || !__AVX512IFMA__ || !__AVX512VNNI__ ||\
-    !__AVX512BF16__ || !__AVX512VPOPCNTDQ__ || !__AVX512VBMI2__ || !__AVX512VPOPCNTDQ__ || !__AVX512BITALG__ || !__AVX512FP16__
+    !__AVX512BF16__ || !__AVX512VPOPCNTDQ__ || !__AVX512VBMI2__ || !__AVX512VPOPCNTDQ__ || !__AVX512BITALG__ ||\
+    !__AVX512FP16__ || __AMX_TILE__
 #error fail
 #endif
 #endif
