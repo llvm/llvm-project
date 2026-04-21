@@ -2491,11 +2491,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vpadalq_v: {
     intrName = usgn ? "aarch64.neon.uaddlp" : "aarch64.neon.saddlp";
     llvm::SmallVector<mlir::Value> inputs{ops[1]};
-    mlir::Type resultTy = ty;
     mlir::Value pairwiseSum =
         emitNeonCall(cgm, builder, {getNeonPairwiseWidenInputType(ty, usgn)},
-                     inputs, intrName, resultTy, loc);
-    mlir::Value accumValue = ops[0] = builder.createBitcast(loc, ops[0], ty);
+                     inputs, intrName, ty, loc);
+    mlir::Value accumValue = builder.createBitcast(loc, ops[0], ty);
     return cir::AddOp::create(builder, loc, ty, pairwiseSum, accumValue);
   }
   case NEON::BI__builtin_neon_vpmin_v:
