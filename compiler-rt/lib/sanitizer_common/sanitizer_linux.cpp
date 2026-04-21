@@ -90,7 +90,8 @@
 extern "C" SANITIZER_WEAK_ATTRIBUTE const char *strerrorname_np(int);
 #  endif
 
-#  if SANITIZER_LINUX && (defined(__loongarch__) || defined(__hexagon__))
+#  if SANITIZER_LINUX && \
+      (defined(__loongarch__) || defined(__hexagon__) || defined(__alpha__))
 #    include <sys/sysmacros.h>
 #  endif
 
@@ -375,7 +376,8 @@ static void stat64_to_stat(struct stat64 *in, struct stat *out) {
 }
 #    endif
 
-#    if SANITIZER_LINUX && (defined(__loongarch__) || defined(__hexagon__))
+#    if SANITIZER_LINUX && \
+        (defined(__loongarch__) || defined(__hexagon__) || defined(__alpha__))
 static void statx_to_stat(struct statx *in, struct stat *out) {
   internal_memset(out, 0, sizeof(*out));
   out->st_dev = makedev(in->stx_dev_major, in->stx_dev_minor);
@@ -455,7 +457,7 @@ uptr internal_stat(const char *path, void *buf) {
 #    if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf, 0);
 #    elif SANITIZER_LINUX
-#      if defined(__loongarch__) || defined(__hexagon__)
+#      if defined(__loongarch__) || defined(__hexagon__) || defined(__alpha__)
   struct statx bufx;
   int res = internal_syscall(SYSCALL(statx), AT_FDCWD, (uptr)path,
                              AT_NO_AUTOMOUNT, STATX_BASIC_STATS, (uptr)&bufx);
@@ -493,7 +495,7 @@ uptr internal_lstat(const char *path, void *buf) {
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
 #    elif SANITIZER_LINUX
-#      if defined(__loongarch__) || defined(__hexagon__)
+#      if defined(__loongarch__) || defined(__hexagon__) || defined(__alpha__)
   struct statx bufx;
   int res = internal_syscall(SYSCALL(statx), AT_FDCWD, (uptr)path,
                              AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT,
@@ -541,7 +543,7 @@ uptr internal_fstat(fd_t fd, void *buf) {
   int res = internal_syscall(SYSCALL(fstat64), fd, &kbuf);
   kernel_stat_to_stat(&kbuf, (struct stat *)buf);
   return res;
-#      elif SANITIZER_LINUX && defined(__loongarch__)
+#      elif SANITIZER_LINUX && (defined(__loongarch__) || defined(__alpha__))
   struct statx bufx;
   int res = internal_syscall(SYSCALL(statx), fd, "", AT_EMPTY_PATH,
                              STATX_BASIC_STATS, (uptr)&bufx);
