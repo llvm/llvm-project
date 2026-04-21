@@ -111,7 +111,12 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   // Now, if it's possible to use the GetMemoryRegionInfo API to detect mapped
   // regions, walk forward through memory until a region is found that has
   // adequate space for our allocation.
-  if (process_is_alive) {
+  //
+  // Skip this when the process can't JIT. In that case, allocations are
+  // host-only and never written to process memory, so there's no need to probe
+  // the process's memory map (which may not cover the full address space for
+  // targets like WebAssembly).
+  if (process_is_alive && process_sp->CanJIT()) {
     MemoryRegionInfo region_info;
     Status err = process_sp->GetMemoryRegionInfo(ret, region_info);
     if (err.Success()) {
