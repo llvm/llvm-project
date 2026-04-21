@@ -158,7 +158,10 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
 
     for (const auto &[G, C] : Targets) {
       [[maybe_unused]] auto It = GuidToCounter.insert({G, C});
-      assert(It.second);
+      // TODO(boomanaiden154): Currently we do not assert on inserting
+      // duplicate GUIDs because we might have multiple zeros when the profile
+      // loader fails to map addresses to functions. Readd the assertion that
+      // we did insert once this has been fixed.
     }
   }
   for (auto [Index, Func] : llvm::enumerate(JT.Funcs)) {
@@ -211,11 +214,12 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
-  auto FuncToGuid = [&](const Function &Fct) {
+  auto FuncToGuid = [InLTO = this->InLTO](const Function &Fct) {
     if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
       return AssignGUIDPass::getGUID(Fct);
 
-    return Function::getGUIDAssumingExternalLinkage(getIRPGOFuncName(F, InLTO));
+    return Function::getGUIDAssumingExternalLinkage(
+        getIRPGOFuncName(Fct, InLTO));
   };
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
