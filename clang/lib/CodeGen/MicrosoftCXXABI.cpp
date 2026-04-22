@@ -1196,9 +1196,9 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
     isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
   } else if (isa<VectorType>(RetTy) &&
              getContext().getLangOpts().getClangABICompat() >
-                 LangOptions::ClangABI::Ver21) {
+                 LangOptions::ClangABI::Ver22) {
     // On x86, MSVC usually returns vector types indirectly from C++ instance
-    // methods. (Clang <= 21.0 always returned vector types directly.)
+    // methods. (Clang <= 22.0 always returned vector types directly.)
     if (CGM.getTarget().getTriple().isX86() && FI.isInstanceMethod()) {
       // However, MSVC returns vector types > 64 bits directly from vectorcall
       // instance methods.

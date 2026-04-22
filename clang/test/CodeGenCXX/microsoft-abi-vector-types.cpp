@@ -5,11 +5,11 @@
 // RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=aarch64-pc-windows-msvc \
 // RUN:   | FileCheck --check-prefixes=CHECK,AARCH64 %s
 // RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=i686-pc-windows-msvc \
-// RUN:   -fclang-abi-compat=21 | FileCheck --check-prefixes=CHECK,CLANG21 %s
+// RUN:   -fclang-abi-compat=22 | FileCheck --check-prefixes=CHECK,CLANG22 %s
 // RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=x86_64-pc-windows-msvc \
-// RUN:   -fclang-abi-compat=21 | FileCheck --check-prefixes=CHECK,CLANG21 %s
+// RUN:   -fclang-abi-compat=22 | FileCheck --check-prefixes=CHECK,CLANG22 %s
 // RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=aarch64-pc-windows-msvc \
-// RUN:   -fclang-abi-compat=21 | FileCheck --check-prefixes=CHECK,CLANG21 %s
+// RUN:   -fclang-abi-compat=22 | FileCheck --check-prefixes=CHECK,CLANG22 %s
 
 // To match the MSVC ABI, vector types are usually returned directly, but on x86
 // and x86-64 they must be returned indirectly from member functions (unless
@@ -48,7 +48,7 @@ VECTOR64_TYPE Foo::method_ret_vec64() {
 // X86: store <1 x i64>
 // X86: ret void
 // AARCH64: ret <1 x i64>
-// CLANG21: ret <1 x i64>
+// CLANG22: ret <1 x i64>
 }
 
 VECTOR128_TYPE Foo::method_ret_vec128() {
@@ -56,7 +56,7 @@ VECTOR128_TYPE Foo::method_ret_vec128() {
 // X86: store <4 x float>
 // X86: ret void
 // AARCH64: ret <4 x float>
-// CLANG21: ret <4 x float>
+// CLANG22: ret <4 x float>
 }
 
 VECTOR64_TYPE VECTORCALL Foo::vc_method_ret_vec64() {
@@ -64,7 +64,7 @@ VECTOR64_TYPE VECTORCALL Foo::vc_method_ret_vec64() {
 // X86: store <1 x i64>
 // X86: ret void
 // AARCH64: ret <1 x i64>
-// CLANG21: ret <1 x i64>
+// CLANG22: ret <1 x i64>
 }
 
 VECTOR128_TYPE VECTORCALL Foo::vc_method_ret_vec128() {
