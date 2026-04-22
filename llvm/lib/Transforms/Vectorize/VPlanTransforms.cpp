@@ -870,6 +870,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
         continue;
 
+      // VPReplicateRecipe is not compatible
+      if (isa<ExtractValueInst>(Def->getUnderlyingInstr()))
+        continue;
+
       auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
                                           Def->operands(), /*IsUniform*/ true,
                                           /*Mask*/ nullptr, /*Flags*/ *Def);
