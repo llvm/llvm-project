@@ -15,6 +15,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSFrame.h"
@@ -35,7 +36,7 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
   assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
   IsObj = true;
   setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
-  if (Context.getTargetOptions() && Context.getTargetOptions()->MCRelaxAll)
+  if (Context.getTargetOptions()->MCRelaxAll)
     Assembler->setRelaxAll(true);
 }
 
@@ -109,7 +110,10 @@ void MCObjectStreamer::addSpecialFragment(MCFragment *Frag) {
 void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
   ensureHeadroom(Contents.size());
   assert(FragSpace >= Contents.size());
-  llvm::copy(Contents, getCurFragEnd());
+  // As this is performance-sensitive code, explicitly use std::memcpy.
+  // Optimization of std::copy to memmove is unreliable.
+  if (!Contents.empty())
+    std::memcpy(getCurFragEnd(), Contents.begin(), Contents.size());
   CurFrag->FixedSize += Contents.size();
   FragSpace -= Contents.size();
 }
@@ -167,8 +171,7 @@ void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
 void MCObjectStreamer::reset() {
   if (Assembler) {
     Assembler->reset();
-    if (getContext().getTargetOptions())
-      Assembler->setRelaxAll(getContext().getTargetOptions()->MCRelaxAll);
+    Assembler->setRelaxAll(getContext().getTargetOptions()->MCRelaxAll);
   }
   EmitEHFrame = true;
   EmitDebugFrame = false;
@@ -178,18 +181,23 @@ void MCObjectStreamer::reset() {
   MCStreamer::reset();
 }
 
-void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
+void MCObjectStreamer::generateCompactUnwindEncodings() {
+  auto &Backend = getAssembler().getBackend();
+  for (auto &FI : DwarfFrameInfos)
+    FI.CompactUnwindEncoding =
+        Backend.generateCompactUnwindEncoding(&FI, &getContext());
+}
+
+void MCObjectStreamer::emitFrames() {
   if (!getNumFrameInfos())
     return;
 
   if (EmitEHFrame)
-    MCDwarfFrameEmitter::Emit(*this, MAB, true);
-
+    MCDwarfFrameEmitter::emit(*this, true);
   if (EmitDebugFrame)
-    MCDwarfFrameEmitter::Emit(*this, MAB, false);
+    MCDwarfFrameEmitter::emit(*this, false);
 
-  if (EmitSFrame || (getContext().getTargetOptions() &&
-                     getContext().getTargetOptions()->EmitSFrameUnwind))
+  if (EmitSFrame || getContext().getTargetOptions()->EmitSFrameUnwind)
     MCSFrameEmitter::emit(*this);
 }
 
@@ -389,6 +397,9 @@ bool MCObjectStreamer::mayHaveInstructions(MCSection &Sec) const {
 
 void MCObjectStreamer::emitInstruction(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
+  if (LFIRewriter && LFIRewriter->rewriteInst(Inst, *this, STI))
+    return;
+
   MCStreamer::emitInstruction(Inst, STI);
 
   MCSection *Sec = getCurrentSectionOnly();
@@ -675,6 +686,16 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   F->u.align.EmitNops = true;
   F->STI = STI;
+}
+
+void MCObjectStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
+                                     bool EmitNops, uint8_t Fill,
+                                     const MCSubtargetInfo &STI) {
+  auto *F = getCurrentFragment();
+  F->makePrefAlign(Alignment, End, EmitNops, Fill);
+  if (EmitNops)
+    F->STI = &STI;
+  newFragment();
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

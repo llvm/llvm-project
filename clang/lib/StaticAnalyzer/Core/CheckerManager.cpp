@@ -505,15 +505,14 @@ void CheckerManager::runCheckersForBeginFunction(ExplodedNodeSet &Dst,
 /// Run checkers for end of path.
 // Note, We do not chain the checker output (like in expandGraphWithCheckers)
 // for this callback since end of path nodes are expected to be final.
-void CheckerManager::runCheckersForEndFunction(NodeBuilderContext &BC,
-                                               ExplodedNodeSet &Dst,
+void CheckerManager::runCheckersForEndFunction(ExplodedNodeSet &Dst,
                                                ExplodedNode *Pred,
                                                ExprEngine &Eng,
                                                const ReturnStmt *RS) {
   // We define the builder outside of the loop because if at least one checker
   // creates a successor for Pred, we do not need to generate an
   // autotransition for it.
-  NodeBuilder Bldr(Pred, Dst, BC);
+  NodeBuilder Bldr(Pred, Dst, Eng.getBuilderContext());
   for (const auto &checkFn : EndFunctionCheckers) {
     const ProgramPoint &L =
         FunctionExitPoint(RS, Pred->getLocationContext(), checkFn.Checker);

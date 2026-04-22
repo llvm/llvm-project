@@ -154,19 +154,31 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
+  // No exit blocks, so nothing to do. Just return.
+  if (ExitingBlocks.empty())
+    return false;
+
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   SmallVector<BasicBlock *, 8> CallBrTargetBlocksToFix;
+
   // Redirect exiting edges through a control flow hub.
   ControlFlowHub CHub;
+  bool Changed = false;
 
   for (unsigned I = 0; I < ExitingBlocks.size(); ++I) {
     BasicBlock *BB = ExitingBlocks[I];
-    if (BranchInst *Branch = dyn_cast<BranchInst>(BB->getTerminator())) {
+    if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(BB->getTerminator())) {
+      BasicBlock *Succ0 = Branch->getSuccessor(0);
+      Succ0 = L->contains(Succ0) ? nullptr : Succ0;
+      CHub.addBranch(BB, Succ0);
+
+      LLVM_DEBUG(dbgs() << "Added extiting branch: " << printBasicBlock(BB)
+                        << " -> " << printBasicBlock(Succ0) << '\n');
+    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(BB->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
       Succ0 = L->contains(Succ0) ? nullptr : Succ0;
 
-      BasicBlock *Succ1 =
-          Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
+      BasicBlock *Succ1 = Branch->getSuccessor(1);
       Succ1 = L->contains(Succ1) ? nullptr : Succ1;
       CHub.addBranch(BB, Succ0, Succ1);
 
@@ -182,6 +194,10 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
         bool UpdatedLI = false;
         BasicBlock *NewSucc =
             SplitCallBrEdge(BB, Succ, J, &DTU, nullptr, &LI, &UpdatedLI);
+        // SplitCallBrEdge modifies the CFG because it creates an intermediate
+        // block. So we need to set the changed flag no matter what the
+        // ControlFlowHub is going to do later.
+        Changed = true;
         // Even if CallBr and Succ do not have a common parent loop, we need to
         // add the new target block to the parent loop of the current loop.
         if (!UpdatedLI)
@@ -207,6 +223,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   bool ChangedCFG;
   std::tie(LoopExitBlock, ChangedCFG) = CHub.finalize(
       &DTU, GuardBlocks, "loop.exit", MaxBooleansInControlFlowHub.getValue());
+  ChangedCFG |= Changed;
   if (!ChangedCFG)
     return false;
 

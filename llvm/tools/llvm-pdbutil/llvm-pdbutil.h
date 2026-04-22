@@ -201,6 +201,7 @@ extern llvm::cl::opt<bool> DumpModules;
 extern llvm::cl::opt<bool> DumpModuleFiles;
 extern llvm::cl::list<ModuleSubsection> DumpModuleSubsections;
 extern llvm::cl::opt<bool> DumpModuleSyms;
+extern llvm::cl::opt<bool> DumpSectionHeaders;
 } // namespace pdb2yaml
 
 namespace explain {

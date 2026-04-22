@@ -15,10 +15,8 @@ define amdgpu_kernel void @s_uaddo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_add_u32 s2, s2, s8
-; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; SI-NEXT:    s_or_b32 s0, s0, s1
 ; SI-NEXT:    s_addc_u32 s3, s3, s9
+; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
@@ -433,8 +431,6 @@ define amdgpu_kernel void @s_uaddo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_add_u32 s4, s4, s6
-; SI-NEXT:    s_cselect_b64 s[12:13], -1, 0
-; SI-NEXT:    s_or_b32 s6, s12, s13
 ; SI-NEXT:    s_addc_u32 s5, s5, s7
 ; SI-NEXT:    s_mov_b32 s8, s0
 ; SI-NEXT:    s_mov_b32 s9, s1

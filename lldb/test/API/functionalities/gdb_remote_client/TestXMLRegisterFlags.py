@@ -487,7 +487,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test_xml_includes(self):
-        # Certain targets e.g. s390x QEMU split their defintions over multiple
+        # Certain targets e.g. s390x QEMU split their definitions over multiple
         # files that are included into target.xml.
         self.setup_multidoc_test(
             {

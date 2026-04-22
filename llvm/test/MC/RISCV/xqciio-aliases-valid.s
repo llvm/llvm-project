@@ -1,13 +1,13 @@
 # Xqciio - Qualcomm uC External Input Output extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciio -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqciio -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqciio < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqciio -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqciio < %s \
+# RUN:     | llvm-objdump --mattr=+xqciio -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciio -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqciio -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqciio < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqciio --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqciio < %s \
+# RUN:     | llvm-objdump --mattr=+xqciio --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: qc.outw t0, 0(a0)

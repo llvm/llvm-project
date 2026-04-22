@@ -89,9 +89,8 @@ protected:
               result.SetStatus(eReturnStatusSuccessFinishResult);
               process = nullptr;
             } else {
-              result.AppendErrorWithFormat(
-                  "Failed to detach from process: %s\n",
-                  detach_error.AsCString());
+              result.AppendErrorWithFormat("Failed to detach from process: %s",
+                                           detach_error.AsCString());
             }
           } else {
             Status destroy_error(process->Destroy(false));
@@ -99,7 +98,7 @@ protected:
               result.SetStatus(eReturnStatusSuccessFinishResult);
               process = nullptr;
             } else {
-              result.AppendErrorWithFormat("Failed to kill process: %s\n",
+              result.AppendErrorWithFormat("Failed to kill process: %s",
                                            destroy_error.AsCString());
             }
           }
@@ -264,8 +263,8 @@ protected:
 
           const char *archname =
               exe_module_sp->GetArchitecture().GetArchitectureName();
-          result.AppendMessageWithFormat(
-              "Process %" PRIu64 " launched: '%s' (%s)\n", process_sp->GetID(),
+          result.AppendMessageWithFormatv(
+              "Process {0} launched: '{1}' ({2})", process_sp->GetID(),
               exe_module_sp->GetFileSpec().GetPath().c_str(), archname);
         }
         result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -371,7 +370,7 @@ protected:
             "no error returned from Target::Attach, and target has no process");
       }
     } else {
-      result.AppendErrorWithFormat("attach failed: %s\n", error.AsCString());
+      result.AppendErrorWithFormat("attach failed: %s", error.AsCString());
     }
 
     if (!result.Succeeded())
@@ -383,30 +382,30 @@ protected:
     if (!old_exec_module_sp) {
       // We might not have a module if we attached to a raw pid...
       if (new_exec_module_sp) {
-        result.AppendMessageWithFormat(
-            "Executable binary set to \"%s\".\n",
+        result.AppendMessageWithFormatv(
+            "Executable binary set to \"{0}\".",
             new_exec_module_sp->GetFileSpec().GetPath().c_str());
       }
     } else if (!new_exec_module_sp) {
-      result.AppendWarningWithFormat("No executable binary.");
+      result.AppendWarning("no executable binary");
     } else if (old_exec_module_sp->GetFileSpec() !=
                new_exec_module_sp->GetFileSpec()) {
 
-      result.AppendWarningWithFormat(
-          "Executable binary changed from \"%s\" to \"%s\".\n",
-          old_exec_module_sp->GetFileSpec().GetPath().c_str(),
-          new_exec_module_sp->GetFileSpec().GetPath().c_str());
+      result.AppendWarningWithFormatv(
+          "executable binary changed from \"{0}\" to \"{1}\"",
+          old_exec_module_sp->GetFileSpec().GetPath(),
+          new_exec_module_sp->GetFileSpec().GetPath());
     }
 
     if (!old_arch_spec.IsValid()) {
-      result.AppendMessageWithFormat(
-          "Architecture set to: %s.\n",
+      result.AppendMessageWithFormatv(
+          "Architecture set to: {0}.",
           target->GetArchitecture().GetTriple().getTriple().c_str());
     } else if (!old_arch_spec.IsExactMatch(target->GetArchitecture())) {
-      result.AppendWarningWithFormat(
-          "Architecture changed from %s to %s.\n",
-          old_arch_spec.GetTriple().getTriple().c_str(),
-          target->GetArchitecture().GetTriple().getTriple().c_str());
+      result.AppendWarningWithFormatv(
+          "architecture changed from {0} to {1}",
+          old_arch_spec.GetTriple().getTriple(),
+          target->GetArchitecture().GetTriple().getTriple());
     }
 
     // This supports the use-case scenario of immediately continuing the
@@ -719,8 +718,8 @@ protected:
         // PushProcessIOHandler().
         process->SyncIOHandler(iohandler_id, std::chrono::seconds(2));
 
-        result.AppendMessageWithFormat("Process %" PRIu64 " resuming\n",
-                                       process->GetID());
+        result.AppendMessageWithFormatv("Process {0} resuming",
+                                        process->GetID());
         if (synchronous_execution) {
           // If any state changed events had anything to say, add that to the
           // result
@@ -732,12 +731,12 @@ protected:
           result.SetStatus(eReturnStatusSuccessContinuingNoResult);
         }
       } else {
-        result.AppendErrorWithFormat("Failed to resume process: %s.\n",
+        result.AppendErrorWithFormat("Failed to resume process: %s.",
                                      error.AsCString());
       }
     } else {
       result.AppendErrorWithFormat(
-          "Process cannot be continued from its current state (%s).\n",
+          "Process cannot be continued from its current state (%s).",
           StateAsCString(state));
     }
   }
@@ -827,7 +826,7 @@ protected:
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Detach failed: %s\n", error.AsCString());
+      result.AppendErrorWithFormat("Detach failed: %s", error.AsCString());
     }
   }
 
@@ -896,7 +895,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one argument:\nUsage: %s\n", m_cmd_name.c_str(),
+          "'%s' takes exactly one argument:\nUsage: %s", m_cmd_name.c_str(),
           m_cmd_syntax.c_str());
       return;
     }
@@ -905,7 +904,7 @@ protected:
     if (process && process->IsAlive()) {
       result.AppendErrorWithFormat(
           "Process %" PRIu64
-          " is currently being debugged, kill the process before connecting.\n",
+          " is currently being debugged, kill the process before connecting.",
           process->GetID());
       return;
     }
@@ -1057,8 +1056,8 @@ protected:
       }
 
       if (image_token != LLDB_INVALID_IMAGE_TOKEN) {
-        result.AppendMessageWithFormat(
-            "Loading \"%s\"...ok\nImage %u loaded.\n", image_path.str().c_str(),
+        result.AppendMessageWithFormatv(
+            "Loading \"{0}\"...ok\nImage {1} loaded.", image_path.str().c_str(),
             image_token);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
@@ -1099,10 +1098,10 @@ public:
 
     Process *process = m_exe_ctx.GetProcessPtr();
 
-    const std::vector<lldb::addr_t> &tokens = process->GetImageTokens();
-    const size_t token_num = tokens.size();
+    const std::vector<addr_t> &token_addrs = process->GetImageTokens();
+    const size_t token_num = token_addrs.size();
     for (size_t i = 0; i < token_num; ++i) {
-      if (tokens[i] == LLDB_INVALID_IMAGE_TOKEN)
+      if (token_addrs[i] == LLDB_INVALID_ADDRESS)
         continue;
       request.TryCompleteCurrentArg(std::to_string(i));
     }
@@ -1122,8 +1121,8 @@ protected:
         Status error(process->GetTarget().GetPlatform()->UnloadImage(
             process, image_token));
         if (error.Success()) {
-          result.AppendMessageWithFormat(
-              "Unloading shared library with index %u...ok\n", image_token);
+          result.AppendMessageWithFormatv(
+              "Unloading shared library with index {0}...ok", image_token);
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           result.AppendErrorWithFormat("failed to unload image: %s",
@@ -1179,20 +1178,20 @@ protected:
         signo = process->GetUnixSignals()->GetSignalNumberFromName(signal_name);
 
       if (signo == LLDB_INVALID_SIGNAL_NUMBER) {
-        result.AppendErrorWithFormat("Invalid signal argument '%s'.\n",
+        result.AppendErrorWithFormat("Invalid signal argument '%s'.",
                                      command.GetArgumentAtIndex(0));
       } else {
         Status error(process->Signal(signo));
         if (error.Success()) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat("Failed to send signal %i: %s\n", signo,
+          result.AppendErrorWithFormat("Failed to send signal %i: %s", signo,
                                        error.AsCString());
         }
       }
     } else {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one signal number argument:\nUsage: %s\n",
+          "'%s' takes exactly one signal number argument:\nUsage: %s",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
     }
   }
@@ -1225,7 +1224,7 @@ protected:
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Failed to halt process: %s\n",
+      result.AppendErrorWithFormat("Failed to halt process: %s",
                                    error.AsCString());
     }
   }
@@ -1257,7 +1256,7 @@ protected:
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Failed to kill process: %s\n",
+      result.AppendErrorWithFormat("Failed to kill process: %s",
                                    error.AsCString());
     }
   }
@@ -1301,7 +1300,7 @@ public:
         if (opt_name != "plugin-name")
           continue;
 
-        std::vector<llvm::StringRef> plugin_names =
+        llvm::SmallVector<llvm::StringRef> plugin_names =
             PluginManager::GetSaveCorePluginNames();
         m_plugin_enums.resize(plugin_names.size());
         for (auto [num, val] : llvm::zip(plugin_names, m_plugin_enums)) {
@@ -1351,7 +1350,8 @@ protected:
     if (process_sp) {
       if (command.GetArgumentCount() == 1) {
         FileSpec output_file(command.GetArgumentAtIndex(0));
-        FileSystem::Instance().Resolve(output_file);
+        FileSystem::Instance().Resolve(output_file,
+                                       /*force_make_absolute=*/true);
         auto &core_dump_options = m_options.m_core_dump_options;
         core_dump_options.SetOutputFile(output_file);
         core_dump_options.SetProcess(process_sp);
@@ -1361,7 +1361,7 @@ protected:
                   SaveCoreStyle::eSaveCoreDirtyOnly ||
               core_dump_options.GetStyle() ==
                   SaveCoreStyle::eSaveCoreStackOnly) {
-            result.AppendMessageWithFormat(
+            result.AppendMessage(
                 "\nModified-memory or stack-memory only corefile "
                 "created.  This corefile may \n"
                 "not show library/framework/app binaries "
@@ -1369,15 +1369,16 @@ protected:
                 "those binaries have "
                 "been updated/modified. Copies are not included\n"
                 "in this corefile.  Use --style full to include all "
-                "process memory.\n");
+                "process memory.");
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat(
-              "Failed to save core file for process: %s\n", error.AsCString());
+          result.AppendErrorWithFormatv(
+              "failed to save core file for process to '{0}': {1}\n",
+              output_file.GetPath(), error);
         }
       } else {
-        result.AppendErrorWithFormat("'%s' takes one arguments:\nUsage: %s\n",
+        result.AppendErrorWithFormat("'%s' takes one arguments:\nUsage: %s",
                                      m_cmd_name.c_str(), m_cmd_syntax.c_str());
       }
     } else {
@@ -1466,12 +1467,12 @@ protected:
       addr_t data_mask = process->GetDataAddressMask();
       if (code_mask != LLDB_INVALID_ADDRESS_MASK) {
         int bits = std::bitset<64>(~code_mask).count();
-        result.AppendMessageWithFormat(
-            "Addressable code address mask: 0x%" PRIx64 "\n", code_mask);
-        result.AppendMessageWithFormat(
-            "Addressable data address mask: 0x%" PRIx64 "\n", data_mask);
-        result.AppendMessageWithFormat(
-            "Number of bits used in addressing (code): %d\n", bits);
+        result.AppendMessageWithFormatv("Addressable code address mask: {0:x}",
+                                        code_mask);
+        result.AppendMessageWithFormatv("Addressable data address mask: {0:x}",
+                                        data_mask);
+        result.AppendMessageWithFormatv(
+            "Number of bits used in addressing (code): {0}", bits);
       }
 
       PlatformSP platform_sp = process->GetTarget().GetPlatform();
@@ -1603,8 +1604,8 @@ public:
   Options *GetOptions() override { return &m_options; }
 
   void PrintSignalHeader(Stream &str) {
-    str.Printf("NAME         PASS   STOP   NOTIFY\n");
-    str.Printf("===========  =====  =====  ======\n");
+    str.Printf("NAME         PASS   STOP   NOTIFY  DESCRIPTION\n");
+    str.Printf("===========  =====  =====  ======  ===================\n");
   }
 
   void PrintSignal(Stream &str, int32_t signo, llvm::StringRef sig_name,
@@ -1615,9 +1616,16 @@ public:
 
     str.Format("{0, -11}  ", sig_name);
     if (signals_sp->GetSignalInfo(signo, suppress, stop, notify)) {
-      bool pass = !suppress;
+      const bool pass = !suppress;
       str.Printf("%s  %s  %s", (pass ? "true " : "false"),
                  (stop ? "true " : "false"), (notify ? "true " : "false"));
+
+      const llvm::StringRef sig_description =
+          signals_sp->GetSignalNumberDescription(signo);
+      if (!sig_description.empty()) {
+        str.PutCString("   ");
+        str.PutCString(sig_description);
+      }
     }
     str.Printf("\n");
   }
@@ -1750,8 +1758,8 @@ protected:
               signals_sp->SetShouldNotify(signo, *notify_action);
             ++num_signals_set;
           } else {
-            result.AppendErrorWithFormat("Invalid signal name '%s'\n",
-                                          arg.c_str());
+            result.AppendErrorWithFormat("Invalid signal name '%s'",
+                                         arg.c_str());
             continue;
           }
         } else {

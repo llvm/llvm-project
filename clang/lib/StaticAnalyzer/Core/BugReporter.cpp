@@ -25,7 +25,6 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
@@ -324,7 +323,7 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
   CallExitEnd CExit = P.castAs<CallExitEnd>();
 
   // FIXME: Use CallEvent to abstract this over all calls.
-  const Stmt *CallSite = CExit.getCalleeContext()->getCallSite();
+  const Expr *CallSite = CExit.getCalleeContext()->getCallSite();
   const auto *CE = dyn_cast_or_null<CallExpr>(CallSite);
   if (!CE)
     return {};

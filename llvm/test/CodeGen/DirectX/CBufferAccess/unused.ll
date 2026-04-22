@@ -2,7 +2,7 @@
 ; Check that we correctly ignore cbuffers that were nulled out by optimizations.
 
 %__cblayout_CB = type <{ float }>
-@CB.cb = local_unnamed_addr global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) poison
+@CB.cb = local_unnamed_addr global target("dx.CBuffer", %__cblayout_CB) poison
 @x = external local_unnamed_addr addrspace(2) global float, align 4
 
 ; CHECK-NOT: !hlsl.cbs =

@@ -31,6 +31,7 @@ public:
                              const char *ExtraCode, raw_ostream &O) override;
 
   void emitInstruction(const MachineInstr *MI) override;
+  void emitFunctionBodyEnd() override;
   MCSymbol *getJTPublicSymbol(unsigned JTI);
   void emitJumpTableInfo() override;
 
@@ -39,6 +40,7 @@ public:
 private:
   BTFDebug *BTF;
   TargetMachine &TM;
+  bool SawTrapCall = false;
 
   const BPFTargetMachine &getBTM() const;
 };

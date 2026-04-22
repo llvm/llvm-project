@@ -12,13 +12,16 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
@@ -1617,6 +1620,21 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
         ExtVectorElementExpr(ret, VK, BaseExpr.get(), *Member, MemberLoc);
   }
 
+  if (S.getLangOpts().HLSL && BaseType->isConstantMatrixType()) {
+    IdentifierInfo *Member = MemberName.getAsIdentifierInfo();
+    ExprValueKind VK = BaseExpr.get()->getValueKind();
+    QualType Ret = S.HLSL().checkMatrixComponent(S, BaseType, VK, OpLoc, Member,
+                                                 MemberLoc);
+    if (Ret.isNull())
+      return ExprError();
+    Qualifiers BaseQ =
+        S.Context.getCanonicalType(BaseExpr.get()->getType()).getQualifiers();
+    Ret = S.Context.getQualifiedType(Ret, BaseQ);
+
+    return new (S.Context)
+        MatrixElementExpr(Ret, VK, BaseExpr.get(), *Member, MemberLoc);
+  }
+
   // Adjust builtin-sel to the appropriate redefinition type if that's
   // not just a pointer to builtin-sel again.
   if (IsArrow && BaseType->isSpecificBuiltinType(BuiltinType::ObjCSel) &&
@@ -1720,9 +1738,18 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
       Base, Base->getType(), OpLoc, IsArrow, SS, TemplateKWLoc,
       FirstQualifierInScope, NameInfo, TemplateArgs, S, &ExtraArgs);
 
-  if (!Res.isInvalid() && isa<MemberExpr>(Res.get()))
-    CheckMemberAccessOfNoDeref(cast<MemberExpr>(Res.get()));
+  if (!Res.isInvalid()) {
+    if (MemberExpr *ME = dyn_cast<MemberExpr>(Res.get())) {
+      CheckMemberAccessOfNoDeref(ME);
 
+      if (getLangOpts().HLSL) {
+        QualType Ty = Res.get()->getType();
+        if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
+          if (!HLSL().ActOnResourceMemberAccessExpr(ME))
+            Res = ExprError();
+      }
+    }
+  }
   return Res;
 }
 
@@ -1794,6 +1821,12 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     // CVR attributes from the base are picked up by members,
     // except that 'mutable' members don't pick up 'const'.
     if (Field->isMutable()) BaseQuals.removeConst();
+
+    // HLSL resource types do not pick up address space qualifiers from the
+    // base.
+    if (getLangOpts().HLSL && (MemberType->isHLSLResourceRecord() ||
+                               MemberType->isHLSLResourceRecordArray()))
+      BaseQuals.removeAddressSpace();
 
     Qualifiers MemberQuals =
         Context.getCanonicalType(MemberType).getQualifiers();

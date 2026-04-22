@@ -9,6 +9,7 @@
 #include "MsvcStl.h"
 
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
@@ -64,9 +65,18 @@ lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::Update() {
   if (!storage_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
-  if (!m_element_type)
+  CompilerType backend_type = m_backend.GetCompilerType();
+  if (!backend_type)
     return lldb::ChildCacheState::eRefetch;
+
+  m_element_type = backend_type.GetTypeTemplateArgument(0);
+  if (!m_element_type) {
+    // PDB doesn't have info about templates, so use value_type which equals T.
+    m_element_type = backend_type.GetDirectNestedTypeWithName("value_type");
+
+    if (!m_element_type)
+      return lldb::ChildCacheState::eRefetch;
+  }
 
   m_storage = storage_sp.get();
   return lldb::ChildCacheState::eRefetch;
@@ -76,8 +86,7 @@ llvm::Expected<size_t> lldb_private::formatters::
     MsvcStlAtomicSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "Value")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::SyntheticChildrenFrontEnd *
@@ -90,11 +99,11 @@ lldb_private::formatters::MsvcStlAtomicSyntheticFrontEndCreator(
 
 bool lldb_private::formatters::MsvcStlAtomicSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  auto synth_sp = valobj.GetSyntheticValue();
+  ValueObjectSP synth_sp = valobj.GetSyntheticValue();
   if (!synth_sp)
     return false;
 
-  auto value_sp = synth_sp->GetChildAtIndex(0);
+  ValueObjectSP value_sp = synth_sp->GetChildAtIndex(0);
   std::string summary;
   if (value_sp->GetSummaryAsCString(summary, options) && !summary.empty()) {
     stream << summary;

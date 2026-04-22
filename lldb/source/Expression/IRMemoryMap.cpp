@@ -111,7 +111,11 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   // Now, if it's possible to use the GetMemoryRegionInfo API to detect mapped
   // regions, walk forward through memory until a region is found that has
   // adequate space for our allocation.
-  if (process_is_alive) {
+  //
+  // Skip this when the process can't JIT. In that case, allocations are
+  // host-only and never written to process memory, so there's no need to probe
+  // the process's memory map.
+  if (process_is_alive && process_sp->CanJIT()) {
     MemoryRegionInfo region_info;
     Status err = process_sp->GetMemoryRegionInfo(ret, region_info);
     if (err.Success()) {
@@ -122,12 +126,9 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
           // it can make it harder to debug null dereference crashes
           // in the inferior.
           ret = region_info.GetRange().GetRangeEnd();
-        } else if (region_info.GetReadable() !=
-                       MemoryRegionInfo::OptionalBool::eNo ||
-                   region_info.GetWritable() !=
-                       MemoryRegionInfo::OptionalBool::eNo ||
-                   region_info.GetExecutable() !=
-                       MemoryRegionInfo::OptionalBool::eNo) {
+        } else if (region_info.GetReadable() != eLazyBoolNo ||
+                   region_info.GetWritable() != eLazyBoolNo ||
+                   region_info.GetExecutable() != eLazyBoolNo) {
           if (region_info.GetRange().GetRangeEnd() - 1 >= end_of_memory) {
             ret = LLDB_INVALID_ADDRESS;
             break;
@@ -140,6 +141,8 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
           // ret stays the same.  We just need to walk a bit further.
         }
 
+        // FIXME: When we're able to JIT WebAssembly, this strategy won't work
+        // because we might probe beyond its linear memory.
         err = process_sp->GetMemoryRegionInfo(
             region_info.GetRange().GetRangeEnd(), region_info);
         if (err.Fail()) {

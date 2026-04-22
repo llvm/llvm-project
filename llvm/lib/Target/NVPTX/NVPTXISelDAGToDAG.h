@@ -17,6 +17,7 @@
 #include "NVPTX.h"
 #include "NVPTXISelLowering.h"
 #include "NVPTXRegisterInfo.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXTargetMachine.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
@@ -35,6 +36,7 @@ struct NVPTXScopes {
 
 private:
   SmallMapVector<SyncScope::ID, NVPTX::Scope, 8> Scopes{};
+  LLVMContext *Context = nullptr;
 };
 
 class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
@@ -91,6 +93,7 @@ private:
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
   void SelectTcgen05St(SDNode *N, bool hasOffset = false);
   void selectAtomicSwap128(SDNode *N);
+  void selectBR_JT(SDNode *N);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);

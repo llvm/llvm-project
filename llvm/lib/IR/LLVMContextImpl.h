@@ -1566,55 +1566,11 @@ template <class NodeTy> struct MDNodeInfo {
 #define HANDLE_MDNODE_LEAF(CLASS) using CLASS##Info = MDNodeInfo<CLASS>;
 #include "llvm/IR/Metadata.def"
 
-/// Multimap-like storage for metadata attachments.
-class MDAttachments {
-public:
-  struct Attachment {
-    unsigned MDKind;
-    TrackingMDNodeRef Node;
-  };
-
-private:
-  SmallVector<Attachment, 1> Attachments;
-
-public:
-  bool empty() const { return Attachments.empty(); }
-  size_t size() const { return Attachments.size(); }
-
-  /// Returns the first attachment with the given ID or nullptr if no such
-  /// attachment exists.
-  MDNode *lookup(unsigned ID) const;
-
-  /// Appends all attachments with the given ID to \c Result in insertion order.
-  /// If the global has no attachments with the given ID, or if ID is invalid,
-  /// leaves Result unchanged.
-  void get(unsigned ID, SmallVectorImpl<MDNode *> &Result) const;
-
-  /// Appends all attachments for the global to \c Result, sorting by attachment
-  /// ID. Attachments with the same ID appear in insertion order. This function
-  /// does \em not clear \c Result.
-  void getAll(SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const;
-
-  /// Set an attachment to a particular node.
-  ///
-  /// Set the \c ID attachment to \c MD, replacing the current attachments at \c
-  /// ID (if anyway).
-  void set(unsigned ID, MDNode *MD);
-
-  /// Adds an attachment to a particular node.
-  void insert(unsigned ID, MDNode &MD);
-
-  /// Remove attachments with the given ID.
-  ///
-  /// Remove the attachments at \c ID, if any.
-  bool erase(unsigned ID);
-
-  /// Erase matching attachments.
-  ///
-  /// Erases all attachments matching the \c shouldRemove predicate.
-  template <class PredTy> void remove_if(PredTy shouldRemove) {
-    llvm::erase_if(Attachments, shouldRemove);
-  }
+/// Single metadata attachment, forms linked list ended by index 0.
+struct MDAttachment {
+  unsigned Next = 0;
+  unsigned MDKind;
+  TrackingMDNodeRef Node;
 };
 
 class LLVMContextImpl {
@@ -1673,6 +1629,12 @@ public:
   DenseMap<APInt, std::unique_ptr<ConstantInt>> IntConstants;
   DenseMap<std::pair<ElementCount, APInt>, std::unique_ptr<ConstantInt>>
       IntSplatConstants;
+
+  DenseMap<unsigned, std::unique_ptr<ConstantByte>> ByteZeroConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantByte>> ByteOneConstants;
+  DenseMap<APInt, std::unique_ptr<ConstantByte>> ByteConstants;
+  DenseMap<std::pair<ElementCount, APInt>, std::unique_ptr<ConstantByte>>
+      ByteSplatConstants;
 
   DenseMap<APFloat, std::unique_ptr<ConstantFP>> FPConstants;
   DenseMap<std::pair<ElementCount, APFloat>, std::unique_ptr<ConstantFP>>
@@ -1743,11 +1705,15 @@ public:
   ConstantInt *TheTrueVal = nullptr;
   ConstantInt *TheFalseVal = nullptr;
 
+  ConstantByte *TheTrueByteVal = nullptr;
+  ConstantByte *TheFalseByteVal = nullptr;
+
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
       TokenTy;
   Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_AMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
+  ByteType Byte1Ty, Byte8Ty, Byte16Ty, Byte32Ty, Byte64Ty, Byte128Ty;
 
   std::unique_ptr<ConstantTokenNone> TheNoneToken;
 
@@ -1756,6 +1722,7 @@ public:
   SpecificBumpPtrAllocator<ConstantRangeAttributeImpl>
       ConstantRangeAttributeAlloc;
 
+  DenseMap<unsigned, ByteType *> ByteTypes;
   DenseMap<unsigned, IntegerType *> IntegerTypes;
 
   using FunctionTypeSet = DenseSet<FunctionType *, FunctionTypeKeyInfo>;
@@ -1783,8 +1750,13 @@ public:
   /// CustomMDKindNames - Map to hold the metadata string to ID mapping.
   StringMap<unsigned> CustomMDKindNames;
 
-  /// Collection of metadata used in this context.
-  DenseMap<const Value *, MDAttachments> ValueMetadata;
+  /// Collection of metadata attachments in this context.
+  SmallVector<MDAttachment, 0> Metadatas;
+  /// Index of first free Metadatas entry, linked list via MDAttachment::Next.
+  unsigned MetadataRecycleHead = 0;
+  /// Number of currently unused metadata entries. Only used/updated in debug
+  /// builds to ensure that all metadata attachments are properly freed.
+  unsigned MetadataRecycleSize = 0;
 
   /// Map DIAssignID -> Instructions with that attachment.
   /// Managed by Instruction via Instruction::updateDIAssignIDMapping.

@@ -53,7 +53,7 @@ program main
   real, pointer :: t1(:,:)
   nullify(d%p)
   allocate(t1(2,2))
-  
+
   ! 2.7.9:
   ! Allocates the memory for object 'd' on the device.
   ! The descriptor member of 'd' is a NULL descriptor,
@@ -62,9 +62,9 @@ program main
   ! The descriptor storage is created on the device
   ! just as part of the object 'd' storage.
   !$acc enter data create(d)
-  
+
   d%p => t1
-  
+
   ! 2.7.7:
   ! Pointer d%p is not present on the device, so copyin
   ! action is performed for the data pointed to by the pointer:
@@ -80,7 +80,7 @@ program main
   !     from the host values of the corresponding members.
   !   * The attachment counter of 'd%p' is set to 1.
   !$acc enter data copyin(d%p)
-  
+
   ! 2.7.7:
   ! Pointer d%p is already present on the device, so no copyin
   ! action is performed.
@@ -89,12 +89,12 @@ program main
   ! during the previous attachment, only its attachment counter
   ! is incremented to 2.
   !$acc enter data copyin(d%p)
-  
+
   ! 3.2.29:
   ! The detach action is performed. According to 2.7.2 the attachment
   ! counter of d%p is decremented to 1.
   call acc_detach(d%p)
-  
+
   ! 3.2.29:
   ! The detach action is performed. According to 2.7.2 the attachment
   ! counter of d%p is decremented to 0, which initiates an update
@@ -102,7 +102,7 @@ program main
   ! pointer in the local memory.
   ! We will discuss this in more detail below.
   call acc_detach(d%p)
-  
+
   ! The following construct will fail, because the 'd%p' descriptor's
   ! base_addr is now the host address not accessible on the device.
   ! Without the second 'acc_detach' it will work correctly.
@@ -111,7 +111,7 @@ program main
   !$acc end serial
 ```
 
-Let's discuss in more detail what happens during the second `acc_detach`. 
+Let's discuss in more detail what happens during the second `acc_detach`.
 
 OpenACC 2.6.4:
 
@@ -255,7 +255,7 @@ Due to `d%p` reference in the `present` clause of the `serial` region, the compi
 In the case of POINTER dummy argument, if the descriptor storage is not explicitly created in the user code, the pointer attachment may not happen due to 2.7.2:
 
 > 1693 If the pointer var is in shared memory or is not present in the current device memory, or if the
-> 1694 address to which var points is not present in the current device memory, no action is taken. 
+> 1694 address to which var points is not present in the current device memory, no action is taken.
 
 Example:
 

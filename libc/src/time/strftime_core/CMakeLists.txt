@@ -43,6 +43,7 @@ add_header_library(
     .core_structs
     .parser
     .converter
+    libc.src.__support.error_or
     libc.src.stdio.printf_core.writer
     libc.hdr.types.struct_tm
 )

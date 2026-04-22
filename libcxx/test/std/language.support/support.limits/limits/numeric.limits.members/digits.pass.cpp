@@ -53,5 +53,43 @@ int main(int, char**)
     test<double, DBL_MANT_DIG>();
     test<long double, LDBL_MANT_DIG>();
 
-  return 0;
+    // _BitInt(N): digits must equal N for unsigned and N-1 for signed,
+    // regardless of padding bits for non-byte-aligned widths.
+#if TEST_HAS_EXTENSION(bit_int)
+    // Byte-aligned widths.
+    test<unsigned _BitInt(8), 8>();
+    test<signed _BitInt(8), 7>();
+    test<unsigned _BitInt(32), 32>();
+    test<signed _BitInt(32), 31>();
+    test<unsigned _BitInt(64), 64>();
+    test<signed _BitInt(64), 63>();
+
+    // Non-byte-aligned widths.
+    test<unsigned _BitInt(7), 7>();
+    test<signed _BitInt(7), 6>();
+    test<unsigned _BitInt(13), 13>();
+    test<signed _BitInt(13), 12>();
+    test<unsigned _BitInt(37), 37>();
+    test<signed _BitInt(37), 36>();
+#  if __BITINT_MAXWIDTH__ >= 128
+    test<unsigned _BitInt(77), 77>();
+    test<signed _BitInt(77), 76>();
+    test<unsigned _BitInt(128), 128>();
+    test<signed _BitInt(128), 127>();
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 256
+    test<unsigned _BitInt(129), 129>();
+    test<signed _BitInt(129), 128>();
+    test<unsigned _BitInt(255), 255>();
+    test<signed _BitInt(255), 254>();
+    test<unsigned _BitInt(256), 256>();
+    test<signed _BitInt(256), 255>();
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 4096
+    test<unsigned _BitInt(4096), 4096>();
+    test<signed _BitInt(4096), 4095>();
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
+
+    return 0;
 }

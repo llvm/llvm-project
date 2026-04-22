@@ -4,6 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+gfni | FileCheck %s --check-prefixes=GFNIAVX,GFNIAVX1OR2,GFNIAVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+gfni | FileCheck %s --check-prefixes=GFNIAVX,GFNIAVX512,GFNIAVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+gfni | FileCheck %s --check-prefixes=GFNIAVX,GFNIAVX512,GFNIAVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+gfni,+avx512bitalg | FileCheck %s --check-prefixes=GFNIAVX,GFNIAVX512BITALG
 
 define <16 x i8> @testv16i8(<16 x i8> %in) nounwind {
 ; GFNISSE-LABEL: testv16i8:
@@ -32,6 +33,15 @@ define <16 x i8> @testv16i8(<16 x i8> %in) nounwind {
 ; GFNIAVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; GFNIAVX512-NEXT:    vgf2p8affineqb $8, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; GFNIAVX512-NEXT:    retq
+;
+; GFNIAVX512BITALG-LABEL: testv16i8:
+; GFNIAVX512BITALG:       # %bb.0:
+; GFNIAVX512BITALG-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNIAVX512BITALG-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; GFNIAVX512BITALG-NEXT:    vpaddb %xmm1, %xmm0, %xmm1
+; GFNIAVX512BITALG-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; GFNIAVX512BITALG-NEXT:    vpopcntb %xmm0, %xmm0
+; GFNIAVX512BITALG-NEXT:    retq
   %out = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %in, i1 0)
   ret <16 x i8> %out
 }
@@ -63,6 +73,15 @@ define <16 x i8> @testv16i8u(<16 x i8> %in) nounwind {
 ; GFNIAVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; GFNIAVX512-NEXT:    vgf2p8affineqb $8, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; GFNIAVX512-NEXT:    retq
+;
+; GFNIAVX512BITALG-LABEL: testv16i8u:
+; GFNIAVX512BITALG:       # %bb.0:
+; GFNIAVX512BITALG-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNIAVX512BITALG-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; GFNIAVX512BITALG-NEXT:    vpaddb %xmm1, %xmm0, %xmm1
+; GFNIAVX512BITALG-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; GFNIAVX512BITALG-NEXT:    vpopcntb %xmm0, %xmm0
+; GFNIAVX512BITALG-NEXT:    retq
   %out = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %in, i1 -1)
   ret <16 x i8> %out
 }
@@ -76,7 +95,7 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; GFNISSE-NEXT:    pxor %xmm4, %xmm4
 ; GFNISSE-NEXT:    psubb %xmm0, %xmm4
 ; GFNISSE-NEXT:    pand %xmm4, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm4 = [12307476859704049664,12307476859704049664]
+; GFNISSE-NEXT:    movdqa {{.*#+}} xmm4 = [0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170]
 ; GFNISSE-NEXT:    gf2p8affineqb $8, %xmm4, %xmm0
 ; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm2, %xmm1
 ; GFNISSE-NEXT:    psubb %xmm1, %xmm3
@@ -106,8 +125,7 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; GFNIAVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; GFNIAVX2-NEXT:    vpsubb %ymm0, %ymm1, %ymm1
 ; GFNIAVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; GFNIAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [12307476859704049664,12307476859704049664,12307476859704049664,12307476859704049664]
-; GFNIAVX2-NEXT:    vgf2p8affineqb $8, %ymm1, %ymm0, %ymm0
+; GFNIAVX2-NEXT:    vgf2p8affineqb $8, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; GFNIAVX2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: testv32i8:
@@ -118,6 +136,15 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; GFNIAVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; GFNIAVX512-NEXT:    vgf2p8affineqb $8, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNIAVX512-NEXT:    retq
+;
+; GFNIAVX512BITALG-LABEL: testv32i8:
+; GFNIAVX512BITALG:       # %bb.0:
+; GFNIAVX512BITALG-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; GFNIAVX512BITALG-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; GFNIAVX512BITALG-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
+; GFNIAVX512BITALG-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; GFNIAVX512BITALG-NEXT:    vpopcntb %ymm0, %ymm0
+; GFNIAVX512BITALG-NEXT:    retq
   %out = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %in, i1 0)
   ret <32 x i8> %out
 }
@@ -131,7 +158,7 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 ; GFNISSE-NEXT:    pxor %xmm4, %xmm4
 ; GFNISSE-NEXT:    psubb %xmm0, %xmm4
 ; GFNISSE-NEXT:    pand %xmm4, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm4 = [12307476859704049664,12307476859704049664]
+; GFNISSE-NEXT:    movdqa {{.*#+}} xmm4 = [0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170]
 ; GFNISSE-NEXT:    gf2p8affineqb $8, %xmm4, %xmm0
 ; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm2, %xmm1
 ; GFNISSE-NEXT:    psubb %xmm1, %xmm3
@@ -161,8 +188,7 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 ; GFNIAVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; GFNIAVX2-NEXT:    vpsubb %ymm0, %ymm1, %ymm1
 ; GFNIAVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; GFNIAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [12307476859704049664,12307476859704049664,12307476859704049664,12307476859704049664]
-; GFNIAVX2-NEXT:    vgf2p8affineqb $8, %ymm1, %ymm0, %ymm0
+; GFNIAVX2-NEXT:    vgf2p8affineqb $8, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; GFNIAVX2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: testv32i8u:
@@ -173,6 +199,15 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 ; GFNIAVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; GFNIAVX512-NEXT:    vgf2p8affineqb $8, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNIAVX512-NEXT:    retq
+;
+; GFNIAVX512BITALG-LABEL: testv32i8u:
+; GFNIAVX512BITALG:       # %bb.0:
+; GFNIAVX512BITALG-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; GFNIAVX512BITALG-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; GFNIAVX512BITALG-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
+; GFNIAVX512BITALG-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; GFNIAVX512BITALG-NEXT:    vpopcntb %ymm0, %ymm0
+; GFNIAVX512BITALG-NEXT:    retq
   %out = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %in, i1 -1)
   ret <32 x i8> %out
 }
@@ -186,7 +221,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; GFNISSE-NEXT:    pxor %xmm6, %xmm6
 ; GFNISSE-NEXT:    psubb %xmm0, %xmm6
 ; GFNISSE-NEXT:    pand %xmm6, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm6 = [12307476859704049664,12307476859704049664]
+; GFNISSE-NEXT:    movdqa {{.*#+}} xmm6 = [0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170]
 ; GFNISSE-NEXT:    gf2p8affineqb $8, %xmm6, %xmm0
 ; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm4, %xmm1
 ; GFNISSE-NEXT:    pxor %xmm7, %xmm7
@@ -217,7 +252,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; GFNIAVX1-NEXT:    vpsubb %xmm0, %xmm5, %xmm0
 ; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; GFNIAVX1-NEXT:    vandps %ymm0, %ymm4, %ymm0
-; GFNIAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [12307476859704049664,12307476859704049664,12307476859704049664,12307476859704049664]
+; GFNIAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170]
 ; GFNIAVX1-NEXT:    vgf2p8affineqb $8, %ymm2, %ymm0, %ymm0
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; GFNIAVX1-NEXT:    vgf2p8affineqb $0, %xmm3, %xmm4, %xmm4
@@ -237,7 +272,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; GFNIAVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; GFNIAVX2-NEXT:    vpsubb %ymm0, %ymm3, %ymm4
 ; GFNIAVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
-; GFNIAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [12307476859704049664,12307476859704049664,12307476859704049664,12307476859704049664]
+; GFNIAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170]
 ; GFNIAVX2-NEXT:    vgf2p8affineqb $8, %ymm4, %ymm0, %ymm0
 ; GFNIAVX2-NEXT:    vgf2p8affineqb $0, %ymm2, %ymm1, %ymm1
 ; GFNIAVX2-NEXT:    vpsubb %ymm1, %ymm3, %ymm2
@@ -268,6 +303,15 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; GFNIAVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; GFNIAVX512BW-NEXT:    vgf2p8affineqb $8, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; GFNIAVX512BW-NEXT:    retq
+;
+; GFNIAVX512BITALG-LABEL: testv64i8:
+; GFNIAVX512BITALG:       # %bb.0:
+; GFNIAVX512BITALG-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512BITALG-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
+; GFNIAVX512BITALG-NEXT:    vpaddb %zmm1, %zmm0, %zmm1
+; GFNIAVX512BITALG-NEXT:    vpandnq %zmm1, %zmm0, %zmm0
+; GFNIAVX512BITALG-NEXT:    vpopcntb %zmm0, %zmm0
+; GFNIAVX512BITALG-NEXT:    retq
   %out = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %in, i1 0)
   ret <64 x i8> %out
 }
@@ -281,7 +325,7 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; GFNISSE-NEXT:    pxor %xmm6, %xmm6
 ; GFNISSE-NEXT:    psubb %xmm0, %xmm6
 ; GFNISSE-NEXT:    pand %xmm6, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm6 = [12307476859704049664,12307476859704049664]
+; GFNISSE-NEXT:    movdqa {{.*#+}} xmm6 = [0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170]
 ; GFNISSE-NEXT:    gf2p8affineqb $8, %xmm6, %xmm0
 ; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm4, %xmm1
 ; GFNISSE-NEXT:    pxor %xmm7, %xmm7
@@ -312,7 +356,7 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; GFNIAVX1-NEXT:    vpsubb %xmm0, %xmm5, %xmm0
 ; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; GFNIAVX1-NEXT:    vandps %ymm0, %ymm4, %ymm0
-; GFNIAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [12307476859704049664,12307476859704049664,12307476859704049664,12307476859704049664]
+; GFNIAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170]
 ; GFNIAVX1-NEXT:    vgf2p8affineqb $8, %ymm2, %ymm0, %ymm0
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; GFNIAVX1-NEXT:    vgf2p8affineqb $0, %xmm3, %xmm4, %xmm4
@@ -332,7 +376,7 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; GFNIAVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; GFNIAVX2-NEXT:    vpsubb %ymm0, %ymm3, %ymm4
 ; GFNIAVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
-; GFNIAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [12307476859704049664,12307476859704049664,12307476859704049664,12307476859704049664]
+; GFNIAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170,0,0,0,0,255,240,204,170]
 ; GFNIAVX2-NEXT:    vgf2p8affineqb $8, %ymm4, %ymm0, %ymm0
 ; GFNIAVX2-NEXT:    vgf2p8affineqb $0, %ymm2, %ymm1, %ymm1
 ; GFNIAVX2-NEXT:    vpsubb %ymm1, %ymm3, %ymm2
@@ -363,6 +407,15 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; GFNIAVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; GFNIAVX512BW-NEXT:    vgf2p8affineqb $8, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; GFNIAVX512BW-NEXT:    retq
+;
+; GFNIAVX512BITALG-LABEL: testv64i8u:
+; GFNIAVX512BITALG:       # %bb.0:
+; GFNIAVX512BITALG-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512BITALG-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
+; GFNIAVX512BITALG-NEXT:    vpaddb %zmm1, %zmm0, %zmm1
+; GFNIAVX512BITALG-NEXT:    vpandnq %zmm1, %zmm0, %zmm0
+; GFNIAVX512BITALG-NEXT:    vpopcntb %zmm0, %zmm0
+; GFNIAVX512BITALG-NEXT:    retq
   %out = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %in, i1 -1)
   ret <64 x i8> %out
 }

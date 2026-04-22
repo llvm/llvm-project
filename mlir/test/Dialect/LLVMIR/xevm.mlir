@@ -93,6 +93,38 @@ func.func @mma(%loaded_c_casted: vector<8xf32>, %loaded_a: vector<8xi16>, %loade
 }
 
 // -----
+// CHECK-LABEL: func.func @mma_mx(
+// CHECK-SAME: %[[ARG0:.*]]: vector<8xf32>, %[[ARG1:.*]]: vector<8xi16>, %[[ARG2:.*]]: vector<8xi32>, %[[ARG3:.*]]: vector<2xi8>, %[[ARG4:.*]]: vector<2xi8>)
+func.func @mma_mx(%loaded_c_casted: vector<8xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>, %scale_a: vector<2xi8>, %scale_b: vector<2xi8>) -> vector<8xf32> {
+  // CHECK: %[[VAR0:.*]] = xevm.mma_mx %[[ARG1]], %[[ARG2]], %[[ARG3]], %[[ARG4]], %[[ARG0]]
+  // CHECK-SAME: {shape = <m = 8, n = 16, k = 64>, types = <d = f32, a = e2m1, b = e2m1, c = f32>}
+  // CHECK-SAME:: (vector<8xi16>, vector<8xi32>, vector<2xi8>, vector<2xi8>, vector<8xf32>) -> vector<8xf32>
+  %c_result = xevm.mma_mx %loaded_a, %loaded_b_casted, %scale_a, %scale_b, %loaded_c_casted { shape=<m=8, n=16, k=64>,
+    types=<d=f32, a=e2m1, b=e2m1, c=f32> } : (vector<8xi16>, vector<8xi32>, vector<2xi8>, vector<2xi8>, vector<8xf32>) -> vector<8xf32>
+  return %c_result : vector<8xf32>
+}
+
+// -----
+// CHECK-LABEL: func.func @truncf_scalar
+func.func @truncf_scalar() -> i8 {
+  // CHECK: %[[VAR0:.*]] = arith.constant 1.0
+  %0 = arith.constant 1.0 : bf16
+  // CHECK: xevm.truncf %[[VAR0]] {src_etype = bf16, dst_etype = f8} : (bf16) -> i8
+  %2 = xevm.truncf %0 { src_etype=bf16, dst_etype=f8 } : (bf16) -> i8
+  return %2 : i8
+}
+
+// -----
+// CHECK-LABEL: func.func @truncf_vector
+func.func @truncf_vector() -> vector<8xi4> {
+  // CHECK: %[[VAR0:.*]] = arith.constant
+  %0 = arith.constant dense<1.0> : vector<8xbf16>
+  // CHECK: xevm.truncf %[[VAR0]] {src_etype = bf16, dst_etype = e2m1} : (vector<8xbf16>) -> vector<8xi4>
+  %2 = xevm.truncf %0 { src_etype=bf16, dst_etype=e2m1 } : (vector<8xbf16>) -> vector<8xi4>
+  return %2 : vector<8xi4>
+}
+
+// -----
 // CHECK-LABEL: func.func @memfence()
 func.func @memfence() {
   // CHECK: xevm.memfence

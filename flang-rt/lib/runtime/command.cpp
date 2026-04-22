@@ -23,11 +23,9 @@
 #define unlink _unlink
 #define PATH_MAX MAX_PATH
 
-#ifdef _MSC_VER
 // On Windows GetCurrentProcessId returns a DWORD aka uint32_t
 #include <processthreadsapi.h>
 inline pid_t getpid() { return GetCurrentProcessId(); }
-#endif
 #else
 #include <unistd.h> //getpid() unlink()
 

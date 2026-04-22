@@ -44,6 +44,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -95,7 +96,7 @@ class CXXOperatorCallExpr final : public CallExpr {
   CXXOperatorCallExpr(OverloadedOperatorKind OpKind, Expr *Fn,
                       ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
                       SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
-                      ADLCallKind UsesADL);
+                      ADLCallKind UsesADL, bool IsReversed);
 
   CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
@@ -104,7 +105,7 @@ public:
   Create(const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
          ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
          SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
-         ADLCallKind UsesADL = NotADL);
+         ADLCallKind UsesADL = NotADL, bool IsReversed = false);
 
   static CXXOperatorCallExpr *CreateEmpty(const ASTContext &Ctx,
                                           unsigned NumArgs, bool HasFPFeatures,
@@ -140,6 +141,9 @@ public:
     }
   }
   bool isComparisonOp() const { return isComparisonOp(getOperator()); }
+
+  /// Whether this is a C++20 rewritten reversed operator.
+  bool isReversed() const { return CXXOperatorCallExprBits.IsReversed; }
 
   /// Is this written as an infix binary operator?
   bool isInfixBinaryOp() const;
@@ -978,8 +982,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<MSPropertyRefExpr *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<MSPropertyRefExpr *>(this)->children();
   }
 
   static bool classof(const Stmt *T) {
@@ -1741,8 +1744,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<CXXConstructExpr *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<CXXConstructExpr *>(this)->children();
   }
 };
 
@@ -3280,14 +3282,10 @@ public:
 
   /// Determines whether this expression had explicit template arguments.
   bool hasExplicitTemplateArgs() const {
-    if (!hasTemplateKWAndArgsInfo())
-      return false;
-    // FIXME: deduced function types can have "hidden" args and no <
-    // investigate that further, but ultimately maybe we want to model concepts
-    // reference with another kind of expression.
-    return (isConceptReference() || isVarDeclReference())
-               ? getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs
-               : getLAngleLoc().isValid();
+    if (getLAngleLoc().isValid())
+      return true;
+    return hasTemplateKWAndArgsInfo() &&
+           getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs;
   }
 
   bool isConceptReference() const {
@@ -5498,6 +5496,60 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BuiltinBitCastExprClass;
+  }
+};
+
+/// Represents a C++26 reflect expression [expr.reflect]. The operand of the
+/// expression is either:
+///  - :: (global namespace),
+///  - a reflection-name,
+///  - a type-id, or
+///  - an id-expression.
+class CXXReflectExpr : public Expr {
+
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
+
+  SourceLocation CaretCaretLoc;
+  operand_type Operand;
+
+  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeSourceInfo *TSI);
+  CXXReflectExpr(EmptyShell Empty);
+
+public:
+  static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
+                                TypeSourceInfo *TL);
+
+  static CXXReflectExpr *CreateEmpty(ASTContext &C);
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeSourceInfo *>(
+            [](auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeSourceInfo *>(
+            [](auto *Ptr) { return Ptr->getTypeLoc().getEndLoc(); });
+  }
+
+  /// Returns location of the '^^'-operator.
+  SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
+
+  child_range children() {
+    // TODO(Reflection)
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    // TODO(Reflection)
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXReflectExprClass;
   }
 };
 

@@ -45,7 +45,7 @@
 ; WARNINGS: warning: no declaration was found for exported symbol '(ObjC Class) SimpleInternalSPI' in dynamic library
 ; WARNINGS: warning: no declaration was found for exported symbol '(ObjC Class) SimpleInternalAPI' in dynamic library
 
-; PEDANTIC-NOT: error
+; PEDANTIC-NOT: error:
 ; PEDANTIC: warning: cannot find protocol definition for 'ForwardProcotol'
 
 ; NOPUBLIC: error: no such public header file:

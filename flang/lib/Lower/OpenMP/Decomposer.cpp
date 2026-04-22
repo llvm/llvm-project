@@ -42,9 +42,9 @@ struct ConstructDecomposition {
                          llvm::omp::Directive compound,
                          const List<Clause> &clauses)
       : semaCtx(semaCtx), mod(modOp), eval(ev) {
-    tomp::ConstructDecompositionT decompose(getOpenMPVersionAttribute(modOp),
-                                            *this, compound,
-                                            llvm::ArrayRef(clauses));
+    tomp::ConstructDecompositionT decompose(
+        mlir::omp::getOpenMPVersionAttribute(modOp), *this, compound,
+        llvm::ArrayRef(clauses));
     output = std::move(decompose.output);
   }
 

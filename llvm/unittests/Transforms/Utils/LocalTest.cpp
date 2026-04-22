@@ -39,10 +39,10 @@ TEST(Local, RecursivelyDeleteDeadPHINodes) {
 
   builder.SetInsertPoint(bb0);
   PHINode    *phi = builder.CreatePHI(Type::getInt32Ty(C), 2);
-  BranchInst *br0 = builder.CreateCondBr(builder.getTrue(), bb0, bb1);
+  CondBrInst *br0 = builder.CreateCondBr(builder.getTrue(), bb0, bb1);
 
   builder.SetInsertPoint(bb1);
-  BranchInst *br1 = builder.CreateBr(bb0);
+  UncondBrInst *br1 = builder.CreateBr(bb0);
 
   phi->addIncoming(phi, bb0);
   phi->addIncoming(phi, bb1);
@@ -80,7 +80,7 @@ TEST(Local, RemoveDuplicatePHINodes) {
                        GlobalValue::ExternalLinkage, "F"));
   BasicBlock *Entry(BasicBlock::Create(C, "", F.get()));
   BasicBlock *BB(BasicBlock::Create(C, "", F.get()));
-  BranchInst::Create(BB, Entry);
+  UncondBrInst::Create(BB, Entry);
 
   B.SetInsertPoint(BB);
 
@@ -100,7 +100,7 @@ TEST(Local, RemoveDuplicatePHINodes) {
 
   P1->addIncoming(P3, BB);
   P2->addIncoming(P4, BB);
-  BranchInst::Create(BB, BB);
+  UncondBrInst::Create(BB, BB);
 
   // Verify that we can eliminate PHIs that become duplicates after chaning PHIs
   // downstream.
@@ -183,7 +183,7 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
   auto resetIR = [&]() {
     M = parseIR(C,
                 R"(
-      define i32 @f(i8* %str) {
+      define i32 @f(ptr %str) {
       entry:
         br label %bb2.i
       bb2.i:                                            ; preds = %bb4.i, %entry
@@ -219,8 +219,7 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
       BasicBlock *SinglePred = BB->getSinglePredecessor();
       if (!SinglePred || SinglePred == BB || BB->hasAddressTaken())
         continue;
-      BranchInst *Term = dyn_cast<BranchInst>(SinglePred->getTerminator());
-      if (Term && !Term->isConditional())
+      if (isa<UncondBrInst>(SinglePred->getTerminator()))
         MergeBasicBlockIntoOnlyPred(BB, &DTU);
     }
     if (DTU.hasDomTree()) {
@@ -411,7 +410,7 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
+        indirectbr ptr blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
       bb0:
         ret void
       bb1:
@@ -420,14 +419,14 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr_repeated() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
+        indirectbr ptr blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
       bb0:
         ret void
       }
 
       define void @indirectbr_unreachable() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
+        indirectbr ptr blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
       bb0:
         ret void
       bb1:
@@ -679,7 +678,6 @@ TEST(Local, FindDbgRecords) {
   findDbgUsers(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 
-  SmallVector<DbgValueInst *> Vals;
   Records.clear();
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgValues returns
   // only 1 pointer to it rather than 2.
@@ -925,7 +923,7 @@ TEST(Local, RemoveUnreachableBlocks) {
 
       declare i32 @__gxx_personality_v0(...)
 
-      define void @invoke_terminator() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+      define void @invoke_terminator() personality ptr @__gxx_personality_v0 {
       entry:
         br i1 undef, label %invoke.block, label %exit
 
@@ -943,8 +941,8 @@ TEST(Local, RemoveUnreachableBlocks) {
         unreachable
 
       lpad.block:
-        %lp = landingpad { i8*, i32 }
-                catch i8* null
+        %lp = landingpad { ptr, i32 }
+                catch ptr null
         br label %exit
 
       exit:
@@ -1153,7 +1151,7 @@ TEST(Local, ExpressionForConstant) {
   IntegerType *Int1Ty = Type::getInt1Ty(Context);
   Expr = createExpression(ConstantInt::getTrue(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 18446744073709551615U);
+  EXPECT_EQ(Expr->getElement(1), 1U);
 
   Expr = createExpression(ConstantInt::getFalse(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);

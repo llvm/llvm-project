@@ -31,24 +31,23 @@ set(LIBCXX_ENABLE_STATIC ON CACHE BOOL "")
 set(LIBCXX_INSTALL_LIBRARY ON CACHE BOOL "")
 set(LIBCXX_CXX_ABI libcxxabi CACHE STRING "")
 
-# confirmed not available in libc
+# Not yet fully implemented.
 set(LIBCXX_ENABLE_LOCALIZATION OFF CACHE BOOL "")
 set(LIBCXX_ENABLE_WIDE_CHARACTERS OFF CACHE BOOL "")
 
-# missing at least `<sys/statvfs.h>` and `utimes`
+# Still missing some components.
 set(LIBCXX_ENABLE_FILESYSTEM OFF CACHE BOOL "")
 
-# missing at least `ioctl`
+# Still needs validation before turning on.
 set(LIBCXX_ENABLE_RANDOM_DEVICE OFF CACHE BOOL "")
 
-# unclear what this is missing
+# Still missing some components.
 set(LIBCXX_ENABLE_MONOTONIC_CLOCK OFF CACHE BOOL "")
 
 # requires LIBCXX_ENABLE_MONOTONIC_CLOCK=ON
 set(LIBCXX_ENABLE_THREADS OFF CACHE BOOL "")
 set(LIBCXXABI_ENABLE_THREADS OFF CACHE BOOL "")
 
-# these are fine
 set(LIBCXX_ENABLE_UNICODE ON CACHE BOOL "")
 set(LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
 set(LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
@@ -61,5 +60,3 @@ set(LLVM_LIBC_FULL_BUILD ON CACHE BOOL "")
 set(LLVM_LIBC_INCLUDE_SCUDO ON CACHE BOOL "")
 set(COMPILER_RT_BUILD_GWP_ASAN OFF CACHE BOOL "")
 set(COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC ON CACHE BOOL "")
-
-#set(CMAKE_SYSROOT "/home/gha/libc-sysroot" CACHE STRING "")

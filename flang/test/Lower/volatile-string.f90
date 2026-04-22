@@ -56,9 +56,8 @@ end program
 ! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:           fir.call @_FortranAAdjustl(%[[VAL_29]], %[[VAL_31]], %[[VAL_32]], %[[VAL_1]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:           %[[VAL_33:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>
-! CHECK:           %[[VAL_34:.*]] = fir.box_elesize %[[VAL_33]] : (!fir.box<!fir.heap<!fir.char<1,3>>>) -> index
 ! CHECK:           %[[VAL_35:.*]] = fir.box_addr %[[VAL_33]] : (!fir.box<!fir.heap<!fir.char<1,3>>>) -> !fir.heap<!fir.char<1,3>>
-! CHECK:           %[[VAL_36:.*]]:2 = hlfir.declare %[[VAL_35]] typeparams %[[VAL_34]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,3>>, index) -> (!fir.heap<!fir.char<1,3>>, !fir.heap<!fir.char<1,3>>)
+! CHECK:           %[[VAL_36:.*]]:2 = hlfir.declare %[[VAL_35]] typeparams %[[VAL_5]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,3>>, index) -> (!fir.heap<!fir.char<1,3>>, !fir.heap<!fir.char<1,3>>)
 ! CHECK:           %[[VAL_37:.*]] = hlfir.as_expr %[[VAL_36]]#0 move %[[VAL_0]] : (!fir.heap<!fir.char<1,3>>, i1) -> !hlfir.expr<!fir.char<1,3>>
 ! CHECK:           hlfir.assign %[[VAL_37]] to %[[VAL_14]]#0 : !hlfir.expr<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>, volatile>
 ! CHECK:           hlfir.destroy %[[VAL_37]] : !hlfir.expr<!fir.char<1,3>>
@@ -76,7 +75,7 @@ end program
 ! CHECK:           %[[VAL_3:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_5:.*]] = fir.volatile_cast %[[VAL_4]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<!fir.char<1,3>, volatile>
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_1]] dummy_scope %[[VAL_2]] {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFassign_same_lengthEx"} : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_1]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFassign_same_lengthEx"} : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
 ! CHECK:           %[[VAL_7:.*]] = fir.address_of(@_QQclX626172) : !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_1]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX626172"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
 ! CHECK:           hlfir.assign %[[VAL_8]]#0 to %[[VAL_6]]#0 : !fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>, volatile>
@@ -91,7 +90,7 @@ end program
 ! CHECK:           %[[VAL_4:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_6:.*]] = fir.volatile_cast %[[VAL_5]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<!fir.char<1,3>, volatile>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_2]] dummy_scope %[[VAL_3]] {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFassign_different_lengthEstring"} : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFassign_different_lengthEstring"} : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
 ! CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QQclX626F) : !fir.ref<!fir.char<1,2>>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %[[VAL_1]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX626F"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
 ! CHECK:           hlfir.assign %[[VAL_9]]#0 to %[[VAL_7]]#0 : !fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,3>, volatile>

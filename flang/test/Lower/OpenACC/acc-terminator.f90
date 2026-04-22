@@ -1,6 +1,7 @@
 ! Check that acc.terminator is not inserted in data construct
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -fcuda -emit-hlfir %s -o - | FileCheck %s
 
 program main
   use, intrinsic :: iso_c_binding
@@ -17,7 +18,7 @@ program main
     !$acc data copyin(a(:,:,i),b(:,:,i),c(:,:,i)) copyout(c2(:,:,i))
 
     !$acc host_data use_device(a(:,:,i),b(:,:,i),c(:,:,i))
-    
+
     !$acc end host_data
 
     if ( stat .ne. 0 ) then

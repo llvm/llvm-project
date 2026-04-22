@@ -57,10 +57,11 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
                                      const UniformityInfo &UI,
                                      ValueMap<const Value *, bool> &Tracker) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
-
+  /// We deliberately do not simplify readfirstlane with a uniform argument, so
+  /// that frontends can use it to force a copy to SGPR and thereby prevent the
+  /// backend from generating unwanted waterfall loops.
   switch (IID) {
   case Intrinsic::amdgcn_permlane64:
-  case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
     if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
@@ -106,8 +107,30 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
       II.eraseFromParent();
     return Changed;
   }
+  case Intrinsic::amdgcn_wave_shuffle: {
+    Use &Val = II.getOperandUse(0);
+    Use &Idx = II.getOperandUse(1);
+
+    // Like with readlane, if Value is uniform then just propagate it
+    if (!isDivergentUseWithNew(Val, UI, Tracker)) {
+      II.replaceAllUsesWith(Val);
+      II.eraseFromParent();
+      return true;
+    }
+
+    // Otherwise, when Index is uniform, this is just a readlane operation
+    if (isDivergentUseWithNew(Idx, UI, Tracker))
+      return false;
+
+    // The readlane intrinsic we want to call has the exact same function
+    // signature, so we can quickly modify the instruction in-place
+    Module *Mod = II.getModule();
+    II.setCalledFunction(Intrinsic::getOrInsertDeclaration(
+        Mod, Intrinsic::amdgcn_readlane, II.getType()));
+    return true;
+  }
   default:
-    llvm_unreachable("Unexpected intrinsic ID in optimizeUniformIntrinsic");
+    return false;
   }
   return false;
 }
@@ -121,16 +144,6 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
     auto *II = dyn_cast<IntrinsicInst>(&I);
     if (!II)
       continue;
-
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::amdgcn_permlane64:
-    case Intrinsic::amdgcn_readfirstlane:
-    case Intrinsic::amdgcn_readlane:
-    case Intrinsic::amdgcn_ballot:
-      break;
-    default:
-      continue;
-    }
     IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
   }
   return IsChanged;
@@ -152,10 +165,7 @@ namespace {
 class AMDGPUUniformIntrinsicCombineLegacy : public FunctionPass {
 public:
   static char ID;
-  AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {
-    initializeAMDGPUUniformIntrinsicCombineLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {}
 
 private:
   bool runOnFunction(Function &F) override;

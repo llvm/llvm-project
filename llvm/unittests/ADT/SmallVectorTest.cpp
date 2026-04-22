@@ -226,13 +226,10 @@ protected:
   VectorT otherVector;
 };
 
-
-typedef ::testing::Types<SmallVector<Constructable, 0>,
-                         SmallVector<Constructable, 1>,
-                         SmallVector<Constructable, 2>,
-                         SmallVector<Constructable, 4>,
-                         SmallVector<Constructable, 5>
-                         > SmallVectorTestTypes;
+using SmallVectorTestTypes = ::testing::Types<
+    SmallVector<Constructable, 0>, SmallVector<Constructable, 1>,
+    SmallVector<Constructable, 2>, SmallVector<Constructable, 4>,
+    SmallVector<Constructable, 5>>;
 TYPED_TEST_SUITE(SmallVectorTest, SmallVectorTestTypes, );
 
 // Constructor test.
@@ -536,12 +533,59 @@ TYPED_TEST(SmallVectorTest, AppendNonIterTest) {
   assertValuesInOrder(V, 3u, 1, 7, 7);
 }
 
+struct input_iterator {
+  using iterator_category = std::input_iterator_tag;
+  using value_type = int;
+  using difference_type = int;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+  const int **State;
+  int operator*() const { return **State; }
+  input_iterator &operator++() {
+    (*State)++;
+    return *this;
+  }
+  bool operator==(const input_iterator &Other) const {
+    return *State == *Other.State;
+  }
+  bool operator!=(const input_iterator &Other) const {
+    return !(*this == Other);
+  }
+};
+
+TYPED_TEST(SmallVectorTest, AppendInputIterator) {
+  auto &V = this->theVector;
+  V.push_back(1);
+  static constexpr int Src[] = {5, 6, 7, 8};
+  // Construct an input iterator that actually returns different results on the
+  // second iteration.
+  const int *BeginState = &Src[0];
+  const int *EndState = &Src[2];
+  V.append(input_iterator{&BeginState}, input_iterator{&EndState});
+  assertValuesInOrder(V, 3u, 1, 5, 6);
+}
+
+TYPED_TEST(SmallVectorTest, InsertInputIterator) {
+  auto &V = this->theVector;
+  V.push_back(1);
+  V.push_back(2);
+  static constexpr int Src[] = {5, 6, 7, 8};
+  // Construct an input iterator that actually returns different results on the
+  // second iteration.
+  const int *BeginState = &Src[0];
+  const int *EndState = &Src[2];
+  V.insert(V.begin() + 1, input_iterator{&BeginState},
+           input_iterator{&EndState});
+  assertValuesInOrder(V, 4u, 1, 5, 6, 2);
+}
+
 struct output_iterator {
-  typedef std::output_iterator_tag iterator_category;
-  typedef int value_type;
-  typedef int difference_type;
-  typedef value_type *pointer;
-  typedef value_type &reference;
+  using iterator_category = std::output_iterator_tag;
+  using value_type = int;
+  using difference_type = int;
+  using pointer = value_type *;
+  using reference = value_type &;
   operator int() { return 2; }
   operator Constructable() { return 7; }
 };
@@ -896,7 +940,7 @@ protected:
   VectorT2 otherVector;
 };
 
-typedef ::testing::Types<
+using DualSmallVectorTestTypes = ::testing::Types<
     // Small mode -> Small mode.
     std::pair<SmallVector<Constructable, 4>, SmallVector<Constructable, 4>>,
     // Small mode -> Big mode.
@@ -904,8 +948,7 @@ typedef ::testing::Types<
     // Big mode -> Small mode.
     std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 4>>,
     // Big mode -> Big mode.
-    std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 2>>
-  > DualSmallVectorTestTypes;
+    std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 2>>>;
 
 TYPED_TEST_SUITE(DualSmallVectorsTest, DualSmallVectorTestTypes, );
 

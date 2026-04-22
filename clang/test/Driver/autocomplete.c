@@ -69,6 +69,7 @@
 // FNOSANICOVERALL-NEXT: trace-div
 // FNOSANICOVERALL-NEXT: trace-gep
 // FNOSANICOVERALL-NEXT: trace-pc
+// FNOSANICOVERALL-NEXT: trace-pc-entry-exit
 // FNOSANICOVERALL-NEXT: trace-pc-guard
 // RUN: %clang --autocomplete=-ffp-contract= | FileCheck %s -check-prefix=FFPALL
 // FFPALL: fast
@@ -117,6 +118,8 @@
 // WARNING-NEXT: -Wmany-braces-around-scalar-init
 // WARNING-NEXT: -Wmath-errno-enabled-with-veclib
 // WARNING-NEXT: -Wmathematical-notation-identifier-extension
+// WARNING-NEXT: -Wmatrix-conversion
+// WARNING-NEXT: -Wmatrix-conversions
 // WARNING-NEXT: -Wmax-tokens
 // WARNING-NEXT: -Wmax-unsigned-zero
 // RUN: %clang --autocomplete=-Wno-invalid-pp- | FileCheck %s -check-prefix=NOWARNING

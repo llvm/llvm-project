@@ -14,6 +14,7 @@
 #include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/CPP/new.h"
 #include "src/__support/HashTable/bitmask.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"

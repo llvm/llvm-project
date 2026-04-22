@@ -13,9 +13,6 @@ define amdgpu_kernel void @fcmp_uniform_select(float %a, i32 %b, i32 %c, ptr add
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_cmp_eq_f32_e64 s[4:5], s6, 0
 ; GFX7-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
-; GFX7-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX7-NEXT:    s_and_b32 s4, s4, 1
-; GFX7-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX7-NEXT:    s_cselect_b32 s3, s7, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
@@ -30,9 +27,6 @@ define amdgpu_kernel void @fcmp_uniform_select(float %a, i32 %b, i32 %c, ptr add
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_eq_f32_e64 s[4:5], s0, 0
 ; GFX8-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; GFX8-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX8-NEXT:    s_and_b32 s0, s0, 1
-; GFX8-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX8-NEXT:    s_cselect_b32 s0, s1, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
@@ -49,10 +43,6 @@ define amdgpu_kernel void @fcmp_uniform_select(float %a, i32 %b, i32 %c, ptr add
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_f32_e64 s0, s0, 0
-; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, s0, 1
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-NEXT:    s_cselect_b32 s0, s1, s6
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
