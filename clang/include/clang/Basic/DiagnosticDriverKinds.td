@@ -614,7 +614,7 @@ def err_drv_reduced_module_output_overrided : Warning<
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
 def err_drv_modules_driver_requires_reduced_bmi : Error<
-  "-fmodules-driver' is incompatible with '-fno-modules-reduced-bmi">;
+  "'-fmodules-driver' is currently incompatible with '-fno-modules-reduced-bmi'">;
 def remark_performing_driver_managed_module_build : Remark<
   "performing driver managed module build">, InGroup<ModulesDriver>;
 def remark_modules_manifest_not_found : Remark<

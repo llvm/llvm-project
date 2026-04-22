@@ -1524,7 +1524,7 @@ static std::string createModuleOutputPath(const Compilation &C,
   // Sanitize the ':' included in parition names. It is illegal for filenames on
   // Windows.
   SmallString<32> SanitizedModuleName(ModuleName);
-  llvm::replace(SanitizedModuleName, ':', '_');
+  llvm::replace(SanitizedModuleName, ':', '-');
   auto ModuleOutputPath = C.getDriver().GetTemporaryPath(
       SanitizedModuleName, types::getTypeTempSuffix(types::TY_ModuleFile));
   return ModuleOutputPath;
