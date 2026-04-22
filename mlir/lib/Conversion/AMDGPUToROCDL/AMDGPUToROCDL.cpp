@@ -1784,8 +1784,7 @@ dotOpToIntrinsic(DotOp op, Chipset chipset) {
     if (dest.isF32() && hasDot12Insts(chipset))
       return {{ROCDL::fdot2_f32_bf16::getOperationName(), DotFamily::Clamp}};
     if (dest.isBF16() && hasDot9Insts(chipset))
-      return {{ROCDL::fdot2_bf16_bf16::getOperationName(),
-               DotFamily::NoClamp}};
+      return {{ROCDL::fdot2_bf16_bf16::getOperationName(), DotFamily::NoClamp}};
     return std::nullopt;
   }
 
@@ -1877,8 +1876,7 @@ struct DotOpLowering : public ConvertOpToLLVMPattern<DotOp> {
     std::optional<std::pair<StringRef, DotFamily>> maybeIntrinsic =
         dotOpToIntrinsic(op, chipset);
     if (!maybeIntrinsic)
-      return op.emitOpError(
-                 "no intrinsic matching dot on the given chipset: ")
+      return op.emitOpError("no intrinsic matching dot on the given chipset: ")
              << op.getSourceA().getType() << " * " << op.getSourceB().getType()
              << " + " << op.getDestC().getType();
 

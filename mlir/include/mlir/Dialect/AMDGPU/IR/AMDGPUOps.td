@@ -1126,7 +1126,7 @@ def AMDGPU_DotOp :
     | i8       | i8       | i32   | mixed      | gfx11+                    | sudot4                       |
     | i4       | i4       | i32   | s / u      | gfx906+                   | sdot8 / udot8                |
     | i4       | i4       | i32   | mixed      | gfx11+                    | sudot8                       |
-    | fp8/bf8  | fp8/bf8  | f32   | n/a        | gfx11.7, gfx12+          | dot4.f32.{fp8,bf8}.{fp8,bf8} |
+    | fp8/bf8  | fp8/bf8  | f32   | n/a        | gfx11.7, gfx12+           | dot4.f32.{fp8,bf8}.{fp8,bf8} |
     ```
 
     Example:
