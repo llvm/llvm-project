@@ -59,8 +59,14 @@ option(LIBCXX_ENABLE_RTTI
   This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_FILESYSTEM
   "Whether to include support for parts of the library that rely on a filesystem being
-   available on the platform. This includes things like most parts of <filesystem> and
-   others like <fstream>" ON)
+   available on the platform. This includes things like most parts of <filesystem>.
+   Enabling this option also implies LIBCXX_ENABLE_FSTREAM." ON)
+option(LIBCXX_ENABLE_FSTREAM
+  "Whether to include support for <fstream> in the library. <fstream> requires only
+   basic C stdio support (fopen/fclose/fread/fwrite/fseek) and is independent of full
+   filesystem support (sys/statvfs.h, dirent.h, etc.). Enabling LIBCXX_ENABLE_FILESYSTEM
+   implies this option. Useful for targets that have file I/O but lack the full POSIX
+   filesystem API (e.g. picolibc, wasi-libc)." ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 set(LIBCXX_SUPPORTED_HARDENING_MODES none fast extensive debug)
 set(LIBCXX_HARDENING_MODE "none" CACHE STRING
@@ -790,6 +796,13 @@ config_define(${LIBCXX_HAS_C11_THREAD_API} _LIBCPP_HAS_THREAD_API_C11)
 config_define(${LIBCXX_HAS_MUSL_LIBC} _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define(${LIBCXX_ENABLE_FILESYSTEM} _LIBCPP_HAS_FILESYSTEM)
+# LIBCXX_ENABLE_FILESYSTEM implies LIBCXX_ENABLE_FSTREAM since full filesystem
+# support is a strict superset of fstream support.
+if (LIBCXX_ENABLE_FILESYSTEM AND NOT LIBCXX_ENABLE_FSTREAM)
+  message(STATUS "LIBCXX_ENABLE_FILESYSTEM implies LIBCXX_ENABLE_FSTREAM=ON")
+  set(LIBCXX_ENABLE_FSTREAM ON CACHE BOOL "" FORCE)
+endif()
+config_define(${LIBCXX_ENABLE_FSTREAM} _LIBCPP_HAS_FSTREAM)
 config_define(${LIBCXX_ENABLE_RANDOM_DEVICE} _LIBCPP_HAS_RANDOM_DEVICE)
 config_define(${LIBCXX_ENABLE_LOCALIZATION} _LIBCPP_HAS_LOCALIZATION)
 config_define(${LIBCXX_ENABLE_UNICODE} _LIBCPP_HAS_UNICODE)
