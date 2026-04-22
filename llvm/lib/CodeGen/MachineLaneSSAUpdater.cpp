@@ -28,6 +28,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -49,20 +50,18 @@ using namespace llvm;
 // MachineLaneSSAUpdater Implementation
 //===----------------------------------------------------------------------===//
 
-Register MachineLaneSSAUpdater::repairSSAForNewDef(MachineInstr &NewDefMI,
-                                                    Register OrigVReg,
-                                                    Register NewVReg) {
-  LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::repairSSAForNewDef VReg=" << OrigVReg);
-  if (NewVReg.isValid()) {
-    LLVM_DEBUG(dbgs() << ", caller-provided NewVReg=" << NewVReg);
-  }
-  LLVM_DEBUG(dbgs() << "\n");
-  
+Register MachineLaneSSAUpdater::repairSSAForNewDef(
+    MachineInstr &NewDefMI, Register OrigVReg,
+    SmallVectorImpl<MachineOperand *> &PHIRegDefOps) {
+  LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::repairSSAForNewDef VReg="
+                    << OrigVReg << "\n");
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  
-  // Step 1: Find the def operand that currently defines OrigVReg (violating SSA)
+
+  // Step 1: Find the def operand for OrigVReg
   MachineOperand *DefOp = nullptr;
   unsigned DefOpIdx = 0;
+  
   for (MachineOperand &MO : NewDefMI.defs()) {
     if (MO.getReg() == OrigVReg) {
       DefOp = &MO;
@@ -89,42 +88,32 @@ Register MachineLaneSSAUpdater::repairSSAForNewDef(MachineInstr &NewDefMI,
     LLVM_DEBUG(dbgs() << "  Full register def, DefMask=" << PrintLaneMask(DefMask) << "\n");
   }
   
-  // Step 3: Create or use provided new virtual register
-  Register NewSSAVReg;
-  if (NewVReg.isValid()) {
-    // Caller provided a register - use it
-    NewSSAVReg = NewVReg;
-    const TargetRegisterClass *RC = MRI.getRegClass(NewSSAVReg);
-    LLVM_DEBUG(dbgs() << "  Using caller-provided SSA vreg " << NewSSAVReg 
-                      << " with RC=" << TRI.getRegClassName(RC) << "\n");
+  // Step 3: Create a new virtual register with class matching MaskToRewrite width
+  const TargetRegisterClass *RC;
+  if (SubRegIdx) {
+    // For subreg defs, create register with class for the subreg (narrower)
+    const TargetRegisterClass *OrigRC = MRI.getRegClass(OrigVReg);
+    RC = TRI.getSubRegisterClass(OrigRC, SubRegIdx);
+    assert(RC && "Failed to get subregister class");
   } else {
-    // Create a new virtual register with appropriate register class
-    // If this is a subreg def, we need the class for the subreg, not the full reg
-    const TargetRegisterClass *RC;
-    if (SubRegIdx) {
-      // For subreg defs, get the subreg class
-      const TargetRegisterClass *OrigRC = MRI.getRegClass(OrigVReg);
-      RC = TRI.getSubRegisterClass(OrigRC, SubRegIdx);
-      assert(RC && "Failed to get subregister class for subreg def - would create incorrect MIR");
-    } else {
-      // For full reg defs, use the same class as OrigVReg
-      RC = MRI.getRegClass(OrigVReg);
-    }
-    
-    NewSSAVReg = MRI.createVirtualRegister(RC);
-    LLVM_DEBUG(dbgs() << "  Created new SSA vreg " << NewSSAVReg << " with RC=" << TRI.getRegClassName(RC) << "\n");
+    // For full register defs, use same class as OrigVReg
+    RC = MRI.getRegClass(OrigVReg);
   }
+  Register NewSSAVReg = MRI.createVirtualRegister(RC);
+  LLVM_DEBUG(dbgs() << "  Created new SSA vreg " << NewSSAVReg << " with RC=" << TRI.getRegClassName(RC) << "\n");
   
   // Step 4: Replace the operand in NewDefMI to define the new vreg
-  // If this was a subreg def, the new vreg is a full register of the subreg class
-  // so we clear the subreg index (e.g., %1.sub0:vreg_64 becomes %3:vgpr_32)
+  // Clear subreg index since NewSSAVReg is a full register of the (possibly narrower) class
   DefOp->setReg(NewSSAVReg);
   if (SubRegIdx) {
-    DefOp->setSubReg(0);
-    LLVM_DEBUG(dbgs() << "  Replaced operand: " << OrigVReg << "." << TRI.getSubRegIndexName(SubRegIdx)
-                      << " -> " << NewSSAVReg << " (full register)\n");
+    DefOp->setSubReg(0);  // Clear subreg - NewSSAVReg is full register of narrower class
+    DefOp->setIsUndef(false);  // Clear undef flag - verifier requires undef only with subreg
+    LLVM_DEBUG(dbgs() << "  Replaced operand: " << OrigVReg << "." 
+                      << TRI.getSubRegIndexName(SubRegIdx) 
+                      << " -> " << NewSSAVReg << " (full narrower register)\n");
   } else {
-    LLVM_DEBUG(dbgs() << "  Replaced operand: " << OrigVReg << " -> " << NewSSAVReg << "\n");
+    LLVM_DEBUG(dbgs() << "  Replaced operand: " << OrigVReg 
+                      << " -> " << NewSSAVReg << "\n");
   }
   
   // Step 5: Index the new instruction in SlotIndexes/LIS
@@ -132,7 +121,7 @@ Register MachineLaneSSAUpdater::repairSSAForNewDef(MachineInstr &NewDefMI,
   
   // Step 6: Perform common SSA repair (PHI placement + use rewriting)
   // LiveInterval for NewSSAVReg will be created by getInterval() as needed
-  performSSARepair(NewSSAVReg, OrigVReg, DefMask, NewDefMI.getParent());
+  PHIRegDefOps = performSSARepair(NewSSAVReg, OrigVReg, DefMask, NewDefMI.getParent());
   
   // Step 7: If SSA repair created subregister uses of OrigVReg (e.g., in PHIs or REG_SEQUENCEs),
   // recompute its LiveInterval to create subranges
@@ -158,7 +147,8 @@ Register MachineLaneSSAUpdater::repairSSAForNewDef(MachineInstr &NewDefMI,
     }
   }
   
-  LLVM_DEBUG(dbgs() << "  repairSSAForNewDef complete, returning " << NewSSAVReg << "\n");
+  LLVM_DEBUG(dbgs() << "  repairSSAForNewDef complete, returning " 
+                    << printReg(NewSSAVReg, &TRI) << "\n");
   return NewSSAVReg;
 }
 
@@ -166,19 +156,22 @@ Register MachineLaneSSAUpdater::repairSSAForNewDef(MachineInstr &NewDefMI,
 // Common SSA Repair Logic
 //===----------------------------------------------------------------------===//
 
-void MachineLaneSSAUpdater::performSSARepair(Register NewVReg, Register OrigVReg, 
-                                              LaneBitmask DefMask, MachineBasicBlock *DefBB) {
+SmallVector<MachineOperand *>
+MachineLaneSSAUpdater::performSSARepair(Register NewVReg, Register OrigVReg,
+                                        LaneBitmask DefMask,
+                                        MachineBasicBlock *DefBB) {
   LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::performSSARepair NewVReg=" << NewVReg
                     << " OrigVReg=" << OrigVReg << " DefMask=" << PrintLaneMask(DefMask) << "\n");
   
   // Step 1: Use worklist-driven PHI placement
-  SmallVector<Register> AllPHIVRegs = insertLaneAwarePHI(NewVReg, OrigVReg, DefMask, DefBB);
-  
+  SmallVector<MachineOperand *> AllPHIVResults =
+      insertLaneAwarePHI(NewVReg, OrigVReg, DefMask, DefBB);
+
   // Step 2: Rewrite dominated uses once for each new register
   // Note: getInterval() will automatically create LiveIntervals if needed
   rewriteDominatedUses(OrigVReg, NewVReg, DefMask);
-  for (Register PHIVReg : AllPHIVRegs) {
-    rewriteDominatedUses(OrigVReg, PHIVReg, DefMask);
+  for (MachineOperand* PHIVRes : AllPHIVResults) {
+    rewriteDominatedUses(OrigVReg, PHIVRes->getReg(), DefMask);
   }
   
   // Step 3: Renumber values if needed
@@ -186,8 +179,8 @@ void MachineLaneSSAUpdater::performSSARepair(Register NewVReg, Register OrigVReg
   NewLI.RenumberValues();
   
   // Also renumber PHI intervals
-  for (Register PHIVReg : AllPHIVRegs) {
-    LiveInterval &PHILI = LIS.getInterval(PHIVReg);
+  for (MachineOperand* PHIVRes : AllPHIVResults) {
+    LiveInterval &PHILI = LIS.getInterval(PHIVRes->getReg());
     PHILI.RenumberValues();
   }
   
@@ -210,8 +203,8 @@ void MachineLaneSSAUpdater::performSSARepair(Register NewVReg, Register OrigVReg
   
   // Step 4: Update operand flags to match the LiveIntervals
   updateDeadFlags(NewVReg);
-  for (Register PHIVReg : AllPHIVRegs) {
-    updateDeadFlags(PHIVReg);
+  for (MachineOperand* PHIVRes : AllPHIVResults) {
+    updateDeadFlags(PHIVRes->getReg());
   }
   
   // Step 5: Verification if enabled
@@ -221,6 +214,7 @@ void MachineLaneSSAUpdater::performSSARepair(Register NewVReg, Register OrigVReg
   }
   
   LLVM_DEBUG(dbgs() << "  performSSARepair complete\n");
+  return AllPHIVResults;
 }
 
 //===----------------------------------------------------------------------===//
@@ -310,12 +304,33 @@ void MachineLaneSSAUpdater::computePrunedIDF(Register OrigVReg,
                                               LaneBitmask DefMask,
                                               ArrayRef<MachineBasicBlock *> NewDefBlocks,
                                               SmallVectorImpl<MachineBasicBlock *> &OutIDFBlocks) {
-  LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::computePrunedIDF VReg=" << OrigVReg 
+  const TargetRegisterInfo &TRI = *MF.getRegInfo().getTargetRegisterInfo();
+  LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::computePrunedIDF VReg=" 
+                    << printReg(OrigVReg, &TRI)
                     << " DefMask=" << PrintLaneMask(DefMask)
                     << " with " << NewDefBlocks.size() << " new def blocks\n");
   
   // Clear output vector at entry
   OutIDFBlocks.clear();
+  
+  // Try cache for single-block definitions (most common case in spilling)
+  if (NewDefBlocks.size() == 1 && NewDefBlocks[0]) {
+    IDFCacheKey Key{OrigVReg, DefMask, static_cast<unsigned>(NewDefBlocks[0]->getNumber())};
+    auto It = IDFCache.find(Key);
+    if (It != IDFCache.end()) {
+      OutIDFBlocks.assign(It->second.begin(), It->second.end());
+      LLVM_DEBUG(dbgs() << "  IDF cache HIT for VReg=" << printReg(OrigVReg, &TRI)
+                        << " Mask=" << PrintLaneMask(DefMask)
+                        << " DefBlock=bb." << NewDefBlocks[0]->getNumber() 
+                        << "." << NewDefBlocks[0]->getName()
+                        << " -> " << OutIDFBlocks.size() << " IDF blocks\n");
+      return;
+    }
+    LLVM_DEBUG(dbgs() << "  IDF cache MISS for VReg=" << printReg(OrigVReg, &TRI)
+                      << " Mask=" << PrintLaneMask(DefMask)
+                      << " DefBlock=bb." << NewDefBlocks[0]->getNumber()
+                      << "." << NewDefBlocks[0]->getName() << "\n");
+  }
   
   // Early bail-out checks for robustness
   if (!OrigVReg.isVirtual()) {
@@ -397,18 +412,23 @@ void MachineLaneSSAUpdater::computePrunedIDF(Register OrigVReg,
   
   LLVM_DEBUG(dbgs() << "  Computed " << OutIDFBlocks.size() << " IDF blocks\n");
   
+  // Store in cache if this was a single-block definition
+  if (NewDefBlocks.size() == 1 && NewDefBlocks[0]) {
+    IDFCacheKey Key{OrigVReg, DefMask, static_cast<unsigned>(NewDefBlocks[0]->getNumber())};
+    IDFCache[Key].assign(OutIDFBlocks.begin(), OutIDFBlocks.end());
+  }
+  
   // Note: We do not place PHIs here; this function only computes candidate 
   // join blocks. The IDFCalculator handles deduplication automatically.
 }
 
-SmallVector<Register> MachineLaneSSAUpdater::insertLaneAwarePHI(Register InitialVReg,
-                                                                Register OrigVReg,
-                                                                LaneBitmask DefMask,
-                                                                MachineBasicBlock *InitialDefBB) {
+SmallVector<MachineOperand *> MachineLaneSSAUpdater::insertLaneAwarePHI(
+    Register InitialVReg, Register OrigVReg, LaneBitmask DefMask,
+    MachineBasicBlock *InitialDefBB) {
   LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::insertLaneAwarePHI InitialVReg=" << InitialVReg
                     << " OrigVReg=" << OrigVReg << " DefMask=" << PrintLaneMask(DefMask) << "\n");
   
-  SmallVector<Register> AllCreatedPHIs;
+  SmallVector<MachineOperand*> AllCreatedPHIs;
   
   // Step 1: Compute IDF (Iterated Dominance Frontier) for the initial definition
   // This gives us ALL blocks where PHI nodes need to be inserted
@@ -431,14 +451,14 @@ SmallVector<Register> MachineLaneSSAUpdater::insertLaneAwarePHI(Register Initial
                       << " with CurrentNewVReg=" << CurrentNewVReg << "\n");
     
     // Create PHI: merges OrigVReg and CurrentNewVReg based on dominance
-    Register PHIResult = createPHIInBlock(*JoinMBB, OrigVReg, CurrentNewVReg, DefMask);
+    MachineOperand* PHIResult = createPHIInBlock(*JoinMBB, OrigVReg, CurrentNewVReg, DefMask);
     
-    if (PHIResult.isValid()) {
+    if (PHIResult) {
       AllCreatedPHIs.push_back(PHIResult);
       
       // Update CurrentNewVReg to be the PHI result
       // This ensures the next PHI (if any) uses this PHI's result, not the original InitialVReg
-      CurrentNewVReg = PHIResult;
+      CurrentNewVReg = PHIResult->getReg();
       
       LLVM_DEBUG(dbgs() << "    Created PHI result VReg=" << PHIResult 
                         << ", will use this for subsequent PHIs\n");
@@ -452,16 +472,38 @@ SmallVector<Register> MachineLaneSSAUpdater::insertLaneAwarePHI(Register Initial
 }
 
 // Helper: Create lane-specific PHI in a join block
-Register MachineLaneSSAUpdater::createPHIInBlock(MachineBasicBlock &JoinMBB,
-                                                 Register OrigVReg,
-                                                 Register NewVReg,
-                                                 LaneBitmask DefMask) {
+MachineOperand *
+MachineLaneSSAUpdater::createPHIInBlock(MachineBasicBlock &JoinMBB,
+                                        Register OrigVReg, Register NewVReg,
+                                        LaneBitmask DefMask) {
   LLVM_DEBUG(dbgs() << "    createPHIInBlock in BB#" << JoinMBB.getNumber()
                     << " OrigVReg=" << OrigVReg << " NewVReg=" << NewVReg 
                     << " DefMask=" << PrintLaneMask(DefMask) << "\n");
   
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const LaneBitmask FullMask = MRI.getMaxLaneMaskForVReg(OrigVReg);
+  
+  // Check for existing PHI that already merges this register with matching lane mask
+  for (MachineInstr &MI : JoinMBB.phis()) {
+    for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+      MachineOperand &ValOp = MI.getOperand(i);
+      if (!ValOp.isReg() || ValOp.getReg() != OrigVReg)
+        continue;
+      
+      // Get effective lane mask for this operand
+      LaneBitmask OpMask = TRI.getSubRegIndexLaneMask(ValOp.getSubReg());
+      if (OpMask == LaneBitmask::getAll())
+        OpMask = FullMask;
+      
+      if ((OpMask & DefMask).any()) {
+        LLVM_DEBUG(dbgs() << "      Found existing PHI with matching lanes: ");
+        LLVM_DEBUG(MI.print(dbgs()));
+        return &MI.getOperand(0);
+      }
+    }
+  }
+  
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const LaneBitmask FullMask = MF.getRegInfo().getMaxLaneMaskForVReg(OrigVReg);
   
   // Check if this is a partial lane redefinition
   const bool IsPartialReload = (DefMask != FullMask);
@@ -473,7 +515,6 @@ Register MachineLaneSSAUpdater::createPHIInBlock(MachineBasicBlock &JoinMBB,
                     << " DefMask=" << PrintLaneMask(DefMask) << "\n");
   
   // Get the definition block of NewVReg for dominance checks
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineInstr *NewDefMI = MRI.getVRegDef(NewVReg);
   MachineBasicBlock *NewDefBB = NewDefMI->getParent();
   
@@ -498,7 +539,7 @@ Register MachineLaneSSAUpdater::createPHIInBlock(MachineBasicBlock &JoinMBB,
       if (IsPartialReload) {
         // Partial case: z = PHI(y, BB1, x.sub2_3, BB0)
         // Use DefMask to find which subreg of OrigVReg was redefined
-        unsigned SubIdx = getSubRegIndexForLaneMask(DefMask, &TRI);
+        unsigned SubIdx = TRI.getSubRegIndexForLaneMask(DefMask);
         PHIOperands.push_back(MachineOperand::CreateReg(OrigVReg, /*isDef*/ false,
                                                        /*isImp*/ false, /*isKill*/ false,
                                                        /*isDead*/ false, /*isUndef*/ false,
@@ -528,10 +569,10 @@ Register MachineLaneSSAUpdater::createPHIInBlock(MachineBasicBlock &JoinMBB,
     LLVM_DEBUG(dbgs() << "      Created lane-specific PHI: ");
     LLVM_DEBUG(PHI->print(dbgs()));
     
-    return PHIVReg;
+    return &PHINode->getOperand(0);
   }
   
-  return Register();
+  return nullptr;
 }
 
 void MachineLaneSSAUpdater::rewriteDominatedUses(Register OrigVReg,
@@ -551,7 +592,6 @@ void MachineLaneSSAUpdater::rewriteDominatedUses(Register OrigVReg,
   }
   
   MachineBasicBlock *DefBB = DefMI->getParent();
-  const TargetRegisterClass *NewRC = MRI.getRegClass(NewSSA);
 
   LLVM_DEBUG(dbgs() << "  Rewriting uses dominated by definition in BB#" << DefBB->getNumber() << ": ");
   LLVM_DEBUG(DefMI->print(dbgs()));
@@ -567,8 +607,9 @@ void MachineLaneSSAUpdater::rewriteDominatedUses(Register OrigVReg,
     if (UseMI == DefMI)
       continue;
 
-    // Check if this use is reached by our definition
-    if (!defReachesUse(DefMI, UseMI, MO))
+    // Check if this use is DOMINATED by our definition
+    // Reachable-but-not-dominated uses should use PHI results, not NewSSA directly
+    if (!defDominatesUse(DefMI, UseMI, MO))
       continue;
 
     // Get the lane mask for this operand
@@ -580,6 +621,7 @@ void MachineLaneSSAUpdater::rewriteDominatedUses(Register OrigVReg,
     LLVM_DEBUG(UseMI->print(dbgs()));
 
     const TargetRegisterClass *OpRC = MRI.getRegClass(OrigVReg);
+    const TargetRegisterClass *NewRC = MRI.getRegClass(NewSSA);
 
     // Case 1: Exact match - direct replacement
     if (OpMask == MaskToRewrite) {
@@ -596,15 +638,23 @@ void MachineLaneSSAUpdater::rewriteDominatedUses(Register OrigVReg,
         MO.setReg(NewSSA);
         MO.setSubReg(0); // Clear subregister (NewSSA is a full register of NewRC)
         
-        // Extend NewSSA's live interval to cover this use
-        SlotIndex UseIdx = LIS.getInstructionIndex(*UseMI).getRegSlot();
-        LiveInterval &NewLI = LIS.getInterval(NewSSA);
-        LIS.extendToIndices(NewLI, {UseIdx});
+        // NOTE: Don't extend NewSSA's live interval here - it will be computed
+        // later after all use rewriting is complete. Extending during the loop
+        // triggers lazy interval creation with incomplete use info, causing
+        // incorrect "dead" flags.
         
         continue;
       }
       
       // Incompatible register classes with same lane mask indicates corrupted MIR
+      LLVM_DEBUG(dbgs() << "=== Register Class Mismatch ===\n"
+                        << "  OrigVReg: " << printReg(OrigVReg, &TRI) << " class: " << TRI.getRegClassName(OpRC) << "\n"
+                        << "  NewSSA: " << printReg(NewSSA, &TRI) << " class: " << TRI.getRegClassName(NewRC) << "\n"
+                        << "  MaskToRewrite: " << PrintLaneMask(MaskToRewrite) << "\n"
+                        << "  OpMask: " << PrintLaneMask(OpMask) << "\n"
+                        << "  MO.getSubReg(): " << MO.getSubReg() << "\n"
+                        << "  ExpectedRC: " << (ExpectedRC ? TRI.getRegClassName(ExpectedRC) : "null") << "\n"
+                        << "  Use: "; UseMI->print(dbgs()));
       llvm_unreachable("Incompatible register classes with same lane mask - invalid MIR");
     }
 
@@ -638,57 +688,49 @@ void MachineLaneSSAUpdater::rewriteDominatedUses(Register OrigVReg,
       
     } else {
       // Case 3: Subset - use needs fewer lanes than NewSSA provides
-      // Need to remap subregister index from OrigVReg's register class to NewSSA's register class
-      //
-      // Example: OrigVReg is vreg_128, we redefine sub2_3 (64-bit), use accesses sub3 (32-bit)
-      //   MaskToRewrite = 0xF0  // sub2_3: lanes 4-7 in vreg_128 space
-      //   OpMask        = 0xC0  // sub3:   lanes 6-7 in vreg_128 space
-      //   NewSSA is vreg_64, has lanes 0-3 (but represents lanes 4-7 of OrigVReg)
-      //
-      // Algorithm: Shift OpMask down by the bit position of MaskToRewrite's LSB to map
-      // from OrigVReg's lane space into NewSSA's lane space, then find the subreg index.
-      //
-      // Why this works:
-      //   1. MaskToRewrite is contiguous (comes from subreg definition)
-      //   2. OpMask ⊆ MaskToRewrite (we're in subset case by construction)
-      //   3. Lane masks use bit positions that correspond to actual lane indices
-      //   4. Subreg boundaries are power-of-2 aligned in register class design
-      //
-      // Calculation:
-      //   Shift = countTrailingZeros(MaskToRewrite) = 4  // How far "up" MaskToRewrite is
-      //   NewMask = OpMask >> 4 = 0xC0 >> 4 = 0xC        // Map to NewSSA's lane space
-      //   0xC corresponds to sub1 in vreg_64 ✓
-      LLVM_DEBUG(dbgs() << "      Subset case -> remapping subregister index\n");
+      // Need to map OpMask to NewSSA's register class namespace if they differ
+      LLVM_DEBUG(dbgs() << "      Subset case -> finding subregister index\n");
       
-      // Find the bit offset of MaskToRewrite (position of its lowest set bit)
-      unsigned ShiftAmt = llvm::countr_zero(MaskToRewrite.getAsInteger());
-      assert(ShiftAmt < 64 && "MaskToRewrite should have at least one bit set");
+      LaneBitmask MappedOpMask = OpMask;
+      if (NewRC != OpRC) {
+        // Different register classes - need to map lane namespace
+        // MaskToRewrite defines which lanes of OrigVReg we redefined
+        // NewSSA is a narrower register that holds just those lanes
+        // Shift OpMask down to map from OrigVReg space to NewSSA space
+        unsigned ShiftAmt = llvm::countr_zero(MaskToRewrite.getAsInteger());
+        MappedOpMask = LaneBitmask(OpMask.getAsInteger() >> ShiftAmt);
+        
+        LLVM_DEBUG(dbgs() << "        Namespace mapping: OrigRC=" << TRI.getRegClassName(OpRC)
+                          << " NewRC=" << TRI.getRegClassName(NewRC)
+                          << "\n          OpMask=" << PrintLaneMask(OpMask)
+                          << " -> MappedOpMask=" << PrintLaneMask(MappedOpMask) << "\n");
+      }
       
-      // Shift OpMask down into NewSSA's lane space
-      LaneBitmask NewMask = LaneBitmask(OpMask.getAsInteger() >> ShiftAmt);
+      // Find the subregister index for MappedOpMask in NewSSA's register class
+      unsigned NewSubReg = TRI.getSubRegIndexForLaneMask(MappedOpMask);
+      assert(NewSubReg && "Should find subreg index for mapped lanes");
       
-      // Find the subregister index for NewMask in NewSSA's register class
-      unsigned NewSubReg = getSubRegIndexForLaneMask(NewMask, &TRI);
-      assert(NewSubReg && "Should find subreg index for remapped lanes");
-      
-      LLVM_DEBUG(dbgs() << "        Remapping subreg:\n"
-                        << "          OrigVReg lanes: OpMask=" << PrintLaneMask(OpMask) 
-                        << " MaskToRewrite=" << PrintLaneMask(MaskToRewrite) << "\n"
-                        << "          Shift amount: " << ShiftAmt << "\n"
-                        << "          NewSSA lanes: NewMask=" << PrintLaneMask(NewMask)
+      LLVM_DEBUG(dbgs() << "        MappedOpMask=" << PrintLaneMask(MappedOpMask)
                         << " -> SubReg=" << TRI.getSubRegIndexName(NewSubReg) << "\n");
       
       MO.setReg(NewSSA);
       MO.setSubReg(NewSubReg);
       
-      // Extend NewSSA's live interval to cover this use
-      SlotIndex UseIdx = LIS.getInstructionIndex(*UseMI).getRegSlot();
-      LiveInterval &NewLI = LIS.getInterval(NewSSA);
-      LIS.extendToIndices(NewLI, {UseIdx});
+      // NOTE: Don't extend NewSSA's live interval here - computed later.
     }
   }
   
   LLVM_DEBUG(dbgs() << "  Completed rewriting dominated uses\n");
+}
+
+SmallVector<MachineOperand *, 4> MachineLaneSSAUpdater::repairSSAForReload(
+    Register NewVReg, Register OrigVReg, LaneBitmask DefMask,
+    MachineBasicBlock *DefBB) {
+  LLVM_DEBUG(dbgs() << "MachineLaneSSAUpdater::repairSSAForReload NewVReg="
+                    << NewVReg << " OrigVReg=" << OrigVReg
+                    << " DefMask=" << PrintLaneMask(DefMask)
+                    << " DefBB=BB#" << DefBB->getNumber() << "\n");
+  return performSSARepair(NewVReg, OrigVReg, DefMask, DefBB);
 }
 
 //===----------------------------------------------------------------------===//
@@ -705,27 +747,213 @@ VNInfo *MachineLaneSSAUpdater::incomingOnEdge(LiveInterval &LI, MachineInstr *Ph
 }
 
 /// Check if \p DefMI's definition reaches \p UseMI's use operand.
-/// During SSA reconstruction, LiveIntervals may not be complete yet, so we use
-/// dominance-based checking rather than querying LiveInterval reachability.
-bool MachineLaneSSAUpdater::defReachesUse(MachineInstr *DefMI,
-                                           MachineInstr *UseMI, 
-                                           MachineOperand &UseOp) {
-  // For PHI uses, check if DefMI dominates the predecessor block
-  if (UseMI->isPHI()) {
-    unsigned OpIdx = UseMI->getOperandNo(&UseOp);
-    MachineBasicBlock *Pred = UseMI->getOperand(OpIdx + 1).getMBB();
-    return MDT.dominates(DefMI->getParent(), Pred);
+/// Get pruned IDF blocks for a definition (public API).
+/// Caching is handled inside computePrunedIDF.
+void MachineLaneSSAUpdater::getPrunedIDF(Register OrigVReg,
+                                          LaneBitmask DefMask,
+                                          MachineBasicBlock *DefBlock,
+                                          SmallVectorImpl<MachineBasicBlock *> &OutIDFBlocks) {
+  SmallVector<MachineBasicBlock *, 1> DefBlocks = {DefBlock};
+  computePrunedIDF(OrigVReg, DefMask, DefBlocks, OutIDFBlocks);
+}
+
+MachineOperand *MachineLaneSSAUpdater::insertPHIAtBlock(
+    MachineBasicBlock *JoinBB, Register OrigVReg,
+    const DenseMap<MachineBasicBlock *, Register> &IncomingValues,
+    LaneBitmask SpilledMask) {
+  LLVM_DEBUG(dbgs() << "  insertPHIAtBlock in BB#" << JoinBB->getNumber()
+                    << " for vreg" << OrigVReg << "\n");
+
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // Determine register class for the spilled lanes
+  const TargetRegisterClass *RC;
+  if (!IncomingValues.empty()) {
+    Register AnyIncoming = IncomingValues.begin()->second;
+    RC = MRI.getRegClass(AnyIncoming);
+  } else {
+    // Map is empty - derive RC from OrigVReg and SpilledMask
+    const TargetRegisterClass *OrigRC = MRI.getRegClass(OrigVReg);
+    LaneBitmask FullMask = MRI.getMaxLaneMaskForVReg(OrigVReg);
+    if (SpilledMask != FullMask) {
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      unsigned SubIdx = TRI->getSubRegIndexForLaneMask(SpilledMask);
+      RC = TRI->getSubRegisterClass(OrigRC, SubIdx);
+    } else {
+      RC = OrigRC;
+    }
+  }
+  Register PHIVReg = MRI.createVirtualRegister(RC);
+
+  auto PHIBuilder =
+      BuildMI(*JoinBB, JoinBB->begin(), DebugLoc(), TII->get(TargetOpcode::PHI), PHIVReg);
+
+  // Compute subreg index for partial spills (used when IncomingValues doesn't have an entry)
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  LaneBitmask FullMask = MRI.getMaxLaneMaskForVReg(OrigVReg);
+  bool IsPartialSpill = (SpilledMask != FullMask);
+  unsigned SubIdx = IsPartialSpill ? TRI->getSubRegIndexForLaneMask(SpilledMask) : 0;
+
+  for (MachineBasicBlock *Pred : JoinBB->predecessors()) {
+    auto It = IncomingValues.find(Pred);
+    if (It != IncomingValues.end()) {
+      PHIBuilder.addReg(It->second).addMBB(Pred);
+    } else {
+      // Predecessor not in map - use OrigVReg with appropriate subreg for partial spills
+      if (IsPartialSpill) {
+        PHIBuilder.addReg(OrigVReg, RegState::NoFlags, SubIdx).addMBB(Pred);
+      } else {
+        PHIBuilder.addReg(OrigVReg).addMBB(Pred);
+      }
+    }
   }
 
-  // For same-block uses, check instruction order
-  if (UseMI->getParent() == DefMI->getParent()) {
+  MachineInstr *PHI = PHIBuilder.getInstr();
+  LIS.InsertMachineInstrInMaps(*PHI);
+
+  LLVM_DEBUG(dbgs() << "    Created PHI: "; PHI->print(dbgs()));
+
+  return &PHI->getOperand(0);
+}
+
+/// Check if a definition dominates a use.
+/// This is stricter than reachability - dominance means the def is on ALL paths to the use.
+///
+/// \param DefMI - The instruction defining a register
+/// \param UseMI - The instruction using a register
+/// \param UseOp - The specific use operand
+/// \returns true if DefMI dominates the use
+bool MachineLaneSSAUpdater::defDominatesUse(MachineInstr *DefMI,
+                                             MachineInstr *UseMI,
+                                             MachineOperand &UseOp) {
+  MachineBasicBlock *DefBlock = DefMI->getParent();
+  MachineBasicBlock *UseBlock = UseMI->getParent();
+  
+  // Fast path 1: Same block - check instruction order
+  if (UseBlock == DefBlock) {
     SlotIndex DefIdx = LIS.getInstructionIndex(*DefMI);
     SlotIndex UseIdx = LIS.getInstructionIndex(*UseMI);
     return DefIdx < UseIdx;
   }
   
-  // For cross-block uses, check block dominance
-  return MDT.dominates(DefMI->getParent(), UseMI->getParent());
+  // For PHI uses, we need to check dominance of the predecessor block
+  // For non-PHI uses, we check dominance of the use block
+  MachineBasicBlock *TargetBlock = UseBlock;
+  if (UseMI->isPHI()) {
+    unsigned OpIdx = UseMI->getOperandNo(&UseOp);
+    TargetBlock = UseMI->getOperand(OpIdx + 1).getMBB();
+  }
+  
+  return MDT.dominates(DefBlock, TargetBlock);
+}
+
+/// Check if a use is reachable from a definition using IDF analysis.
+///
+/// This fixes a bug where PHI operands from non-dominated predecessors were
+/// incorrectly left unrewritten after spills on parallel paths.
+bool MachineLaneSSAUpdater::isUseReachableFromDef(MachineInstr *DefMI,
+                                                    MachineInstr *UseMI,
+                                                    Register OrigVReg,
+                                                    LaneBitmask DefMask) {
+  MachineBasicBlock *DefBlock = DefMI->getParent();
+  
+  // Find the use operand in UseMI for dominance check
+  MachineOperand *UseOp = UseMI->findRegisterUseOperand(OrigVReg, &TRI, /*isKill=*/false);
+  assert(UseOp && "UseMI must use OrigVReg");
+  
+  // Fast path: Check dominance first
+  // If def dominates use, it definitely reaches it
+  if (defDominatesUse(DefMI, UseMI, *UseOp)) {
+    return true;
+  }
+  
+  // Extract the target block for IDF analysis (use block or PHI predecessor)
+  MachineBasicBlock *PredBlock = UseMI->getParent();
+  if (UseMI->isPHI()) {
+    unsigned OpIdx = UseMI->getOperandNo(UseOp);
+    PredBlock = UseMI->getOperand(OpIdx + 1).getMBB();
+  }
+  
+  // IDF-based reachability for non-dominated uses (parallel paths case)
+  //
+  // When a spill happens on one path but not all paths to a join point,
+  // we need PHI insertion. Example from spill-use-before-spill.mir:
+  //
+  //   bb.0.entry:
+  //     %0:vreg_128 = COPY ...
+  //     Branch to bb.1 or bb.2
+  //
+  //   bb.1.spill_path:
+  //     SI_SPILL_V128_SAVE %0  <- Spill here
+  //     %reload:vreg_128 = SI_SPILL_V128_RESTORE  <- Reload immediately
+  //     S_BRANCH %bb.3
+  //
+  //   bb.2.clean_path:
+  //     S_BRANCH %bb.3
+  //
+  //   bb.3.join:
+  //     S_ENDPGM 0, implicit %0  <- Needs PHI: one pred has reload, other has original!
+  //
+  // IDF analysis detects bb.3 is in the dominance frontier of bb.1,
+  // so the use in bb.3 IS reachable from the spill and needs PHI insertion.
+  
+  SmallVector<MachineBasicBlock *, 4> PrunedIDFBlocks;
+  SmallVector<MachineBasicBlock *, 1> DefBlocks = {DefBlock};
+  computePrunedIDF(OrigVReg, DefMask, DefBlocks, PrunedIDFBlocks);
+  
+  LLVM_DEBUG({
+    dbgs() << "  isUseReachableFromDef (slow path): DefBlock=bb." << DefBlock->getNumber()
+           << "." << DefBlock->getName() << " PredBlock=bb." << PredBlock->getNumber()
+           << "." << PredBlock->getName() << "\n";
+    dbgs() << "  Pruned IDF blocks: ";
+    for (auto *BB : PrunedIDFBlocks)
+      dbgs() << "bb." << BB->getNumber() << "." << BB->getName() << " ";
+    dbgs() << "\n";
+  });
+  
+  // Check if PredBlock is in or dominated by any IDF block
+  for (auto *IDFBB : PrunedIDFBlocks) {
+    if (IDFBB == PredBlock || MDT.dominates(IDFBB, PredBlock)) {
+      LLVM_DEBUG(dbgs() << "  => Reachable via IDF\n");
+      return true;
+    }
+  }
+  
+  LLVM_DEBUG(dbgs() << "  => NOT reachable\n");
+  return false;
+}
+
+bool MachineLaneSSAUpdater::isUseReachableFromDef(MachineOperand &DefOp,
+                                                    MachineOperand &UseOp,
+                                                    Register OrigVReg) {
+  // Derive instructions and lane mask from operands and call the MachineInstr* version
+  MachineInstr *DefMI = DefOp.getParent();
+  MachineInstr *UseMI = UseOp.getParent();
+  LaneBitmask DefMask = operandLaneMask(DefOp);
+  return isUseReachableFromDef(DefMI, UseMI, OrigVReg, DefMask);
+}
+
+/// During SSA reconstruction, check if a definition reaches a use.
+/// Uses IDF-based reachability analysis for correctness.
+///
+/// DefMI defines a NEW register (NewSSA), and UseOp uses the ORIGINAL register.
+/// We need to check if the definition of NewSSA can reach this use of OrigVReg.
+bool MachineLaneSSAUpdater::defReachesUse(MachineInstr *DefMI,
+                                           Register NewSSA,
+                                           MachineInstr *UseMI, 
+                                           MachineOperand &UseOp) {
+  Register OrigReg = UseOp.getReg();
+  assert(OrigReg.isVirtual() && "Expected virtual register");
+  assert(NewSSA.isVirtual() && "Expected virtual register");
+  
+  // Find the def operand in DefMI for NewSSA
+  MachineOperand *DefOp = DefMI->findRegisterDefOperand(NewSSA, &TRI, /*isDead=*/false, /*Overlap=*/true);
+  assert(DefOp && "DefMI must define NewSSA");
+  
+  // Use IDF-based reachability check
+  // Check if DefOp (NewSSA's definition) can reach UseOp (OrigReg's use)
+  return isUseReachableFromDef(*DefOp, UseOp, OrigReg);
 }
 
 /// What lanes does this operand read?
@@ -838,9 +1066,9 @@ Register MachineLaneSSAUpdater::buildRSForSuperUse(MachineInstr *UseMI, MachineO
   
   // Add source for lanes from NewVR (updated lanes)
   if (LanesFromNew.any()) {
-    unsigned SubIdx = getSubRegIndexForLaneMask(LanesFromNew, &TRI);
+    unsigned SubIdx = TRI.getSubRegIndexForLaneMask(LanesFromNew);
     assert(SubIdx && "Failed to find subregister index for LanesFromNew");
-    RS.addReg(NewVR, 0, 0).addImm(SubIdx);  // NewVR is full register, no subreg
+    RS.addReg(NewVR, RegState::NoFlags, 0).addImm(SubIdx);  // NewVR is full register, no subreg
     AddedSubIdxs.insert(SubIdx);
     LanesToExtend.push_back(LanesFromNew);
   }
@@ -849,11 +1077,11 @@ Register MachineLaneSSAUpdater::buildRSForSuperUse(MachineInstr *UseMI, MachineO
   // Handle both contiguous and non-contiguous lane masks
   // Non-contiguous example: Redefining only sub2 of vreg_128 leaves LanesFromOld = sub0+sub1+sub3
   if (LanesFromOld.any()) {
-    unsigned SubIdx = getSubRegIndexForLaneMask(LanesFromOld, &TRI);
+    unsigned SubIdx = TRI.getSubRegIndexForLaneMask(LanesFromOld);
     
     if (SubIdx) {
       // Contiguous case: single subregister covers all lanes
-      RS.addReg(OldVR, 0, SubIdx).addImm(SubIdx);  // OldVR.subIdx
+      RS.addReg(OldVR, RegState::NoFlags, SubIdx).addImm(SubIdx);  // OldVR.subIdx
       AddedSubIdxs.insert(SubIdx);
       LanesToExtend.push_back(LanesFromOld);
     } else {
@@ -871,7 +1099,7 @@ Register MachineLaneSSAUpdater::buildRSForSuperUse(MachineInstr *UseMI, MachineO
       // Add each covering subregister as a source to the REG_SEQUENCE
       for (unsigned CoverSubIdx : CoveringSubRegs) {
         LaneBitmask CoverMask = TRI.getSubRegIndexLaneMask(CoverSubIdx);
-        RS.addReg(OldVR, 0, CoverSubIdx).addImm(CoverSubIdx);  // OldVR.CoverSubIdx
+        RS.addReg(OldVR, RegState::NoFlags, CoverSubIdx).addImm(CoverSubIdx);  // OldVR.CoverSubIdx
         AddedSubIdxs.insert(CoverSubIdx);
         LanesToExtend.push_back(CoverMask);
         
