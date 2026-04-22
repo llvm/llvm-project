@@ -31,7 +31,7 @@ extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
                               bool EmitReport, const char *OutputDirPath);
 
 extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                         void *DeviceMemory, int64_t DeviceMemorySize,
+                         void *DeviceMemory, int64_t DeviceMemorySize, void *ReusableDeviceAlloc,
                          const llvm::offloading::EntryTy *Globals,
                          int32_t NumGlobals, void **TgtArgs,
                          ptrdiff_t *TgtOffsets, int32_t NumArgs,

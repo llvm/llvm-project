@@ -509,6 +509,9 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
 /// \param DeviceMemory A pointer to an array storing device memory data to move
 ///                     prior to kernel execution.
 /// \param DeviceMemorySize The size of the above device memory data in bytes.
+/// \param ReusableDeviceAlloc Pointer to a device memory allocation that should
+///                            be reused for the replay. If null, the replay will
+///                            allocate the necessary device buffer.
 /// \param TgtArgs An array of pointers of the pre-recorded target kernel
 ///                arguments.
 /// \param TgtOffsets An array of pointers of the pre-recorded target kernel
@@ -520,7 +523,7 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
 /// \param LoopTripCount The pre-recorded value of the loop tripcount, if any.
 /// \return OMP_TGT_SUCCESS on success, OMP_TGT_FAIL on failure.
 EXTERN int __tgt_target_kernel_replay(
-    ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory,
+    ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory, void *ReusableDeviceAlloc,
     int64_t DeviceMemorySize, const llvm::offloading::EntryTy *Globals,
     int32_t NumGlobals, void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
     int32_t NumTeams, int32_t ThreadLimit, uint32_t SharedMemorySize,
@@ -542,7 +545,7 @@ EXTERN int __tgt_target_kernel_replay(
 
   AsyncInfoTy AsyncInfo(*DeviceOrErr);
   int Rc = target_replay(
-      Loc, *DeviceOrErr, HostPtr, DeviceMemory, DeviceMemorySize, Globals,
+      Loc, *DeviceOrErr, HostPtr, DeviceMemory, DeviceMemorySize, ReusableDeviceAlloc, Globals,
       NumGlobals, TgtArgs, TgtOffsets, NumArgs, NumTeams, ThreadLimit,
       SharedMemorySize, LoopTripCount, AsyncInfo, ReplayOutcome);
 

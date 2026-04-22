@@ -427,7 +427,7 @@ void __tgt_target_nowait_query(void **AsyncHandle);
 /// Executes a target kernel by replaying recorded kernel arguments and
 /// device memory.
 int __tgt_target_kernel_replay(
-    ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory,
+    ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory, void *ReusableDeviceAlloc,
     int64_t DeviceMemorySize, const llvm::offloading::EntryTy *Globals,
     int32_t NumGlobals, void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
     int32_t NumTeams, int32_t ThreadLimit, uint32_t SharedMemorySize,

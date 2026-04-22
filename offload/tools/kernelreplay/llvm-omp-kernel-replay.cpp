@@ -58,6 +58,9 @@ static cl::opt<uint32_t> NumThreadsOpt("num-threads",
 static cl::opt<int32_t> DeviceIdOpt("device-id", cl::desc("Set the device id."),
                                     cl::init(-1), cl::cat(ReplayOptions));
 
+static cl::opt<uint32_t> RepetitionsOpt("repetitions", cl::desc("Set the number of replay repetitions."),
+                                    cl::init(1), cl::cat(ReplayOptions));
+
 template <typename... ArgsTy>
 Error createErr(const char *ErrFmt, ArgsTy &&...Args) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(), ErrFmt,
@@ -132,7 +135,6 @@ Error verifyReplayOutput(StringRef RecordOutputFilename,
     return createErr("replay device memory failed to verify");
 
   // Sucessfully verified.
-  outs() << TOOL_PREFIX << "Replay device memory verified\n";
   return Error::success();
 }
 
@@ -315,26 +317,38 @@ Error replayKernel() {
   auto RecordInputBuffer = std::move(RecordInputBufferOrErr.get());
 
   KernelReplayOutcomeTy Outcome;
-  Rc = __tgt_target_kernel_replay(
-      /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
-      const_cast<char *>(RecordInputBuffer->getBufferStart()),
-      RecordInputBuffer->getBufferSize(),
-      NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
-      TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
-      LoopTripCount, &Outcome);
-  if (Rc != OMP_TGT_SUCCESS)
-    return createErr("failed to replay kernel");
 
-  // Verify the replay output if requested.
-  if (VerifyOpt) {
-    if (Outcome.OutputFilepath.empty())
-      return createErr("replay output file was not generated");
+  // Perform the kernel replay and verification (if needed) for each repetition.
+  for (uint32_t R = 0; R < RepetitionsOpt; ++R) {
+    Rc = __tgt_target_kernel_replay(
+        /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
+        const_cast<char *>(RecordInputBuffer->getBufferStart()), R > 0 ? Outcome.ReplayDeviceAlloc : nullptr,
+        RecordInputBuffer->getBufferSize(),
+        NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
+        TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
+        LoopTripCount, &Outcome);
+    if (Rc != OMP_TGT_SUCCESS)
+      return createErr("failed to replay kernel");
 
-    Filepath.replace_extension("record_output");
-    return verifyReplayOutput(Filepath.c_str(), Outcome.OutputFilepath.c_str());
+    // Verify the replay output if requested.
+    if (VerifyOpt) {
+      if (Outcome.OutputFilepath.empty())
+        return createErr("replay output file was not generated");
+
+      Filepath.replace_extension("record_output");
+      if (auto Err = verifyReplayOutput(Filepath.c_str(), Outcome.OutputFilepath.c_str()))
+        return Err;
+    }
+
+    outs() << TOOL_PREFIX << " Replay time (" << R << "): " << Outcome.KernelReplayTimeNano << " ns\n";
   }
 
-  outs() << TOOL_PREFIX << "Replay finished (verification skipped)\n";
+  // At this point, any verification done was successful.
+  if (VerifyOpt)
+    outs() << TOOL_PREFIX << " Replay done, device memory verified\n";
+  else
+    outs() << TOOL_PREFIX << " Replay done, verification skipped\n";
+
   return Error::success();
 }
 
