@@ -46,17 +46,16 @@
 #ifndef LLVM_SUPPORT_JSON_H
 #define LLVM_SUPPORT_JSON_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <map>
-#include <unordered_map>
 
 namespace llvm {
 namespace json {
@@ -95,14 +94,9 @@ class Value;
 template <typename T> Value toJSON(const std::optional<T> &Opt);
 
 /// An Object is a JSON object, which maps strings to heterogenous JSON values.
-/// ObjectKey is a maybe-owned string.
+/// It simulates DenseMap<ObjectKey, Value>. ObjectKey is a maybe-owned string.
 class Object {
-  struct ObjectKeyHash {
-    template <typename T> size_t operator()(const T &Key) const {
-      return hash_value(Key);
-    }
-  };
-  using Storage = std::unordered_map<ObjectKey, Value, ObjectKeyHash>;
+  using Storage = DenseMap<ObjectKey, Value, llvm::DenseMapInfo<StringRef>>;
   Storage M;
 
 public:
@@ -139,11 +133,8 @@ public:
   bool erase(StringRef K);
   void erase(iterator I) { M.erase(I); }
 
-  // TODO: Implement heterogeneous lookup using StringRef directly. We need to
-  // make ObjectKey transparent with transparent hash and key equality check.
-  // This is supported for unordered containers in C++20.
-  iterator find(const ObjectKey &K) { return M.find(K); }
-  const_iterator find(const ObjectKey &K) const { return M.find(K); }
+  iterator find(StringRef K) { return M.find_as(K); }
+  const_iterator find(StringRef K) const { return M.find_as(K); }
   // operator[] acts as if Value was default-constructible as null.
   LLVM_ABI Value &operator[](const ObjectKey &K);
   LLVM_ABI Value &operator[](ObjectKey &&K);
@@ -655,7 +646,7 @@ inline Object::Object(std::initializer_list<KV> Properties) {
   for (const auto &P : Properties) {
     auto R = try_emplace(P.K, nullptr);
     if (R.second)
-      R.first->second.moveFrom(std::move(P.V));
+      R.first->getSecond().moveFrom(std::move(P.V));
   }
 }
 inline std::pair<Object::iterator, bool> Object::insert(KV E) {
