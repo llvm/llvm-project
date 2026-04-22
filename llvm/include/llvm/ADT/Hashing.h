@@ -161,14 +161,14 @@ static constexpr uint64_t k3 = 0xc949d7c7509e6557ULL;
 /// Bitwise right rotate.
 /// Normally this will compile to a single instruction, especially if the
 /// shift is a manifest constant.
-inline constexpr uint64_t rotate(uint64_t val, size_t shift) {
+constexpr uint64_t rotate(uint64_t val, size_t shift) {
   // Avoid shifting by 64: doing so yields an undefined result.
   return shift == 0 ? val : ((val >> shift) | (val << (64 - shift)));
 }
 
-inline constexpr uint64_t shift_mix(uint64_t val) { return val ^ (val >> 47); }
+constexpr uint64_t shift_mix(uint64_t val) { return val ^ (val >> 47); }
 
-inline constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
+constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
   // Murmur-inspired hashing.
   const uint64_t kMul = 0x9ddfea08eb382d69ULL;
   uint64_t a = (low ^ high) * kMul;
@@ -179,8 +179,7 @@ inline constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
   return b;
 }
 
-inline constexpr uint64_t hash_1to3_bytes(const char *s, size_t len,
-                                          uint64_t seed) {
+constexpr uint64_t hash_1to3_bytes(const char *s, size_t len, uint64_t seed) {
   uint8_t a = s[0];
   uint8_t b = s[len >> 1];
   uint8_t c = s[len - 1];
@@ -655,8 +654,8 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg) {
 }
 
 template <> struct DenseMapInfo<hash_code, void> {
-  static inline constexpr hash_code getEmptyKey() { return hash_code(-1); }
-  static inline constexpr hash_code getTombstoneKey() { return hash_code(-2); }
+  static constexpr hash_code getEmptyKey() { return hash_code(-1); }
+  static constexpr hash_code getTombstoneKey() { return hash_code(-2); }
   static constexpr unsigned getHashValue(hash_code val) {
     return static_cast<unsigned>(size_t(val));
   }
