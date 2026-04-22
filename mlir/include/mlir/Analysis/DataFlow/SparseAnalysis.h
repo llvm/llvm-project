@@ -193,8 +193,9 @@ public:
   /// accordingly.  Otherwise, the operation transfer function is invoked.
   LogicalResult visit(ProgramPoint *point) override;
 
-  /// Sparse forward analyses use `DeadCodeAnalysis` to skip dead blocks and
-  /// control-flow edges during propagation.
+  /// Chain to this implementation from subclass overrides (so the
+  /// `DeadCodeAnalysis` dependency is preserved) and add any additional
+  /// dependencies of the concrete analysis.
   void getDependentAnalyses(AnalysisDependencies &deps) const override;
 
 protected:
@@ -417,8 +418,9 @@ public:
   /// Otherwise, invokes the operation transfer function (`visitOperationImpl`).
   LogicalResult visit(ProgramPoint *point) override;
 
-  /// Sparse backward analyses use `DeadCodeAnalysis` to skip dead blocks and
-  /// control-flow edges during propagation.
+  /// Chain to this implementation from subclass overrides (so the
+  /// `DeadCodeAnalysis` dependency is preserved) and add any additional
+  /// dependencies of the concrete analysis.
   void getDependentAnalyses(AnalysisDependencies &deps) const override;
 
 protected:

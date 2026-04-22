@@ -111,8 +111,8 @@ Location LatticeAnchor::getLoc() const {
 // DataFlowSolver
 //===----------------------------------------------------------------------===//
 
-/// Emit a diagnostic listing all analyses whose declared dependencies are not
-/// loaded in the solver. Returns failure if any dependency is missing.
+/// Emits a diagnostic listing all analyses whose declared dependencies are
+/// not loaded in the solver. Returns failure if any dependency is missing.
 static LogicalResult validateDependencies(
     Operation *top, ArrayRef<std::unique_ptr<DataFlowAnalysis>> analyses,
     llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter) {

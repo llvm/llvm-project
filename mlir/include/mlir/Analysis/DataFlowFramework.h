@@ -35,12 +35,18 @@ class DataFlowAnalysis;
 // AnalysisDependencies
 //===----------------------------------------------------------------------===//
 
-/// Helper used by `DataFlowAnalysis::getDependentAnalyses` to declare the
-/// analyses that must be loaded into the solver for an analysis to run
-/// correctly. Declared analyses are not auto-loaded by the solver; callers
-/// are expected to load them explicitly with the appropriate constructor
-/// arguments. `DataFlowSolver::initializeAndRun` fails with a diagnostic if
-/// any declared dependency is missing.
+/// Collection of sibling analyses a `DataFlowAnalysis` subclass declares it
+/// requires via `DataFlowAnalysis::getDependentAnalyses`. The solver consults
+/// it at `initializeAndRun` time and errors out if any declared analysis is
+/// missing from the solver.
+///
+/// Declared analyses are *not* auto-loaded by the solver. `DataFlowSolver::
+/// load<T>` can take arbitrary constructor arguments that the framework
+/// cannot synthesize, so the caller retains control of how each analysis is
+/// instantiated; this class only captures the contract. Use hard
+/// dependencies sparingly, and only for analyses that are strictly required
+/// for correctness; analyses that would merely improve precision should be
+/// loaded explicitly by the pipeline author instead.
 ///
 /// Dependencies are matched by `TypeID`. Analyses defined inside an
 /// anonymous namespace must therefore provide an explicit TypeID via
