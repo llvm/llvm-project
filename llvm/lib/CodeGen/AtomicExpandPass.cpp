@@ -44,7 +44,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -106,7 +105,6 @@ private:
   bool tryExpandAtomicStore(StoreInst *SI);
   void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
-  void expandElementwiseAtomicRMW(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
   insertRMWLLSCLoop(IRBuilderBase &Builder, Type *ResultTy, Value *Addr,
@@ -382,15 +380,6 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   }
 
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
-    if (RMWI->isElementwise()) {
-      auto ExpansionKind = TLI->shouldExpandAtomicRMWInIR(RMWI);
-      if (ExpansionKind ==
-          TargetLoweringBase::AtomicExpansionKind::Elementwise) {
-        expandElementwiseAtomicRMW(RMWI);
-        return true;
-      }
-    }
-
     if (!atomicSizeSupported(TLI, RMWI)) {
       expandAtomicRMWToLibcall(RMWI);
       return true;
@@ -613,125 +602,6 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
   RMWI->replaceAllUsesWith(NewRVal);
   RMWI->eraseFromParent();
   return NewRMWI;
-}
-
-/// Halve an elementwise vector atomicrmw and feed each half back through the
-/// normal atomic expansion pipeline. The target's shouldExpandAtomicRMWInIR()
-/// is re-queried at the halved width and may return any expansion kind there
-/// (e.g. None to preserve as a native vector atomic, Elementwise to keep
-/// halving, CmpXChg to emit one wide cmpxchg loop at the halved width). Three
-/// cases:
-///   N == 1: collapse directly to one scalar atomicrmw T
-///   N == 2: split into two scalar atomicrmw T (low at Ptr, high at
-///           gep inbounds T, Ptr, 1); reassemble via two insertelement's.
-///   N  > 2: split into two atomicrmw elementwise <N/2 x T> (low at Ptr, high
-///           at gep inbounds <N/2 x T>, Ptr, 1); reassemble via a
-///           shufflevector.
-/// Note that halving works because the vectors must always be a power of two.
-///
-/// Each new atomicrmw inherits the original ordering/syncscope/volatility and
-/// metadata, and is fed back through processAtomicInstr() so fences, casts,
-/// and further expansion fire per-half.
-void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
-  assert(AI->isElementwise());
-  auto *VecTy = cast<FixedVectorType>(AI->getType());
-  Type *LaneTy = VecTy->getElementType();
-  const unsigned NumLanes = VecTy->getNumElements();
-  Value *Ptr = AI->getPointerOperand();
-  Value *Val = AI->getValOperand();
-
-  ReplacementIRBuilder Builder(AI, *DL);
-  IntegerType *IdxTy =
-      DL->getIndexType(AI->getContext(), AI->getPointerAddressSpace());
-
-  auto CreateRMWInstruction = [&](Value *HalfPtr, Value *HalfVal, Align A,
-                                  bool Elementwise) -> AtomicRMWInst * {
-    auto *NewAI =
-        Builder.CreateAtomicRMW(AI->getOperation(), HalfPtr, HalfVal, A,
-                                AI->getOrdering(), AI->getSyncScopeID());
-    NewAI->setVolatile(AI->isVolatile());
-    NewAI->setElementwise(Elementwise);
-    copyMetadataForAtomic(*NewAI, *AI);
-    return NewAI;
-  };
-
-  Constant *IdxZero = ConstantInt::get(IdxTy, 0);
-  Constant *IdxOne = ConstantInt::get(IdxTy, 1);
-
-  // N == 1: collapse to a single scalar atomicrmw T and wrap the result back
-  // into a <1 x T> vector.
-  if (NumLanes == 1) {
-    Value *LaneVal = Builder.CreateExtractElement(Val, IdxZero, "lane.val");
-    AtomicRMWInst *LaneRMW = CreateRMWInstruction(Ptr, LaneVal, AI->getAlign(),
-                                                  /*Elementwise=*/false);
-    Value *Result = Builder.CreateInsertElement(PoisonValue::get(VecTy),
-                                                LaneRMW, IdxZero, "lane.old");
-    AI->replaceAllUsesWith(Result);
-    AI->eraseFromParent();
-    processAtomicInstr(LaneRMW);
-    return;
-  }
-
-  const uint64_t LaneBytes = DL->getTypeStoreSize(LaneTy).getFixedValue();
-
-  // N == 2 base case: split directly into two scalar atomicrmw T, one per
-  // lane.
-  if (NumLanes == 2) {
-    Value *LoVal = Builder.CreateExtractElement(Val, IdxZero, "lo.val");
-    Value *HiVal = Builder.CreateExtractElement(Val, IdxOne, "hi.val");
-    Value *HiPtr = Builder.CreateInBoundsGEP(LaneTy, Ptr, IdxOne, "hi.ptr");
-    Align LoAlign = AI->getAlign();
-    Align HiAlign = commonAlignment(LoAlign, LaneBytes);
-
-    AtomicRMWInst *LoRMW =
-        CreateRMWInstruction(Ptr, LoVal, LoAlign, /*Elementwise=*/false);
-    AtomicRMWInst *HiRMW =
-        CreateRMWInstruction(HiPtr, HiVal, HiAlign, /*Elementwise=*/false);
-
-    Value *Result = PoisonValue::get(VecTy);
-    Result = Builder.CreateInsertElement(Result, LoRMW, IdxZero, "lo.old");
-    Result = Builder.CreateInsertElement(Result, HiRMW, IdxOne, "hi.old");
-    AI->replaceAllUsesWith(Result);
-    AI->eraseFromParent();
-    processAtomicInstr(LoRMW);
-    processAtomicInstr(HiRMW);
-    return;
-  }
-
-  // N > 2: split into two <N/2 x T> elementwise atomicrmws and recurse via
-  // processAtomicInstr().
-  assert(NumLanes % 2 == 0 &&
-         "elementwise atomicrmw vector length must be a power of two");
-  const unsigned HalfLanes = NumLanes / 2;
-  auto *HalfVecTy = FixedVectorType::get(LaneTy, HalfLanes);
-  const uint64_t HalfBytes = DL->getTypeStoreSize(HalfVecTy).getFixedValue();
-
-  SmallVector<int, 16> LoMask(HalfLanes), HiMask(HalfLanes);
-  for (unsigned I = 0; I < HalfLanes; ++I) {
-    LoMask[I] = static_cast<int>(I);
-    HiMask[I] = static_cast<int>(HalfLanes + I);
-  }
-  Value *LoVal = Builder.CreateShuffleVector(Val, LoMask, "lo.val");
-  Value *HiVal = Builder.CreateShuffleVector(Val, HiMask, "hi.val");
-
-  Value *HiPtr = Builder.CreateInBoundsGEP(HalfVecTy, Ptr, IdxOne, "hi.ptr");
-  Align LoAlign = AI->getAlign();
-  Align HiAlign = commonAlignment(LoAlign, HalfBytes);
-
-  AtomicRMWInst *LoRMW =
-      CreateRMWInstruction(Ptr, LoVal, LoAlign, /*Elementwise=*/true);
-  AtomicRMWInst *HiRMW =
-      CreateRMWInstruction(HiPtr, HiVal, HiAlign, /*Elementwise=*/true);
-
-  SmallVector<int, 16> Mask(NumLanes);
-  for (unsigned I = 0; I < NumLanes; ++I)
-    Mask[I] = static_cast<int>(I);
-  Value *Result = Builder.CreateShuffleVector(LoRMW, HiRMW, Mask, "old");
-
-  AI->replaceAllUsesWith(Result);
-  AI->eraseFromParent();
-  processAtomicInstr(LoRMW);
-  processAtomicInstr(HiRMW);
 }
 
 bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {
