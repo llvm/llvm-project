@@ -1043,6 +1043,12 @@ public:
     return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
   }
 
+  /// Create call to the fabs intrinsic.
+  CallInst *CreateFAbs(Value *V, FMFSource FMFSource = {},
+                       const Twine &Name = "") {
+    return CreateUnaryIntrinsic(Intrinsic::fabs, V, FMFSource, Name);
+  }
+
   /// Create call to the minnum intrinsic.
   Value *CreateMinNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
                       const Twine &Name = "") {
