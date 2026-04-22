@@ -302,8 +302,7 @@ protected:
         m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
     if (!thread_sp) {
       result.AppendErrorWithFormat(
-          "thread disappeared while computing backtraces: 0x%" PRIx64,
-          tid);
+          "thread disappeared while computing backtraces: 0x%" PRIx64, tid);
       return false;
     }
 
@@ -1516,8 +1515,7 @@ public:
     ThreadSP thread_sp =
         m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
     if (!thread_sp) {
-      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64,
-                                   tid);
+      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64, tid);
       return false;
     }
 
@@ -1566,8 +1564,7 @@ public:
     ThreadSP thread_sp =
         m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
     if (!thread_sp) {
-      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64,
-                                   tid);
+      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64, tid);
       return false;
     }
 
@@ -1618,8 +1615,7 @@ public:
     ThreadSP thread_sp =
         m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
     if (!thread_sp) {
-      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64,
-                                   tid);
+      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64, tid);
       return false;
     }
 
