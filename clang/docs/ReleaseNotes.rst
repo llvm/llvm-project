@@ -86,7 +86,10 @@ Clang Frontend Potentially Breaking Changes
   libraries will need to be recompiled, or used with
   (`--no-offload-new-driver`). This option will be removed in the next release.
 
-
+- Clang no longer defines the ``__cpp_impl_coroutine`` feature test macro under the 32 bits x86 Microsoft ABI,
+  as support for coroutines on this target is incomplete.
+  When using coroutines on this target a warning is emmitted to indicate the lack of full support.
+  That warning can be disabled with ``-Wno-coroutines-unsupported-target``.
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
