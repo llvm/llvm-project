@@ -648,13 +648,7 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
       continue;
 
     Matrix->unassign(*Intf);
-    // Urgent eviction will break the cascade assumption.
-    // Should sync with canEvictInterferenceBasedOnCost
-    bool Urgent =
-        !VirtReg.isSpillable() &&
-        (Intf->isSpillable() ||
-         RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
-             RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(Intf->reg())));
+    bool Urgent = EvictAdvisor->isUrgentEviction(VirtReg, *Intf);
     assert((ExtraInfo->getCascade(Intf->reg()) < Cascade ||
             (Cascade < ExtraInfo->getCascade(Intf->reg()) && Urgent) ||
             VirtReg.isSpillable() < Intf->isSpillable()) &&
