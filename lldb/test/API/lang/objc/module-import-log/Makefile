@@ -1,2 +1,2 @@
-C_SOURCES := main.c
+OBJC_SOURCES := main.m
 include Makefile.rules
