@@ -622,17 +622,23 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
 
   // clang-format off
   static const bool ASAliasRules[][AMDGPUAS::MAX_AMDGPU_ADDRESS + 1] = {
-    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */
-    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true},
-    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Region   */            {false, false, true,  false, false, false, false, false, false, false},
-    /* Local    */            {true,  false, false, true,  false, false, false, false, false, false},
-    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true},
-    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false},
-    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true},
-    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true},
+    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr Reserved Reserved Reserved Reserved Reserved Barrier */
+    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true, false, false, false, false, false, false},
+    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Region   */            {false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false},
+    /* Local    */            {true,  false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false},
+    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false},
+    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true, false, false, false, false, false, false},
+    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Barrier  */           {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, true},
   };
   // clang-format on
   static_assert(std::size(ASAliasRules) == AMDGPUAS::MAX_AMDGPU_ADDRESS + 1);

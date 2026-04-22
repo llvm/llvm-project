@@ -937,16 +937,6 @@ public:
     for (auto &[F, Vars] : FunctionLDSUses)
       AllLDSUses[F].insert(Vars.begin(), Vars.end());
 
-    // Named barriers are handled by AMDGPULowerExecSync; filter them out.
-    for (auto &[F, Vars] : AllLDSUses) {
-      SmallVector<GlobalVariable *> Barriers;
-      for (GlobalVariable *V : Vars)
-        if (AMDGPU::isNamedBarrier(*V))
-          Barriers.push_back(V);
-      for (GlobalVariable *V : Barriers)
-        Vars.erase(V);
-    }
-
     // Build reverse map: LDS variable -> functions that use it.
     DenseMap<GlobalVariable *, SmallVector<Function *, 4>> VarToFuncs;
     for (auto &[F, Vars] : AllLDSUses) {

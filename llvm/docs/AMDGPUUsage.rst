@@ -979,6 +979,7 @@ supported for the ``amdgcn`` target.
      *reserved for downstream use (LLPC)*  12
      *reserved for future use*             13
      *reserved for future use*             14
+     Barrier                               15              N/A         N/A              32      0
      *reserved for future use*             16
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
@@ -1192,6 +1193,23 @@ supported for the ``amdgcn`` target.
   a buffer strided pointer, this means that the base pointer is ``align(4)``, that
   the offset is a multiple of 4 bytes, and that the stride is a multiple of 4.
 
+**Barrier**
+  This address space represents barrier IDs (introduced in GFX12) as addresses.
+  It does not map directly to any addressable memory, thus pointers into this address space:
+
+  * Never alias with any other pointers outside this address space.
+  * Cannot be dereferenced.
+  * Can only be consumed by intrinsics.
+  * Are always uniform.
+
+  Pointer are 32 bits and directly correspond to valid barrier IDs. All barrier pointers must,
+  when interpreted as signed 32 bit integers, have a value corresponding to a valid barrier ID
+  on the target. Otherwise, the behavior is undefined.
+
+  Due to these pointers being a compiler abstraction without a corresponding hardware aperture,
+  the back-end handles them as-if they were local pointers with a very large offset as to not
+  overlap with any addressable local memory.
+
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
   file is modelled as a memory in a distinct address space because it is indexed
@@ -1353,10 +1371,8 @@ Named barriers are fixed function hardware barrier objects that are available
 in gfx12.5+ in addition to the traditional default barriers.
 
 In LLVM IR, named barriers are represented by global variables of type
-``target("amdgcn.named.barrier", 0)`` in the LDS address space. Named barrier
-global variables do not occupy actual LDS memory, but their lifetime and
-allocation scope matches that of global variables in LDS. Programs in LLVM IR
-refer to named barriers using pointers.
+``target("amdgcn.named.barrier", 0)`` in the Execution Synchronization Resources
+address space. Programs in LLVM IR refer to named barriers using pointers.
 
 The following named barrier types are supported in global variables, defined
 recursively:
@@ -1367,14 +1383,14 @@ recursively:
 
 .. code-block:: llvm
 
-      @bar = addrspace(3) global target("amdgcn.named.barrier", 0) undef
-      @foo = addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] undef
-      @baz = addrspace(3) global { target("amdgcn.named.barrier", 0) } undef
+      @bar = addrspace(15) global target("amdgcn.named.barrier", 0) undef
+      @foo = addrspace(15) global [2 x target("amdgcn.named.barrier", 0)] undef
+      @baz = addrspace(15) global { target("amdgcn.named.barrier", 0) } undef
 
       ...
 
-      %foo.i = getelementptr [2 x target("amdgcn.named.barrier", 0)], ptr addrspace(3) @foo, i32 0, i32 %i
-      call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %foo.i, i32 0)
+      %foo.i = getelementptr [2 x target("amdgcn.named.barrier", 0)], ptr addrspace(15) @foo, i32 0, i32 %i
+      call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %foo.i, i32 0)
 
 Named barrier types may not be used in ``alloca``.
 

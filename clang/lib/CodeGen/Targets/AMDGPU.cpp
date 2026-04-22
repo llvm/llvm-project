@@ -478,8 +478,21 @@ AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
 
 LangAS AMDGPUTargetCodeGenInfo::adjustGlobalVarAddressSpace(
     CodeGenModule &CGM, const VarDecl *D, std::optional<LangAS> AS) const {
-  if (AS)
+  if (AS) {
+    // NamedWorkgroupBarrier GVs are declared as __shared__, but the back-end
+    // models them as a separate address space.
+    const LangOptions &LangOpts = CGM.getLangOpts();
+    if (D && LangOpts.CUDA && LangOpts.CUDAIsDevice &&
+        AS == LangAS::cuda_shared) {
+      const Type *Ty = D->getType().getCanonicalType().getTypePtr();
+      if (Ty->isArrayType())
+        Ty = Ty->getBaseElementTypeUnsafe();
+      const BuiltinType *BTy = dyn_cast<BuiltinType>(Ty);
+      if (BTy && BTy->getKind() == BuiltinType::AMDGPUNamedWorkgroupBarrier)
+        return getLangASFromTargetAS(llvm::AMDGPUAS::BARRIER);
+    }
     return *AS;
+  }
 
   LangAS DefaultGlobalAS = getLangASFromTargetAS(
       CGM.getContext().getTargetAddressSpace(LangAS::opencl_global));
