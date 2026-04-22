@@ -22,7 +22,6 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Attributes.h"
@@ -46,7 +45,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -267,10 +265,9 @@ class InstrLowerer final {
 public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
-               const RTLIB::RuntimeLibcallsInfo &RTLCI, bool IsCS)
+               bool IsCS)
       : M(M), Options(Options), TT(M.getTargetTriple()), IsCS(IsCS),
-        GetTLI(GetTLI), RTLCI(RTLCI),
-        DataReferencedByCode(profDataReferencedByCode(M)) {}
+        GetTLI(GetTLI), DataReferencedByCode(profDataReferencedByCode(M)) {}
 
   bool lower();
 
@@ -282,9 +279,6 @@ private:
   const bool IsCS;
 
   std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
-
-  // Runtime libcall registry (e.g. __llvm_profile_instrument_gpu).
-  const RTLIB::RuntimeLibcallsInfo &RTLCI;
 
   const bool DataReferencedByCode;
 
@@ -722,9 +716,7 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
   auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  const RTLIB::RuntimeLibcallsInfo &RTLCI =
-      AM.getResult<RuntimeLibraryAnalysis>(M);
-  InstrLowerer Lowerer(M, Options, GetTLI, RTLCI, IsCS);
+  InstrLowerer Lowerer(M, Options, GetTLI, IsCS);
   if (!Lowerer.lower())
     return PreservedAnalyses::all();
 
@@ -1311,17 +1303,8 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
 
   auto *CalleeTy = FunctionType::get(Type::getVoidTy(Context),
                                      {PtrTy, PtrTy, Int64Ty}, false);
-  // Look up the runtime entry-point name through the RuntimeLibcalls
-  // registry instead of hardcoding the string. The concrete impl is
-  // registered for AMDGPU in llvm/include/llvm/IR/RuntimeLibcalls.td; the
-  // consumer side is in
-  // compiler-rt's clang_rt.profile.
-  assert(RTLCI.isAvailable(RTLIB::impl___llvm_profile_instrument_gpu) &&
-         "RuntimeLibcalls.td must register __llvm_profile_instrument_gpu "
-         "for AMDGPU");
-  StringRef IncrFnName =
-      RTLCI.getLibcallImplName(RTLIB::impl___llvm_profile_instrument_gpu);
-  FunctionCallee IncrFn = M.getOrInsertFunction(IncrFnName, CalleeTy);
+  FunctionCallee IncrFn =
+      M.getOrInsertFunction(getInstrProfInstrumentGPUFuncName(), CalleeTy);
   Builder.CreateCall(IncrFn, {CastAddr, UniformAddrArg, StepI64});
 
   Inc->eraseFromParent();
