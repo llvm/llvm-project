@@ -24,6 +24,10 @@
 
 #include <arm_neon.h>
 
+//===------------------------------------------------------===//
+// 2.1.3.1 Vector Saturating left
+//===------------------------------------------------------===//
+
 // LLVM-LABEL: @test_vqshlud_n_s64(
 // CIR-LABEL: @test_vqshlud_n_s64(
 int64_t test_vqshlud_n_s64(int64_t a) {
