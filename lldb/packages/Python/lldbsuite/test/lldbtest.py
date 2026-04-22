@@ -818,6 +818,7 @@ class Base(unittest.TestCase):
             "settings set use-color false",
             # Disable the statusline by default.
             "settings set show-statusline false",
+            "settings set target.check-vo-ownership true",
         ]
 
         # Set any user-overridden settings.
