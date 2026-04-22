@@ -1,0 +1,23 @@
+; RUN: split-file %s %t
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- input.txt
+START
+Noise1
+Noise2
+Noise3
+Noise4
+TARGET
+END
+
+;--- check.txt
+; CHECK: START
+; CHECK-NEXT: TARGET
+; CHECK: END
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  START
+; DIFF-NEXT: -TARGET
+; DIFF-NEXT: +Noise1
+; DIFF-NEXT:  Noise2
