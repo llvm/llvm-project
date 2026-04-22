@@ -476,7 +476,7 @@ defm : MadFmaMixFP32Pats<fma, V_FMA_MIX_F32_BF16, bf16>;
 let True16Predicate = NotUseRealTrue16Insts in
 defm : MadFmaMixFP16Pats<fma, V_FMA_MIXLO_BF16, V_FMA_MIXHI_BF16, bf16, v2bf16>;
 let True16Predicate = UseRealTrue16Insts in
-defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_BF16_t16>;
+defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_BF16_t16, bf16, v2bf16>;
 } // End SubtargetPredicate = HasFmaMixBF16Insts
 
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {

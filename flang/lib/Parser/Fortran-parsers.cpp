@@ -732,7 +732,8 @@ TYPE_PARSER("CONSTANT" >> pure(common::CUDADataAttr::Constant) ||
     "PINNED" >> pure(common::CUDADataAttr::Pinned) ||
     "SHARED" >> pure(common::CUDADataAttr::Shared) ||
     "TEXTURE" >> pure(common::CUDADataAttr::Texture) ||
-    "UNIFIED" >> pure(common::CUDADataAttr::Unified))
+    "UNIFIED" >> pure(common::CUDADataAttr::Unified) ||
+    "VALUE" >> pure(common::CUDADataAttr::Value))
 
 // R804 object-name -> name
 constexpr auto objectName{name};
@@ -1340,6 +1341,7 @@ constexpr auto noinlineDir{
     "NOINLINE" >> construct<CompilerDirective::NoInline>()};
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
+constexpr auto simd{"SIMD" >> construct<CompilerDirective::Simd>()};
 TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1355,6 +1357,7 @@ TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
                 construct<CompilerDirective>(noinlineDir) ||
                 construct<CompilerDirective>(forceinlineDir) ||
                 construct<CompilerDirective>(inlineDir) ||
+                construct<CompilerDirective>(simd) ||
                 construct<CompilerDirective>(ivdep) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(

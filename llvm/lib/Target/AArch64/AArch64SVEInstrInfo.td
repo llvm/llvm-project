@@ -233,14 +233,12 @@ def AArch64mul_p  : SDNode<"AArch64ISD::MUL_PRED",  SDT_AArch64Arith>;
 def AArch64sabd_p : SDNode<"AArch64ISD::ABDS_PRED", SDT_AArch64Arith>;
 def AArch64shadd_p : SDNode<"AArch64ISD::HADDS_PRED", SDT_AArch64Arith>;
 def AArch64srhadd_p : SDNode<"AArch64ISD::RHADDS_PRED", SDT_AArch64Arith>;
-def AArch64sdiv_p : SDNode<"AArch64ISD::SDIV_PRED", SDT_AArch64Arith>;
 def AArch64smax_p : SDNode<"AArch64ISD::SMAX_PRED", SDT_AArch64Arith>;
 def AArch64smin_p : SDNode<"AArch64ISD::SMIN_PRED", SDT_AArch64Arith>;
 def AArch64smulh_p : SDNode<"AArch64ISD::MULHS_PRED", SDT_AArch64Arith>;
 def AArch64uabd_p : SDNode<"AArch64ISD::ABDU_PRED", SDT_AArch64Arith>;
 def AArch64uhadd_p : SDNode<"AArch64ISD::HADDU_PRED", SDT_AArch64Arith>;
 def AArch64urhadd_p : SDNode<"AArch64ISD::RHADDU_PRED", SDT_AArch64Arith>;
-def AArch64udiv_p : SDNode<"AArch64ISD::UDIV_PRED", SDT_AArch64Arith>;
 def AArch64umax_p : SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
 def AArch64umin_p : SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
 def AArch64umulh_p : SDNode<"AArch64ISD::MULHU_PRED", SDT_AArch64Arith>;
@@ -263,6 +261,13 @@ def AArch64fmaxnm_p_nnan : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                    (AArch64fmaxnm_p node:$op1, node:$op2, node:$op3), [{
   return N->getFlags().hasNoNaNs();
 }]>;
+
+def AArch64sdiv_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                             [(int_aarch64_sve_sdiv_u node:$op1, node:$op2, node:$op3),
+                              (masked_sdiv node:$op2, node:$op3, node:$op1)]>;
+def AArch64udiv_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                             [(int_aarch64_sve_udiv_u node:$op1, node:$op2, node:$op3),
+                              (masked_udiv node:$op2, node:$op3, node:$op1)]>;
 
 def SDT_AArch64Arith_Imm : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3,i32>,
@@ -676,6 +681,10 @@ let Predicates = [HasSVE_or_SME] in {
   defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd", uaddsat>;
   defm SQSUB_ZI : sve_int_arith_imm0_ssat<0b110, "sqsub", ssubsat, saddsat>;
   defm UQSUB_ZI : sve_int_arith_imm0<0b111, "uqsub", usubsat>;
+
+  // NOT (x) = SUBR (x, -1).
+  foreach VT = [nxv16i8, nxv8i16, nxv4i32, nxv2i64] in
+    def : Pat<(VT (vnot VT:$op)), (SUBR_ZI_B_PSEUDO ZPR8:$op, (i32 255), (i32 0))>;
 
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", AArch64mad_m1, "MLA_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", AArch64msb_m1, "MLS_ZPmZZ", /*isReverseInstr*/ 1>;
@@ -4584,9 +4593,9 @@ class PromoteNEONToSVEImmWithShift
 let Predicates = [HasSVE_or_SME] in {
   foreach VT = [v2i64, v4i32, v8i16, v16i8] in {
     // Logical operations
-    def : PromoteNEONToSVEImm<and, VT, NEONSplatOfSVELogicalImmPat, AND_ZI, i64>;
-    def : PromoteNEONToSVEImm<xor, VT, NEONSplatOfSVELogicalImmPat, EOR_ZI, i64>;
-    def : PromoteNEONToSVEImm< or, VT, NEONSplatOfSVELogicalImmPat, ORR_ZI, i64>;
+    def : PromoteNEONToSVEImm<and, VT, NEONSplatOfSVELogicalImmPat, AND_ZI_PSEUDO, i64>;
+    def : PromoteNEONToSVEImm<xor, VT, NEONSplatOfSVELogicalImmPat, EOR_ZI_PSEUDO, i64>;
+    def : PromoteNEONToSVEImm< or, VT, NEONSplatOfSVELogicalImmPat, ORR_ZI_PSEUDO, i64>;
   }
 
   // Arith operations: ADD
@@ -4602,10 +4611,10 @@ let Predicates = [HasSVE_or_SME] in {
   def : PromoteNEONToSVEImmWithShift<sub, v16i8, NEONSplatOfSVEAddSubImm, SUB_ZI_B_PSEUDO>;
 
   // Arith operations: MUL
-  def : PromoteNEONToSVEImm<mul, v2i64, NEONSplatOfSVEAddSubImm, MUL_ZI_D, i32>;
-  def : PromoteNEONToSVEImm<mul, v4i32, NEONSplatOfSVEArithSImm, MUL_ZI_S, i32>;
-  def : PromoteNEONToSVEImm<mul, v8i16, NEONSplatOfSVEArithSImm, MUL_ZI_H, i32>;
-  def : PromoteNEONToSVEImm<mul, v16i8, NEONSplatOfSVEArithSImm, MUL_ZI_B, i32>;
+  def : PromoteNEONToSVEImm<mul, v2i64, NEONSplatOfSVEAddSubImm, MUL_ZI_D_PSEUDO, i32>;
+  def : PromoteNEONToSVEImm<mul, v4i32, NEONSplatOfSVEArithSImm, MUL_ZI_S_PSEUDO, i32>;
+  def : PromoteNEONToSVEImm<mul, v8i16, NEONSplatOfSVEArithSImm, MUL_ZI_H_PSEUDO, i32>;
+  def : PromoteNEONToSVEImm<mul, v16i8, NEONSplatOfSVEArithSImm, MUL_ZI_B_PSEUDO, i32>;
 }
 
 //===----------------------------------------------------------------------===//
