@@ -1883,7 +1883,8 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   // call optimization
   if (IsReturnBlock) {
     unsigned RetOpcode = MBBI->getOpcode();
-    // AIX ABI do not support calle pop-up stack f-r fastcc with -tailcallopt.
+    // AIX ABI does not support callee-popup stack for fastcc with -tailcallopt
+    // yet.
     if (MF.getTarget().Options.GuaranteedTailCallOpt &&
         (RetOpcode == PPC::BLR || RetOpcode == PPC::BLR8) &&
         MF.getFunction().getCallingConv() == CallingConv::Fast &&

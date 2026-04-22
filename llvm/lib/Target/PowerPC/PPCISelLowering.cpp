@@ -5990,7 +5990,8 @@ SDValue PPCTargetLowering::FinishCall(
   // When performing tail call optimization the callee pops its arguments off
   // the stack. Account for this here so these bytes can be pushed back on in
   // PPCFrameLowering::eliminateCallFramePseudoInstr.
-  // AIX ABI do not support callee-popup stack for fastcc with -tailcallopt now.
+  // AIX ABI does not support callee-popup stack for fastcc with -tailcallopt
+  // yet.
   int BytesCalleePops =
       (!Subtarget.isAIXABI() && CFlags.CallConv == CallingConv::Fast &&
        getTargetMachine().Options.GuaranteedTailCallOpt)
