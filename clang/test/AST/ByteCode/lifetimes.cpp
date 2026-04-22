@@ -11,7 +11,7 @@ constexpr int dead1() {
 
   Foo *F2 = nullptr;
   {
-    Foo F{12}; // expected-note {{declared here}}
+    Foo F{12}; // both-note {{declared here}}
     F2 = &F;
   } // Ends lifetime of F.
 
@@ -27,7 +27,7 @@ struct S {
   int t;
   constexpr S() : r(0), t(r) {} // both-error {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}} \
                                 // both-note {{read of object outside its lifetime is not allowed in a constant expression}} \
-                                // expected-note {{temporary created here}}
+                                // both-note {{temporary created here}}
 };
 constexpr int k1 = S().t; // both-error {{must be initialized by a constant expression}} \
                           // both-note {{in call to}}
@@ -94,7 +94,7 @@ namespace CallScope {
     constexpr int f() const { return 0; }
   };
   constexpr Q *out_of_lifetime(Q q) { return &q; } // both-warning {{address of stack}} \
-                                                   // expected-note 2{{declared here}}
+                                                   // both-note 2{{declared here}}
   constexpr int k3 = out_of_lifetime({})->n; // both-error {{must be initialized by a constant expression}} \
                                              // expected-note {{read of object outside its lifetime}} \
                                              // ref-note {{read of object outside its lifetime}}

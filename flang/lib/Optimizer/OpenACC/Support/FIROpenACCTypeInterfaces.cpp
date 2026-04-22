@@ -1603,6 +1603,38 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
     mlir::Value valueToStore,
     mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
 
+template <typename Ty>
+mlir::Value OpenACCPointerLikeModel<Ty>::genCast(mlir::Type pointer,
+                                                 mlir::OpBuilder &builder,
+                                                 mlir::Location loc,
+                                                 mlir::Value value,
+                                                 mlir::Type resultType) const {
+  (void)pointer;
+  if (value.getType() == resultType)
+    return value;
+
+  if (fir::ConvertOp::canBeConverted(value.getType(), resultType))
+    return fir::ConvertOp::create(builder, loc, resultType, value);
+
+  return {};
+}
+
+template mlir::Value OpenACCPointerLikeModel<fir::ReferenceType>::genCast(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value value, mlir::Type resultType) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::PointerType>::genCast(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value value, mlir::Type resultType) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::HeapType>::genCast(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value value, mlir::Type resultType) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genCast(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value value, mlir::Type resultType) const;
+
 /// Check CUDA attributes on a function argument.
 static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
   auto *owner = blockArg.getOwner();

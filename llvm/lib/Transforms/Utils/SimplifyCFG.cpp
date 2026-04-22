@@ -5836,7 +5836,8 @@ findContiguousCases(Value *Condition, SmallVectorImpl<ConstantInt *> &Cases,
         /*OtherCases=*/&OtherCases,
     };
   }
-  ConstantRange CR = computeConstantRange(Condition, /*ForSigned=*/false);
+  ConstantRange CR = computeConstantRange(Condition, /*ForSigned=*/false,
+                                          SimplifyQuery(Dest->getDataLayout()));
   // If this is a wrapping contiguous range, that is, [Min, OtherMin] +
   // [OtherMax, Max] (also [OtherMax, OtherMin]), [OtherMin+1, OtherMax-1] is a
   // contiguous range for the other destination. N.B. If CR is not a full range,
@@ -6962,6 +6963,7 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     // Set the alignment to that of an array items. We will be only loading one
     // value out of it.
     Table->setAlignment(DL.getPrefTypeAlign(ValueType));
+    Table->setComdat(Func->getComdat());
     Type *IndexTy = DL.getIndexType(Table->getType());
     auto *ArrayTy = cast<ArrayType>(Table->getValueType());
 
@@ -7316,8 +7318,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       // Grow the table to cover all possible index values to avoid the range
       // check. It will use the default result to fill in the table hole later,
       // so make sure it exist.
-      ConstantRange CR =
-          computeConstantRange(TableIndex, /* ForSigned */ false);
+      ConstantRange CR = computeConstantRange(TableIndex, /*ForSigned=*/false,
+                                              SimplifyQuery(DL));
       // Grow the table shouldn't have any size impact by checking
       // wouldFitInRegister.
       // TODO: Consider growing the table also when it doesn't fit in a register

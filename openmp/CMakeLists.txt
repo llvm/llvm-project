@@ -173,7 +173,7 @@ else()
 
   # Build documentation
   add_subdirectory(docs)
-
-  # Now that we have seen all testsuites, create the check-openmp target.
-  construct_check_openmp_target()
 endif()
+
+# Now that we have seen all testsuites, create the check-openmp target.
+construct_check_openmp_target()

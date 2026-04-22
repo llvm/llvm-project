@@ -3485,27 +3485,51 @@ func.func @omp_allocate_dir(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
   // Test with one data var and allocator clause
   // CHECK: %[[VAL_1:.*]] = arith.constant 1 : i64
   %omp_default_mem_alloc = arith.constant 1 : i64
-  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_1:.*]])
-  omp.allocate_dir (%arg0 : memref<i32>) allocator(%omp_default_mem_alloc)
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_1:.*]]  : i64)
+  omp.allocate_dir (%arg0 : memref<i32>) allocator(%omp_default_mem_alloc : i64)
 
   // Test with one data var, align clause and allocator clause
   // CHECK: %[[VAL_2:.*]] = arith.constant 7 : i64
   %omp_pteam_mem_alloc = arith.constant 7 : i64
-  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>)  align(4) allocator(%[[VAL_2:.*]])
-  omp.allocate_dir (%arg0 : memref<i32>)  align(4) allocator(%omp_pteam_mem_alloc)
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>)  align(4) allocator(%[[VAL_2:.*]]  : i64)
+  omp.allocate_dir (%arg0 : memref<i32>)  align(4) allocator(%omp_pteam_mem_alloc  : i64)
 
   // Test with two data vars, align clause and allocator clause
   // CHECK: %[[VAL_3:.*]] = arith.constant 6 : i64
   %omp_cgroup_mem_alloc = arith.constant 6 : i64
-  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) align(8) allocator(%[[VAL_3:.*]])
-  omp.allocate_dir (%arg0, %arg1 : memref<i32>, memref<i32>) align(8) allocator(%omp_cgroup_mem_alloc)
+  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) align(8) allocator(%[[VAL_3:.*]] : i64)
+  omp.allocate_dir (%arg0, %arg1 : memref<i32>, memref<i32>) align(8) allocator(%omp_cgroup_mem_alloc : i64)
 
   // Test with one data var and user defined allocator clause
   // CHECK: %[[VAL_4:.*]] = arith.constant 9 : i64
   %custom_allocator = arith.constant 9 : i64
   %custom_mem_alloc = func.call @omp_init_allocator(%custom_allocator) : (i64) -> (i64)
-  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_5:.*]])
-  omp.allocate_dir (%arg0 : memref<i32>) allocator(%custom_mem_alloc)
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_5:.*]] : i64)
+  omp.allocate_dir (%arg0 : memref<i32>) allocator(%custom_mem_alloc : i64)
+
+  return
+}
+
+// CHECK-LABEL: func.func @omp_allocate_free(
+// CHECK-SAME: %[[ARG0:.*]]: memref<i32>,
+// CHECK-SAME: %[[ARG1:.*]]: memref<i32>) {
+func.func @omp_allocate_free(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
+
+  // Test free with no allocator
+  // CHECK: omp.allocate_free(%[[ARG0]] : memref<i32>)
+  omp.allocate_free (%arg0 : memref<i32>)
+
+  // Test free with allocator clause
+  // CHECK: %[[VAL_1:.*]] = arith.constant 1 : i64
+  %omp_default_mem_alloc = arith.constant 1 : i64
+  // CHECK: omp.allocate_free(%[[ARG0]] : memref<i32>) allocator(%[[VAL_1:.*]] : i64)
+  omp.allocate_free (%arg0 : memref<i32>) allocator(%omp_default_mem_alloc : i64)
+
+  // Test free with two variables and allocator clause
+  // CHECK: %[[VAL_3:.*]] = arith.constant 6 : i64
+  %omp_cgroup_mem_alloc = arith.constant 6 : i64
+  // CHECK: omp.allocate_free(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) allocator(%[[VAL_3:.*]] : i64)
+  omp.allocate_free (%arg0, %arg1 : memref<i32>, memref<i32>) allocator(%omp_cgroup_mem_alloc : i64)
 
   return
 }

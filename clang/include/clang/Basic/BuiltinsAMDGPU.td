@@ -213,6 +213,10 @@ def __builtin_amdgcn_ds_permute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_ds_bpermute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_readfirstlane : AMDGPUBuiltin<"int(int)", [Const]>;
 def __builtin_amdgcn_readlane : AMDGPUBuiltin<"int(int, int)", [Const]>;
+def __builtin_amdgcn_wave_shuffle : AMDGPUBuiltin<"int(int, int)", [Const]> {
+  let Documentation = [DocWaveShuffle];
+  let ArgNames = ["src", "idx"];
+}
 def __builtin_amdgcn_fmed3f : AMDGPUBuiltin<"float(float, float, float)", [Const]>;
 def __builtin_amdgcn_ds_faddf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">;
 def __builtin_amdgcn_ds_fminf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">;
@@ -953,8 +957,8 @@ def __builtin_amdgcn_global_store_async_from_lds_b128 : AMDGPUBuiltin<"void(_Ext
 def __builtin_amdgcn_ds_atomic_async_barrier_arrive_b64 : AMDGPUBuiltin<"void(long int address_space<3> *)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64 : AMDGPUBuiltin<"long int(long int address_space<3> *, long int)", [Const], "gfx1250-insts">;
 
-def __builtin_amdgcn_tensor_load_to_lds : AMDGPUBuiltin<"void(_ExtVector<4, int>, _ExtVector<8, int>, _ExtVector<4, int>, _ExtVector<4, int>, _ExtVector<8, int>, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_tensor_store_from_lds : AMDGPUBuiltin<"void(_ExtVector<4, int>, _ExtVector<8, int>, _ExtVector<4, int>, _ExtVector<4, int>, _ExtVector<8, int>, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_tensor_load_to_lds : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int>, _ExtVector<8, int>, _ExtVector<4, int>, _ExtVector<4, int>, _ExtVector<8, int>, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_tensor_store_from_lds : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int>, _ExtVector<8, int>, _ExtVector<4, int>, _ExtVector<4, int>, _ExtVector<8, int>, _Constant int)", [Const], "gfx1250-insts">;
 
 
 def __builtin_amdgcn_global_load_tr4_b64_v2i32 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<1> *)", [Const], "transpose-load-f4f6-insts,wavefrontsize32">;
