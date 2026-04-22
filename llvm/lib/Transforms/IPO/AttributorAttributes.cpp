@@ -4499,6 +4499,9 @@ struct AAIsDeadValueImpl : public AAIsDead {
     if (!I || wouldInstructionBeTriviallyDead(I))
       return true;
 
+    if (!I->isTerminator() && !I->mayHaveSideEffects())
+      return true;
+
     auto *CB = dyn_cast<CallBase>(I);
     if (!CB || isa<IntrinsicInst>(CB))
       return false;
