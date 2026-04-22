@@ -935,6 +935,7 @@ RT_API_ATTRS bool EditLogicalInput(
     break;
   case 'L':
   case 'G':
+  case 'B':
     break;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
@@ -951,19 +952,34 @@ RT_API_ATTRS bool EditLogicalInput(
     io.GetIoErrorHandler().SignalError("Empty LOGICAL input field");
     return false;
   }
-  switch (*next) {
-  case 'T':
-  case 't':
-    x = true;
-    break;
-  case 'F':
-  case 'f':
-    x = false;
-    break;
-  default:
-    io.GetIoErrorHandler().SignalError(
-        "Bad character '%lc' in LOGICAL input field", *next);
-    return false;
+  if (edit.descriptor == 'B') {
+    switch (*next) {
+    case '1':
+      x = true;
+      break;
+    case '0':
+      x = false;
+      break;
+    default:
+      io.GetIoErrorHandler().SignalError(
+          "Bad character '%lc' in BINARY input field", *next);
+      return false;
+    }
+  } else {
+    switch (*next) {
+    case 'T':
+    case 't':
+      x = true;
+      break;
+    case 'F':
+    case 'f':
+      x = false;
+      break;
+    default:
+      io.GetIoErrorHandler().SignalError(
+          "Bad character '%lc' in LOGICAL input field", *next);
+      return false;
+    }
   }
   if (remaining || edit.descriptor == DataEdit::ListDirected) {
     // Ignore the rest of the input field; stop after separator when
