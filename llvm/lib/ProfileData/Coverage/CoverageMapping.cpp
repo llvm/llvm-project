@@ -1106,18 +1106,20 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     }
 
     for (object::BuildIDRef BinaryID : BinaryIDsToFetch) {
-      Expected<std::string> Path = BIDFetcher->fetch(BinaryID);
-      if (Path) {
+      std::optional<std::string> PathOpt = BIDFetcher->fetch(BinaryID);
+      if (PathOpt) {
+        std::string Path = std::move(*PathOpt);
         StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
-        if (Error E = loadFromFile(*Path, Arch, CompilationDir,
-                                   ProfileReaderRef, *Coverage, DataFound))
+        if (Error E = loadFromFile(Path, Arch, CompilationDir, ProfileReaderRef,
+                                   *Coverage, DataFound))
           return std::move(E);
+      } else if (CheckBinaryIDs) {
+        return createFileError(
+            ProfileFilename.value(),
+            createStringError(errc::no_such_file_or_directory,
+                              "Missing binary ID: " +
+                                  llvm::toHex(BinaryID, /*LowerCase=*/true)));
       }
-      if (CheckBinaryIDs) {
-        return createFileError(ProfileFilename.value(), Path.takeError());
-      }
-      // Ignore error and continue.
-      consumeError(Path.takeError());
     }
   }
 
