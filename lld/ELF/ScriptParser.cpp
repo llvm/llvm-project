@@ -74,7 +74,7 @@ private:
   void readSections();
   void readSectionsStmt(SmallVectorImpl<SectionCommand *> &v, StringRef tok);
   void readOutputSectionStmt(OutputSection &osec, StringRef tok);
-  void readIncludedBody(llvm::function_ref<void(StringRef)> readStmt);
+  void readStmts(llvm::function_ref<void(StringRef)> readStmt);
   void readTarget();
   void readVersion();
   void readVersionScriptCommand();
@@ -240,7 +240,7 @@ void ScriptParser::readVersion() {
 }
 
 void ScriptParser::readLinkerScript() {
-  readIncludedBody([&](StringRef t) { readLinkerScriptStmt(t); });
+  readStmts([&](StringRef t) { readLinkerScriptStmt(t); });
 }
 
 void ScriptParser::readLinkerScriptStmt(StringRef tok) {
@@ -254,9 +254,8 @@ void ScriptParser::readLinkerScriptStmt(StringRef tok) {
   } else if (tok == "GROUP") {
     readGroup();
   } else if (tok == "INCLUDE") {
-    readInclude([&] {
-      readIncludedBody([&](StringRef t) { readLinkerScriptStmt(t); });
-    });
+    readInclude(
+        [&] { readStmts([&](StringRef t) { readLinkerScriptStmt(t); }); });
   } else if (tok == "INPUT") {
     readInput();
   } else if (tok == "MEMORY") {
@@ -426,8 +425,7 @@ void ScriptParser::readInclude(llvm::function_ref<void()> parse) {
 }
 
 // Drive `readStmt` on each token until EOF of the current buffer.
-void ScriptParser::readIncludedBody(
-    llvm::function_ref<void(StringRef)> readStmt) {
+void ScriptParser::readStmts(llvm::function_ref<void(StringRef)> readStmt) {
   while (!atEOF()) {
     StringRef tok = next();
     if (atEOF())
@@ -725,9 +723,8 @@ void ScriptParser::readSectionsStmt(SmallVectorImpl<SectionCommand *> &v,
     return;
   }
   if (tok == "INCLUDE") {
-    readInclude([&] {
-      readIncludedBody([&](StringRef t) { readSectionsStmt(v, t); });
-    });
+    readInclude(
+        [&] { readStmts([&](StringRef t) { readSectionsStmt(v, t); }); });
     return;
   }
   if (SectionCommand *cmd = readAssignment(tok))
@@ -1117,7 +1114,7 @@ void ScriptParser::readOutputSectionStmt(OutputSection &osec, StringRef tok) {
     readSort();
   } else if (tok == "INCLUDE") {
     readInclude([&] {
-      readIncludedBody([&](StringRef t) { readOutputSectionStmt(osec, t); });
+      readStmts([&](StringRef t) { readOutputSectionStmt(osec, t); });
     });
   } else if (tok == "(" || tok == ")") {
     setError("expected filename pattern");
@@ -1877,8 +1874,7 @@ void ScriptParser::readMemory() {
 
 void ScriptParser::readMemoryStmt(StringRef tok) {
   if (tok == "INCLUDE") {
-    readInclude(
-        [&] { readIncludedBody([&](StringRef t) { readMemoryStmt(t); }); });
+    readInclude([&] { readStmts([&](StringRef t) { readMemoryStmt(t); }); });
     return;
   }
 
