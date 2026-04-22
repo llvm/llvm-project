@@ -774,6 +774,7 @@ inline auto m_GetElementPtr(const Op0_t &Op0, const Op1_t &Op1) {
       Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
                    /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe>(
           Op0, Op1),
+      VPInstruction_match<Instruction::GetElementPtr, Op0_t, Op1_t>(Op0, Op1),
       VPInstruction_match<VPInstruction::PtrAdd, Op0_t, Op1_t>(Op0, Op1),
       VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>(Op0, Op1));
 }

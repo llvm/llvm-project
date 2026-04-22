@@ -271,6 +271,11 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                             CI->getType(), CI->getDebugLoc(),
                                             VPIRFlags(*CI), MD);
         NewR->setUnderlyingValue(CI);
+      } else if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
+        NewR = VPIRBuilder.createScalarGEP(GEP->getSourceElementType(),
+                                           VPOperands, GEP->getDebugLoc(),
+                                           VPIRFlags(*GEP), MD);
+        NewR->setUnderlyingValue(GEP);
       } else if (auto *LI = dyn_cast<LoadInst>(Inst)) {
         NewR = VPIRBuilder.createScalarLoad(LI->getType(), VPOperands[0],
                                             LI->getDebugLoc(), MD);

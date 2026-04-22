@@ -26,9 +26,9 @@ define void @f1() {
 ; CHECK-NEXT:  bb2:
 ; CHECK-NEXT:    ir<%c.1.0> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%_tmp1> = zext ir<0> to i64
-; CHECK-NEXT:    EMIT ir<%_tmp2> = getelementptr ir<@a>, ir<0>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR ir<%_tmp2> = getelementptr [1 x %rec8] ir<@a>, ir<0>, ir<0>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%_tmp6> = sext ir<%c.1.0> to i64
-; CHECK-NEXT:    EMIT ir<%_tmp7> = getelementptr ir<@b>, ir<0>, ir<%_tmp6>
+; CHECK-NEXT:    EMIT-SCALAR ir<%_tmp7> = getelementptr [2 x ptr] ir<@b>, ir<0>, ir<%_tmp6>
 ; CHECK-NEXT:    EMIT store ir<@a>, ir<%_tmp7>
 ; CHECK-NEXT:    EMIT ir<%_tmp9> = add nsw ir<%c.1.0>, ir<1>
 ; CHECK-NEXT:    EMIT ir<%_tmp11> = icmp sge ir<%_tmp9>, ir<2>

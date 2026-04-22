@@ -1454,6 +1454,7 @@ bool VPInstruction::isVectorToScalar() const {
 
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
+  case Instruction::GetElementPtr:
   case Instruction::Load:
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
@@ -1612,6 +1613,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case Instruction::ICmp:
   case Instruction::Select:
   case Instruction::Or:
+  case Instruction::GetElementPtr:
   case Instruction::Freeze:
   case VPInstruction::Not:
     // TODO: Cover additional opcodes.
@@ -1851,6 +1853,27 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
     printOperands(O, SlotTracker);
     O << " to " << *ResultTy;
   }
+}
+#endif
+
+void VPGEPInstruction::execute(VPTransformState &State) {
+  auto Ops = map_to_vector(operands(),
+                           [&](VPValue *Op) { return State.get(Op, true); });
+  Value *GEP =
+      State.Builder.CreateGEP(getSourceElementType(), Ops.front(),
+                              drop_begin(Ops), "", getGEPNoWrapFlags());
+  State.set(this, GEP, true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPGEPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
+                                   VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT-SCALAR ";
+  printAsOperand(O, SlotTracker);
+  O << " = getelementptr";
+  printFlags(O);
+  O << *getSourceElementType() << " ";
+  printOperands(O, SlotTracker);
 }
 #endif
 
