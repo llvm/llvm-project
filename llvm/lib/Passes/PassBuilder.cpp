@@ -489,13 +489,17 @@ public:
 } // namespace
 
 static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
+  if (S == "Os" || S == "Oz")
+    reportFatalUsageError(
+        Twine("The optimization level \"") + S +
+        "\" is no longer supported. Use O2 in conjunction with the " +
+        (S == "Os" ? "optsize" : "minsize") + " attribute instead.");
+
   return StringSwitch<std::optional<OptimizationLevel>>(S)
       .Case("O0", OptimizationLevel::O0)
       .Case("O1", OptimizationLevel::O1)
       .Case("O2", OptimizationLevel::O2)
       .Case("O3", OptimizationLevel::O3)
-      .Case("Os", OptimizationLevel::Os)
-      .Case("Oz", OptimizationLevel::Oz)
       .Default(std::nullopt);
 }
 
@@ -827,8 +831,7 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
     std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
-    // Don't accept -Os/-Oz.
-    if (OptLevel && !OptLevel->isOptimizingForSize()) {
+    if (OptLevel) {
       UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
       continue;
     }
