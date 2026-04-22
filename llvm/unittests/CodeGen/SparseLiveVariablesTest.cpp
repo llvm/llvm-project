@@ -66,7 +66,7 @@ TEST(SparseLiveVariablesTest, APITests) {
 
   // Run SparseLiveVariables analysis
   SparseLiveVariables LV;
-  LV.runOnMachineFunction(*MF);
+  LV.analyze(*MF);
 
   // Block Level Sets Check
   const SparseBitVector<> &LiveIn = LV.getLiveInSet(MBB);
@@ -113,7 +113,7 @@ TEST(SparseLiveVariablesTest, IncrementalLivenessUpdates) {
 
   // Run SparseLiveVariables analysis
   SparseLiveVariables LV;
-  LV.runOnMachineFunction(*MF);
+  LV.analyze(*MF);
 
   // Initially Reg0 is NOT live-out of MBB1 and NOT live-in to MBB2
   EXPECT_FALSE(LV.getLiveOutSet(MBB1).test(Reg0.id()));
@@ -174,7 +174,7 @@ TEST(SparseLiveVariablesTest, RecomputeRegisterLiveness) {
   MBB2->insert(MBB2->end(), MI2);
 
   SparseLiveVariables LV;
-  LV.runOnMachineFunction(*MF);
+  LV.analyze(*MF);
 
   EXPECT_TRUE(LV.getLiveOutSet(MBB1).test(Reg0.id()));
   EXPECT_TRUE(LV.getLiveInSet(MBB2).test(Reg0.id()));
@@ -229,7 +229,7 @@ TEST(SparseLiveVariablesTest, HandleMoveUpdatesLiveness) {
   MBB2->insert(MBB2->end(), MI2);
 
   SparseLiveVariables LV;
-  LV.runOnMachineFunction(*MF);
+  LV.analyze(*MF);
 
   EXPECT_TRUE(LV.getLiveOutSet(MBB1).test(Reg0.id()));
   EXPECT_TRUE(LV.getLiveInSet(MBB2).test(Reg0.id()));
@@ -296,7 +296,7 @@ TEST(SparseLiveVariablesTest, PhiNodeLiveness) {
   MBB3->insert(MBB3->end(), MI3);
 
   SparseLiveVariables LV;
-  LV.runOnMachineFunction(*MF);
+  LV.analyze(*MF);
 
   // For PHI nodes, Reg1 and Reg2 should be LiveOut of their respective
   // predecessors, but neither should be considered LiveIn to MBB3.

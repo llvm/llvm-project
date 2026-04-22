@@ -35,8 +35,10 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/PassRegistry.h"
 
 namespace llvm {
 
@@ -47,11 +49,9 @@ namespace llvm {
 /// memory-efficient alternative to the legacy LiveVariables pass. It operates
 /// as a read-only analysis but provides mutation APIs (`updateLiveIns`)
 /// to explicitly update the IR state if desired.
-class SparseLiveVariables : public MachineFunctionPass {
+class SparseLiveVariables {
 public:
-  static char ID;
-
-  SparseLiveVariables() : MachineFunctionPass(ID) {}
+  SparseLiveVariables() = default;
 
   struct BlockInfo {
     SparseBitVector<> LiveIn;
@@ -181,20 +181,11 @@ public:
   /// Update the live-ins of all basic blocks in MF based on computed liveness.
   void updateLiveIns(MachineFunction &MF) const;
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "Sparse Live Variable Analysis";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
+  void analyze(MachineFunction &MF);
 
 private:
-  const MachineRegisterInfo *MRI;
-  const TargetRegisterInfo *TRI;
+  const MachineRegisterInfo *MRI = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
   void propagateGrowth(Register Reg, MachineBasicBlock *StartBB,
                        MachineInstr *IgnoreMI = nullptr);
@@ -207,6 +198,43 @@ private:
                  MachineInstr *IgnoreMI = nullptr) const;
   void reevaluateLiveIn(Register Reg, MachineBasicBlock *MBB,
                         MachineInstr *IgnoreMI = nullptr);
+};
+
+class SparseLiveVariablesAnalysis
+    : public AnalysisInfoMixin<SparseLiveVariablesAnalysis> {
+  friend AnalysisInfoMixin<SparseLiveVariablesAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = SparseLiveVariables;
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+};
+
+class SparseLiveVariablesWrapperPass : public MachineFunctionPass {
+  SparseLiveVariables LV;
+
+public:
+  static char ID;
+
+  SparseLiveVariablesWrapperPass() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    LV.analyze(MF);
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  SparseLiveVariables &getLV() { return LV; }
+
+  StringRef getPassName() const override {
+    return "Sparse Live Variable Analysis";
+  }
 };
 
 } // end namespace llvm
