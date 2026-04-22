@@ -3044,8 +3044,8 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   // If we are using out of line pointer glue we have to emit the
   // linkage for it.
   if (OutContext.hasXCOFFSection(
-          ".__ptrgl", XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER))) {
-    MCSymbol *PtrGlueSym = OutContext.getOrCreateSymbol(".__ptrgl[PR]");
+          "._ptrgl", XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER))) {
+    MCSymbol *PtrGlueSym = OutContext.getOrCreateSymbol("._ptrgl[PR]");
     OutStreamer->emitXCOFFSymbolLinkageWithVisibility(PtrGlueSym, MCSA_Extern,
                                                       MCSA_Invalid);
   }

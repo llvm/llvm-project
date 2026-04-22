@@ -5640,15 +5640,6 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
   if (!CFlags.IsIndirect)
     Ops.push_back(Callee);
   else if (Subtarget.noInlineGlue()) {
-    // An indirect call with out of line glue code. We create a target
-    // external symbol for '.__ptrgl' as the callee.
-    auto &Context = DAG.getMachineFunction().getContext();
-    MCSectionXCOFF *Sec = Context.getXCOFFSection(
-        ".__ptrgl", SectionKind::getMetadata(),
-        XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER));
-    MCSymbolXCOFF *CalleeSym = Sec->getQualNameSymbol();
-    Callee = DAG.getTargetExternalSymbol(CalleeSym->getName().data(),
-                                         Callee.getValueType(), 0);
     Ops.push_back(Callee);
     // Add the register used to pass the descriptor address.
     Ops.push_back(
@@ -5738,10 +5729,13 @@ SDValue PPCTargetLowering::FinishCall(
   if (!CFlags.IsIndirect)
     Callee = transformCallee(Callee, DAG, dl, Subtarget);
   else if (Subtarget.usesFunctionDescriptors())
-    if (Subtarget.noInlineGlue())
+    if (Subtarget.noInlineGlue()) {
       prepareOutOfLineGlueCall(DAG, Callee, Glue, Chain, CallSeqStart, CB, dl,
                                CFlags.HasNest, Subtarget);
-    else
+      SDValue PtrGlueCallee =
+          DAG.getExternalSymbol("_ptrgl", getPointerTy(DAG.getDataLayout()));
+      Callee = transformCallee(PtrGlueCallee, DAG, dl, Subtarget);
+    } else
       prepareDescriptorIndirectCall(DAG, Callee, Glue, Chain, CallSeqStart, CB,
                                     dl, CFlags.HasNest, Subtarget);
   else
