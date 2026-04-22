@@ -25162,7 +25162,7 @@ This is an overloaded intrinsic.
 ::
 
       declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1.i32(i32 %addrA, i32 %addrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
       declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
       declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
 
@@ -25251,7 +25251,7 @@ This is an overloaded intrinsic.
 ::
 
       declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1.i32(i32 %addrA, i32 %addrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
       declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
       declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
 
