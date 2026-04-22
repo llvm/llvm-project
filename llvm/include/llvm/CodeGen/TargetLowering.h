@@ -443,7 +443,7 @@ public:
   /// G_INSERT_VECTOR_ELT, G_EXTRACT_VECTOR_ELT,
   /// G_INSERT_SUBVECTOR, and G_EXTRACT_SUBVECTOR
   LLT getVectorIdxLLT(const DataLayout &DL) const {
-    return LLT::scalar(getVectorIdxWidth(DL));
+    return LLT::integer(getVectorIdxWidth(DL));
   }
 
   /// Returns the type to be used for the EVL/AVL operand of VP nodes:
@@ -996,8 +996,9 @@ public:
   /// Return the ValueType for comparison libcalls. Comparison libcalls include
   /// floating point comparison calls, and Ordered/Unordered check calls on
   /// floating point numbers.
-  virtual
-  MVT::SimpleValueType getCmpLibcallReturnType() const;
+  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
+    return MVT::i32; // return the default value
+  }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
   /// of boolean values held in types wider than i1.

@@ -16,6 +16,8 @@
   define void @nocopyprop3() { ret void }
   define void @nocopyprop4() { ret void }
   define void @nocopyprop5() { ret void }
+  define void @nocopyprop_frame_setup() { ret void }
+  define void @nocopyprop_frame_destroy() { ret void }
 ...
 ---
 # The second copy is redundant and will be removed, check that we also remove
@@ -252,4 +254,24 @@ body: |
   bb.0:
     $rip = COPY $rax
     $rip = COPY $rax
+...
+---
+# Conservatively assume prologue/epilogue instructions may have
+# additional effects.
+# CHECK-LABEL: name: nocopyprop_frame_setup
+# CHECK: bb.0:
+# CHECK-NEXT: $rbx = frame-setup COPY $rax
+name: nocopyprop_frame_setup
+body: |
+  bb.0:
+    $rbx = frame-setup COPY $rax
+...
+---
+# CHECK-LABEL: name: nocopyprop_frame_destroy
+# CHECK: bb.0:
+# CHECK-NEXT: $rbx = frame-destroy COPY $rax
+name: nocopyprop_frame_destroy
+body: |
+  bb.0:
+    $rbx = frame-destroy COPY $rax
 ...

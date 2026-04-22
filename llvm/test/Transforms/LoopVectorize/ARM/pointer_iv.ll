@@ -176,7 +176,7 @@ define hidden void @pointer_phi_v8i16_add1(ptr noalias nocapture readonly %A, pt
 entry:
   %0 = trunc i32 %y to i16
   br label %for.body
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %A.addr.011 = phi ptr [ %A, %entry ], [ %add.ptr, %for.body ]
   %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %B.addr.09 = phi ptr [ %B, %entry ], [ %incdec.ptr, %for.body ]
@@ -232,7 +232,7 @@ define hidden void @pointer_phi_v8i16_add2(ptr noalias nocapture readonly %A, pt
 entry:
   %0 = trunc i32 %y to i16
   br label %for.body
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %A.addr.011 = phi ptr [ %A, %entry ], [ %add.ptr, %for.body ]
   %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %B.addr.09 = phi ptr [ %B, %entry ], [ %incdec.ptr, %for.body ]
@@ -271,7 +271,7 @@ define hidden void @pointer_phi_v8i16_add3(ptr noalias nocapture readonly %A, pt
 entry:
   %0 = trunc i32 %y to i16
   br label %for.body
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %A.addr.011 = phi ptr [ %A, %entry ], [ %add.ptr, %for.body ]
   %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %B.addr.09 = phi ptr [ %B, %entry ], [ %incdec.ptr, %for.body ]

@@ -192,4 +192,4 @@ class TestCase(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
-        self._expect_cmd("dwim-print gGlobal", "frame variable")
+        self._expect_cmd("dwim-print gGlobal", "expression")

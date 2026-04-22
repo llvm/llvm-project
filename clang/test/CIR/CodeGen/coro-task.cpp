@@ -430,7 +430,6 @@ folly::coro::Task<void> yield1() {
 // yield_value + await(yield)
 // CIR: %[[YIELD_TASK:.*]] = cir.call @_Z5yieldv(){{.*}}
 // CIR: cir.store{{.*}} %[[YIELD_TASK]], %[[T_ADDR]]
-// CIR: cir.copy %[[T_ADDR]] to %[[AWAITER_COPY_ADDR]]
 // CIR: %[[AWAITER:.*]] = cir.load{{.*}} %[[AWAITER_COPY_ADDR]]
 // CIR: %[[YIELD_SUSP:.*]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type11yield_valueES2_(%[[PROMISE]], %[[AWAITER]]){{.*}}
 // CIR: cir.store{{.*}} %[[YIELD_SUSP]], %[[SUSP1]]
@@ -484,20 +483,17 @@ folly::coro::Task<int> go1() {
 
 // CIR: cir.func coroutine {{.*}} @_Z3go1v() {{.*}} ![[IntTask]]
 // CIR: %[[IntTaskAddr:.*]] = cir.alloca ![[IntTask]], !cir.ptr<![[IntTask]]>, ["task", init]
+// CIR: %[[OneAddr:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp1", init] {alignment = 4 : i64}
 
 // CIR: cir.await(init, ready : {
 // CIR: }, suspend : {
 // CIR: }, resume : {
 // CIR: },)
 
-// The call to go(1) has its own scope due to full-expression rules.
-// CIR: cir.scope {
-// CIR:   %[[OneAddr:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp1", init] {alignment = 4 : i64}
-// CIR:   %[[One:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:   cir.store{{.*}} %[[One]], %[[OneAddr]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[IntTaskTmp:.*]] = cir.call @_Z2goRKi(%[[OneAddr]]) : (!cir.ptr<!s32i>{{.*}}) -> ![[IntTask]]
-// CIR:   cir.store{{.*}} %[[IntTaskTmp]], %[[IntTaskAddr]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
-// CIR: }
+// CIR: %[[One:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.store{{.*}} %[[One]], %[[OneAddr]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[IntTaskTmp:.*]] = cir.call @_Z2goRKi(%[[OneAddr]]) : (!cir.ptr<!s32i>{{.*}}) -> ![[IntTask]]
+// CIR: cir.store{{.*}} %[[IntTaskTmp]], %[[IntTaskAddr]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
 
 // CIR: cir.await(user, ready : {
 // CIR: }, suspend : {
@@ -570,16 +566,13 @@ folly::coro::Task<int> go4() {
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
 // CIR: %[[INVOKER:.*]] = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%{{.*}}) nothrow : {{.*}} -> (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>> {llvm.noundef})
 // CIR: cir.store{{.*}} %[[INVOKER]], %[[FN_ADDR:.*]] : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>>
-// CIR: cir.scope {
-// CIR:   %[[ARG:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp2", init] {alignment = 4 : i64}
-// CIR:   %[[FN:.*]] = cir.load{{.*}} %[[FN_ADDR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>>, !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
-// CIR:   %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR:   cir.store{{.*}} %[[THREE]], %[[ARG]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[FN:.*]] = cir.load{{.*}} %[[FN_ADDR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>>, !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
+// CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CIR: cir.store{{.*}} %[[THREE]], %[[ARG:.*]] : !s32i, !cir.ptr<!s32i>
 
 // Call invoker, which calls operator() indirectly.
-// CIR:   %[[CALLRES:.*]] = cir.call %[[FN]](%[[ARG]]) : (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!s32i> {{.*}}) -> ![[IntTask]]
-// CIR:   cir.store{{.*}} %[[CALLRES]], %[[TASK_ADDR:.*]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
-// CIR: }
+// CIR: %[[CALLRES:.*]] = cir.call %[[FN]](%[[ARG]]) : (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!s32i> {{.*}}) -> ![[IntTask]]
+// CIR: cir.store{{.*}} %[[CALLRES]], %[[TASK_ADDR:.*]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
 
 // CIR: cir.await(user, ready : {
 // CIR:   = cir.call @_ZN5folly4coro4TaskIiE11await_readyEv(%[[TASK_ADDR]])

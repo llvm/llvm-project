@@ -341,7 +341,10 @@ class VariadicEnumArgument<string name, string type, bit is_string,
 }
 
 // Represents an attribute wrapped by another attribute.
-class WrappedAttr<string name, bit opt = 0> : Argument<name, opt>;
+class WrappedAttr<string name, bit opt = 0, string type = ""> : Argument<name, opt> {
+  // C++ class name for the wrapped attr (without the ' *' suffix).
+  string AttrType = type;
+}
 
 // This handles one spelling of an attribute.
 class Spelling<string name, string variety, int version = 1> {
@@ -934,9 +937,15 @@ def AlignNatural : InheritableAttr {
 
 def AlwaysInline : DeclOrStmtAttr {
   let Spellings = [GCC<"always_inline">, CXX11<"clang", "always_inline">,
-                   C23<"clang", "always_inline">, CustomKeyword<"__forceinline">];
+                   C23<"clang", "always_inline">, CustomKeyword<"__forceinline">,
+                   CXX11<"msvc", "forceinline">, C23<"msvc", "forceinline">,
+                   CXX11<"msvc", "forceinline_calls">, C23<"msvc", "forceinline_calls">];
   let Accessors = [Accessor<"isClangAlwaysInline", [CXX11<"clang", "always_inline">,
-                                                    C23<"clang", "always_inline">]>];
+                                                    C23<"clang", "always_inline">]>,
+                   Accessor<"isMSVCForceInline", [CXX11<"msvc", "forceinline">,
+                                                  C23<"msvc", "forceinline">]>,
+                   Accessor<"isMSVCForceInlineCalls", [CXX11<"msvc", "forceinline_calls">,
+                                                       C23<"msvc", "forceinline_calls">]>];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
   let Documentation = [AlwaysInlineDocs];
@@ -1102,7 +1111,7 @@ def Availability : InheritableAttr {
               BoolArgument<"unavailable">, StringArgument<"message">,
               BoolArgument<"strict">, StringArgument<"replacement">,
               IntArgument<"priority">, IdentifierArgument<"environment">,
-              VersionArgument<"origAnyAppleOSVersion", 0, 1>];
+              WrappedAttr<"InferredAttr", 1, "AvailabilityAttr">];
   let AdditionalMembers =
 [{static llvm::StringRef getPrettyPlatformName(llvm::StringRef Platform) {
     return llvm::StringSwitch<llvm::StringRef>(Platform)
@@ -1238,6 +1247,20 @@ static llvm::Triple::OSType getOSType(llvm::StringRef Platform) {
              .Case("xros", OSType::XROS)
              .Case("xros_app_extension", OSType::XROS)
              .Default(OSType::UnknownOS);
+}
+
+const AvailabilityAttr *getEffectiveAttr() const {
+  if (auto *Inf = getInferredAttrAs())
+    return Inf;
+  return this;
+}
+AvailabilityAttr *getEffectiveAttr() {
+  return const_cast<AvailabilityAttr *>(
+      static_cast<const AvailabilityAttr *>(this)->getEffectiveAttr());
+}
+VersionTuple getEffectiveIntroduced() const { return getEffectiveAttr()->getIntroduced(); }
+const IdentifierInfo *getEffectiveEnvironment() const {
+  return getEffectiveAttr()->getEnvironment();
 }
 
 }];

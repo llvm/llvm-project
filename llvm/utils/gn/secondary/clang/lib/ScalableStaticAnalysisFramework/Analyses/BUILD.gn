@@ -10,6 +10,9 @@ static_library("Analyses") {
   ]
   sources = [
     "CallGraph/CallGraphExtractor.cpp",
+    "CallGraph/CallGraphJSONFormat.cpp",
+    "EntityPointerLevel/EntityPointerLevel.cpp",
+    "UnsafeBufferUsage/UnsafeBufferUsage.cpp",
     "UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp",
   ]
 }
