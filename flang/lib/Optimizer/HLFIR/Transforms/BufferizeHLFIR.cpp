@@ -29,6 +29,7 @@
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -857,6 +858,137 @@ struct CharExtremumOpConversion
   }
 };
 
+struct ConditionalOpConversion
+    : public mlir::OpConversionPattern<hlfir::ConditionalOp> {
+  using mlir::OpConversionPattern<hlfir::ConditionalOp>::OpConversionPattern;
+  explicit ConditionalOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::ConditionalOp>{ctx} {
+    // This pattern recursively converts nested ConditionalOp's
+    // by cloning and then converting them, so we have to allow
+    // for recursive pattern application. The recursion is bounded
+    // by the nesting level of ConditionalOp's.
+    setHasBoundedRewriteRecursion();
+  }
+  /// Compute the MLIR type of the temp's DeclareOp base result,
+  /// given the hlfir.expr type of the conditional. This must match
+  /// what createAndDeclareTemp + hlfir::DeclareOp would produce.
+  static mlir::Type computeTempBaseType(fir::FirOpBuilder &builder,
+                                        hlfir::ExprType exprType) {
+    const mlir::Type eleTy{exprType.getEleTy()};
+    const bool isPolymorphic{exprType.isPolymorphic()};
+    const bool isArray{exprType.isArray()};
+    mlir::Type elemOrSeqType{eleTy};
+    if (isArray)
+      elemOrSeqType = fir::SequenceType::get(exprType.getShape(), eleTy);
+    // Polymorphic: runtime allocate produces fir.class<fir.heap<T>>,
+    // DeclareOp strips the heap attribute → fir.class<T>.
+    if (isPolymorphic)
+      return fir::ClassType::get(elemOrSeqType);
+    // Arrays (non-polymorphic): heap alloc → fir.heap<seqTy>,
+    // DeclareOp wraps in box → fir.box<seqTy>.
+    if (isArray)
+      return fir::BoxType::get(elemOrSeqType);
+    // Scalar, non-polymorphic.
+    if (auto charTy{mlir::dyn_cast<fir::CharacterType>(eleTy)})
+      if (charTy.hasDynamicLen())
+        return fir::BoxCharType::get(builder.getContext(), charTy.getFKind());
+    if (fir::isRecordWithTypeParameters(eleTy))
+      return fir::BoxType::get(eleTy);
+    return fir::ReferenceType::get(eleTy);
+  }
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::ConditionalOp condOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    const mlir::Location loc{condOp->getLoc()};
+    fir::FirOpBuilder builder(rewriter, condOp.getOperation());
+    HLFIRListener listener{builder, rewriter};
+    builder.setListener(&listener);
+    // Use ExprType to ensure both branches produce identical MLIR temp types.
+    const auto exprType{
+        mlir::cast<hlfir::ExprType>(condOp.getResult().getType())};
+    const bool isPolymorphic{exprType.isPolymorphic()};
+    const bool isArray{exprType.isArray()};
+    mlir::Type elemOrSeqType{exprType.getEleTy()};
+    if (isArray)
+      elemOrSeqType =
+          fir::SequenceType::get(exprType.getShape(), elemOrSeqType);
+    const bool useStack{!isArray && !isPolymorphic};
+    const mlir::Type tempBaseType{computeTempBaseType(builder, exprType)};
+    // Callback for hlfir::DeclareOp.
+    auto genTempDeclareOp =
+        [](fir::FirOpBuilder &bldr, mlir::Location l, mlir::Value memref,
+           llvm::StringRef name, mlir::Value shape,
+           llvm::ArrayRef<mlir::Value> typeParams,
+           fir::FortranVariableFlagsAttr attrs) -> mlir::Value {
+      auto declareOp =
+          hlfir::DeclareOp::create(bldr, l, memref, name, shape, typeParams,
+                                   /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+                                   /*storage_offset=*/0, attrs);
+      return declareOp.getBase();
+    };
+
+    // Emit one branch: clone ops, create temp, assign, run deferred
+    // destroys, yield (temp, mustFree).
+    auto emitBranch = [&](mlir::Region &region) {
+      mlir::IRMapping mapper;
+      // Clone all ops except hlfir.destroy and the terminator.
+      for (auto &op : region.front().without_terminator())
+        if (!mlir::isa<hlfir::DestroyOp>(op))
+          builder.clone(op, mapper);
+      auto yield{mlir::cast<hlfir::YieldOp>(region.front().getTerminator())};
+      // Dereference allocatable/pointer values.
+      const hlfir::Entity val{hlfir::derefPointersAndAllocatables(
+          loc, builder,
+          hlfir::Entity{mapper.lookupOrDefault(yield.getEntity())})};
+      // Obtain runtime length/shape from the actual yielded value.
+      llvm::SmallVector<mlir::Value> lenParams;
+      hlfir::genLengthParameters(loc, builder, val, lenParams);
+      mlir::Value shape{};
+      llvm::SmallVector<mlir::Value> extents;
+      if (isArray) {
+        shape = hlfir::genShape(loc, builder, val);
+        extents = hlfir::getExplicitExtentsFromShape(shape, builder);
+      }
+      // Create temp with common MLIR type but runtime params from the yielded
+      // value.
+      const auto [base, isHeapAlloc]{builder.createAndDeclareTemp(
+          loc, elemOrSeqType, shape, extents, lenParams, genTempDeclareOp,
+          isPolymorphic ? val.getBase() : nullptr, useStack, ".tmp.cond")};
+      const hlfir::Entity temp{base};
+      assert(temp.getType() == tempBaseType &&
+             "temp type mismatch with fir.if result type");
+      hlfir::AssignOp::create(builder, loc, val, temp,
+                              /*realloc=*/false,
+                              /*keep_lhs_length_if_realloc=*/false,
+                              /*temporary_lhs=*/true);
+      // Clone hlfir.destroy ops after the assign to avoid
+      // use-after-free of the source operand.
+      for (auto &op : region.front().without_terminator())
+        if (mlir::isa<hlfir::DestroyOp>(op))
+          builder.clone(op, mapper);
+      // Return temp and mustFree as separate fir.result values.
+      mlir::Value mustFreeVal{builder.createBool(loc, isHeapAlloc)};
+      fir::ResultOp::create(builder, loc, mlir::ValueRange{temp, mustFreeVal});
+    };
+
+    // Generate fir.if returning (temp, mustFree) as two results.
+    auto ifOp{builder.genIfOp(
+        loc, /*resultTypes=*/{tempBaseType, builder.getI1Type()},
+        adaptor.getCondition(),
+        /*withElseRegion=*/true)};
+    ifOp.genThen([&]() { emitBranch(condOp.getThenRegion()); })
+        .genElse([&]() { emitBranch(condOp.getElseRegion()); })
+        .end();
+    // Package fir.if results into the bufferized expr tuple.
+    const mlir::Value bufferizedExpr{
+        packageBufferizedExpr(loc, builder, hlfir::Entity{ifOp.getResults()[0]},
+                              ifOp.getResults()[1])};
+    rewriter.replaceOp(condOp, bufferizedExpr);
+    return mlir::success();
+  }
+};
+
 struct EvaluateInMemoryOpConversion
     : public mlir::OpConversionPattern<hlfir::EvaluateInMemoryOp> {
   using mlir::OpConversionPattern<
@@ -892,12 +1024,13 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-                    AssociateOpConversion, CharExtremumOpConversion,
-                    ConcatOpConversion, DestroyOpConversion,
-                    EndAssociateOpConversion, EvaluateInMemoryOpConversion,
-                    NoReassocOpConversion, SetLengthOpConversion,
-                    ShapeOfOpConversion, GetLengthOpConversion>(context);
+    patterns.insert<
+        ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+        AssociateOpConversion, CharExtremumOpConversion, ConcatOpConversion,
+        ConditionalOpConversion, DestroyOpConversion, EndAssociateOpConversion,
+        EvaluateInMemoryOpConversion, NoReassocOpConversion,
+        SetLengthOpConversion, ShapeOfOpConversion, GetLengthOpConversion>(
+        context);
     patterns.insert<ElementalOpConversion>(context, optimizeEmptyElementals);
     mlir::ConversionTarget target(*context);
     // Note that YieldElementOp is not marked as an illegal operation.
@@ -905,7 +1038,8 @@ public:
     // conversion pattern to YieldElementOp itself. If any YieldElementOp
     // survives this pass, the verifier will detect it because it has to be
     // a child of ElementalOp and ElementalOp's are explicitly illegal.
-    target.addIllegalOp<hlfir::ApplyOp, hlfir::AssociateOp, hlfir::ElementalOp,
+    target.addIllegalOp<hlfir::ApplyOp, hlfir::AssociateOp,
+                        hlfir::ConditionalOp, hlfir::ElementalOp,
                         hlfir::EndAssociateOp, hlfir::SetLengthOp>();
 
     target.markUnknownOpDynamicallyLegal([](mlir::Operation *op) {
