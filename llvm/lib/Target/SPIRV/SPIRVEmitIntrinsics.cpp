@@ -2266,7 +2266,7 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
     Prev = Prev->getPrevNode();
   if (auto *CI = dyn_cast_or_null<CallInst>(Prev);
       CI && CI->getIntrinsicID() == Intrinsic::spv_abort)
-      return &I;
+    return &I;
 #ifndef NDEBUG
   for (Instruction *P = I.getPrevNode(); P; P = P->getPrevNode()) {
     auto *CI = dyn_cast<CallInst>(P);
