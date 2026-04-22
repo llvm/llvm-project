@@ -71,7 +71,7 @@ struct ExtraRematTest : public testing::Test {
 StringRef Text = R"(
     define ptr @f(i32 %n) presplitcoroutine {
     entry:
-      %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+      %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
       %size = call i32 @llvm.coro.size.i32()
       %alloc = call ptr @malloc(i32 %size)
       %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -186,7 +186,7 @@ TEST_F(ExtraRematTest, TestCoroRematWithCallback) {
 StringRef TextCoroBeginCustomABI = R"(
     define ptr @f(i32 %n) presplitcoroutine {
     entry:
-      %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+      %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
       %size = call i32 @llvm.coro.size.i32()
       %alloc = call ptr @malloc(i32 %size)
       %hdl = call ptr @llvm.coro.begin.custom.abi(token %id, ptr %alloc, i32 0)
