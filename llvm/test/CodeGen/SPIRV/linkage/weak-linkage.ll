@@ -12,6 +12,8 @@
 ; CHECK-SPIRV-NOT: OpExtension "SPV_AMD_weak_linkage"
 ; CHECK-SPIRV-NOT: OpDecorate %[[#]] LinkageAttributes "GV" Weak
 ; CHECK-SPIRV-NOT: OpDecorate %[[#]] LinkageAttributes "square" Weak
+; CHECK-SPIRV-DAG: OpDecorate %[[#]] LinkageAttributes "GV" Export
+; CHECK-SPIRV-DAG: OpDecorate %[[#]] LinkageAttributes "square" Export
 
 @GV = weak addrspace(1) global [3 x i32] zeroinitializer, align 4
 
