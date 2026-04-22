@@ -12,6 +12,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   ConcatNestedNamespacesCheck.cpp
   DeprecatedHeadersCheck.cpp
   DeprecatedIosBaseAliasesCheck.cpp
+  UseStdEraseCheck.cpp
   IntegralLiteralExpressionMatcher.cpp
   LoopConvertCheck.cpp
   LoopConvertUtils.cpp
