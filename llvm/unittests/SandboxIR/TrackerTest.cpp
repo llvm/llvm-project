@@ -128,7 +128,7 @@ define void @foo(i1 %cond) {
   auto &Tracker = Ctx.getTracker();
   Tracker.save();
   auto It = BB0->begin();
-  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+  auto *Br = cast<sandboxir::CondBrInst>(&*It++);
 
   unsigned SuccIdx = 0;
   SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1, BB2});
@@ -628,6 +628,84 @@ define void @foo(i8 %arg0, i8 %arg1) {
   EXPECT_EQ(Call->getCalledFunction(), Bar2F);
   Ctx.revert();
   EXPECT_EQ(Call->getCalledFunction(), Bar1F);
+}
+
+TEST_F(TrackerTest, UncondBrSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+ bb0:
+   br label %bb1
+ bb1:
+   ret void
+ bb2:
+   ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto It = BB0->begin();
+  auto *Br = cast<sandboxir::UncondBrInst>(&*It++);
+
+  // Check setSuccessor().
+  Ctx.save();
+  EXPECT_EQ(Br->getSuccessor(), BB1);
+  Br->setSuccessor(BB2);
+  EXPECT_EQ(Br->getSuccessor(), BB2);
+  Ctx.revert();
+  EXPECT_EQ(Br->getSuccessor(), BB1);
+}
+
+TEST_F(TrackerTest, CondBrSetters) {
+  parseIR(C, R"IR(
+define void @foo(i1 %cond0, i1 %cond2) {
+ bb0:
+   br i1 %cond0, label %bb1, label %bb2
+ bb1:
+   ret void
+ bb2:
+   ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Cond0 = F.getArg(0);
+  auto *Cond1 = F.getArg(1);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto It = BB0->begin();
+  auto *Br = cast<sandboxir::CondBrInst>(&*It++);
+
+  // Check setSuccessor().
+  Ctx.save();
+  EXPECT_EQ(Br->getSuccessor(0), BB1);
+  EXPECT_EQ(Br->getSuccessor(1), BB2);
+  Br->setSuccessor(0, BB2);
+  Br->setSuccessor(1, BB1);
+  EXPECT_EQ(Br->getSuccessor(0), BB2);
+  EXPECT_EQ(Br->getSuccessor(1), BB1);
+  Ctx.revert();
+  EXPECT_EQ(Br->getSuccessor(0), BB1);
+  EXPECT_EQ(Br->getSuccessor(1), BB2);
+
+  // Check setCondition().
+  Ctx.save();
+  EXPECT_EQ(Br->getCondition(), Cond0);
+  Br->setCondition(Cond1);
+  EXPECT_EQ(Br->getCondition(), Cond1);
+  Ctx.revert();
+  EXPECT_EQ(Br->getCondition(), Cond0);
 }
 
 TEST_F(TrackerTest, InvokeSetters) {

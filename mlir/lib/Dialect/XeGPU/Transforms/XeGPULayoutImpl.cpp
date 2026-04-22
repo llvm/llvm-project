@@ -18,12 +18,15 @@
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -80,30 +83,225 @@ xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
   return out;
 }
 
-// Attach layout attributes to all vector-type operands of operations within
-// the given operation's region. Reports an error if any vector operand lacks
-// a layout attribute.
-bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
-  auto result = rootOp->walk([&](Operation *op) {
-    for (OpOperand &operand : op->getOpOperands()) {
-      // Layouts are needed for vector type only.
-      if (!isa<VectorType>(operand.get().getType()))
-        continue;
-      // Skip block arguments since they don't have defining ops to attach
-      // layout attributes to.
-      if (isa<BlockArgument>(operand.get()))
-        continue;
-      auto layout = xegpu::getDistributeLayoutAttr(operand.get());
-      if (!layout) {
-        op->emitWarning("Could not find layout attribute for operand ")
-            << operand.getOperandNumber() << " of operation " << op->getName();
-        continue;
-      }
-      xegpu::setTemporaryLayout(operand, layout);
+// the walkRegionBackward() is a recursive function
+// the input rootOp is the function operation, which is also a region op.
+// it recursively processes the region op in reverse topological order.
+static void walkRegionBackward(Region &region,
+                               llvm::function_ref<void(Operation *)> visit) {
+
+  // Use post-order traversal to process blocks in reverse topological order.
+  // This ensures that use blocks are visited before def blocks, which is
+  // required for backward layout propagation.
+  if (region.empty())
+    return;
+  llvm::ReversePostOrderTraversal<Region *> rpot(&region);
+  SmallVector<Block *> blocks(rpot.begin(), rpot.end());
+  for (Block *block : llvm::reverse(blocks)) {
+    // ops: back -> front
+    for (Operation &op : llvm::reverse(*block)) {
+      // make sure we first visit inside the region op (so yield op first)
+      // and then move to region op itself
+      // Regions are iterated in forward order so that for multi-region ops
+      // like scf.while, earlier regions (e.g., "before/cond") are processed
+      // first. This ensures that when a later region's terminator (e.g., "do"
+      // yield) needs the layout of an earlier region's block args, those
+      // layouts are already available from use points.
+      for (Region &nested : op.getRegions())
+        walkRegionBackward(nested, visit);
+
+      visit(&op);
     }
-    return WalkResult::advance();
+  }
+}
+
+static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
+  xegpu::DistributeLayoutAttr layout = nullptr;
+  for (OpOperand &use : result.getUses()) {
+    if (auto tmpLayout = xegpu::getDistributeLayoutAttr(use)) {
+      if (!layout)
+        layout = tmpLayout;
+      break;
+    }
+  }
+  return layout;
+}
+
+// For regular operations: First the result layouts are propagated from uses.
+// Then the result layouts are propagated to uses (operands).
+static void propagateResultsToRegularOperands(Operation *op) {
+  if (op->getNumResults() == 0 || op->getNumResults() > 1)
+    return;
+
+  OpResult result = op->getResult(0);
+  xegpu::DistributeLayoutAttr resLayout = getLayoutFromUsePoints(result);
+  Type resultType = result.getType();
+
+  // recover layout for tensor Descriptor type, which is a special case since
+  // its layout is not stored as an attribute but encoded in the type itself.
+  // For vector type, we attach the layout as an attribute to op.
+  if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
+    auto layout = tensorDescTy.getLayoutAttr();
+    if (!layout) {
+      auto typeWithLayout = xegpu::TensorDescType::get(
+          tensorDescTy.getContext(), tensorDescTy.getShape(),
+          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), resLayout);
+      result.setType(typeWithLayout);
+    }
+  }
+  if (isa<VectorType>(resultType) && resLayout)
+    xegpu::setTemporaryLayout(result, resLayout);
+
+  for (OpOperand &opr : op->getOpOperands()) {
+    xegpu::DistributeLayoutAttr operandLayout =
+        xegpu::inferSourceLayoutFromResult(opr, resLayout);
+    if (isa<VectorType>(opr.get().getType()) && operandLayout)
+      xegpu::setTemporaryLayout(opr, operandLayout);
+  }
+}
+
+// Propagate layout from region op results and sibling region block args
+// to yield/condition operands. For each successor of this terminator:
+// - Parent successor: propagate from parent op's result layouts (use points).
+// - Region successor: propagate from target region's block arg layouts (use
+//   points), e.g., scf.yield in "after/do" region propagates to "before/cond"
+//   block args.
+static void propagateRegionResultsToYieldOperands(
+    mlir::RegionBranchTerminatorOpInterface yieldOp) {
+  auto regionBranchOp =
+      dyn_cast<RegionBranchOpInterface>(yieldOp->getParentOp());
+  if (!regionBranchOp)
+    return;
+
+  SmallVector<RegionSuccessor> successors;
+  SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
+  yieldOp.getSuccessorRegions(operandAttrs, successors);
+
+  for (const RegionSuccessor &successor : successors) {
+    OperandRange succOps = yieldOp.getSuccessorOperands(successor);
+    if (succOps.empty())
+      continue;
+    unsigned beginIdx = succOps.getBeginOperandIndex();
+    ValueRange successorInputs = regionBranchOp.getSuccessorInputs(successor);
+    unsigned count = std::min<unsigned>(succOps.size(), successorInputs.size());
+
+    for (unsigned i = 0; i < count; ++i) {
+      xegpu::DistributeLayoutAttr layout;
+      if (successor.isParent()) {
+        // For parent successor, get layout from external use points of the
+        // parent op's results.
+        layout = getLayoutFromUsePoints(regionBranchOp->getResult(i));
+        if (layout)
+          xegpu::setTemporaryLayout(regionBranchOp->getResult(i), layout);
+      } else {
+        // For region successor, get layout from the target region's block
+        // arg use points (e.g., "before/cond" region args for scf.while
+        // "after/do" yield).
+        layout = getLayoutFromUsePoints(successorInputs[i]);
+      }
+      if (!layout)
+        continue;
+      if (isa<VectorType>(succOps[i].getType()))
+        xegpu::setTemporaryLayout(yieldOp->getOpOperand(beginIdx + i), layout);
+    }
+  }
+}
+
+// Propagate layout from region arguments to region op's init operands. This
+// sets the temporary layout for region arguments and init operands.
+static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
+  // Iterate all regions of the region op. For each block argument that has a
+  // layout (determined from its use points), trace back to find the
+  // corresponding init operand of the regionOp and set the layout on it.
+  // This works generically for scf.for, scf.while, and other
+  // RegionBranchOpInterface ops.
+  for (Region &region : regionOp->getRegions()) {
+    RegionSuccessor regionSuccessor(&region);
+    // Use getSuccessorInputs to get the block arguments that correspond to
+    // predecessor operands. This correctly handles ops like scf.for where
+    // the induction variable is a block arg but not a successor input.
+    ValueRange successorInputs = regionOp.getSuccessorInputs(regionSuccessor);
+    for (auto [inputIdx, regionArg] : llvm::enumerate(successorInputs)) {
+      auto layout = getLayoutFromUsePoints(regionArg);
+      if (!layout)
+        continue;
+
+      // Recover layout for tensor_desc block args by updating the type.
+      if (auto tensorDescTy =
+              dyn_cast<xegpu::TensorDescType>(regionArg.getType())) {
+        if (!tensorDescTy.getLayoutAttr()) {
+          auto typeWithLayout = xegpu::TensorDescType::get(
+              tensorDescTy.getContext(), tensorDescTy.getShape(),
+              tensorDescTy.getElementType(), tensorDescTy.getEncoding(),
+              layout);
+          regionArg.setType(typeWithLayout);
+        }
+      }
+
+      // Find all predecessor values that flow into this block argument.
+      SmallVector<Value> predValues;
+      regionOp.getPredecessorValues(regionSuccessor, inputIdx, predValues);
+      for (Value predVal : predValues) {
+        // Match predecessor value to an operand of the regionOp.
+        for (OpOperand &operand : regionOp->getOpOperands()) {
+          if (operand.get() == predVal)
+            xegpu::setTemporaryLayout(operand, layout);
+        }
+      }
+    }
+  }
+}
+
+// Prerequisite for Layout Recovery
+// It relies on the following invariant:
+// 1. there is no layout conflict between different uses of the same definition.
+// 2. each definition has a well-defined layout requirement at its use point.
+//     - Every definition must have at least one use that appears after it in
+//     topological order.
+//     - TODO: If a definition has no such use (e.g., a loop result or region
+//     output), an explicit convert_layout operation is inserted to create a
+//     use.
+//     - Only the result of convert_layout is permitted to have no subsequent
+//     use.
+//
+// The recovery proceeds by scanning the operation in reverse topological order
+// as follows:
+//    For regular operations: First the result layouts are propagated from uses.
+//      Then the result layouts are propagated to operands.
+//
+//    For region operations (e.g., loops):
+//       - When backward propagation reaches a region op, it sets the layout of
+//       the region op’s results according to use points like regular ops.
+//       - Then, the result layouts (such as a loop output) are propagated to
+//       their corresponding operands in the yield.
+//       - When backward propagation reaches the first operation inside the
+//       region, the pass examines the region op’s initialization list,
+//       propagating from region arguments to the corresponding initialization
+//       operands.
+//       - This ensures that layouts are consistently propagated
+//       across region boundaries while preserving a single well-defined use for
+//       each definition at the region-op level.
+bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
+  auto processFunc = [&](Region &body, StringRef funcName) {
+    walkRegionBackward(body, [&](Operation *op) {
+      if (auto regionOp = dyn_cast<mlir::RegionBranchOpInterface>(op)) {
+        propagateRegionArgsToInits(regionOp);
+      } else if (auto yieldOp =
+                     dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
+        propagateRegionResultsToYieldOperands(yieldOp);
+      } else if (!dyn_cast<xegpu::AnchorLayoutInterface>(op)) {
+        propagateResultsToRegularOperands(op);
+      }
+    });
+  };
+
+  rootOp->walk([&](func::FuncOp func) {
+    processFunc(func.getBody(), func.getSymName());
   });
-  return !result.wasInterrupted();
+  rootOp->walk([&](gpu::GPUFuncOp func) {
+    processFunc(func.getBody(), func.getName());
+  });
+
+  return true;
 }
 
 template <typename T, typename>
@@ -132,6 +330,18 @@ void xegpu::removeLayoutAttrs(Operation *op) {
     }
     for (auto attrName : attrsToRemove)
       nestOp->removeAttr(attrName);
+  });
+}
+
+void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
+  op->walk([&](Operation *nestOp) {
+    SmallVector<StringAttr> attrsToRemove;
+    for (auto namedAttr : nestOp->getDiscardableAttrs()) {
+      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
+        attrsToRemove.push_back(namedAttr.getName());
+    }
+    for (auto attrName : attrsToRemove)
+      nestOp->removeDiscardableAttr(attrName);
   });
 }
 
@@ -181,6 +391,11 @@ xegpu::inferMultiReductionSourceLayout(xegpu::DistributeLayoutAttr resLayout,
          "reduction dims must match with slice dims");
 
   return sliceLayout.getParent();
+}
+
+xegpu::DistributeLayoutAttr
+xegpu::inferReductionSourceLayout(xegpu::DistributeLayoutAttr resLayout) {
+  return xegpu::inferMultiReductionSourceLayout(resLayout, {0});
 }
 
 /// Infers the source layout attribute for a transpose operation given the
@@ -376,6 +591,17 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return nullptr;
 }
 
+/// Infers the layout attribute for mask and offset operand for Chunked load
+/// and store, given the anchor layout attribute for the value being load/store.
+xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
+    xegpu::DistributeLayoutAttr payloadLayout, int chunkSize) {
+  auto rank = payloadLayout.getRank();
+  if (chunkSize > 1)
+    return payloadLayout.dropDims(
+        llvm::to_vector(llvm::seq<int64_t>(rank - 1, rank)));
+  return payloadLayout;
+}
+
 /// Sets up layout for reduction operations by creating a SliceAttr for the
 /// result.
 ///
@@ -388,7 +614,9 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 /// layout and data with the consumer's layout on non-reduction dimensions.
 /// Then, it distributes remaining subgroups across reduction dimensions. This
 /// avoids subgroup data redistribution overhead between the reduced result and
-/// its consumer.
+/// its consumer. When the consumer layout is a slice layout, it attempts to
+/// reuse the slice layout's parent layout for the source to further minimize
+/// potential data redistribution.
 ///
 /// InstData requries {1, ..., min(maxReduceVectorSize, srcShape),subgroupSize}
 /// Lane Layout requires {1, ..., 1, subgroupSize}
@@ -396,17 +624,34 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 ///
 /// Examples:
 ///   1. Subgroup layout - Row reduction on 2D tensor:
-///      srcShape=[32, 64], reductionDims=[1], resShape=[32], subgroupSize=16,
-///      workgroupSize=32
-///      Consumer Layout:
-///      #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
-///      [1]>} Result: srcLayout with sgLayout=[4, 8], sgData=[8, 8] (matches
-///      consumer on non-reduction dim, minimizing data redistribution on
-///      reduction dim)
-///   2. Subgroup layout - Same example above but consumer has different layout:
-///      sgLayout=[32], sgData=[1]
-///      Result: srcLayout with sgLayout=[32,1], sgData=[1, 64]
-///      (distributes all subgroups on non reduction dim)
+///      srcShape=[32, 128], reductionDims=[1], resShape=[32], subgroupSize=16,
+///      NumSg=32
+///      * Consumer Layout:
+///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
+///        [1]>}
+////     * Result Layout:
+///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8],sg_data=[8, 16]>, dims =
+///        [1]>}
+///      Note that the sg_layout is reused but sg_data needs to be adjusted to
+///      evenly distribute the source tensor tile among the reduction dim.
+///
+///   2. Subgroup layout - Same example above but consumer doesn't have a
+///   reusable slice layout.
+///      * Consumer Layout:
+///        #xegpu.layout<sgLayout=[32], sgData=[1]>
+///      * Result Layout:
+///        #xegpu.slice<#xegpu.layout<sgLayout=[32,1], sgData=[1, 64]>, dims =
+///        [1]>}
+///      * Consumer Layout:
+///        #xegpu.slice<#xegpu.layout<sgLayout=[8, 2, 4], sgData=[4, 64, 32]>,
+///      dims = [1, 2]>}
+///      * Result Layout:
+///        #xegpu.slice<#xegpu.layout<sgLayout=[8,4], sgData=[4, 32]>, dims =
+///        [1]>}
+///      Note that the consumer's layout can't be directly reused as is.
+///      So the algorithm distributes all subgroups on non reduction dimensions
+///      first and then distribute remaining subgroups on the reduction
+///      dimension.
 ///
 ///   2. InstData layout - Column reduction:
 ///      srcShape=[32, 64], reductionDims=[0], subgroupSize=16
@@ -421,15 +666,11 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
     DistributeLayoutAttr consumerLayout, SmallVector<int64_t> reductionDims,
-    const xegpu::uArch::uArch *uArch) {
+    int numSg, const xegpu::uArch::uArch *uArch) {
 
   auto srcShape = srcVecTy.getShape();
   int srcRank = srcShape.size();
-  auto context = consumerLayout.getContext();
-
-  // Reduction layout requires at least 2D tensors
-  if (srcRank < 2)
-    return nullptr;
+  auto context = srcVecTy.getContext();
 
   // Helper lambda to convert int64 vectors to int32 DenseArrayAttr
   auto toInt32Attr = [&](ArrayRef<int64_t> vec) {
@@ -437,79 +678,130 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     return DenseI32ArrayAttr::get(context, vec32);
   };
 
-  // Extract original plain layout for workgroup/subgroup size recovery
-  xegpu::SliceAttr consumerSliceLayout =
-      dyn_cast<xegpu::SliceAttr>(consumerLayout);
-  DistributeLayoutAttr plainLayout =
-      consumerSliceLayout ? consumerSliceLayout.flatten().getParent()
-                          : consumerLayout;
-
   const int subgroupSize = uArch->getSubgroupSize();
   int64_t maxReduceVectorSize = 1; // could extend to spirv vector Size
-
   xegpu::DistributeLayoutAttr srcLayout;
-
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    auto sgLayoutVec = plainLayout.getEffectiveSgLayoutAsInt();
-    const int workgroupSize = std::accumulate(
-        sgLayoutVec.begin(), sgLayoutVec.end(), 1, std::multiplies<int64_t>());
-    SmallVector<int64_t> sgLayout(srcRank), sgData(srcRank);
-    SmallVector<int64_t> consumerSgLayout =
-        consumerLayout.getEffectiveSgLayoutAsInt();
-    int remainingSgCount = workgroupSize;
-    int consumerIdx = consumerSgLayout.size() - 1;
+    xegpu::SliceAttr consumerSliceLayout =
+        dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
+    if (consumerSliceLayout &&
+        consumerSliceLayout.getDims().asArrayRef().equals(reductionDims)) {
+      srcLayout = consumerSliceLayout.getParent();
+      SmallVector<int64_t> sgLayoutFromConsumer =
+          srcLayout.getEffectiveSgLayoutAsInt();
+      auto srcSgData = computeShapeRatio(srcShape, sgLayoutFromConsumer);
+      if (srcSgData)
+        for (int dim = 0; dim < srcRank; dim++) {
+          if (llvm::is_contained(reductionDims, dim))
+            srcLayout =
+                srcLayout.setDimData(dim, srcSgData.value()[dim], -1, -1);
+        }
+    } else {
+      SmallVector<int64_t> consumerSgLayout =
+          consumerLayout ? consumerLayout.getEffectiveSgLayoutAsInt()
+                         : SmallVector<int64_t>();
+      SmallVector<int64_t> consumerSgData =
+          consumerLayout ? consumerLayout.getEffectiveSgDataAsInt()
+                         : SmallVector<int64_t>();
+      SmallVector<int64_t> consumerOrder =
+          consumerLayout ? consumerLayout.getEffectiveOrderAsInt()
+                         : SmallVector<int64_t>();
+      DenseI32ArrayAttr orderAttr =
+          consumerLayout ? consumerLayout.getOrder() : nullptr;
+      SmallVector<int64_t> sgLayout(srcRank), sgData(srcRank), order(srcRank);
+      int remainingSgCount =
+          consumerLayout ? consumerLayout.getNumSubgroups() : numSg;
+      int consumerIdx = 0;
 
-    // First pass: Match consumer's layout on non-reduction dimensions
-    for (int i = srcRank - 1; i >= 0; i--) {
-      if (!llvm::is_contained(reductionDims, i) && consumerIdx >= 0) {
-        sgLayout[i] = consumerSgLayout[consumerIdx];
-        assert((srcShape[i] % sgLayout[i] == 0) &&
-               "source shape not divisible by consumer sg_layout");
-        sgData[i] = srcShape[i] / sgLayout[i];
-        remainingSgCount /= sgLayout[i];
-        consumerIdx--;
+      // First pass: Match consumer's layout on non-reduction dimensions
+      for (int i = 0; i < srcRank; i++) {
+        if (!llvm::is_contained(reductionDims, i) &&
+            consumerIdx < static_cast<int>(consumerSgLayout.size())) {
+          sgLayout[i] = consumerSgLayout[consumerIdx];
+          sgData[i] = consumerSgData[consumerIdx];
+          remainingSgCount /= sgLayout[i];
+          order[i] = consumerOrder[consumerIdx];
+          consumerIdx++;
+        }
       }
-    }
 
-    // Second pass: Distribute remaining subgroups across reduction dimensions
-    for (int i = srcRank - 1; i >= 0; i--) {
-      if (llvm::is_contained(reductionDims, i)) {
-        sgLayout[i] =
-            std::min(srcShape[i], static_cast<int64_t>(remainingSgCount));
-        assert((srcShape[i] % sgLayout[i] == 0) &&
-               "source shape not divisible by sg_layout");
-        sgData[i] = srcShape[i] / sgLayout[i];
-        remainingSgCount /= sgLayout[i];
+      // Second pass: Distribute remaining subgroups across reduction dimensions
+      // the reduction to scalar case is handled only by this loop
+      int64_t remainOrder = consumerSgLayout.size();
+      for (int i = 0; i < srcRank; i++) {
+        if (llvm::is_contained(reductionDims, i)) {
+          sgLayout[i] =
+              std::min(srcShape[i], static_cast<int64_t>(remainingSgCount));
+          assert((srcShape[i] % sgLayout[i] == 0) &&
+                 "source shape not divisible by sg_layout");
+          sgData[i] = srcShape[i] / sgLayout[i];
+          remainingSgCount /= sgLayout[i];
+          order[i] = remainOrder++;
+        }
       }
+
+      assert(remainingSgCount == 1 && "not all subgroups distributed");
+      srcLayout = xegpu::LayoutAttr::get(
+          context, toInt32Attr(sgLayout), toInt32Attr(sgData),
+          /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+          /*lane_data =*/nullptr, /*order =*/
+          (!orderAttr || orderAttr.empty()) ? nullptr : toInt32Attr(order));
     }
-
-    assert(remainingSgCount == 1 && "not all subgroups distributed");
-    srcLayout = xegpu::LayoutAttr::get(
-        context, toInt32Attr(sgLayout), toInt32Attr(sgData),
-        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-        /*lane_data =*/nullptr, /*order =*/nullptr);
-
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
 
     SmallVector<int64_t> instData(srcRank, 1);
-    instData[srcRank - 2] =
-        std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
-    instData[srcRank - 1] = subgroupSize;
+    if (srcRank >= 2)
+      instData[srcRank - 2] =
+          std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
+    instData[srcRank - 1] =
+        std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
-
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
 
     SmallVector<int64_t> laneLayout(srcRank, 1), laneData(srcRank, 1);
-    laneLayout[srcRank - 1] = subgroupSize;
-    laneData[srcRank - 2] =
-        std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
+    laneLayout[srcRank - 1] =
+        std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
+    if (srcRank >= 2)
+      laneData[srcRank - 2] =
+          std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
-                                       toInt32Attr(laneData),
-                                       consumerLayout.getOrder());
+                                       toInt32Attr(laneData));
   }
 
   return xegpu::SliceAttr::get(context, srcLayout,
                                DenseI64ArrayAttr::get(context, reductionDims));
+}
+
+/// Sets up layout for Reduction operations by creating a SliceAttr for the
+/// result.
+xegpu::SliceAttr
+xegpu::setupReductionResultLayout(xegpu::LayoutKind layoutKind,
+                                  VectorType srcVecTy,
+                                  const xegpu::uArch::uArch *uArch) {
+
+  auto srcShape = srcVecTy.getShape();
+  auto context = srcVecTy.getContext();
+  auto subgroupSize = uArch->getSubgroupSize();
+  xegpu::LayoutAttr srcLayout;
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(true && "subgroup layout assignment not supported for reduction (op "
+                   "is not expected at this level).");
+  } else if (layoutKind == xegpu::LayoutKind::InstData) {
+    assert(true && "instData layout assignment not supported for reduction (op "
+                   "is not expected at this level).");
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+    SmallVector<int32_t> laneLayout(1), laneData(1);
+    laneLayout[0] = std::min(subgroupSize, static_cast<int32_t>(srcShape[0]));
+    laneData[0] = 1;
+    srcLayout = xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, laneLayout),
+        DenseI32ArrayAttr::get(context, laneData));
+  }
+
+  auto result = xegpu::SliceAttr::get(context, srcLayout,
+                                      DenseI64ArrayAttr::get(context, 0));
+  return result;
 }
 
 /// Sets up the result layout for a bitcast operation.
@@ -622,7 +914,6 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
              "srcShape must be divisible by laneLayout for all dimensions");
       laneDataValue = std::min(srcShape[dim] / consumerLaneLayout[dim],
                                consumerLaneData[dim]);
-
       requiredResLayout =
           requiredResLayout.setDimData(dim, -1, -1, laneDataValue);
     }
@@ -896,8 +1187,8 @@ std::optional<
                xegpu::DistributeLayoutAttr>>
 xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
                        VectorType bTy, VectorType cdTy,
-                       xegpu::DistributeLayoutAttr consumerLayout,
-                       const xegpu::uArch::uArch *uArch, int numSg) {
+                       xegpu::DistributeLayoutAttr consumerLayout, int numSg,
+                       const xegpu::uArch::uArch *uArch) {
   auto context = aTy.getContext();
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
@@ -1035,26 +1326,25 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     auto bLayout = getDefaultLaneLayout2DBlockIo(
         bTy, uArch, uArchInstruction->getPackedFormatBitSizeB(), true);
     auto cdLayout = getDefaultLaneLayout2DBlockIo(
-        cdTy, uArch, uArchInstruction->getPackedFormatBitSizeB());
+        cdTy, uArch /*, packingSize = std::nullopt */);
     return std::make_tuple(aLayout, bLayout, cdLayout);
   }
   return std::nullopt;
 }
 
-xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
+xegpu::DistributeLayoutAttr
+xegpu::inferSourceLayoutFromResult(OpOperand &operand,
+                                   xegpu::DistributeLayoutAttr resLayout) {
+  if (!resLayout)
+    return nullptr;
   Operation *op = operand.getOwner();
   unsigned idx = operand.getOperandNumber();
-  xegpu::DistributeLayoutAttr resLayout;
-  if (op->getNumResults() == 1 && isa<VectorType>(op->getResult(0).getType()))
-    resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
 
   // For vector::BroadcastOp, infer the source layout from the result layout.
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     auto srcTy = dyn_cast<VectorType>(broadcast.getSourceType());
     if (!srcTy)
-      return xegpu::DistributeLayoutAttr();
+      return nullptr;
     return xegpu::inferBroadcastSourceLayout(
         resLayout, broadcast.getResultVectorType().getShape(),
         srcTy.getShape());
@@ -1064,8 +1354,6 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // using reduction dims. Acc operand is expected to have the same layout as
   // the result.
   if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     if (idx == 0) {
       SmallVector<int64_t> reductionDims(reduction.getReductionDims());
       return xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
@@ -1074,11 +1362,12 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
       return resLayout;
   }
 
+  if (auto reduction = dyn_cast<vector::ReductionOp>(op))
+    return xegpu::inferReductionSourceLayout(resLayout);
+
   // For vector::BitCastOp, infer source layout from result layout using
   // element type bitwidths.
   if (auto bitcast = dyn_cast<vector::BitCastOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     int resElemBitWidth =
         bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
     int srcElemBitWidth =
@@ -1090,8 +1379,6 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // For vector::ShapeCastOp, infer source layout from result layout using
   // shapes.
   if (auto shapeCast = dyn_cast<vector::ShapeCastOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     return xegpu::inferShapeCastSourceLayout(
         resLayout, shapeCast.getResultVectorType().getShape(),
         shapeCast.getSourceVectorType().getShape());
@@ -1100,12 +1387,11 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // For vector::InsertStridedSliceOp, infer source layout from result layout.
   // Dest vector must have the same layout as the result.
   if (auto insertSlice = dyn_cast<vector::InsertStridedSliceOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
-    if (idx == 0)
+    if (idx == 0) {
       return xegpu::inferInsertStridedSliceSourceLayout(
           resLayout, insertSlice.getDestVectorType().getShape(),
           insertSlice.getSourceVectorType().getShape());
+    }
     if (idx == 1)
       return resLayout;
   }
@@ -1113,20 +1399,29 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // For vector::TransposeOp, infer source layout from result layout using
   // permutation.
   if (auto transpose = dyn_cast<vector::TransposeOp>(op)) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
     return xegpu::inferTransposeSourceLayout(resLayout,
                                              transpose.getPermutation());
   }
 
+  // For vector::ExtractStridedSliceOp, simply return result layout
+  if (dyn_cast<vector::ExtractStridedSliceOp>(op))
+    return resLayout;
   // For elementwise operations, all operands must have the same layout as the
   // result.
-  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
     return resLayout;
-  }
-  // TODO: Handle more cases as needed here.
+
+  return nullptr;
+}
+
+xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
+  Operation *op = operand.getOwner();
+  xegpu::DistributeLayoutAttr resLayout;
+  if (op->getNumResults() == 1)
+    resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
+  auto inferredOperandLayout = inferSourceLayoutFromResult(operand, resLayout);
+  if (inferredOperandLayout)
+    return inferredOperandLayout;
   // By default, assume no layout conflict and return the current layout of
   // the operand.
   return xegpu::getDistributeLayoutAttr(operand.get());

@@ -102,7 +102,7 @@ int SANITIZER_CDECL __asan_address_is_poisoned(void const volatile *addr);
 /// address of the first such byte. Otherwise returns 0.
 ///
 /// \param beg Start of memory region.
-/// \param size Start of memory region.
+/// \param size Size of memory region.
 /// \returns Address of first poisoned byte.
 void *SANITIZER_CDECL __asan_region_is_poisoned(void *beg, size_t size);
 
@@ -160,10 +160,10 @@ void *SANITIZER_CDECL __asan_get_report_address(void);
 
 /// Gets access type of an ASan error (useful for calling from the debugger).
 ///
-/// Returns access type (read or write) if an error has been (or is being)
-/// reported. Otherwise returns 0.
+/// Returns access type (read or write or assumption) if an error has been (or
+/// is being) reported. Otherwise returns 0.
 ///
-/// \returns Access type (0 = read, 1 = write).
+/// \returns Access type (0 = read, 1 = write, 2 = assumption).
 int SANITIZER_CDECL __asan_get_report_access_type(void);
 
 /// Gets access size of an ASan error (useful for calling from the debugger).

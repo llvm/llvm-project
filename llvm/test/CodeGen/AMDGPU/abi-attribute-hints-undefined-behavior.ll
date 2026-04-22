@@ -271,9 +271,9 @@ define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() #0 {
 ; FIXEDABI-LABEL: marked_kernel_nokernargs_implicitarg_ptr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_add_i32 s4, s4, s9
-; FIXEDABI-NEXT:    v_mov_b32_e32 v0, 0
 ; FIXEDABI-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; FIXEDABI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; FIXEDABI-NEXT:    v_mov_b32_e32 v0, 0
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v1, 0
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_endpgm

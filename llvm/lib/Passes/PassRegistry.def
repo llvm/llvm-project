@@ -119,6 +119,7 @@ MODULE_PASS("memprof-remove-attributes", MemProfRemoveInfo())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
+MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass())
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
@@ -161,8 +162,9 @@ MODULE_PASS("rtsan", RealtimeSanitizerPass())
 MODULE_PASS("sample-profile", SampleProfileLoaderPass())
 MODULE_PASS("sancov-module", SanitizerCoveragePass())
 MODULE_PASS("sanmd-module", SanitizerBinaryMetadataPass())
+// TODO: Rename (or parameterize by optimization level)
 MODULE_PASS("scc-oz-module-inliner",
-            buildInlinerPipeline(OptimizationLevel::Oz,
+            buildInlinerPipeline(OptimizationLevel::O2,
                                  ThinOrFullLTOPhase::None))
 MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass())
 MODULE_PASS("strip", StripSymbolsPass())
@@ -217,6 +219,11 @@ MODULE_PASS_WITH_PARAMS(
     [](HWAddressSanitizerOptions Opts) { return HWAddressSanitizerPass(Opts); },
     parseHWASanPassOptions, "kernel;recover")
 MODULE_PASS_WITH_PARAMS(
+    "drop-type-tests", "DropTypeTestsPass",
+    [](lowertypetests::DropTestKind Kind) { return DropTypeTestsPass(Kind); },
+    parseDropTypeTestsPassOptions,
+    "assume;all")
+MODULE_PASS_WITH_PARAMS(
     "internalize", "InternalizePass",
     [](SmallVector<std::string, 0> PreservedGVs) {
       if (PreservedGVs.empty())
@@ -261,19 +268,19 @@ MODULE_PASS_WITH_PARAMS(
       setupOptionsForPipelineAlias(PTO, L);
       return buildPerModuleDefaultPipeline(L);
     },
-    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+    parseOptLevelParam, "O0;O1;O2;O3")
 MODULE_PASS_WITH_PARAMS(
     "thinlto-pre-link", "", [&](OptimizationLevel L) {
       setupOptionsForPipelineAlias(PTO, L);
       return buildThinLTOPreLinkDefaultPipeline(L);
     },
-    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+    parseOptLevelParam, "O0;O1;O2;O3")
 MODULE_PASS_WITH_PARAMS(
     "thinlto", "", [&](OptimizationLevel L) {
       setupOptionsForPipelineAlias(PTO, L);
       return buildThinLTODefaultPipeline(L, nullptr);
     },
-    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+    parseOptLevelParam, "O0;O1;O2;O3")
 MODULE_PASS_WITH_PARAMS(
     "lto-pre-link", "", [&](OptimizationLevel L) {
       setupOptionsForPipelineAlias(PTO, L);
@@ -285,20 +292,20 @@ MODULE_PASS_WITH_PARAMS(
       }
       return buildLTOPreLinkDefaultPipeline(L);
     },
-    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+    parseOptLevelParam, "O0;O1;O2;O3")
 MODULE_PASS_WITH_PARAMS(
     "lto", "", [&](OptimizationLevel L) {
       setupOptionsForPipelineAlias(PTO, L);
       return buildLTODefaultPipeline(L, nullptr);
     },
-    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+    parseOptLevelParam, "O0;O1;O2;O3")
 MODULE_PASS_WITH_PARAMS(
     "fatlto-pre-link", "", [&](FatLTOOptions Opts) {
       setupOptionsForPipelineAlias(PTO, Opts.OptLevel);
       return buildFatLTODefaultPipeline(Opts.OptLevel, Opts.ThinLTO,
                                         Opts.EmitSummary);
     },
-    parseFatLTOOptions, "O0;O1;O2;O3;Os;Oz;thinlto;emit-summary")
+    parseFatLTOOptions, "O0;O1;O2;O3;thinlto;emit-summary")
 
 #undef MODULE_PASS_WITH_PARAMS
 
@@ -412,6 +419,7 @@ FUNCTION_PASS("atomic-expand", AtomicExpandPass(*TM))
 FUNCTION_PASS("bdce", BDCEPass())
 FUNCTION_PASS("break-crit-edges", BreakCriticalEdgesPass())
 FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
+FUNCTION_PASS("cfguard", CFGuardPass())
 FUNCTION_PASS("chr", ControlHeightReductionPass())
 FUNCTION_PASS("codegenprepare", CodeGenPreparePass(*TM))
 FUNCTION_PASS("complex-deinterleaving", ComplexDeinterleavingPass(*TM))
@@ -432,7 +440,7 @@ FUNCTION_PASS("dot-post-dom", PostDomPrinter())
 FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(*TM))
-FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(*TM))
+FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass())
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
 FUNCTION_PASS("extra-vector-passes",
               ExtraFunctionPassManager<ShouldRunExtraVectorPasses>())
@@ -440,7 +448,6 @@ FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())
 FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass())
-FUNCTION_PASS("func-properties-stats", FunctionPropertiesStatisticsPass())
 FUNCTION_PASS("gc-lowering", GCLoweringPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
@@ -451,7 +458,6 @@ FUNCTION_PASS("infer-address-spaces", InferAddressSpacesPass())
 FUNCTION_PASS("infer-alignment", InferAlignmentPass())
 FUNCTION_PASS("inject-tli-mappings", InjectTLIMappings())
 FUNCTION_PASS("inline-asm-prepare", InlineAsmPreparePass())
-FUNCTION_PASS("instcount", InstCountPass())
 FUNCTION_PASS("instnamer", InstructionNamerPass())
 FUNCTION_PASS("instsimplify", InstSimplifyPass())
 FUNCTION_PASS("interleaved-access", InterleavedAccessPass(*TM))
@@ -459,7 +465,7 @@ FUNCTION_PASS("interleaved-load-combine", InterleavedLoadCombinePass(*TM))
 FUNCTION_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 FUNCTION_PASS("irce", IRCEPass())
 FUNCTION_PASS("jump-threading", JumpThreadingPass())
-FUNCTION_PASS("jump-table-to-switch", JumpTableToSwitchPass());
+FUNCTION_PASS("jump-table-to-switch", JumpTableToSwitchPass())
 FUNCTION_PASS("kcfi", KCFIPass())
 FUNCTION_PASS("kernel-info", KernelInfoPrinter(TM))
 FUNCTION_PASS("lcssa", LCSSAPass())
@@ -543,6 +549,7 @@ FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass(TM))
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("stack-protector", StackProtectorPass(*TM))
+FUNCTION_PASS("strip-convergence-intrinsics", StripConvergenceIntrinsicsPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
@@ -574,10 +581,6 @@ FUNCTION_PASS("wasm-eh-prepare", WasmEHPreparePass())
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
 FUNCTION_PASS_WITH_PARAMS(
-    "cfguard", "CFGuardPass",
-    [](CFGuardPass::Mechanism M) { return CFGuardPass(M); },
-    parseCFGuardPassOptions, "check;dispatch")
-FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },
     parseEarlyCSEPassOptions, "memssa")
@@ -590,11 +593,18 @@ FUNCTION_PASS_WITH_PARAMS(
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },
     parseEntryExitInstrumenterPassOptions, "post-inline")
 FUNCTION_PASS_WITH_PARAMS(
+    "func-properties-stats", 
+    "FunctionPropertiesStatisticsPass",
+    [](bool IsPreOptimizations) { 
+      return FunctionPropertiesStatisticsPass(IsPreOptimizations); 
+    },
+    parseFunctionPropertiesStatisticsOptions, "pre-opt")
+FUNCTION_PASS_WITH_PARAMS(
     "function-simplification", "",
     [this](OptimizationLevel OL) {
       return buildFunctionSimplificationPipeline(OL, ThinOrFullLTOPhase::None);
     },
-    parseFunctionSimplificationPipelineOptions, "O1;O2;O3;Os;Oz")
+    parseFunctionSimplificationPipelineOptions, "O1;O2;O3")
 FUNCTION_PASS_WITH_PARAMS(
     "gvn", "GVNPass", [](GVNOptions Opts) { return GVNPass(Opts); },
     parseGVNOptions,
@@ -612,6 +622,12 @@ FUNCTION_PASS_WITH_PARAMS(
     [](InstCombineOptions Opts) { return InstCombinePass(Opts); },
     parseInstCombineOptions,
     "no-verify-fixpoint;verify-fixpoint;max-iterations=N")
+FUNCTION_PASS_WITH_PARAMS(
+    "instcount", "InstCountPass",
+    [](bool IsPreOptimizations) { 
+      return InstCountPass(IsPreOptimizations); 
+    },
+    parseInstCountOptions, "pre-opt")
 FUNCTION_PASS_WITH_PARAMS(
     "lint", "LintPass",
     [](bool AbortOnError) { return LintPass(AbortOnError); }, parseLintOptions,
@@ -800,12 +816,14 @@ LOOP_PASS_WITH_PARAMS(
     parseLICMOptions, "allowspeculation;no-allowspeculation")
 LOOP_PASS_WITH_PARAMS(
     "loop-rotate", "LoopRotatePass",
-    [](std::pair<bool, bool> Params) {
-      return LoopRotatePass(Params.first, Params.second);
+    [](LoopRotateOptions Params) {
+      return LoopRotatePass(Params.EnableHeaderDuplication, Params.PrepareForLTO,
+                            Params.CheckExitCount);
     },
     parseLoopRotateOptions,
     "no-header-duplication;header-duplication;"
-    "no-prepare-for-lto;prepare-for-lto")
+    "no-prepare-for-lto;prepare-for-lto;"
+    "no-check-exit-count;check-exit-count")
 LOOP_PASS_WITH_PARAMS(
     "simple-loop-unswitch", "SimpleLoopUnswitchPass",
     [](std::pair<bool, bool> Params) {

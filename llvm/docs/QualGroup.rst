@@ -1,8 +1,3 @@
-.. CHANGE TRACKER for reference
-.. Purpose: Fixed document location and added Current Topics & Backlog
-.. Author: Carlos Andres Ramirez
-.. Last updated: 2025-09-08 by Carlos Ramirez
-
 ========================
 LLVM Qualification Group
 ========================
@@ -49,7 +44,8 @@ Group Members
 -------------
 
 The members of the LLVM Qualification Group represent a diverse cross-section of the LLVM community, including individual contributors, researchers, vendor representatives, and experts in the field of software qualification, including reliability, quality, safety, and/or security.
-They meet the criteria for inclusion below. Knowing their handles help us keep track of who’s who across platforms, coordinate activities, and recognize contributions.
+They meet the criteria for inclusion described in the sub-sections below and are identified as `active contributors <#contribution-principles>`_.
+Knowing their handles help us keep track of who’s who across platforms, coordinate activities, and recognize contributions.
 
 .. list-table::
    :widths: 20 20 20 20 20
@@ -60,41 +56,16 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
      - Discourse handle
      - Discord handle
      - GitHub handle
-   * - Alan Phipps
-     - Texas Instruments
-     - evodius96
-     - alanphipps
-     - evodius96
    * - Carlos Andrés Ramírez
      - Woven by Toyota
      - CarlosAndresRamirez
      - carlos\_andres\_ramirez
      - CarlosAndresRamirez
-   * - Davide Cunial
-     - BMW A.G.
-     - capitan-davide
-     - capitan_davide
-     - capitan-davide
-   * - Jorge Pinto Sousa
-     - Critical Techworks
-     - sousajo-cc
-     - sousajo-cc
-     - sousajo-cc
-   * - José Rui Simões
-     - Critical Software
-     - jr-simoes
-     - jr_simoes
-     - iznogoud-zz
    * - Oscar Slotosch
      - Validas
      - slotosch
      - oscarslotosch_66740
      - \-
-   * - Petar Jovanovic
-     - HTECH
-     - petarj
-     - petarjovanovic_18635
-     - petar-jovanovic
    * - Petter Berntsson
      - Arm Limited
      - petbernt
@@ -139,11 +110,20 @@ We understand that most members contribute in a limited capacity due to their pr
 * **Realistic progress expectations:** Given the voluntary nature and no full-time involvement, we expect our progress to be slow. This group was initiated in July 2025. Concrete outcomes in 1-2 years would be considered excellent for this type of cross-company and voluntary collaboration.
 * **Respect for differing capacities:** We value every member’s engagement, whether large or small, often or sporadically, as it all contributes to the overall effort. Even contributions that may seem small, such as sharing an idea or pointing out a relevant resource, are meaningful and important.
 
-However, we need a balance between flexibility, structure, and enough organization to move forward together. Members are expected to remain engaged through one or more of the following:
+However, we need a balance between flexibility, structure, and enough organization to move forward together. Thus, to support coordination and clarity, the group distinguishes between **active contributors** and **observers / interested participants**.
 
-* Regular participation in meetings or asynchronous discussions.
-* Contributions to qualification artifacts, methodologies, or documentation.
-* Active involvement in at least one qualification-related task over the past year.
+**Active contributors** are members who provide regular and substantive contributions to the group’s work. This includes ongoing engagement in at least one of the following:
+
+* Participation in sync-ups or asynchronous discussions (via Discord or Discourse),
+* Contributions to qualification artifacts, methodologies, documentation, structured reviews, or feedback on proposals and drafts,
+* Analysis, research activities, or support for coordination, outreach, or other working tasks.
+
+Active contribution implies sustained engagement that meaningfully advances the group’s objectives. Participation may be synchronous or asynchronous, depending on availability. Participation status reflects current bandwidth and coordination needs and may be updated during the `biannual membership review <#membership-review>`_.
+
+**Observers**, or **interested participants** are anyone who follows the group’s work and may participate when availability allows. 
+This is an open status and does not require the `nomination process <#nomination-process>`_ used for active contributors. 
+Observers remain welcome to attend meetings, provide feedback, and contribute at any time. 
+Moreover, observer status does not imply reduced importance or access within the group.
 
 Membership Criteria
 -------------------
@@ -174,12 +154,21 @@ Individuals may nominate themselves or be nominated by an existing member. Nomin
 * Be submitted via this form: `Participant Introduction & Membership <https://forms.gle/cE1kHjqkKNtafUrD7>`_
 * Be communicated to an active LLVM Qualification Group member (e.g., on the Discord channel).
 
+This nomination process applies to becoming an **active contributor**. People who simply wish to 
+follow the group’s work or participate occasionally may do so as observers / interested participants, 
+without a formal nomination process.
+
 Nominations are discussed within the group. If consensus is reached, the nominee is accepted. Otherwise, a majority vote will decide.
 
 Membership Review
 -----------------
 
-To ensure the group remains active and focused, member participation will be reviewed every six months. Inactive members may be removed following this review.
+To ensure the group remains active and focused, member participation is reviewed every six months. Inactive members may be removed following this review.
+
+During the biannual membership review, members who have not participated in discussions or provided substantive contributions during the review period will be contacted. After consensus, they may be transitioned to **observer** status to reflect current availability.
+
+This transition is procedural and does not restrict participation. Members may resume **active contributor** status at any time when their engagement increases.
+
 
 Decision Making
 ---------------

@@ -222,6 +222,8 @@ static void sol_free(struct isl_sol *sol)
 static void sol_context_add_eq(struct isl_sol *sol, isl_int *eq, int check,
 	int update)
 {
+	if (sol->error)
+		return;
 	sol->context->op->add_eq(sol->context, eq, check, update);
 	if (!sol->context->op->is_ok(sol->context))
 		sol->error = 1;

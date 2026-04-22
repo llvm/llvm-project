@@ -57,8 +57,7 @@ define <4 x float> @check_top_of_schedule(ptr %0) {
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> zeroinitializer, float poison, i64 0
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr double, ptr [[TMP0]], i64 1
-; CHECK-NEXT:    [[TRUNC_1:%.*]] = fptrunc double 0.000000e+00 to float
-; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float [[TRUNC_1]], i64 0
+; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float 0.000000e+00, i64 0
 ; CHECK-NEXT:    store <2 x double> <double 0.000000e+00, double 1.000000e+00>, ptr [[GEP_1]], align 8, !sandboxvec [[META1:![0-9]+]]
 ; CHECK-NEXT:    ret <4 x float> [[INS_2]]
 ;

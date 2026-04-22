@@ -96,6 +96,9 @@ TYPE_PARSER(first(construct<ConnectSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>("IOMSG =" >> msgVariable),
     construct<ConnectSpec>("IOSTAT =" >> statVariable),
+    construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
+        "LEADING_ZERO =" >> pure(ConnectSpec::CharExpr::Kind::Leading_Zero),
+        scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::Newunit>(
         "NEWUNIT =" >> scalar(integer(variable)))),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
@@ -217,6 +220,10 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
     construct<IoControlSpec>("ID =" >> idVariable),
     construct<IoControlSpec>("IOMSG = " >> msgVariable),
     construct<IoControlSpec>("IOSTAT = " >> statVariable),
+    construct<IoControlSpec>("LEADING_ZERO =" >>
+        construct<IoControlSpec::CharExpr>(
+            pure(IoControlSpec::CharExpr::Kind::Leading_Zero),
+            scalarDefaultCharExpr)),
     construct<IoControlSpec>("PAD =" >>
         construct<IoControlSpec::CharExpr>(
             pure(IoControlSpec::CharExpr::Kind::Pad), scalarDefaultCharExpr)),
@@ -430,6 +437,10 @@ TYPE_PARSER(first(construct<InquireSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<InquireSpec>("IOSTAT =" >>
         construct<InquireSpec::IntVar>(pure(InquireSpec::IntVar::Kind::Iostat),
             scalar(integer(variable)))),
+    construct<InquireSpec>(
+        "LEADING_ZERO =" >> construct<InquireSpec::CharVar>(
+                                pure(InquireSpec::CharVar::Kind::Leading_Zero),
+                                scalarDefaultCharVariable)),
     construct<InquireSpec>("NAME =" >>
         construct<InquireSpec::CharVar>(
             pure(InquireSpec::CharVar::Kind::Name), scalarDefaultCharVariable)),
@@ -634,7 +645,8 @@ TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
                     "X " >> pure(format::IntrinsicTypeDataEditDesc::Kind::EX) ||
                     pure(format::IntrinsicTypeDataEditDesc::Kind::E)) ||
             "G " >> pure(format::IntrinsicTypeDataEditDesc::Kind::G) ||
-            "L " >> pure(format::IntrinsicTypeDataEditDesc::Kind::L),
+            ("L "_tok / !letter /* don't occlude LZ, LZS, & LZP */) >>
+                pure(format::IntrinsicTypeDataEditDesc::Kind::L),
         noInt, noInt, noInt)))
 
 // R1307 data-edit-desc (part 2 of 2)
@@ -682,6 +694,12 @@ TYPE_PARSER(construct<format::ControlEditDesc>(
                          pure(format::ControlEditDesc::Kind::BN)) ||
                 "Z " >> construct<format::ControlEditDesc>(
                             pure(format::ControlEditDesc::Kind::BZ))) ||
+    "L " >> ("Z " >> ("S " >> construct<format::ControlEditDesc>(
+                                  pure(format::ControlEditDesc::Kind::LZS)) ||
+                         "P " >> construct<format::ControlEditDesc>(pure(
+                                     format::ControlEditDesc::Kind::LZP)) ||
+                         construct<format::ControlEditDesc>(
+                             pure(format::ControlEditDesc::Kind::LZ)))) ||
     "R " >> ("U " >> construct<format::ControlEditDesc>(
                          pure(format::ControlEditDesc::Kind::RU)) ||
                 "D " >> construct<format::ControlEditDesc>(

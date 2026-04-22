@@ -74,14 +74,15 @@ class MachineInstr
 public:
   using mmo_iterator = ArrayRef<MachineMemOperand *>::iterator;
 
+  using AsmPrinterFlagTy = uint8_t;
+
   /// Flags to specify different kinds of comments to output in
   /// assembly code.  These flags carry semantic information not
   /// otherwise easily derivable from the IR text.
-  ///
-  enum CommentFlag {
-    ReloadReuse = 0x1,    // higher bits are reserved for target dep comments.
+  enum CommentFlag : AsmPrinterFlagTy {
+    ReloadReuse = 0x1, // higher bits are reserved for target dep comments.
     NoSchedComment = 0x2,
-    TAsmComments = 0x4    // Target Asm comments should start from this value.
+    TAsmComments = 0x4 // Target Asm comments should start from this value.
   };
 
   enum MIFlag {
@@ -154,7 +155,7 @@ private:
   /// Various bits of information used by the AsmPrinter to emit helpful
   /// comments.  This is *not* semantic information.  Do not use this for
   /// anything other than to convey comment information to AsmPrinter.
-  uint8_t AsmPrinterFlags;
+  AsmPrinterFlagTy AsmPrinterFlags;
 
   /// Cached opcode from MCID.
   uint32_t Opcode;
@@ -387,28 +388,28 @@ public:
   }
 
   /// Return the asm printer flags bitvector.
-  uint8_t getAsmPrinterFlags() const { return AsmPrinterFlags; }
+  AsmPrinterFlagTy getAsmPrinterFlags() const { return AsmPrinterFlags; }
 
   /// Clear the AsmPrinter bitvector.
   void clearAsmPrinterFlags() { AsmPrinterFlags = 0; }
 
   /// Return whether an AsmPrinter flag is set.
-  bool getAsmPrinterFlag(CommentFlag Flag) const {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  bool getAsmPrinterFlag(AsmPrinterFlagTy Flag) const {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     return AsmPrinterFlags & Flag;
   }
 
   /// Set a flag for the AsmPrinter.
-  void setAsmPrinterFlag(uint8_t Flag) {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  void setAsmPrinterFlag(AsmPrinterFlagTy Flag) {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     AsmPrinterFlags |= Flag;
   }
 
   /// Clear specific AsmPrinter flags.
-  void clearAsmPrinterFlag(CommentFlag Flag) {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  void clearAsmPrinterFlag(AsmPrinterFlagTy Flag) {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     AsmPrinterFlags &= ~Flag;
   }

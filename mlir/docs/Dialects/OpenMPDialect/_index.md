@@ -30,8 +30,8 @@ words separated by underscores.
 If the operation corresponds to a directive, clause or other kind of definition
 in the OpenMP specification, it must use the same name split into words in the
 same way. For example, the `target data` directive would become `TargetDataOp` /
-`omp.target_data`, whereas `taskloop` would become `TaskloopOp` /
-`omp.taskloop`.
+`omp.target_data`, whereas `taskloop` would become `TaskloopWrapperOp` /
+`omp.taskloop.wrapper`.
 
 Operations intended to carry extra information for another particular operation
 or clause must be named after that other operation or clause, followed by the
@@ -391,7 +391,7 @@ wrapper or `omp.loop_nest` operation.
 This approach splits the representation for a loop nest and the loop-associated
 constructs that specify how its iterations are executed, possibly across various
 SIMD lanes (`omp.simd`), threads (`omp.wsloop`), teams of threads
-(`omp.distribute`) or tasks (`omp.taskloop`). The ability to directly nest
+(`omp.distribute`) or tasks (`omp.taskloop.wrapper`). The ability to directly nest
 multiple loop wrappers to impact the execution of a single loop nest is used to
 represent composite constructs in a modular way.
 

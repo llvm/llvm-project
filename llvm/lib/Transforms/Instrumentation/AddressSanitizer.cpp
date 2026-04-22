@@ -71,6 +71,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
@@ -297,6 +298,11 @@ static cl::opt<bool> ClRedzoneByvalArgs("asan-redzone-byval-args",
                                                  "arguments (extra copy "
                                                  "required)"), cl::Hidden,
                                         cl::init(true));
+
+static cl::opt<bool> ClInstrumentAssumeDereferenceable(
+    "asan-instrument-assume-dereferenceable",
+    cl::desc("instrument llvm.assume(dereferenceable)"), cl::Hidden,
+    cl::init(true));
 
 static cl::opt<bool> ClUseAfterScope("asan-use-after-scope",
                                      cl::desc("Check stack-use-after-scope"),
@@ -633,7 +639,7 @@ void llvm::getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
 }
 
 void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
-  // Sanitizer checks read from shadow, which invalidates memory(argmem: *).
+  // Adding sanitizer checks invalidates previously inferred memory attributes.
   //
   // This is not only true for sanitized functions, because AttrInfer can
   // infer those attributes on libc functions, which is not true if those
@@ -644,19 +650,28 @@ void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
   // intrinsic, essentially like in the AArch64StackTagging pass. But that's
   // for another day.
 
-  // The API is weird. `onlyReadsMemory` actually means "does not write", and
-  // `onlyWritesMemory` actually means "does not read". So we reconstruct
-  // "accesses memory" && "does not read" <=> "writes".
   bool Changed = false;
-  if (!F.doesNotAccessMemory()) {
-    bool WritesMemory = !F.onlyReadsMemory();
-    bool ReadsMemory = !F.onlyWritesMemory();
-    if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
-      F.removeFnAttr(Attribute::Memory);
+  // We add memory(readwrite) to functions that don't already have that set and
+  // can access any non-inaccessible memory. Sanitizer instrumentation can
+  // read/write shadow memory, which is IRMemLocation::Other. Sanitizer
+  // instrumentation can instrument any memory accesses to non-inaccessible
+  // memory.
+  if (!F.getMemoryEffects()
+           .getWithoutLoc(IRMemLocation::InaccessibleMem)
+           .doesNotAccessMemory() &&
+      !isModAndRefSet(F.getMemoryEffects().getModRef(IRMemLocation::Other))) {
+    F.setMemoryEffects(F.getMemoryEffects() |
+                       MemoryEffects::otherMemOnly(ModRefInfo::ModRef));
+    Changed = true;
+  }
+  // HWASan reads from argument memory even for previously write-only accesses.
+  if (ReadsArgMem) {
+    if (F.getMemoryEffects().getModRef(IRMemLocation::ArgMem) ==
+        ModRefInfo::Mod) {
+      F.setMemoryEffects(F.getMemoryEffects() |
+                         MemoryEffects::argMemOnly(ModRefInfo::Ref));
       Changed = true;
     }
-  }
-  if (ReadsArgMem) {
     for (Argument &A : F.args()) {
       if (A.hasAttribute(Attribute::WriteOnly)) {
         A.removeAttr(Attribute::WriteOnly);
@@ -914,6 +929,7 @@ private:
   // These arrays is indexed by AccessIsWrite and Experiment.
   FunctionCallee AsanErrorCallbackSized[2][2];
   FunctionCallee AsanMemoryAccessCallbackSized[2][2];
+  FunctionCallee AsanAssumeDereferenceableCallback;
 
   FunctionCallee AsanMemmove, AsanMemcpy, AsanMemset;
   Value *LocalDynamicShadow = nullptr;
@@ -2871,6 +2887,12 @@ bool ModuleAddressSanitizer::instrumentModule() {
 
 void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
   IRBuilder<> IRB(*C);
+
+  const std::string EndingStr = Recover ? "_noabort" : "";
+  AsanAssumeDereferenceableCallback = M.getOrInsertFunction(
+      "__asan_report_assume_dereferenceable" + EndingStr,
+      FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false));
+
   // Create __asan_report* callbacks.
   // IsWrite, TypeSize and Exp are encoded in the function name.
   for (int Exp = 0; Exp < 2; Exp++) {
@@ -3089,6 +3111,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   SmallVector<Instruction *, 8> NoReturnCalls;
   SmallVector<BasicBlock *, 16> AllBlocks;
   SmallVector<Instruction *, 16> PointerComparisonsOrSubtracts;
+  SmallVector<AssumeInst *, 8> DerefAssumptions;
 
   // Fill the set of memory operations to instrument.
   for (auto &BB : F) {
@@ -3103,6 +3126,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
       getInterestingMemoryOperands(&Inst, InterestingOperands, TTI);
 
+      AssumeInst *AI;
       if (!InterestingOperands.empty()) {
         for (auto &Operand : InterestingOperands) {
           if (ClOpt && ClOptSameTemp) {
@@ -3130,6 +3154,12 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         // ok, take it.
         IntrinToInstrument.push_back(MI);
         NumInsnsPerBB++;
+      } else if (ClInstrumentAssumeDereferenceable &&
+                 (AI = dyn_cast<AssumeInst>(&Inst))) {
+        if (AI->getOperandBundle("dereferenceable")) {
+          DerefAssumptions.push_back(AI);
+          NumInsnsPerBB++;
+        }
       } else {
         if (auto *CB = dyn_cast<CallBase>(&Inst)) {
           // A call inside BB.
@@ -3177,6 +3207,28 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   for (auto *Inst : PointerComparisonsOrSubtracts) {
     instrumentPointerComparisonOrSubtraction(Inst, RTCI);
     FunctionModified = true;
+  }
+
+  for (auto *AI : DerefAssumptions) {
+    if (auto Bundle = AI->getOperandBundle("dereferenceable")) {
+      Value *Ptr = Bundle->Inputs[0];
+      Value *Size = Bundle->Inputs[1];
+
+      // Skip if size is exactly 0 without generating IR.
+      if (auto *CI = dyn_cast<ConstantInt>(Size)) {
+        if (CI->getValue().zextOrTrunc(IntptrTy->getIntegerBitWidth()).isZero())
+          continue;
+      }
+
+      IRBuilder<> IRB(AI);
+      Value *AddrLong = IRB.CreatePointerCast(Ptr, IntptrTy);
+      Value *SizeExt = IRB.CreateZExtOrTrunc(Size, IntptrTy);
+
+      RTCI.createRuntimeCall(IRB, AsanAssumeDereferenceableCallback,
+                             {AddrLong, SizeExt});
+
+      FunctionModified = true;
+    }
   }
 
   if (ChangedStack || !NoReturnCalls.empty())

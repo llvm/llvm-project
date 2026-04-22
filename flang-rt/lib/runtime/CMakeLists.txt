@@ -59,6 +59,7 @@ set(supported_sources
   ragged.cpp
   reduction.cpp
   stat.cpp
+  stl-overrides.cpp
   stop.cpp
   sum.cpp
   support.cpp
@@ -159,31 +160,35 @@ file(GLOB_RECURSE private_headers
 
 
 # Import changes from flang_rt.quadmath
-get_target_property(f128_sources
-  FortranFloat128MathILib INTERFACE_SOURCES
-  )
-if (f128_sources)
-  # The interface may define special macros for Float128Math files,
-  # so we need to propagate them.
-  get_target_property(f128_defs
-    FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+set(f128_sources "")
+if (TARGET FortranFloat128MathILib)
+  get_target_property(f128_sources
+    FortranFloat128MathILib INTERFACE_SOURCES
     )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY COMPILE_DEFINITIONS
-    ${f128_defs}
-    )
-  get_target_property(f128_include_dirs
-    FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
-    )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY INCLUDE_DIRECTORIES
-    ${f128_include_dirs}
-    )
-else ()
-  set(f128_sources "")
+  if (f128_sources)
+    # The interface may define special macros for Float128Math files,
+    # so we need to propagate them.
+    get_target_property(f128_defs
+      FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY COMPILE_DEFINITIONS
+      ${f128_defs}
+      )
+    get_target_property(f128_include_dirs
+      FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY INCLUDE_DIRECTORIES
+      ${f128_include_dirs}
+      )
+  else ()
+    # Change `f128_sources-NOTFOUND` to "no additional sources"
+    set(f128_sources "")
+  endif ()
 endif ()
 
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   set(sources ${supported_sources})
@@ -203,8 +208,10 @@ if (NOT WIN32)
   enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
-  get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
-  add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  if (TARGET flang_rt.runtime.default)
+    get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
+    add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  endif ()
 else()
   # Target for building all versions of the runtime
   add_custom_target(flang_rt.runtime)

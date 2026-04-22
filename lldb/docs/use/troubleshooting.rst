@@ -113,14 +113,14 @@ command from within LLDB:
    This feature was added in LLDB 22. If you are using an earlier version, you
    can use one of the methods below.
 
-If your LLDB has a scripting langauge enabled, you can also use this command to
+If your LLDB has a scripting language enabled, you can also use this command to
 print the same information:
 
 ::
 
    (lldb) script lldb.debugger.GetBuildConfiguration()
 
-This command will fail if no scripting langauge was enabled. In that case, you
+This command will fail if no scripting language was enabled. In that case, you
 can instead check the shared library dependencies of LLDB.
 
 For example on Linux you can use the following command:
