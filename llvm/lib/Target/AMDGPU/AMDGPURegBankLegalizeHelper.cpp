@@ -1083,6 +1083,58 @@ bool RegBankLegalizeHelper::lowerInsVecEltTo32(MachineInstr &MI) {
   return true;
 }
 
+bool RegBankLegalizeHelper::lowerAbsToNegMax(MachineInstr &MI) {
+  // Lower divergent G_ABS to smax(x, 0 - x) in the VGPR bank:
+  //   zero = 0
+  //   neg  = G_SUB zero, x
+  //   dst  = G_SMAX x, neg
+  //
+  // There is no integer v_abs instruction on AMDGPU, so divergent G_ABS is
+  // expanded to this sub/smax pair.
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(DstReg);
+
+  Register Zero;
+  if (Ty == V2S16) {
+    // buildConstant cannot produce a V2S16 directly; pack two S16 zeros.
+    Register Zero16 = B.buildConstant({VgprRB, S16}, 0).getReg(0);
+    Zero = B.buildBuildVector({VgprRB, Ty}, {Zero16, Zero16}).getReg(0);
+  } else {
+    assert((Ty == S32 || Ty == S16) && "unexpected type for AbsToNegMax");
+    Zero = B.buildConstant({VgprRB, Ty}, 0).getReg(0);
+  }
+
+  auto Neg = B.buildSub({VgprRB, Ty}, Zero, SrcReg);
+  B.buildSMax(DstReg, SrcReg, Neg);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RegBankLegalizeHelper::lowerAbsToS32(MachineInstr &MI) {
+  // Lower uniform V2S16 abs by unpacking the values to two separate SGPR
+  // registers and re-emitting G_ABS on each:
+  //   packed  = bitcast <2 x s16> src to s32
+  //   lo      = sext_inreg packed, 16
+  //   hi      = ashr packed, 16
+  //   dst     = build_vector_trunc G_ABS(lo), G_ABS(hi)
+  //
+  // SALU only has s_abs_i32, with no direct uniform V2S16 abs. The
+  // re-emitted G_ABS(SgprRB, S32) selects to s_abs_i32 on each value.
+  auto Bitcast = B.buildBitcast({SgprRB_S32}, MI.getOperand(1).getReg());
+  auto SextInReg = B.buildSExtInReg({SgprRB_S32}, Bitcast, 16);
+  auto ShiftHi =
+      B.buildAShr({SgprRB_S32}, Bitcast, B.buildConstant({SgprRB_S32}, 16));
+
+  auto AbsLo = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_S32}}, {SextInReg});
+  auto AbsHi = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_S32}}, {ShiftHi});
+  B.buildBuildVectorTrunc(MI.getOperand(0).getReg(),
+                          {AbsLo.getReg(0), AbsHi.getReg(0)});
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RegBankLegalizeHelper::lower(MachineInstr &MI,
                                   const RegBankLLTMapping &Mapping,
                                   WaterfallInfo &WFI) {
@@ -1353,8 +1405,27 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     }));
     return true;
   }
-  case ApplyINTRIN_IMAGE:
-    return applyRegisterBanksINTRIN_IMAGE(MI);
+  case ApplyINTRIN_IMAGE: {
+    const AMDGPU::RsrcIntrinsic *RSrcIntrin =
+        AMDGPU::lookupRsrcIntrinsic(AMDGPU::getIntrinsicID(MI));
+    assert(RSrcIntrin && RSrcIntrin->IsImage);
+    // The reported argument index is relative to the IR intrinsic call
+    // arguments, so shift by the number of defs and the intrinsic ID.
+    unsigned RsrcIdx = RSrcIntrin->RsrcArg + MI.getNumExplicitDefs() + 1;
+    return applyRegisterBanksVgprWithSgprRsrc(MI, RsrcIdx);
+  }
+  case ApplyBVH_INTERSECT_RAY: {
+    // Rsrc is the last register operand. Base BVH trails an A16 immediate
+    // after rsrc; dual/BVH8 do not. Scan backwards for the last virtual
+    // register.
+    unsigned RsrcIdx = MI.getNumOperands();
+    while (RsrcIdx-- > MI.getNumExplicitDefs()) {
+      const MachineOperand &Op = MI.getOperand(RsrcIdx);
+      if (Op.isReg() && Op.getReg().isVirtual())
+        break;
+    }
+    return applyRegisterBanksVgprWithSgprRsrc(MI, RsrcIdx);
+  }
   case SplitBitCount64To32:
     return lowerSplitBitCount64To32(MI);
   case ExtrVecEltToSel:
@@ -1365,6 +1436,10 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerInsVecEltToSel(MI);
   case InsVecEltTo32:
     return lowerInsVecEltTo32(MI);
+  case AbsToNegMax:
+    return lowerAbsToNegMax(MI);
+  case AbsToS32:
+    return lowerAbsToS32(MI);
   }
 
   if (!WFI.SgprWaterfallOperandRegs.empty()) {
@@ -2046,50 +2121,19 @@ bool RegBankLegalizeHelper::applyMappingSrc(
   return true;
 }
 
-void RegBankLegalizeHelper::applyMappingTrivial(MachineInstr &MI) {
-  const RegisterBank *RB = MRI.getRegBank(MI.getOperand(0).getReg());
-  // Put RB on all registers
-  unsigned NumDefs = MI.getNumDefs();
-  unsigned NumOperands = MI.getNumOperands();
-
-  assert(verifyRegBankOnOperands(MI, RB, MRI, 0, NumDefs - 1));
-  if (RB == SgprRB)
-    assert(verifyRegBankOnOperands(MI, RB, MRI, NumDefs, NumOperands - 1));
-
-  if (RB == VgprRB) {
-    B.setInstr(MI);
-    for (unsigned i = NumDefs; i < NumOperands; ++i) {
-      Register Reg = MI.getOperand(i).getReg();
-      if (MRI.getRegBank(Reg) != RB) {
-        auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
-        MI.getOperand(i).setReg(Copy.getReg(0));
-      }
-    }
-  }
-}
-
-bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
-  const AMDGPU::RsrcIntrinsic *RSrcIntrin =
-      AMDGPU::lookupRsrcIntrinsic(AMDGPU::getIntrinsicID(MI));
-  assert(RSrcIntrin && RSrcIntrin->IsImage);
-
-  unsigned RsrcIdx = RSrcIntrin->RsrcArg;
+bool RegBankLegalizeHelper::applyRegisterBanksVgprWithSgprRsrc(
+    MachineInstr &MI, unsigned RsrcIdx) {
   const unsigned NumDefs = MI.getNumExplicitDefs();
-
-  // The reported argument index is relative to the IR intrinsic call arguments,
-  // so we need to shift by the number of defs and the intrinsic ID.
-  RsrcIdx += NumDefs + 1;
 
   MachineBasicBlock *MBB = MI.getParent();
   B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(MI.getIterator())));
 
-  // Defs(for image loads with return) are vgpr.
+  // Defs are vgpr.
   for (unsigned i = 0; i < NumDefs; ++i) {
-    const RegisterBank *RB = MRI.getRegBank(MI.getOperand(i).getReg());
-    if (RB == VgprRB)
+    Register Reg = MI.getOperand(i).getReg();
+    if (MRI.getRegBank(Reg) == VgprRB)
       continue;
 
-    Register Reg = MI.getOperand(i).getReg();
     Register NewVgprDst = MRI.createVirtualRegister({VgprRB, MRI.getType(Reg)});
     MI.getOperand(i).setReg(NewVgprDst);
     buildReadAnyLane(B, Reg, NewVgprDst, RBI);
@@ -2097,8 +2141,8 @@ bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
 
   B.setInstrAndDebugLoc(MI);
 
-  // Register uses(before RsrcIdx) are vgpr.
-  for (unsigned i = 1; i < RsrcIdx; ++i) {
+  // Register uses before RsrcIdx are vgpr.
+  for (unsigned i = NumDefs; i < RsrcIdx; ++i) {
     MachineOperand &Op = MI.getOperand(i);
     if (!Op.isReg())
       continue;
@@ -2116,7 +2160,7 @@ bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
 
   SmallSet<Register, 4> OpsToWaterfall;
 
-  // Register use RsrcIdx(and RsrcIdx+1 in some cases) is sgpr.
+  // Register use RsrcIdx (and later register operands) is sgpr.
   for (unsigned i = RsrcIdx; i < MI.getNumOperands(); ++i) {
     MachineOperand &Op = MI.getOperand(i);
     if (!Op.isReg())

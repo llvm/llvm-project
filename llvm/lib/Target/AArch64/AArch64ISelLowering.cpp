@@ -7320,16 +7320,52 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDValue PassThru = LoadNode->getPassThru();
   SDValue Mask = LoadNode->getMask();
 
-  if (PassThru->isUndef() || isZerosVector(PassThru.getNode()))
-    return Op;
+  if (!LoadNode->isExpandingLoad()) {
+    if (PassThru->isUndef() || isZerosVector(PassThru.getNode()))
+      return Op;
 
+    SDValue Load = DAG.getMaskedLoad(
+        VT, DL, LoadNode->getChain(), LoadNode->getBasePtr(),
+        LoadNode->getOffset(), Mask, DAG.getUNDEF(VT), LoadNode->getMemoryVT(),
+        LoadNode->getMemOperand(), LoadNode->getAddressingMode(),
+        LoadNode->getExtensionType());
+
+    SDValue Result = DAG.getSelect(DL, VT, Mask, Load, PassThru);
+    return DAG.getMergeValues({Result, Load.getValue(1)}, DL);
+  }
+
+  // Return if EXPAND instruction is not available.
+  if ((!Subtarget->isSVEAvailable() || !Subtarget->hasSVE2p2()) &&
+      (!Subtarget->isSVEorStreamingSVEAvailable() || !Subtarget->hasSME2p2()))
+    return SDValue();
+
+  // Create mask using the number of active lanes in the predicate.
+  SDValue CntActive = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask,
+      Mask);
+
+  SDValue ActiveMask =
+      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, Mask->getValueType(0),
+                  DAG.getConstant(0, DL, MVT::i64), CntActive);
+
+  // Contiguous load of elements using the active lane mask above.
   SDValue Load = DAG.getMaskedLoad(
       VT, DL, LoadNode->getChain(), LoadNode->getBasePtr(),
-      LoadNode->getOffset(), Mask, DAG.getUNDEF(VT), LoadNode->getMemoryVT(),
-      LoadNode->getMemOperand(), LoadNode->getAddressingMode(),
-      LoadNode->getExtensionType());
+      LoadNode->getOffset(), ActiveMask, DAG.getUNDEF(VT),
+      LoadNode->getMemoryVT(), LoadNode->getMemOperand(),
+      LoadNode->getAddressingMode(), LoadNode->getExtensionType());
 
-  SDValue Result = DAG.getSelect(DL, VT, Mask, Load, PassThru);
+  // Expand instruction copies the low-numbered elements to active elements
+  // in the original predicate and zeros all other lanes.
+  SDValue Result = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, VT,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_expand, DL, MVT::i64), Mask,
+      Load);
+
+  // Copy the passthrough value unless zero/undef.
+  if (!PassThru->isUndef() && !isZerosVector(PassThru.getNode()))
+    Result = DAG.getSelect(DL, VT, Mask, Result, PassThru);
 
   return DAG.getMergeValues({Result, Load.getValue(1)}, DL);
 }
@@ -16521,26 +16557,34 @@ SDValue AArch64TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
                                    !Subtarget->isNeonAvailable()))
     return LowerFixedLengthInsertVectorElt(Op, DAG);
 
-  EVT VT = Op.getOperand(0).getValueType();
+  EVT VT = Op.getValueType();
+  SDValue Vec = Op.getOperand(0);
+  SDValue Elt = Op.getOperand(1);
+  SDValue Idx = Op.getOperand(2);
 
   if (VT.getScalarType() == MVT::i1) {
-    EVT VectorVT = getPromotedVTForPredicate(VT);
     SDLoc DL(Op);
-    SDValue ExtendedVector =
-        DAG.getAnyExtOrTrunc(Op.getOperand(0), DL, VectorVT);
-    SDValue ExtendedValue =
-        DAG.getAnyExtOrTrunc(Op.getOperand(1), DL,
-                             VectorVT.getScalarType().getSizeInBits() < 32
-                                 ? MVT::i32
-                                 : VectorVT.getScalarType());
-    ExtendedVector =
-        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VectorVT, ExtendedVector,
-                    ExtendedValue, Op.getOperand(2));
-    return DAG.getAnyExtOrTrunc(ExtendedVector, DL, VT);
+
+    // MVT::nxv1i8 is not a legal type so widen->insert->shrink instead.
+    if (VT == MVT::nxv1i1) {
+      SDValue WidenVec =
+          DAG.getInsertSubvector(DL, DAG.getPOISON(MVT::nxv2i1), Vec, 0);
+      SDValue Insert = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::nxv2i1,
+                                   WidenVec, Elt, Idx);
+      return DAG.getExtractSubvector(DL, MVT::nxv1i1, Insert, 0);
+    }
+
+    EVT PromoteVT = getPromotedVTForPredicate(VT);
+    SDValue PromoteVec = DAG.getNode(ISD::ANY_EXTEND, DL, PromoteVT, Vec);
+    if (PromoteVT.getVectorElementType() == MVT::i64)
+      Elt = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Elt);
+    SDValue Insert = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, PromoteVT,
+                                 PromoteVec, Elt, Idx);
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, Insert);
   }
 
   // Check for non-constant or out of range lane.
-  ConstantSDNode *CI = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+  ConstantSDNode *CI = dyn_cast<ConstantSDNode>(Idx);
   if (!CI || CI->getZExtValue() >= VT.getVectorNumElements())
     return SDValue();
 
@@ -18985,14 +19029,14 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
   // NEON dup + scalar store works for any alignment and is efficient.
   if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset &&
       AlignmentIsAcceptable(MVT::v16i8, Align(1)))
-    return LLT::fixed_vector(2, 64);
+    return LLT::fixed_vector(2, LLT::integer(64));
   if (CanUseFP && !IsSmallZeroMemset &&
       AlignmentIsAcceptable(MVT::f128, Align(16)))
-    return LLT::scalar(128);
+    return LLT::floatIEEE(128);
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
-    return LLT::scalar(64);
+    return LLT::integer(64);
   if (Op.size() >= 4 && AlignmentIsAcceptable(MVT::i32, Align(4)))
-    return LLT::scalar(32);
+    return LLT::integer(32);
   return LLT();
 }
 
@@ -31401,7 +31445,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
   }
   Mask = convertFixedMaskToScalableVector(Mask, DAG);
 
-  SDValue PassThru;
+  SDValue PassThru, NewLoad, Result;
   bool IsPassThruZeroOrUndef = false;
 
   if (Load->getPassThru()->isUndef()) {
@@ -31416,12 +31460,42 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
       IsPassThruZeroOrUndef = true;
   }
 
-  SDValue NewLoad = DAG.getMaskedLoad(
-      ContainerVT, DL, Load->getChain(), Load->getBasePtr(), Load->getOffset(),
-      Mask, PassThru, Load->getMemoryVT(), Load->getMemOperand(),
-      Load->getAddressingMode(), Load->getExtensionType());
+  if (!Load->isExpandingLoad()) {
+    NewLoad =
+        DAG.getMaskedLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
+                          Load->getOffset(), Mask, PassThru,
+                          Load->getMemoryVT(), Load->getMemOperand(),
+                          Load->getAddressingMode(), Load->getExtensionType());
+    Result = NewLoad;
+  } else {
+    // Fixed-length masked.expandload intrinsics should have been scalarised
+    // if the required features are not available to use EXPAND.
+    assert(((Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||
+            (Subtarget->isSVEorStreamingSVEAvailable() &&
+             Subtarget->hasSME2p2())) &&
+           "Expected SVE2p2 or SME2p2");
 
-  SDValue Result = NewLoad;
+    SDValue CntActive = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask,
+        Mask);
+
+    SDValue ActiveMask =
+        DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, Mask->getValueType(0),
+                    DAG.getConstant(0, DL, MVT::i64), CntActive);
+
+    NewLoad = DAG.getMaskedLoad(
+        ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
+        Load->getOffset(), ActiveMask, DAG.getUNDEF(ContainerVT),
+        Load->getMemoryVT(), Load->getMemOperand(), Load->getAddressingMode(),
+        Load->getExtensionType());
+
+    Result = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_expand, DL, MVT::i64),
+        Mask, NewLoad);
+  }
+
   if (!IsPassThruZeroOrUndef) {
     SDValue OldPassThru =
         convertToScalableVector(DAG, ContainerVT, Load->getPassThru());
@@ -32296,6 +32370,33 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
+
+  if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
+    Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
+    SDValue StackPtr =
+        DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
+
+    SmallVector<SDValue, 6> Ops;
+    Ops.push_back(DAG.getEntryNode());
+    Ops.push_back(
+        DAG.getTargetConstant(Intrinsic::aarch64_neon_st3, DL, MVT::i64));
+    for (SDValue V : Op->ops())
+      Ops.push_back(V);
+    Ops.push_back(StackPtr);
+
+    SDValue Chain = DAG.getMemIntrinsicNode(
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, OpVT,
+        MachinePointerInfo(), Alignment, MachineMemOperand::MOStore);
+
+    SmallVector<SDValue, 3> Results;
+    for (unsigned I = 0; I < 3; ++I) {
+      SDValue Ptr =
+          DAG.getMemBasePlusOffset(StackPtr, OpVT.getStoreSize() * I, DL);
+      Results.push_back(
+          DAG.getLoad(OpVT, DL, Chain, Ptr, MachinePointerInfo()));
+    }
+    return DAG.getMergeValues(Results, DL);
+  }
 
   if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
     // aarch64_sve_st3 only supports packed datatypes.
