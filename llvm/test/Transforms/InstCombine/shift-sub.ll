@@ -135,6 +135,19 @@ define i16 @shl_xor_i2(i2 %x) {
   ret i16 %r
 }
 
+define i8 @shl_xor_notmask(i8 %x) {
+; CHECK-LABEL: @shl_xor_notmask(
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[S:%.*]] = xor i8 [[M]], 6
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i8 2, [[S]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = and i8 %x, 2
+  %s = xor i8 %m, 6
+  %r = shl i8 2, %s
+  ret i8 %r
+}
+
 define i8 @shl_xor_multiuse(i8 %x) {
 ; CHECK-LABEL: @shl_xor_multiuse(
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 3
@@ -188,8 +201,8 @@ define <2 x i8> @shl_xor_vec_non_splat(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
-define i8 @shl_xor_negative_notmask(i8 %x) {
-; CHECK-LABEL: @shl_xor_negative_notmask(
+define i8 @shl_xor_negative_notsub(i8 %x) {
+; CHECK-LABEL: @shl_xor_negative_notsub(
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 3
 ; CHECK-NEXT:    [[S:%.*]] = xor i8 [[M]], 2
 ; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i8 2, [[S]]
@@ -364,8 +377,8 @@ define <2 x i8> @lshr_xor_vec_non_splat(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
-define i8 @lshr_xor_negative_notmask(i8 %x) {
-; CHECK-LABEL: @lshr_xor_negative_notmask(
+define i8 @lshr_xor_negative_notsub(i8 %x) {
+; CHECK-LABEL: @lshr_xor_negative_notsub(
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 3
 ; CHECK-NEXT:    [[S:%.*]] = xor i8 [[M]], 2
 ; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 96, [[S]]
