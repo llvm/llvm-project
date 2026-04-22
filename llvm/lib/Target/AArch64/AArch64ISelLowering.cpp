@@ -32292,6 +32292,37 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
 
+  if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
+    Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
+    SDValue StackPtr =
+        DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
+
+    SmallVector<SDValue, 3> Chains;
+    for (unsigned I = 0; I < 3; ++I) {
+      SDValue Ptr =
+          DAG.getMemBasePlusOffset(StackPtr, OpVT.getStoreSize() * I, DL);
+      Chains.push_back(DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(I),
+                                    Ptr, MachinePointerInfo()));
+    }
+
+    SmallVector<SDValue, 3> Ops;
+    Ops.push_back(DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains));
+    Ops.push_back(
+        DAG.getTargetConstant(Intrinsic::aarch64_neon_ld3, DL, MVT::i64));
+    Ops.push_back(StackPtr);
+
+    EVT TripleOpVT =
+        EVT::getVectorVT(*DAG.getContext(), OpVT.getVectorElementType(),
+                         OpVT.getVectorNumElements() * 3);
+    SDVTList VTs = DAG.getVTList(OpVT, OpVT, OpVT, MVT::Other);
+    SDValue LD3 = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
+                                          TripleOpVT, MachinePointerInfo(),
+                                          Alignment, MachineMemOperand::MOLoad);
+
+    return DAG.getMergeValues(
+        {LD3.getValue(0), LD3.getValue(1), LD3.getValue(2)}, DL);
+  }
+
   if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
     // aarch64_sve_ld3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
@@ -32384,8 +32415,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
       Ops.push_back(V);
     Ops.push_back(StackPtr);
 
+    EVT TripleOpVT =
+        EVT::getVectorVT(*DAG.getContext(), OpVT.getVectorElementType(),
+                         OpVT.getVectorNumElements() * 3);
     SDValue Chain = DAG.getMemIntrinsicNode(
-        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, OpVT,
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, TripleOpVT,
         MachinePointerInfo(), Alignment, MachineMemOperand::MOStore);
 
     SmallVector<SDValue, 3> Results;
