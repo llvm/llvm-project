@@ -1356,35 +1356,9 @@ define <32 x i8> @perlane_ashr_v32i8(<32 x i8> %a) nounwind {
 define <64 x i8> @perlane_shl_v64i8(<64 x i8> %a) nounwind {
 ; SSE2-LABEL: perlane_shl_v64i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psllw $5, %xmm4
-; SSE2-NEXT:    pxor %xmm5, %xmm5
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm4, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    por %xmm3, %xmm0
-; SSE2-NEXT:    paddb %xmm4, %xmm4
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    pcmpgtb %xmm4, %xmm3
-; SSE2-NEXT:    movdqa %xmm3, %xmm7
-; SSE2-NEXT:    pandn %xmm0, %xmm7
-; SSE2-NEXT:    psllw $2, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; SSE2-NEXT:    pand %xmm6, %xmm3
-; SSE2-NEXT:    pand %xmm0, %xmm3
-; SSE2-NEXT:    por %xmm7, %xmm3
-; SSE2-NEXT:    paddb %xmm4, %xmm4
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm4, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:    pandn %xmm3, %xmm4
-; SSE2-NEXT:    paddb %xmm3, %xmm3
-; SSE2-NEXT:    pand %xmm0, %xmm3
-; SSE2-NEXT:    por %xmm4, %xmm3
 ; SSE2-NEXT:    psllw $5, %xmm1
+; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm4
@@ -1394,12 +1368,12 @@ define <64 x i8> @perlane_shl_v64i8(<64 x i8> %a) nounwind {
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm7
-; SSE2-NEXT:    pandn %xmm0, %xmm7
+; SSE2-NEXT:    movdqa %xmm4, %xmm6
+; SSE2-NEXT:    pandn %xmm0, %xmm6
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    pand %xmm4, %xmm0
-; SSE2-NEXT:    por %xmm7, %xmm0
+; SSE2-NEXT:    por %xmm6, %xmm0
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm4
@@ -1408,32 +1382,58 @@ define <64 x i8> @perlane_shl_v64i8(<64 x i8> %a) nounwind {
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    pand %xmm4, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    psllw $5, %xmm2
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpgtb %xmm2, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; SSE2-NEXT:    pand %xmm1, %xmm7
-; SSE2-NEXT:    paddb %xmm1, %xmm7
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm1, %xmm7
-; SSE2-NEXT:    paddb %xmm2, %xmm2
+; SSE2-NEXT:    psllw $5, %xmm3
+; SSE2-NEXT:    pxor %xmm6, %xmm6
+; SSE2-NEXT:    pcmpgtb %xmm3, %xmm6
+; SSE2-NEXT:    movdqa %xmm6, %xmm1
+; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
+; SSE2-NEXT:    por %xmm1, %xmm6
+; SSE2-NEXT:    paddb %xmm3, %xmm3
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
-; SSE2-NEXT:    pcmpgtb %xmm2, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-NEXT:    pandn %xmm7, %xmm1
-; SSE2-NEXT:    psllw $2, %xmm7
+; SSE2-NEXT:    pcmpgtb %xmm3, %xmm4
+; SSE2-NEXT:    movdqa %xmm4, %xmm7
+; SSE2-NEXT:    pandn %xmm6, %xmm7
+; SSE2-NEXT:    psllw $2, %xmm6
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; SSE2-NEXT:    pand %xmm1, %xmm4
 ; SSE2-NEXT:    pand %xmm6, %xmm4
-; SSE2-NEXT:    pand %xmm7, %xmm4
-; SSE2-NEXT:    por %xmm1, %xmm4
+; SSE2-NEXT:    por %xmm7, %xmm4
+; SSE2-NEXT:    paddb %xmm3, %xmm3
+; SSE2-NEXT:    pxor %xmm6, %xmm6
+; SSE2-NEXT:    pcmpgtb %xmm3, %xmm6
+; SSE2-NEXT:    movdqa %xmm6, %xmm3
+; SSE2-NEXT:    pandn %xmm4, %xmm3
+; SSE2-NEXT:    paddb %xmm4, %xmm4
+; SSE2-NEXT:    pand %xmm6, %xmm4
+; SSE2-NEXT:    por %xmm3, %xmm4
+; SSE2-NEXT:    psllw $5, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pcmpgtb %xmm2, %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; SSE2-NEXT:    pand %xmm3, %xmm6
+; SSE2-NEXT:    paddb %xmm3, %xmm6
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE2-NEXT:    psubb %xmm3, %xmm6
+; SSE2-NEXT:    paddb %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pcmpgtb %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm7
+; SSE2-NEXT:    pandn %xmm6, %xmm7
+; SSE2-NEXT:    psllw $2, %xmm6
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    pand %xmm6, %xmm3
+; SSE2-NEXT:    por %xmm7, %xmm3
 ; SSE2-NEXT:    paddb %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpgtb %xmm2, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, %xmm1
-; SSE2-NEXT:    pandn %xmm4, %xmm1
-; SSE2-NEXT:    paddb %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm5, %xmm4
-; SSE2-NEXT:    por %xmm1, %xmm4
+; SSE2-NEXT:    pandn %xmm3, %xmm1
+; SSE2-NEXT:    paddb %xmm3, %xmm3
+; SSE2-NEXT:    pand %xmm5, %xmm3
+; SSE2-NEXT:    por %xmm1, %xmm3
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    movdqa %xmm4, %xmm2
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    movdqa %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: perlane_shl_v64i8:

@@ -156,9 +156,9 @@ Error replayKernel() {
 
   // Retrieve the values from the JSON file.
   uint32_t NumTeams, NumThreads, SharedMemorySize, DeviceId, NumArgs;
-  if (auto Err = getInteger(JsonObj, "NumTeamsClause", NumTeams))
+  if (auto Err = getInteger(JsonObj, "NumTeams", NumTeams))
     return Err;
-  if (auto Err = getInteger(JsonObj, "ThreadLimitClause", NumThreads))
+  if (auto Err = getInteger(JsonObj, "NumThreads", NumThreads))
     return Err;
   if (auto Err = getInteger(JsonObj, "SharedMemorySize", SharedMemorySize))
     return Err;
@@ -186,8 +186,35 @@ Error replayKernel() {
   NumThreads = NumThreadsOpt > 0 ? NumThreadsOpt : NumThreads;
   DeviceId = DeviceIdOpt >= 0 ? DeviceIdOpt : DeviceId;
 
+  // Retrieve the teams and threads limits (min and max).
+  SmallVector<uint32_t> TeamsLimits;
+  auto Err = processIntegerArray(JsonObj, "TeamsLimits", [&](uint64_t Val) {
+    TeamsLimits.push_back(static_cast<uint32_t>(Val));
+  });
+  if (Err)
+    return Err;
+
+  SmallVector<uint32_t> ThreadsLimits;
+  Err = processIntegerArray(JsonObj, "ThreadsLimits", [&](uint64_t Val) {
+    ThreadsLimits.push_back(static_cast<uint32_t>(Val));
+  });
+  if (Err)
+    return Err;
+
+  if (TeamsLimits.size() != 2 || ThreadsLimits.size() != 2)
+    return createErr("TeamsLimits and ThreadsLimits must have a min and max");
+
+  // If the limits were specified, verify the selected values are valid.
+  if (TeamsLimits[0] > 0 &&
+      (NumTeams < TeamsLimits[0] || NumTeams > TeamsLimits[1]))
+    return createErr("number of teams is out of the allowed limits");
+  if (ThreadsLimits[0] > 0 &&
+      (NumThreads < ThreadsLimits[0] || NumThreads > ThreadsLimits[1]))
+    return createErr("number of threads is out of the allowed limits");
+
+  // Retrieve the arguments of the kernel.
   SmallVector<void *> TgtArgs;
-  auto Err = processIntegerArray(JsonObj, "ArgPtrs", [&](uint64_t Val) {
+  Err = processIntegerArray(JsonObj, "ArgPtrs", [&](uint64_t Val) {
     TgtArgs.push_back(reinterpret_cast<void *>(Val));
   });
   if (Err)
@@ -213,15 +240,8 @@ Error replayKernel() {
     return createErr("failed to read the globals file");
   auto GlobalsBuffer = std::move(GlobalsBufferOrErr.get());
 
-  // On AMD for currently unknown reasons we cannot copy memory mapped data to
-  // device. This is a work-around.
-  uint8_t *RecordedGlobals = new uint8_t[GlobalsBuffer->getBufferSize()];
-  std::memcpy(RecordedGlobals,
-              const_cast<char *>(GlobalsBuffer->getBuffer().data()),
-              GlobalsBuffer->getBufferSize());
-
-  void *BufferPtr = (void *)RecordedGlobals;
-  uint32_t NumGlobals = *((uint32_t *)(BufferPtr));
+  const void *BufferPtr = const_cast<char *>(GlobalsBuffer->getBufferStart());
+  uint32_t NumGlobals = *((const uint32_t *)(BufferPtr));
   BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
   SmallVector<llvm::offloading::EntryTy> OffloadEntries(
@@ -241,14 +261,15 @@ Error replayKernel() {
     Global.Address = static_cast<char *>(OffloadEntries[0].Address) + I + 1;
 
     // Setup the offload entry using the information from the file.
-    uint32_t NameSize = *((uint32_t *)(BufferPtr));
+    uint32_t NameSize = *((const uint32_t *)(BufferPtr));
     BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
-    uint64_t Size = *((uint64_t *)(BufferPtr));
+    uint64_t Size = *((const uint64_t *)(BufferPtr));
     BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint64_t));
     Global.Size = Size;
-    Global.SymbolName = (char *)BufferPtr;
+    Global.SymbolName =
+        const_cast<char *>(static_cast<const char *>(BufferPtr));
     BufferPtr = utils::advancePtr(BufferPtr, NameSize);
-    Global.AuxAddr = BufferPtr;
+    Global.AuxAddr = const_cast<void *>(BufferPtr);
     BufferPtr = utils::advancePtr(BufferPtr, Size);
   }
 
@@ -293,24 +314,16 @@ Error replayKernel() {
     return createErr("failed to read the kernel record input file");
   auto RecordInputBuffer = std::move(RecordInputBufferOrErr.get());
 
-  // On AMD for currently unknown reasons we cannot copy memory mapped data to
-  // device. This is a work-around.
-  uint8_t *RecordedData = new uint8_t[RecordInputBuffer->getBufferSize()];
-  std::memcpy(RecordedData,
-              const_cast<char *>(RecordInputBuffer->getBuffer().data()),
-              RecordInputBuffer->getBufferSize());
-
   KernelReplayOutcomeTy Outcome;
   Rc = __tgt_target_kernel_replay(
       /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
-      (char *)RecordedData, RecordInputBuffer->getBufferSize(),
+      const_cast<char *>(RecordInputBuffer->getBufferStart()),
+      RecordInputBuffer->getBufferSize(),
       NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
       LoopTripCount, &Outcome);
   if (Rc != OMP_TGT_SUCCESS)
     return createErr("failed to replay kernel");
-
-  delete[] RecordedData;
 
   // Verify the replay output if requested.
   if (VerifyOpt) {

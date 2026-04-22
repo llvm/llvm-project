@@ -304,7 +304,7 @@ CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
 # Note: we get some 'garbage' options for linker here (such as -I, --isystem & etc).
 LDFLAGS += $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
-ifeq (,$(filter $(OS), Windows_NT Android Darwin))
+ifeq (,$(filter $(OS), Windows_NT Android Darwin Wasm))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
 		LDFLAGS += -pthread
 	endif
