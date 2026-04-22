@@ -1934,16 +1934,17 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   Register Ptr = I.getOperand(1 + OpOffset).getReg();
 
   if (!ResType.isTypeIntOrFloat())
-    return diagnoseUnsupported(
-        I, "atomic load is only allowed for integer or floating point types");
+    return diagnoseUnsupported(I,
+                               "Lowering to SPIR-V of atomic load is only "
+                               "allowed for integer or floating point types");
 
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
-  // This could be relaxed since the volatile attribute on atomic load is
+  // TODO: This must be relaxed since the volatile attribute on atomic load is
   // supported with the VulkanMemoryModelKHR capability.
   if (MemOp.isVolatile())
-    return diagnoseUnsupported(
-        I, "atomic load of volatile memory is not supported");
+    return diagnoseUnsupported(I, "Lowering to SPIR-V of atomic load of "
+                                  "volatile memory is not supported");
 
   uint32_t Scope =
       static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
@@ -2029,17 +2030,18 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(Ptr);
   SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
   if (!PointeeType.isTypeIntOrFloat())
-    return diagnoseUnsupported(
-        I, "atomic store is only allowed for integer or floating point types");
+    return diagnoseUnsupported(I,
+                               "Lowering to SPIR-V of atomic store is only "
+                               "allowed for integer or floating point types");
 
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
 
-  // This could be relaxed since the volatile attribute on atomic store is
+  // TODO: This must be relaxed since the volatile attribute on atomic store is
   // supported with the VulkanMemoryModelKHR capability.
   if (MemOp.isVolatile())
-    return diagnoseUnsupported(
-        I, "atomic store of volatile memory is not supported");
+    return diagnoseUnsupported(I, "Lowering to SPIR-V of atomic store of "
+                                  "volatile memory is not supported");
 
   uint32_t Scope =
       static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
