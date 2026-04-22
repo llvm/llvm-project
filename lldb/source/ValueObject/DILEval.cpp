@@ -818,192 +818,45 @@ static bool HasFloatingRepresentation(CompilerType ct) {
   return ct.GetTypeInfo() & lldb::eTypeIsFloat;
 }
 
-static AssignConvertType VerifyAssignmentTypes(CompilerType lhs_type,
-                                               CompilerType rhs_type) {
+static std::string VerifyAssignmentTypes(CompilerType lhs_type,
+                                         CompilerType rhs_type) {
   // Make sure lhs is a legal type for DIL assignment.
   if (!lhs_type.IsInteger() && !lhs_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(lhs_type) && !lhs_type.IsPointerType() &&
       !lhs_type.IsScalarType())
-    return AssignConvertType::UnrecognizedType;
+    return "Illegal type for lhs of assignment (not scalar numeric type)";
 
   // Make sure rhs is a legal type for DIL assignment.
   if (!rhs_type.IsInteger() && !rhs_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(rhs_type) && !rhs_type.IsPointerType())
-    return AssignConvertType::UnrecognizedType;
+    return "Illegal type for rhs of assignment (not scalar numeric type)";
 
   // Only allow assigning pointers to pointers.
   if ((lhs_type.IsPointerType() && !rhs_type.IsPointerType()) ||
       (!lhs_type.IsPointerType() && rhs_type.IsPointerType()))
-    return AssignConvertType::UnrecognizedType;
+    return "Invalid assignment: Can only assign pointers to pointers";
 
-  // Only allow assigning floats or doubles to floats, doubles or ints.
-  if (HasFloatingRepresentation(rhs_type) &&
-      !HasFloatingRepresentation(lhs_type) && !lhs_type.IsInteger())
-    return AssignConvertType::UnrecognizedType;
+  // For "real numbers", the types must match exactly.
+  if ((HasFloatingRepresentation(rhs_type) ||
+       HasFloatingRepresentation(lhs_type)) &&
+      lhs_type != rhs_type)
+    return "Invalid assignment: lhs and rhs have incompatible types";
 
-  // Check for int-float-double conversions (the only kind we do for
-  // assignments. Note: For assignments we only ever convert the RHS,
-  // never the LHS.
-  if (lhs_type == rhs_type)
-    return AssignConvertType::None;
-
-  if (HasFloatingRepresentation(lhs_type) ||
-      HasFloatingRepresentation(rhs_type)) {
-    if (rhs_type.IsInteger() || rhs_type.IsUnscopedEnumerationType()) {
-      if (lhs_type.GetTypeName(false) == "float")
-        return AssignConvertType::IntToFloat;
-      else if (lhs_type.GetTypeName(false) == "double")
-        return AssignConvertType::IntToDouble;
-      else
-        return AssignConvertType::UnrecognizedType;
-    } else if (rhs_type.GetTypeName(false) == "float") {
-      if (lhs_type.IsInteger())
-        return AssignConvertType::FloatToInt;
-      if (lhs_type.GetTypeName(false) == "double")
-        return AssignConvertType::FloatToDouble;
-      ;
-    } else if (rhs_type.GetTypeName(false) == "double") {
-      if (lhs_type.IsInteger())
-        return AssignConvertType::DoubleToInt;
-      else if (lhs_type.GetTypeName(false) == "float")
-        return AssignConvertType::DoubleToFloat;
-    } else
-      return AssignConvertType::UnrecognizedType;
-  }
-
-  return AssignConvertType::None;
-}
-
-static llvm::APFloat GetAPFloat(lldb::ValueObjectSP rhs,
-                                AssignConvertType conversion) {
-  switch (conversion) {
-  case AssignConvertType::IntToFloat: {
-    // float = int. lhs is float, rhs is int.
-    auto value_or_err = rhs->GetValueAsAPSInt();
-    if (value_or_err) {
-      float f_val = float(value_or_err->roundToDouble());
-      llvm::APFloat ap_float(f_val);
-      return ap_float;
-    }
-  } break;
-  case AssignConvertType::IntToDouble: {
-    // double = int. lhs is double, rhs is int.
-    auto value_or_err = rhs->GetValueAsAPSInt();
-    if (value_or_err) {
-      double d_val = value_or_err->roundToDouble();
-      llvm::APFloat ap_float(d_val);
-      return ap_float;
-    }
-  } break;
-  case AssignConvertType::DoubleToFloat: {
-    // float = double. lhs is float, rhs is double.
-    auto value_or_err = rhs->GetValueAsAPFloat();
-    if (value_or_err) {
-      double d_val = value_or_err->convertToDouble();
-      float f_val = static_cast<float>(d_val);
-      llvm::APFloat ap_float(f_val);
-      return ap_float;
-    }
-  } break;
-  default:
-    break;
-  }
-  return llvm::APFloat(0.0);
-}
-
-static llvm::APInt GetAPInt(lldb::ValueObjectSP rhs,
-                            AssignConvertType conversion) {
-  switch (conversion) {
-  case AssignConvertType::FloatToInt: {
-    // int = float. lhs is int, rhs is float.
-    auto value_or_err = rhs->GetValueAsAPFloat();
-    if (value_or_err) {
-      float f_val = value_or_err->convertToFloat();
-      int int_val = std::round(f_val);
-      llvm::APInt ap_int(32, int_val);
-      return ap_int;
-    }
-  } break;
-  case AssignConvertType::DoubleToInt: {
-    // int = double. lhs is int, rhs is double
-    auto value_or_err = rhs->GetValueAsAPFloat();
-    if (value_or_err) {
-      double d_val = value_or_err->convertToDouble();
-      int int_val = std::round(d_val);
-      llvm::APInt ap_int(32, int_val);
-      return ap_int;
-    }
-  } break;
-  default:
-    break;
-  }
-  return llvm::APInt(32, 0);
-}
-
-static lldb::ValueObjectSP GetDoubleValueObject(lldb::ValueObjectSP rhs,
-                                                CompilerType lhs_type,
-                                                ExecutionContext exe_ctx) {
-  // Given a ValueObjectSP that contains a float, return an equivalent
-  // ValueObjectSP that contains a double (convert the float to a double).
-  if (rhs->GetCompilerType().GetTypeName(false) != "float")
-    return rhs;
-
-  if (lhs_type.GetTypeName(false) != "double")
-    return rhs;
-
-  auto value_or_err = rhs->GetValueAsAPFloat();
-  if (value_or_err) {
-    double d_val = value_or_err->convertToDouble();
-    Scalar scalar(d_val);
-    //    ExecutionContext exe_ctx(m_exe_ctx_scope);
-    lldb::ValueObjectSP new_valobj = ValueObject::CreateValueObjectFromScalar(
-        exe_ctx, scalar, lhs_type, "result");
-    return new_valobj;
-  }
-
-  return rhs;
+  return "all ok";
 }
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
                                 lldb::ValueObjectSP rhs, uint32_t location) {
 
-  AssignConvertType conversion =
+  std::string err_msg =
       VerifyAssignmentTypes(lhs->GetCompilerType(), rhs->GetCompilerType());
-  std::string err_msg;
-  Status status;
-  switch (conversion) {
-  case AssignConvertType::IntToFloat:
-  case AssignConvertType::IntToDouble:
-  case AssignConvertType::DoubleToFloat: {
-    llvm::APFloat ap_float = GetAPFloat(rhs, conversion);
-    lhs->SetValueFromInteger(ap_float.bitcastToAPInt(), status,
-                             m_allow_var_updates);
-  } break;
-  case AssignConvertType::FloatToInt:
-  case AssignConvertType::DoubleToInt: {
-    llvm::APInt ap_int = GetAPInt(rhs, conversion);
-    lhs->SetValueFromInteger(ap_int, status, m_allow_var_updates);
-  } break;
-  case AssignConvertType::FloatToDouble:
-    // Rhs is float; to convert it to a double, need to create a new
-    // ValueObject for rhs, with type "double".
-    {
-      ExecutionContext exe_ctx(m_exe_ctx_scope);
-      rhs = GetDoubleValueObject(rhs, lhs->GetCompilerType(), exe_ctx);
-      lhs->SetValueFromInteger(rhs, status, m_allow_var_updates);
-    }
-    break;
-  case AssignConvertType::None: {
-    lhs->SetValueFromInteger(rhs, status, m_allow_var_updates);
-  } break;
-  case AssignConvertType::UnrecognizedType: {
-    err_msg = "Illegal type for assignment: Cannot assign/convert rhs to lhs.";
+  if (err_msg != "all ok")
     return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                 location);
-  }
-  }
 
+  Status status;
+  lhs->SetValueFromInteger(rhs, status, m_allow_var_updates);
   if (status.Success())
     return lhs;
 

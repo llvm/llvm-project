@@ -45,15 +45,6 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect("frame variable 'i = (int)eTwo'", substrs=["i = 1"])
         self.expect_var_path("i", value="1")
 
-        # Assigning "int" with a small value to "short" should work.
-        self.expect("frame variable 's = i'", substrs=["s = 1"])
-        # Assigning "int" with a big value to "short" should fail.
-        self.expect(
-            "frame variable 's = 78246'",
-            error=True,
-            substrs=["new value is too big"],
-        )
-
         # Assigning to a float var
         self.expect_var_path("f", value="1.5")
         self.expect("frame variable 'f = 17.823f'", substrs=["f = 17.823"])
@@ -75,19 +66,19 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable 'p = 1'",
             error=True,
-            substrs=["Illegal type for assignment: Cannot assign/convert rhs to lhs"],
+            substrs=["Invalid assignment: Can only assign pointers to pointers"],
         )
 
         self.expect(
             "frame variable 'p = i + s'",
             error=True,
-            substrs=["Illegal type for assignment: Cannot assign/convert rhs to lhs"],
+            substrs=["Invalid assignment: Can only assign pointers to pointers"],
         )
 
         self.expect(
             "frame variable 'i = p'",
             error=True,
-            substrs=["Illegal type for assignment: Cannot assign/convert rhs to lhs"],
+            substrs=["Invalid assignment: Can only assign pointers to pointers"],
         )
 
         if Is32Bit:
@@ -122,30 +113,61 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect("frame variable 'arr[1] = j'", substrs=["arr[1] = j = -4"])
         self.expect("frame variable 'arr'", substrs=["([0] = 37, [1] = -4)"])
 
-        # Test assignment conversions.
+        # Test basic assignment conversions.
         # int = enum
         self.expect("frame variable 'i = eOne'", substrs=["i = 0"])
         # int = bool
         self.expect("frame variable 'i = true'", substrs=["i = 1"])
         # int = double
-        self.expect("frame variable 'i = d2'", substrs=["i = 16"])
+        self.expect(
+            "frame variable 'i = d2'",
+            error=True,
+            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+        )
         # int = float
-        self.expect("frame variable 'i = pi'", substrs=["i = 3"])
-
+        self.expect(
+            "frame variable 'i = pi'",
+            error=True,
+            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+        )
         # float = int
-        self.expect("frame variable 'f = 8'", substrs=["f = 8"])
+        self.expect(
+            "frame variable 'f = 8'",
+            error=True,
+            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+        )
         # float = double
-        self.expect("frame variable 'f = d2'", substrs=["f = 15.7799997"])
-
+        self.expect(
+            "frame variable 'f = d2'",
+            error=True,
+            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+        )
         # double = double
         self.expect("frame variable 'd = d2'", substrs=["d = 15.779999999999999"])
         self.expect("frame variable 'd = 1.25'", substrs=["d = 1.25"])
         # double = float
-        self.expect("frame variable 'd = pi'", substrs=["d = 3.1415901184082031"])
+        self.expect(
+            "frame variable 'd = pi'",
+            error=True,
+            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+        )
         # double = int
-        self.expect("frame variable 'd = 17'", substrs=["d = 17"])
+        self.expect(
+            "frame variable 'd = 17'",
+            error=True,
+            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+        )
 
         # bool = int
         self.expect("frame variable 'b = 0'", substrs=["b = false"])
         self.expect("frame variable 'b = 1'", substrs=["b = true"])
         self.expect("frame variable 'b = 32'", substrs=["b = true"])
+
+        # Assigning "int" with a small value to "short" should work.
+        self.expect("frame variable 's = i'", substrs=["s = 1"])
+        # Assigning "int" with a big value to "short" should fail.
+        self.expect(
+            "frame variable 's = 78246'",
+            error=True,
+            substrs=["new value is too big"],
+        )
