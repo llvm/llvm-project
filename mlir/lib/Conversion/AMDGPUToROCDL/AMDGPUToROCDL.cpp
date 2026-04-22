@@ -683,8 +683,7 @@ static Value packSmallFloatVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
-/// Converts sparse MFMA/WMMA (smfmac/swmmac) operands to the expected ROCDL
-/// types.
+/// Converts packed vector operands to the expected ROCDL types.
 static Value convertPackedVectorOperand(ConversionPatternRewriter &rewriter,
                                         Location loc, Value input,
                                         bool allowBf16 = true) {
