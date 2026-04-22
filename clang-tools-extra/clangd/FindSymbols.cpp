@@ -215,7 +215,8 @@ SymbolTags filterSymbolTags(SymbolTags ST) {
   if (ST & AbstractMask)
     ST &= ~VirtualMask;
 
-  // Final implies Virtual; Overrides is also redundant as Final overrides are still overrides.
+  // Final implies Virtual; Overrides is also redundant as Final overrides are
+  // still overrides.
   if (ST & FinalMask)
     ST &= ~(VirtualMask | OverridesMask);
 
