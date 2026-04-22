@@ -185,7 +185,7 @@ def findMainThreadCheckerDylib():
         return ""
 
     if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
-        if getDarwinEmbeddedKernelVersion() >= 26:
+        if getDarwinEmbeddedKernelVersion() > 25:
             return "/usr/lib/libMainThreadChecker.dylib"
         return "/Developer/usr/lib/libMainThreadChecker.dylib"
 
@@ -203,6 +203,8 @@ def findBacktraceRecordingDylib():
         return ""
 
     if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        if getDarwinEmbeddedKernelVersion() > 25:
+            return "/usr/lib/libBacktraceRecording.dylib"
         return "/Developer/usr/lib/libBacktraceRecording.dylib"
 
     with os.popen("xcode-select -p") as output:
