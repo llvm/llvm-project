@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s  -split-input-file -affine-loop-tile="tile-size=32" -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -affine-loop-tile="tile-sizes=16,16" | FileCheck %s --check-prefix=TILE16
 
 // -----
 
@@ -45,5 +46,23 @@ func.func @illegal_loop_with_diag_dependence() {
     }
   }
 
+  return
+}
+
+// -----
+
+// Verify that tiling is not applied when anti-dependences would be violated.
+
+// TILE16-LABEL: func @anti_dep
+// TILE16:       affine.for %{{.*}} = 0 to 1023 {
+// TILE16-NEXT:    affine.for %{{.*}} = 1 to 1024 {
+// TILE16-NOT:     affine.for %{{.*}} = 0 to 1023 step 16
+func.func @anti_dep(%arr: memref<1024x1024xi32>) {
+  affine.for %i = 0 to 1023 {
+    affine.for %j = 1 to 1024 {
+      %val = affine.load %arr[%i + 1, %j - 1] : memref<1024x1024xi32>
+      affine.store %val, %arr[%i, %j] : memref<1024x1024xi32>
+    }
+  }
   return
 }
