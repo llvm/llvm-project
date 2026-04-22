@@ -1493,8 +1493,7 @@ public:
         // symbols that switch XLEN (e.g. rv64 inside an rv32 triple) reach
         // the decoder correctly.
         Features.AddFeature("64bit", (*ParseResult)->getXLen() == 64);
-        for (const std::string &F : (*ParseResult)->toFeatures())
-          Features.AddFeature(F);
+        Features.addFeaturesVector((*ParseResult)->toFeatures());
         It->second = std::make_unique<DisassemblerTarget>(Base, Features);
       } else {
         // Parse failed: leave the slot null so every future query for this
