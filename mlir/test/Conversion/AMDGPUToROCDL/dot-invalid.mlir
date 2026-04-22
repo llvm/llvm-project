@@ -21,8 +21,7 @@ func.func @dot_f16_f16_requires_gfx11(%a: vector<2xf16>, %b: vector<2xf16>, %c: 
 
 // -----
 
-// fdot2.f32.bf16 is available on gfx11+ and gfx950 (ROCDLOps.td:1532);
-// neither gfx906 nor gfx942 supports it.
+// fdot2.f32.bf16 is available on gfx11+ and gfx950+.
 func.func @dot_f32_bf16_requires_gfx11_or_gfx950(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: f32) -> f32 {
   // expected-error@below {{'amdgpu.dot' op no intrinsic matching dot on the given chipset}}
   // expected-error@below {{failed to legalize operation 'amdgpu.dot'}}
