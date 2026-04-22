@@ -155,12 +155,6 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
-- Clang now diagnoses the use of the same identifier with both internal and
-  external linkage within a translation unit, as made ill-formed by
-  `N3410 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf>`_.
-  This is also diagnosed in older C language modes as the behavior was
-  undefined prior to C2y. (#GH54215)
-
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
@@ -260,6 +254,10 @@ New Compiler Flags
   shorthand for ``-fwin-cfg-mechanism=dispatch``.
 - New ``-cl`` option ``/d2guardcfgdispatch-`` added to match MSVC. This acts as a
   shorthand for ``-fwin-cfg-mechanism=check``.
+
+- New option ``-f[no-]strict-bool`` added to control whether Clang can assume
+  that ``bool`` values loaded from memory cannot have a bit pattern other
+  than 0 or 1.
 
 Deprecated Compiler Flags
 -------------------------
