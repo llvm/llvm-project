@@ -48,6 +48,7 @@ subroutine s1()
   type :: extensible
   end type
   type, bind(c) :: inextensible
+    integer :: n
   end type
 
   ! This one's OK

@@ -262,9 +262,6 @@ TEST(FortranFeaturesTest, CamelCaseToLowerCaseHyphenated) {
                 EnumToString(LanguageFeature::InitBlankCommon)),
       "init-blank-common");
   EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
-                EnumToString(LanguageFeature::EmptyBindCDerivedType)),
-      "empty-bind-c-derived-type");
-  EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
                 EnumToString(LanguageFeature::MiscSourceExtensions)),
       "misc-source-extensions");
   EXPECT_EQ(CamelCaseToLowerCaseHyphenated(

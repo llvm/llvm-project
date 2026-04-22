@@ -3256,10 +3256,10 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
             "An array component of an interoperable type must have at least one element"_err_en_US);
       }
     }
-    if (derived->componentNames().empty()) { // F'2023 C1805
-      context().Warn(msgs, common::LanguageFeature::EmptyBindCDerivedType,
-          symbol.name(),
-          "A derived type with the BIND attribute should not be empty"_warn_en_US);
+    if (symbol.attrs().test(Attr::BIND_C) &&
+        derived->componentNames().empty()) { // F'2023 C1805
+      msgs.Say(symbol.name(),
+          "A derived type with the BIND(C) attribute must have at least one component"_err_en_US);
     }
   }
   if (msgs.AnyFatalError()) {

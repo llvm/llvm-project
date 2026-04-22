@@ -40,7 +40,7 @@ program main
     procedure, nopass :: b => s
   end type
 
-  ! WARNING: A derived type with the BIND attribute should not be empty [-Wempty-bind-c-derived-type]
+  ! ERROR: A derived type with the BIND(C) attribute must have at least one component
   type, bind(c) :: t5
   end type
 

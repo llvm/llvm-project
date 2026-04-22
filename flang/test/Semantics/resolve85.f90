@@ -24,7 +24,7 @@ module m
   end type derived4
 
   !WARNING: Attribute 'BIND(C)' cannot be used more than once [-Wredundant-attribute]
-  !WARNING: A derived type with the BIND attribute should not be empty [-Wempty-bind-c-derived-type]
+  !ERROR: A derived type with the BIND(C) attribute must have at least one component
   type, bind(c), public, bind(c) :: derived5
   end type derived5
 

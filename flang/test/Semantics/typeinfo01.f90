@@ -204,6 +204,7 @@ end module
 
 module m10
   type, bind(c) :: t ! non-extensible
+    integer :: n
   end type
   interface read(formatted)
     procedure :: rf
@@ -246,7 +247,8 @@ module m10
     integer, intent(out) :: iostat
     character(len=*), intent(inout) :: iomsg
   end subroutine
-!CHECK: .dt.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),special=.s.t,specialbitset=120_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1,nodefinedassignment=1_1)
+!CHECK: .c.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:0_8 init:[component::component(name=.n.n,genre=1_1,category=0_1,kind=4_1,rank=0_1,memoryspace=0_1,offset=0_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL())]
+!CHECK: .dt.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=4_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=.c.t,procptr=NULL(),special=.s.t,specialbitset=120_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1,nodefinedassignment=1_1)
 !CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:3_8 init:[specialbinding::specialbinding(which=3_1,isargdescriptorset=0_1,istypebound=0_1,specialcaseflag=0_1,proc=rf),specialbinding(which=4_1,isargdescriptorset=0_1,istypebound=0_1,specialcaseflag=0_1,proc=ru),specialbinding(which=5_1,isargdescriptorset=0_1,istypebound=0_1,specialcaseflag=0_1,proc=wf),specialbinding(which=6_1,isargdescriptorset=0_1,istypebound=0_1,specialcaseflag=0_1,proc=wu)]
 end module
 
