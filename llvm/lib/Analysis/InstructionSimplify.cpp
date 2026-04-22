@@ -7297,6 +7297,33 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     return nullptr;
   }
+  // FP instruction intrinsics: without operand bundles these have default
+  // rounding mode and exception behavior, equivalent to FP instructions.
+  case Intrinsic::fadd: {
+    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
+    return simplifyFAddInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
+                            RoundingMode::NearestTiesToEven);
+  }
+  case Intrinsic::fsub: {
+    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
+    return simplifyFSubInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
+                            RoundingMode::NearestTiesToEven);
+  }
+  case Intrinsic::fmul: {
+    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
+    return simplifyFMulInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
+                            RoundingMode::NearestTiesToEven);
+  }
+  case Intrinsic::fdiv: {
+    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
+    return simplifyFDivInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
+                            RoundingMode::NearestTiesToEven);
+  }
+  case Intrinsic::frem: {
+    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
+    return simplifyFRemInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
+                            RoundingMode::NearestTiesToEven);
+  }
   case Intrinsic::experimental_constrained_fma: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
     if (Value *V = simplifyFPOp(Args, {}, Q, *FPI->getExceptionBehavior(),

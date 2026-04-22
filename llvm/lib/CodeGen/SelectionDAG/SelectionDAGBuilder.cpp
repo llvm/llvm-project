@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -7088,6 +7089,147 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::ARITH_FENCE, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)), Flags));
+    return;
+  }
+  // FP instruction intrinsics: call-form equivalents of FP instructions.
+  // Without fp.control/fp.except bundles these lower to the same ISD nodes
+  // as the corresponding instructions.
+  case Intrinsic::fadd:
+    setValue(&I, DAG.getNode(ISD::FADD, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+  case Intrinsic::fsub:
+    setValue(&I, DAG.getNode(ISD::FSUB, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+  case Intrinsic::fmul:
+    setValue(&I, DAG.getNode(ISD::FMUL, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+  case Intrinsic::fneg:
+    setValue(&I, DAG.getNode(ISD::FNEG, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)), Flags));
+    return;
+  case Intrinsic::fdiv:
+    setValue(&I, DAG.getNode(ISD::FDIV, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+  case Intrinsic::frem:
+    setValue(&I, DAG.getNode(ISD::FREM, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+  case Intrinsic::fptrunc: {
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::FP_ROUND, sdl, DestVT,
+                             getValue(I.getArgOperand(0)),
+                             DAG.getTargetConstant(0, sdl, MVT::i32), Flags));
+    return;
+  }
+  case Intrinsic::fpext: {
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::FP_EXTEND, sdl, DestVT,
+                             getValue(I.getArgOperand(0)), Flags));
+    return;
+  }
+  case Intrinsic::uitofp: {
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::UINT_TO_FP, sdl, DestVT,
+                             getValue(I.getArgOperand(0)), Flags));
+    return;
+  }
+  case Intrinsic::sitofp: {
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::SINT_TO_FP, sdl, DestVT,
+                             getValue(I.getArgOperand(0)), Flags));
+    return;
+  }
+  case Intrinsic::fptosi: {
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::FP_TO_SINT, sdl, DestVT,
+                             getValue(I.getArgOperand(0))));
+    return;
+  }
+  case Intrinsic::fptoui: {
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::FP_TO_UINT, sdl, DestVT,
+                             getValue(I.getArgOperand(0))));
+    return;
+  }
+  case Intrinsic::fcmp: {
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
+    FCmpInst::Predicate Pred =
+        StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
+            .Case("oeq", FCmpInst::FCMP_OEQ)
+            .Case("ogt", FCmpInst::FCMP_OGT)
+            .Case("oge", FCmpInst::FCMP_OGE)
+            .Case("olt", FCmpInst::FCMP_OLT)
+            .Case("ole", FCmpInst::FCMP_OLE)
+            .Case("one", FCmpInst::FCMP_ONE)
+            .Case("ord", FCmpInst::FCMP_ORD)
+            .Case("uno", FCmpInst::FCMP_UNO)
+            .Case("ueq", FCmpInst::FCMP_UEQ)
+            .Case("ugt", FCmpInst::FCMP_UGT)
+            .Case("uge", FCmpInst::FCMP_UGE)
+            .Case("ult", FCmpInst::FCMP_ULT)
+            .Case("ule", FCmpInst::FCMP_ULE)
+            .Case("une", FCmpInst::FCMP_UNE)
+            .Default(FCmpInst::BAD_FCMP_PREDICATE);
+    assert(Pred != FCmpInst::BAD_FCMP_PREDICATE &&
+           "invalid predicate in llvm.fcmp");
+    ISD::CondCode Condition = getFCmpCondCode(Pred);
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getSetCC(sdl, DestVT, getValue(I.getArgOperand(0)),
+                              getValue(I.getArgOperand(1)), Condition));
+    return;
+  }
+  case Intrinsic::fcmps: {
+    // fcmps raises an Invalid exception for any NaN; always strictly ordered.
+    SDValue Chain = getFPOperationRoot(fp::ebStrict);
+    SDValue LHS = getValue(I.getArgOperand(0));
+    SDValue RHS = getValue(I.getArgOperand(1));
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
+    FCmpInst::Predicate Pred =
+        StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
+            .Case("oeq", FCmpInst::FCMP_OEQ)
+            .Case("ogt", FCmpInst::FCMP_OGT)
+            .Case("oge", FCmpInst::FCMP_OGE)
+            .Case("olt", FCmpInst::FCMP_OLT)
+            .Case("ole", FCmpInst::FCMP_OLE)
+            .Case("one", FCmpInst::FCMP_ONE)
+            .Case("ord", FCmpInst::FCMP_ORD)
+            .Case("uno", FCmpInst::FCMP_UNO)
+            .Case("ueq", FCmpInst::FCMP_UEQ)
+            .Case("ugt", FCmpInst::FCMP_UGT)
+            .Case("uge", FCmpInst::FCMP_UGE)
+            .Case("ult", FCmpInst::FCMP_ULT)
+            .Case("ule", FCmpInst::FCMP_ULE)
+            .Case("une", FCmpInst::FCMP_UNE)
+            .Default(FCmpInst::BAD_FCMP_PREDICATE);
+    assert(Pred != FCmpInst::BAD_FCMP_PREDICATE &&
+           "invalid predicate in llvm.fcmps");
+    ISD::CondCode Condition = getFCmpCondCode(Pred);
+    if (DAG.isKnownNeverNaN(LHS) && DAG.isKnownNeverNaN(RHS))
+      Condition = getFCmpCodeWithoutNaN(Condition);
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    SDVTList VTs = DAG.getVTList(VT, MVT::Other);
+    SDNodeFlags StrictFlags;
+    StrictFlags.copyFMF(*cast<FPMathOperator>(&I));
+    SDValue Result = DAG.getNode(ISD::STRICT_FSETCCS, sdl, VTs,
+                                 {Chain, LHS, RHS, DAG.getCondCode(Condition)},
+                                 StrictFlags);
+    pushFPOpOutChain(Result, fp::ebStrict);
+    setValue(&I, Result.getValue(0));
     return;
   }
   case Intrinsic::fma:

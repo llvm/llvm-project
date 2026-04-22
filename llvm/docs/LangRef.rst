@@ -10459,6 +10459,9 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
+See also the :ref:`llvm.fneg <int_fneg>` intrinsic, which is a call-form
+equivalent of this instruction.
+
 Example:
 """"""""
 
@@ -10564,6 +10567,9 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
+See also the :ref:`llvm.fadd <int_fadd>` intrinsic, which is a call-form
+equivalent of this instruction.
+
 Example:
 """"""""
 
@@ -10659,6 +10665,9 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
+
+See also the :ref:`llvm.fsub <int_fsub>` intrinsic, which is a call-form
+equivalent of this instruction.
 
 Example:
 """"""""
@@ -10756,6 +10765,9 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
+
+See also the :ref:`llvm.fmul <int_fmul>` intrinsic, which is a call-form
+equivalent of this instruction.
 
 Example:
 """"""""
@@ -10894,6 +10906,9 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
+
+See also the :ref:`llvm.fdiv <int_fdiv>` intrinsic, which is a call-form
+equivalent of this instruction.
 
 Example:
 """"""""
@@ -11050,6 +11065,9 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
+
+See also the :ref:`llvm.frem <int_frem>` intrinsic, which is a call-form
+equivalent of this instruction.
 
 Example:
 """"""""
@@ -12715,6 +12733,9 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations.
 
+See also the :ref:`llvm.fptrunc <int_fptrunc_intr>` intrinsic, which is a
+call-form equivalent of this instruction.
+
 Example:
 """"""""
 
@@ -12766,6 +12787,9 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations.
 
+See also the :ref:`llvm.fpext <int_fpext_intr>` intrinsic, which is a
+call-form equivalent of this instruction.
+
 Example:
 """"""""
 
@@ -12806,6 +12830,9 @@ The '``fptoui``' instruction converts its :ref:`floating-point
 <t_floating>` operand into the nearest (rounding towards zero)
 unsigned integer value. If the value cannot fit in ``ty2``, the result
 is a :ref:`poison value <poisonvalues>`.
+
+See also the :ref:`llvm.fptoui <int_fptoui_intr>` intrinsic, which is a
+call-form equivalent of this instruction.
 
 Example:
 """"""""
@@ -12848,6 +12875,9 @@ The '``fptosi``' instruction converts its :ref:`floating-point
 <t_floating>` operand into the nearest (rounding towards zero)
 signed integer value. If the value cannot fit in ``ty2``, the result
 is a :ref:`poison value <poisonvalues>`.
+
+See also the :ref:`llvm.fptosi <int_fptosi_intr>` intrinsic, which is a
+call-form equivalent of this instruction.
 
 Example:
 """"""""
@@ -12898,6 +12928,8 @@ the default rounding mode.
 If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
 the result is a poison value.
 
+See also the :ref:`llvm.uitofp <int_uitofp_intr>` intrinsic, which is a
+call-form equivalent of this instruction.
 
 Example:
 """"""""
@@ -12942,6 +12974,9 @@ The '``sitofp``' instruction interprets its operand as a signed integer
 quantity and converts it to the corresponding floating-point value. If the
 value cannot be exactly represented, it is rounded using the default rounding
 mode.
+
+See also the :ref:`llvm.sitofp <int_sitofp_intr>` intrinsic, which is a
+call-form equivalent of this instruction.
 
 Example:
 """"""""
@@ -13478,6 +13513,10 @@ Any set of fast-math flags are legal on an ``fcmp`` instruction, but the
 only flags that have any effect on its semantics are those that allow
 assumptions to be made about the values of input arguments; namely
 ``nnan``, ``ninf``, and ``reassoc``. See :ref:`fastmath` for more information.
+
+See also the :ref:`llvm.fcmp <int_fcmp>` intrinsic (quiet comparison, call-form
+equivalent of this instruction) and the :ref:`llvm.fcmps <int_fcmps>` intrinsic
+(signaling comparison that always raises on NaN operands).
 
 Example:
 """"""""
@@ -30243,6 +30282,663 @@ Semantics:
 
 This function returns the same values as the libm ``trunc`` functions
 would and handles error conditions in the same way.
+
+.. _fpintrin:
+
+FP Arithmetic Intrinsics
+------------------------
+
+These intrinsics are call-form equivalents of the standard floating-point
+instructions (:ref:`fadd <i_fadd>`, :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`,
+:ref:`fdiv <i_fdiv>`, :ref:`frem <i_frem>`, :ref:`fneg <i_fneg>`,
+:ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`, :ref:`fpext <i_fpext>`,
+and the ``fptoui``, ``fptosi``, ``uitofp``, ``sitofp`` conversion instructions).
+They behave identically to the corresponding instruction and accept the same
+:ref:`fast-math flags <fastmath>`.
+
+The primary purpose of these intrinsics is to allow per-call FP environment
+control in a future extension; for now they are direct equivalents of their
+instruction counterparts.
+
+``llvm.fcmps`` is always ``memory(inaccessiblemem: readwrite)`` and not
+speculatable because a signaling comparison raises an FP Invalid Operation
+exception whenever either operand is any NaN, including quiet NaNs.
+
+.. _int_fadd:
+
+'``llvm.fadd.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fadd`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare half      @llvm.fadd.f16(half %op1, half %op2)
+      declare bfloat    @llvm.fadd.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.fadd.f32(float %op1, float %op2)
+      declare double    @llvm.fadd.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.fadd.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.fadd.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.fadd.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
+
+Overview:
+"""""""""
+
+Intrinsic form of the :ref:`fadd <i_fadd>` instruction.  Returns the
+floating-point sum of its two operands.
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Equivalent to the :ref:`fadd <i_fadd>` instruction.  Always ``memory(none)``
+and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call float @llvm.fadd.f32(float %a, float %b)
+
+.. _int_fsub:
+
+'``llvm.fsub.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fsub`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare half      @llvm.fsub.f16(half %op1, half %op2)
+      declare bfloat    @llvm.fsub.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.fsub.f32(float %op1, float %op2)
+      declare double    @llvm.fsub.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.fsub.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.fsub.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.fsub.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
+
+Overview:
+"""""""""
+
+Intrinsic form of the :ref:`fsub <i_fsub>` instruction.  Returns the
+floating-point difference of its two operands.
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Equivalent to the :ref:`fsub <i_fsub>` instruction.  Always ``memory(none)``
+and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call double @llvm.fsub.f64(double %a, double %b)
+
+.. _int_fmul:
+
+'``llvm.fmul.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fmul`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare half      @llvm.fmul.f16(half %op1, half %op2)
+      declare bfloat    @llvm.fmul.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.fmul.f32(float %op1, float %op2)
+      declare double    @llvm.fmul.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.fmul.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.fmul.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.fmul.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
+
+Overview:
+"""""""""
+
+Intrinsic form of the :ref:`fmul <i_fmul>` instruction.  Returns the
+floating-point product of its two operands.
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Equivalent to the :ref:`fmul <i_fmul>` instruction.  Always ``memory(none)``
+and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call float @llvm.fmul.f32(float %a, float %b)
+
+.. _int_fdiv:
+
+'``llvm.fdiv.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fdiv`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare half      @llvm.fdiv.f16(half %op1, half %op2)
+      declare bfloat    @llvm.fdiv.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.fdiv.f32(float %op1, float %op2)
+      declare double    @llvm.fdiv.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.fdiv.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.fdiv.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.fdiv.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
+
+Overview:
+"""""""""
+
+Intrinsic form of the :ref:`fdiv <i_fdiv>` instruction.  Returns the
+floating-point quotient of its two operands.
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Equivalent to the :ref:`fdiv <i_fdiv>` instruction.  Always ``memory(none)``
+and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call double @llvm.fdiv.f64(double %a, double %b)
+
+.. _int_frem:
+
+'``llvm.frem.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.frem`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare half      @llvm.frem.f16(half %op1, half %op2)
+      declare bfloat    @llvm.frem.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.frem.f32(float %op1, float %op2)
+      declare double    @llvm.frem.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.frem.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.frem.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.frem.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
+
+Overview:
+"""""""""
+
+Intrinsic form of the :ref:`frem <i_frem>` instruction.  Returns the
+floating-point remainder of dividing the first operand by the second.
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Equivalent to the :ref:`frem <i_frem>` instruction.  Always ``memory(none)``
+and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call float @llvm.frem.f32(float %a, float %b)
+
+.. _int_fneg:
+
+'``llvm.fneg.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fneg`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare half      @llvm.fneg.f16(half %op1)
+      declare bfloat    @llvm.fneg.bf16(bfloat %op1)
+      declare float     @llvm.fneg.f32(float %op1)
+      declare double    @llvm.fneg.f64(double %op1)
+      declare x86_fp80  @llvm.fneg.f80(x86_fp80 %op1)
+      declare fp128     @llvm.fneg.f128(fp128 %op1)
+      declare ppc_fp128 @llvm.fneg.ppcf128(ppc_fp128 %op1)
+
+Overview:
+"""""""""
+
+Intrinsic form of the :ref:`fneg <i_fneg>` instruction.  Returns the
+floating-point negation of its operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Equivalent to the :ref:`fneg <i_fneg>` instruction.  Always ``memory(none)``
+and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call float @llvm.fneg.f32(float %x)
+
+.. _int_fcmp:
+
+'``llvm.fcmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fcmp`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare i1        @llvm.fcmp.f16(half %op1, half %op2, metadata %cc)
+      declare i1        @llvm.fcmp.bf16(bfloat %op1, bfloat %op2, metadata %cc)
+      declare i1        @llvm.fcmp.f32(float %op1, float %op2, metadata %cc)
+      declare i1        @llvm.fcmp.f64(double %op1, double %op2, metadata %cc)
+      declare i1        @llvm.fcmp.f80(x86_fp80 %op1, x86_fp80 %op2, metadata %cc)
+      declare i1        @llvm.fcmp.f128(fp128 %op1, fp128 %op2, metadata %cc)
+      declare i1        @llvm.fcmp.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2, metadata %cc)
+
+Overview:
+"""""""""
+
+Intrinsic form of the :ref:`fcmp <i_fcmp>` instruction.  Performs a **quiet**
+floating-point comparison.  For vector types the return type is a vector of
+``i1`` with the same number of elements as the operands.
+
+Arguments:
+""""""""""
+
+The two operands must be floating-point numbers of the same type.  The third
+argument is a metadata string giving the comparison predicate; valid values are
+:ref:`the same as for the fcmp instruction <fcmp_md_cc>`: ``"oeq"``,
+``"ogt"``, ``"oge"``, ``"olt"``, ``"ole"``, ``"one"``, ``"ord"``, ``"ueq"``,
+``"ugt"``, ``"uge"``, ``"ult"``, ``"ule"``, ``"une"``, ``"uno"``, ``"true"``,
+and ``"false"``.
+
+Semantics:
+""""""""""
+
+The comparison semantics :ref:`follow those of the fcmp instruction
+<fcmp_md_cc_sem>`.  Always ``memory(none)`` and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %c = call i1 @llvm.fcmp.f32(float %a, float %b, metadata !"oeq")
+
+.. _int_fcmps:
+
+'``llvm.fcmps.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fcmps`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare i1        @llvm.fcmps.f16(half %op1, half %op2, metadata %cc)
+      declare i1        @llvm.fcmps.bf16(bfloat %op1, bfloat %op2, metadata %cc)
+      declare i1        @llvm.fcmps.f32(float %op1, float %op2, metadata %cc)
+      declare i1        @llvm.fcmps.f64(double %op1, double %op2, metadata %cc)
+      declare i1        @llvm.fcmps.f80(x86_fp80 %op1, x86_fp80 %op2, metadata %cc)
+      declare i1        @llvm.fcmps.f128(fp128 %op1, fp128 %op2, metadata %cc)
+      declare i1        @llvm.fcmps.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2, metadata %cc)
+
+Overview:
+"""""""""
+
+Performs a **signaling** floating-point comparison.  Unlike
+:ref:`llvm.fcmp <int_fcmp>`, a signaling comparison raises an FP Invalid
+Operation exception whenever either operand is any NaN — including quiet NaNs
+(qNaN).  There is no corresponding plain instruction; the closest equivalent is
+:ref:`fcmp <i_fcmp>`.  For vector types the return type is a vector of ``i1``
+with the same number of elements as the operands.
+
+Arguments:
+""""""""""
+
+Same as :ref:`llvm.fcmp <int_fcmp>`.
+
+Semantics:
+""""""""""
+
+``llvm.fcmps`` is always ``memory(inaccessiblemem: readwrite) willreturn``
+because it can always raise an FP Invalid Operation exception when a NaN
+operand is encountered.
+
+Example:
+""""""""
+
+::
+
+      %r = call i1 @llvm.fcmps.f32(float %a, float %b, metadata !"oeq")
+
+.. _int_fptrunc_intr:
+
+'``llvm.fptrunc.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. The source and destination types must both
+be floating-point types; not all targets support all type combinations.
+
+::
+
+      declare half     @llvm.fptrunc.f32.f16(float %val)
+      declare float    @llvm.fptrunc.f64.f32(double %val)
+      declare half     @llvm.fptrunc.f64.f16(double %val)
+
+Overview:
+"""""""""
+
+Intrinsic form of the :ref:`fptrunc <i_fptrunc>` instruction.  Truncates
+a floating-point value to a smaller floating-point type.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point number and the return type is a smaller
+floating-point type. The source type must be larger than the destination type.
+
+Semantics:
+""""""""""
+
+Equivalent to the :ref:`fptrunc <i_fptrunc>` instruction.  Always
+``memory(none)`` and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call float @llvm.fptrunc.f64.f32(double %x)
+
+.. _int_fpext_intr:
+
+'``llvm.fpext.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. The source and destination types must both
+be floating-point types; not all targets support all type combinations.
+
+::
+
+      declare double  @llvm.fpext.f32.f64(float %val)
+      declare float   @llvm.fpext.f16.f32(half %val)
+      declare double  @llvm.fpext.f16.f64(half %val)
+
+Overview:
+"""""""""
+
+Intrinsic form of the :ref:`fpext <i_fpext>` instruction.  Extends a
+floating-point value to a larger floating-point type.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point number and the return type is a larger
+floating-point type. The source type must be smaller than the destination type.
+
+Semantics:
+""""""""""
+
+Equivalent to the :ref:`fpext <i_fpext>` instruction.  Always
+``memory(none)`` and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call double @llvm.fpext.f32.f64(float %x)
+
+.. _int_sitofp_intr:
+
+'``llvm.sitofp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. The source type must be an integer type and
+the destination type must be a floating-point type.
+
+::
+
+      declare float  @llvm.sitofp.i32.f32(i32 %val)
+      declare double @llvm.sitofp.i64.f64(i64 %val)
+
+Overview:
+"""""""""
+
+Intrinsic form of the ``sitofp`` instruction.  Converts a signed integer
+value to a floating-point value.
+
+Arguments:
+""""""""""
+
+The argument is a signed integer value and the return type is a floating-point
+type. If the source is a vector, the destination must be a vector with the same
+number of elements.
+
+Semantics:
+""""""""""
+
+Equivalent to the ``sitofp`` instruction.  If the integer value cannot be
+represented exactly in the destination type, it is rounded using the default
+rounding mode.  Always ``memory(none)`` and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call float @llvm.sitofp.i32.f32(i32 %x)
+
+.. _int_uitofp_intr:
+
+'``llvm.uitofp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. The source type must be an integer type and
+the destination type must be a floating-point type.
+
+::
+
+      declare float  @llvm.uitofp.i32.f32(i32 %val)
+      declare double @llvm.uitofp.i64.f64(i64 %val)
+
+Overview:
+"""""""""
+
+Intrinsic form of the ``uitofp`` instruction.  Converts an unsigned integer
+value to a floating-point value.
+
+Arguments:
+""""""""""
+
+The argument is an unsigned integer value and the return type is a floating-point
+type. If the source is a vector, the destination must be a vector with the same
+number of elements.
+
+Semantics:
+""""""""""
+
+Equivalent to the ``uitofp`` instruction.  If the integer value cannot be
+represented exactly in the destination type, it is rounded using the default
+rounding mode.  Always ``memory(none)`` and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call float @llvm.uitofp.i32.f32(i32 %x)
+
+.. _int_fptosi_intr:
+
+'``llvm.fptosi.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. The source type must be a floating-point
+type and the destination type must be an integer type.
+
+::
+
+      declare i32 @llvm.fptosi.f32.i32(float %val)
+      declare i64 @llvm.fptosi.f64.i64(double %val)
+
+Overview:
+"""""""""
+
+Intrinsic form of the ``fptosi`` instruction.  Converts a floating-point
+value to a signed integer value by truncating toward zero.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point value and the return type is a signed integer
+type. If the source is a vector, the destination must be a vector with the same
+number of elements.
+
+Semantics:
+""""""""""
+
+Equivalent to the ``fptosi`` instruction.  If the floating-point value cannot
+be represented in the destination integer type, the result is a
+:ref:`poison value <poisonvalues>`.  Always ``memory(none)`` and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call i32 @llvm.fptosi.f32.i32(float %x)
+
+.. _int_fptoui_intr:
+
+'``llvm.fptoui.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. The source type must be a floating-point
+type and the destination type must be an integer type.
+
+::
+
+      declare i32 @llvm.fptoui.f32.i32(float %val)
+      declare i64 @llvm.fptoui.f64.i64(double %val)
+
+Overview:
+"""""""""
+
+Intrinsic form of the ``fptoui`` instruction.  Converts a floating-point
+value to an unsigned integer value by truncating toward zero.
+
+Arguments:
+""""""""""
+
+The argument is a floating-point value and the return type is an unsigned
+integer type. If the source is a vector, the destination must be a vector with
+the same number of elements.
+
+Semantics:
+""""""""""
+
+Equivalent to the ``fptoui`` instruction.  If the floating-point value cannot
+be represented in the destination integer type, the result is a
+:ref:`poison value <poisonvalues>`.  Always ``memory(none)`` and speculatable.
+
+Example:
+""""""""
+
+::
+
+      %r = call i32 @llvm.fptoui.f32.i32(float %x)
+
 
 .. _int_experimental_noalias_scope_decl:
 
