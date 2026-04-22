@@ -1,8 +1,5 @@
 // RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1100 | FileCheck %s
 
-// Variants first available on gfx11: fdot2 variants with narrower
-// accumulators, fdot2.f32.bf16, and the mixed-sign sudot* ops.
-
 // CHECK-LABEL: @dot_fdot2_f16_f16
 func.func @dot_fdot2_f16_f16(%a: vector<2xf16>, %b: vector<2xf16>, %c: f16) -> f16 {
   // CHECK: rocdl.fdot2.f16.f16 %{{.+}}, %{{.+}}, %{{.+}} : (vector<2xf16>, vector<2xf16>, f16) -> f16

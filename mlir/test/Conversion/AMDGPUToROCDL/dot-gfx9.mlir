@@ -1,9 +1,5 @@
 // RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx906 | FileCheck %s
 
-// Dot variants available from gfx906. Integer sources arrive unpacked;
-// vector<4xi8> and vector<8xi4> are bitcast to scalar i32 (little-endian
-// lane order) before being passed to ROCDL.
-
 // CHECK-LABEL: @dot_fdot2
 func.func @dot_fdot2(%a: vector<2xf16>, %b: vector<2xf16>, %c: f32) -> f32 {
   // CHECK: rocdl.fdot2 %{{.+}}, %{{.+}}, %{{.+}} : (vector<2xf16>, vector<2xf16>, f32) -> f32
