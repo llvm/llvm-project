@@ -4988,32 +4988,6 @@ static bool isAbsoluteValueULEOne(const Value *V) {
          match(V, m_Intrinsic<Intrinsic::amdgcn_fract>(m_Value()));
 }
 
-/// \return true if result-side NSZ relaxation should be applied to this
-/// operation.
-///
-/// With the stricter NSZ interpretation, NSZ only relaxes input zero sign.
-/// Do not relax ops whose output zero sign is fixed or sign-preserving:
-/// fabs always produces +0, copysign copies the sign of its second operand,
-/// and fneg(fabs) always produces -0.
-static bool shouldApplyNSZToResult(const Operator *Op) {
-  if (const auto *II = dyn_cast<IntrinsicInst>(Op)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::fabs:
-    case Intrinsic::copysign:
-      return false;
-    default:
-      break;
-    }
-  }
-
-  // fneg(fabs(...)) always produces -0 for zero inputs.
-  if (Op->getOpcode() == Instruction::FNeg)
-    if (match(Op->getOperand(0), m_Intrinsic<Intrinsic::fabs>(m_Value())))
-      return false;
-
-  return true;
-}
-
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth) {
@@ -5144,9 +5118,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   if (Depth == MaxAnalysisRecursionDepth)
     return;
 
+  // True only for ops where NSZ may relax the result zero sign.
+  bool AllowNSZResultRelaxation = false;
   const unsigned Opc = Op->getOpcode();
   switch (Opc) {
   case Instruction::FNeg: {
+    // fneg(fabs(...)) always produces -0 for zero inputs.
+    AllowNSZResultRelaxation =
+        !match(Op->getOperand(0), m_Intrinsic<Intrinsic::fabs>(m_Value()));
     computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                         Known, Q, Depth + 1);
     Known.fneg();
@@ -5646,6 +5625,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::FAdd:
   case Instruction::FSub: {
+    AllowNSZResultRelaxation = true;
     KnownFPClass KnownLHS, KnownRHS;
     bool WantNegative =
         Op->getOpcode() == Instruction::FAdd &&
@@ -5702,6 +5682,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FMul: {
+    AllowNSZResultRelaxation = true;
     const Function *F = cast<Instruction>(Op)->getFunction();
     DenormalMode Mode =
         F ? F->getDenormalMode(
@@ -5750,6 +5731,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::FDiv:
   case Instruction::FRem: {
+    AllowNSZResultRelaxation = true;
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
 
     if (Op->getOpcode() == Instruction::FRem)
@@ -6154,7 +6136,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   // sign must also be considered possible. Apply this selectively because
   // some ops preserve or explicitly determine the zero sign.
   if (const auto *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
-    if (FPOp->hasNoSignedZeros() && shouldApplyNSZToResult(Op)) {
+    if (FPOp->hasNoSignedZeros() && AllowNSZResultRelaxation) {
       const auto *I = dyn_cast<Instruction>(Op);
       const Function *F = I ? I->getFunction() : nullptr;
       const fltSemantics &FltSem =

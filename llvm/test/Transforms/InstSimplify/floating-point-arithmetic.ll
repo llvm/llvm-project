@@ -644,8 +644,7 @@ define float @fabs_sqrt_nsz(float %a) {
 define float @fabs_sqrt_nnan_nsz(float %a) {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[A:%.*]])
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
-; CHECK-NEXT:    ret float [[FABS]]
+; CHECK-NEXT:    ret float [[SQRT]]
 ;
   %sqrt = call nnan nsz float @llvm.sqrt.f32(float %a)
   %fabs = call float @llvm.fabs.f32(float %sqrt)
@@ -1062,10 +1061,7 @@ define i1 @copysign_known_positive_maybe_neg0(float %unknown, float %sign) {
 
 define i1 @copysign_known_positive(float %unknown, float %sign) {
 ; CHECK-LABEL: @copysign_known_positive(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nnan ninf nsz float @llvm.sqrt.f32(float [[SIGN:%.*]])
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[UNKNOWN:%.*]], float [[SQRT]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[COPYSIGN]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sqrt = call ninf nnan nsz float @llvm.sqrt.f32(float %sign)
   %copysign = call float @llvm.copysign.f32(float %unknown, float %sqrt)
