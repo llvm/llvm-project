@@ -36,7 +36,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP9]] = fmul <vscale x 4 x float> [[TMP7]], [[WIDE_MASKED_GATHER2]]
 ; CHECK-NEXT:    [[TMP10]] = add nuw nsw <vscale x 4 x i64> [[TMP6]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 4 x i64> [[TMP10]], splat (i64 512)
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 4 x i1> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 4 x i1> [[TMP11]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[VECTOR_LATCH]], label %[[INNER_LOOP1]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[TMP9]], <vscale x 4 x ptr> align 4 [[TMP5]], <vscale x 4 x i1> splat (i1 true))

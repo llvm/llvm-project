@@ -159,7 +159,7 @@ define i64 @partial_reduce_sub_sext_mul(ptr %x) #1 {
 ; CHECK-INTERLEAVE1:       middle.block:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[PARTIAL_REDUCE]])
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = sub i64 0, [[TMP8]]
-; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STRIDED_VEC]], i32 3
+; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STRIDED_VEC]], i64 3
 ; CHECK-INTERLEAVE1-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
@@ -224,7 +224,7 @@ define i64 @partial_reduce_sub_sext_mul(ptr %x) #1 {
 ; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX14:%.*]] = add <2 x i64> [[PARTIAL_REDUCE12]], [[BIN_RDX13]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[BIN_RDX14]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP30:%.*]] = sub i64 0, [[TMP32]]
-; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STRIDED_VEC3]], i32 3
+; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STRIDED_VEC3]], i64 3
 ; CHECK-INTERLEAVED-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
@@ -253,7 +253,7 @@ define i64 @partial_reduce_sub_sext_mul(ptr %x) #1 {
 ; CHECK-MAXBW:       middle.block:
 ; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[PARTIAL_REDUCE]])
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = sub i64 0, [[TMP8]]
-; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STRIDED_VEC]], i32 3
+; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STRIDED_VEC]], i64 3
 ; CHECK-MAXBW-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
