@@ -2129,6 +2129,7 @@ def FeatureISAVersion12_50 : FeatureSet<
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
+   FeatureSetregVGPRMSBFixup,
    FeatureDPALU_DPP,
    FeatureCubeInsts,
    FeatureLerpInst,
