@@ -22,5 +22,5 @@ sa_family_t test_sockaddr_aliasing(struct sockaddr_storage *ss,
                                    struct sockaddr_un *sun) {
   ss->ss_family = AF_UNSPEC;
   sun->sun_family = AF_UNIX;
-  return ss->ss_family == static_cast<sa_family_t>(AF_UNIX);
+  return ss->ss_family;
 }
