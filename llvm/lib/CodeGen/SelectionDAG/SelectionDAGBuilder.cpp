@@ -7225,9 +7225,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDVTList VTs = DAG.getVTList(VT, MVT::Other);
     SDNodeFlags StrictFlags;
     StrictFlags.copyFMF(*cast<FPMathOperator>(&I));
-    SDValue Result = DAG.getNode(ISD::STRICT_FSETCCS, sdl, VTs,
-                                 {Chain, LHS, RHS, DAG.getCondCode(Condition)},
-                                 StrictFlags);
+    SDValue Result =
+        DAG.getNode(ISD::STRICT_FSETCCS, sdl, VTs,
+                    {Chain, LHS, RHS, DAG.getCondCode(Condition)}, StrictFlags);
     pushFPOpOutChain(Result, fp::ebStrict);
     setValue(&I, Result.getValue(0));
     return;

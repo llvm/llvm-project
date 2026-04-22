@@ -12,9 +12,9 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -2723,14 +2723,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     Register Src = getOrCreateVReg(*CI.getArgOperand(0));
     Register Res = getOrCreateVReg(CI);
     MIRBuilder.buildFPTrunc(Res, Src,
-                             MachineInstr::copyFlagsFromInstruction(CI));
+                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
   case Intrinsic::fpext: {
     Register Src = getOrCreateVReg(*CI.getArgOperand(0));
     Register Res = getOrCreateVReg(CI);
-    MIRBuilder.buildFPExt(Res, Src,
-                           MachineInstr::copyFlagsFromInstruction(CI));
+    MIRBuilder.buildFPExt(Res, Src, MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
   case Intrinsic::sitofp: {
