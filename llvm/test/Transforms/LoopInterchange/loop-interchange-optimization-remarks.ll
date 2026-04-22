@@ -87,7 +87,7 @@ for.end19:
 ; DELIN-NEXT: Name:            InterchangeNotProfitable
 ; DELIN-NEXT: Function:        test01
 ; DELIN-NEXT: Args:
-; DELIN-NEXT:   - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
+; DELIN-NEXT:   - String:          Insufficient information to calculate the cost of loop for interchange.
 ; DELIN-NEXT: ...
 
 ;;--------------------------------------Test case 02------------------------------------
