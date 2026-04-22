@@ -25,7 +25,6 @@
 #include "sanitizer_type_traits.h"
 
 #if SANITIZER_AMDGPU
-
 #  if defined(__has_include)
 #    if __has_include("hsa.h")
 #      include "hsa.h"
@@ -79,14 +78,14 @@ struct NoOpMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const {}
 };
 
-#include "sanitizer_allocator_combined.h"
-#include "sanitizer_allocator_device.h"
-#include "sanitizer_allocator_local_cache.h"
-#include "sanitizer_allocator_primary32.h"
-#include "sanitizer_allocator_primary64.h"
-#include "sanitizer_allocator_secondary.h"
 #include "sanitizer_allocator_size_class_map.h"
 #include "sanitizer_allocator_stats.h"
+#include "sanitizer_allocator_primary64.h"
+#include "sanitizer_allocator_primary32.h"
+#include "sanitizer_allocator_local_cache.h"
+#include "sanitizer_allocator_secondary.h"
+#include "sanitizer_allocator_device.h"
+#include "sanitizer_allocator_combined.h"
 
 bool IsRssLimitExceeded();
 void SetRssLimitExceeded(bool limit_exceeded);
