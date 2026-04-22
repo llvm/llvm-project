@@ -770,9 +770,7 @@ public:
 class FPCmpIntrinsic : public IntrinsicInst {
 public:
   LLVM_ABI FCmpInst::Predicate getPredicate() const;
-  bool isSignaling() const {
-    return getIntrinsicID() == Intrinsic::fcmps;
-  }
+  bool isSignaling() const { return getIntrinsicID() == Intrinsic::fcmps; }
 
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::fcmp ||
