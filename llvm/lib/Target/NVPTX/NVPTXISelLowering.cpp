@@ -7415,10 +7415,8 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   }
 }
 
-// Returns how NVPTX should expand a scalar atomicrmw with the given op and
-// value type. `AtomicExpansionKind::None` means PTX natively supports this op
-// at this width; anything else (typically `CmpXChg`) means the pass should
-// emulate it (usually via a cmpxchg loop).
+/// Returns how NVPTX should expand a scalar atomicrmw with the given op and
+/// value type.
 static TargetLoweringBase::AtomicExpansionKind
 getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
                             const NVPTXSubtarget &STI) {
@@ -7511,48 +7509,29 @@ getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
 
 NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
-  // Elementwise vector atomicrmws use the generic halve-and-recurse driver in
-  // AtomicExpandPass: returning Elementwise at width N tells the pass to halve
-  // into two <N/2 x T> elementwise atomicrmws (or two scalar atomicrmws when
-  // N == 2) and re-query this hook at the halved width. This hook then picks
-  // the tier for the current width:
-  //   1. If the scalar lane op is natively supported by PTX, return
-  //      Elementwise so halving eventually bottoms out at the scalar base
-  //      case, where this hook returns None for each scalar lane and the
-  //      scalar `atom.*` instruction is preserved.
-  //   2. Otherwise, if the whole current vector width fits a single native
-  //      cmpxchg (i.e. `sizeof(<N x T>) <= getMaxAtomicSizeInBitsSupported()`,
-  //      e.g. 128 bits with atom.cas.b128 on sm_90 + ptx83), return CmpXChg
-  //      to emit one wide cmpxchg loop. The vector op inside the loop body
-  //      (fadd/fmax/etc. on `<N x T>`) is already per-lane, so whole-vector
-  //      atomicity satisfies elementwise semantics.
-  //   3. Otherwise the vector is too wide for a single native cmpxchg; return
-  //      Elementwise again so the pass halves further. Recursion keeps
-  //      halving until the width fits the cmpxchg branch above.
-  //
-  // TODO: once the backend supports native elementwise vector atoms
-  // (`atom.v2/v4/v8.{f16,bf16,f16x2,bf16x2}.{add,min,max}` and
-  // `atom.v2/v4.f32.add` per the PTX ISA), return `None` for those matching
-  // widths before running the tier logic here so they are preserved as native
-  // vector atomics instead of being halved or emulated.
+  // TODO: once the backend supports native elementwise vector atoms,
+  // return `AtomicExpansionKind::None` to preserve and lower them.
   if (AI->isElementwise()) {
     auto *VecTy = cast<FixedVectorType>(AI->getType());
     Type *LaneTy = VecTy->getElementType();
 
-    // Tier 1: scalar lane op is natively supported -> keep halving until we
-    // reach the scalar base case.
+    // If the scalar lane op is natively supported, return
+    // Elementwise so halving eventually bottoms out at the scalar base
+    // case, where this hook returns None for each scalar lane and the
+    // scalar `atom.*` instruction is preserved.
     if (getScalarAtomicRMWExpansion(AI->getOperation(), LaneTy, STI) ==
         AtomicExpansionKind::None)
       return AtomicExpansionKind::Elementwise;
 
-    // Tier 2: whole vector fits a single native cmpxchg -> emit one wide
+    // If the whole vector fits a single native cmpxchg, emit one wide
     // cmpxchg loop at the current width.
     const DataLayout &DL = AI->getDataLayout();
     uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
     if (VecBits <= getMaxAtomicSizeInBitsSupported())
       return AtomicExpansionKind::CmpXChg;
 
-    // Tier 3: too wide for a single cmpxchg -> halve further.
+    // If the vector is too wide for a single native cmpxchg, halve further to
+    // emit multiple cmpxchg loops.
     return AtomicExpansionKind::Elementwise;
   }
 
