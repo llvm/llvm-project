@@ -7757,6 +7757,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Transforms/CFGToSCF.h",
+        "include/mlir/Transforms/CSE.h",
         "include/mlir/Transforms/CommutativityUtils.h",
         "include/mlir/Transforms/ControlFlowSinkUtils.h",
         "include/mlir/Transforms/DialectConversion.h",
@@ -8183,6 +8184,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DataLayoutInterfaces",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
         ":Support",
@@ -12287,6 +12289,7 @@ cc_library(
         ":ConvertToLLVMInterface",
         ":FunctionInterfaces",
         ":IR",
+        ":InliningUtils",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LoopLikeInterface",
