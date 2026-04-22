@@ -372,9 +372,11 @@ void CIRGenModule::emitGlobalDecl(const clang::GlobalDecl &d) {
   // redefinition). Just ignore those cases.
   // TODO: Not sure what to map this to for MLIR
   mlir::Operation *globalValueOp = op;
-  if (auto gv = dyn_cast<cir::GetGlobalOp>(op))
+  if (auto gv = dyn_cast<cir::GetGlobalOp>(op)) {
     globalValueOp =
         mlir::SymbolTable::lookupSymbolIn(getModule(), gv.getNameAttr());
+    assert(globalValueOp && "expected a valid global op");
+  }
 
   if (auto cirGlobalValue =
           dyn_cast<cir::CIRGlobalValueInterface>(globalValueOp))
@@ -914,6 +916,11 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
     }
   }
 
+  // If the old global is being tracked as the most-recently-created global,
+  // update it so that subsequent globals are not inserted after a (now
+  // erased) operation, which would leave them detached from the module.
+  if (lastGlobalOp == oldGV)
+    lastGlobalOp = newGV;
   oldGV.erase();
 }
 
