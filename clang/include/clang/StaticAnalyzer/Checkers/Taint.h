@@ -26,7 +26,8 @@ using TaintTagType = unsigned;
 
 static constexpr TaintTagType TaintTagGeneric = 0;
 
-/// Create a new state in which the value of the expression is marked as tainted.
+/// Create a new state in which the value of the expression is marked as
+/// tainted.
 [[nodiscard]] ProgramStateRef addTaint(ProgramStateRef State, const Expr *Ex,
                                        const LocationContext *LCtx,
                                        TaintTagType Kind = TaintTagGeneric);

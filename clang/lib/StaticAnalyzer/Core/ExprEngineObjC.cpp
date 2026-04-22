@@ -114,7 +114,7 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   const Expr *collection = S->getCollection();
   const ConstCFGElementRef &elemRef = getCFGElementRef();
   ProgramStateRef state = Pred->getState();
-  
+
   SVal collectionV = state->getSVal(collection, Pred->getLocationContext());
 
   SVal elementV = UnknownVal();

@@ -793,7 +793,7 @@ inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) c
 }
 
 inline SVal ProgramState::getSVal(const Expr *Ex,
-                                  const LocationContext *LCtx) const{
+                                  const LocationContext *LCtx) const {
   return Env.getSVal(EnvironmentEntry(Ex, LCtx),
                      *getStateManager().svalBuilder);
 }

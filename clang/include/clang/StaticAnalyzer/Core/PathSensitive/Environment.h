@@ -32,8 +32,8 @@ class SymbolReaper;
 /// This allows the environment to manage context-sensitive bindings,
 /// which is essentially for modeling recursive function analysis, among
 /// other things.
-class EnvironmentEntry : public std::pair<const Expr *,
-                                          const StackFrameContext *> {
+class EnvironmentEntry
+    : public std::pair<const Expr *, const StackFrameContext *> {
 public:
   EnvironmentEntry(const Expr *Ex, const LocationContext *L);
 

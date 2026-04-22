@@ -64,10 +64,8 @@ static const Expr *ignoreTransparentExprs(const Expr *E) {
 }
 
 EnvironmentEntry::EnvironmentEntry(const Expr *S, const LocationContext *L)
-    : std::pair<const Expr *,
-                const StackFrameContext *>(ignoreTransparentExprs(S),
-                                           L ? L->getStackFrame()
-                                             : nullptr) {}
+    : std::pair<const Expr *, const StackFrameContext *>(
+          ignoreTransparentExprs(S), L ? L->getStackFrame() : nullptr) {}
 
 SVal Environment::lookupExpr(const EnvironmentEntry &E) const {
   const SVal* X = ExprBindings.lookup(E);

@@ -171,7 +171,8 @@ std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State,
                                                 const Expr *Ex,
                                                 const LocationContext *LCtx,
                                                 TaintTagType Kind) {
-  return getTaintedSymbolsImpl(State, Ex, LCtx, Kind, /*ReturnFirstOnly=*/false);
+  return getTaintedSymbolsImpl(State, Ex, LCtx, Kind,
+                               /*ReturnFirstOnly=*/false);
 }
 
 std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State, SVal V,

@@ -307,9 +307,11 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
       // Ensure that the return type matches the type of the returned Expr.
       if (wasDifferentDeclUsedForInlining(Call, CalleeCtx)) {
-        QualType ReturnedTy = CallEvent::getDeclaredResultType(CalleeCtx->getDecl());
+        QualType ReturnedTy =
+            CallEvent::getDeclaredResultType(CalleeCtx->getDecl());
         if (!ReturnedTy.isNull()) {
-          V = adjustReturnValue(V, CE->getType(), ReturnedTy, getStoreManager());
+          V = adjustReturnValue(V, CE->getType(), ReturnedTy,
+                                getStoreManager());
         }
       }
 

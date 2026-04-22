@@ -2062,7 +2062,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
           for (auto Child : Ex->children()) {
             assert(Child);
             const Expr *ChildExpr = dyn_cast<Expr>(Child);
-            SVal Val = ChildExpr ? State->getSVal(ChildExpr, LCtx) : UnknownVal();
+            SVal Val =
+                ChildExpr ? State->getSVal(ChildExpr, LCtx) : UnknownVal();
             State = escapeValues(State, Val, PSK_EscapeOther);
           }
 
