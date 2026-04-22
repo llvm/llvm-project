@@ -58,11 +58,3 @@ define void @load_texture2d_int3(<2 x i32> %coords) {
   call void @use_int3(<3 x i32> %data)
   ret void
 }
-
-declare <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_0_0_0_2t.v2i32.i32.v2i32(target("dx.Texture", <4 x float>, 0, 0, 0, 2), <2 x i32>, i32, <2 x i32>)
-declare float @llvm.dx.resource.load.level.f32.tdx.Texture_f32_0_0_0_2t.v2i32.i32.v2i32(target("dx.Texture", float, 0, 0, 0, 2), <2 x i32>, i32, <2 x i32>)
-declare <3 x i32> @llvm.dx.resource.load.level.v3i32.tdx.Texture_v3i32_0_0_1_2t.v2i32.i32.v2i32(target("dx.Texture", <3 x i32>, 0, 0, 1, 2), <2 x i32>, i32, <2 x i32>)
-
-declare target("dx.Texture", <4 x float>, 0, 0, 0, 2) @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_0_0_0_2t(i32, i32, i32, i32, ptr)
-declare target("dx.Texture", float, 0, 0, 0, 2) @llvm.dx.resource.handlefrombinding.tdx.Texture_f32_0_0_0_2t(i32, i32, i32, i32, ptr)
-declare target("dx.Texture", <3 x i32>, 0, 0, 1, 2) @llvm.dx.resource.handlefrombinding.tdx.Texture_v3i32_0_0_1_2t(i32, i32, i32, i32, ptr)
