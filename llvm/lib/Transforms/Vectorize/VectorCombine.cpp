@@ -156,6 +156,10 @@ private:
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
+  Value *createBinaryOp(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
+                        BinaryOperator *OldI);
+  Value *createUnaryOp(Instruction::UnaryOps Opcode, Value *Operand,
+                       Instruction &OldI);
 
   void replaceValue(Instruction &Old, Value &New, bool Erase = true) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -1282,6 +1286,72 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   return true;
 }
 
+Value *VectorCombine::createUnaryOp(Instruction::UnaryOps Opcode,
+                                    Value *Operand, Instruction &OldI) {
+  switch (Opcode) {
+  case Instruction::FNeg:
+    return Builder.CreateFNegFMF(Operand, &OldI,
+                                 OldI.getName() + ".scalar.fneg");
+  case Instruction::UnaryOpsEnd:
+    llvm_unreachable("Invalid unary opcode");
+  }
+  llvm_unreachable("Invalid unary opcode");
+}
+
+Value *VectorCombine::createBinaryOp(Instruction::BinaryOps Opcode, Value *LHS,
+                                     Value *RHS, BinaryOperator *OldI) {
+  Twine Prefix = OldI->getName() + ".scalar.";
+  switch (Opcode) {
+  case Instruction::Add:
+    return Builder.CreateAdd(LHS, RHS, Prefix + "add",
+                             OldI->hasNoUnsignedWrap(),
+                             OldI->hasNoSignedWrap());
+  case Instruction::Sub:
+    return Builder.CreateSub(LHS, RHS, Prefix + "sub",
+                             OldI->hasNoUnsignedWrap(),
+                             OldI->hasNoSignedWrap());
+  case Instruction::Mul:
+    return Builder.CreateMul(LHS, RHS, Prefix + "mul",
+                             OldI->hasNoUnsignedWrap(),
+                             OldI->hasNoSignedWrap());
+  case Instruction::UDiv:
+    return Builder.CreateUDiv(LHS, RHS, Prefix + "udiv", OldI->isExact());
+  case Instruction::SDiv:
+    return Builder.CreateSDiv(LHS, RHS, Prefix + "sdiv", OldI->isExact());
+  case Instruction::URem:
+    return Builder.CreateURem(LHS, RHS, Prefix + "urem");
+  case Instruction::SRem:
+    return Builder.CreateSRem(LHS, RHS, Prefix + "srem");
+  case Instruction::Shl:
+    return Builder.CreateShl(LHS, RHS, Prefix + "shl",
+                             OldI->hasNoUnsignedWrap(),
+                             OldI->hasNoSignedWrap());
+  case Instruction::LShr:
+    return Builder.CreateLShr(LHS, RHS, Prefix + "lshr", OldI->isExact());
+  case Instruction::AShr:
+    return Builder.CreateAShr(LHS, RHS, Prefix + "ashr", OldI->isExact());
+  case Instruction::And:
+    return Builder.CreateAnd(LHS, RHS, Prefix + "and");
+  case Instruction::Or:
+    return Builder.CreateOr(LHS, RHS, Prefix + "or");
+  case Instruction::Xor:
+    return Builder.CreateXor(LHS, RHS, Prefix + "xor");
+  case Instruction::FAdd:
+    return Builder.CreateFAddFMF(LHS, RHS, OldI, Prefix + "fadd");
+  case Instruction::FSub:
+    return Builder.CreateFSubFMF(LHS, RHS, OldI, Prefix + "fsub");
+  case Instruction::FMul:
+    return Builder.CreateFMulFMF(LHS, RHS, OldI, Prefix + "fmul");
+  case Instruction::FDiv:
+    return Builder.CreateFDivFMF(LHS, RHS, OldI, Prefix + "fdiv");
+  case Instruction::FRem:
+    return Builder.CreateFRemFMF(LHS, RHS, OldI, Prefix + "frem");
+  case Instruction::BinaryOpsEnd:
+    llvm_unreachable("Invalid binary opcode");
+  }
+  llvm_unreachable("Invalid binary opcode");
+}
+
 /// Match a vector op/compare/intrinsic with at least one
 /// inserted scalar operand and convert to scalar op/cmp/intrinsic followed
 /// by insertelement.
@@ -1436,8 +1506,10 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   Value *Scalar;
   if (CI)
     Scalar = Builder.CreateCmp(CI->getPredicate(), ScalarOps[0], ScalarOps[1]);
-  else if (UO || BO)
-    Scalar = Builder.CreateNAryOp(Opcode, ScalarOps);
+  else if (UO)
+    Scalar = createUnaryOp(UO->getOpcode(), ScalarOps[0], I);
+  else if (BO)
+    Scalar = createBinaryOp(BO->getOpcode(), ScalarOps[0], ScalarOps[1], BO);
   else
     Scalar = Builder.CreateIntrinsic(ScalarTy, II->getIntrinsicID(), ScalarOps);
 
