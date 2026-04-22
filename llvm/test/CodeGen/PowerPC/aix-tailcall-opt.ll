@@ -14,8 +14,6 @@ define hidden fastcc i32 @k(i32 %a, i32 %b) {
 ; COMM-OPT-LABEL: k:
 ; COMM-OPT:       # %bb.0: # %entry
 ; COMM-OPT-NEXT:    add r3, r3, r4
-; AIX32-OPT-NEXT:    addi r1, r1, 64
-; AIX64-OPT-NEXT:    addi r1, r1, 112
 ; COMM-OPT-NEXT:    blr
 
 entry:
@@ -31,8 +29,6 @@ define hidden fastcc i32 @ff(i32 %a) {
 ;
 ; COMM-OPT-LABEL: ff:
 ; COMM-OPT:       # %bb.0: # %entry
-; AIX32-OPT-NEXT:    addi r1, r1, 64
-; AIX64-OPT-NEXT:    addi r1, r1, 112
 ; COMM-OPT-NEXT:    blr
 
 entry:
@@ -168,12 +164,10 @@ define fastcc i32 @gg(i32 %a) {
 ; AIX32-OPT-NEXT:    stwu r1, -64(r1)
 ; AIX32-OPT-NEXT:    stw r0, 72(r1)
 ; AIX32-OPT-NEXT:    bl .ff
-; AIX32-OPT-NEXT:    addi r1, r1, -56
 ; AIX32-OPT-NEXT:    addi r3, r3, 1
 ; AIX32-OPT-NEXT:    addi r1, r1, 64
 ; AIX32-OPT-NEXT:    lwz r0, 8(r1)
 ; AIX32-OPT-NEXT:    mtlr r0
-; AIX32-OPT-NEXT:    addi r1, r1, 64
 ; AIX32-OPT-NEXT:    blr
 ;
 ; AIX64-OPT-LABEL: gg:
@@ -183,12 +177,10 @@ define fastcc i32 @gg(i32 %a) {
 ; AIX64-OPT-NEXT:    clrldi r3, r3, 32
 ; AIX64-OPT-NEXT:    std r0, 128(r1)
 ; AIX64-OPT-NEXT:    bl .ff
-; AIX64-OPT-NEXT:    addi r1, r1, -112
 ; AIX64-OPT-NEXT:    addi r3, r3, 1
 ; AIX64-OPT-NEXT:    addi r1, r1, 112
 ; AIX64-OPT-NEXT:    ld r0, 16(r1)
 ; AIX64-OPT-NEXT:    mtlr r0
-; AIX64-OPT-NEXT:    addi r1, r1, 112
 ; AIX64-OPT-NEXT:    blr
 entry:
   %r = tail call fastcc i32 @ff(i32 %a)

@@ -5250,10 +5250,6 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
   if (!isFunctionGlobalAddress(CalleeGV) && !isCalleeExternalSymbol)
     return false;
 
-  // TCO allows altering callee ABI, so we don't have to check further.
-  if (CalleeCC == CallingConv::Fast && TailCallOpt)
-    return true;
-
   // Check if we share the TOC base.
   if (!callsShareTOCBase(CallerFunc, CalleeGV, getTargetMachine()))
     return false;
@@ -5280,8 +5276,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
   // apply SCO on this case. If it is not, then we need to check if callee
   // needs stack for passing argumentse
   assert(CB && "AIX do not support PC relative call.");
-  if (CB && !hasSameArgumentList(CallerFunc, *CB) &&
-      NeedStackSlotPassParameters)
+  if (!hasSameArgumentList(CallerFunc, *CB) && NeedStackSlotPassParameters)
     return false;
 
   return true;
@@ -5995,10 +5990,12 @@ SDValue PPCTargetLowering::FinishCall(
   // When performing tail call optimization the callee pops its arguments off
   // the stack. Account for this here so these bytes can be pushed back on in
   // PPCFrameLowering::eliminateCallFramePseudoInstr.
-  int BytesCalleePops = (CFlags.CallConv == CallingConv::Fast &&
-                         getTargetMachine().Options.GuaranteedTailCallOpt)
-                            ? NumBytes
-                            : 0;
+  // AIX ABI do not support callee-popup stack for fastcc with -tailcallopt now.
+  int BytesCalleePops =
+      (!Subtarget.isAIXABI() && CFlags.CallConv == CallingConv::Fast &&
+       getTargetMachine().Options.GuaranteedTailCallOpt)
+          ? NumBytes
+          : 0;
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, BytesCalleePops, Glue, dl);
   Glue = Chain.getValue(1);
@@ -7737,13 +7734,18 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   // conservatively assume that it is needed.  As such, make sure we have at
   // least enough stack space for the caller to store the 8 GPRs.
   const unsigned MinParameterSaveAreaSize = 8 * PtrByteSize;
-  const unsigned NumBytes = std::max<unsigned>(
-      LinkageSize + MinParameterSaveAreaSize, CCInfo.getStackSize());
+  unsigned NumBytes = std::max<unsigned>(LinkageSize + MinParameterSaveAreaSize,
+                                         CCInfo.getStackSize());
 
   // To protect arguments on the stack from being clobbered in a tail call,
   // force all the loads to happen before doing any other lowering.
   if (CFlags.IsTailCall)
     Chain = DAG.getStackArgumentTokenFactor(Chain);
+
+  // Tail call needs the stack to be aligned.
+  if (getTargetMachine().Options.GuaranteedTailCallOpt &&
+      CFlags.CallConv == CallingConv::Fast)
+    NumBytes = EnsureStackAlignment(Subtarget.getFrameLowering(), NumBytes);
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass.
