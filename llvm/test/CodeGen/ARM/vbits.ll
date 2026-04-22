@@ -864,9 +864,8 @@ define <4 x i32> @hidden_not_v4i32(<4 x i32> %x) nounwind {
 define arm_aapcs_vfpcc <4 x i32> @not_signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; CHECK-LABEL: not_signbit_mask_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i8 q8, #0xff
-; CHECK-NEXT:    vcgt.s32 q8, q0, q8
-; CHECK-NEXT:    vand q0, q8, q1
+; CHECK-NEXT:    vshr.s32 q8, q0, #31
+; CHECK-NEXT:    vbic q0, q1, q8
 ; CHECK-NEXT:    bx lr
   %cond = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
   %r = select <4 x i1> %cond, <4 x i32> %b, <4 x i32> zeroinitializer
