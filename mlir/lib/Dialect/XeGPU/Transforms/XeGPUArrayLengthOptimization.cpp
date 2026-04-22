@@ -208,6 +208,10 @@ public:
     int64_t newOffset0 = origOffset0 + (arrayIndex * origRows);
     int64_t newOffset1 = origOffset1 % newFCD;
 
+    // If offsets don't change, this extract is already transformed
+    if (newOffset0 == origOffset0 && newOffset1 == origOffset1)
+      return failure();
+
     SmallVector<int64_t> newOffsets = {newOffset0, newOffset1};
 
     auto newOp = vector::ExtractStridedSliceOp::create(
