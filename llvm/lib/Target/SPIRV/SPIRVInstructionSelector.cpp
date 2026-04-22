@@ -1495,7 +1495,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
     Register PointerVReg =
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
-    auto It = getOpVariableMBBIt(I);
+    auto It = getOpVariableMBBIt(*I.getMF());
     BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
         .addDef(PointerVReg)
         .addUse(GR.getSPIRVTypeID(PointerType))
@@ -1536,7 +1536,7 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
     Register PointerVReg =
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
-    auto It = getOpVariableMBBIt(I);
+    auto It = getOpVariableMBBIt(*I.getMF());
     BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
         .addDef(PointerVReg)
         .addUse(GR.getSPIRVTypeID(PointerType))
@@ -2227,8 +2227,7 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
     report_fatal_error(
         "cannot select G_UNMERGE_VALUES with a non-vector argument");
 
-  SPIRVTypeInst ScalarType =
-      GR.getSPIRVTypeForVReg(SrcType->getOperand(1).getReg());
+  SPIRVTypeInst ScalarType = GR.getScalarOrVectorComponentType(SrcType);
   MachineBasicBlock &BB = *I.getParent();
   unsigned CurrentIndex = 0;
   for (unsigned i = 0; i < I.getNumDefs(); ++i) {
@@ -2741,7 +2740,7 @@ bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
     NotEqualReg =
         IsBoolTy ? InputRegister
                  : createVirtualRegister(SpvBoolTy, &GR, MRI, MRI->getMF());
-    const unsigned NumElts = InputType->getOperand(2).getImm();
+    const unsigned NumElts = GR.getScalarOrVectorComponentCount(InputType);
     SpvBoolTy = GR.getOrCreateSPIRVVectorType(SpvBoolTy, NumElts, I, TII);
   }
 
@@ -2794,7 +2793,7 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
          "dot product requires a vector of at least 2 components");
 
   [[maybe_unused]] SPIRVTypeInst EltType =
-      GR.getSPIRVTypeForVReg(VecType->getOperand(1).getReg());
+      GR.getScalarOrVectorComponentType(VecType);
 
   assert(EltType->getOpcode() == SPIRV::OpTypeFloat);
 
@@ -3170,15 +3169,6 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   return true;
 }
 
-unsigned getVectorSizeOrOne(SPIRVTypeInst Type) {
-
-  if (Type->getOpcode() != SPIRV::OpTypeVector)
-    return 1;
-
-  // Operand(2) is the vector size
-  return Type->getOperand(2).getImm();
-}
-
 bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
                                                         SPIRVTypeInst ResType,
                                                         MachineInstr &I) const {
@@ -3190,16 +3180,12 @@ bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
   SPIRVTypeInst InputType = GR.getSPIRVTypeForVReg(InputReg);
 
   // Determine if input is vector
-  unsigned NumElems = getVectorSizeOrOne(InputType);
+  unsigned NumElems = GR.getScalarOrVectorComponentCount(InputType);
   bool IsVector = NumElems > 1;
 
   // Determine element types
-  SPIRVTypeInst ElemInputType = InputType;
-  SPIRVTypeInst ElemBoolType = ResType;
-  if (IsVector) {
-    ElemInputType = GR.getSPIRVTypeForVReg(InputType->getOperand(1).getReg());
-    ElemBoolType = GR.getSPIRVTypeForVReg(ResType->getOperand(1).getReg());
-  }
+  SPIRVTypeInst ElemInputType = GR.getScalarOrVectorComponentType(InputType);
+  SPIRVTypeInst ElemBoolType = GR.getScalarOrVectorComponentType(ResType);
 
   // Subgroup scope constant
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
@@ -3960,10 +3946,7 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
 
     MachineIRBuilder MIRBuilder(I);
 
-    SPIRVTypeInst SpirvScalarType = ResType->getOpcode() == SPIRV::OpTypeVector
-                                        ? SPIRVTypeInst(GR.getSPIRVTypeForVReg(
-                                              ResType->getOperand(1).getReg()))
-                                        : ResType;
+    SPIRVTypeInst SpirvScalarType = GR.getScalarOrVectorComponentType(ResType);
 
     assert(SpirvScalarType->getOperand(1).getImm() == 32 &&
            "only float operands supported by GLSL extended math");
@@ -4155,7 +4138,7 @@ bool SPIRVInstructionSelector::selectIToF(Register ResVReg,
     unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
     SPIRVTypeInst TmpType = GR.getOrCreateSPIRVIntegerType(BitWidth, I, TII);
     if (ResType->getOpcode() == SPIRV::OpTypeVector) {
-      const unsigned NumElts = ResType->getOperand(2).getImm();
+      const unsigned NumElts = GR.getScalarOrVectorComponentCount(ResType);
       TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
     }
     SrcReg = createVirtualRegister(TmpType, &GR, MRI, MRI->getMF());
@@ -6241,7 +6224,7 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
                                                 MachineInstr &I) const {
   // Change order of instructions if needed: all OpVariable instructions in a
   // function must be the first instructions in the first block
-  auto It = getOpVariableMBBIt(I);
+  auto It = getOpVariableMBBIt(*I.getMF());
   BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
@@ -6463,10 +6446,7 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
   assert(ResType->getOpcode() == SPIRV::OpTypeVector ||
          ResType->getOpcode() == SPIRV::OpTypeFloat);
   // TODO: Add matrix implementation once supported by the HLSL frontend.
-  SPIRVTypeInst SpirvScalarType = ResType->getOpcode() == SPIRV::OpTypeVector
-                                      ? SPIRVTypeInst(GR.getSPIRVTypeForVReg(
-                                            ResType->getOperand(1).getReg()))
-                                      : ResType;
+  SPIRVTypeInst SpirvScalarType = GR.getScalarOrVectorComponentType(ResType);
   Register ScaleReg =
       GR.buildConstantFP(APFloat(0.30103f), MIRBuilder, SpirvScalarType);
 
@@ -6539,9 +6519,8 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     // Assign SPIR-V type of the pointer type of the alloca variable to the
     // new register.
     GR.assignSPIRVTypeToVReg(PtrType, PtrTyReg, MIRBuilder.getMF());
+    MachineBasicBlock::iterator VarPos = getOpVariableMBBIt(*I.getMF());
     MachineBasicBlock &EntryBB = I.getMF()->front();
-    MachineBasicBlock::iterator VarPos =
-        getFirstValidInstructionInsertPoint(EntryBB);
     auto AllocaMIB =
         BuildMI(EntryBB, VarPos, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
             .addDef(PtrTyReg)
@@ -6678,12 +6657,10 @@ SPIRVTypeInst SPIRVInstructionSelector::widenTypeToVec4(SPIRVTypeInst Type,
   if (Type->getOpcode() != SPIRV::OpTypeVector)
     return GR.getOrCreateSPIRVVectorType(Type, 4, MIRBuilder, false);
 
-  uint64_t VectorSize = Type->getOperand(2).getImm();
-  if (VectorSize == 4)
+  if (GR.getScalarOrVectorComponentCount(Type) == 4)
     return Type;
 
-  Register ScalarTypeReg = Type->getOperand(1).getReg();
-  const SPIRVTypeInst ScalarType = GR.getSPIRVTypeForVReg(ScalarTypeReg);
+  SPIRVTypeInst ScalarType = GR.getScalarOrVectorComponentType(Type);
   return GR.getOrCreateSPIRVVectorType(ScalarType, 4, MIRBuilder, false);
 }
 

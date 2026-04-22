@@ -70,6 +70,8 @@ AST Dumping Potentially Breaking Changes
   ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
   ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
   fields were missing from the JSON output.
+- Colons that appear at the end of a ParamCommentCommand name are not serialized
+  as part of the name.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -119,7 +121,7 @@ Clang Python Bindings Potentially Breaking Changes
   ``locations`` argument are passed. Previousy, ``locations`` took precedence.
 - ``_CXUnsavedFile`` will be renamed to ``UnsavedFile`` for consistency.
   ``UnsavedFile`` is already available to use and existing uses should
-  be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a 
+  be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a
   future release.
 
 What's New in Clang |release|?
@@ -189,6 +191,23 @@ Non-comprehensive list of changes in this release
   ``__builtin_stdc_has_single_bit``, ``__builtin_stdc_bit_width``,
   ``__builtin_stdc_bit_floor``, and ``__builtin_stdc_bit_ceil``.
 
+- Implemented the type-specific C23 ``<stdbit.h>`` functions with constexpr
+  evaluation support:
+  ``stdc_leading_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_leading_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_trailing_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_trailing_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_first_leading_zero_{uc,us,ui,ul,ull}``,
+  ``stdc_first_leading_one_{uc,us,ui,ul,ull}``,
+  ``stdc_first_trailing_zero_{uc,us,ui,ul,ull}``,
+  ``stdc_first_trailing_one_{uc,us,ui,ul,ull}``,
+  ``stdc_count_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_count_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_has_single_bit_{uc,us,ui,ul,ull}``,
+  ``stdc_bit_width_{uc,us,ui,ul,ull}``,
+  ``stdc_bit_floor_{uc,us,ui,ul,ull}``, and
+  ``stdc_bit_ceil_{uc,us,ui,ul,ull}``.
+
 - A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
   extends bit-reversal support to all standard integers type, including
   ``_BitInt``
@@ -199,6 +218,15 @@ Non-comprehensive list of changes in this release
 - Added header ``endian.h`` which contains byte order helpers specified in POSIX
 
 - Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
+
+- Added a new ``ExplicitInstantiationDecl`` AST node to represent explicit
+  template instantiations (e.g., ``template void foo<int>();`` or
+  ``extern template class S<int>;``). Previously, source location information
+  for explicit instantiation statements was discarded after parsing. The new
+  node preserves the full source range including the ``extern`` and ``template``
+  keywords, qualifiers, template arguments as written, and the declared type,
+  enabling tools such as language servers and refactoring engines to accurately
+  map source locations back to explicit instantiation sites.
 
 New Compiler Flags
 ------------------
@@ -235,6 +263,10 @@ New Compiler Flags
   shorthand for ``-fwin-cfg-mechanism=dispatch``.
 - New ``-cl`` option ``/d2guardcfgdispatch-`` added to match MSVC. This acts as a
   shorthand for ``-fwin-cfg-mechanism=check``.
+
+- New option ``-f[no-]strict-bool`` added to control whether Clang can assume
+  that ``bool`` values loaded from memory cannot have a bit pattern other
+  than 0 or 1.
 
 Deprecated Compiler Flags
 -------------------------
@@ -277,10 +309,24 @@ Attribute Changes in Clang
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
 
+- The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
+  notes. For example:
+  
+  .. code-block:: yaml
+
+    Functions:
+      - Name: myUnsafeFunction
+        UnsafeBufferUsage: true
+
 - Added support for ``[[msvc::forceinline]]`` for functions and
   ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to
   ``[[clang::always_inline]]`` with additional checks to ensure that they
   are only accepted in places where MSVC also does.
+
+- The AMDGPU ``amdgpu_num_sgpr`` and ``amdgpu_num_vgpr`` attributes are now
+  deprecated. Clang emits a ``-Wdeprecated-declarations`` warning when they
+  are used. Use ``amdgpu_waves_per_eu`` instead to control SGPR and VGPR
+  usage.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -357,7 +403,7 @@ Improvements to Clang's diagnostics
   when accessing a member function on a past-the-end array element.
   (#GH179128)
 
-- Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
+- Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and
   made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
 
 - Fixed the Fix-It insertion point for ``expected ';' after alias declaration``
@@ -370,7 +416,7 @@ Improvements to Clang's diagnostics
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
-- Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
+- Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof
   the destination buffer(dynamically allocated) in the len parameter(#GH162366)
 
 - Added ``-Wmodule-map-path-outside-directory`` (off by default) to warn on
@@ -475,7 +521,6 @@ Bug Fixes to C++ Support
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
-- Fixed a bug matching constrained out-of-line definitions of class members.
 - Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
@@ -487,8 +532,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
 
-- Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching 
-  MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported 
+- Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching
+  MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported
   and produce a warning. (#GH162640)
 - Correctly diagnose invalid non-dependent calls in dependent contexts. (#GH135694)
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
@@ -544,6 +589,9 @@ AMDGPU Support
 - Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
   a late / deferred query for the availability of target specific builtins.
 - Initial support for gfx1310
+- The ``amdgpu_num_sgpr`` and ``amdgpu_num_vgpr`` function attributes are now
+  deprecated. Using them produces a ``-Wdeprecated-declarations`` warning. Use
+  ``amdgpu_waves_per_eu`` instead.
 
 NVPTX Support
 ^^^^^^^^^^^^^^
@@ -631,6 +679,11 @@ clang-format
 ------------
 - Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
   '-'/'+' and the return type in Objective-C method declarations
+- Deprecate the ``BinPackParameters`` and ``BinPackArguments`` options and replace 
+  them with the ``PackParameters`` and ``PackArguments`` structs (respectively) to 
+  unify packing behavior. Add the ``BreakAfter`` option to the structs, allowing 
+  parameter and argument lists to be formatted with one parameter/argument on each 
+  line if they exceed the specified count.
 - Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
   constructor initializers after commas, keeping the colon on the same line.
 - Extend ``BreakBinaryOperations`` to accept a structured configuration with

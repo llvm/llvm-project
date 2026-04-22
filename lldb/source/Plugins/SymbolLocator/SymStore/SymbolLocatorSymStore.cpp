@@ -67,6 +67,25 @@ public:
       return s->GetCurrentValue();
     return SymbolLocatorSymStore::GetSystemDefaultCachePath();
   }
+
+  std::optional<std::string> GetTLSCertFingerprint() const {
+    OptionValueString *s =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(
+            ePropertyTLSCertFingerprint);
+    if (!s)
+      return {};
+    llvm::StringRef val = s->GetCurrentValueAsRef();
+    if (val.empty())
+      return {};
+    if (val.size() != 64 || !llvm::all_of(val, llvm::isHexDigit)) {
+      Debugger::ReportWarning(llvm::formatv(
+          "plugin.symbol-locator.symstore.tls-cert-fingerprint: expected a "
+          "64-character hex string (SHA-256), but got '{0}', ignoring",
+          val));
+      return {};
+    }
+    return val.lower();
+  }
 };
 
 } // namespace
@@ -269,6 +288,8 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
       client);
 
   llvm::HTTPRequest request(source_url);
+  request.PinnedCertFingerprint =
+      GetGlobalPluginProperties().GetTLSCertFingerprint();
   if (llvm::Error Err = client.perform(request, Handler)) {
     Debugger::ReportWarning(
         llvm::formatv("failed to download from SymStore '{0}': {1}", source_url,
