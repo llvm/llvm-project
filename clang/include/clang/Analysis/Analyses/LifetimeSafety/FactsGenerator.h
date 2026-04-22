@@ -41,7 +41,7 @@ public:
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N);
-  void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
+  void VisitCastExpr(const CastExpr *CE);
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -74,6 +74,10 @@ private:
   void handleFullExprCleanup(const CFGFullExprCleanup &FullExprCleanup);
 
   void handleExitBlock();
+
+  /// Mark all fields of the implicit object as used for an instance method
+  /// call, since the callee may access any part of the object.
+  void handleImplicitObjectFieldUses(const Expr *Call, const FunctionDecl *FD);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 

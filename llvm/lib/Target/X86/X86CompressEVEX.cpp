@@ -237,6 +237,9 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
       Opc != X86::VPMOVB2MZ128kr && Opc != X86::VPMOVB2MZ256kr)
     return false;
 
+  if (usesExtendedRegister(MI))
+    return false;
+
   Register MaskReg = MI.getOperand(0).getReg();
   Register SrcVecReg = MI.getOperand(1).getReg();
 

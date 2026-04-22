@@ -116,6 +116,13 @@ typedef struct hsa_isa_s {
   uint64_t handle;
 } hsa_isa_t;
 
+typedef enum {
+  HSA_ACCESS_PERMISSION_NONE = 0,
+  HSA_ACCESS_PERMISSION_RO = 1,
+  HSA_ACCESS_PERMISSION_WO = 2,
+  HSA_ACCESS_PERMISSION_RW = 3
+} hsa_access_permission_t;
+
 hsa_status_t hsa_system_get_info(hsa_system_info_t attribute, void *value);
 
 hsa_status_t hsa_agent_get_info(hsa_agent_t agent, hsa_agent_info_t attribute,

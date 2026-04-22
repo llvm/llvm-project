@@ -2453,7 +2453,7 @@ llvm::StructType *OpenMPIRBuilder::getKmpTaskAffinityInfoTy() {
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    const DependenciesInfo &Dependencies, AffinityData Affinities,
+    const DependenciesInfo &Dependencies, const AffinityData &Affinities,
     bool Mergeable, Value *EventHandle, Value *Priority) {
 
   if (!updateToLocation(Loc))
@@ -5475,7 +5475,19 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
-  Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  IdentFlag Flag = IdentFlag(0);
+  switch (LoopType) {
+  case WorksharingLoopType::ForStaticLoop:
+    Flag = OMP_IDENT_FLAG_WORK_LOOP;
+    break;
+  case WorksharingLoopType::DistributeStaticLoop:
+    Flag = OMP_IDENT_FLAG_WORK_DISTRIBUTE;
+    break;
+  case WorksharingLoopType::DistributeForStaticLoop:
+    Flag = OMP_IDENT_FLAG_WORK_DISTRIBUTE | OMP_IDENT_FLAG_WORK_LOOP;
+    break;
+  }
+  Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize, Flag);
 
   // Declare useful OpenMP runtime functions.
   Value *IV = CLI->getIndVar();
@@ -5509,7 +5521,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
   Builder.CreateStore(UpperBound, PUpperBound);
   Builder.CreateStore(One, PStride);
 
-  Value *ThreadNum = getOrCreateThreadID(SrcLoc);
+  Value *ThreadNum =
+      getOrCreateThreadID(getOrCreateIdent(SrcLocStr, SrcLocStrSize));
 
   OMPScheduleType SchedType =
       (LoopType == WorksharingLoopType::DistributeStaticLoop)
@@ -5698,8 +5711,13 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
   // value it produced.
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
-  Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-  Value *ThreadNum = getOrCreateThreadID(SrcLoc);
+  IdentFlag Flag = OMP_IDENT_FLAG_WORK_LOOP;
+  if (DistScheduleSchedType != OMPScheduleType::None) {
+    Flag |= OMP_IDENT_FLAG_WORK_DISTRIBUTE;
+  }
+  Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize, Flag);
+  Value *ThreadNum =
+      getOrCreateThreadID(getOrCreateIdent(SrcLocStr, SrcLocStrSize));
   auto BuildInitCall = [StaticInit, SrcLoc, ThreadNum, PLastIter, PLowerBound,
                         PUpperBound, PStride, One,
                         this](Value *SchedulingType, Value *ChunkSize,
@@ -5955,7 +5973,19 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
     WorksharingLoopType LoopType, bool NoLoop) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
-  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  IdentFlag Flag = IdentFlag(0);
+  switch (LoopType) {
+  case WorksharingLoopType::ForStaticLoop:
+    Flag = OMP_IDENT_FLAG_WORK_LOOP;
+    break;
+  case WorksharingLoopType::DistributeStaticLoop:
+    Flag = OMP_IDENT_FLAG_WORK_DISTRIBUTE;
+    break;
+  case WorksharingLoopType::DistributeForStaticLoop:
+    Flag = OMP_IDENT_FLAG_WORK_DISTRIBUTE | OMP_IDENT_FLAG_WORK_LOOP;
+    break;
+  }
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize, Flag);
 
   OutlineInfo OI;
   OI.OuterAllocaBB = CLI->getPreheader();
@@ -6177,7 +6207,8 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
-  Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *SrcLoc =
+      getOrCreateIdent(SrcLocStr, SrcLocStrSize, OMP_IDENT_FLAG_WORK_LOOP);
 
   // Declare useful OpenMP runtime functions.
   Value *IV = CLI->getIndVar();
@@ -6218,7 +6249,8 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   if (!Chunk)
     Chunk = One;
 
-  Value *ThreadNum = getOrCreateThreadID(SrcLoc);
+  Value *ThreadNum =
+      getOrCreateThreadID(getOrCreateIdent(SrcLocStr, SrcLocStrSize));
 
   Constant *SchedulingType =
       ConstantInt::get(I32Type, static_cast<int>(SchedType));
@@ -7639,7 +7671,8 @@ CallInst *OpenMPIRBuilder::createOMPAlloc(const LocationDescription &Loc,
                                           Value *Size, Value *Allocator,
                                           std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  updateToLocation(Loc);
+  if (!updateToLocation(Loc))
+    return nullptr;
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -7652,11 +7685,31 @@ CallInst *OpenMPIRBuilder::createOMPAlloc(const LocationDescription &Loc,
   return createRuntimeFunctionCall(Fn, Args, Name);
 }
 
+CallInst *OpenMPIRBuilder::createOMPAlignedAlloc(const LocationDescription &Loc,
+                                                 Value *Align, Value *Size,
+                                                 Value *Allocator,
+                                                 std::string Name) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
+  if (!updateToLocation(Loc))
+    return nullptr;
+
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *ThreadId = getOrCreateThreadID(Ident);
+  Value *Args[] = {ThreadId, Align, Size, Allocator};
+
+  Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_aligned_alloc);
+
+  return Builder.CreateCall(Fn, Args, Name);
+}
+
 CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
                                          Value *Addr, Value *Allocator,
                                          std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  updateToLocation(Loc);
+  if (!updateToLocation(Loc))
+    return nullptr;
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -10475,8 +10528,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
            "OMP Atomic expects a pointer to target memory");
     Type *XElemTy = X.ElemTy;
     assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-            XElemTy->isPointerTy()) &&
-           "OMP atomic update expected a scalar type");
+            XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
+           "OMP atomic update expected a scalar or struct type");
     assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
            (RMWOp != AtomicRMWInst::UMax) && (RMWOp != AtomicRMWInst::UMin) &&
            "OpenMP atomic does not support LT or GT operations");
@@ -10535,8 +10588,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
     AtomicUpdateCallbackTy &UpdateOp, bool VolatileX, bool IsXBinopExpr,
     bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
-  // TODO: handle the case where XElemTy is not byte-sized or not a power of 2
-  // or a complex datatype.
+  // TODO: handle the case where XElemTy is not byte-sized or not a power of 2.
   bool emitRMWOp = false;
   switch (RMWOp) {
   case AtomicRMWInst::Add:
@@ -10578,14 +10630,12 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
       Res.second = Res.first;
     else
       Res.second = emitRMWOpAsInstruction(Res.first, Expr, RMWOp);
-  } else if (RMWOp == llvm::AtomicRMWInst::BinOp::BAD_BINOP &&
-             XElemTy->isStructTy()) {
+  } else if (XElemTy->isStructTy()) {
     LoadInst *OldVal =
         Builder.CreateLoad(XElemTy, X, X->getName() + ".atomic.load");
     OldVal->setAtomic(AO);
     const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
-    unsigned LoadSize =
-        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
+    unsigned LoadSize = LoadDL.getTypeStoreSize(XElemTy);
 
     OpenMPIRBuilder::AtomicInfo atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
@@ -10713,8 +10763,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
            "OMP Atomic expects a pointer to target memory");
     Type *XElemTy = X.ElemTy;
     assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-            XElemTy->isPointerTy()) &&
-           "OMP atomic capture expected a scalar type");
+            XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
+           "OMP atomic capture expected a scalar or struct type");
     assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
            "OpenMP atomic does not support LT or GT operations");
   });
