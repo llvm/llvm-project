@@ -118,13 +118,13 @@ Compiler Options
 
 The LFI target has several configuration options, specified via ``-mattr=``:
 
-* ``+lfi-loads``: enable sandboxing for loads (default: true).
-* ``+lfi-stores``: enable sandboxing for stores (default: true).
+* ``+no-lfi-loads``: Disable sandboxing for load instructions (stores-only mode).
+* ``+no-lfi-stores``: Disable sandboxing for store instructions.
 
-Use ``+nolfi-loads`` to create a "stores-only" sandbox that may read, but not
+Use ``+no-lfi-loads`` to create a "stores-only" sandbox that may read, but not
 write, outside the sandbox region.
 
-Use ``+nolfi-loads+nolfi-stores`` to create a "jumps-only" sandbox that may
+Use ``+no-lfi-loads,+no-lfi-stores`` to create a "jumps-only" sandbox that may
 read/write outside the sandbox region but may not transfer control outside
 (e.g., may not execute system calls directly). This is primarily useful in
 combination with some other form of memory sandboxing, such as Intel MPK.
@@ -148,7 +148,7 @@ that must be maintained.
 * ``sp``: always holds an address within the sandbox.
 * ``x30``: always holds an address within the sandbox.
 * ``x26``: scratch register.
-* ``x25``: points to a thread-local virtual register file for storing runtime context information.
+* ``x25``: context register (see `Context Register`_).
 
 The current design only supports 4GiB sandboxes, which requires the sandbox
 base address to be 4GiB-aligned. This is because LFI's ABI stores pointers as
@@ -327,43 +327,42 @@ System instructions
 
 System calls are rewritten into a sequence that loads the address of the first
 runtime call entrypoint and jumps to it. The runtime call entrypoint table is
-stored at the start of the sandbox, so it can be referenced by ``x27``. The
-rewrite also saves and restores the link register, since it is used for
-branching into the runtime.
+stored at a negative offset from the sandbox base, so it can be referenced by
+``x27``. The rewrite also saves and restores the link register, since it is
+used for branching into the runtime.
 
-+-----------------+----------------------------+
-|    Original     |         Rewritten          |
-+-----------------+----------------------------+
-| .. code-block:: | .. code-block::            |
-|                 |                            |
-|    svc #0       |    mov w26, w30            |
-|                 |    ldr x30, [x27]          |
-|                 |    blr x30                 |
-|                 |    add x30, x27, w26, uxtw |
-|                 |                            |
-+-----------------+----------------------------+
++-----------------+------------------------------+
+|    Original     |          Rewritten           |
++-----------------+------------------------------+
+| .. code-block:: | .. code-block::              |
+|                 |                              |
+|    svc #0       |    mov x26, x30              |
+|                 |    ldur x30, [x27, #-8]      |
+|                 |    blr x30                   |
+|                 |    add x30, x27, w26, uxtw   |
+|                 |                              |
++-----------------+------------------------------+
 
 Thread pointer (TP)
 ~~~~~~~~~~~~~~~~~~~
 
-TLS accesses are rewritten into accesses offset from ``x25``, which is a
-reserved register that points to a virtual register file, with a location for
-storing the sandbox's thread pointer. ``TP`` is the offset into that virtual
-register file where the thread pointer is stored.
+TP accesses are rewritten into loads/stores from the context register
+(``x25``), which holds the virtual thread pointer at offset 16 (see
+`Context Register`_).
 
-+----------------------+-----------------------+
-|       Original       |       Rewritten       |
-+----------------------+-----------------------+
-| .. code-block::      | .. code-block::       |
-|                      |                       |
-|    mrs xN, tpidr_el0 |    ldr xN, [x25, #TP] |
-|                      |                       |
-+----------------------+-----------------------+
-| .. code-block::      | .. code-block::       |
-|                      |                       |
-|    mrs tpidr_el0, xN |    str xN, [x25, #TP] |
-|                      |                       |
-+----------------------+-----------------------+
++----------------------+-------------------------+
+|       Original       |        Rewritten        |
++----------------------+-------------------------+
+| .. code-block::      | .. code-block::         |
+|                      |                         |
+|    mrs xN, tpidr_el0 |    ldr xN, [x25, #16]   |
+|                      |                         |
++----------------------+-------------------------+
+| .. code-block::      | .. code-block::         |
+|                      |                         |
+|    msr tpidr_el0, xN |    str xN, [x25, #16]   |
+|                      |                         |
++----------------------+-------------------------+
 
 Optimizations
 =============
@@ -488,192 +487,25 @@ In the following assembly rewrites, some shorthand is used.
 * ``%rN`` or ``%eN``: refers to any general-purpose non-reserved register.
 * ``{a,b,c}``: matches any of ``a``, ``b``, or ``c``.
 
-Instructions placed between ``.bundle_lock`` and ``.bundle_unlock`` directives
-must all be placed inside the same bundle. The directive ``.bundle_lock
-align_to_end`` ensures that the last instruction in the ``.bundle_lock``
-sequence is placed at the end of the bundle.
-
 Control flow
 ~~~~~~~~~~~~
 
 **Note**: these rewrites have not been implemented.
-
-Indirect jumps are rewritten to first apply a mask that zeroes the top 32 bits
-and bottom 5 bits of the target. An ``addq`` instruction is then used to fill
-in the top 32 bits with the sandbox base.
-
-Indirect calls are similar, but the call instruction must be placed at the
-end of the bundle so that the return address is bundle-aligned. Direct calls
-must also be placed at the end of a bundle.
-
-The addressing mode ``LFI:N(...)`` specifies to apply an LFI addressing mode
-transformation (see the Memory accesses section) when rewriting the addressing
-mode.
-
-+------------------+------------------------------+
-|     Original     |          Rewritten           |
-+------------------+------------------------------+
-| .. code-block::  | .. code-block::              |
-|                  |                              |
-|    jmpq *%rX     |    .bundle_lock              |
-|                  |    andl $0xffffffe0, %eX     |
-|                  |    addq %r14, %rX            |
-|                  |    jmpq *%rX                 |
-|                  |    .bundle_unlock            |
-|                  |                              |
-+------------------+------------------------------+
-| .. code-block::  | .. code-block::              |
-|                  |                              |
-|    jmpq *N(...)  |    movq LFI:N(...), %r11     |
-|                  |    .bundle_lock              |
-|                  |    andl $0xffffffe0, %r11d   |
-|                  |    addq %r14, %r11           |
-|                  |    jmpq *%r11                |
-|                  |    .bundle_unlock            |
-|                  |                              |
-+------------------+------------------------------+
-| .. code-block::  | .. code-block::              |
-|                  |                              |
-|    callq *%rX    |    .bundle_lock align_to_end |
-|                  |    andl $0xffffffe0, %eX     |
-|                  |    addq %r14, %r11           |
-|                  |    callq *%r11               |
-|                  |    .bundle_unlock            |
-|                  |                              |
-+------------------+------------------------------+
-| .. code-block::  | .. code-block::              |
-|                  |                              |
-|    callq *N(...) |    movq LFI:N(...), %r11     |
-|                  |    .bundle_lock align_to_end |
-|                  |    andl $0xffffffe0, %r11d   |
-|                  |    addq %r14, %r11           |
-|                  |    callq *%r11               |
-|                  |    .bundle_unlock            |
-|                  |                              |
-+------------------+------------------------------+
-| .. code-block::  | .. code-block::              |
-|                  |                              |
-|    ret           |    popq %r11                 |
-|                  |    .bundle_lock              |
-|                  |    andl $0xffffffe0, %r11d   |
-|                  |    addq %r14, %r11           |
-|                  |    jmpq *%r11                |
-|                  |    .bundle_unlock            |
-|                  |                              |
-+------------------+------------------------------+
-| .. code-block::  | .. code-block::              |
-|                  |                              |
-|    call ...      |    .bundle_lock align_to_end |
-|                  |    call ...                  |
-|                  |    .bundle_unlock            |
-|                  |                              |
-+------------------+------------------------------+
 
 Memory accesses
 ~~~~~~~~~~~~~~~
 
 **Note**: these rewrites have not been implemented.
 
-Memory accesses are transformed to safe versions by rewriting the addressing
-mode. The rewrite prefixes the addressing mode with ``%gs:`` to make the access
-relative to the sandbox base. All registers must be changed to the 32-bit form
-(``%eX``).
-
-The stack ``%rsp`` may be accessed directly because it is always guaranteed to
-contain a valid sandbox address. ``lea`` instructions do not need rewriting for
-their addressing mode since they do not actually perform a memory access.
-
-+--------------------+--------------------+
-|      Original      |     Rewritten      |
-+--------------------+--------------------+
-| .. code-block::    | .. code-block::    |
-|                    |                    |
-|    lea N(...), ... |    lea N(...), ... |
-|                    |                    |
-+--------------------+--------------------+
-
-+-------------------+-----------------------+
-|     Original      |       Rewritten       |
-+-------------------+-----------------------+
-| .. code-block::   | .. code-block::       |
-|                   |                       |
-|    N(%rsp)        |    N(%rsp)            |
-|                   |                       |
-+-------------------+-----------------------+
-| .. code-block::   | .. code-block::       |
-|                   |                       |
-|    N(%rip)        |    N(%rip)            |
-|                   |                       |
-+-------------------+-----------------------+
-| .. code-block::   | .. code-block::       |
-|                   |                       |
-|    N(%rX)         |    %gs:N(%eX)         |
-|                   |                       |
-+-------------------+-----------------------+
-| .. code-block::   | .. code-block::       |
-|                   |                       |
-|    N(%rX, %rY, S) |    %gs:N(%eX, %eY, S) |
-|                   |                       |
-+-------------------+-----------------------+
-| .. code-block::   | .. code-block::       |
-|                   |                       |
-|    N(, %rX, S)    |    N(, %eX, S)        |
-|                   |                       |
-+-------------------+-----------------------+
-
 String instructions
 ~~~~~~~~~~~~~~~~~~~
 
 **Note**: these rewrites have not been implemented.
 
-String instructions perform memory accesses using specific registers. Those
-registers must be manually guarded before the instruction.
-
-+-----------------+----------------------------+
-|    Original     |         Rewritten          |
-+-----------------+----------------------------+
-| .. code-block:: | .. code-block::            |
-|                 |                            |
-|    rep? stosq   |    .bundle_lock            |
-|                 |    movl %edi, %edi         |
-|                 |    leaq (%r14, %rdi), %rdi |
-|                 |    rep? stosq              |
-|                 |    .bundle_unlock          |
-|                 |                            |
-+-----------------+----------------------------+
-| .. code-block:: | .. code-block::            |
-|                 |                            |
-|    rep? movsq   |    .bundle_lock            |
-|                 |    movl %edi, %edi         |
-|                 |    leaq (%r14, %rdi), %rdi |
-|                 |    movl %esi, %esi         |
-|                 |    leaq (%r14, %rsi), %rsi |
-|                 |    rep? movsq              |
-|                 |    .bundle_unlock          |
-|                 |                            |
-+-----------------+----------------------------+
-
 Stack modification
 ~~~~~~~~~~~~~~~~~~
 
 **Note**: these rewrites have not been implemented.
-
-Since the stack pointer must always contain a valid sandbox address, any
-modification to the stack pointer must be rewritten to modify it via ``%esp``
-and then re-guard it with ``leaq (%rsp, %r14), %rsp``. We use this guard form
-instead of ``addq %r14, %rsp`` to avoid modifying the flags.
-
-+------------------+----------------------------+
-|     Original     |         Rewritten          |
-+------------------+----------------------------+
-| .. code-block::  | .. code-block::            |
-|                  |                            |
-|    MOD ..., %rsp |    .bundle_lock            |
-|                  |    MOD ..., %esp           |
-|                  |    leaq (%rsp, %r14), %rsp |
-|                  |    .bundle_unlock          |
-|                  |                            |
-+------------------+----------------------------+
 
 System instructions
 ~~~~~~~~~~~~~~~~~~~
