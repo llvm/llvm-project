@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c2y -Wall -pedantic -Wno-unused %s
 
-/* WG14 N3410: Clang 23
+/* WG14 N3410: No
  * Slay Some Earthly Demons XI
  *
  * It is now ill-formed for the same identifier within a TU to have both
@@ -24,17 +24,19 @@ void func2() {
   extern int b; // Ok
 }
 
-static int c, d; // expected-note 2 {{previous definition is here}}
+static int c, d;
 void func3() {
   int c; // no linkage, different object from the one declared above.
   for (int d;;) {
     // This 'c' is the same as the one declared at file scope, but because of
     // the local scope 'c', the file scope 'c' is not visible.
-    extern int c; // expected-error {{declared with both internal and external linkage}}
+    // FIXME: This should be diagnosed under N3410.
+    extern int c;
     // This 'd' is the same as the one declared at file scope as well, but
     // because of the 'd' declared within the for loop, the file scope 'd' is
     // also not visible, same as with 'c'.
-    extern int d; // expected-error {{declared with both internal and external linkage}}
+    // FIXME: This should be diagnosed under N3410.
+    extern int d;
   }
   for (static int e;;) {
     extern int e; // Ok for the same reason as 'b' above.
