@@ -1,0 +1,30 @@
+; Load first process
+ 262511 PERF_RECORD_MMAP2 262511/262511: [0x61f3acfa8000(0x1000) @ 0x1000 103:02 13931513 3957944494]: r-xp /home/multi-process-cs-probe.perfbin
+
+; Samples from first process
+ 262511 
+	    61f3acfa8155
+	    61f3acfa81e9
+	    78d7ee62a1ca
+	    78d7ee62a28b
+	    61f3acfa8065
+ 0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/- 
+
+; Load second process
+ 262512 PERF_RECORD_MMAP2 262512/262512: [0x5b3c4c631000(0x1000) @ 0x1000 103:02 13931513 3957944494]: r-xp /home/multi-process-cs-probe.perfbin
+
+; Samples from both processes
+ 262512 
+	    5b3c4c631195
+	    5b3c4c63120c
+	    73bf70e2a1ca
+	    73bf70e2a28b
+	    5b3c4c631065
+ 0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/5/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/4/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/5/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/5/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/5/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/5/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/5/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/-  0x5b3c4c631190/0x5b3c4c631195/P/-/-/1/UNCOND/-  0x5b3c4c6311a1/0x5b3c4c63117c/P/-/-/1/UNCOND/- 
+ 262511 
+	    61f3acfa813c
+	    61f3acfa81e9
+	    78d7ee62a1ca
+	    78d7ee62a28b
+	    61f3acfa8065
+ 0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/4/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/-  0x61f3acfa8161/0x61f3acfa813c/P/-/-/1/UNCOND/-  0x61f3acfa8150/0x61f3acfa8155/P/-/-/1/UNCOND/- 

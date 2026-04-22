@@ -1,0 +1,46 @@
+; Check that we can handle profiles with multiple processes, using pseudo probes
+; and a context-sensitive profile
+
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-cs-probe.perfscript --binary=%S/Inputs/multi-process-cs-probe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile
+; RUN: FileCheck %s --input-file %t
+
+CHECK:      loop1:93:0
+CHECK-NEXT:  1: 0
+CHECK-NEXT:  2: 31
+CHECK-NEXT:  3: 31
+CHECK-NEXT:  4: 31
+CHECK-NEXT:  5: 0
+CHECK-NEXT:  !CFGChecksum: 88680961901
+CHECK-NEXT: loop2:47:0
+CHECK-NEXT:  1: 0
+CHECK-NEXT:  2: 16
+CHECK-NEXT:  3: 16
+CHECK-NEXT:  4: 15
+CHECK-NEXT:  5: 0
+CHECK-NEXT:  !CFGChecksum: 88680961901
+
+; original code:
+; clang -g -fpseudo-probe-for-profiling -fno-omit-frame-pointer test.c -o multi-process-cs-probe.perfbin
+#include <stdint.h>
+
+// Loop for a while so we see samples in the function (compiled at -O0)
+void loop1() {
+  for (uint64_t i = 0; i < 10000000000; i++) {}
+}
+
+// Slightly modified to make sure there isn't any kind of linker merging
+void loop2() {
+  for (uint64_t i = 1; i < 10000000001; i++) {}
+}
+
+int main(int argc, char *argv[]) {
+  // Use CLI argument to choose which loop to run, so we can distinguish which
+  // process samples were collected from
+
+  if (argc >= 2 && argv[1][0] == '1') {
+    loop1();
+  }
+  if (argc >= 2 && argv[1][0] == '2') {
+    loop2();
+  }
+}
