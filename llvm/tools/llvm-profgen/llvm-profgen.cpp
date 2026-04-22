@@ -228,11 +228,11 @@ int main(int argc, const char *argv[]) {
                         "yet supported for context-sensitive perf traces or "
                         "when pseudo-probe based mapping is enabled. ");
         }
-        // Parse the data access perf traces into <ip, data-addr> pairs, symbolize
-        // the data-addr to data-symbol. If the data-addr is a vtable, increment
-        // counters for the <ip, data-symbol> pair.
-        if (Error E = PerfReader->parseDataAccessPerfTraces(DataAccessProfileFilename,
-                                                        PIDFilter)) {
+        // Parse the data access perf traces into <ip, data-addr> pairs,
+        // symbolize the data-addr to data-symbol. If the data-addr is a vtable,
+        // increment counters for the <ip, data-symbol> pair.
+        if (Error E = PerfReader->parseDataAccessPerfTraces(
+                DataAccessProfileFilename, PIDFilter)) {
           handleAllErrors(std::move(E), [&](const StringError &SE) {
             exitWithError(SE.getMessage());
           });
