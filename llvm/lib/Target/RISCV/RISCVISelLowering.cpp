@@ -1683,13 +1683,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
           // Don't promote f16 vector operations to f32 if f32 vector type is
           // not legal.
-          // For LMUL=8, custom lower them so we can split to 2 LMUL=4
-          // operations to be able to lower them.
+          // Custom lower maximum LMUL case to split to 2 half LMUL operations.
           // TODO: Support more operations.
           if (!isTypeLegal(F32VecVT)) {
-            if (getLMUL(getContainerForFixedLengthVector(VT)) ==
-                RISCVVType::LMUL_8)
-              setOperationAction(ISD::SETCC, VT, Custom);
+            setOperationAction(ISD::SETCC, VT, Custom);
             continue;
           }
           setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
@@ -1719,13 +1716,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
           // Don't promote bf16 vector operations to f32 if f32 vector type is
           // not legal.
-          // For LMUL=8, custom lower them so we can split to 2 LMUL=4
-          // operations to be able to lower them.
+          // Custom lower maximum LMUL case to split to 2 half LMUL operations.
           // TODO: Support more operations.
           if (!isTypeLegal(F32VecVT)) {
-            if (getLMUL(getContainerForFixedLengthVector(VT)) ==
-                RISCVVType::LMUL_8)
-              setOperationAction(ISD::SETCC, VT, Custom);
+            setOperationAction(ISD::SETCC, VT, Custom);
             continue;
           }
 
@@ -7625,14 +7619,19 @@ static bool isPromotedOpNeedingSplit(SDValue Op,
                                      const RISCVSubtarget &Subtarget,
                                      const TargetLowering &TLI) {
   MVT OpVT = Op.getSimpleValueType();
-  if (OpVT.isFixedLengthVector())
-    OpVT = getContainerForFixedLengthVector(TLI, OpVT, Subtarget);
-  return (OpVT == MVT::nxv32f16 && (Subtarget.hasVInstructionsF16Minimal() &&
-                                    !Subtarget.hasVInstructionsF16())) ||
-         (OpVT == MVT::nxv32bf16 && Subtarget.hasVInstructionsBF16Minimal() &&
-          (!Subtarget.hasVInstructionsBF16() ||
-           (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
-            !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode()))));
+  if (!OpVT.isVector())
+    return false;
+  MVT EltVT = OpVT.getVectorElementType();
+  if (!(EltVT == MVT::f16 && Subtarget.hasVInstructionsF16Minimal() &&
+        !Subtarget.hasVInstructionsF16()) &&
+      !(EltVT == MVT::bf16 && Subtarget.hasVInstructionsBF16Minimal() &&
+        (!Subtarget.hasVInstructionsBF16() ||
+         (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
+          !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode())))))
+    return false;
+  // Need to split when the same width f32 vector type isn't legal.
+  return !TLI.isTypeLegal(
+      MVT::getVectorVT(MVT::f32, OpVT.getVectorElementCount()));
 }
 
 static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
