@@ -13,7 +13,7 @@
 
 // A struct large (and aligned) enough to accomodate all supported
 // protocol-specific address structures.
-struct sockaddr_storage {
+struct __attribute__((may_alias)) sockaddr_storage {
   sa_family_t ss_family;
   union {
     char __ss_padding[128 - sizeof(sa_family_t)]; // Ensures size.

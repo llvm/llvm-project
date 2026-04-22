@@ -8,13 +8,15 @@
 
 #include "hdr/types/struct_sockaddr_storage.h"
 #include "hdr/types/struct_sockaddr_un.h"
-#include "src/string/memcpy.h"
 
 #include "test/UnitTest/LibcTest.h"
 
 #include <sys/socket.h> // For AF_UNIX
 
 using LlvmLibcSockaddrStorageTest = LIBC_NAMESPACE::testing::Test;
+
+sa_family_t test_sockaddr_aliasing(struct sockaddr_storage *ss,
+                                   struct sockaddr_un *sun);
 
 TEST_F(LlvmLibcSockaddrStorageTest, SizeAndAlignment) {
   // TODO: Add other sockaddr_* types as they are defined.
@@ -24,9 +26,8 @@ TEST_F(LlvmLibcSockaddrStorageTest, SizeAndAlignment) {
 }
 
 TEST_F(LlvmLibcSockaddrStorageTest, MemberAccess) {
-  struct sockaddr_un sun = {};
-  sun.sun_family = AF_UNIX;
-  struct sockaddr_storage ss;
-  LIBC_NAMESPACE::memcpy(&ss, &sun, sizeof(sun));
-  ASSERT_EQ(ss.ss_family, static_cast<sa_family_t>(AF_UNIX));
+  struct sockaddr_storage ss = {};
+  auto *sun = reinterpret_cast<struct sockaddr_un *>(&ss);
+  ASSERT_EQ(static_cast<sa_family_t>(AF_UNIX),
+            test_sockaddr_aliasing(&ss, sun));
 }

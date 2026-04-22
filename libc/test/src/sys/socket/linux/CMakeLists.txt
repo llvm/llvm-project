@@ -194,8 +194,8 @@ add_libc_unittest(
     libc_sys_socket_unittests
   SRCS
     sockaddr_storage_test.cpp
+    sockaddr_storage_helper.cpp
   DEPENDS
     libc.hdr.types.struct_sockaddr_storage
     libc.hdr.types.struct_sockaddr_un
-    libc.src.string.memcpy
 )
