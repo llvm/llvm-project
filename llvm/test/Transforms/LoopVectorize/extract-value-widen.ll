@@ -36,20 +36,20 @@ entry:
   br label %loop.header
 
 loop.header:                                           ; preds = %loop.latch, %entry
-  %var4 = phi i64 [ 0, %entry ], [ %var2, %loop.latch ]
-  %n.026 = phi i64 [ 0, %entry ], [ %1, %loop.latch ]
-  %0 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %n.026, i64 1)
-  %1 = extractvalue { i64, i1 } %0, 0
+  %var4 = phi i64 [ 0, %entry ], [ %sum2, %loop.latch ]
+  %n.026 = phi i64 [ 0, %entry ], [ %sum1, %loop.latch ]
+  %res1 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %n.026, i64 1)
+  %sum1 = extractvalue { i64, i1 } %res1, 0
   br label %loop.latch
 
 loop.latch:                                         ; preds = %loop.header
-  %n.02 = phi i64 [ %1, %loop.header ]
+  %n.02 = phi i64 [ %sum1, %loop.header ]
   %arrayidx37 = getelementptr [8 x i8], ptr %p, i64 %n.02
   store i64 0, ptr %arrayidx37, align 8
-  %var1 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %var4, i64 1)
-  %var2 = extractvalue { i64, i1 } %var1, 0
-  %var3 = extractvalue { i64, i1 } %var1, 1
-  br i1 %var3, label %exit, label %loop.header
+  %res2 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %var4, i64 1)
+  %sum2 = extractvalue { i64, i1 } %res2, 0
+  %overflow2 = extractvalue { i64, i1 } %res2, 1
+  br i1 %overflow2, label %exit, label %loop.header
 
 exit:                          ; preds = %loop.latch
   ret void
