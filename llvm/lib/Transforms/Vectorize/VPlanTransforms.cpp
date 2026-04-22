@@ -288,7 +288,8 @@ collectGroupedReplicateMemOps(
 }
 
 /// Return true if we do not know how to (mechanically) hoist or sink \p R out
-/// of a loop region. When sinking, \p Sinking must be true.
+/// of a loop region. When sinking, passing \p Sinking = true ensures that
+/// assumes aren't sunk.
 static bool cannotHoistOrSinkRecipe(const VPRecipeBase &R,
                                     bool Sinking = false) {
   // Assumes don't alias anything or throw; as long as they're guaranteed to
@@ -2769,11 +2770,8 @@ static void licm(VPlan &Plan) {
           }))
         continue;
 
-      // Attempt to set SinkBB to the LoopRegion's single successor, if one
-      // wasn't found.
-      if (!SinkBB && !(SinkBB = cast_or_null<VPBasicBlock>(
-                           LoopRegion->getSingleSuccessor())))
-        continue;
+      if (!SinkBB)
+        SinkBB = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());
 
       // TODO: This will need to be a check instead of a assert after
       // conditional branches in vectorized loops are supported.
