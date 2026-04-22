@@ -126,3 +126,58 @@ entry:
   %1 = load atomic i32, ptr %a unordered, align 4
   ret i32 %1
 }
+
+define i64 @test_partial_overlap(ptr %buf) {
+; CHECK-LABEL: @test_partial_overlap(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DST:%.*]] = getelementptr inbounds i8, ptr [[BUF:%.*]], i64 2
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[BUF]], align 8
+; CHECK-NEXT:    store i64 [[V1]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[BUF]], align 8
+; CHECK-NEXT:    ret i64 [[V2]]
+;
+entry:
+  %src = getelementptr inbounds i8, ptr %buf, i64 0
+  %dst = getelementptr inbounds i8, ptr %buf, i64 2
+  %v1 = load i64, ptr %src, align 8
+  store i64 %v1, ptr %dst, align 8
+  %v2 = load i64, ptr %src, align 8
+  ret i64 %v2
+}
+
+; Negative offset partial overlap
+define i64 @test_partial_overlap_neg(ptr %buf) {
+; CHECK-LABEL: @test_partial_overlap_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds i8, ptr [[BUF:%.*]], i64 4
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[SRC]], align 8
+; CHECK-NEXT:    store i64 [[V1]], ptr [[BUF]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[SRC]], align 8
+; CHECK-NEXT:    ret i64 [[V2]]
+;
+entry:
+  %src = getelementptr inbounds i8, ptr %buf, i64 4
+  %dst = getelementptr inbounds i8, ptr %buf, i64 0
+  %v1 = load i64, ptr %src, align 8
+  store i64 %v1, ptr %dst, align 8
+  %v2 = load i64, ptr %src, align 8
+  ret i64 %v2
+}
+
+; No overlap (store to non-overlapping region) - GVN SHOULD eliminate the load
+define i64 @test_no_overlap(ptr %buf) {
+; CHECK-LABEL: @test_no_overlap(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DST:%.*]] = getelementptr inbounds i8, ptr [[BUF:%.*]], i64 64
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[BUF]], align 8
+; CHECK-NEXT:    store i64 [[V1]], ptr [[DST]], align 8
+; CHECK-NEXT:    ret i64 [[V1]]
+;
+entry:
+  %src = getelementptr inbounds i8, ptr %buf, i64 0
+  %dst = getelementptr inbounds i8, ptr %buf, i64 64
+  %v1 = load i64, ptr %src, align 8
+  store i64 %v1, ptr %dst, align 8
+  %v2 = load i64, ptr %src, align 8
+  ret i64 %v2
+}

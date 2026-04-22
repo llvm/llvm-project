@@ -355,6 +355,14 @@ static bool canSkipClobberingStore(const StoreInst *SI,
       MemLoc.Size.getValue().getKnownMinValue())
     return false;
 
+  // The alignment check above is necessary but not sufficient: AA may know
+  // that the store destination and MemLoc have a constant offset that causes
+  // partial overlap. In that case the store modifies only part of MemLoc,
+  // so the loaded value may change even though the stored value was originally
+  // read from a MustAlias location.
+  if (BatchAA.alias(MemoryLocation::get(SI), MemLoc) == AliasResult::PartialAlias)
+    return false;
+
   auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
   if (!LI || LI->getParent() != SI->getParent())
     return false;
