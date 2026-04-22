@@ -248,7 +248,7 @@ using GL = decltype(gl);
 template <>
 auto GL::operator()(int a) const {
 // since-cxx11-error@-1 {{a member of a lambda should not be explicitly specialized}}
-//   since-cxx11-note-re@#cwg1780-spec{{{{'\(lambda at .+\)'}} defined here}}
+//   since-cxx11-note-re@#cwg1780-spec {{{{'\(lambda at .+\)'}} defined here}}
     return 6;
 }
 
