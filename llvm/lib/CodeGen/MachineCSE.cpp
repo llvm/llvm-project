@@ -619,18 +619,32 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
 
     // Check if it's profitable to perform this CSE.
     bool DoCSE = true;
-    unsigned NumDefs = MI.getNumDefs();
 
-    for (unsigned i = 0, e = MI.getNumOperands(); NumDefs && i != e; ++i) {
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
       MachineOperand &MO = MI.getOperand(i);
-      if (!MO.isReg() || !MO.isDef())
+      MachineOperand &CSMO = CSMI->getOperand(i);
+
+      if (!MO.isReg())
         continue;
+
+      // No need to check a reversed condition since MI with non-ignorable MO
+      // would not be a CSE candidate.
+      if (TII->isIgnorableUse(MO) && !TII->isIgnorableUse(CSMO)) {
+        LLVM_DEBUG(dbgs() << "*** Ignorable and non-ignorable use for the same "
+                             "operand, avoid CSE!\n");
+        DoCSE = false;
+        break;
+      }
+
+      if (!MO.isDef())
+        continue;
+
       Register OldReg = MO.getReg();
-      Register NewReg = CSMI->getOperand(i).getReg();
+      Register NewReg = CSMO.getReg();
 
       // Go through implicit defs of CSMI and MI, if a def is not dead at MI,
       // we should make sure it is not dead at CSMI.
-      if (MO.isImplicit() && !MO.isDead() && CSMI->getOperand(i).isDead())
+      if (MO.isImplicit() && !MO.isDead() && CSMO.isDead())
         ImplicitDefsToUpdate.push_back(i);
 
       // Keep track of implicit defs of CSMI and MI, to clear possibly
@@ -639,7 +653,6 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
         ImplicitDefs.push_back(OldReg);
 
       if (OldReg == NewReg) {
-        --NumDefs;
         continue;
       }
 
@@ -663,7 +676,6 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
       }
 
       CSEPairs.emplace_back(OldReg, NewReg);
-      --NumDefs;
     }
 
     // Actually perform the elimination.
