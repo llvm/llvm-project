@@ -885,13 +885,8 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
     const VarDecl *ElemDecl = cast<VarDecl>(DS->getSingleDecl());
     assert(ElemDecl->getInit() == nullptr);
     ElementLoc = State->getLValue(ElemDecl, LCtx);
-  } else {
-    const Expr *Ex = dyn_cast<Expr>(Element);
-    if (Ex) {
-      ElementLoc = State->getSVal(Ex, LCtx).getAs<Loc>();
-    } else {
-      ElementLoc = UnknownVal().getAs<Loc>();
-    }
+  } else if (const auto *Ex = dyn_cast<Expr>(Element)) {
+    ElementLoc = State->getSVal(Ex, LCtx).getAs<Loc>();
   }
 
   if (!ElementLoc)

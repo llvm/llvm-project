@@ -122,11 +122,8 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
     const VarDecl *elemD = cast<VarDecl>(DS->getSingleDecl());
     assert(elemD->getInit() == nullptr);
     elementV = state->getLValue(elemD, Pred->getLocationContext());
-  } else {
-    const Expr *Ex = dyn_cast<Expr>(elem);
-    if (Ex) {
-      elementV = state->getSVal(Ex, Pred->getLocationContext());
-    }
+  } else if (const auto *Ex = dyn_cast<Expr>(elem)) {
+    elementV = state->getSVal(Ex, Pred->getLocationContext());
   }
 
   bool isContainerNull = state->isNull(collectionV).isConstrainedTrue();
