@@ -569,9 +569,10 @@ public:
   // Copies `Src` into `Args` starting at `ArgIdx`. If `Src` is a vector, its
   // elements are extracted and stored in consecutive slots; otherwise `Src`
   // is stored directly. At most `MaxElements` elements are expected.
-  static void copyVectorArgs(IRBuilder<> &IRB, MutableArrayRef<Value *> Args,
-                             unsigned ArgIdx, Value *Src,
-                             unsigned MaxElements) {
+  static void extractElementsIntoArgs(IRBuilder<> &IRB,
+                                      MutableArrayRef<Value *> Args,
+                                      unsigned ArgIdx, Value *Src,
+                                      unsigned MaxElements) {
     Type *Ty = Src->getType();
     if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
       unsigned Count = VecTy->getNumElements();
@@ -604,9 +605,9 @@ public:
                                   Undef,  Undef,    Undef, Undef};
 
       // Copy coordinates and offsets into Args.
-      copyVectorArgs(IRB, Args, 2, Coords, 3);
+      extractElementsIntoArgs(IRB, Args, 2, Coords, 3);
       if (auto *C = dyn_cast<Constant>(Offsets); !C || !C->isNullValue())
-        copyVectorArgs(IRB, Args, 5, Offsets, 3);
+        extractElementsIntoArgs(IRB, Args, 5, Offsets, 3);
 
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
           OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
