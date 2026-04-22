@@ -32303,10 +32303,13 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
         DAG.getTargetConstant(Intrinsic::aarch64_neon_ld3, DL, MVT::i64));
     Ops.push_back(StackPtr);
 
+    EVT TripleOpVT =
+        EVT::getVectorVT(*DAG.getContext(), OpVT.getVectorElementType(),
+                         OpVT.getVectorNumElements() * 3);
     SDVTList VTs = DAG.getVTList(OpVT, OpVT, OpVT, MVT::Other);
     SDValue LD3 = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
-                                          OpVT, MachinePointerInfo(), Alignment,
-                                          MachineMemOperand::MOLoad);
+                                          TripleOpVT, MachinePointerInfo(),
+                                          Alignment, MachineMemOperand::MOLoad);
 
     return DAG.getMergeValues(
         {LD3.getValue(0), LD3.getValue(1), LD3.getValue(2)}, DL);
