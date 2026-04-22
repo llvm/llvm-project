@@ -83,8 +83,9 @@ end:
 
 }
 
-define void @baz_coro() {
-  %unused = call ptr @llvm.coro.begin(token none, ptr null)
+define void @baz_coro() presplitcoroutine {
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %unused = call ptr @llvm.coro.begin(token %id, ptr null)
   ret void
 }
 
