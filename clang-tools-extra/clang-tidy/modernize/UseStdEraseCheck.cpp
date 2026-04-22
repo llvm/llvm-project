@@ -17,7 +17,6 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
 #include <initializer_list>
-#include <string_view>
 
 using namespace clang::ast_matchers;
 
@@ -76,7 +75,7 @@ void UseStdEraseCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       cxxMemberCallExpr(callee(cxxMethodDecl(hasName("erase"))),
-                        hasArgument(0, makeMatcherPair()),
+                        argumentCountIs(2), hasArgument(0, makeMatcherPair()),
                         hasArgument(1, EraseEndCheck),
                         on(anyOf(hasType(EraseableContainerType),
                                  hasType(pointsTo(EraseableContainerType)))))
