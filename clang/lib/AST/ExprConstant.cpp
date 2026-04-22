@@ -17229,8 +17229,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
     // since it will give us the behavior of a TruncOrSelf in the case where
     // its parameter <= its size.  We previously set Result to be at least the
-    // integer width of the result, so getIntWidth(ResultType) <= Result.BitWidth
-    // will work exactly like TruncOrSelf.
+    // integer width of the result, so getIntWidth(ResultType) <=
+    // Result.BitWidth will work exactly like TruncOrSelf.
     APSInt Temp = Result.extOrTrunc(Info.Ctx.getIntWidth(ResultType));
     Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
 

@@ -126,7 +126,7 @@ static void pushInteger(InterpState &S, T Val, QualType QT) {
 }
 
 static void assignIntegral(InterpState &S, const Pointer &Dest, PrimType ValueT,
-                          const APSInt &Value) {
+                           const APSInt &Value) {
 
   if (ValueT == PT_IntAPS) {
     Dest.deref<IntegralAP<true>>() =
@@ -911,7 +911,8 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
     // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
     // since it will give us the behavior of a TruncOrSelf in the case where
     // its parameter <= its size.  We previously set Result to be at least the
-    // integer width of the result, so getIntWidth(ResultType) <= Result.BitWidth
+    // integer width of the result, so getIntWidth(ResultType) <=
+    // Result.BitWidth
     APSInt Temp = Result.extOrTrunc(S.getASTContext().getIntWidth(ResultType));
     Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
 
@@ -2697,9 +2698,9 @@ interp__builtin_x86_pack(InterpState &S, CodePtr, const CallExpr *E,
         APSInt B = RHS.elem<T>(BaseSrc + I).toAPSInt();
 
         assignIntegral(S, Dst.atIndex(BaseDst + I), DstT,
-                      APSInt(PackFn(A), IsUnsigend));
+                       APSInt(PackFn(A), IsUnsigend));
         assignIntegral(S, Dst.atIndex(BaseDst + SrcPerLane + I), DstT,
-                      APSInt(PackFn(B), IsUnsigend));
+                       APSInt(PackFn(B), IsUnsigend));
       });
     }
   }
