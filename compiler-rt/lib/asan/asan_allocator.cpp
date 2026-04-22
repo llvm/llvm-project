@@ -393,7 +393,14 @@ struct Allocator {
 
   void InitLinkerInitialized(const AllocatorOptions& options) {
     SetAllocatorMayReturnNull(options.may_return_null);
+#if SANITIZER_AMDGPU
+    // Device-backed HSA allocations (e.g. hsa_amd_memory_pool_allocate) use
+    // CombinedAllocator's device path; it must be enabled for InitMemFuncs/
+    // AmdgpuMemFuncs::Init to run at startup.
+    allocator.InitLinkerInitialized(options.release_to_os_interval_ms, 0, true);
+#else
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
+#endif
     SharedInitCode(options);
     max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
                                        ? common_flags()->max_allocation_size_mb
@@ -540,7 +547,7 @@ struct Allocator {
   // (true) or a fatal Report*+Die() (false).
   void* AllocateImpl(uptr size, uptr alignment, BufferedStackTrace* stack,
                      AllocType alloc_type, bool can_fill,
-                     bool may_return_null) {
+                     bool may_return_null,DeviceAllocationInfo *da_info = nullptr) {
     if (UNLIKELY(!AsanInited()))
       AsanInitFromRtl();
     if (UNLIKELY(IsRssLimitExceeded())) {
@@ -595,11 +602,11 @@ struct Allocator {
     void* allocated;
     if (t) {
       AllocatorCache* cache = GetAllocatorCache(&t->malloc_storage());
-      allocated = allocator.Allocate(cache, needed_size, 8);
+      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     } else {
       SpinMutexLock l(&fallback_mutex);
-      AllocatorCache* cache = &fallback_allocator_cache;
-      allocated = allocator.Allocate(cache, needed_size, 8);
+      AllocatorCache *cache = &fallback_allocator_cache;
+      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     }
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();
@@ -1475,3 +1482,248 @@ int __asan_update_allocation_context(void* addr) {
   GET_STACK_TRACE_MALLOC;
   return instance.UpdateAllocationStack((uptr)addr, &stack);
 }
+
+#if SANITIZER_AMDGPU
+
+DECLARE_REAL(hsa_status_t, hsa_init);
+DECLARE_REAL(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
+             const hsa_agent_t* agents, const uint32_t* flags, const void* ptr)
+DECLARE_REAL(hsa_status_t, hsa_amd_memory_pool_allocate,
+             hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags,
+             void** ptr)
+DECLARE_REAL(hsa_status_t, hsa_amd_memory_pool_free, void* ptr)
+DECLARE_REAL(hsa_status_t, hsa_amd_ipc_memory_create, void* ptr, size_t len,
+             hsa_amd_ipc_memory_t* handle)
+DECLARE_REAL(hsa_status_t, hsa_amd_ipc_memory_attach,
+             const hsa_amd_ipc_memory_t* handle, size_t len,
+             uint32_t num_agents, const hsa_agent_t* mapping_agents,
+             void** mapped_ptr)
+DECLARE_REAL(hsa_status_t, hsa_amd_ipc_memory_detach, void* mapped_ptr)
+DECLARE_REAL(hsa_status_t, hsa_amd_vmem_address_reserve_align, void** ptr,
+             size_t size, uint64_t address, uint64_t alignment, uint64_t flags)
+DECLARE_REAL(hsa_status_t, hsa_amd_vmem_address_free, void* ptr, size_t size)
+DECLARE_REAL(hsa_status_t, hsa_amd_pointer_info, const void* ptr,
+             hsa_amd_pointer_info_t* info, void* (*alloc)(size_t),
+             uint32_t* num_agents_accessible, hsa_agent_t** accessible)
+DECLARE_REAL(hsa_status_t, hsa_amd_register_system_event_handler,
+             hsa_amd_system_event_callback_t, void*)
+
+namespace __asan {
+// Always align to page boundary to match current ROCr behavior
+static const size_t kPageSize_ = 4096;
+
+hsa_status_t asan_hsa_amd_memory_pool_allocate(
+    hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void** ptr,
+    BufferedStackTrace* stack) {
+  AmdgpuAllocationInfo aa_info;
+  aa_info.alloc_func =
+      reinterpret_cast<void*>(asan_hsa_amd_memory_pool_allocate);
+  aa_info.memory_pool = memory_pool;
+  aa_info.size = size;
+  aa_info.flags = flags;
+  aa_info.ptr = nullptr;
+  SetErrnoOnNull(*ptr = instance.Allocate(size, kPageSize_, stack, FROM_MALLOC,
+                                          false, &aa_info));
+  return aa_info.status;
+}
+
+hsa_status_t asan_hsa_amd_memory_pool_free(void* ptr,
+                                           BufferedStackTrace* stack) {
+  void* p = get_allocator().GetBlockBegin(ptr);
+  if (p) {
+    instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
+    return HSA_STATUS_SUCCESS;
+  }
+  return REAL(hsa_amd_memory_pool_free)(ptr);
+}
+
+hsa_status_t asan_hsa_amd_agents_allow_access(uint32_t num_agents,
+                                              const hsa_agent_t* agents,
+                                              const uint32_t* flags,
+                                              const void* ptr,
+                                              BufferedStackTrace* stack) {
+  void* p = get_allocator().GetBlockBegin(ptr);
+  return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags,
+                                           p ? p : ptr);
+}
+
+// For asan allocator, kMetadataSize is 0 and maximum redzone size is 2048. This
+// implies for device allocation, the gap between user_beg and GetBlockBegin()
+// is always one kPageSize_
+// IPC calls use static_assert to make sure kMetadataSize = 0
+//
+#  if SANITIZER_CAN_USE_ALLOCATOR64
+static struct AP64<LocalAddressSpaceView> AP_;
+#  else
+static struct AP32<LocalAddressSpaceView> AP_;
+#  endif
+
+hsa_status_t asan_hsa_amd_ipc_memory_create(void* ptr, size_t len,
+                                            hsa_amd_ipc_memory_t* handle) {
+  void* ptr_ = get_allocator().GetBlockBegin(ptr);
+  AsanChunk* m = ptr_
+                     ? instance.GetAsanChunkByAddr(reinterpret_cast<uptr>(ptr_))
+                     : nullptr;
+  if (ptr_ && m) {
+    static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
+    uptr p = reinterpret_cast<uptr>(ptr);
+    uptr p_ = reinterpret_cast<uptr>(ptr_);
+    if (p == p_ + kPageSize_ && len == m->UsedSize()) {
+      size_t len_ = get_allocator().GetActuallyAllocatedSize(ptr_);
+      return REAL(hsa_amd_ipc_memory_create)(ptr_, len_, handle);
+    }
+  }
+  return REAL(hsa_amd_ipc_memory_create)(ptr, len, handle);
+}
+
+hsa_status_t asan_hsa_amd_ipc_memory_attach(const hsa_amd_ipc_memory_t* handle,
+                                            size_t len, uint32_t num_agents,
+                                            const hsa_agent_t* mapping_agents,
+                                            void** mapped_ptr) {
+  static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
+  size_t len_ = len + kPageSize_;
+  hsa_status_t status = REAL(hsa_amd_ipc_memory_attach)(
+      handle, len_, num_agents, mapping_agents, mapped_ptr);
+  if (status == HSA_STATUS_SUCCESS && mapped_ptr) {
+    uptr mapped_base = reinterpret_cast<uptr>(*mapped_ptr);
+    uptr user_beg = mapped_base + kPageSize_;
+    uptr tail_beg = RoundUpTo(user_beg + len, ASAN_SHADOW_GRANULARITY);
+    uptr mapped_end = mapped_base + kPageSize_ + RoundUpTo(len, kPageSize_);
+
+    PoisonShadow(mapped_base, kPageSize_, kAsanHeapLeftRedzoneMagic);
+
+    if (mapped_end > tail_beg)
+      PoisonShadow(tail_beg, mapped_end - tail_beg, kAsanHeapLeftRedzoneMagic);
+
+    uptr size_rounded_down = RoundDownTo(len, ASAN_SHADOW_GRANULARITY);
+    if (size_rounded_down)
+      PoisonShadow(user_beg, size_rounded_down, 0);
+
+    if (len != size_rounded_down && CanPoisonMemory()) {
+      u8* shadow = (u8*)MemToShadow(user_beg + size_rounded_down);
+      *shadow = flags()->poison_partial
+                    ? static_cast<u8>(len & (ASAN_SHADOW_GRANULARITY - 1))
+                    : 0;
+    }
+
+    *mapped_ptr = reinterpret_cast<void*>(user_beg);
+  }
+  return status;
+}
+
+hsa_status_t asan_hsa_amd_ipc_memory_detach(void* mapped_ptr) {
+  static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
+  uptr mapped_base = reinterpret_cast<uptr>(mapped_ptr) - kPageSize_;
+
+  hsa_amd_pointer_info_t info;
+  info.size = sizeof(hsa_amd_pointer_info_t);
+  if (REAL(hsa_amd_pointer_info)(reinterpret_cast<void*>(mapped_base), &info,
+                                 nullptr, nullptr,
+                                 nullptr) == HSA_STATUS_SUCCESS) {
+    PoisonShadow(mapped_base, info.sizeInBytes, 0);
+    FlushUnneededASanShadowMemory(mapped_base, info.sizeInBytes);
+  }
+
+  return REAL(hsa_amd_ipc_memory_detach)(reinterpret_cast<void*>(mapped_base));
+}
+
+hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
+    void** ptr, size_t size, uint64_t address, uint64_t alignment,
+    uint64_t flags, BufferedStackTrace* stack) {
+  // Bypass the tracking for a fixed address since it cannot be supported.
+  // Reasons:
+  //  1. Address may not meet the alignment/page-size requirement.
+  //  2. Requested range overlaps an existing reserved/mapped range.
+  //  3. Insufficient VA space to honor that exact placement.
+  if (address)
+    return REAL(hsa_amd_vmem_address_reserve_align)(ptr, size, address,
+                                                    alignment, flags);
+
+  if (alignment < kPageSize_)
+    alignment = kPageSize_;
+
+  if (UNLIKELY(!IsPowerOfTwo(alignment))) {
+    errno = errno_EINVAL;
+    return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  AmdgpuAllocationInfo aa_info;
+  aa_info.alloc_func =
+      reinterpret_cast<void*>(asan_hsa_amd_vmem_address_reserve_align);
+  aa_info.memory_pool = {0};
+  aa_info.size = size;
+  aa_info.flags64 = flags;
+  aa_info.address = 0;
+  aa_info.alignment = alignment;
+  aa_info.ptr = nullptr;
+  SetErrnoOnNull(*ptr = instance.Allocate(size, alignment, stack, FROM_MALLOC,
+                                          false, &aa_info));
+
+  return aa_info.status;
+}
+
+hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
+                                            BufferedStackTrace* stack) {
+  if (UNLIKELY(!IsAligned(reinterpret_cast<uptr>(ptr), kPageSize_))) {
+    errno = errno_EINVAL;
+    return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+  if (size == 0) {
+    errno = errno_EINVAL;
+    return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  void* p = get_allocator().GetBlockBegin(ptr);
+  if (p) {
+    instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
+    return HSA_STATUS_SUCCESS;
+  }
+  return REAL(hsa_amd_vmem_address_free)(ptr, size);
+}
+
+hsa_status_t asan_hsa_amd_pointer_info(const void* ptr,
+                                       hsa_amd_pointer_info_t* info,
+                                       void* (*alloc)(size_t),
+                                       uint32_t* num_agents_accessible,
+                                       hsa_agent_t** accessible) {
+  void* ptr_ = get_allocator().GetBlockBegin(ptr);
+  AsanChunk* m = ptr_
+                     ? instance.GetAsanChunkByAddr(reinterpret_cast<uptr>(ptr_))
+                     : nullptr;
+  if (ptr_ && m) {
+    hsa_status_t status = REAL(hsa_amd_pointer_info)(
+        ptr_, info, alloc, num_agents_accessible, accessible);
+    if (status == HSA_STATUS_SUCCESS && info) {
+      static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
+      // Adjust base address of agent,host and sizeInBytes so as to return
+      // the actual pointer information of user allocation rather than asan
+      // allocation. Asan allocation pointer info can be acquired using internal
+      // 'GetPointerInfo'
+      info->agentBaseAddress = reinterpret_cast<void*>(
+          reinterpret_cast<uptr>(info->agentBaseAddress) + kPageSize_);
+      info->hostBaseAddress = reinterpret_cast<void*>(
+          reinterpret_cast<uptr>(info->hostBaseAddress) + kPageSize_);
+      info->sizeInBytes = m->UsedSize();
+    }
+    return status;
+  }
+  return REAL(hsa_amd_pointer_info)(ptr, info, alloc, num_agents_accessible,
+                                    accessible);
+}
+
+hsa_status_t asan_hsa_init() {
+  hsa_status_t status = REAL(hsa_init)();
+  if (status == HSA_STATUS_SUCCESS) {
+    // Only clear state when recovering from a prior shutdown (avoids clearing
+    // amdgpu_event_registered on every refcount bump and re-registering).
+    if (__sanitizer::AmdgpuMemFuncs::IsAmdgpuRuntimeShutdown())
+      __sanitizer::AmdgpuMemFuncs::ClearAmdgpuRuntimeShutdownState();
+    // Load HSA entry points once the runtime is up; device allocator may stay
+    // disabled, but interceptors and RegisterSystemEventHandlers need them.
+    if (__sanitizer::AmdgpuMemFuncs::Init())
+      __sanitizer::AmdgpuMemFuncs::RegisterSystemEventHandlers();
+  }
+  return status;
+}
+#endif
+}  // namespace __asan
