@@ -21,6 +21,7 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
+#include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -40,11 +41,51 @@
 #include "clang/AST/Type.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
+
+// Wrapper function to conditionally call -debugDescription or -description. The
+// wrapper checks whether the object's class directly or indirectly overrides
+// -debugDescription or -debugDescription beyond the NSObject implementations.
+// When a custom implementation exists, the wrapper calls the available
+// PrintForDebugger function and returns the C-string result. Otherwise it
+// returns null, allowing the caller to fall back to ValueObject printing.
+static const char *g_print_object_wrapper_code = R"(
+extern "C" void *object_getClass(void *);
+extern "C" void *class_getMethodImplementation(void *cls, void *sel);
+@class NSObject;
+
+const char *__lldb_apple_objc_print_object(void *obj, const char *(*print_fn)(void *)) {
+  if (!obj)
+    return (const char *)0;
+
+  void *nsobj = (void *)[NSObject class];
+  void *cls = object_getClass(obj);
+
+  void *desc_sel = @selector(debugDescription);
+  void *base_imp = class_getMethodImplementation(nsobj, desc_sel);
+  void *cls_imp = class_getMethodImplementation(cls, desc_sel);
+  if (cls_imp != base_imp)
+    // Obj's class overrides -debugDescription.
+    return print_fn(obj);
+
+  desc_sel = @selector(description);
+  base_imp = class_getMethodImplementation(nsobj, desc_sel);
+  cls_imp = class_getMethodImplementation(cls, desc_sel);
+  if (cls_imp != base_imp)
+    // Obj's class overrides -description.
+    return print_fn(obj);
+
+  return (const char *)0;
+}
+)";
+
+static const char *g_print_object_wrapper_name =
+    "__lldb_apple_objc_print_object";
 
 LLDB_PLUGIN_DEFINE(AppleObjCRuntime)
 
@@ -135,23 +176,23 @@ AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
     if (!opaque_type)
       opaque_type =
           scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
-    // value.SetContext(Value::eContextTypeClangType, opaque_type_ptr);
     value.SetCompilerType(opaque_type);
   }
 
-  ValueList arg_value_list;
-  arg_value_list.PushValue(value);
+  // Resolve the PrintForDebugger function to a load address.
+  addr_t print_fn_addr = function_address->GetLoadAddress(target);
+  if (print_fn_addr == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError("could not resolve print function address");
 
-  // This is the return value:
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*target);
   if (!scratch_ts_sp)
     return llvm::createStringError("no scratch type system");
 
-  CompilerType return_compiler_type = scratch_ts_sp->GetCStringType(true);
-  Value ret;
-  //    ret.SetContext(Value::eContextTypeClangType, return_compiler_type);
-  ret.SetCompilerType(return_compiler_type);
+  CompilerType void_ptr_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+  CompilerType char_ptr_type =
+      scratch_ts_sp->GetBasicType(lldb::eBasicTypeChar).GetPointerType();
 
   if (!exe_ctx.GetFramePtr()) {
     Thread *thread = exe_ctx.GetThreadPtr();
@@ -164,31 +205,51 @@ AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
     }
   }
 
-  // Now we're ready to call the function:
-
-  DiagnosticManager diagnostics;
-  lldb::addr_t wrapper_struct_addr = LLDB_INVALID_ADDRESS;
-
-  if (!m_print_object_caller_up) {
-    Status error;
-    m_print_object_caller_up.reset(
-        exe_scope->CalculateTarget()->GetFunctionCallerForLanguage(
-            eLanguageTypeObjC, return_compiler_type, *function_address,
-            arg_value_list, "objc-object-description", error));
-    if (error.Fail()) {
-      m_print_object_caller_up.reset();
+  // Compile the wrapper utility function on first use.
+  if (!m_print_object_utility_up) {
+    auto utility_fn_or_error = target->CreateUtilityFunction(
+        g_print_object_wrapper_code, g_print_object_wrapper_name,
+        eLanguageTypeObjC, exe_ctx);
+    if (!utility_fn_or_error) {
       return llvm::createStringError(
-          llvm::Twine(
-              "could not get function runner to call print for debugger "
-              "function: ") +
-          error.AsCString());
+          llvm::Twine("could not create print object wrapper: ") +
+          llvm::toString(utility_fn_or_error.takeError()));
     }
-    m_print_object_caller_up->InsertFunction(exe_ctx, wrapper_struct_addr,
-                                             diagnostics);
-  } else {
-    m_print_object_caller_up->WriteFunctionArguments(
-        exe_ctx, wrapper_struct_addr, arg_value_list, diagnostics);
+    m_print_object_utility_up = std::move(*utility_fn_or_error);
+
+    // Set up argument types: (void *obj, void *print_fn)
+    ValueList arg_types;
+    Value arg;
+    arg.SetValueType(Value::ValueType::Scalar);
+    arg.SetCompilerType(void_ptr_type);
+    arg_types.PushValue(arg); // obj
+    arg_types.PushValue(arg); // print_fn
+
+    Status make_caller_error;
+    m_print_object_utility_up->MakeFunctionCaller(
+        char_ptr_type, arg_types, exe_ctx.GetThreadSP(), make_caller_error);
+    if (make_caller_error.Fail()) {
+      m_print_object_utility_up.reset();
+      return llvm::createStringError(
+          llvm::Twine("could not make function caller for wrapper: ") +
+          make_caller_error.AsCString("unknown error"));
+    }
   }
+
+  FunctionCaller *caller = m_print_object_utility_up->GetFunctionCaller();
+  if (!caller)
+    return llvm::createStringError("no function caller for wrapper");
+
+  // Set argument values.
+  ValueList arguments = caller->GetArgumentValues();
+  arguments.GetValueAtIndex(0)->GetScalar() = value.GetScalar();
+  arguments.GetValueAtIndex(1)->GetScalar() = print_fn_addr;
+
+  lldb::addr_t print_object_args_addr = LLDB_INVALID_ADDRESS;
+  DiagnosticManager diagnostics;
+  if (!caller->WriteFunctionArguments(exe_ctx, print_object_args_addr,
+                                      arguments, diagnostics))
+    return llvm::createStringError("could not write function arguments");
 
   EvaluateExpressionOptions options;
   options.SetUnwindOnError(true);
@@ -198,28 +259,30 @@ AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   options.SetTimeout(process->GetUtilityExpressionTimeout());
   options.SetIsForUtilityExpr(true);
 
-  ExpressionResults results = m_print_object_caller_up->ExecuteFunction(
-      exe_ctx, &wrapper_struct_addr, options, diagnostics, ret);
+  Value ret;
+  ret.SetValueType(Value::ValueType::Scalar);
+  ret.SetCompilerType(char_ptr_type);
+
+  ExpressionResults results = caller->ExecuteFunction(
+      exe_ctx, &print_object_args_addr, options, diagnostics, ret);
   if (results != eExpressionCompleted)
     return llvm::createStringError(
         "could not evaluate print object function: " + toString(results));
 
   addr_t result_ptr = ret.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
 
-  char buf[512];
-  size_t cstr_len = 0;
-  size_t full_buffer_len = sizeof(buf) - 1;
-  size_t curr_len = full_buffer_len;
-  while (curr_len == full_buffer_len) {
-    Status error;
-    curr_len = process->ReadCStringFromMemory(result_ptr + cstr_len, buf,
-                                              sizeof(buf), error);
-    strm.Write(buf, curr_len);
-    cstr_len += curr_len;
-  }
-  if (cstr_len > 0)
-    return llvm::Error::success();
-  return llvm::createStringError("empty object description");
+  if (result_ptr == 0 || result_ptr == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError("object has no custom description");
+
+  // Read the C string from memory.
+  Status error;
+  std::string str;
+  auto str_len = process->ReadCStringFromMemory(result_ptr, str, error);
+  if (str_len == 0)
+    return llvm::createStringError("empty object description");
+
+  strm.PutCString(str);
+  return llvm::Error::success();
 }
 
 lldb::ModuleSP AppleObjCRuntime::GetObjCModule() {
