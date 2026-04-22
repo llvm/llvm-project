@@ -198,14 +198,13 @@ function(darwin_filter_host_archs input output)
   string(REGEX MATCH "hw.cpusubtype: ([0-9]*)"
           SUBTYPE_MATCHED "${SUBTYPE}")
 
-  if(NOT COMPILER_RT_HAS_MAC_PUBLIC_ARM64E)
-    list(REMOVE_ITEM tmp_var arm64e)
-  endif()
-
   if(ARM_HOST)
     list(REMOVE_ITEM tmp_var i386)
     list(REMOVE_ITEM tmp_var x86_64)
     list(REMOVE_ITEM tmp_var x86_64h)
+    if(NOT COMPILER_RT_HAS_MAC_PUBLIC_ARM64E)
+      list(REMOVE_ITEM tmp_var arm64e)
+    endif()
   else()
     list(REMOVE_ITEM tmp_var arm64e)
     list(REMOVE_ITEM tmp_var arm64)
