@@ -3217,7 +3217,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
     if (auto ParseResult =
             RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
-      getTargetStreamer().setISAString((*ParseResult)->toString());
+      getTargetStreamer().setArchString((*ParseResult)->toString());
     return false;
   }
 
@@ -3249,7 +3249,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
     setFeatureBits(RISCV::FeatureStdExtC, "c");
     if (auto ParseResult =
             RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
-      getTargetStreamer().setISAString((*ParseResult)->toString());
+      getTargetStreamer().setArchString((*ParseResult)->toString());
     return false;
   }
 
@@ -3262,7 +3262,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
     clearFeatureBits(RISCV::FeatureStdExtZca, "zca");
     if (auto ParseResult =
             RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
-      getTargetStreamer().setISAString((*ParseResult)->toString());
+      getTargetStreamer().setArchString((*ParseResult)->toString());
     return false;
   }
 
@@ -3388,7 +3388,7 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
 
     // And then update the active ISA so the next instruction-run emits
     // an ISA-specific mapping symbol.
-    getTargetStreamer().setISAString(Result);
+    getTargetStreamer().setArchString(Result);
   }
 
   return false;
