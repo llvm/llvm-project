@@ -237,9 +237,9 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
         Out << '[' << NL;
       }
 
-      const Stmt *S = I->first.getExpr();
-      (void)S;
-      assert(S != nullptr && "Expected non-null Stmt");
+      const Expr *Ex = I->first.getExpr();
+      (void)Ex;
+      assert(Ex != nullptr && "Expected non-null Expr");
 
       LastI = I;
     }
@@ -249,11 +249,11 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
       if (I->first.getLocationContext() != LC)
         continue;
 
-      const Stmt *S = I->first.getExpr();
+      const Expr *Ex = I->first.getExpr();
       Indent(Out, InnerSpace, IsDot)
-          << "{ \"stmt_id\": " << S->getID(Ctx) << ", \"kind\": \""
-          << S->getStmtClassName() << "\", \"pretty\": ";
-      S->printJson(Out, nullptr, PP, /*AddQuotes=*/true);
+          << "{ \"stmt_id\": " << Ex->getID(Ctx) << ", \"kind\": \""
+          << Ex->getStmtClassName() << "\", \"pretty\": ";
+      Ex->printJson(Out, nullptr, PP, /*AddQuotes=*/true);
 
       Out << ", \"value\": ";
       I->second.printJson(Out, /*AddQuotes=*/true);

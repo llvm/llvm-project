@@ -168,10 +168,10 @@ bool taint::isTainted(ProgramStateRef State, SymbolRef Sym, TaintTagType Kind) {
 }
 
 std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State,
-                                                const Expr *S,
+                                                const Expr *Ex,
                                                 const LocationContext *LCtx,
                                                 TaintTagType Kind) {
-  return getTaintedSymbolsImpl(State, S, LCtx, Kind, /*ReturnFirstOnly=*/false);
+  return getTaintedSymbolsImpl(State, Ex, LCtx, Kind, /*ReturnFirstOnly=*/false);
 }
 
 std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State, SVal V,

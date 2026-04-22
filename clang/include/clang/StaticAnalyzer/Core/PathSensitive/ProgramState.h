@@ -377,8 +377,8 @@ public:
   /// Get the lvalue for an array index.
   SVal getLValue(QualType ElementType, SVal Idx, SVal Base) const;
 
-  /// Returns the SVal bound to the expression 'E' in the state's environment.
-  SVal getSVal(const Expr *E, const LocationContext *LCtx) const;
+  /// Returns the SVal bound to the expression \p Ex in the state's environment.
+  SVal getSVal(const Expr *Ex, const LocationContext *LCtx) const;
 
   SVal getSValAsScalarOrLoc(const Expr *Ex, const LocationContext *LCtx) const;
 

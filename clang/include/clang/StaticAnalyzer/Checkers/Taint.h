@@ -26,7 +26,7 @@ using TaintTagType = unsigned;
 
 static constexpr TaintTagType TaintTagGeneric = 0;
 
-/// Create a new state in which the value of the statement is marked as tainted.
+/// Create a new state in which the value of the expression is marked as tainted.
 [[nodiscard]] ProgramStateRef addTaint(ProgramStateRef State, const Expr *Ex,
                                        const LocationContext *LCtx,
                                        TaintTagType Kind = TaintTagGeneric);
@@ -61,7 +61,7 @@ addPartialTaint(ProgramStateRef State, SymbolRef ParentSym,
                 const SubRegion *SubRegion,
                 TaintTagType Kind = TaintTagGeneric);
 
-/// Check if the statement has a tainted value in the given state.
+/// Check if the expression has a tainted value in the given state.
 bool isTainted(ProgramStateRef State, const Expr *Ex,
                const LocationContext *LCtx,
                TaintTagType Kind = TaintTagGeneric);
@@ -79,7 +79,7 @@ bool isTainted(ProgramStateRef State, SymbolRef Sym,
 bool isTainted(ProgramStateRef State, const MemRegion *Reg,
                TaintTagType Kind = TaintTagGeneric);
 
-/// Returns the tainted Symbols for a given Statement and state.
+/// Returns the tainted Symbols for a given expression and state.
 std::vector<SymbolRef> getTaintedSymbols(ProgramStateRef State, const Expr *Ex,
                                          const LocationContext *LCtx,
                                          TaintTagType Kind = TaintTagGeneric);
