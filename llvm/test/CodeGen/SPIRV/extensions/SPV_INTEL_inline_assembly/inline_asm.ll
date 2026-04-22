@@ -7,7 +7,7 @@
 ; CHECK: OpCapability AsmINTEL
 ; CHECK: OpExtension "SPV_INTEL_inline_assembly"
 
-; CHECK-COUNT-8: OpDecorate %[[#]] SideEffectsINTEL
+; CHECK-COUNT-11: OpDecorate %[[#]] SideEffectsINTEL
 
 ; CHECK-DAG: %[[#VoidTy:]] = OpTypeVoid
 ; CHECK-DAG: %[[#Int8Ty:]] = OpTypeInt 8 0
