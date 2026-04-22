@@ -67,7 +67,7 @@ void test_r(Fn f, Args... args) {
   T gr;
   T *result;
   std::string buff;
-  buff.resize(1000);
+  buff.resize(10000);
 
   int r;
   do {
