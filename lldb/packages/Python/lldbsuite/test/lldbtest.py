@@ -818,11 +818,12 @@ class Base(unittest.TestCase):
             "settings set use-color false",
             # Disable the statusline by default.
             "settings set show-statusline false",
+            "settings set target.check-vo-ownership true",
         ]
 
         # Set any user-overridden settings.
         for setting, value in configuration.settings:
-            commands.append("settings set -- %s %s" % (setting, value))
+            commands.append("setting set %s %s" % (setting, value))
 
         # Make sure that a sanitizer LLDB's environment doesn't get passed on.
         if (
