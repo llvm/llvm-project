@@ -21,7 +21,6 @@ float test_float(float p0) {
 
 // CHECK: define {{.*}}test_vector_uint{{.*}}(<4 x i32> {{.*}} [[VAL:%.*]]){{.*}} 
 // CHECK: bitcast <4 x i32> [[VAL]] to <4 x float>
-
 float4 test_vector_uint(uint4 p0) {
   return asfloat(p0);
 }
@@ -36,5 +35,24 @@ float4 test_vector_int(int4 p0) {
 // CHECK-NOT: bitcast
 // CHECK: ret <4 x float> [[VAL]]
 float4 test_vector_float(float4 p0) {
+  return asfloat(p0);
+}
+
+// CHECK: define {{.*}}test_matrix_uint{{.*}}(<4 x i32> {{.*}} [[VAL:%.*]]){{.*}} 
+// CHECK: bitcast <4 x i32> [[VAL]] to <4 x float>
+float4x4 test_matrix_uint(uint4x4 p0) {
+  return asfloat(p0);
+}
+
+// CHECK: define {{.*}}test_matrix_int{{.*}}(<4 x i32> {{.*}} [[VAL:%.*]]){{.*}} 
+// CHECK: bitcast <4 x i32> [[VAL]] to <4 x float>
+float4x4 test_matrix_int(int4x4 p0) {
+  return asfloat(p0);
+}
+
+// CHECK: define {{.*}}test_matrix_float{{.*}}(<4 x float> {{.*}} [[VAL:%.*]]){{.*}} 
+// CHECK-NOT: bitcast
+// CHECK: ret <4 x float> [[VAL]]
+float4x4 test_matrix_float(float4x4 p0) {
   return asfloat(p0);
 }

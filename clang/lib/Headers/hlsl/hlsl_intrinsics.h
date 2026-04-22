@@ -24,6 +24,11 @@ namespace hlsl {
 /// \brief Interprets the bit pattern of x as float point number.
 /// \param Val The input value.
 
+template <typename T, int C, int R>
+constexpr matrix<float, C, R> asfloat(matrix<T, C, R> V) {
+  return __detail::bit_cast<float, T, C, R>(V);
+}
+
 template <typename T, int N>
 constexpr vector<float, N> asfloat(vector<T, N> V) {
   return __detail::bit_cast<float, T, N>(V);
