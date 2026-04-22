@@ -60,8 +60,8 @@ private:
   void readExtern();
   void readGroup();
   void readInclude(llvm::function_ref<void()> parse);
-  void readIncludedBody(llvm::function_ref<void(StringRef)> stmt);
   void readInput();
+  void readLinkerScriptStmt(StringRef tok);
   void readMemory();
   void readMemoryStmt(StringRef tok);
   void readOutput();
@@ -74,6 +74,7 @@ private:
   void readSections();
   void readSectionsStmt(SmallVectorImpl<SectionCommand *> &v, StringRef tok);
   void readOutputSectionStmt(OutputSection &osec, StringRef tok);
+  void readIncludedBody(llvm::function_ref<void(StringRef)> readStmt);
   void readTarget();
   void readVersion();
   void readVersionScriptCommand();
@@ -239,54 +240,55 @@ void ScriptParser::readVersion() {
 }
 
 void ScriptParser::readLinkerScript() {
-  while (!atEOF()) {
-    StringRef tok = next();
-    if (atEOF())
-      break;
-    if (tok == ";")
-      continue;
+  readIncludedBody([&](StringRef t) { readLinkerScriptStmt(t); });
+}
 
-    if (tok == "ENTRY") {
-      readEntry();
-    } else if (tok == "EXTERN") {
-      readExtern();
-    } else if (tok == "GROUP") {
-      readGroup();
-    } else if (tok == "INCLUDE") {
-      readInclude([&] { readLinkerScript(); });
-    } else if (tok == "INPUT") {
-      readInput();
-    } else if (tok == "MEMORY") {
-      readMemory();
-    } else if (tok == "OUTPUT") {
-      readOutput();
-    } else if (tok == "OUTPUT_ARCH") {
-      readOutputArch();
-    } else if (tok == "OUTPUT_FORMAT") {
-      readOutputFormat();
-    } else if (tok == "OVERWRITE_SECTIONS") {
-      readOverwriteSections();
-    } else if (tok == "PHDRS") {
-      readPhdrs();
-    } else if (tok == "REGION_ALIAS") {
-      readRegionAlias();
-    } else if (tok == "SEARCH_DIR") {
-      readSearchDir();
-    } else if (tok == "SECTIONS") {
-      readSections();
-    } else if (tok == "TARGET") {
-      readTarget();
-    } else if (tok == "VERSION") {
-      readVersion();
-    } else if (tok == "NOCROSSREFS") {
-      readNoCrossRefs(/*to=*/false);
-    } else if (tok == "NOCROSSREFS_TO") {
-      readNoCrossRefs(/*to=*/true);
-    } else if (SymbolAssignment *cmd = readAssignment(tok)) {
-      ctx.script->sectionCommands.push_back(cmd);
-    } else {
-      setError("unknown directive: " + tok);
-    }
+void ScriptParser::readLinkerScriptStmt(StringRef tok) {
+  if (tok == ";")
+    return;
+
+  if (tok == "ENTRY") {
+    readEntry();
+  } else if (tok == "EXTERN") {
+    readExtern();
+  } else if (tok == "GROUP") {
+    readGroup();
+  } else if (tok == "INCLUDE") {
+    readInclude([&] {
+      readIncludedBody([&](StringRef t) { readLinkerScriptStmt(t); });
+    });
+  } else if (tok == "INPUT") {
+    readInput();
+  } else if (tok == "MEMORY") {
+    readMemory();
+  } else if (tok == "OUTPUT") {
+    readOutput();
+  } else if (tok == "OUTPUT_ARCH") {
+    readOutputArch();
+  } else if (tok == "OUTPUT_FORMAT") {
+    readOutputFormat();
+  } else if (tok == "OVERWRITE_SECTIONS") {
+    readOverwriteSections();
+  } else if (tok == "PHDRS") {
+    readPhdrs();
+  } else if (tok == "REGION_ALIAS") {
+    readRegionAlias();
+  } else if (tok == "SEARCH_DIR") {
+    readSearchDir();
+  } else if (tok == "SECTIONS") {
+    readSections();
+  } else if (tok == "TARGET") {
+    readTarget();
+  } else if (tok == "VERSION") {
+    readVersion();
+  } else if (tok == "NOCROSSREFS") {
+    readNoCrossRefs(/*to=*/false);
+  } else if (tok == "NOCROSSREFS_TO") {
+    readNoCrossRefs(/*to=*/true);
+  } else if (SymbolAssignment *cmd = readAssignment(tok)) {
+    ctx.script->sectionCommands.push_back(cmd);
+  } else {
+    setError("unknown directive: " + tok);
   }
 }
 
@@ -423,13 +425,14 @@ void ScriptParser::readInclude(llvm::function_ref<void()> parse) {
   activeFilenames.erase(name);
 }
 
-// Drive `stmt` until EOF of the nested buffer.
-void ScriptParser::readIncludedBody(llvm::function_ref<void(StringRef)> stmt) {
+// Drive `readStmt` on each token until EOF of the current buffer.
+void ScriptParser::readIncludedBody(
+    llvm::function_ref<void(StringRef)> readStmt) {
   while (!atEOF()) {
     StringRef tok = next();
     if (atEOF())
       return;
-    stmt(tok);
+    readStmt(tok);
   }
 }
 
