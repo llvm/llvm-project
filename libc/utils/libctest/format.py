@@ -194,8 +194,9 @@ class LibcTest(lit.formats.ExecutableTest):
             )
         else:
             out, err, exit_code = lit.util.executeCommand(
-                [test_path] + extra_args, cwd=exec_dir, env=env
+                [test_path] + test_args, cwd=exec_dir, env=env
             )
+
 
         if not exit_code:
             return lit.Test.PASS, ""

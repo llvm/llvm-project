@@ -38,12 +38,13 @@ endif()
 
 if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
   add_dependencies(check-libc libc-unit-tests)
-  add_dependencies(check-libc-lit libc-unit-tests-build)
+  add_dependencies(check-libc libc-unit-tests-build)
 endif()
 if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
   add_dependencies(check-libc libc-hermetic-tests)
-  add_dependencies(check-libc-lit libc-hermetic-tests-build)
+  add_dependencies(check-libc libc-hermetic-tests-build)
 endif()
+
 
 add_subdirectory(UnitTest)
 
