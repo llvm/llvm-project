@@ -424,15 +424,9 @@ struct ErrorInvalidPointerPair : ErrorBase {
 };
 
 struct ErrorGenericBase : ErrorBase {
-  enum class AccessType : u8 {
-    Read = 0,
-    Write = 1,
-    Assumption = 2,
-  };
-
   AddressDescription addr_description;
   uptr access_size;
-  AccessType access_type;
+  bool is_write;
   u8 shadow_val;
   const char *bug_descr;
   ErrorGenericBase() = default;  // (*)
@@ -442,8 +436,8 @@ struct ErrorGenericBase : ErrorBase {
 struct ErrorGeneric : ErrorGenericBase {
   uptr pc, bp, sp;
   ErrorGeneric() = default;  // (*)
-  ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
-               AccessType access_type_, uptr access_size_);
+  ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr, bool is_write_,
+               uptr access_size_);
   void Print();
 };
 

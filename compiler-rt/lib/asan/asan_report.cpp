@@ -544,9 +544,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
   (void)exp;
 
   ScopedInErrorReport in_report(fatal);
-  ErrorGeneric error(GetCurrentTidOrInvalid(), pc, bp, sp, addr,
-                     is_write ? ErrorGeneric::AccessType::Write
-                              : ErrorGeneric::AccessType::Read,
+  ErrorGeneric error(GetCurrentTidOrInvalid(), pc, bp, sp, addr, is_write,
                      access_size);
   in_report.ReportError(error);
 }
@@ -679,20 +677,6 @@ void ReportNonselfLeak(u64 alloc_pc, u64 alloc_size, int device_id,
   }
 }
 
-void ReportAssumeDereferenceableError(uptr pc, uptr bp, uptr sp, uptr addr,
-                                      uptr dereferenceable_size, bool fatal) {
-  if (!fatal && SuppressErrorReport(pc))
-    return;
-  ENABLE_FRAME_POINTER;
-
-  ScopedInErrorReport in_report(fatal);
-  ErrorGeneric error(GetCurrentTidOrInvalid(), pc, bp, sp, addr,
-                     ErrorGeneric::AccessType::Assumption,
-                     dereferenceable_size);
-  error.bug_descr = "dereferenceable-assumption-violation";
-  in_report.ReportError(error);
-}
-
 }  // namespace __asan
 
 // --------------------------- Interface --------------------- {{{1
@@ -750,8 +734,7 @@ uptr __asan_get_report_address() {
 
 int __asan_get_report_access_type() {
   if (ScopedInErrorReport::CurrentError().kind == kErrorKindGeneric)
-    return static_cast<int>(
-        ScopedInErrorReport::CurrentError().Generic.access_type);
+    return ScopedInErrorReport::CurrentError().Generic.is_write;
   return 0;
 }
 
