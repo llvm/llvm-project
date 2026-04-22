@@ -7634,10 +7634,11 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
 
   // Create recipes for header phis.
-  if (!RUN_VPLAN_PASS(VPlanTransforms::createHeaderPhiRecipes,
-          *VPlan0, PSE, *OrigLoop, Legal->getInductionVars(),
-          Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
-          CM.getInLoopReductions(), Hints.allowReordering()))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE,
+                      *OrigLoop, Legal->getInductionVars(),
+                      Legal->getReductionVars(),
+                      Legal->getFixedOrderRecurrences(),
+                      CM.getInLoopReductions(), Hints.allowReordering()))
     return;
 
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
@@ -7846,14 +7847,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-<<<<<<< HEAD
   // TODO: We can't call runPass on these transforms yet, due to verifier
   // failures.
-  VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(*Plan, Range);
-=======
-  RUN_VPLAN_PASS(VPlanTransforms::addExitUsersForFirstOrderRecurrences, *Plan,
+  RUN_VPLAN_PASS(VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers, *Plan,
                  Range);
->>>>>>> origin/main
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to

@@ -5405,13 +5405,9 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     // Find the existing splice for this FOR, created in
     // createHeaderPhiRecipes. All uses of FOR have already been replaced with
     // RecurSplice there; only RecurSplice itself still references FOR.
-    auto It = find_if(FOR->users(), [&](VPUser *U) {
-      return match(U,
-                   m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
-                       m_Specific(FOR), m_VPValue()));
-    });
-    assert(It != FOR->users().end() && "expected FirstOrderRecurrenceSplice");
-    auto *RecurSplice = cast<VPInstruction>(*It);
+    auto *RecurSplice =
+        vputils::findUserOf<VPInstruction::FirstOrderRecurrenceSplice>(FOR);
+    assert(RecurSplice && "expected FirstOrderRecurrenceSplice");
 
     // For VF vscale x 1, if vscale = 1, we are unable to extract the
     // penultimate value of the recurrence. Instead we rely on the existing
@@ -5515,6 +5511,7 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
         VPValue *Cmp = B.createICmp(CmpInst::ICMP_EQ, LastActiveLane, Zero);
         VPValue *Sel = B.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
         ExtractR->replaceAllUsesWith(Sel);
+        continue;
       }
 
       if (!match(&R, m_ExtractLastLaneOfLastPart(m_Specific(RecurSplice))))

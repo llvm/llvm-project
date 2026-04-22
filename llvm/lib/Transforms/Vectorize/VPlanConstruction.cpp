@@ -873,10 +873,10 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
   return true;
 }
 
-// Sink users of fixed-order recurrences past or hoist before the recipe
-// defining the previous value, introduce FirstOrderRecurrenceSplice
-// VPInstructions, and replace FOR uses. Return false, if hoisting or sinking
-// fails.
+/// Sink users of fixed-order recurrences past or hoist before the recipe
+/// defining the previous value, introduce FirstOrderRecurrenceSplice
+/// VPInstructions, and replace FOR uses. Returns false if hoisting or sinking
+/// fails.
 static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
                                             VPDominatorTree &VPDT) {
   for (VPRecipeBase &R : HeaderVPBB->phis()) {
@@ -908,7 +908,6 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
                         ? InsertBlock->getFirstNonPhi()
                         : std::next(Previous->getIterator());
     VPBuilder LoopBuilder(InsertBlock, InsertPt);
-    ;
     auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
                                  {FOR, FOR->getBackedgeValue()});
