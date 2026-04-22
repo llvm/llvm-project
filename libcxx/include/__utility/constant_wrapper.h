@@ -306,7 +306,7 @@ struct constant_wrapper : __cw_operators {
     requires __constexpr_callable<value, _Args...>
   [[nodiscard]]
   _LIBCPP_HIDE_FROM_ABI static constexpr constant_wrapper<std::invoke(value, remove_cvref_t<_Args>::value...)>
-  operator()(_Args&&... __args) noexcept {
+  operator()(_Args&&...) noexcept {
     return {};
   }
 
