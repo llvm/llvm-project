@@ -12,7 +12,7 @@
 /// promote them to multiple allocas of scalar type.
 ///
 /// FIXME: nested aggregates are not fully optimized (#192619).
-/// FIXME: array are not optimized (#192620).
+/// FIXME: arrays are not optimized (#192620).
 ///
 //===----------------------------------------------------------------------===//
 

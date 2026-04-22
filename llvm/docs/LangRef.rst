@@ -15318,12 +15318,12 @@ If the source pointer is poison, the instruction returns poison.
 The resulting pointer belongs to the same address space as ``source``.
 This instruction does not dereference the pointer.
 
-Chaining indices in a single ``llvm.structured.gep`` instruction or spliting
-is sequentialy over multiple has exactly the same behavior. As such, two
-``llvm.structured.gep`` instruction can be merged if the second one base
-pointer is the result of the first by appending the indices of the second to
-the first.
-Conversely, a single structured GEP instruction can be split in to by
+Chaining indices in a single ``llvm.structured.gep`` instruction or splitting
+is sequentially over multiple instructions has exactly the same behavior. As
+such, two ``llvm.structured.gep`` instructions can be merged if the second
+one base pointer is the result of the first by appending the indices of the
+second to the first.
+Conversely, a single structured GEP instruction can be split in two by
 splitting the indices sequence over multiple instructions.
 
 Example:
