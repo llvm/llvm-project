@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c11 -O0 %s -o %t.c.ll && FileCheck %s --check-prefixes=CHECK,C < %t.c.ll
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c++17 -x c++ -O0 %s -o %t.cxx.ll && FileCheck %s --check-prefixes=CHECK,CXX < %t.cxx.ll
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c11 -O0 -DUSE_UNION %s -o %t.union.ll && FileCheck %s --check-prefixes=CHECK,C < %t.union.ll
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c11 -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,C
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c++17 -x c++ -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,CXX
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c11 -O0 -DUSE_UNION %s -o - | FileCheck %s --check-prefixes=CHECK,C
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c++17 -x c++ -O0 -DUSE_UNION %s -o - | FileCheck %s --check-prefixes=CHECK,CXX
 
 #ifdef USE_UNION
 union Agg { int x; };
@@ -16,7 +17,7 @@ extern "C" {
 
 // LHS checks - C only
 
-// C-LABEL: define {{.*}}@test_lhs_ptr(
+// C-LABEL: define {{.*}}@test_lhs_ptrcheck_deref(
 // C: [[DEST:%.*]] = load ptr, ptr %dest.addr
 // C-NEXT: [[CMP:%.*]] = icmp ne ptr [[DEST]], null, !nosanitize
 // C-NEXT: [[INT:%.*]] = ptrtoint ptr [[DEST]] to i64, !nosanitize
@@ -27,26 +28,26 @@ extern "C" {
 // C: handler.type_mismatch:
 // C-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
 // C: call void @llvm.memcpy
-void test_lhs_ptr(AGG *dest) {
+void test_lhs_ptrcheck_deref(AGG *dest) {
   AGG local = {0};
   *dest = local;
 }
 
-// C-LABEL: define {{.*}}@test_lhs_array(
+// C-LABEL: define {{.*}}@test_lhs_ptrcheck_subscript(
 // C: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // C-NEXT: [[DEST:%.*]] = getelementptr inbounds %{{(struct|union)}}.Agg, ptr [[ARR]], i64 0
 // C-NEXT: [[CMP:%.*]] = icmp ne ptr [[DEST]], null, !nosanitize
 // C: handler.type_mismatch:
 // C-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
 // C: call void @llvm.memcpy
-void test_lhs_array(AGG arr[4]) {
+void test_lhs_ptrcheck_subscript(AGG arr[4]) {
   AGG local = {0};
   arr[0] = local;
 }
 
 // RHS checks - both C and C++
 
-// CHECK-LABEL: define {{.*}}@test_rhs_ptr(
+// CHECK-LABEL: define {{.*}}@test_rhs_ptrcheck_deref(
 // CHECK: [[SRC:%.*]] = load ptr, ptr %src.addr
 // CHECK-NEXT: [[CMP:%.*]] = icmp ne ptr [[SRC]], null, !nosanitize
 // CHECK-NEXT: [[INT:%.*]] = ptrtoint ptr [[SRC]] to i64, !nosanitize
@@ -58,20 +59,20 @@ void test_lhs_array(AGG arr[4]) {
 // CHECK-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
 // CHECK: cont:
 // CHECK-NEXT: call void @llvm.memcpy
-void test_rhs_ptr(AGG *src) {
+void test_rhs_ptrcheck_deref(AGG *src) {
   AGG local;
   local = *src;
   (void)local;
 }
 
-// CHECK-LABEL: define {{.*}}@test_rhs_array(
+// CHECK-LABEL: define {{.*}}@test_rhs_ptrcheck_subscript(
 // CHECK: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // CHECK-NEXT: [[SRC:%.*]] = getelementptr inbounds %{{(struct|union)}}.Agg, ptr [[ARR]], i64 0
 // CHECK-NEXT: [[CMP:%.*]] = icmp ne ptr [[SRC]], null, !nosanitize
 // CHECK: handler.type_mismatch:
 // CHECK-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
 // CHECK: call void @llvm.memcpy
-void test_rhs_array(AGG arr[4]) {
+void test_rhs_ptrcheck_subscript(AGG arr[4]) {
   AGG local;
   local = arr[0];
   (void)local;
@@ -97,7 +98,7 @@ void test_init_from_array(AGG arr[4]) {
   (void)local;
 }
 
-// Array bounds - out-of-bounds access
+// Array bounds - out-of-bounds access (RHS)
 
 // CHECK-LABEL: define {{.*}}@test_oob_rhs(
 // CHECK: br i1 {{(true|false)}}, label %cont, label %handler.out_of_bounds
@@ -113,12 +114,27 @@ void test_oob_rhs(void) {
   (void)local;
 }
 
+// Array bounds - out-of-bounds access (LHS)
+
+// C-LABEL: define {{.*}}@test_oob_lhs(
+// C: br i1 {{(true|false)}}, label %cont, label %handler.out_of_bounds
+// C: handler.out_of_bounds:
+// C-NEXT: call void @__ubsan_handle_out_of_bounds_abort
+// C: handler.type_mismatch:
+// C-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
+// C: call void @llvm.memcpy
+void test_oob_lhs(void) {
+  AGG arr[4];
+  AGG local = {0};
+  arr[4] = local;
+  (void)arr;
+}
+
 #ifdef __cplusplus
 }
 #endif
 
-
-// C++ - handler call only
+// C++ RHS cases - handler call only
 
 #ifdef __cplusplus
 
