@@ -786,8 +786,6 @@ private:
       // TODO: Make private: we should not provide raw access to the internals.
       void setLB(unsigned NewLB) { LB = NewLB; }
       // TODO: Make private: we should not provide raw access to the internals.
-      void setUBNoLBClamp(unsigned NewUB) { UB = NewUB; }
-      // TODO: Make private: we should not provide raw access to the internals.
       void setUB(unsigned NewUB) {
         UB = NewUB;
         if (CntT == AMDGPU::EXP_CNT) {
@@ -799,7 +797,18 @@ private:
       unsigned getUB() const { return UB; }
       // TODO: Make private: we should not provide raw access to the internals.
       unsigned getLB() const { return LB; }
-
+      /// Merge \p Other into this counter. This sets this counter to the
+      /// maximum counter value of this and \p Other.
+      /// \returns the pair of score shifts for this and \p Other.
+      std::pair<unsigned, unsigned> merge(const Counter &Other) {
+        unsigned NewUB = LB + std::max(getCount(), Other.getCount());
+        if (NewUB < LB)
+          report_fatal_error("waitcnt score overflow");
+        unsigned MyShift = NewUB - UB;
+        unsigned OtherShift = NewUB - Other.UB;
+        UB = NewUB;
+        return {MyShift, OtherShift};
+      }
       /// \returns true if the counter includes \p Score, i.e., it has
       /// contributed to its current value, or in other words it is pending.
       bool contains(unsigned Score) const { return LB < Score && Score <= UB; }
@@ -3156,20 +3165,11 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     PendingEvents |= OtherEvents;
 
     // Merge scores for this counter
-    const unsigned MyPending = Counters[T].getCount();
-    const unsigned OtherPending = Other.Counters[T].getCount();
-    const unsigned NewUB =
-        Counters[T].getLB() + std::max(MyPending, OtherPending);
-    if (NewUB < Counters[T].getLB())
-      report_fatal_error("waitcnt score overflow");
-
     MergeInfo &M = MergeInfos[T];
     M.OldLB = Counters[T].getLB();
     M.OtherLB = Other.Counters[T].getLB();
-    M.MyShift = NewUB - Counters[T].getUB();
-    M.OtherShift = NewUB - Other.Counters[T].getUB();
 
-    Counters[T].setUBNoLBClamp(NewUB);
+    std::tie(M.MyShift, M.OtherShift) = Counters[T].merge(Other.Counters[T]);
 
     if (T == AMDGPU::LOAD_CNT)
       StrictDom |= mergeScore(M, LastFlatLoadCnt, Other.LastFlatLoadCnt);
