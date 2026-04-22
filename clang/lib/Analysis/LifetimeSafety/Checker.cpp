@@ -250,8 +250,8 @@ public:
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
-                                          MovedExpr, ExpiryLoc);
+          SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
+                                         ExpiryLoc);
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
