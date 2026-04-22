@@ -44,7 +44,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    vector.body:
 ; IF-EVL-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP3]]>, ir<%add>
 ; IF-EVL-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; IF-EVL-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[VP5]]>
+; IF-EVL-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%a>, vp<[[VP5]]>
 ; IF-EVL-NEXT:      CLONE ir<%0> = load ir<%arrayidx>
 ; IF-EVL-NEXT:      CLONE ir<%add> = add ir<%0>, ir<%rdx>
 ; IF-EVL-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
@@ -88,7 +88,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:      EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
 ; IF-EVL-OUTLOOP-NEXT:      EMIT-SCALAR vp<[[VP6:%[0-9]+]]> = zext vp<%evl> to i64
 ; IF-EVL-OUTLOOP-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP6]]>
-; IF-EVL-OUTLOOP-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[VP7]]>
+; IF-EVL-OUTLOOP-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%a>, vp<[[VP7]]>
 ; IF-EVL-OUTLOOP-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; IF-EVL-OUTLOOP-NEXT:      WIDEN ir<%0> = vp.load vp<[[VP8]]>, vp<%evl>
 ; IF-EVL-OUTLOOP-NEXT:      WIDEN ir<%add> = add ir<%0>, ir<%rdx>
@@ -135,7 +135,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:      EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
 ; IF-EVL-INLOOP-NEXT:      EMIT-SCALAR vp<[[VP6:%[0-9]+]]> = zext vp<%evl> to i64
 ; IF-EVL-INLOOP-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP6]]>
-; IF-EVL-INLOOP-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[VP7]]>
+; IF-EVL-INLOOP-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%a>, vp<[[VP7]]>
 ; IF-EVL-INLOOP-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; IF-EVL-INLOOP-NEXT:      WIDEN ir<%0> = vp.load vp<[[VP8]]>, vp<%evl>
 ; IF-EVL-INLOOP-NEXT:      REDUCE ir<%add> = ir<%rdx> +  vp.reduce.add (ir<%0>, vp<%evl>)
@@ -178,7 +178,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT:    vector.body:
 ; NO-VP-OUTLOOP-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP3]]>, ir<%add>
 ; NO-VP-OUTLOOP-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; NO-VP-OUTLOOP-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[VP5]]>
+; NO-VP-OUTLOOP-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%a>, vp<[[VP5]]>
 ; NO-VP-OUTLOOP-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; NO-VP-OUTLOOP-NEXT:      WIDEN ir<%0> = load vp<[[VP6]]>
 ; NO-VP-OUTLOOP-NEXT:      WIDEN ir<%add> = add ir<%0>, ir<%rdx>
@@ -220,7 +220,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT:    vector.body:
 ; NO-VP-INLOOP-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP3]]>, ir<%add>
 ; NO-VP-INLOOP-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; NO-VP-INLOOP-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[VP5]]>
+; NO-VP-INLOOP-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%a>, vp<[[VP5]]>
 ; NO-VP-INLOOP-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; NO-VP-INLOOP-NEXT:      WIDEN ir<%0> = load vp<[[VP6]]>
 ; NO-VP-INLOOP-NEXT:      REDUCE ir<%add> = ir<%rdx> +  reduce.add (ir<%0>)

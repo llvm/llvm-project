@@ -22,10 +22,10 @@ define void @cse_duplicate_load(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep.a>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%x>, ir<%x>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, ir<%sum>, vp<%evl>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>
@@ -69,7 +69,7 @@ define void @no_cse_across_store(ptr %a, i64 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%inc> = add ir<%x>, ir<1>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep>, ir<%inc>, vp<%evl>
@@ -119,14 +119,14 @@ define void @two_masked_same_mask(ptr noalias %a, ptr noalias %b, ptr noalias %c
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%gep.c> = getelementptr inbounds ir<%cond>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.c> = getelementptr inbounds i32, ir<%cond>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%c> = vp.load ir<%gep.c>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%cmp> = icmp ne ir<%c>, ir<0>
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep.a>, vp<%evl>, ir<%cmp>
 ; CHECK-NEXT:    WIDEN ir<%s> = add ir<%x>, ir<%x>
 ; CHECK-NEXT:    EMIT vp<%predphi> = select ir<%cmp>, ir<%s>, ir<0>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, vp<%predphi>, vp<%evl>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>
@@ -180,19 +180,19 @@ define void @two_masked_diff_mask(ptr noalias %a, ptr noalias %b, ptr noalias %c
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%index>
-; CHECK-NEXT:    CLONE ir<%gp1> = getelementptr inbounds ir<%c1>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr i32, ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gp1> = getelementptr inbounds i32, ir<%c1>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%v1> = vp.load ir<%gp1>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp ne ir<%v1>, ir<0>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep.a>, vp<%evl>, ir<%cmp1>
 ; CHECK-NEXT:    EMIT vp<%predphi> = select ir<%cmp1>, ir<%x>, ir<0>
-; CHECK-NEXT:    CLONE ir<%gp2> = getelementptr inbounds ir<%c2>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gp2> = getelementptr inbounds i32, ir<%c2>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%v2> = vp.load ir<%gp2>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp ne ir<%v2>, ir<0>
 ; CHECK-NEXT:    WIDEN ir<%y> = vp.load ir<%gep.a>, vp<%evl>, ir<%cmp2>
 ; CHECK-NEXT:    EMIT vp<%predphi>.1 = select ir<%cmp2>, ir<%y>, ir<0>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add vp<%predphi>, vp<%predphi>.1
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, ir<%sum>, vp<%evl>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>
@@ -256,11 +256,11 @@ define void @cse_three_duplicate_loads(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep.a>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%t> = add ir<%x>, ir<%x>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%t>, ir<%x>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, ir<%sum>, vp<%evl>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>
@@ -306,14 +306,14 @@ define void @two_dup_groups(ptr noalias %a, ptr noalias %b, ptr noalias %out, i6
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%pa> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%pa> = getelementptr inbounds i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%a1> = vp.load ir<%pa>, vp<%evl>
-; CHECK-NEXT:    CLONE ir<%pb> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%pb> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%b1> = vp.load ir<%pb>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%sa> = add ir<%a1>, ir<%a1>
 ; CHECK-NEXT:    WIDEN ir<%sb> = add ir<%b1>, ir<%b1>
 ; CHECK-NEXT:    WIDEN ir<%s> = add ir<%sa>, ir<%sb>
-; CHECK-NEXT:    CLONE ir<%po> = getelementptr inbounds ir<%out>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%po> = getelementptr inbounds i32, ir<%out>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%po>, ir<%s>, vp<%evl>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>
@@ -362,10 +362,10 @@ define void @cse_stronger_align_first(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%x>, ir<%x>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, ir<%sum>, vp<%evl>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>
@@ -409,11 +409,11 @@ define void @no_cse_weaker_align_first(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%y> = vp.load ir<%gep>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%x>, ir<%y>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, ir<%sum>, vp<%evl>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>
@@ -457,9 +457,9 @@ define void @no_cse_across_noalias_store(ptr noalias %a, ptr noalias %b, i64 %n)
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep.a>, vp<%evl>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, ir<%x>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%y> = vp.load ir<%gep.a>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%x>, ir<%y>
@@ -507,12 +507,12 @@ define void @dup_gather(ptr noalias %a, ptr noalias %idx, ptr noalias %out, i64 
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    CLONE ir<%gep.idx> = getelementptr inbounds ir<%idx>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.idx> = getelementptr inbounds i64, ir<%idx>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%i> = vp.load ir<%gep.idx>, vp<%evl>
 ; CHECK-NEXT:    WIDEN-GEP ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%i>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep.a>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%x>, ir<%x>
-; CHECK-NEXT:    CLONE ir<%gep.o> = getelementptr inbounds ir<%out>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.o> = getelementptr inbounds i32, ir<%out>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep.o>, ir<%sum>, vp<%evl>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>

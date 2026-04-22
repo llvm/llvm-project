@@ -23,10 +23,10 @@ define void @cse_duplicate_masked_load(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask vp<%index>, ir<%n>
-; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i32, ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = load ir<%gep.a>, vp<%active.lane.mask>
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%x>, ir<%x>
-; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; CHECK-NEXT:    EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%sum>, vp<%active.lane.mask>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>

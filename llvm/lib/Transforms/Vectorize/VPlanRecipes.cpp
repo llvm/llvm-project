@@ -1574,6 +1574,7 @@ bool VPInstruction::isVectorToScalar() const {
 
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
+  case Instruction::GetElementPtr:
   case Instruction::Load:
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
@@ -1738,6 +1739,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
+  case Instruction::GetElementPtr:
   case Instruction::Or:
   case Instruction::Freeze:
   case VPInstruction::Not:
@@ -1963,6 +1965,28 @@ static void executePhiRecipe(VPSingleDefRecipe *R, VPPhiAccessors &Phi,
                         State.CFG.VPBB2IRBB.at(Phi.getIncomingBlock(Idx)));
   State.set(R, NewPhi, IsScalar);
 }
+
+void VPGEPInstruction::execute(VPTransformState &State) {
+  auto Ops = map_to_vector(operands(),
+                           [&](VPValue *Op) { return State.get(Op, true); });
+  Value *GEP =
+      State.Builder.CreateGEP(getSourceElementType(), Ops.front(),
+                              drop_begin(Ops), "", getGEPNoWrapFlags());
+  State.set(this, GEP, true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPGEPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
+                                   VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT-SCALAR ";
+  printAsOperand(O, SlotTracker);
+  O << " = getelementptr";
+  printFlags(O);
+  getSourceElementType()->print(O);
+  O << ", ";
+  printOperands(O, SlotTracker);
+}
+#endif
 
 void VPPhi::execute(VPTransformState &State) {
   executePhiRecipe(this, *this, State, /*IsScalar=*/true, getName());

@@ -25,10 +25,10 @@ define i32 @unsigned_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi (add) vp<[[VP3]]>, vp<[[VP13:%[0-9]+]]> (VF scaled by 1/4)
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%x.ptr> = getelementptr inbounds nuw ir<%x>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%x.ptr> = getelementptr inbounds nuw i8, ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw i8, ir<%x.ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%x.val> = load vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%y.ptr> = getelementptr inbounds nuw ir<%y>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%y.ptr> = getelementptr inbounds nuw i8, ir<%y>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds nuw i8, ir<%y.ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%y.val> = load vp<[[VP7]]>
 ; CHECK-NEXT:      WIDEN vp<[[VP8:%[0-9]+]]> = freeze ir<%x.val>
@@ -99,10 +99,10 @@ define i32 @signed_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi (add) vp<[[VP3]]>, vp<[[VP13:%[0-9]+]]> (VF scaled by 1/4)
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%x.ptr> = getelementptr inbounds nuw ir<%x>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%x.ptr> = getelementptr inbounds nuw i8, ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw i8, ir<%x.ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%x.val> = load vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%y.ptr> = getelementptr inbounds nuw ir<%y>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%y.ptr> = getelementptr inbounds nuw i8, ir<%y>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds nuw i8, ir<%y.ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%y.val> = load vp<[[VP7]]>
 ; CHECK-NEXT:      WIDEN vp<[[VP8:%[0-9]+]]> = freeze ir<%x.val>
