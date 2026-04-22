@@ -9,7 +9,8 @@ Intrinsic Detection Macros
 ===========================
 
 Clang provides macros to detect which RISC-V intrinsics are supported by the
-toolchain.
+toolchain. This is only available if intrinsics are ratified, in other word,
+experimental intrinsics do not have macro defined.
 Note: This is independent from assembler support.
 
 Intrinsic Detection
