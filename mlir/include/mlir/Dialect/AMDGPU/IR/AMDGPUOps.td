@@ -1111,8 +1111,7 @@ def AMDGPU_DotOp :
     The `amdgpu.dot` op is an MLIR wrapper over the `v_dot*` family of intrinsics,
     which compute `D = sum_i A[i] * B[i] + C`. 
 
-    Variants (source, dest, signedness, chipset -> intrinsic). For the precise
-    per-feature chipset enablement, see `hasDot{N}Insts` in `Chipset.h`.
+    Variants (source, dest, signedness, chipset -> intrinsic).
 
     ```text
     | A elem   | B elem   | destC | signedness | chipset                   | ROCDL op                     |
