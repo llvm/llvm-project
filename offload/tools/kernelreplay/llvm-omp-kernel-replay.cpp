@@ -142,6 +142,9 @@ Error verifyReplayOutput(StringRef RecordOutputFilename,
 
 /// Replay the kernel and return whether verification occurred.
 Error replayKernel() {
+  if (RepetitionsOpt == 0)
+    return createErr("invalid number of repetitions");
+
   // Load the kernel descriptor JSON file.
   auto KernelDescrBufferOrErr =
       MemoryBuffer::getFile(JsonFilename, /*isText=*/true,
@@ -321,7 +324,7 @@ Error replayKernel() {
   KernelReplayOutcomeTy Outcome;
 
   // Perform the kernel replay and verification (if needed) for each repetition.
-  for (uint32_t R = 0; R < RepetitionsOpt; ++R) {
+  for (uint32_t R = 1; R <= RepetitionsOpt; ++R) {
     Rc = __tgt_target_kernel_replay(
         /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
         const_cast<char *>(RecordInputBuffer->getBufferStart()),
@@ -333,27 +336,25 @@ Error replayKernel() {
     if (Rc != OMP_TGT_SUCCESS)
       return createErr("failed to replay kernel");
 
-    // Verify the replay output if requested.
-    if (VerifyOpt) {
-      if (Outcome.OutputFilepath.empty())
-        return createErr("replay output file was not generated");
-
-      Filepath.replace_extension("record_output");
-      if (auto Err = verifyReplayOutput(Filepath.c_str(),
-                                        Outcome.OutputFilepath.c_str()))
-        return Err;
-    }
-
     outs() << TOOL_PREFIX << " Replay time (" << R
            << "): " << Outcome.KernelReplayTimeNs << " ns\n";
   }
 
-  // At this point, any verification done was successful.
-  if (VerifyOpt)
-    outs() << TOOL_PREFIX << " Replay done, device memory verified\n";
-  else
-    outs() << TOOL_PREFIX << " Replay done, verification skipped\n";
+  // Verify the replay output if requested.
+  if (VerifyOpt) {
+    if (Outcome.OutputFilepath.empty())
+      return createErr("replay output file was not generated");
 
+    Filepath.replace_extension("record_output");
+    if (auto Err = verifyReplayOutput(Filepath.c_str(),
+                                      Outcome.OutputFilepath.c_str()))
+      return Err;
+
+    // The verification was successful.
+    outs() << TOOL_PREFIX << " Replay done, device memory verified\n";
+  } else {
+    outs() << TOOL_PREFIX << " Replay done, verification skipped\n";
+  }
   return Error::success();
 }
 
