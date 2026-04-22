@@ -22,10 +22,10 @@ namespace llvm {
 namespace json {
 
 Value &Object::operator[](const ObjectKey &K) {
-  return try_emplace(K, nullptr).first->second;
+  return try_emplace(K, nullptr).first->getSecond();
 }
 Value &Object::operator[](ObjectKey &&K) {
-  return try_emplace(std::move(K), nullptr).first->second;
+  return try_emplace(std::move(K), nullptr).first->getSecond();
 }
 Value *Object::get(StringRef K) {
   auto I = find(K);
