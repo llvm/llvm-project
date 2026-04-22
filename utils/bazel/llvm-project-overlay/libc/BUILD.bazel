@@ -2865,6 +2865,7 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_math_asin_utils",
         ":__support_math_inv_trigf_utils",
     ],
 )
@@ -2954,6 +2955,7 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_math_atan_utils",
         ":__support_math_inv_trigf_utils",
     ],
 )
@@ -3321,6 +3323,7 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_macros_optimization",
+        ":__support_math_atan_utils",
         ":__support_math_inv_trigf_utils",
         ":llvm_libc_macros_float16_macros",
     ],
@@ -3353,6 +3356,7 @@ libc_support_library(
         ":__support_fputil_rounding_mode",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_math_atan_utils",
         ":__support_math_inv_trigf_utils",
     ],
 )
@@ -4360,8 +4364,8 @@ libc_support_library(
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
+        ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
-        ":__support_macros_properties_optimization",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -6315,6 +6319,7 @@ libc_support_library(
         ":__support_fputil_polyeval",
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
+        ":__support_math_atan_utils",
         ":hdr_errno_macros",
         ":hdr_fenv_macros",
         ":llvm_libc_macros_float16_macros",
