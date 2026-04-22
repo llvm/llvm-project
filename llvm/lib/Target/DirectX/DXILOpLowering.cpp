@@ -566,6 +566,23 @@ public:
     });
   }
 
+  // Copies `Src` into `Args` starting at `ArgIdx`. If `Src` is a vector, its
+  // elements are extracted and stored in consecutive slots; otherwise `Src`
+  // is stored directly. At most `MaxElements` elements are expected.
+  static void copyVectorArgs(IRBuilder<> &IRB, MutableArrayRef<Value *> Args,
+                             unsigned ArgIdx, Value *Src,
+                             unsigned MaxElements) {
+    Type *Ty = Src->getType();
+    if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+      unsigned Count = VecTy->getNumElements();
+      assert(Count <= MaxElements && "Expected at most 3 elements in vector");
+      for (unsigned I = 0; I < Count; ++I)
+        Args[ArgIdx + I] = IRB.CreateExtractElement(Src, uint64_t(I));
+    } else {
+      Args[ArgIdx] = Src;
+    }
+  }
+
   [[nodiscard]] bool lowerTextureLoad(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -586,33 +603,10 @@ public:
       std::array<Value *, 8> Args{Handle, MipLevel, Undef, Undef,
                                   Undef,  Undef,    Undef, Undef};
 
-      Type *CoordTy = Coords->getType();
-      if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy)) {
-        unsigned NumCoords = VecTy->getNumElements();
-        assert(NumCoords < 3 &&
-               "Expected at most 3 elements in coordinate vector");
-        for (unsigned I = 0; I < NumCoords; ++I)
-          Args[2 + I] = IRB.CreateExtractElement(Coords, uint64_t(I));
-      } else {
-        Args[2] = Coords;
-      }
-
-      bool IsZeroOffset = false;
-      if (auto *C = dyn_cast<Constant>(Offsets))
-        IsZeroOffset = C->isNullValue();
-
-      if (!IsZeroOffset) {
-        Type *OffsetTy = Offsets->getType();
-        if (auto *VecTy = dyn_cast<FixedVectorType>(OffsetTy)) {
-          unsigned NumOffsets = VecTy->getNumElements();
-          assert(NumOffsets < 3 &&
-                 "Expected at most 3 elements in offsets vector");
-          for (unsigned I = 0; I < NumOffsets; ++I)
-            Args[5 + I] = IRB.CreateExtractElement(Offsets, uint64_t(I));
-        } else {
-          Args[5] = Offsets;
-        }
-      }
+      // Copy coordinates and offsets into Args.
+      copyVectorArgs(IRB, Args, 2, Coords, 3);
+      if (auto *C = dyn_cast<Constant>(Offsets); !C || !C->isNullValue())
+        copyVectorArgs(IRB, Args, 5, Offsets, 3);
 
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
           OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
