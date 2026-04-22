@@ -4,11 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV64ZB
 
-; Source-side missed optimizations: when the bswap *operand* is known to have
-; at most one byte of possibly-nonzero bits, the bswap is equivalent to a
-; shift moving that byte to the mirror position. Today these emit
-; mask + rev8 + shift; after the generic DAGCombiner fold lands, they should
-; become a single shift.
+; Source-side known-bits fold: when the bswap operand has at most one byte
+; of possibly-nonzero bits at a known byte-aligned position, the bswap is
+; equivalent to a shift moving that byte to the mirror byte.
 
 declare i16 @llvm.bswap.i16(i16)
 declare i32 @llvm.bswap.i32(i32)

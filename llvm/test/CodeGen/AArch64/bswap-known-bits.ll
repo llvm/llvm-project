@@ -113,11 +113,9 @@ define void @demand_one_loaded_byte(ptr %xp, ptr %yp) {
   ret void
 }
 
-; Source-side missed optimizations: when the bswap *operand* is known to have
-; at most one byte of possibly-nonzero bits, the bswap is equivalent to a
-; shift moving that byte to the mirror position. Today these emit
-; rev + shift + mask; after the generic DAGCombiner fold lands, they should
-; become a single shift (or a no-op for i64 middle bytes that don't exist).
+; Source-side known-bits fold: when the bswap operand has at most one byte
+; of possibly-nonzero bits at a known byte-aligned position, the bswap is
+; equivalent to a shift moving that byte to the mirror byte.
 
 define i16 @bswap_src_and_lo_i16(i16 %x) {
 ; CHECK-LABEL: bswap_src_and_lo_i16:
