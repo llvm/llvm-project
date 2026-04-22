@@ -10459,8 +10459,7 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
-See also the :ref:`llvm.fneg <int_fneg>` intrinsic, which is a call-form
-equivalent of this instruction.
+See also the :ref:`llvm.fneg <int_fneg>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -10567,8 +10566,7 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
-See also the :ref:`llvm.fadd <int_fadd>` intrinsic, which is a call-form
-equivalent of this instruction.
+See also the :ref:`llvm.fadd <int_fadd>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -10666,8 +10664,7 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
-See also the :ref:`llvm.fsub <int_fsub>` intrinsic, which is a call-form
-equivalent of this instruction.
+See also the :ref:`llvm.fsub <int_fsub>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -10766,8 +10763,7 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
-See also the :ref:`llvm.fmul <int_fmul>` intrinsic, which is a call-form
-equivalent of this instruction.
+See also the :ref:`llvm.fmul <int_fmul>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -10907,8 +10903,7 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
-See also the :ref:`llvm.fdiv <int_fdiv>` intrinsic, which is a call-form
-equivalent of this instruction.
+See also the :ref:`llvm.fdiv <int_fdiv>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -11066,8 +11061,7 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
-See also the :ref:`llvm.frem <int_frem>` intrinsic, which is a call-form
-equivalent of this instruction.
+See also the :ref:`llvm.frem <int_frem>` intrinsic, which is a intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -12734,7 +12728,7 @@ flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations.
 
 See also the :ref:`llvm.fptrunc <int_fptrunc_intr>` intrinsic, which is a
-call-form equivalent of this instruction.
+intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -12788,7 +12782,7 @@ flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations.
 
 See also the :ref:`llvm.fpext <int_fpext_intr>` intrinsic, which is a
-call-form equivalent of this instruction.
+intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -12832,7 +12826,7 @@ unsigned integer value. If the value cannot fit in ``ty2``, the result
 is a :ref:`poison value <poisonvalues>`.
 
 See also the :ref:`llvm.fptoui <int_fptoui_intr>` intrinsic, which is a
-call-form equivalent of this instruction.
+intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -12877,7 +12871,7 @@ signed integer value. If the value cannot fit in ``ty2``, the result
 is a :ref:`poison value <poisonvalues>`.
 
 See also the :ref:`llvm.fptosi <int_fptosi_intr>` intrinsic, which is a
-call-form equivalent of this instruction.
+intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -12929,7 +12923,7 @@ If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
 the result is a poison value.
 
 See also the :ref:`llvm.uitofp <int_uitofp_intr>` intrinsic, which is a
-call-form equivalent of this instruction.
+intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -12976,7 +12970,7 @@ value cannot be exactly represented, it is rounded using the default rounding
 mode.
 
 See also the :ref:`llvm.sitofp <int_sitofp_intr>` intrinsic, which is a
-call-form equivalent of this instruction.
+intrinsic variant of this instruction.
 
 Example:
 """"""""
@@ -13514,8 +13508,8 @@ only flags that have any effect on its semantics are those that allow
 assumptions to be made about the values of input arguments; namely
 ``nnan``, ``ninf``, and ``reassoc``. See :ref:`fastmath` for more information.
 
-See also the :ref:`llvm.fcmp <int_fcmp>` intrinsic (quiet comparison, call-form
-equivalent of this instruction) and the :ref:`llvm.fcmps <int_fcmps>` intrinsic
+See also the :ref:`llvm.fcmp <int_fcmp>` intrinsic (quiet comparison, intrinsic
+variant of this instruction) and the :ref:`llvm.fcmps <int_fcmps>` intrinsic
 (signaling comparison that always raises on NaN operands).
 
 Example:
@@ -30288,17 +30282,13 @@ would and handles error conditions in the same way.
 FP Arithmetic Intrinsics
 ------------------------
 
-These intrinsics are call-form equivalents of the standard floating-point
+These intrinsics are intrinsic variants of the standard floating-point
 instructions (:ref:`fadd <i_fadd>`, :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`,
 :ref:`fdiv <i_fdiv>`, :ref:`frem <i_frem>`, :ref:`fneg <i_fneg>`,
 :ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`, :ref:`fpext <i_fpext>`,
 and the ``fptoui``, ``fptosi``, ``uitofp``, ``sitofp`` conversion instructions).
 They behave identically to the corresponding instruction and accept the same
 :ref:`fast-math flags <fastmath>`.
-
-The primary purpose of these intrinsics is to allow per-call FP environment
-control in a future extension; for now they are direct equivalents of their
-instruction counterparts.
 
 ``llvm.fcmps`` is always ``memory(inaccessiblemem: readwrite)`` and not
 speculatable because a signaling comparison raises an FP Invalid Operation

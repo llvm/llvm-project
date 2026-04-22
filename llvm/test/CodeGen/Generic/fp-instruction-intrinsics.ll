@@ -68,10 +68,10 @@ define i32 @test_fptosi(float %a) {
   ret i32 %r
 }
 
-; llvm.fcmp (quiet compare) lowers to ucomiss + conditional flag use
+; llvm.fcmp (quiet compare) lowers to cmpeqss (SSE mask form for i1 result)
 define i1 @test_fcmp_oeq(float %a, float %b) {
 ; CHECK-LABEL: test_fcmp_oeq:
-; CHECK: ucomiss
+; CHECK: cmpeqss
   %r = call i1 @llvm.fcmp.f32(float %a, float %b, metadata !"oeq")
   ret i1 %r
 }

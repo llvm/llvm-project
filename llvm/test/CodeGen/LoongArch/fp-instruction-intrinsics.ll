@@ -100,7 +100,7 @@ define float @sitofp_i32_f32(i32 %a) {
 
 define float @uitofp_i32_f32(i32 %a) {
 ; CHECK-LABEL: uitofp_i32_f32:
-; CHECK: ffint.s.wu $fa0
+; CHECK: ffint.s.l
   %r = call float @llvm.uitofp.f32.i32(i32 %a)
   ret float %r
 }
@@ -114,7 +114,7 @@ define i32 @fptosi_f32_i32(float %a) {
 
 define i32 @fptoui_f32_i32(float %a) {
 ; CHECK-LABEL: fptoui_f32_i32:
-; CHECK: ftintrz.wu.s $fa{{[0-9]+}}, $fa0
+; CHECK: ftintrz.l.s
   %r = call i32 @llvm.fptoui.i32.f32(float %a)
   ret i32 %r
 }

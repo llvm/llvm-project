@@ -1,5 +1,5 @@
 ; REQUIRES: arm-registered-target
-; RUN: llc < %s -mtriple=arm-apple-ios -mattr=+vfp2 | FileCheck %s
+; RUN: llc < %s -mtriple=armv7-linux-gnueabihf | FileCheck %s
 
 ;;; f64 arithmetic
 

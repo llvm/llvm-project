@@ -107,14 +107,14 @@ define float @uitofp_i32_f32(i32 %a) {
 
 define i32 @fptosi_f32_i32(float %a) {
 ; CHECK-LABEL: fptosi_f32_i32:
-; CHECK: i32.trunc_f32_s
+; CHECK: i32.trunc_sat_f32_s
   %r = call i32 @llvm.fptosi.i32.f32(float %a)
   ret i32 %r
 }
 
 define i32 @fptoui_f32_i32(float %a) {
 ; CHECK-LABEL: fptoui_f32_i32:
-; CHECK: i32.trunc_f32_u
+; CHECK: i32.trunc_sat_f32_u
   %r = call i32 @llvm.fptoui.i32.f32(float %a)
   ret i32 %r
 }

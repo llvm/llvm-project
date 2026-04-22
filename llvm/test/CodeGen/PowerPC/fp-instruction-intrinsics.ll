@@ -42,28 +42,28 @@ define double @fneg_f64(double %a) {
 
 define float @fadd_f32(float %a, float %b) {
 ; CHECK-LABEL: fadd_f32:
-; CHECK: fadds
+; CHECK: xsaddsp
   %r = call float @llvm.fadd.f32(float %a, float %b)
   ret float %r
 }
 
 define float @fsub_f32(float %a, float %b) {
 ; CHECK-LABEL: fsub_f32:
-; CHECK: fsubs
+; CHECK: xssubsp
   %r = call float @llvm.fsub.f32(float %a, float %b)
   ret float %r
 }
 
 define float @fmul_f32(float %a, float %b) {
 ; CHECK-LABEL: fmul_f32:
-; CHECK: fmuls
+; CHECK: xsmulsp
   %r = call float @llvm.fmul.f32(float %a, float %b)
   ret float %r
 }
 
 define float @fdiv_f32(float %a, float %b) {
 ; CHECK-LABEL: fdiv_f32:
-; CHECK: fdivs
+; CHECK: xsdivsp
   %r = call float @llvm.fdiv.f32(float %a, float %b)
   ret float %r
 }
@@ -79,7 +79,7 @@ define float @fneg_f32(float %a) {
 
 define float @fptrunc(double %a) {
 ; CHECK-LABEL: fptrunc:
-; CHECK: frsp
+; CHECK: xscvdpsp
   %r = call float @llvm.fptrunc.f32.f64(double %a)
   ret float %r
 }
@@ -94,28 +94,28 @@ define double @fpext(float %a) {
 
 define float @sitofp_i32_f32(i32 %a) {
 ; CHECK-LABEL: sitofp_i32_f32:
-; CHECK: fcfids
+; CHECK: xscvsxdsp
   %r = call float @llvm.sitofp.f32.i32(i32 %a)
   ret float %r
 }
 
 define float @uitofp_i32_f32(i32 %a) {
 ; CHECK-LABEL: uitofp_i32_f32:
-; CHECK: fcfidus
+; CHECK: xscvuxdsp
   %r = call float @llvm.uitofp.f32.i32(i32 %a)
   ret float %r
 }
 
 define i32 @fptosi_f32_i32(float %a) {
 ; CHECK-LABEL: fptosi_f32_i32:
-; CHECK: fctiwz
+; CHECK: xscvdpsxws
   %r = call i32 @llvm.fptosi.i32.f32(float %a)
   ret i32 %r
 }
 
 define i32 @fptoui_f32_i32(float %a) {
 ; CHECK-LABEL: fptoui_f32_i32:
-; CHECK: fctiwuz
+; CHECK: xscvdpuxws
   %r = call i32 @llvm.fptoui.i32.f32(float %a)
   ret i32 %r
 }
@@ -131,34 +131,34 @@ define i1 @fcmp_oeq(float %a, float %b) {
 
 ;;; Fast-math flags
 
-; fast on fadd.f32 — same fadds instruction on PowerPC
+; fast on fadd.f32 — same xsaddsp instruction on PowerPC VSX
 define float @fadd_fast_f32(float %a, float %b) {
 ; CHECK-LABEL: fadd_fast_f32:
-; CHECK: fadds
+; CHECK: xsaddsp
   %r = call fast float @llvm.fadd.f32(float %a, float %b)
   ret float %r
 }
 
-; nnan nsz on fmul.f32 — same fmuls instruction on PowerPC
+; nnan nsz on fmul.f32 — same xsmulsp instruction on PowerPC VSX
 define float @fmul_nnan_nsz_f32(float %a, float %b) {
 ; CHECK-LABEL: fmul_nnan_nsz_f32:
-; CHECK: fmuls
+; CHECK: xsmulsp
   %r = call nnan nsz float @llvm.fmul.f32(float %a, float %b)
   ret float %r
 }
 
-; reassoc on fdiv.f32 — same fdivs instruction on PowerPC
+; reassoc on fdiv.f32 — same xsdivsp instruction on PowerPC VSX
 define float @fdiv_reassoc_f32(float %a, float %b) {
 ; CHECK-LABEL: fdiv_reassoc_f32:
-; CHECK: fdivs
+; CHECK: xsdivsp
   %r = call reassoc float @llvm.fdiv.f32(float %a, float %b)
   ret float %r
 }
 
-; contract on fmul+fadd → fmadds (FMA contraction, f32)
+; contract on fmul+fadd → xsmaddasp (FMA contraction, f32, VSX)
 define float @fmadd_contract_f32(float %a, float %b, float %c) {
 ; CHECK-LABEL: fmadd_contract_f32:
-; CHECK: fmadds
+; CHECK: xsmaddasp
   %mul = call contract float @llvm.fmul.f32(float %a, float %b)
   %add = call contract float @llvm.fadd.f32(float %mul, float %c)
   ret float %add

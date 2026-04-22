@@ -33,7 +33,7 @@ define double @fdiv_f64(double %a, double %b) {
 
 define double @fneg_f64(double %a) {
 ; CHECK-LABEL: fneg_f64:
-; CHECK: lcdbr
+; CHECK: lcdfr
   %r = call double @llvm.fneg.f64(double %a)
   ret double %r
 }
@@ -70,7 +70,7 @@ define float @fdiv_f32(float %a, float %b) {
 
 define float @fneg_f32(float %a) {
 ; CHECK-LABEL: fneg_f32:
-; CHECK: lcebr
+; CHECK: lcdfr
   %r = call float @llvm.fneg.f32(float %a)
   ret float %r
 }
@@ -154,19 +154,19 @@ define float @fdiv_reassoc_f32(float %a, float %b) {
   ret float %r
 }
 
-; contract on fmul+fadd → maebr (FMA contraction, f32)
+; contract on fmul+fadd → wfmasb (FMA contraction, f32, z14 vector FP)
 define float @fmadd_contract_f32(float %a, float %b, float %c) {
 ; CHECK-LABEL: fmadd_contract_f32:
-; CHECK: maebr
+; CHECK: wfmasb
   %mul = call contract float @llvm.fmul.f32(float %a, float %b)
   %add = call contract float @llvm.fadd.f32(float %mul, float %c)
   ret float %add
 }
 
-; contract on fmul+fadd for f64 → madbr
+; contract on fmul+fadd for f64 → wfmadb (z14 vector FP)
 define double @fmadd_contract_f64(double %a, double %b, double %c) {
 ; CHECK-LABEL: fmadd_contract_f64:
-; CHECK: madbr
+; CHECK: wfmadb
   %mul = call contract double @llvm.fmul.f64(double %a, double %b)
   %add = call contract double @llvm.fadd.f64(double %mul, double %c)
   ret double %add

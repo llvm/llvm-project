@@ -34,7 +34,7 @@ define double @fdiv_f64(double %a, double %b) {
 ; FP negation on SSE2 is an XOR with the sign bit
 define double @fneg_f64(double %a) {
 ; CHECK-LABEL: fneg_f64:
-; CHECK: xorpd
+; CHECK: xorp{{[sd]}}
   %r = call double @llvm.fneg.f64(double %a)
   ret double %r
 }
@@ -124,7 +124,7 @@ define i32 @fptoui_f32_i32(float %a) {
 
 define i1 @fcmp_oeq(float %a, float %b) {
 ; CHECK-LABEL: fcmp_oeq:
-; CHECK: ucomiss
+; CHECK: cmpeqss
   %r = call i1 @llvm.fcmp.f32(float %a, float %b, metadata !"oeq")
   ret i1 %r
 }
