@@ -1,0 +1,58 @@
+# Check that clangd can optionally avoid reusing prebuilt module files.
+#
+# Windows uses a different default for this flag and has different escaping
+# modes, so keep this test non-Windows for now.
+# UNSUPPORTED: system-windows
+#
+# RUN: rm -fr %t
+# RUN: mkdir -p %t
+# RUN: split-file %s %t
+# RUN: sed -e "s|DIR|%/t|g" %t/compile_commands.json.tmpl > %t/compile_commands.json.tmp
+# RUN: sed -e "s|CLANG_CC|clang|g" %t/compile_commands.json.tmp > %t/compile_commands.json
+# RUN: clang -std=c++20 %t/M.cppm --precompile -o %t/M.pcm
+# RUN: clangd -enable-config=0 -experimental-modules-support -log=verbose \
+# RUN:   -compile-commands-dir=%t -check=%t/Use.cpp 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=REUSE
+# RUN: clangd -enable-config=0 -experimental-modules-support -log=verbose \
+# RUN:   -compile-commands-dir=%t -check=%t/Use.cpp \
+# RUN:   --disable-prebuilt-module-file-reuse 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOREUSE
+
+// REUSE: Built module M to [[PCM:.*clangd.*/module_files/.*/M\.pcm]]
+// REUSE: All checks completed, 0 errors
+
+// NOREUSE-NOT: Reusing prebuilt module file
+// NOREUSE: Built module M to [[BUILT:.*clangd.*/module_files/.*/M\.pcm]]
+// NOREUSE: All checks completed, 0 errors
+
+#--- M.cppm
+export module M;
+export int value() { return 42; }
+
+#--- A.cppm
+export module A;
+import M;
+export int useM() { return value(); }
+
+#--- Use.cpp
+import A;
+int use() { return useM(); }
+
+#--- compile_commands.json.tmpl
+[
+  {
+    "directory": "DIR",
+    "command": "CLANG_CC -std=c++20 DIR/M.cppm --precompile -o DIR/M-from-cdb.pcm",
+    "file": "DIR/M.cppm"
+  },
+  {
+    "directory": "DIR",
+    "command": "CLANG_CC -std=c++20 -fmodule-file=M=DIR/M.pcm DIR/A.cppm --precompile -o DIR/A-from-cdb.pcm",
+    "file": "DIR/A.cppm"
+  },
+  {
+    "directory": "DIR",
+    "command": "CLANG_CC -std=c++20 -fprebuilt-module-path=DIR -c DIR/Use.cpp -o DIR/Use.o",
+    "file": "DIR/Use.cpp"
+  }
+]
