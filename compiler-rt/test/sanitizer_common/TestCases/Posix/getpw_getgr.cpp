@@ -75,7 +75,7 @@ void test_r(Fn f, Args... args) {
     if (r == ERANGE) {
       buff.resize(buff.size() * 2);
     }
-  } while(r == ERANGE);
+  } while (r == ERANGE);
 
   assert(!r);
 
