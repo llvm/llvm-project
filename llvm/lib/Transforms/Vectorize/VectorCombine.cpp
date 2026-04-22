@@ -1513,24 +1513,6 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   else
     Scalar = Builder.CreateIntrinsic(ScalarTy, II->getIntrinsicID(), ScalarOps);
 
-  Scalar->setName(I.getName() + ".scalar");
-
-  if (auto *ScalarInst = dyn_cast<Instruction>(Scalar)) {
-    bool IsFoldOp = false;
-    for (auto Op : ScalarOps) {
-      if (Op == ScalarInst) {
-        IsFoldOp = true;
-        break;
-      }
-    }
-
-    // If ScalarInst is not one of the existing operands, it must be newly
-    // created. In that case, it is safe to propagate the IR flags from the
-    // original instruction to ScalarInst.
-    if (!IsFoldOp)
-      ScalarInst->copyIRFlags(&I);
-  }
-
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);
   return true;
