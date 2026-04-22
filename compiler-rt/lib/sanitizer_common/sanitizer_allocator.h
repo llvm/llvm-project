@@ -78,6 +78,9 @@ struct NoOpMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const {}
 };
 
+// clang-format off
+// Include order is load-bearing (MemoryMapper, AllocatorStats, secondary
+// typedefs, then DeviceAllocatorT, then CombinedAllocator). Do not sort.
 #include "sanitizer_allocator_size_class_map.h"
 #include "sanitizer_allocator_stats.h"
 #include "sanitizer_allocator_primary64.h"
@@ -86,6 +89,7 @@ struct NoOpMapUnmapCallback {
 #include "sanitizer_allocator_secondary.h"
 #include "sanitizer_allocator_device.h"
 #include "sanitizer_allocator_combined.h"
+// clang-format on
 
 bool IsRssLimitExceeded();
 void SetRssLimitExceeded(bool limit_exceeded);
