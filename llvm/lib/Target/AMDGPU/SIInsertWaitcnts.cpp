@@ -775,6 +775,13 @@ private:
       const AMDGPU::HardwareLimits *Limits = nullptr;
       unsigned LB = 0;
       unsigned UB = 0;
+      void setUB(unsigned NewUB) {
+        UB = NewUB;
+        if (CntT == AMDGPU::EXP_CNT) {
+          if (getCount() > getWaitCountMax(*Limits, AMDGPU::EXP_CNT))
+            LB = UB - getWaitCountMax(*Limits, AMDGPU::EXP_CNT);
+        }
+      }
 
     public:
       Counter() = default;
@@ -788,14 +795,6 @@ private:
       unsigned getWait(unsigned Score) const { return UB - Score; }
       // TODO: Make private: we should not provide raw access to the internals.
       void setLB(unsigned NewLB) { LB = NewLB; }
-      // TODO: Make private: we should not provide raw access to the internals.
-      void setUB(unsigned NewUB) {
-        UB = NewUB;
-        if (CntT == AMDGPU::EXP_CNT) {
-          if (getCount() > getWaitCountMax(*Limits, AMDGPU::EXP_CNT))
-            LB = UB - getWaitCountMax(*Limits, AMDGPU::EXP_CNT);
-        }
-      }
       // TODO: Make private: we should not provide raw access to the internals.
       unsigned getUB() const { return UB; }
       // TODO: Make private: we should not provide raw access to the internals.
@@ -823,6 +822,11 @@ private:
         if (UB == 0)
           report_fatal_error("InsertWaitcnt score wraparound");
         return UB;
+      }
+      /// Sets the counter to its maximum value.
+      void setToMax() {
+        unsigned Max = getWaitCountMax(*Limits, CntT);
+        setUB(UB + Max);
       }
     };
 
@@ -950,9 +954,7 @@ public:
   }
 
   void setStateOnFunctionEntryOrReturn() {
-    setScoreUB(AMDGPU::STORE_CNT,
-               getScoreUB(AMDGPU::STORE_CNT) +
-                   getWaitCountMax(Context->getLimits(), AMDGPU::STORE_CNT));
+    Counters[AMDGPU::STORE_CNT].setToMax();
     PendingEvents |= Context->getWaitEvents(AMDGPU::STORE_CNT);
   }
 
@@ -1003,11 +1005,6 @@ private:
   void setScoreLB(AMDGPU::InstCounterType T, unsigned Val) {
     assert(T < AMDGPU::NUM_INST_CNTS);
     Counters[T].setLB(Val);
-  }
-
-  void setScoreUB(AMDGPU::InstCounterType T, unsigned Val) {
-    assert(T < AMDGPU::NUM_INST_CNTS);
-    Counters[T].setUB(Val);
   }
 
   void setRegScore(MCPhysReg Reg, AMDGPU::InstCounterType T, unsigned Val) {
