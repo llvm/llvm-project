@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbtest
 
 
-@skipIfTargetDoesNotSupportThreads()
 class StackCoreScriptedProcesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

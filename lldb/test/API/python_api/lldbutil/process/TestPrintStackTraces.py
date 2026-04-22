@@ -9,7 +9,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
 class ThreadsStackTracesTestCase(TestBase):
     def test_stack_traces(self):
         """Test SBprocess and SBThread APIs with printing of the stack traces."""

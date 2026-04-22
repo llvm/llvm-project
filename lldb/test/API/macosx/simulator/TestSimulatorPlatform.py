@@ -5,7 +5,6 @@ import lldbsuite.test.lldbutil as lldbutil
 import json
 
 
-@skipIfTargetDoesNotSupportThreads()
 class TestSimulatorPlatformLaunching(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False

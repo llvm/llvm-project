@@ -9,7 +9,6 @@ from lldbsuite.test.lldbtest import *
 import json, os
 
 
-@skipIfTargetDoesNotSupportThreads()
 class TestInteractiveScriptedProcess(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

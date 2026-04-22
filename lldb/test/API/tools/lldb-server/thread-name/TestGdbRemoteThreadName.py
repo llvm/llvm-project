@@ -4,7 +4,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
 class TestGdbRemoteThreadName(gdbremote_testcase.GdbRemoteTestCaseBase):
     def run_and_check_name(self, expected_name):
         self.test_sequence.add_log_lines(

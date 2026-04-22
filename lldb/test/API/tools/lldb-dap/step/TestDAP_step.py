@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 import lldbdap_testcase
 
 
-@skipIfTargetDoesNotSupportThreads()
 class TestDAP_step(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_step(self):
