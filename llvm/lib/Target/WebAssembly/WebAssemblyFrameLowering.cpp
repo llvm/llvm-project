@@ -407,10 +407,11 @@ WebAssemblyFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   if (needsSP(MF) && MFI.isFrameBaseVirtual()) {
     unsigned LocalNum = MFI.getFrameBaseLocal();
     Loc.Location.WasmLoc = {WebAssembly::TI_LOCAL, LocalNum};
-  } else if (MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext()) {
+  } else if (MF.getSubtarget<WebAssemblySubtarget>()
+                 .hasLibcallThreadContext()) {
     // There is no __stack_pointer global in libcall thread context mode, so
-    // TI_GLOBAL_RELOC would produce a bogus relocation. Ideally, this case would never happen,
-    // but if it does, fall back to a CFA directive.
+    // TI_GLOBAL_RELOC would produce a bogus relocation. Ideally, this case
+    // would never happen, but if it does, fall back to a CFA directive.
     Loc.Kind = DwarfFrameBase::CFA;
   } else {
     // TODO: This should work on a breakpoint at a function with no frame,

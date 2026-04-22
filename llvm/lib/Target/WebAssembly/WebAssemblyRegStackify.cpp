@@ -293,10 +293,10 @@ static MachineInstr *getVRegDef(unsigned Reg, const MachineInstr *Insert,
 static bool hasSingleUse(unsigned Reg, MachineRegisterInfo &MRI,
                          const MachineFunction &MF, bool Optimize,
                          MachineInstr *Def, LiveIntervals *LIS) {
-  auto& MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   // The frame base always has an implicit DBG use as DW_AT_frame_base.
   if (MFI.isFrameBaseVirtual() && MFI.getFrameBaseVreg() == Reg) {
-    // When using global thread context, the frame base can be encoded 
+    // When using global thread context, the frame base can be encoded
     // as an offset from __stack_pointer, so the vreg can be stackified.
     // However, when using libcall thread context, we need to keep the frame
     // base vreg around if debug info is enabled, because there is no
