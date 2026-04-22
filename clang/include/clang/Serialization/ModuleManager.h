@@ -328,6 +328,12 @@ public:
   /// View the graphviz representation of the module graph.
   void viewGraph();
 
+  /// Creates the deduplication key for use in \c ModuleManager.
+  /// Returns an empty optional if:
+  /// * the module cache does not exist for an implicit module name,
+  /// * the module file does not exist for an explicit module name.
+  std::optional<ModuleFileKey> makeKey(const ModuleFileName &Name) const;
+
   ModuleCache &getModuleCache() const { return ModCache; }
 };
 
