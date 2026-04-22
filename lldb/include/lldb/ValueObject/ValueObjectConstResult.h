@@ -35,6 +35,15 @@ class ValueObjectConstResult : public ValueObject {
 public:
   ~ValueObjectConstResult() override;
 
+  /// These routines create ValueObjectConstResult ValueObjects from
+  /// various data sources.  To create a root ValueObject, don't change
+  /// the defaulted manager parameter.  For the most part, that is the
+  /// only client-level use.  The manager parameter is used when creating
+  /// child ValueObjects, but that functionality is wrapped in the
+  /// CreateChildValueObject*** API's and code implementing particular
+  /// Synthetic child providers should use those API's instead.
+  /// See the comments in ValueObject.h at CreateValueObjectFrom*** for
+  /// more details.
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     lldb::ByteOrder byte_order,
                                     uint32_t addr_byte_size,

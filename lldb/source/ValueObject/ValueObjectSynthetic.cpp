@@ -294,8 +294,8 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
       }
       synth_guy->SetPreferredDisplayLanguageIfNeeded(
           GetPreferredDisplayLanguage());
-      lldb::ValueObjectSP check_sp = CheckValueObjectOwnership(synth_guy.get());
-      if (check_sp)
+      
+      if (lldb::ValueObjectSP check_sp = CheckValueObjectOwnership(synth_guy.get()))
         return check_sp;
       return synth_guy;
     } else {
