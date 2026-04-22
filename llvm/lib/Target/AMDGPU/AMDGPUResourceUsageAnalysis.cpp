@@ -17,6 +17,7 @@
 
 #include "AMDGPUResourceUsageAnalysis.h"
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -272,6 +273,15 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
           Info.Callees.push_back(Callee);
 
         bool IsIndirect = !Callee || Callee->isDeclaration();
+        Info.HasIndirectCall |= IsIndirect;
+
+        // In object linking mode the linker has the full cross-TU view. It
+        // propagates resource usage across both direct calls to external
+        // declarations and true indirect calls. Skip the compile-time
+        // conservative assumptions so that the locally emitted metadata
+        // describes this function's own usage only.
+        if (AMDGPUTargetMachine::EnableObjectLinking)
+          continue;
 
         // FIXME: Call site could have norecurse on it
         if (!Callee || !Callee->doesNotRecurse()) {
@@ -301,7 +311,6 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
           Info.UsesVCC = true;
           Info.UsesFlatScratch = ST.hasFlatAddressSpace();
           Info.HasDynamicallySizedStack = true;
-          Info.HasIndirectCall = true;
         }
       }
     }

@@ -2080,8 +2080,7 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
     }
 
     if (AbsOp)
-      return copyFlags(
-          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, CI, "cabs"));
+      return copyFlags(*CI, B.CreateFAbs(AbsOp, CI, "cabs"));
 
     if (!CI->isFast())
       return nullptr;
@@ -2343,7 +2342,7 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
 
   // Handle signed zero base by expanding to fabs(sqrt(x)).
   if (!Pow->hasNoSignedZeros())
-    Sqrt = B.CreateUnaryIntrinsic(Intrinsic::fabs, Sqrt, nullptr, "abs");
+    Sqrt = B.CreateFAbs(Sqrt, nullptr, "abs");
 
   Sqrt = copyFlags(*Pow, Sqrt);
 
@@ -2840,8 +2839,7 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
   // If we found a repeated factor, hoist it out of the square root and
   // replace it with the fabs of that factor.
-  Value *FabsCall =
-      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, I, "fabs");
+  Value *FabsCall = B.CreateFAbs(RepeatOp, I, "fabs");
   if (OtherOp) {
     // If we found a non-repeated factor, we still need to get its square
     // root. We then multiply that by the value that was simplified out

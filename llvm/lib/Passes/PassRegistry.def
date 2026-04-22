@@ -119,6 +119,7 @@ MODULE_PASS("memprof-remove-attributes", MemProfRemoveInfo())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
+MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass())
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
@@ -161,8 +162,9 @@ MODULE_PASS("rtsan", RealtimeSanitizerPass())
 MODULE_PASS("sample-profile", SampleProfileLoaderPass())
 MODULE_PASS("sancov-module", SanitizerCoveragePass())
 MODULE_PASS("sanmd-module", SanitizerBinaryMetadataPass())
+// TODO: Rename (or parameterize by optimization level)
 MODULE_PASS("scc-oz-module-inliner",
-            buildInlinerPipeline(OptimizationLevel::Oz,
+            buildInlinerPipeline(OptimizationLevel::O2,
                                  ThinOrFullLTOPhase::None))
 MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass())
 MODULE_PASS("strip", StripSymbolsPass())

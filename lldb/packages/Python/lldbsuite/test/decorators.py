@@ -911,6 +911,20 @@ def skipUnlessWindows(func):
     return skipUnlessPlatform(["windows"])(func)
 
 
+def skipUnlessWindowsConPTY(func):
+    """Skip if on Windows older than 10.0.17763 (the first build to ship ConPTY)."""
+    return skipIfWindows(windows_version=["<", "10.0.17763"])(func)
+
+
+def skipUnlessWindowsConPTY2022(func):
+    """Skip on Windows older than 10.0.20348 (Server 2022).
+
+    Windows Server 2019 (10.0.17763) emits additional VT initialisation
+    sequences that LLDB does not handle.
+    """
+    return skipIfWindows(windows_version=["<", "10.0.20348"])(func)
+
+
 def skipUnlessDarwin(func):
     """Decorate the item to skip tests that should be skipped on any non Darwin platform."""
     return skipUnlessPlatform(lldbplatformutil.getDarwinOSTriples())(func)
@@ -1366,3 +1380,14 @@ def skipUnlessArm64eSupported(func):
         return None
 
     return skipTestIfFn(can_build_and_run_arm64e)(func)
+
+
+def skipUnlessPackageAvailable(name):
+    """Skip the test case if the named package is not available on the system."""
+    available = True
+    try:
+        __import__(name)
+    except ImportError:
+        available = False
+
+    return unittest.skipUnless(available, f"requires the '{name}' package")
