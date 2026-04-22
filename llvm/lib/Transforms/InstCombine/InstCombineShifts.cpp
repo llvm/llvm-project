@@ -509,7 +509,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
     uint64_t C2;
     Value *X;
     if (match(Op1, m_NUWSub(m_ConstantInt(C2), m_Value(X))) ||
-        (match(Op1, m_Xor(m_Value(X), m_ConstantInt(C2))) && isMask_64(C2) &&
+        (match(Op1, m_Xor(m_Value(X), m_ConstantInt(C2))) &&
          (C2 | computeKnownBits(X, &I).Zero).isAllOnes())) {
       if (I.getOpcode() == Instruction::Shl) {
         if (AC->countl_zero() >= C2)

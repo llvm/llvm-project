@@ -138,8 +138,7 @@ define i16 @shl_xor_i2(i2 %x) {
 define i8 @shl_xor_notmask(i8 %x) {
 ; CHECK-LABEL: @shl_xor_notmask(
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[S:%.*]] = xor i8 [[M]], 6
-; CHECK-NEXT:    [[R:%.*]] = shl nuw i8 2, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 -128, [[M]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = and i8 %x, 2
