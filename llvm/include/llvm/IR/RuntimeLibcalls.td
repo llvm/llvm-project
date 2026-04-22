@@ -504,6 +504,9 @@ def RETURN_ADDRESS : RuntimeLibcall;
 def CLEAR_CACHE : RuntimeLibcall;
 def RISCV_FLUSH_ICACHE : RuntimeLibcall;
 
+// Profile instrumentation runtime
+def INSTR_PROF_INSTRUMENT_GPU : RuntimeLibcall;
+
 // Mips16 calls
 def MIPS16_RET_DC : RuntimeLibcall;
 def MIPS16_RET_DF : RuntimeLibcall;
@@ -1156,6 +1159,10 @@ def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
 
 // Clear cache
 def __clear_cache : RuntimeLibcallImpl<CLEAR_CACHE>;
+
+// Profile instrumentation runtime
+def __llvm_profile_instrument_gpu :
+    RuntimeLibcallImpl<INSTR_PROF_INSTRUMENT_GPU>;
 
 //--------------------------------------------------------------------
 // libm
@@ -2241,8 +2248,8 @@ def WindowsARM64ECSystemLibrary
 
 def isAMDGPU : RuntimeLibcallPredicate<"TT.isAMDGPU()">;
 
-// No calls.
-def AMDGPUSystemLibrary : SystemRuntimeLibrary<isAMDGPU, (add)>;
+def AMDGPUSystemLibrary :
+    SystemRuntimeLibrary<isAMDGPU, (add __llvm_profile_instrument_gpu)>;
 
 //===----------------------------------------------------------------------===//
 // ARM Runtime Libcalls

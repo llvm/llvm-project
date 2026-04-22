@@ -22,6 +22,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Attributes.h"
@@ -45,6 +46,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -247,14 +249,16 @@ static bool profDataReferencedByCode(const Module &M) {
 
 // Extract CUID (Compilation Unit ID) from the module.
 // HIP/CUDA modules have a global variable __hip_cuid_<hash> that uniquely
-// identifies each translation unit. Returns empty string if not found.
-static std::string getCUIDFromModule(const Module &M) {
+// identifies each translation unit. Returns an empty StringRef if not found.
+// The returned StringRef points into the GlobalVariable's name, which is
+// owned by the Module and stable for the Module's lifetime.
+static StringRef getCUIDFromModule(const Module &M) {
   for (const GlobalVariable &GV : M.globals()) {
     if (!GV.hasExternalLinkage())
       continue;
     StringRef Name = GV.getName();
     if (Name.consume_front("__hip_cuid_"))
-      return Name.str();
+      return Name;
   }
   return "";
 }
@@ -263,9 +267,10 @@ class InstrLowerer final {
 public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
-               bool IsCS)
+               const RTLIB::RuntimeLibcallsInfo &RTLCI, bool IsCS)
       : M(M), Options(Options), TT(M.getTargetTriple()), IsCS(IsCS),
-        GetTLI(GetTLI), DataReferencedByCode(profDataReferencedByCode(M)) {}
+        GetTLI(GetTLI), RTLCI(RTLCI),
+        DataReferencedByCode(profDataReferencedByCode(M)) {}
 
   bool lower();
 
@@ -277,6 +282,9 @@ private:
   const bool IsCS;
 
   std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
+
+  // Runtime libcall registry (e.g. __llvm_profile_instrument_gpu).
+  const RTLIB::RuntimeLibcallsInfo &RTLCI;
 
   const bool DataReferencedByCode;
 
@@ -714,7 +722,9 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
   auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  InstrLowerer Lowerer(M, Options, GetTLI, IsCS);
+  const RTLIB::RuntimeLibcallsInfo &RTLCI =
+      AM.getResult<RuntimeLibraryAnalysis>(M);
+  InstrLowerer Lowerer(M, Options, GetTLI, RTLCI, IsCS);
   if (!Lowerer.lower())
     return PreservedAnalyses::all();
 
@@ -1301,8 +1311,18 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
 
   auto *CalleeTy = FunctionType::get(Type::getVoidTy(Context),
                                      {PtrTy, PtrTy, Int64Ty}, false);
-  FunctionCallee IncrFn =
-      M.getOrInsertFunction("__llvm_profile_instrument_gpu", CalleeTy);
+  // Look up the runtime entry-point name through the RuntimeLibcalls
+  // registry instead of hardcoding the string. The abstract libcall is
+  // registered in llvm/include/llvm/IR/RuntimeLibcalls.td and a concrete
+  // impl is added to AMDGPUSystemLibrary; the consumer side is in
+  // compiler-rt's clang_rt.profile.
+  RTLIB::LibcallImpl IncrImpl =
+      RTLCI.getLibcallImpl(RTLIB::INSTR_PROF_INSTRUMENT_GPU);
+  assert(IncrImpl != RTLIB::Unsupported &&
+         "RuntimeLibcalls.td must register INSTR_PROF_INSTRUMENT_GPU "
+         "for any target that reaches lowerIncrementAMDGPU");
+  StringRef IncrFnName = RTLCI.getLibcallImplName(IncrImpl);
+  FunctionCallee IncrFn = M.getOrInsertFunction(IncrFnName, CalleeTy);
   Builder.CreateCall(IncrFn, {CastAddr, UniformAddrArg, StepI64});
 
   Inc->eraseFromParent();
@@ -2173,9 +2193,10 @@ void InstrLowerer::emitNameData() {
       ConstantDataArray::getString(Ctx, StringRef(CompressedNameStr), false);
   std::string NamesVarName = std::string(getInstrProfNamesVarName());
   if (isGPUProfTarget(M)) {
-    std::string CUID = CachedCUID.empty() ? getCUIDFromModule(M) : CachedCUID;
+    StringRef CUID =
+        CachedCUID.empty() ? getCUIDFromModule(M) : StringRef(CachedCUID);
     if (!CUID.empty())
-      NamesVarName = NamesVarName + "_" + CUID;
+      NamesVarName = (Twine(NamesVarName) + "_" + CUID).str();
   }
   NamesVar =
       new GlobalVariable(M, NamesVal->getType(), true,
@@ -2455,7 +2476,7 @@ void InstrLowerer::createProfileSectionSymbols() {
   // The host reads through this indirection: hipGetSymbolAddress gives the
   // pointer global's device address, then one DtoH copy yields the sections
   // struct address, then another DtoH copy reads the actual sections.
-  auto *PtrTy = PointerType::get(Ctx, AS);
+  auto *PtrTy = SectionsGV->getType();
   auto *PtrInit =
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(SectionsGV, PtrTy);
   std::string PtrName = "__llvm_offload_prf_" + CachedCUID;
@@ -2470,7 +2491,8 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
   if (isGPUProfTarget(M))
     return;
 
-  std::string CUID = CachedCUID.empty() ? getCUIDFromModule(M) : CachedCUID;
+  StringRef CUID =
+      CachedCUID.empty() ? getCUIDFromModule(M) : StringRef(CachedCUID);
   if (CUID.empty())
     return;
 
@@ -2478,7 +2500,7 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
   auto *VoidTy = Type::getVoidTy(Ctx);
   auto *VoidPtrTy = PointerType::getUnqual(Ctx);
 
-  std::string OffloadPrfName = "__llvm_offload_prf_" + CUID;
+  std::string OffloadPrfName = ("__llvm_offload_prf_" + CUID).str();
   auto *OffloadPrfShadow = new GlobalVariable(
       M, VoidPtrTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
       ConstantPointerNull::get(cast<PointerType>(VoidPtrTy)), OffloadPrfName);
@@ -2494,7 +2516,7 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
     // linker wrapper generates __hipRegisterVar in the final module ctor.
     llvm::offloading::emitOffloadingEntry(
         M, llvm::object::OffloadKind::OFK_HIP, OffloadPrfShadow, OffloadPrfName,
-        M.getDataLayout().getPointerSize(),
+        M.getDataLayout().getPointerSize(VoidPtrTy->getPointerAddressSpace()),
         llvm::offloading::OffloadGlobalEntry, /*Data=*/0);
 
     auto *CtorFn = Function::Create(FunctionType::get(VoidTy, false),
@@ -2535,8 +2557,7 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
     }
 
   if (!FatbinHandleGV) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "store of __hipRegisterFatBinary call not found\n");
+    LLVM_DEBUG(dbgs() << "store of __hipRegisterFatBinary call not found\n");
   }
 
   // Insert the new registration just before the ctor’s return
@@ -2548,9 +2569,8 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
     return;
   IRBuilder<> Builder(RetInst);
 
-  LLVM_DEBUG(
-      llvm::dbgs() << "Found __hip_module_ctor, registering anchors for CUID="
-                   << CUID << "\n");
+  LLVM_DEBUG(dbgs() << "Found __hip_module_ctor, registering anchors for CUID="
+                    << CUID << "\n");
 
   auto *Int32Ty = Type::getInt32Ty(Ctx);
   auto *Int64Ty = Type::getInt64Ty(Ctx);

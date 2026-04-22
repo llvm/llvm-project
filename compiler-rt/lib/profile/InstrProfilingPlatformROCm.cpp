@@ -12,17 +12,7 @@ extern "C" {
 #include "InstrProfilingPort.h"
 }
 
-// interception.h pulls in sanitizer_internal_defs.h, which normally includes
-// sanitizer_redefine_builtins.h. That uses inline asm to alias
-// memcpy/memmove/memset to __sanitizer_internal_* (see sanitizer_libc.cpp in
-// sanitizer_common). The instrumented *host* link for HIP (-fprofile-generate)
-// only pulls in libclang_rt.profile.a, not the full sanitizer_common objects
-// that define those symbols, so we get undefined references at link time. This
-// TU does not need the sanitizer builtin redirect; keep using libc
-// memcpy/memset.
-#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS 1
 #include "interception/interception.h"
-#undef SANITIZER_COMMON_NO_REDEFINE_BUILTINS
 // C library headers (not <cstdio> etc.): clang_rt.profile is built with
 // -nostdinc++ and avoids the C++ standard library (see profile/CMakeLists.txt).
 #include <stddef.h>
@@ -127,7 +117,7 @@ static void ensureHipLoaded(void) {
         Count = MAX_DEVICES;
       HipDevicePropMinimal Prop;
       for (int i = 0; i < Count; ++i) {
-        memset(&Prop, 0, sizeof(Prop));
+        __builtin_memset(&Prop, 0, sizeof(Prop));
         if (pHipGetDeviceProperties(&Prop, i) == 0) {
           strncpy(DeviceArchNames[i], Prop.gcnArchName,
                   sizeof(DeviceArchNames[i]) - 1);
@@ -234,17 +224,18 @@ static const void *unwrapOffloadBundle(const void *Image) {
 
   const char *Buf = (const char *)Image;
   uint64_t NumEntries;
-  memcpy(&NumEntries, Buf + sizeof(BundleMagic) - 1, sizeof(uint64_t));
+  __builtin_memcpy(&NumEntries, Buf + sizeof(BundleMagic) - 1,
+                   sizeof(uint64_t));
 
   /* Walk the entry table (starts at offset 32). */
   const char *Cursor = Buf + 32;
   for (uint64_t I = 0; I < NumEntries; ++I) {
     uint64_t EntryOffset, EntrySize, IDSize;
-    memcpy(&EntryOffset, Cursor, sizeof(EntryOffset));
+    __builtin_memcpy(&EntryOffset, Cursor, sizeof(EntryOffset));
     Cursor += sizeof(EntryOffset);
-    memcpy(&EntrySize, Cursor, sizeof(EntrySize));
+    __builtin_memcpy(&EntrySize, Cursor, sizeof(EntrySize));
     Cursor += sizeof(EntrySize);
-    memcpy(&IDSize, Cursor, sizeof(IDSize));
+    __builtin_memcpy(&IDSize, Cursor, sizeof(IDSize));
     Cursor += sizeof(IDSize);
     /* Skip the entry ID string. */
     Cursor += IDSize;
@@ -691,16 +682,16 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
     return -1;
   }
   char *ContiguousBuffer = ContiguousBuf.get();
-  memset(ContiguousBuffer, 0, ContiguousBufferSize);
+  __builtin_memset(ContiguousBuffer, 0, ContiguousBufferSize);
 
   char *BufDataBegin = ContiguousBuffer;
   char *BufCountersBegin =
       ContiguousBuffer + DataSize + PaddingBytesBeforeCounters;
   char *BufNamesBegin = BufCountersBegin + CountersSize;
 
-  memcpy(BufDataBegin, HostDataBegin, DataSize);
-  memcpy(BufCountersBegin, HostCountersBegin, CountersSize);
-  memcpy(BufNamesBegin, HostNamesBegin, NamesSize);
+  __builtin_memcpy(BufDataBegin, HostDataBegin, DataSize);
+  __builtin_memcpy(BufCountersBegin, HostCountersBegin, CountersSize);
+  __builtin_memcpy(BufNamesBegin, HostNamesBegin, NamesSize);
 
   // Relocate CounterPtr in data records for file layout.
   // CounterPtr is device-relative offset; adjust for file layout where
@@ -719,16 +710,16 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
       ptrdiff_t NewRelativeOffset = DataSize + PaddingBytesBeforeCounters +
                                     OffsetIntoCountersSection -
                                     (i * sizeof(__llvm_profile_data));
-      memcpy((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
-                 offsetof(__llvm_profile_data, CounterPtr),
-             &NewRelativeOffset, sizeof(NewRelativeOffset));
+      __builtin_memcpy((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
+                           offsetof(__llvm_profile_data, CounterPtr),
+                       &NewRelativeOffset, sizeof(NewRelativeOffset));
     }
-    memset((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
-               offsetof(__llvm_profile_data, BitmapPtr),
-           0,
-           sizeof(RelocatedData[i].BitmapPtr) +
-               sizeof(RelocatedData[i].FunctionPointer) +
-               sizeof(RelocatedData[i].Values));
+    __builtin_memset((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
+                         offsetof(__llvm_profile_data, BitmapPtr),
+                     0,
+                     sizeof(RelocatedData[i].BitmapPtr) +
+                         sizeof(RelocatedData[i].FunctionPointer) +
+                         sizeof(RelocatedData[i].Values));
   }
 
   char TUIndexStr[16];

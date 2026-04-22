@@ -99,6 +99,18 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   default:
     break;
   }
+
+  // Populate the abstract Libcall -> first available LibcallImpl cache so that
+  // IR passes (which don't have a TargetSubtargetInfo) can resolve a libcall
+  // name from its abstract enum the same way codegen does. Matches the
+  // "first available impl wins" policy used by LibcallLoweringInfo.
+  for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+    if (!isAvailable(Impl))
+      continue;
+    RTLIB::Libcall LC = getLibcallFromImpl(Impl);
+    if (LibcallImpls[LC] == RTLIB::Unsupported)
+      LibcallImpls[LC] = Impl;
+  }
 }
 
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
