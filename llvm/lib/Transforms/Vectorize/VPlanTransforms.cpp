@@ -1279,7 +1279,9 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
                             Ops[1]);
     case Instruction::GetElementPtr: {
       auto &RFlags = cast<VPRecipeWithIRFlags>(R);
-      auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
+      auto *GEP = cast_or_null<GetElementPtrInst>(RFlags.getUnderlyingValue());
+      if (!GEP)
+        return nullptr;
       return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0],
                             drop_begin(Ops), RFlags.getGEPNoWrapFlags());
     }

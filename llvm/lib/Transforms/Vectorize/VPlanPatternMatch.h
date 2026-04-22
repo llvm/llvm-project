@@ -1011,7 +1011,8 @@ private:
 
     if constexpr (std::is_same_v<RecipeTy, VPWidenGEPRecipe>) {
       SourceElementType = DefR->getSourceElementType();
-    } else if (DefR->getOpcode() == Instruction::GetElementPtr) {
+    } else if (DefR->getOpcode() == Instruction::GetElementPtr &&
+               DefR->getUnderlyingValue()) {
       SourceElementType = cast<GetElementPtrInst>(DefR->getUnderlyingInstr())
                               ->getSourceElementType();
     } else if constexpr (std::is_same_v<RecipeTy, VPInstruction>) {
