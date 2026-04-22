@@ -233,8 +233,8 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
   // functions. It's OK to hardcode knowledge of specific symbols here; this
   // method is precisely there for fetching the signatures of known
   // Clang-provided symbols.
-  if (Name == "__stack_pointer" || Name == "__init_stack_pointer" ||
-      Name == "__tls_base" || Name == "__init_tls_base" ||
+  if (Name == "__stack_pointer"  ||
+      Name == "__tls_base" ||
       Name == "__memory_base" || Name == "__table_base" ||
       Name == "__tls_size" || Name == "__tls_align") {
     bool Mutable = Name == "__stack_pointer" || Name == "__tls_base";
