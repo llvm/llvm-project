@@ -438,8 +438,9 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // to DISubroutineType to inform debugger that it may not be safe to call this
   // function.
   DISubprogram *SP = NF->getSubprogram();
-  if (SP) {
-    auto Temp = SP->getType()->cloneWithCC(llvm::dwarf::DW_CC_nocall);
+  DISubroutineType *SPTy = SP ? SP->getType() : nullptr;
+  if (SPTy) {
+    auto Temp = SPTy->cloneWithCC(llvm::dwarf::DW_CC_nocall);
     SP->replaceType(MDNode::replaceWithPermanent(std::move(Temp)));
   }
 
