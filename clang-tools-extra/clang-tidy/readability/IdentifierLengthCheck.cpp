@@ -64,12 +64,14 @@ IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
 
 void IdentifierLengthCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MinimumVariableNameLength", MinimumVariableNameLength);
+  Options.store(Opts, "MinimumBindingNameLength", MinimumBindingNameLength);
   Options.store(Opts, "MinimumLoopCounterNameLength",
                 MinimumLoopCounterNameLength);
   Options.store(Opts, "MinimumExceptionNameLength", MinimumExceptionNameLength);
   Options.store(Opts, "MinimumParameterNameLength", MinimumParameterNameLength);
-  Options.store(Opts, "IgnoredLoopCounterNames", IgnoredLoopCounterNamesInput);
   Options.store(Opts, "IgnoredVariableNames", IgnoredVariableNamesInput);
+  Options.store(Opts, "IgnoredBindingNames", IgnoredBindingNamesInput);
+  Options.store(Opts, "IgnoredLoopCounterNames", IgnoredLoopCounterNamesInput);
   Options.store(Opts, "IgnoredExceptionVariableNames",
                 IgnoredExceptionVariableNamesInput);
   Options.store(Opts, "IgnoredParameterNames", IgnoredParameterNamesInput);
@@ -164,6 +166,10 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (VarName.size() >= MinimumBindingNameLength ||
         IgnoredBindingNames.match(VarName))
+      return;
+
+    if (isShortLived(BindingVar, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
       return;
 
     diag(BindingVar->getLocation(), ErrorMessage)
