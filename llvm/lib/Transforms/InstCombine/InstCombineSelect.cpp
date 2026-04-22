@@ -3347,19 +3347,6 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
   return ChangedFMF ? &SI : nullptr;
 }
 
-// Match a select that returns X when X is not NaN, and Y otherwise.
-static Value *matchNaNScrubbedValue(Value *V, Value *Y) {
-  Value *Cond, *X;
-  if (!match(V, m_Select(m_Value(Cond), m_Value(X), m_Specific(Y))))
-    return nullptr;
-
-  if (!match(Cond, m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Specific(X),
-                                           m_AnyZeroFP()))))
-    return nullptr;
-
-  return X;
-}
-
 // Fold a select of an ordered fcmp using fabs of a NaN-scrubbed value:
 //   %s   = select i1 (isnotnan T %x), T %x, T %y
 //   %a   = call T @llvm.fabs.T(T %s)
@@ -3386,8 +3373,12 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
 
   Value *Y = SI.getFalseValue();
   Value *InnerSel = SI.getTrueValue();
-  Value *X = matchNaNScrubbedValue(InnerSel, Y);
-  if (!X)
+  // Match a select that returns X when X is not NaN, and Y otherwise.
+  Value *X;
+  if (!match(InnerSel,
+             m_Select(m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(X),
+                                              m_AnyZeroFP())),
+                      m_Deferred(X), m_Specific(Y))))
     return nullptr;
 
   if (!match(Cmp0, m_OneUse(m_FAbs(m_Specific(InnerSel))))) {
@@ -3398,7 +3389,7 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
     Pred = CmpInst::getSwappedPredicate(Pred);
   }
 
-  Value *NewAbs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+  Value *NewAbs = IC.Builder.CreateFAbs(X);
 
   // Do not preserve nnan on the new fcmp: when X is NaN, the old compare
   // evaluated fabs(Y), while the new compare evaluates fabs(X).
