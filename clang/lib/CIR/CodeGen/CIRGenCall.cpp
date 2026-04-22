@@ -849,12 +849,6 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
 
   QualType type = param->getType();
 
-  if (type->getAsCXXRecordDecl()) {
-    cgm.errorNYI(param->getSourceRange(),
-                 "emitDelegateCallArg: record argument");
-    return;
-  }
-
   // GetAddrOfLocalVar returns a pointer-to-pointer for references, but the
   // argument needs to be the original pointer.
   if (type->isReferenceType()) {
