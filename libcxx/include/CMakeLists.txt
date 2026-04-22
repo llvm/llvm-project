@@ -928,6 +928,7 @@ set(files
   __utility/as_lvalue.h
   __utility/auto_cast.h
   __utility/cmp.h
+  __utility/constant_wrapper.h
   __utility/convert_to_integral.h
   __utility/declval.h
   __utility/default_three_way_comparator.h
