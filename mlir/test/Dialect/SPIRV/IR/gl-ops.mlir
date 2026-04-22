@@ -128,6 +128,32 @@ func.func @inversesqrtvec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.MatrixInverse
+//===----------------------------------------------------------------------===//
+
+func.func @matrix_inverse(%matrix : !spirv.matrix<4 x vector<4xf32>>) -> () {
+  // CHECK: spirv.GL.MatrixInverse {{%.*}} : !spirv.matrix<4 x vector<4xf32>>
+  %0 = spirv.GL.MatrixInverse %matrix : !spirv.matrix<4 x vector<4xf32>>
+  return
+}
+
+func.func @matrix_inverse_2x2(%matrix : !spirv.matrix<2 x vector<2xf32>>) -> () {
+  // CHECK: spirv.GL.MatrixInverse {{%.*}} : !spirv.matrix<2 x vector<2xf32>>
+  %0 = spirv.GL.MatrixInverse %matrix : !spirv.matrix<2 x vector<2xf32>>
+  return
+}
+
+// -----
+
+func.func @matrix_inverse_non_square(%matrix : !spirv.matrix<3 x vector<4xf32>>) -> () {
+  // expected-error @+1 {{matrix must be square, got 3 columns and 4 rows}}
+  %0 = spirv.GL.MatrixInverse %matrix : !spirv.matrix<3 x vector<4xf32>>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Sqrt
 //===----------------------------------------------------------------------===//
 
