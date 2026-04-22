@@ -273,7 +273,6 @@ static void createTextureLoad(IntrinsicInst *II, LoadInst *LI,
 
   // For operator[], offsets are zero.
   Type *CoordTy = Coords->getType();
-
   Type *OffsetTy;
   if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy))
     OffsetTy =
