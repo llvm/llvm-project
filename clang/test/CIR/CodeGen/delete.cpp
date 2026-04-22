@@ -100,7 +100,7 @@ Container::~Container() { delete contents; }
 
 // LLVM: define dso_local void @_ZN9ContainerD2Ev
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
-// LLVM:   %[[CONTENTS_PTR_ADDR:.*]] = getelementptr %struct.Container, ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[CONTENTS_PTR_ADDR:.*]] = getelementptr inbounds nuw %struct.Container, ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[CONTENTS_PTR:.*]] = load ptr, ptr %[[CONTENTS_PTR_ADDR]]
 // LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[CONTENTS_PTR]], null
 // LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
