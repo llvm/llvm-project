@@ -1497,16 +1497,18 @@ void ASTContext::eraseDeclAttrs(const Decl *D) {
 }
 
 ArrayRef<ExplicitInstantiationDecl *>
-ASTContext::getExplicitInstantiationDecls(const Decl *Spec) const {
-  auto It = ExplicitInstantiations.find(Spec->getCanonicalDecl());
+ASTContext::getExplicitInstantiationDecls(const NamedDecl *Spec) const {
+  auto It =
+      ExplicitInstantiations.find(cast<NamedDecl>(Spec->getCanonicalDecl()));
   if (It != ExplicitInstantiations.end())
     return It->second;
   return {};
 }
 
-void ASTContext::addExplicitInstantiationDecl(const Decl *Spec,
+void ASTContext::addExplicitInstantiationDecl(const NamedDecl *Spec,
                                               ExplicitInstantiationDecl *EID) {
-  ExplicitInstantiations[Spec->getCanonicalDecl()].push_back(EID);
+  ExplicitInstantiations[cast<NamedDecl>(Spec->getCanonicalDecl())].push_back(
+      EID);
 }
 
 // FIXME: Remove ?

@@ -1846,12 +1846,8 @@ SourceLocation ExplicitInstantiationDecl::getTagKWLoc() const {
 NestedNameSpecifierLoc ExplicitInstantiationDecl::getQualifierLoc() const {
   if (hasTrailingQualifier())
     return *getTrailingObjects<NestedNameSpecifierLoc>();
-  if (auto *TSI = getRawTypeSourceInfo()) {
-    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
-      return TL.getQualifierLoc();
-    if (auto TL = TSI->getTypeLoc().getAs<TagTypeLoc>())
-      return TL.getQualifierLoc();
-  }
+  if (auto *TSI = getRawTypeSourceInfo())
+    return TSI->getTypeLoc().getPrefix();
   return NestedNameSpecifierLoc();
 }
 

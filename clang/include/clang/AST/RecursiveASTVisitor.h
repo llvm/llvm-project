@@ -1749,12 +1749,14 @@ DEF_TRAVERSE_DECL(StaticAssertDecl, {
 })
 
 DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
+  // No double visiting: getTypeAsWritten() returns null for class
+  // templates/nested classes where the qualifier lives inside the TSI.
   if (D->getQualifierLoc())
     TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
-  for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I)
-    TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
   if (TypeSourceInfo *TSI = D->getTypeAsWritten())
     TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
+  for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I)
+    TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
 })
 
 DEF_TRAVERSE_DECL(TranslationUnitDecl, {

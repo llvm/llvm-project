@@ -684,12 +684,12 @@ public:
   }
 
   void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D) {
+    if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+      Visit(TSI->getTypeLoc());
     for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I) {
       TemplateArgumentLoc Loc = D->getTemplateArg(I);
       Visit(Loc.getArgument(), Loc.getSourceRange());
     }
-    if (TypeSourceInfo *TSI = D->getTypeAsWritten())
-      Visit(TSI->getTypeLoc());
   }
 
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {

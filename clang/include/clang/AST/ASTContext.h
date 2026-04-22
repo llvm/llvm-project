@@ -659,7 +659,8 @@ private:
 
   /// Maps a canonical specialization Decl to all ExplicitInstantiationDecls
   /// that reference it (declarations and definitions).
-  llvm::DenseMap<const Decl *, llvm::TinyPtrVector<ExplicitInstantiationDecl *>>
+  llvm::DenseMap<const NamedDecl *,
+                 llvm::TinyPtrVector<ExplicitInstantiationDecl *>>
       ExplicitInstantiations;
 
   /// Mapping that stores the methods overridden by a given C++
@@ -1142,10 +1143,10 @@ public:
 
   /// Get all ExplicitInstantiationDecls for a given specialization.
   ArrayRef<ExplicitInstantiationDecl *>
-  getExplicitInstantiationDecls(const Decl *Spec) const;
+  getExplicitInstantiationDecls(const NamedDecl *Spec) const;
 
   /// Add an ExplicitInstantiationDecl for a given specialization.
-  void addExplicitInstantiationDecl(const Decl *Spec,
+  void addExplicitInstantiationDecl(const NamedDecl *Spec,
                                     ExplicitInstantiationDecl *EID);
 
   /// If this variable is an instantiated static data member of a
