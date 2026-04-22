@@ -12187,18 +12187,14 @@ operation. The operation must be one of the following keywords:
 -  usub_cond
 -  usub_sat
 
-For most of these operations, the type of '<value>' must be an integer
-type whose bit width is a power of two greater than or equal to eight.
-For xchg, this
-may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point
-or fixed vector of floating-point type, with the same size constraints. The type of the '``<pointer>``'
-operand must be a pointer to that type. If the ``atomicrmw`` is marked
-as ``volatile``, then the optimizer is not allowed to modify the
+For all of these operations, the type of '<value>' must be a type whose bit width is a power of two greater than or equal to eight.
+For add/sub/and/nand/or/xor/max/min/umax/umin/uinc_wrap/udec_wrap/usub_cond/usub_sat, this must be an integer type, or, if the ``elementwise`` modifier is present, a fixed vector of integer type.
+For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point or fixed vector of floating-point type.
+For xchg, this must be an integer type, floating-point type, or pointer type, or, if the ``elementwise`` modifier is present, a fixed vector of integer type, floating-point type, or pointer type.
+The type of the '<pointer>' operand must be a pointer to the type of '<value>'.
+If the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not allowed to modify the
 number or order of execution of this ``atomicrmw`` with other
-:ref:`volatile operations <volatile>`. If the ``elementwise`` modifier is present,
-then ``<value>`` must be a fixed vector type, with the same size constraints, whose element type is legal for the
-corresponding scalar ``atomicrmw`` operation.
+:ref:`volatile operations <volatile>`.
 
 Note: if the alignment is not greater or equal to the size of the `<value>`
 type, the atomic operation is likely to require a lock and have poor
@@ -12214,14 +12210,8 @@ An ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
 
 If the ``elementwise`` modifier is present, the instruction has per-element vector
-atomic semantics. It behaves as if it were expanded into one scalar ``atomicrmw`` per element, executed in an arbitrary order.
+atomic semantics. It behaves as if it were expanded into one scalar ``atomicrmw`` per element, that are not ordered with respect to each other.
 Without ``elementwise``, vector ``atomicrmw`` keeps whole-value atomic semantics.
-
-Targets may implement ``atomicrmw elementwise`` either by lowering it to a
-native elementwise vector atomic, by scalarizing it into per-element scalar
-``atomicrmw`` operations, or by using an existing stronger whole-value atomic
-implementation, as long as the observable semantics are at least as strong as
-the IR definition above.
 
 Semantics:
 """"""""""
