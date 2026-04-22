@@ -17,6 +17,8 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -113,6 +115,8 @@ private:
                     bool &DevirtualizedCall);
   bool RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
                         bool IsCheckingMode);
+  bool RunAllPassesOnOrphanNodes(CallGraph &CG, CallGraphSCC &CurSCC,
+                            std::vector<const CallGraphNode *> &VisitedNodes);
 };
 
 } // end anonymous namespace.
@@ -505,11 +509,21 @@ bool CGPassManager::runOnModule(Module &M) {
   scc_iterator<CallGraph*> CGI = scc_begin(&CG);
 
   CallGraphSCC CurSCC(CG, &CGI);
+
+  // Track which CallGraphNodes the main scc_iterator visits so the orphan
+  // catch-up below can run the same passes on any non-declaration Function
+  // whose node was not reached from ExternalCallingNode. Such orphan nodes
+  // would otherwise be silently skipped by the CGSCC pipeline; on targets
+  // that schedule a ModulePass mid-codegen they later trigger an empty
+  // MachineFunction crash in downstream passes (issue #119556).
+  std::vector<const CallGraphNode *> VisitedNodes;
+
   while (!CGI.isAtEnd()) {
     // Copy the current SCC and increment past it so that the pass can hack
     // on the SCC if it wants to without invalidating our iterator.
     const std::vector<CallGraphNode *> &NodeVec = *CGI;
     CurSCC.initialize(NodeVec);
+    VisitedNodes.insert(VisitedNodes.end(), NodeVec.begin(), NodeVec.end());
     ++CGI;
 
     // At the top level, we run all the passes in this pass manager on the
@@ -541,7 +555,48 @@ bool CGPassManager::runOnModule(Module &M) {
 
     MaxSCCIterations.updateMax(Iteration);
   }
+
+  Changed |= RunAllPassesOnOrphanNodes(CG, CurSCC, VisitedNodes);
   Changed |= doFinalization(CG);
+  return Changed;
+}
+
+bool CGPassManager::RunAllPassesOnOrphanNodes(
+    CallGraph &CG, CallGraphSCC &CurSCC,
+    std::vector<const CallGraphNode *> &VisitedNodes) {
+  bool Changed = false;
+
+  // Collect orphan roots up front so Module iteration cannot be disturbed
+  // by IR-level mutation a pass may perform on an orphan.
+  std::vector<CallGraphNode *> OrphanRoots;
+  for (Function &F : CG.getModule()) {
+    if (!F.isDeclaration()) {
+      CallGraphNode *Node = CG[&F];
+      if (!is_contained(VisitedNodes, Node))
+        OrphanRoots.push_back(Node);
+    }
+  }
+
+  for (CallGraphNode *Root : OrphanRoots) {
+    if (!is_contained(VisitedNodes, Root)) {
+      for (auto SCCI = scc_begin(Root); !SCCI.isAtEnd(); ++SCCI) {
+        const std::vector<CallGraphNode *> &Members = *SCCI;
+        if (!any_of(Members, [&](CallGraphNode *M) {
+              return is_contained(VisitedNodes, M);
+            })) {
+          // Skip any orphaned node that is not in another root and hasn't been
+          // called by another orphaned node yet.
+          // Create a CallGraphSCC for them.
+          // Ignore devirtualization since it really doesn't matter here.
+          CurSCC.initialize(Members);
+          bool UnusedDevirtualizedCall = false;
+          Changed |= RunAllPassesOnSCC(CurSCC, CG, UnusedDevirtualizedCall);
+          VisitedNodes.insert(VisitedNodes.end(), Members.begin(),
+                              Members.end());
+        }
+      }
+    }
+  }
   return Changed;
 }
 
