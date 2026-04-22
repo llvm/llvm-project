@@ -509,10 +509,22 @@ bool llvm::matchFmulWithSelectToFldexpImpl(
         Builder.buildConstant(IntDestTy, SelectTrueLog2Val),
         Builder.buildConstant(IntDestTy, SelectFalseLog2Val));
 
+    const auto *RegBank = MRI.getRegBankOrNull(Dst);
+    if (RegBank) {
+      auto &MutMRI = Builder.getMF().getRegInfo();
+      MutMRI.setRegBank(NewSel.getReg(0), *RegBank);
+      MutMRI.setRegBank(NewSel->getOperand(2).getReg(), *RegBank);
+      MutMRI.setRegBank(NewSel->getOperand(3).getReg(), *RegBank);
+    }
+
     Register XReg = MI.getOperand(1).getReg();
     if (SelectTrueVal->isNegative()) {
       auto NegX =
           Builder.buildFNeg(DestTy, XReg, MRI.getVRegDef(XReg)->getFlags());
+      if (RegBank) {
+        auto &MutMRI = Builder.getMF().getRegInfo();
+        MutMRI.setRegBank(NegX.getReg(0), *RegBank);
+      }
       Builder.buildFLdexp(Dst, NegX, NewSel, MI.getFlags());
     } else {
       Builder.buildFLdexp(Dst, XReg, NewSel, MI.getFlags());
@@ -531,9 +543,7 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   // fldexp has no SALU form. On targets with SALU float, defer this combine
   // to the RegBankCombiner where register banks are known and we can limit it
   // to VGPR (divergent) values only.
-  if (STI.hasSALUFloatInsts() &&
-      (ScalarDestTy == LLT::scalar(64) || ScalarDestTy == LLT::scalar(32) ||
-       ScalarDestTy == LLT::scalar(16)))
+  if (STI.hasSALUFloatInsts() && ScalarDestTy == LLT::scalar(32))
     return false;
 
   return matchFmulWithSelectToFldexpImpl(MI, Sel, MatchInfo, MRI, TII);
