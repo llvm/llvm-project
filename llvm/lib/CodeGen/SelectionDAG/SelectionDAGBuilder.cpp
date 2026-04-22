@@ -7213,8 +7213,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Metadata *RoundMD =
         cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
     StringRef RoundStr = cast<MDString>(RoundMD)->getString();
-    std::optional<RoundingMode> RoundMode =
-        convertStrToRoundingMode(RoundStr);
+    std::optional<RoundingMode> RoundMode = convertStrToRoundingMode(RoundStr);
     if (!RoundMode || *RoundMode == RoundingMode::Dynamic) {
       DAG.getContext()->emitError(
           "convert_to_arbitrary_fp: unsupported rounding mode '" + RoundStr +
@@ -7233,8 +7232,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue RoundConst =
         DAG.getTargetConstant(static_cast<int>(*RoundMode), sdl, MVT::i32);
     SDValue SatConst = DAG.getTargetConstant(Saturate, sdl, MVT::i32);
-    setValue(&I, DAG.getNode(ISD::CONVERT_TO_ARBITRARY_FP, sdl, DstVT,
-                             FloatVal, SemConst, RoundConst, SatConst));
+    setValue(&I, DAG.getNode(ISD::CONVERT_TO_ARBITRARY_FP, sdl, DstVT, FloatVal,
+                             SemConst, RoundConst, SatConst));
     return;
   }
   case Intrinsic::set_rounding:
