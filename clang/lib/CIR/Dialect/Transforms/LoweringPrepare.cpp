@@ -193,8 +193,7 @@ struct LoweringPreparePass
         globalOp->emitError("NYI: guard COMDAT for non-local variables");
         return {};
       } else if (hasComdat && globalOp.isWeakForLinker()) {
-        globalOp->emitError("NYI: guard COMDAT for weak linkage");
-        return {};
+        guard.setComdat(true);
       }
 
       setStaticLocalDeclGuardAddress(globalSymName, guard);
