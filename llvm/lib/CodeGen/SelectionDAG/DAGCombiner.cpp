@@ -17165,6 +17165,16 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
+    // Skip trunc-through-binop when the trunc's flag lets a sole widening
+    // user elide the pair (DAGCombiner.cpp:15350 does
+    // "ext(trunc nsw/nuw X) -> ext X"). Pushing the trunc into the binop
+    // operands erases the flag and no generic combine reconstructs it.
+    if (N->hasOneUse()) {
+      unsigned UserOpc = N->user_begin()->getOpcode();
+      if ((UserOpc == ISD::SIGN_EXTEND && N->getFlags().hasNoSignedWrap()) ||
+          (UserOpc == ISD::ZERO_EXTEND && N->getFlags().hasNoUnsignedWrap()))
+        break;
+    }
     if (!LegalOperations && N0.hasOneUse() &&
         (N0.getOperand(0) == N0.getOperand(1) ||
          isConstantOrConstantVector(N0.getOperand(0), true) ||
