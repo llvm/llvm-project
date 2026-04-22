@@ -1512,8 +1512,7 @@ static DisassemblerTarget *getRISCVISAMappingTarget(
     ArrayRef<std::pair<uint64_t, DisassemblerTarget *>> Syms,
     uint64_t Address) {
   auto It = partition_point(
-      Syms,
-      [Address](const std::pair<uint64_t, DisassemblerTarget *> &Val) {
+      Syms, [Address](const std::pair<uint64_t, DisassemblerTarget *> &Val) {
         return Val.first <= Address;
       });
   if (It == Syms.begin())
