@@ -121,6 +121,17 @@ private:
       remove(first);
       return first;
     }
+
+    // Assume `this` is the dummy node of the queue. Separate nodes before
+    // cursor into a separate queue.
+    LIBC_INLINE void separate(QueueNode *cursor) {
+      QueueNode *removed_head = this->next;
+      QueueNode *removed_tail = cursor->prev;
+      this->next = cursor;
+      cursor->prev = this;
+      removed_tail->next = removed_head;
+      removed_head->prev = removed_tail;
+    }
   };
 
   // This node will be on the per-thread stack.
@@ -143,6 +154,9 @@ private:
     }
   };
 
+  // Group structures with similar alignment together to
+  // save trailing padding bytes, such that is_shared
+  // can be introduced without extra space.
   union {
     QueueNode waiter_queue;
     cpp::Atomic<size_t> shared_waiters;
@@ -182,6 +196,8 @@ private:
     // acquire the lock and dequeue themselves.
     {
       cpp::lock_guard lock(queue_lock);
+      // Still need to check the queue validity. CndVar maybe
+      // intialized by an empty intializer.
       waiter_queue.ensure_queue_initialization();
       if (waiter_queue.next == &waiter_queue)
         return;
@@ -201,12 +217,7 @@ private:
         limit--;
       }
       // remove everything before cursor
-      auto removed_head = waiter_queue.next;
-      auto removed_tail = cursor->prev;
-      waiter_queue.next = cursor;
-      cursor->prev = &waiter_queue;
-      removed_tail->next = removed_head;
-      removed_head->prev = removed_tail;
+      waiter_queue.separate(cursor);
     }
     // We want to make sure the propagation queue contain only threads
     // that have consumed the signal. So we wait until all cancelled
@@ -294,11 +305,16 @@ public:
       waiter.barrier.lock();
     }
 
+    // Reacquire the mutex lock. If error ever happens, we still wake up
+    // our successor so that remaining waiters can continue. However, we treat
+    // outselves as not owning the mute and we don't touch the contention
+    // bit.
     MutexError mutex_result = mutex->lock();
     // If we are requeued, we need to establish contention after lock, otherwise
     // requeued thread may clear the contention bit even though
     // there are still waiters behind it.
-    if (waiter.state.load(cpp::MemoryOrder::RELAXED) == Requeued)
+    if (mutex_result == MutexError::NONE &&
+        waiter.state.load(cpp::MemoryOrder::RELAXED) == Requeued)
       mutex->get_raw_futex().store(RawMutex::IN_CONTENTION);
     // If there is other in the queue after us, we need to wake the next waiter.
     // If we cancelled, we should naturally have waiter.next == &waiter
@@ -314,7 +330,7 @@ public:
       // If next waiter in queue sleeps, it will establish contention its own
       // barrier
       if (prev == RawMutex::IN_CONTENTION) {
-        if (mutex->can_be_requeued()) {
+        if (mutex_result == MutexError::NONE && mutex->can_be_requeued()) {
           ErrorOr<int> res = next_barrier_futex.requeue_to(
               mutex_futex, cpp::nullopt, /*wake_limit=*/0,
               /*requeue_limit=*/1,

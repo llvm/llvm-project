@@ -161,6 +161,7 @@ if(TARGET libc.src.__support.threads.futex_utils)
       libc.src.__support.CPP.new
       libc.src.__support.threads.sleep
       libc.src.__support.time.monotonicity
+      libc.src.__support.time.abs_timeout
   )
 endif()
 

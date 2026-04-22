@@ -34,10 +34,6 @@ class Mutex final : private RawMutex {
   friend class CndVar;
 
 public:
-  LIBC_INLINE bool can_be_requeued() const {
-    return !this->pshared && !this->robust;
-  }
-
   LIBC_INLINE constexpr Mutex(bool is_timed, bool is_recursive, bool is_robust,
                               bool is_pshared)
       : RawMutex(), timed(is_timed), recursive(is_recursive), robust(is_robust),
@@ -88,6 +84,10 @@ public:
     if (this->RawMutex::try_lock())
       return MutexError::NONE;
     return MutexError::BUSY;
+  }
+
+  LIBC_INLINE bool can_be_requeued() const {
+    return !this->pshared && !this->robust;
   }
 };
 
