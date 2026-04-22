@@ -2669,56 +2669,8 @@ function(llvm_codesign name)
 endfunction()
 
 function(llvm_setup_rpath name)
-  if(CMAKE_INSTALL_RPATH)
-    return()
-  endif()
-
-  if(LLVM_INSTALL_PREFIX AND NOT (LLVM_INSTALL_PREFIX STREQUAL CMAKE_INSTALL_PREFIX))
-    set(extra_libdir ${LLVM_LIBRARY_DIR})
-  elseif(LLVM_BUILD_LIBRARY_DIR)
-    set(extra_libdir ${LLVM_LIBRARY_DIR})
-  endif()
-
-  if (APPLE)
-    set(_install_name_dir INSTALL_NAME_DIR "@rpath")
-    set(_install_rpath "@loader_path/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
-  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX" AND BUILD_SHARED_LIBS)
-    # $ORIGIN is not interpreted at link time by aix ld.
-    # Since BUILD_SHARED_LIBS is only recommended for use by developers,
-    # hardcode the rpath to build/install lib dir first in this mode.
-    # FIXME: update this when there is better solution.
-    set(_install_rpath "${LLVM_LIBRARY_OUTPUT_INTDIR}" "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
-  elseif(UNIX)
-    set(_build_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
-    set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
-    if("${CMAKE_SYSTEM_NAME}" MATCHES "(FreeBSD|DragonFly)")
-      set_property(TARGET ${name} APPEND_STRING PROPERTY
-                   LINK_FLAGS " -Wl,-z,origin ")
-    endif()
-    if(LLVM_LINKER_IS_GNULD AND NOT ${LLVM_LIBRARY_OUTPUT_INTDIR} STREQUAL "")
-      # $ORIGIN is not interpreted at link time by ld.bfd
-      set_property(TARGET ${name} APPEND_STRING PROPERTY
-                   LINK_FLAGS " -Wl,-rpath-link,${LLVM_LIBRARY_OUTPUT_INTDIR} ")
-    endif()
-  else()
-    return()
-  endif()
-
-  # Enable BUILD_WITH_INSTALL_RPATH unless CMAKE_BUILD_RPATH is set and not
-  # building for macOS or AIX, as those platforms seemingly require it.
-  # On AIX, the tool chain doesn't support modifying rpaths/libpaths for XCOFF
-  # on install at the moment, so BUILD_WITH_INSTALL_RPATH is required.
-  if("${CMAKE_BUILD_RPATH}" STREQUAL "")
-    if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin|AIX")
-      set_property(TARGET ${name} PROPERTY BUILD_WITH_INSTALL_RPATH ON)
-    else()
-      set_property(TARGET ${name} APPEND PROPERTY BUILD_RPATH "${_build_rpath}")
-    endif()
-  endif()
-
   set_target_properties(${name} PROPERTIES
-                        INSTALL_RPATH "${_install_rpath}"
-                        ${_install_name_dir})
+                        INSTALL_RPATH_USE_LINK_PATH TRUE)
 endfunction()
 
 function(setup_dependency_debugging name)
