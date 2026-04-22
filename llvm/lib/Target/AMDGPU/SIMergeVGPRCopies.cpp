@@ -73,16 +73,14 @@ bool SIMergeVGPRCopiesLegacy::runOnMachineFunction(MachineFunction &MF) {
   return SIMergeVGPRCopies().run(MF);
 }
 
-static bool getBaseIfAlignedAndConsecutive(const Register &Reg1,
-                                           const Register &Reg2,
-                                           const SIRegisterInfo *TRI,
-                                           Register &Base) {
+static bool getBaseIfConsecutive(const Register &Reg1, const Register &Reg2,
+                                 const SIRegisterInfo *TRI, Register &Base) {
   long Dist =
       static_cast<long>(TRI->getHWRegIndex(Reg2)) - TRI->getHWRegIndex(Reg1);
   if (std::abs(Dist) != 1)
     return false;
   Base = (Dist == 1) ? Reg1 : Reg2;
-  return TRI->getHWRegIndex(Base) % 2 == 0;
+  return true;
 }
 
 bool SIMergeVGPRCopies::run(MachineFunction &MF) {
@@ -109,51 +107,52 @@ bool SIMergeVGPRCopies::run(MachineFunction &MF) {
         continue;
       MachineInstr &NextMI = *I;
 
-      {
-        // Both destinations must be VGPRs.
-        Register MIDstReg = MI.getOperand(0).getReg();
-        Register NextMIDstReg = NextMI.getOperand(0).getReg();
-        if (!AMDGPU::VGPR_32RegClass.contains(MIDstReg) ||
-            !AMDGPU::VGPR_32RegClass.contains(NextMIDstReg))
-          continue;
-      }
+      // Both destinations must be VGPRs.
+      Register MIDstReg = MI.getOperand(0).getReg();
+      Register NextMIDstReg = NextMI.getOperand(0).getReg();
+      if (!AMDGPU::VGPR_32RegClass.contains(MIDstReg) ||
+          !AMDGPU::VGPR_32RegClass.contains(NextMIDstReg))
+        continue;
 
-      bool UsesSGPRSources = false;
-      {
-        // Sources may always be VGPRs, but can also be SGPRs if the target
-        // supports V_MOV_B64. Either way, the sources must be the same class.
-        Register MISrcReg = MI.getOperand(1).getReg();
-        Register NextMISrcReg = NextMI.getOperand(1).getReg();
-        UsesSGPRSources = ST.hasMovB64() &&
-                          AMDGPU::SGPR_32RegClass.contains(MISrcReg) &&
-                          AMDGPU::SGPR_32RegClass.contains(NextMISrcReg);
-        if (!UsesSGPRSources &&
-            !(AMDGPU::VGPR_32RegClass.contains(MISrcReg) &&
-              AMDGPU::VGPR_32RegClass.contains(NextMISrcReg)))
-          continue;
-      }
+      // Sources may always be VGPRs, but can also be SGPRs if the target
+      // supports V_MOV_B64. Either way, the sources must be the same class.
+      Register MISrcReg = MI.getOperand(1).getReg();
+      Register NextMISrcReg = NextMI.getOperand(1).getReg();
+      bool UsesSGPRSources = ST.hasMovB64() &&
+                             AMDGPU::SGPR_32RegClass.contains(MISrcReg) &&
+                             AMDGPU::SGPR_32RegClass.contains(NextMISrcReg);
+      if (!UsesSGPRSources && !(AMDGPU::VGPR_32RegClass.contains(MISrcReg) &&
+                                AMDGPU::VGPR_32RegClass.contains(NextMISrcReg)))
+        continue;
 
       // Ensure the first copy is the one with the lower-numbered destination
       // register. This simplifies checking for consecutive sources and ensures
       // the merged copy reads the same registers as the original pair.
       Register DstBase;
-      if (!getBaseIfAlignedAndConsecutive(MI.getOperand(0).getReg(),
-                                          NextMI.getOperand(0).getReg(), TRI,
-                                          DstBase))
+      if (!getBaseIfConsecutive(MIDstReg, NextMIDstReg, TRI, DstBase))
+        continue;
+
+      // If the target requires aligned VGPRs, the destination base must be
+      // even-aligned.
+      if (ST.needsAlignedVGPRs() && TRI->getHWRegIndex(DstBase) % 2 != 0)
         continue;
 
       Register SrcBase;
-      if (!getBaseIfAlignedAndConsecutive(MI.getOperand(1).getReg(),
-                                          NextMI.getOperand(1).getReg(), TRI,
-                                          SrcBase))
+      if (!getBaseIfConsecutive(MISrcReg, NextMISrcReg, TRI, SrcBase))
+        continue;
+
+      // If the sources are SGPRs or the target requires aligned VGPRs, the
+      // source base must be even-aligned.
+      if ((UsesSGPRSources || ST.needsAlignedVGPRs()) &&
+          TRI->getHWRegIndex(SrcBase) % 2 != 0)
         continue;
 
       // The sources must also be consecutive and even-aligned, but they can be
       // in either order. If they are inversed, the merged copy needs to use
       // V_PK_MOV_B32 which in turn cannot use SGPR sources, otherwise it can
       // use V_MOV_B64.
-      bool SrcIsInversed = (DstBase == NextMI.getOperand(0).getReg()) !=
-                           (SrcBase == NextMI.getOperand(1).getReg());
+      bool SrcIsInversed =
+          (DstBase == NextMIDstReg) != (SrcBase == NextMISrcReg);
       if (SrcIsInversed && (UsesSGPRSources || !ST.hasPkMovB32()))
         continue;
 
