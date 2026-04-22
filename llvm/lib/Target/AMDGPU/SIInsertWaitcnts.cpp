@@ -794,8 +794,6 @@ private:
       /// \p Score to complete, assuming in-order completion.
       unsigned getWait(unsigned Score) const { return UB - Score; }
       // TODO: Make private: we should not provide raw access to the internals.
-      void setLB(unsigned NewLB) { LB = NewLB; }
-      // TODO: Make private: we should not provide raw access to the internals.
       unsigned getUB() const { return UB; }
       // TODO: Make private: we should not provide raw access to the internals.
       unsigned getLB() const { return LB; }
@@ -828,6 +826,11 @@ private:
         unsigned Max = getWaitCountMax(*Limits, CntT);
         setUB(UB + Max);
       }
+      /// Drop all oldest scores except \p Remaining.
+      void dropOldest(unsigned Remaining = 0) {
+        LB = std::max(LB, UB - Remaining);
+      }
+      void clear() { LB = UB; }
     };
 
     std::array<Counter, AMDGPU::NUM_INST_CNTS> Counters;
@@ -1000,11 +1003,6 @@ private:
     if (Size == 16 && Context->ST.hasD16Writes32BitVgpr())
       Reg = Context->TRI.get32BitRegister(Reg);
     return Context->TRI.regunits(Reg);
-  }
-
-  void setScoreLB(AMDGPU::InstCounterType T, unsigned Val) {
-    assert(T < AMDGPU::NUM_INST_CNTS);
-    Counters[T].setLB(Val);
   }
 
   void setRegScore(MCPhysReg Reg, AMDGPU::InstCounterType T, unsigned Val) {
@@ -1261,7 +1259,7 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
       // SMEM and VMEM operations. So there will never be
       // outstanding address translations for both SMEM and
       // VMEM at the same time.
-      setScoreLB(T, getScoreUB(T) - 1);
+      Counters[T].dropOldest(/*Remaining=*/1);
       PendingEvents.remove(OtherEvent);
     }
     for (const MachineOperand &Op : Inst.all_uses())
@@ -1714,9 +1712,8 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
     WaitEventSet SCC_WRITE_PendingEvent(SCC_WRITE);
     // If this SCC_WRITE is the only pending KM_CNT event, clear counter.
     if ((PendingEvents & Context->getWaitEvents(AMDGPU::KM_CNT)) ==
-        SCC_WRITE_PendingEvent) {
-      setScoreLB(AMDGPU::KM_CNT, getScoreUB(AMDGPU::KM_CNT));
-    }
+        SCC_WRITE_PendingEvent)
+      Counters[AMDGPU::KM_CNT].clear();
 
     PendingEvents.remove(SCC_WRITE_PendingEvent);
     PendingSCCWrite = nullptr;
@@ -1735,9 +1732,9 @@ void WaitcntBrackets::applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count) {
   if (Count != 0) {
     if (counterOutOfOrder(T))
       return;
-    setScoreLB(T, std::max(getScoreLB(T), UB - Count));
+    Counters[T].dropOldest(Count);
   } else {
-    setScoreLB(T, UB);
+    Counters[T].clear();
     PendingEvents.remove(Context->getWaitEvents(T));
   }
 
