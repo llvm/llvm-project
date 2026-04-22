@@ -12094,9 +12094,11 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
     return DAG.getNode(ISD::BITREVERSE, DL, VT, BSwap);
   }
 
+  unsigned BW = VT.getScalarSizeInBits();
+  assert(BW % 16 == 0 && "bswap requires a multiple-of-16-bit width");
+
   // fold (bswap shl(x,c)) -> (zext(bswap(trunc(shl(x,sub(c,bw/2))))))
   // iff x >= bw/2 (i.e. lower half is known zero)
-  unsigned BW = VT.getScalarSizeInBits();
   if (BW >= 32 && N0.getOpcode() == ISD::SHL && N0.hasOneUse()) {
     auto *ShAmt = dyn_cast<ConstantSDNode>(N0.getOperand(1));
     EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), BW / 2);
@@ -12132,6 +12134,24 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
 
   if (SDValue V = foldBitOrderCrossLogicOp(N, DAG))
     return V;
+
+  // If only one byte of the operand may be nonzero, bswap becomes a shift
+  // to the mirror byte. Producer-side dual of the ISD::BSWAP rule in
+  // TargetLowering::SimplifyDemandedBits; placed here to fire pre-legalize.
+  KnownBits Known = DAG.computeKnownBits(N0);
+  unsigned Lo = Known.countMinTrailingZeros();
+  unsigned Hi = BW - Known.countMinLeadingZeros();
+  if (Lo < Hi && Lo / 8 == (Hi - 1) / 8) {
+    unsigned SrcByte = Lo / 8;
+    unsigned DstByte = BW / 8 - 1 - SrcByte;
+    unsigned Opc = DstByte > SrcByte ? ISD::SHL : ISD::SRL;
+    unsigned Amt =
+        (DstByte > SrcByte ? DstByte - SrcByte : SrcByte - DstByte) * 8;
+    SDNodeFlags Flags =
+        Opc == ISD::SHL ? SDNodeFlags::NoUnsignedWrap : SDNodeFlags::Exact;
+    return DAG.getNode(Opc, DL, VT, N0, DAG.getShiftAmountConstant(Amt, VT, DL),
+                       Flags);
+  }
 
   return SDValue();
 }

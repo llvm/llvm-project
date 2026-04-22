@@ -17,16 +17,12 @@ declare i64 @llvm.bswap.i64(i64)
 define i16 @bswap_src_and_lo_i16(i16 %x) {
 ; RV32ZB-LABEL: bswap_src_and_lo_i16:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    zext.b a0, a0
-; RV32ZB-NEXT:    rev8 a0, a0
-; RV32ZB-NEXT:    srli a0, a0, 16
+; RV32ZB-NEXT:    slli a0, a0, 8
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_and_lo_i16:
 ; RV64ZB:       # %bb.0:
-; RV64ZB-NEXT:    zext.b a0, a0
-; RV64ZB-NEXT:    rev8 a0, a0
-; RV64ZB-NEXT:    srli a0, a0, 48
+; RV64ZB-NEXT:    slli a0, a0, 8
 ; RV64ZB-NEXT:    ret
   %m = and i16 %x, 255
   %b = call i16 @llvm.bswap.i16(i16 %m)
@@ -36,16 +32,14 @@ define i16 @bswap_src_and_lo_i16(i16 %x) {
 define i16 @bswap_src_and_hi_i16(i16 %x) {
 ; RV32ZB-LABEL: bswap_src_and_hi_i16:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    andi a0, a0, -256
-; RV32ZB-NEXT:    rev8 a0, a0
-; RV32ZB-NEXT:    srli a0, a0, 16
+; RV32ZB-NEXT:    slli a0, a0, 16
+; RV32ZB-NEXT:    srli a0, a0, 24
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_and_hi_i16:
 ; RV64ZB:       # %bb.0:
-; RV64ZB-NEXT:    andi a0, a0, -256
-; RV64ZB-NEXT:    rev8 a0, a0
-; RV64ZB-NEXT:    srli a0, a0, 48
+; RV64ZB-NEXT:    slli a0, a0, 48
+; RV64ZB-NEXT:    srli a0, a0, 56
 ; RV64ZB-NEXT:    ret
   %m = and i16 %x, 65280
   %b = call i16 @llvm.bswap.i16(i16 %m)
@@ -55,16 +49,12 @@ define i16 @bswap_src_and_hi_i16(i16 %x) {
 define i16 @bswap_src_zext_i8_to_i16(i8 %x) {
 ; RV32ZB-LABEL: bswap_src_zext_i8_to_i16:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    zext.b a0, a0
-; RV32ZB-NEXT:    rev8 a0, a0
-; RV32ZB-NEXT:    srli a0, a0, 16
+; RV32ZB-NEXT:    slli a0, a0, 8
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_zext_i8_to_i16:
 ; RV64ZB:       # %bb.0:
-; RV64ZB-NEXT:    zext.b a0, a0
-; RV64ZB-NEXT:    rev8 a0, a0
-; RV64ZB-NEXT:    srli a0, a0, 48
+; RV64ZB-NEXT:    slli a0, a0, 8
 ; RV64ZB-NEXT:    ret
   %z = zext i8 %x to i16
   %b = call i16 @llvm.bswap.i16(i16 %z)
@@ -74,15 +64,12 @@ define i16 @bswap_src_zext_i8_to_i16(i8 %x) {
 define i32 @bswap_src_and_byte0_i32(i32 %x) {
 ; RV32ZB-LABEL: bswap_src_and_byte0_i32:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    zext.b a0, a0
-; RV32ZB-NEXT:    rev8 a0, a0
+; RV32ZB-NEXT:    slli a0, a0, 24
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_and_byte0_i32:
 ; RV64ZB:       # %bb.0:
-; RV64ZB-NEXT:    zext.b a0, a0
-; RV64ZB-NEXT:    rev8 a0, a0
-; RV64ZB-NEXT:    srli a0, a0, 32
+; RV64ZB-NEXT:    slliw a0, a0, 24
 ; RV64ZB-NEXT:    ret
   %m = and i32 %x, 255
   %b = call i32 @llvm.bswap.i32(i32 %m)
@@ -95,7 +82,7 @@ define i32 @bswap_src_and_byte1_i32(i32 %x) {
 ; RV32ZB-NEXT:    lui a1, 16
 ; RV32ZB-NEXT:    addi a1, a1, -256
 ; RV32ZB-NEXT:    and a0, a0, a1
-; RV32ZB-NEXT:    rev8 a0, a0
+; RV32ZB-NEXT:    slli a0, a0, 8
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_and_byte1_i32:
@@ -103,8 +90,7 @@ define i32 @bswap_src_and_byte1_i32(i32 %x) {
 ; RV64ZB-NEXT:    lui a1, 16
 ; RV64ZB-NEXT:    addi a1, a1, -256
 ; RV64ZB-NEXT:    and a0, a0, a1
-; RV64ZB-NEXT:    rev8 a0, a0
-; RV64ZB-NEXT:    srli a0, a0, 32
+; RV64ZB-NEXT:    slli a0, a0, 8
 ; RV64ZB-NEXT:    ret
   %m = and i32 %x, 65280
   %b = call i32 @llvm.bswap.i32(i32 %m)
@@ -116,15 +102,14 @@ define i32 @bswap_src_and_byte2_i32(i32 %x) {
 ; RV32ZB:       # %bb.0:
 ; RV32ZB-NEXT:    lui a1, 4080
 ; RV32ZB-NEXT:    and a0, a0, a1
-; RV32ZB-NEXT:    rev8 a0, a0
+; RV32ZB-NEXT:    srli a0, a0, 8
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_and_byte2_i32:
 ; RV64ZB:       # %bb.0:
 ; RV64ZB-NEXT:    lui a1, 4080
 ; RV64ZB-NEXT:    and a0, a0, a1
-; RV64ZB-NEXT:    rev8 a0, a0
-; RV64ZB-NEXT:    srli a0, a0, 32
+; RV64ZB-NEXT:    srli a0, a0, 8
 ; RV64ZB-NEXT:    ret
   %m = and i32 %x, 16711680
   %b = call i32 @llvm.bswap.i32(i32 %m)
@@ -134,17 +119,12 @@ define i32 @bswap_src_and_byte2_i32(i32 %x) {
 define i32 @bswap_src_and_byte3_i32(i32 %x) {
 ; RV32ZB-LABEL: bswap_src_and_byte3_i32:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    lui a1, 1044480
-; RV32ZB-NEXT:    and a0, a0, a1
-; RV32ZB-NEXT:    rev8 a0, a0
+; RV32ZB-NEXT:    srli a0, a0, 24
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_and_byte3_i32:
 ; RV64ZB:       # %bb.0:
-; RV64ZB-NEXT:    lui a1, 1044480
-; RV64ZB-NEXT:    and a0, a0, a1
-; RV64ZB-NEXT:    rev8 a0, a0
-; RV64ZB-NEXT:    srli a0, a0, 32
+; RV64ZB-NEXT:    srliw a0, a0, 24
 ; RV64ZB-NEXT:    ret
   %m = and i32 %x, 4278190080
   %b = call i32 @llvm.bswap.i32(i32 %m)
@@ -154,15 +134,12 @@ define i32 @bswap_src_and_byte3_i32(i32 %x) {
 define i32 @bswap_src_zext_i8_to_i32(i8 %x) {
 ; RV32ZB-LABEL: bswap_src_zext_i8_to_i32:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    zext.b a0, a0
-; RV32ZB-NEXT:    rev8 a0, a0
+; RV32ZB-NEXT:    slli a0, a0, 24
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_zext_i8_to_i32:
 ; RV64ZB:       # %bb.0:
-; RV64ZB-NEXT:    zext.b a0, a0
-; RV64ZB-NEXT:    rev8 a0, a0
-; RV64ZB-NEXT:    srli a0, a0, 32
+; RV64ZB-NEXT:    slliw a0, a0, 24
 ; RV64ZB-NEXT:    ret
   %z = zext i8 %x to i32
   %b = call i32 @llvm.bswap.i32(i32 %z)
@@ -172,15 +149,13 @@ define i32 @bswap_src_zext_i8_to_i32(i8 %x) {
 define i64 @bswap_src_zext_i8_to_i64(i8 %x) {
 ; RV32ZB-LABEL: bswap_src_zext_i8_to_i64:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    zext.b a0, a0
-; RV32ZB-NEXT:    rev8 a1, a0
+; RV32ZB-NEXT:    slli a1, a0, 24
 ; RV32ZB-NEXT:    li a0, 0
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: bswap_src_zext_i8_to_i64:
 ; RV64ZB:       # %bb.0:
-; RV64ZB-NEXT:    zext.b a0, a0
-; RV64ZB-NEXT:    rev8 a0, a0
+; RV64ZB-NEXT:    slli a0, a0, 56
 ; RV64ZB-NEXT:    ret
   %z = zext i8 %x to i64
   %b = call i64 @llvm.bswap.i64(i64 %z)
@@ -203,4 +178,30 @@ define i64 @bswap_src_zext_i16_to_i64(i16 %x) {
   %z = zext i16 %x to i64
   %b = call i64 @llvm.bswap.i64(i64 %z)
   ret i64 %b
+}
+
+; Regression: the producer-side combine must not tag the produced shl
+; with nsw. For bswap(and X, 0xFF) on i16 we shift byte 0 into the top
+; byte, which becomes the sign bit. Bit 7 of the input freely flips the
+; result's sign, so nsw would be unsound and make `icmp slt 0` fold to
+; false. Here the comparison must remain: the result depends on bit 7
+; of the input.
+define i1 @bswap_lo_byte_sign_i16(i16 %x) {
+; RV32ZB-LABEL: bswap_lo_byte_sign_i16:
+; RV32ZB:       # %bb.0:
+; RV32ZB-NEXT:    slli a0, a0, 8
+; RV32ZB-NEXT:    sext.h a0, a0
+; RV32ZB-NEXT:    srli a0, a0, 31
+; RV32ZB-NEXT:    ret
+;
+; RV64ZB-LABEL: bswap_lo_byte_sign_i16:
+; RV64ZB:       # %bb.0:
+; RV64ZB-NEXT:    slli a0, a0, 8
+; RV64ZB-NEXT:    sext.h a0, a0
+; RV64ZB-NEXT:    srli a0, a0, 63
+; RV64ZB-NEXT:    ret
+  %m = and i16 %x, 255
+  %b = call i16 @llvm.bswap.i16(i16 %m)
+  %neg = icmp slt i16 %b, 0
+  ret i1 %neg
 }
