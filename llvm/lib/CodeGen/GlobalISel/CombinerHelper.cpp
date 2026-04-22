@@ -1001,16 +1001,16 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   LLT RegTy = MRI.getType(LoadReg);
   Register PtrReg = LoadMI->getPointerReg();
   unsigned RegSize = RegTy.getSizeInBits();
-  LocationSize LoadSizeBits = LoadMI->getMemSizeInBits();
+  unsigned LoadSizeBits = LoadMI->getMemSizeInBits().getValue();
   unsigned MaskSizeBits = MaskVal.countr_one();
 
-  if (!MRI.hasOneNonDBGUse(LoadReg) &&
-      (isa<GSExtLoad>(LoadMI) || MaskSizeBits < LoadSizeBits.getValue()))
+  if ((isa<GSExtLoad>(LoadMI) || MaskSizeBits < LoadSizeBits) &&
+      !MRI.hasOneNonDBGUse(LoadReg))
     return false;
 
   // The mask may not be larger than the in-memory type, as it might cover sign
   // extended bits
-  if (MaskSizeBits > LoadSizeBits.getValue())
+  if (MaskSizeBits > LoadSizeBits)
     return false;
 
   // If the mask covers the whole destination register, there's nothing to
@@ -1030,8 +1030,7 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   // still adjust the opcode to indicate the high bit behavior.
   if (LoadMI->isSimple())
     MemDesc.MemoryTy = LLT::scalar(MaskSizeBits);
-  else if (LoadSizeBits.getValue() > MaskSizeBits ||
-           LoadSizeBits.getValue() == RegSize)
+  else if (LoadSizeBits > MaskSizeBits || LoadSizeBits == RegSize)
     return false;
 
   // TODO: Could check if it's legal with the reduced or original memory size.
@@ -1131,7 +1130,7 @@ bool CombinerHelper::matchSextInRegOfLoad(
   uint64_t MemBits = LoadDef->getMemSizeInBits().getValue();
   uint64_t ExtFrom = MI.getOperand(2).getImm();
 
-  if (!MRI.hasOneNonDBGUse(SrcReg) && MemBits > ExtFrom)
+  if (MemBits > ExtFrom && !MRI.hasOneNonDBGUse(SrcReg))
     return false;
 
   // If the sign extend extends from a narrower width than the load's width,
