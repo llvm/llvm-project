@@ -28,6 +28,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
@@ -67,6 +68,16 @@ static bool shouldEmitBuiltinAsIR(unsigned BuiltinID,
     }
   }
   return false;
+}
+
+static bool shouldPreserveLibCallForDeclareSimd(const FunctionDecl *FD,
+                                                const LangOptions &LangOpts) {
+  if (!FD || !LangOpts.OpenMP)
+    return false;
+
+  return llvm::any_of(FD->redecls(), [](const FunctionDecl *Redecl) {
+    return Redecl->hasAttr<OMPDeclareSimdDeclAttr>();
+  });
 }
 
 static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
@@ -2646,6 +2657,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       getContext().BuiltinInfo.shouldGenerateFPMathIntrinsic(
           BuiltinID, CGM.getTriple(), ErrnoOverriden, getLangOpts().MathErrno,
           OptNone, IsOptimizationEnabled);
+
+  if (GenerateFPMathIntrinsics &&
+      shouldPreserveLibCallForDeclareSimd(FD, getLangOpts()))
+    GenerateFPMathIntrinsics = false;
 
   if (GenerateFPMathIntrinsics) {
     switch (BuiltinIDIfNoAsmLabel) {
