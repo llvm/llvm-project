@@ -14,10 +14,5 @@ needs SPIRV/COMGR
 breaks build of llvm
 [clang][CIR][doc] Add auto-generated ClangIR documentation (#190354)
 ---
-ubsan issues
-Reapply "[compiler-rt] Enable minimal ubsan for GPU targets (#188289)"
-[Clang] Correctly handle UBSan libraries for the GPU 
----
-needs merge help
-[Extractor] Use function return for the one and only
+[compiler-rt][asan] Add asan checks for __builtin_assume_dereferencable (#190871)
 ---
