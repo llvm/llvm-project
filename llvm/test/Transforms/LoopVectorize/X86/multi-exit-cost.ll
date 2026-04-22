@@ -122,7 +122,7 @@ define i1 @test_exit_compare_other_users() #0 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <8 x i8> [[WIDE_LOAD]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i8> [[REVERSE]], splat (i8 32)
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP4]], i32 7
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP4]], i64 7
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
@@ -141,13 +141,13 @@ define i1 @test_exit_compare_other_users() #0 {
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD2]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i8> [[REVERSE4]], splat (i8 32)
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP10]], i64 3
 ; CHECK-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 3, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 15, %[[VEC_EPILOG_ITER_CHECK]] ], [ 79, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i64 [ 3, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 15, %[[VEC_EPILOG_ITER_CHECK]] ], [ 79, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp ne i64 [[IV]], 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [1 x i8], ptr @gg, i64 [[IV]]
