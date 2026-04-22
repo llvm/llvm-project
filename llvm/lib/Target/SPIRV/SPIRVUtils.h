@@ -222,7 +222,7 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
 
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.
-MachineBasicBlock::iterator getOpVariableMBBIt(MachineBasicBlock &MBB);
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineFunction &MF);
 
 // Return a valid position for the instruction at the end of the block before
 // terminators and debug instructions.

@@ -296,7 +296,8 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
   }
 }
 
-MachineBasicBlock::iterator getOpVariableMBBIt(MachineBasicBlock &MBB) {
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineFunction &MF) {
+  MachineBasicBlock &MBB = MF.front();
   // Find the position to insert the OpVariable instruction.
   // We will insert it after the last OpFunctionParameter, if any, or
   // after OpFunction otherwise.
