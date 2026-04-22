@@ -5,6 +5,22 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements the SparseLiveVariables analysis pass.
+//
+// This pass computes block-level live-in and live-out sets using a memory
+// efficient SparseBitVector representation. Unlike the legacy LiveVariables
+// pass, this analysis is completely stateless at the instruction level. It
+// relies on a fixed-point dataflow iteration over the control flow graph to
+// establish block boundary conditions. Instruction-level queries are evaluated
+// dynamically via the LivenessTracker by traversing backwards from the end
+// of a block.
+//
+// This modern, target-independent pass is designed to handle very large
+// virtual register sets without the massive memory overhead traditionally
+// associated with dense bit-vectors and heavily cached liveness states.
+//
+//===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SparseLiveVariables.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -34,7 +50,7 @@ bool SparseLiveVariables::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
 
-  BlockLiveness.clear();
+  BlockLiveness.assign(MF.getNumBlockIDs(), BlockInfo());
 
   SmallPtrSet<MachineBasicBlock *, 16> Reachable;
   for (MachineBasicBlock *MBB : llvm::depth_first(&MF))
@@ -47,23 +63,27 @@ bool SparseLiveVariables::runOnMachineFunction(MachineFunction &MF) {
       if (!Reachable.count(MBB))
         continue;
 
-      SparseBitVector<> OldLiveIn = BlockLiveness[MBB].LiveIn;
-      SparseBitVector<> OldLiveOut = BlockLiveness[MBB].LiveOut;
+      SparseBitVector<> OldLiveIn = BlockLiveness[MBB->getNumber()].LiveIn;
+      SparseBitVector<> OldLiveOut = BlockLiveness[MBB->getNumber()].LiveOut;
 
-      for (const MachineBasicBlock *Succ : MBB->successors())
-        if (Reachable.count(Succ))
-          BlockLiveness[MBB].LiveOut |= BlockLiveness[Succ].LiveIn;
+      SparseBitVector<> LiveOut;
+      for (const MachineBasicBlock *Succ : MBB->successors()) {
+        if (!Reachable.count(Succ))
+          continue;
+        LiveOut |= BlockLiveness[Succ->getNumber()].LiveIn;
+      }
+      BlockLiveness[MBB->getNumber()].LiveOut = LiveOut;
 
-      SparseBitVector<> LiveIn = BlockLiveness[MBB].LiveOut;
+      SparseBitVector<> LiveIn = BlockLiveness[MBB->getNumber()].LiveOut;
       LivenessTracker Tracker(LiveIn, MRI);
 
       for (MachineInstr &MI : llvm::reverse(*MBB))
         Tracker.stepBackward(MI);
 
-      BlockLiveness[MBB].LiveIn = Tracker.getLiveSet();
+      BlockLiveness[MBB->getNumber()].LiveIn = Tracker.getLiveSet();
 
-      if (BlockLiveness[MBB].LiveIn != OldLiveIn ||
-          BlockLiveness[MBB].LiveOut != OldLiveOut)
+      if (BlockLiveness[MBB->getNumber()].LiveIn != OldLiveIn ||
+          BlockLiveness[MBB->getNumber()].LiveOut != OldLiveOut)
         Changed = true;
     }
   }
@@ -77,11 +97,10 @@ bool SparseLiveVariables::runOnMachineFunction(MachineFunction &MF) {
 
 void SparseLiveVariables::verifyLiveness(const MachineFunction &MF) const {
   for (const MachineBasicBlock &MBB : MF) {
-    auto It = BlockLiveness.find(&MBB);
-    if (It == BlockLiveness.end())
+    if (!hasAnalyzed(&MBB))
       continue;
 
-    const SparseBitVector<> &LiveIn = It->second.LiveIn;
+    const SparseBitVector<> &LiveIn = BlockLiveness[MBB.getNumber()].LiveIn;
     for (const auto &LI : MBB.liveins()) {
       if (!LiveIn.test(LI.PhysReg.id())) {
         LLVM_DEBUG(dbgs() << "Warning: Live-in register "
@@ -94,12 +113,11 @@ void SparseLiveVariables::verifyLiveness(const MachineFunction &MF) const {
 }
 void SparseLiveVariables::updateLiveIns(MachineFunction &MF) const {
   for (MachineBasicBlock &MBB : MF) {
-    auto It = BlockLiveness.find(&MBB);
-    if (It == BlockLiveness.end())
+    if (!hasAnalyzed(&MBB))
       continue;
 
     MBB.clearLiveIns();
-    const SparseBitVector<> &LiveIn = It->second.LiveIn;
+    const SparseBitVector<> &LiveIn = BlockLiveness[MBB.getNumber()].LiveIn;
     for (unsigned RegID : LiveIn) {
       Register Reg(RegID);
       // MBB.addLiveIn only takes physical registers.
@@ -110,17 +128,15 @@ void SparseLiveVariables::updateLiveIns(MachineFunction &MF) const {
   }
 }
 
-
-
 void SparseLiveVariables::recomputeRegisterLiveness(Register Reg,
                                                     MachineInstr *IgnoreMI) {
   if (!Reg.isVirtual())
     return;
 
   // 1. Clear Reg from all blocks
-  for (auto &KV : BlockLiveness) {
-    KV.second.LiveIn.reset(Reg.id());
-    KV.second.LiveOut.reset(Reg.id());
+  for (unsigned i = 0, e = BlockLiveness.size(); i != e; ++i) {
+    BlockLiveness[i].LiveIn.reset(Reg.id());
+    BlockLiveness[i].LiveOut.reset(Reg.id());
   }
 
   // 2. Propagate from all uses
@@ -139,10 +155,9 @@ void SparseLiveVariables::recomputeRegisterLiveness(Register Reg,
         if (UseMI.getOperand(i).isReg() &&
             UseMI.getOperand(i).getReg() == Reg) {
           MachineBasicBlock *Pred = UseMI.getOperand(i + 1).getMBB();
-          auto PredIt = BlockLiveness.find(Pred);
-          if (PredIt != BlockLiveness.end()) {
-            if (!PredIt->second.LiveOut.test(Reg.id())) {
-              PredIt->second.LiveOut.set(Reg.id());
+          if (hasAnalyzed(Pred)) {
+            if (!BlockLiveness[Pred->getNumber()].LiveOut.test(Reg.id())) {
+              BlockLiveness[Pred->getNumber()].LiveOut.set(Reg.id());
               WorkList.push_back(Pred);
             }
           }
@@ -163,10 +178,9 @@ void SparseLiveVariables::recomputeRegisterLiveness(Register Reg,
     }
 
     if (!FoundDef) {
-      auto It = BlockLiveness.find(MBB);
-      if (It != BlockLiveness.end()) {
-        if (!It->second.LiveIn.test(Reg.id())) {
-          It->second.LiveIn.set(Reg.id());
+      if (hasAnalyzed(MBB)) {
+        if (!BlockLiveness[MBB->getNumber()].LiveIn.test(Reg.id())) {
+          BlockLiveness[MBB->getNumber()].LiveIn.set(Reg.id());
           WorkList.push_back(MBB);
         }
       }
@@ -178,12 +192,11 @@ void SparseLiveVariables::recomputeRegisterLiveness(Register Reg,
     MachineBasicBlock *Curr = WorkList.pop_back_val();
 
     for (MachineBasicBlock *Pred : Curr->predecessors()) {
-      auto PredIt = BlockLiveness.find(Pred);
-      if (PredIt == BlockLiveness.end())
+      if (!hasAnalyzed(Pred))
         continue;
 
-      if (!PredIt->second.LiveOut.test(Reg.id())) {
-        PredIt->second.LiveOut.set(Reg.id());
+      if (!BlockLiveness[Pred->getNumber()].LiveOut.test(Reg.id())) {
+        BlockLiveness[Pred->getNumber()].LiveOut.set(Reg.id());
 
         bool FoundDef = false;
         for (const MachineInstr &MI : llvm::reverse(*Pred)) {
@@ -196,8 +209,8 @@ void SparseLiveVariables::recomputeRegisterLiveness(Register Reg,
         }
 
         if (!FoundDef) {
-          if (!PredIt->second.LiveIn.test(Reg.id())) {
-            PredIt->second.LiveIn.set(Reg.id());
+          if (!BlockLiveness[Pred->getNumber()].LiveIn.test(Reg.id())) {
+            BlockLiveness[Pred->getNumber()].LiveIn.set(Reg.id());
             WorkList.push_back(Pred);
           }
         }
@@ -221,17 +234,16 @@ bool SparseLiveVariables::evaluateLiveIn(Register Reg, MachineBasicBlock *MBB,
     if (BlockMI.definesRegister(Reg, TRI))
       return false;
   }
-  auto It = BlockLiveness.find(MBB);
-  if (It != BlockLiveness.end())
-    return It->second.LiveOut.test(Reg.id());
+  if (hasAnalyzed(MBB))
+    return BlockLiveness[MBB->getNumber()].LiveOut.test(Reg.id());
   return false;
 }
 
 bool SparseLiveVariables::isLiveOut(Register Reg, MachineBasicBlock *MBB,
                                     MachineInstr *IgnoreMI) const {
   for (MachineBasicBlock *Succ : MBB->successors()) {
-    auto SuccIt = BlockLiveness.find(Succ);
-    if (SuccIt != BlockLiveness.end() && SuccIt->second.LiveIn.test(Reg.id()))
+    if (hasAnalyzed(Succ) &&
+        BlockLiveness[Succ->getNumber()].LiveIn.test(Reg.id()))
       return true;
 
     for (const MachineInstr &OtherPHI : *Succ) {
@@ -253,19 +265,18 @@ bool SparseLiveVariables::isLiveOut(Register Reg, MachineBasicBlock *MBB,
 
 void SparseLiveVariables::reevaluateLiveIn(Register Reg, MachineBasicBlock *MBB,
                                            MachineInstr *IgnoreMI) {
-  auto It = BlockLiveness.find(MBB);
-  if (It == BlockLiveness.end())
+  if (!hasAnalyzed(MBB))
     return;
 
-  bool OldLiveIn = It->second.LiveIn.test(Reg.id());
+  bool OldLiveIn = BlockLiveness[MBB->getNumber()].LiveIn.test(Reg.id());
   bool NewLiveIn = evaluateLiveIn(Reg, MBB, IgnoreMI);
 
   if (OldLiveIn != NewLiveIn) {
     if (NewLiveIn) {
-      It->second.LiveIn.set(Reg.id());
+      BlockLiveness[MBB->getNumber()].LiveIn.set(Reg.id());
       propagateGrowth(Reg, MBB, IgnoreMI);
     } else {
-      It->second.LiveIn.reset(Reg.id());
+      BlockLiveness[MBB->getNumber()].LiveIn.reset(Reg.id());
       propagateShrinkage(Reg, MBB, IgnoreMI);
     }
   }
@@ -280,16 +291,15 @@ void SparseLiveVariables::propagateGrowth(Register Reg,
   while (!WorkList.empty()) {
     MachineBasicBlock *Curr = WorkList.pop_back_val();
     for (MachineBasicBlock *Pred : Curr->predecessors()) {
-      auto PredIt = BlockLiveness.find(Pred);
-      if (PredIt == BlockLiveness.end())
+      if (!hasAnalyzed(Pred))
         continue;
 
-      if (!PredIt->second.LiveOut.test(Reg.id())) {
-        PredIt->second.LiveOut.set(Reg.id());
+      if (!BlockLiveness[Pred->getNumber()].LiveOut.test(Reg.id())) {
+        BlockLiveness[Pred->getNumber()].LiveOut.set(Reg.id());
 
-        if (!PredIt->second.LiveIn.test(Reg.id())) {
+        if (!BlockLiveness[Pred->getNumber()].LiveIn.test(Reg.id())) {
           if (evaluateLiveIn(Reg, Pred, IgnoreMI)) {
-            PredIt->second.LiveIn.set(Reg.id());
+            BlockLiveness[Pred->getNumber()].LiveIn.set(Reg.id());
             WorkList.push_back(Pred);
           }
         }
@@ -307,19 +317,18 @@ void SparseLiveVariables::propagateShrinkage(Register Reg,
   while (!WorkList.empty()) {
     MachineBasicBlock *Curr = WorkList.pop_back_val();
     for (MachineBasicBlock *Pred : Curr->predecessors()) {
-      auto PredIt = BlockLiveness.find(Pred);
-      if (PredIt == BlockLiveness.end())
+      if (!hasAnalyzed(Pred))
         continue;
 
-      if (!PredIt->second.LiveOut.test(Reg.id()))
+      if (!BlockLiveness[Pred->getNumber()].LiveOut.test(Reg.id()))
         continue;
 
       if (!isLiveOut(Reg, Pred, IgnoreMI)) {
-        PredIt->second.LiveOut.reset(Reg.id());
+        BlockLiveness[Pred->getNumber()].LiveOut.reset(Reg.id());
 
-        if (PredIt->second.LiveIn.test(Reg.id())) {
+        if (BlockLiveness[Pred->getNumber()].LiveIn.test(Reg.id())) {
           if (!evaluateLiveIn(Reg, Pred, IgnoreMI)) {
-            PredIt->second.LiveIn.reset(Reg.id());
+            BlockLiveness[Pred->getNumber()].LiveIn.reset(Reg.id());
             WorkList.push_back(Pred);
           }
         }
@@ -349,10 +358,9 @@ void SparseLiveVariables::addInstruction(MachineInstr &MI,
       }
 
       if (Pred) {
-        auto PredIt = BlockLiveness.find(Pred);
-        if (PredIt != BlockLiveness.end() &&
-            !PredIt->second.LiveOut.test(Reg.id())) {
-          PredIt->second.LiveOut.set(Reg.id());
+        if (hasAnalyzed(Pred) &&
+            !BlockLiveness[Pred->getNumber()].LiveOut.test(Reg.id())) {
+          BlockLiveness[Pred->getNumber()].LiveOut.set(Reg.id());
           reevaluateLiveIn(Reg, Pred);
         }
       }
@@ -382,11 +390,10 @@ void SparseLiveVariables::removeInstruction(MachineInstr &MI) {
       }
 
       if (Pred) {
-        auto PredIt = BlockLiveness.find(Pred);
-        if (PredIt != BlockLiveness.end() &&
-            PredIt->second.LiveOut.test(Reg.id())) {
+        if (hasAnalyzed(Pred) &&
+            BlockLiveness[Pred->getNumber()].LiveOut.test(Reg.id())) {
           if (!isLiveOut(Reg, Pred, &MI)) {
-            PredIt->second.LiveOut.reset(Reg.id());
+            BlockLiveness[Pred->getNumber()].LiveOut.reset(Reg.id());
             reevaluateLiveIn(Reg, Pred, &MI);
           }
         }

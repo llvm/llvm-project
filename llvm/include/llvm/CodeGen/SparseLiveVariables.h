@@ -58,7 +58,13 @@ public:
     SparseBitVector<> LiveOut;
   };
 
-  DenseMap<const MachineBasicBlock *, BlockInfo> BlockLiveness;
+  /// Liveness information per block, indexed by MBB->getNumber().
+  /// We size this vector to MF.getNumBlockIDs() to guarantee bounds safety.
+  /// Note: Block numbers may have gaps if blocks were deleted. We intentionally
+  /// leave these gap indices empty (unused) rather than calling
+  /// MF.RenumberBlocks(), as doing so would mutate the function and invalidate
+  /// other analysis passes.
+  std::vector<BlockInfo> BlockLiveness;
 
   /// LivenessTracker - A utility class for backward liveness traversal.
   ///
@@ -121,17 +127,20 @@ public:
 
   /// Returns true if the given MachineBasicBlock has been analyzed.
   bool hasAnalyzed(const MachineBasicBlock *MBB) const {
-    return BlockLiveness.count(MBB);
+    return MBB->getNumber() >= 0 &&
+           (size_t)MBB->getNumber() < BlockLiveness.size();
   }
 
   /// Returns the computed Live-In set for the given MachineBasicBlock.
   const SparseBitVector<> &getLiveInSet(const MachineBasicBlock *MBB) const {
-    return BlockLiveness.at(MBB).LiveIn;
+    assert(hasAnalyzed(MBB) && "Block not analyzed");
+    return BlockLiveness[MBB->getNumber()].LiveIn;
   }
 
   /// Returns the computed Live-Out set for the given MachineBasicBlock.
   const SparseBitVector<> &getLiveOutSet(const MachineBasicBlock *MBB) const {
-    return BlockLiveness.at(MBB).LiveOut;
+    assert(hasAnalyzed(MBB) && "Block not analyzed");
+    return BlockLiveness[MBB->getNumber()].LiveOut;
   }
 
   /// Validates the computed block liveness against existing MachineBasicBlock
@@ -148,7 +157,8 @@ public:
   /// \param IgnoreMI An optional instruction to ignore during recomputation
   ///                 (useful for removing liveness before an instruction is
   ///                 physically deleted).
-  void recomputeRegisterLiveness(Register Reg, MachineInstr *IgnoreMI = nullptr);
+  void recomputeRegisterLiveness(Register Reg,
+                                 MachineInstr *IgnoreMI = nullptr);
 
   /// \brief Update liveness after a pass adds a new instruction.
   void addInstruction(MachineInstr &MI, MachineBasicBlock *MBB);
@@ -159,7 +169,8 @@ public:
   void removeInstruction(MachineInstr &MI);
 
   /// \brief Update liveness after a pass moves an instruction.
-  void handleMove(MachineInstr &MI, MachineBasicBlock *OldBB, MachineBasicBlock *NewBB);
+  void handleMove(MachineInstr &MI, MachineBasicBlock *OldBB,
+                  MachineBasicBlock *NewBB);
 
   /// \brief Update the live-in list of each MachineBasicBlock.
   ///
