@@ -12147,17 +12147,24 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
   unsigned Lo = Known.countMinTrailingZeros();
   unsigned Hi = BW - Known.countMinLeadingZeros();
   assert(Lo < Hi && "non-zero value must have a possibly-nonzero bit");
-  if (unsigned SrcByte = Lo / 8; SrcByte == (Hi - 1) / 8) {
-    unsigned DstByte = BW / 8 - 1 - SrcByte;
-    unsigned Opc = DstByte > SrcByte ? ISD::SHL : ISD::SRL;
-    unsigned Amt = AbsoluteDifference(DstByte, SrcByte) * 8;
-    SDNodeFlags Flags =
-        Opc == ISD::SHL ? SDNodeFlags::NoUnsignedWrap : SDNodeFlags::Exact;
-    return DAG.getNode(Opc, DL, VT, N0, DAG.getShiftAmountConstant(Amt, VT, DL),
-                       Flags);
-  }
+  unsigned SrcByte = Lo / 8;
+  if (SrcByte != (Hi - 1) / 8)
+    return SDValue();
 
-  return SDValue();
+  unsigned DstByte = BW / 8 - 1 - SrcByte;
+  unsigned Opc = DstByte > SrcByte ? ISD::SHL : ISD::SRL;
+  // Skip if the target would re-expand the produced shift post-legalize.
+  // Targets that custom-lower byte-multiple shifts via bswap (e.g. MSP430
+  // for shl i16) would loop with this combine. Same idiom as the
+  // hasOperation check on the bswap-shl-half combine above.
+  if (LegalOperations && !hasOperation(Opc, VT))
+    return SDValue();
+
+  unsigned Amt = AbsoluteDifference(DstByte, SrcByte) * 8;
+  SDNodeFlags Flags =
+      Opc == ISD::SHL ? SDNodeFlags::NoUnsignedWrap : SDNodeFlags::Exact;
+  return DAG.getNode(Opc, DL, VT, N0, DAG.getShiftAmountConstant(Amt, VT, DL),
+                     Flags);
 }
 
 SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
