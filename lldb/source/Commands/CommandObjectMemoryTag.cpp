@@ -303,7 +303,7 @@ protected:
 
 CommandObjectMemoryTag::CommandObjectMemoryTag(CommandInterpreter &interpreter)
     : CommandObjectMultiword(
-          interpreter, "tag", "Commands for manipulating memory tags",
+          interpreter, "tag", "Commands for manipulating memory tags.",
           "memory tag <sub-command> [<sub-command-options>]") {
   CommandObjectSP read_command_object(
       new CommandObjectMemoryTagRead(interpreter));
