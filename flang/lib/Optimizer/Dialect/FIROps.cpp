@@ -1694,6 +1694,12 @@ void fir::ConvertOp::getCanonicalizationPatterns(
       context);
 }
 
+static bool isI1(mlir::Type ty) {
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(ty))
+    return intTy.getWidth() == 1;
+  return false;
+}
+
 mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
   if (getValue().getType() == getType())
     return getValue();
@@ -1712,6 +1718,13 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
         if (mlir::isa<fir::LogicalType>(inner.getType()) && (toTy == fromTy) &&
             (fromTy.getWidth() == 1))
           return inner.getValue();
+  }
+  // (convert (bitcast 'cst : int -> logical) : logical -> i1) ==> `'cst != 0`
+  if (isI1(getType()) &&
+      matchPattern(getValue(), mlir::m_Op<fir::BitcastOp>())) {
+    auto bitcast = mlir::cast<fir::BitcastOp>(getValue().getDefiningOp());
+    if (auto cst = fir::getIntIfConstant(bitcast.getValue()))
+      return mlir::IntegerAttr::get(getType(), cst != 0 ? 1 : 0);
   }
   return {};
 }

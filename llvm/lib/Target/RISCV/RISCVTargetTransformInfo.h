@@ -224,6 +224,11 @@ public:
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
                          TTI::TargetCostKind CostKind) const override;
 
+  std::optional<InstructionCost> getCombinedArithmeticInstructionCost(
+      unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
+      ArrayRef<const Value *> Args, const Instruction *CxtI) const;
+
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                              std::optional<FastMathFlags> FMF,
@@ -374,14 +379,10 @@ public:
         Intrinsic::vp_and,
         Intrinsic::vp_ashr,
         Intrinsic::vp_cttz_elts,
-        Intrinsic::vp_fadd,
         Intrinsic::vp_fcmp,
-        Intrinsic::vp_fmul,
         Intrinsic::vp_fptrunc,
-        Intrinsic::vp_frem,
         Intrinsic::vp_fshl,
         Intrinsic::vp_fshr,
-        Intrinsic::vp_fsub,
         Intrinsic::vp_gather,
         Intrinsic::vp_icmp,
         Intrinsic::vp_inttoptr,
@@ -413,7 +414,6 @@ public:
         Intrinsic::vp_select,
         Intrinsic::vp_sext,
         Intrinsic::vp_shl,
-        Intrinsic::vp_sqrt,
         Intrinsic::vp_srem,
         Intrinsic::vp_store,
         Intrinsic::vp_sub,

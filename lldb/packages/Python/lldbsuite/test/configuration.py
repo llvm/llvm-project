@@ -39,7 +39,8 @@ lldb_framework_path = None
 # Test suite repeat count.  Can be overwritten with '-# count'.
 count = 1
 
-# The 'arch' and 'compiler' can be specified via command line.
+# The 'arch' is derived from the triple. The 'compiler' can be specified via
+# command line.
 arch = None
 compiler = None
 dsymutil = None
@@ -48,6 +49,9 @@ make_path = None
 
 # Allow specifying a triple for cross compilation.
 triple = None
+
+# Clang resource directory for cross compilation.
+resource_dir = None
 
 # The overriden dwarf verison.
 # Don't use this to test the current compiler's
