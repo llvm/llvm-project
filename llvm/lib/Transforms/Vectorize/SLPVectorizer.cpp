@@ -6862,15 +6862,24 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   int Size = DL.getTypeStoreSize(ElemTy);
   auto TryGetStride = [&](const SCEV *Dist,
                           const SCEV *Multiplier) -> const SCEV * {
-    if (const auto *M = dyn_cast<SCEVMulExpr>(Dist)) {
-      if (M->getOperand(0) == Multiplier)
-        return M->getOperand(1);
-      if (M->getOperand(1) == Multiplier)
-        return M->getOperand(0);
-      return nullptr;
-    }
     if (Multiplier == Dist)
       return SE.getConstant(Dist->getType(), 1);
+    if (const auto *M = dyn_cast<SCEVMulExpr>(Dist)) {
+      // Want to simplify the distant/multiplier, but can only be done
+      // if NUW is assumed
+      SCEV::NoWrapFlags Flags =
+          ScalarEvolution::setFlags(M->getNoWrapFlags(), SCEV::FlagNUW);
+      SmallVector<SCEVUseT<const SCEV *>> Ops(M->operands());
+      Dist = SE.getMulExpr(Ops, Flags);
+    }
+    if (const auto *M = dyn_cast<SCEVMulExpr>(Multiplier)) {
+      // Want to simplify the distant/multiplier, but can only be done
+      // if NUW is assumed
+      SCEV::NoWrapFlags Flags =
+          ScalarEvolution::setFlags(M->getNoWrapFlags(), SCEV::FlagNUW);
+      SmallVector<SCEVUseT<const SCEV *>> Ops(M->operands());
+      Multiplier = SE.getMulExpr(Ops, Flags);
+    }
     return SE.getUDivExactExpr(Dist, Multiplier);
   };
   // Stride_in_elements = Dist / element_size * (num_elems - 1).
