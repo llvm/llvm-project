@@ -2,9 +2,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250-GISEL %s
 
-@bar = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
+@bar = internal addrspace(15) global target("amdgcn.named.barrier", 0) poison
 
-define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
+define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(15) %in) #0 {
 ; GFX1250-SDAG-LABEL: kernel1:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    global_wb
@@ -14,7 +14,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1250-SDAG-NEXT:    s_mov_b32 m0, 1
 ; GFX1250-SDAG-NEXT:    s_wakeup_barrier m0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    s_bfe_u32 m0, s0, 0x60004
+; GFX1250-SDAG-NEXT:    s_and_b32 m0, s0, 63
 ; GFX1250-SDAG-NEXT:    s_wakeup_barrier m0
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -26,18 +26,16 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1250-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GFX1250-GISEL-NEXT:    s_wakeup_barrier 1
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    s_lshr_b32 s0, s0, 4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_and_b32 m0, s0, 63
 ; GFX1250-GISEL-NEXT:    s_wakeup_barrier m0
 ; GFX1250-GISEL-NEXT:    s_endpgm
-    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) @bar)
-    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %in)
+    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15) @bar)
+    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15) %in)
     ret void
 }
 
 
-declare void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3)) #1
+declare void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15)) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

@@ -6,28 +6,28 @@
 ; where amdgpu-lower-module-lds pass runs in pipeline after amdgpu-lower-exec-sync pass.
 
 %class.ExpAmdWorkgroupWaveBarrier = type { target("amdgcn.named.barrier", 0) }
-@bar2 = internal addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] poison
-@bar3 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
-@bar1 = internal addrspace(3) global [4 x %class.ExpAmdWorkgroupWaveBarrier] poison
+@bar2 = internal addrspace(15) global [2 x target("amdgcn.named.barrier", 0)] poison
+@bar3 = internal addrspace(15) global target("amdgcn.named.barrier", 0) poison
+@bar1 = internal addrspace(15) global [4 x %class.ExpAmdWorkgroupWaveBarrier] poison
 @lds1 = internal addrspace(3) global [1 x i8] poison, align 4
 
 ;.
-; CHECK: @bar2 = internal addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] poison, !absolute_symbol [[META0:![0-9]+]]
-; CHECK: @bar3 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol [[META1:![0-9]+]]
-; CHECK: @bar1 = internal addrspace(3) global [4 x %class.ExpAmdWorkgroupWaveBarrier] poison, !absolute_symbol [[META2:![0-9]+]]
+; CHECK: @bar2 = internal addrspace(15) global [2 x target("amdgcn.named.barrier", 0)] poison, !absolute_symbol [[META0:![0-9]+]]
+; CHECK: @bar3 = internal addrspace(15) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol [[META1:![0-9]+]]
+; CHECK: @bar1 = internal addrspace(15) global [4 x %class.ExpAmdWorkgroupWaveBarrier] poison, !absolute_symbol [[META2:![0-9]+]]
 ; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 4, !absolute_symbol [[META3:![0-9]+]]
 ; CHECK: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
 ;.
 define void @func1() #0 {
 ; CHECK-LABEL: define void @func1(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar3)
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar3, i32 7)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar3)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar3, i32 7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 1)
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar3)
-  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar3, i32 7)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar3)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar3, i32 7)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   ret void
 }
@@ -35,14 +35,14 @@ define void @func1() #0 {
 define void @func2() #0 {
 ; CHECK-LABEL: define void @func2(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar2)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar2, i32 7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 1)
 ; CHECK-NEXT:    store i8 7, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
-  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar2)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar2, i32 7)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   store i8 7, ptr addrspace(3) @lds1, align 4
   ret void
@@ -52,20 +52,20 @@ define amdgpu_kernel void @kernel1() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel1(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 11)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar1)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar1, i32 11)
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 1)
-; CHECK-NEXT:    [[STATE:%.*]] = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) @bar1)
+; CHECK-NEXT:    [[STATE:%.*]] = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) @bar1)
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    call void @func2()
 ; CHECK-NEXT:    store i8 9, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
-  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 11)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar1)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar1, i32 11)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
-  %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) @bar1)
+  %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) @bar1)
   call void @llvm.amdgcn.s.barrier()
   call void @func1()
   call void @func2()
@@ -77,15 +77,15 @@ define amdgpu_kernel void @kernel2() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel2(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar1)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar1, i32 9)
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 1)
 ; CHECK-NEXT:    call void @func2()
 ; CHECK-NEXT:    store i8 10, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
-  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar1)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar1, i32 9)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   call void @func2()
   store i8 10, ptr addrspace(3) @lds1, align 4
@@ -95,13 +95,13 @@ define amdgpu_kernel void @kernel2() #0 {
 declare void @llvm.amdgcn.s.barrier() #1
 declare void @llvm.amdgcn.s.barrier.wait(i16) #1
 declare void @llvm.amdgcn.s.barrier.signal(i32) #1
-declare void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3), i32) #1
+declare void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15), i32) #1
 declare i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32) #1
-declare void @llvm.amdgcn.s.barrier.init(ptr addrspace(3), i32) #1
-declare void @llvm.amdgcn.s.barrier.join(ptr addrspace(3)) #1
+declare void @llvm.amdgcn.s.barrier.init(ptr addrspace(15), i32) #1
+declare void @llvm.amdgcn.s.barrier.join(ptr addrspace(15)) #1
 declare void @llvm.amdgcn.s.barrier.leave(i16) #1
-declare void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3)) #1
-declare i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3)) #1
+declare void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15)) #1
+declare i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15)) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }
@@ -113,8 +113,8 @@ attributes #2 = { nounwind readnone }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ;.
-; CHECK: [[META0]] = !{i32 8396880, i32 8396881}
-; CHECK: [[META1]] = !{i32 8396912, i32 8396913}
-; CHECK: [[META2]] = !{i32 8396816, i32 8396817}
+; CHECK: [[META0]] = !{i32 5, i32 6}
+; CHECK: [[META1]] = !{i32 7, i32 8}
+; CHECK: [[META2]] = !{i32 1, i32 2}
 ; CHECK: [[META3]] = !{i32 0, i32 1}
 ;.

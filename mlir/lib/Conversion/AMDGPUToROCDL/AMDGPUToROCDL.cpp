@@ -4553,7 +4553,7 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
       });
   typeConverter.addConversion([](gpu::NamedBarrierType type) {
     return LLVM::LLVMPointerType::get(
-        type.getContext(), ROCDL::ROCDLDialect::kSharedMemoryAddressSpace);
+        type.getContext(), ROCDL::ROCDLDialect::kBarrierAddressSpace);
   });
 }
 

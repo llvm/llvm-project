@@ -18,6 +18,7 @@ def p3 : PtrValueType<i32, 3>;
 def p4 : PtrValueType<i64, 4>;
 def p5 : PtrValueType<i32, 5>;
 def p6 : PtrValueType<i32, 6>;
+def p15 : PtrValueType<i32, 15>;
 
 //===-----------------------------------------------------------------------===//
 // AMDGPU Subtarget Feature (device properties)
