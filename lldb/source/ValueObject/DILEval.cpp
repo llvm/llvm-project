@@ -22,28 +22,6 @@
 
 namespace lldb_private::dil {
 
-lldb::ValueObjectSP
-GetDynamicOrSyntheticValue(lldb::ValueObjectSP value_sp,
-                           lldb::DynamicValueType use_dynamic,
-                           bool use_synthetic) {
-  if (!value_sp)
-    return nullptr;
-
-  if (use_dynamic != lldb::eNoDynamicValues) {
-    lldb::ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(use_dynamic);
-    if (dynamic_sp)
-      value_sp = dynamic_sp;
-  }
-
-  if (use_synthetic) {
-    lldb::ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
-    if (synthetic_sp)
-      value_sp = synthetic_sp;
-  }
-
-  return value_sp;
-}
-
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
                                  lldb::BasicType basic_type) {
   if (type_system)
@@ -62,6 +40,16 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       name, addr, exe_ctx,
       valobj.GetCompilerType().GetArrayElementType(&ctx).GetPointerType(),
       /* do_deref */ false);
+}
+
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -394,11 +382,14 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
       (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
   const bool allow_var_updates =
       (options & StackFrame::eExpressionPathOptionsAllowVarUpdates) != 0;
+  const bool disallow_globals =
+      (options & StackFrame::eExpressionPathOptionsDisallowGlobals) != 0;
 
   m_use_synthetic = !no_synth_child;
   m_fragile_ivar = !no_fragile_ivar;
   m_check_ptr_vs_member = check_ptr_vs_member;
   m_allow_var_updates = allow_var_updates;
+  m_allow_globals = !disallow_globals;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -436,7 +427,7 @@ Interpreter::Visit(const IdentifierNode &node) {
   lldb::ValueObjectSP identifier =
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
-  if (!identifier)
+  if (!identifier && m_allow_globals)
     identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
                                         m_target, use_dynamic);
   if (!identifier) {
@@ -587,11 +578,17 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                               uint32_t location) {
   Scalar l, r;
   bool l_resolved = lhs->ResolveValue(l);
+  if (!l_resolved) {
+    std::string errMsg =
+        llvm::formatv("invalid lhs value: {0}", lhs->GetError().AsCString());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
   bool r_resolved = rhs->ResolveValue(r);
-
-  if (!l_resolved || !r_resolved)
-    return llvm::make_error<DILDiagnosticError>(m_expr, "invalid scalar value",
-                                                location);
+  if (!r_resolved) {
+    std::string errMsg =
+        llvm::formatv("invalid rhs value: {0}", rhs->GetError().AsCString());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
 
   auto value_object = [this, result_type](Scalar scalar) {
     return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar,
@@ -603,6 +600,12 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l + r);
   case BinaryOpKind::Sub:
     return value_object(l - r);
+  case BinaryOpKind::Mul:
+    return value_object(l * r);
+  case BinaryOpKind::Div:
+    return value_object(l / r);
+  case BinaryOpKind::Rem:
+    return value_object(l % r);
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -723,6 +726,83 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
                                               location);
 }
 
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryMultiplication(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '*' works for:
+  //  {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (!result_type.IsScalarType()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                location);
+  }
+
+  return EvaluateScalarOp(BinaryOpKind::Mul, lhs, rhs, result_type, location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryDivision(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '/' works for:
+  //  {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (!result_type.IsScalarType()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                location);
+  }
+
+  // Check for zero only for integer division.
+  if (result_type.IsInteger() && rhs->GetValueAsSigned(-1) == 0) {
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "division by zero is undefined", location);
+  }
+
+  return EvaluateScalarOp(BinaryOpKind::Div, lhs, rhs, result_type, location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryRemainder(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '%' works for:
+  //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (!result_type.IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                location);
+  }
+
+  if (rhs->GetValueAsSigned(-1) == 0) {
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "division by zero is undefined", location);
+  }
+
+  return EvaluateScalarOp(BinaryOpKind::Rem, lhs, rhs, result_type, location);
+}
+
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BinaryOpNode &node) {
   auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
@@ -749,6 +829,12 @@ Interpreter::Visit(const BinaryOpNode &node) {
     return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Sub:
     return EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Mul:
+    return EvaluateBinaryMultiplication(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Div:
+    return EvaluateBinaryDivision(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Rem:
+    return EvaluateBinaryRemainder(lhs, rhs, node.GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(

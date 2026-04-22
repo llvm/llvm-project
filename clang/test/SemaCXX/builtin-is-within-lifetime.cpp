@@ -111,7 +111,7 @@ static_assert(test_dynamic(true));
 consteval bool test_automatic(int read_dangling) {
   int* p;
   {
-    int x = 0;
+    int x = 0; // expected-note 2{{declared here}}
     p = &x;
     if (!__builtin_is_within_lifetime(p))
       return false;
@@ -124,7 +124,7 @@ consteval bool test_automatic(int read_dangling) {
   if (read_dangling == 2)
     __builtin_is_within_lifetime(p); // expected-note {{read of object outside its lifetime is not allowed in a constant expression}}
   {
-    int x[4];
+    int x[4]; // expected-note {{declared here}}
     p = &x[2];
     if (!__builtin_is_within_lifetime(p))
       return false;
@@ -133,7 +133,7 @@ consteval bool test_automatic(int read_dangling) {
     __builtin_is_within_lifetime(p); // expected-note {{read of object outside its lifetime is not allowed in a constant expression}}
   std::nullptr_t* q;
   {
-    std::nullptr_t np = nullptr;
+    std::nullptr_t np = nullptr; // expected-note {{declared here}}
     q = &np;
     if (!__builtin_is_within_lifetime(q))
       return false;

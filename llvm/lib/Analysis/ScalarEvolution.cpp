@@ -15335,6 +15335,12 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
   if (Start->getType()->isPointerTy() && Start->getType() != OpStart->getType())
     return false;
 
+  // NUSW/NSSW on a wider-type AddRec does not imply the same on a
+  // narrower-type AddRec.
+  if (SE.getTypeSizeInBits(AR->getType()) >
+      SE.getTypeSizeInBits(Op->AR->getType()))
+    return false;
+
   const SCEV *Step = AR->getStepRecurrence(SE);
   const SCEV *OpStep = Op->AR->getStepRecurrence(SE);
   if (!SE.isKnownPositive(Step) || !SE.isKnownPositive(OpStep))

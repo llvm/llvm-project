@@ -1568,19 +1568,6 @@ def : InstAlias<"nop", (NOP)>;
 
 def STSHH: STSHHI;
 
-let hasSideEffects = 1, mayStore = 1, isCodeGenOnly = 1 in {
-let Size = 8 in
-def STSHH_ATOMIC_STORE_SZ
-    : Pseudo<(outs), (ins GPR64:$val, GPR64sp:$addr, i32imm:$order,
-                          i32imm:$policy, i32imm:$size), []>,
-             Sched<[WriteAtomic]>;
-}
-
-def : Pat<(int_aarch64_stshh_atomic_store GPR64sp:$addr, GPR64:$val,
-           (i32 timm:$order), (i32 timm:$policy), (i32 timm:$size)),
-          (STSHH_ATOMIC_STORE_SZ GPR64:$val, GPR64sp:$addr, (i32 timm:$order),
-           (i32 timm:$policy), (i32 timm:$size))>;
-
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
 // However, in order to be compatible with other assemblers (e.g. GAS), LLVM
@@ -2083,6 +2070,11 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
 // Insertion point of LR authentication code.
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
+//
+// In the case where PAuthLR is requested but the subtarget lacks PAuthLR
+// instructions, this pseudo clobbers X16. Insert this instruction with the
+// AArch64InstrInfo::createPauthEpilogueInstr method that adds an implicit-def
+// operand as needed.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
@@ -3269,7 +3261,6 @@ def : InstAlias<"mov $dst, $imm", (ORRWri GPR32sp:$dst, WZR,
 def : InstAlias<"mov $dst, $imm", (ORRXri GPR64sp:$dst, XZR,
                                           logical_imm64:$imm), 0>;
 
-
 // (register)
 defm ANDS : LogicalRegS<0b11, 0, "ands", AArch64and_flag>;
 defm BICS : LogicalRegS<0b11, 1, "bics",
@@ -3340,7 +3331,6 @@ def : Pat<(not logical_shifted_reg64:$Rm_and_shift),
 let AddedComplexity = 6 in
 def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
           (SUBREG_TO_REG (ORRWrr WZR, (EXTRACT_SUBREG GPR64:$Rn, sub_32)), sub_32)>;
-
 
 //===----------------------------------------------------------------------===//
 // One operand data processing instructions.
@@ -10023,6 +10013,20 @@ defm : St1LanePost128Pat<post_store, VectorIndexD, v2i64, i64, ST1i64_POST, 8>;
 defm : St1LanePost128Pat<post_store, VectorIndexD, v2f64, f64, ST1i64_POST, 8>;
 defm : St1LanePost128Pat<post_store, VectorIndexH, v8f16, f16, ST1i16_POST, 2>;
 defm : St1LanePost128Pat<post_store, VectorIndexH, v8bf16, bf16, ST1i16_POST, 2>;
+
+let AddedComplexity = 19 in
+class St1Lane128SubvecPat<ValueType VTy, ComplexPattern extract_high>
+  : Pat<(store (extract_high (VTy V128:$Vt)), GPR64sp:$Rn),
+        (ST1i64 V128:$Vt, 1, GPR64sp:$Rn)>;
+
+def : St1Lane128SubvecPat<v16i8, extract_high_v16i8>;
+def : St1Lane128SubvecPat<v8i16, extract_high_v8i16>;
+def : St1Lane128SubvecPat<v4i32, extract_high_v4i32>;
+def : St1Lane128SubvecPat<v2i64, extract_high_v2i64>;
+def : St1Lane128SubvecPat<v8f16, extract_high_v8f16>;
+def : St1Lane128SubvecPat<v8bf16, extract_high_v8bf16>;
+def : St1Lane128SubvecPat<v4f32, extract_high_v4f32>;
+def : St1Lane128SubvecPat<v2f64, extract_high_v2f64>;
 
 let mayStore = 1, hasSideEffects = 0 in {
 defm ST2 : SIMDStSingleB<1, 0b000,       "st2", VecListTwob,   GPR64pi2>;

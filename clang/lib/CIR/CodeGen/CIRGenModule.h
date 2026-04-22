@@ -201,6 +201,19 @@ public:
   void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
   void updateResolvedBlockAddress(cir::BlockAddressOp op,
                                   cir::LabelOp newLabel);
+
+  /// Add a global value to the llvmUsed list.
+  void addUsedGlobal(cir::CIRGlobalValueInterface gv);
+
+  /// Add a global value to the llvmCompilerUsed list.
+  void addCompilerUsedGlobal(cir::CIRGlobalValueInterface gv);
+
+  /// Add a global to a list to be added to the llvm.compiler.used metadata.
+  void addUsedOrCompilerUsedGlobal(cir::CIRGlobalValueInterface gv);
+
+  /// Emit llvm.used and llvm.compiler.used globals.
+  void emitLLVMUsed();
+
   /// Tell the consumer that this variable has been instantiated.
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
@@ -464,6 +477,12 @@ public:
       clang::GlobalDecl gd, const CIRGenFunctionInfo *fnInfo = nullptr,
       cir::FuncType fnType = nullptr, bool dontDefer = false,
       ForDefinition_t isForDefinition = NotForDefinition);
+
+  /// List of global values which are required to be present in the object file;
+  /// This is used for forcing visibility of symbols which may otherwise be
+  /// optimized out.
+  std::vector<cir::CIRGlobalValueInterface> llvmUsed;
+  std::vector<cir::CIRGlobalValueInterface> llvmCompilerUsed;
 
   mlir::Type getVTableComponentType();
   CIRGenVTables &getVTables() { return vtables; }
@@ -754,8 +773,7 @@ public:
   cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
-                                                    GVALinkage linkage,
-                                                    bool isConstantVariable);
+                                                    GVALinkage linkage);
   void setFunctionLinkage(GlobalDecl gd, cir::FuncOp f) {
     cir::GlobalLinkageKind l = getFunctionLinkage(gd);
     f.setLinkageAttr(cir::GlobalLinkageKindAttr::get(&getMLIRContext(), l));
@@ -763,8 +781,7 @@ public:
                                            getMLIRVisibilityFromCIRLinkage(l));
   }
 
-  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
-                                                    bool isConstant);
+  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd);
 
   void addReplacement(llvm::StringRef name, mlir::Operation *op);
 
