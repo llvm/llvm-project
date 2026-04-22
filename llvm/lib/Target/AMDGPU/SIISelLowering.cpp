@@ -66,6 +66,12 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
+static cl::opt<bool> EnableFP32ReciprocalNewtonRaphson(
+    "enable-fp32-recip-newton-raphson", cl::Hidden, cl::init(false),
+    cl::desc("Use Newton-Raphson refinement for 1.0f/x when the denominator "
+             "is a normal float, falling back to the full division sequence "
+             "for denormals/inf/nan/zero."));
+
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
@@ -10621,21 +10627,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_rcp:
     return DAG.getNode(AMDGPUISD::RCP, DL, VT, Op.getOperand(1));
-  case Intrinsic::amdgcn_rcp_normal_f32: {
-    // Newton-Raphson refinement for reciprocal:
-    //   y0 = rcp(x)              ; initial approximation
-    //   err = x * y0 - 1         ; error term
-    //   neg_err = -err           ; negate error: (1 - x * y0)
-    //   y1 = y0 * neg_err + y0   ; y0 * (2 - x * y0) = refined result
-    //
-    SDValue X = Op.getOperand(1);
-    SDValue Y0 = DAG.getNode(AMDGPUISD::RCP, DL, VT, X);
-    SDValue NegOne = DAG.getConstantFP(-1.0, DL, VT);
-    SDValue Err = DAG.getNode(ISD::FMA, DL, VT, X, Y0, NegOne);
-    SDValue NegErr = DAG.getNode(ISD::FNEG, DL, VT, Err);
-    SDValue Y1 = DAG.getNode(ISD::FMA, DL, VT, Y0, NegErr, Y0);
-    return Y1;
-  }
   case Intrinsic::amdgcn_rsq:
     return DAG.getNode(AMDGPUISD::RSQ, DL, VT, Op.getOperand(1));
   case Intrinsic::amdgcn_rsq_legacy:
@@ -13226,6 +13217,39 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
+  if (EnableFP32ReciprocalNewtonRaphson) {
+    if (auto *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
+      if (CLHS->isExactlyValue(1.0)) {
+        // For 1.0f / x, use a Newton-Raphson refinement when x is normal:
+        //   y0 = rcp(x)
+        //   err = fma(x, y0, -1.0)
+        //   y1 = fma(y0, -err, y0)    i.e. y0 * (2 - x*y0)
+        //
+        // When x is not normal (denormal, zero, inf, nan), fall back to the
+        // full division sequence below.
+        SDValue Y0 = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, RHS);
+        SDValue NegOne = DAG.getConstantFP(-1.0, SL, MVT::f32);
+        SDValue Err = DAG.getNode(ISD::FMA, SL, MVT::f32, RHS, Y0, NegOne);
+        SDValue NegErr = DAG.getNode(ISD::FNEG, SL, MVT::f32, Err);
+        SDValue FastResult =
+            DAG.getNode(ISD::FMA, SL, MVT::f32, Y0, NegErr, Y0);
+
+        SDValue IsNormal = DAG.getNode(
+            ISD::IS_FPCLASS, SL, MVT::i1, RHS,
+            DAG.getTargetConstant(fcNormal, SL, MVT::i32));
+
+        // Recurse with the flag disabled to produce the full (slow) division
+        // sequence for non-normal denominators.
+        EnableFP32ReciprocalNewtonRaphson = false;
+        SDValue SlowResult = LowerFDIV32(Op, DAG);
+        EnableFP32ReciprocalNewtonRaphson = true;
+
+        return DAG.getNode(ISD::SELECT, SL, MVT::f32, IsNormal, FastResult,
+                           SlowResult, Flags);
+      }
+    }
+  }
+
   const SDValue One = DAG.getConstantFP(1.0, SL, MVT::f32);
 
   SDVTList ScaleVT = DAG.getVTList(MVT::f32, MVT::i1);
@@ -15558,7 +15582,6 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_frexp_mant:
     case Intrinsic::amdgcn_fdot2:
     case Intrinsic::amdgcn_rcp:
-    case Intrinsic::amdgcn_rcp_normal_f32:
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rsq_clamp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -15673,7 +15696,6 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
     case Intrinsic::amdgcn_exp2:
     case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_rcp:
-    case Intrinsic::amdgcn_rcp_normal_f32:
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rsq_clamp:
