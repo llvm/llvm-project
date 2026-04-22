@@ -46,6 +46,7 @@
 #ifndef LLVM_SUPPORT_JSON_H
 #define LLVM_SUPPORT_JSON_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -76,10 +77,12 @@ namespace json {
 //   - When retrieving strings from Values (e.g. asString()), the result will
 //     always be valid UTF-8.
 
+template <typename T, bool = std::is_integral_v<T>>
+constexpr bool is_uint_64_bit_v = false;
+
 template <typename T>
-constexpr bool is_uint_64_bit_v =
-    std::is_integral_v<T> && std::is_unsigned_v<T> &&
-    sizeof(T) == sizeof(uint64_t);
+constexpr bool is_uint_64_bit_v<T, true> =
+    std::is_unsigned_v<T> && sizeof(T) == sizeof(uint64_t);
 
 /// Returns true if \p S is valid UTF-8, which is required for use as JSON.
 /// If it returns false, \p Offset is set to a byte offset near the first error.
@@ -90,84 +93,65 @@ LLVM_ABI bool isUTF8(llvm::StringRef S, size_t *ErrOffset = nullptr);
 LLVM_ABI std::string fixUTF8(llvm::StringRef S);
 
 class Array;
-class ObjectKey;
 class Value;
+class Object;
 template <typename T> Value toJSON(const std::optional<T> &Opt);
 
-/// An Object is a JSON object, which maps strings to heterogenous JSON values.
-/// ObjectKey is a maybe-owned string.
-class Object {
-  struct ObjectKeyHash {
-    template <typename T> size_t operator()(const T &Key) const {
-      return hash_value(Key);
-    }
-  };
-  using Storage = std::unordered_map<ObjectKey, Value, ObjectKeyHash>;
-  Storage M;
-
+/// ObjectKey is a used to capture keys in Object. Like Value but:
+///   - only strings are allowed
+///   - it's optimized for the string literal case (Owned == nullptr)
+/// Like Value, strings must be UTF-8. See isUTF8 documentation for details.
+class ObjectKey {
 public:
-  using key_type = ObjectKey;
-  using mapped_type = Value;
-  using value_type = Storage::value_type;
-  using iterator = Storage::iterator;
-  using const_iterator = Storage::const_iterator;
-
-  Object() = default;
-  // KV is a trivial key-value struct for list-initialization.
-  // (using std::pair forces extra copies).
-  struct KV;
-  explicit Object(std::initializer_list<KV> Properties);
-
-  iterator begin() { return M.begin(); }
-  const_iterator begin() const { return M.begin(); }
-  iterator end() { return M.end(); }
-  const_iterator end() const { return M.end(); }
-
-  bool empty() const { return M.empty(); }
-  size_t size() const { return M.size(); }
-
-  void clear() { M.clear(); }
-  std::pair<iterator, bool> insert(KV E);
-  template <typename... Ts>
-  std::pair<iterator, bool> try_emplace(const ObjectKey &K, Ts &&... Args) {
-    return M.try_emplace(K, std::forward<Ts>(Args)...);
+  ObjectKey(const char *S) : ObjectKey(StringRef(S)) {}
+  ObjectKey(std::string S) : Owned(new std::string(std::move(S))) {
+    if (LLVM_UNLIKELY(!isUTF8(*Owned))) {
+      assert(false && "Invalid UTF-8 in value used as JSON");
+      *Owned = fixUTF8(*Owned);
+    }
+    Data = *Owned;
   }
-  template <typename... Ts>
-  std::pair<iterator, bool> try_emplace(ObjectKey &&K, Ts &&... Args) {
-    return M.try_emplace(std::move(K), std::forward<Ts>(Args)...);
+  ObjectKey(llvm::StringRef S) : Data(S) {
+    if (LLVM_UNLIKELY(!isUTF8(Data))) {
+      assert(false && "Invalid UTF-8 in value used as JSON");
+      *this = ObjectKey(fixUTF8(S));
+    }
   }
-  bool erase(StringRef K);
-  void erase(iterator I) { M.erase(I); }
+  ObjectKey(const llvm::SmallVectorImpl<char> &V)
+      : ObjectKey(std::string(V.begin(), V.end())) {}
+  ObjectKey(const llvm::formatv_object_base &V) : ObjectKey(V.str()) {}
 
-  // TODO: Implement heterogeneous lookup using StringRef directly. We need to
-  // make ObjectKey transparent with transparent hash and key equality check.
-  // This is supported for unordered containers in C++20.
-  iterator find(const ObjectKey &K) { return M.find(K); }
-  const_iterator find(const ObjectKey &K) const { return M.find(K); }
-  // operator[] acts as if Value was default-constructible as null.
-  LLVM_ABI Value &operator[](const ObjectKey &K);
-  LLVM_ABI Value &operator[](ObjectKey &&K);
-  // Look up a property, returning nullptr if it doesn't exist.
-  LLVM_ABI Value *get(StringRef K);
-  LLVM_ABI const Value *get(StringRef K) const;
-  // Typed accessors return std::nullopt/nullptr if
-  //   - the property doesn't exist
-  //   - or it has the wrong type
-  LLVM_ABI std::optional<std::nullptr_t> getNull(StringRef K) const;
-  LLVM_ABI std::optional<bool> getBoolean(StringRef K) const;
-  LLVM_ABI std::optional<double> getNumber(StringRef K) const;
-  LLVM_ABI std::optional<int64_t> getInteger(StringRef K) const;
-  LLVM_ABI std::optional<llvm::StringRef> getString(StringRef K) const;
-  LLVM_ABI const json::Object *getObject(StringRef K) const;
-  LLVM_ABI json::Object *getObject(StringRef K);
-  LLVM_ABI const json::Array *getArray(StringRef K) const;
-  LLVM_ABI json::Array *getArray(StringRef K);
+  ObjectKey(const ObjectKey &C) { *this = C; }
+  ObjectKey(ObjectKey &&C) : ObjectKey(static_cast<const ObjectKey &&>(C)) {}
+  ObjectKey &operator=(const ObjectKey &C) {
+    if (C.Owned) {
+      Owned.reset(new std::string(*C.Owned));
+      Data = *Owned;
+    } else {
+      Data = C.Data;
+    }
+    return *this;
+  }
+  ObjectKey &operator=(ObjectKey &&) = default;
 
-  friend LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
+  operator llvm::StringRef() const { return Data; }
+  std::string str() const { return Data.str(); }
+
+private:
+  // FIXME: this is unneccesarily large (3 pointers). Pointer + length + owned
+  // could be 2 pointers at most.
+  std::unique_ptr<std::string> Owned;
+  llvm::StringRef Data;
 };
-LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
-inline bool operator!=(const Object &LHS, const Object &RHS) {
-  return !(LHS == RHS);
+
+inline bool operator==(const ObjectKey &L, const ObjectKey &R) {
+  return llvm::StringRef(L) == llvm::StringRef(R);
+}
+inline bool operator!=(const ObjectKey &L, const ObjectKey &R) {
+  return !(L == R);
+}
+inline bool operator<(const ObjectKey &L, const ObjectKey &R) {
+  return StringRef(L) < StringRef(R);
 }
 
 /// An Array is a JSON array, which contains heterogeneous JSON values.
@@ -319,9 +303,7 @@ public:
   }
   template <typename Elt>
   Value(const std::vector<Elt> &C) : Value(json::Array(C)) {}
-  Value(json::Object &&Properties) : Type(T_Object) {
-    create<json::Object>(std::move(Properties));
-  }
+  Value(json::Object &&Properties);
   template <typename Elt>
   Value(const std::map<std::string, Elt> &C) : Value(json::Object(C)) {}
   // Strings: types with value semantics. Must be valid UTF-8.
@@ -472,10 +454,14 @@ public:
     return std::nullopt;
   }
   const json::Object *getAsObject() const {
-    return LLVM_LIKELY(Type == T_Object) ? &as<json::Object>() : nullptr;
+    return LLVM_LIKELY(Type == T_Object)
+               ? as<std::unique_ptr<json::Object>>().get()
+               : nullptr;
   }
   json::Object *getAsObject() {
-    return LLVM_LIKELY(Type == T_Object) ? &as<json::Object>() : nullptr;
+    return LLVM_LIKELY(Type == T_Object)
+               ? as<std::unique_ptr<json::Object>>().get()
+               : nullptr;
   }
   const json::Array *getAsArray() const {
     return LLVM_LIKELY(Type == T_Array) ? &as<json::Array>() : nullptr;
@@ -538,7 +524,7 @@ private:
   mutable ValueType Type;
   mutable llvm::AlignedCharArrayUnion<bool, double, int64_t, uint64_t,
                                       llvm::StringRef, std::string, json::Array,
-                                      json::Object>
+                                      std::unique_ptr<json::Object>>
       Union;
   LLVM_ABI friend bool operator==(const Value &, const Value &);
 };
@@ -589,61 +575,80 @@ inline Array::iterator Array::emplace(const_iterator P, Args &&...A) {
 inline Array::iterator Array::erase(const_iterator P) { return V.erase(P); }
 inline bool operator==(const Array &L, const Array &R) { return L.V == R.V; }
 
-/// ObjectKey is a used to capture keys in Object. Like Value but:
-///   - only strings are allowed
-///   - it's optimized for the string literal case (Owned == nullptr)
-/// Like Value, strings must be UTF-8. See isUTF8 documentation for details.
-class ObjectKey {
+/// An Object is a JSON object, which maps strings to heterogeneous JSON values.
+/// ObjectKey is a maybe-owned string.
+class Object {
+  struct ObjectKeyHash {
+    size_t operator()(const ObjectKey &Key) const {
+      return hash_value(StringRef(Key));
+    }
+  };
+  using Storage = std::unordered_map<ObjectKey, Value, ObjectKeyHash>;
+  Storage M;
+
 public:
-  ObjectKey(const char *S) : ObjectKey(StringRef(S)) {}
-  ObjectKey(std::string S) : Owned(new std::string(std::move(S))) {
-    if (LLVM_UNLIKELY(!isUTF8(*Owned))) {
-      assert(false && "Invalid UTF-8 in value used as JSON");
-      *Owned = fixUTF8(*Owned);
-    }
-    Data = *Owned;
-  }
-  ObjectKey(llvm::StringRef S) : Data(S) {
-    if (LLVM_UNLIKELY(!isUTF8(Data))) {
-      assert(false && "Invalid UTF-8 in value used as JSON");
-      *this = ObjectKey(fixUTF8(S));
-    }
-  }
-  ObjectKey(const llvm::SmallVectorImpl<char> &V)
-      : ObjectKey(std::string(V.begin(), V.end())) {}
-  ObjectKey(const llvm::formatv_object_base &V) : ObjectKey(V.str()) {}
+  using key_type = ObjectKey;
+  using mapped_type = Value;
+  using value_type = Storage::value_type;
+  using iterator = Storage::iterator;
+  using const_iterator = Storage::const_iterator;
 
-  ObjectKey(const ObjectKey &C) { *this = C; }
-  ObjectKey(ObjectKey &&C) : ObjectKey(static_cast<const ObjectKey &&>(C)) {}
-  ObjectKey &operator=(const ObjectKey &C) {
-    if (C.Owned) {
-      Owned.reset(new std::string(*C.Owned));
-      Data = *Owned;
-    } else {
-      Data = C.Data;
-    }
-    return *this;
+  Object() = default;
+  // KV is a trivial key-value struct for list-initialization.
+  // (using std::pair forces extra copies).
+  struct KV;
+  explicit Object(std::initializer_list<KV> Properties);
+
+  iterator begin() { return M.begin(); }
+  const_iterator begin() const { return M.begin(); }
+  iterator end() { return M.end(); }
+  const_iterator end() const { return M.end(); }
+
+  bool empty() const { return M.empty(); }
+  size_t size() const { return M.size(); }
+
+  void clear() { M.clear(); }
+  std::pair<iterator, bool> insert(KV E);
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(const ObjectKey &K, Ts &&...Args) {
+    return M.try_emplace(K, std::forward<Ts>(Args)...);
   }
-  ObjectKey &operator=(ObjectKey &&) = default;
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(ObjectKey &&K, Ts &&...Args) {
+    return M.try_emplace(std::move(K), std::forward<Ts>(Args)...);
+  }
+  bool erase(StringRef K);
+  void erase(iterator I) { M.erase(I); }
 
-  operator llvm::StringRef() const { return Data; }
-  std::string str() const { return Data.str(); }
+  // TODO: Implement heterogeneous lookup using StringRef directly. We need to
+  // make ObjectKey transparent with transparent hash and key equality check.
+  // This is supported for unordered containers in C++20.
+  iterator find(const ObjectKey &K) { return M.find(K); }
+  const_iterator find(const ObjectKey &K) const { return M.find(K); }
+  // operator[] acts as if Value was default-constructible as null.
+  LLVM_ABI Value &operator[](const ObjectKey &K);
+  LLVM_ABI Value &operator[](ObjectKey &&K);
+  // Look up a property, returning nullptr if it doesn't exist.
+  LLVM_ABI Value *get(StringRef K);
+  LLVM_ABI const Value *get(StringRef K) const;
+  // Typed accessors return std::nullopt/nullptr if
+  //   - the property doesn't exist
+  //   - or it has the wrong type
+  LLVM_ABI std::optional<std::nullptr_t> getNull(StringRef K) const;
+  LLVM_ABI std::optional<bool> getBoolean(StringRef K) const;
+  LLVM_ABI std::optional<double> getNumber(StringRef K) const;
+  LLVM_ABI std::optional<int64_t> getInteger(StringRef K) const;
+  LLVM_ABI std::optional<llvm::StringRef> getString(StringRef K) const;
+  LLVM_ABI const json::Object *getObject(StringRef K) const;
+  LLVM_ABI json::Object *getObject(StringRef K);
+  LLVM_ABI const json::Array *getArray(StringRef K) const;
+  LLVM_ABI json::Array *getArray(StringRef K);
 
-private:
-  // FIXME: this is unneccesarily large (3 pointers). Pointer + length + owned
-  // could be 2 pointers at most.
-  std::unique_ptr<std::string> Owned;
-  llvm::StringRef Data;
+  friend LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
 };
-
-inline bool operator==(const ObjectKey &L, const ObjectKey &R) {
-  return llvm::StringRef(L) == llvm::StringRef(R);
-}
-inline bool operator!=(const ObjectKey &L, const ObjectKey &R) {
-  return !(L == R);
-}
-inline bool operator<(const ObjectKey &L, const ObjectKey &R) {
-  return StringRef(L) < StringRef(R);
+LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
+inline bool operator!=(const Object &LHS, const Object &RHS) {
+  return !(LHS == RHS);
 }
 
 struct Object::KV {
@@ -663,6 +668,11 @@ inline std::pair<Object::iterator, bool> Object::insert(KV E) {
 }
 inline bool Object::erase(StringRef K) {
   return M.erase(ObjectKey(K));
+}
+
+inline Value::Value(json::Object &&Properties) : Type(T_Object) {
+  create<std::unique_ptr<json::Object>>(
+      std::make_unique<json::Object>(std::move(Properties)));
 }
 
 LLVM_ABI std::vector<const Object::value_type *>

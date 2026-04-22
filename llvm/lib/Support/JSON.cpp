@@ -114,7 +114,8 @@ void Value::copyFrom(const Value &M) {
     create<std::string>(M.as<std::string>());
     break;
   case T_Object:
-    create<json::Object>(M.as<json::Object>());
+    create<std::unique_ptr<json::Object>>(
+        std::make_unique<json::Object>(*M.as<std::unique_ptr<json::Object>>()));
     break;
   case T_Array:
     create<json::Array>(M.as<json::Array>());
@@ -139,7 +140,8 @@ void Value::moveFrom(const Value &&M) {
     create<std::string>(std::move(M.as<std::string>()));
     break;
   case T_Object:
-    create<json::Object>(std::move(M.as<json::Object>()));
+    create<std::unique_ptr<json::Object>>(
+        std::move(M.as<std::unique_ptr<json::Object>>()));
     break;
   case T_Array:
     create<json::Array>(std::move(M.as<json::Array>()));
@@ -164,7 +166,7 @@ void Value::destroy() {
     as<std::string>().~basic_string();
     break;
   case T_Object:
-    as<json::Object>().~Object();
+    as<std::unique_ptr<json::Object>>().~unique_ptr();
     break;
   case T_Array:
     as<json::Array>().~Array();
