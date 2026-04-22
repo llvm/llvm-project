@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -887,22 +888,18 @@ static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
   const DataLayout& DL = F.getDataLayout();
-  SmallVector<CallInst *, 8> MemCmpCalls;
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        LibFunc Func;
-        if (TLI->getLibFunc(*CI, Func) &&
-            (Func == LibFunc_memcmp || Func == LibFunc_bcmp))
-          MemCmpCalls.push_back(CI);
-      }
+  SmallVector<std::pair<CallInst *, LibFunc>, 8> MemCmpCalls;
+  for (Instruction &I : instructions(F)) {
+    if (auto *CI = dyn_cast<CallInst>(&I)) {
+      LibFunc Func;
+      if (TLI->getLibFunc(*CI, Func) &&
+          (Func == LibFunc_memcmp || Func == LibFunc_bcmp))
+        MemCmpCalls.push_back({CI, Func});
     }
   }
 
   bool MadeChanges = false;
-  for (CallInst *CI : MemCmpCalls) {
-    LibFunc Func;
-    TLI->getLibFunc(*CI, Func);
+  for (const auto [CI, Func] : MemCmpCalls) {
     if (expandMemCmp(CI, TTI, &DL, PSI, BFI, DTU ? &*DTU : nullptr,
                      Func == LibFunc_bcmp))
       MadeChanges = true;
