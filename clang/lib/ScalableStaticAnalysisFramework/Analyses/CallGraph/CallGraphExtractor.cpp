@@ -101,7 +101,7 @@ static TUSummaryExtractorRegistry::Add<CallGraphExtractor>
     RegisterExtractor(CallGraphSummary::Name,
                       "Extracts static call-graph information");
 
-// This anchor is used to force the linker to link in the generated object file
-// and thus register the CallGraphExtractor.
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int CallGraphExtractorAnchorSource = 0;
+const volatile int CallGraphExtractorAnchorSource = 0;
+} // namespace clang::ssaf
