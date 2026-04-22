@@ -12,6 +12,7 @@ import sys
 from enum import IntEnum
 from pathlib import PurePath, Path
 from collections import defaultdict, namedtuple
+from typing import List
 
 from dex.command.CommandBase import StepExpectInfo
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
@@ -391,6 +392,12 @@ class VisualStudio(
             stop_reason=stop_reason,
             program_state=program_state,
         )
+
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        raise NotImplementedError("--use-script debugging not supported in visual studio yet.")
+
+    def collect_watches(self, step: StepIR, watches: List[str]):
+        raise NotImplementedError("--use-script debugging not supported in visual studio yet.")
 
     @property
     def is_running(self):
