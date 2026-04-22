@@ -509,9 +509,9 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
 /// \param DeviceMemory A pointer to an array storing device memory data to move
 ///                     prior to kernel execution.
 /// \param DeviceMemorySize The size of the above device memory data in bytes.
-/// \param ReuseDeviceAlloc Pointer to a device memory allocation that should
-///                            be reused for the replay. If null, the replay
-///                            will allocate the necessary device buffer.
+/// \param ReuseDeviceAlloc Pointer to a device memory allocation that should be
+///                         reused for the replay. If null, the replay will
+///                         allocate the necessary device buffer.
 /// \param TgtArgs An array of pointers of the pre-recorded target kernel
 ///                arguments.
 /// \param TgtOffsets An array of pointers of the pre-recorded target kernel
