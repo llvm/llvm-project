@@ -562,6 +562,9 @@ if config.can_symbolize:
 if config.gwp_asan:
     config.available_features.add("gwp_asan")
 
+if getattr(config, "sanitizer_amdgpu", False):
+    config.available_features.add("sanitizer-amdgpu")
+
 lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
 min_macos_deployment_target_substitutions = [
