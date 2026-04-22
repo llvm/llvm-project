@@ -7415,15 +7415,17 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   }
 }
 
-NVPTXTargetLowering::AtomicExpansionKind
-NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
-  if (AI->isElementwise())
-    return AtomicExpansionKind::Elementwise;
+// Returns how NVPTX should expand a scalar atomicrmw with the given op and
+// value type. `AtomicExpansionKind::None` means PTX natively supports this op
+// at this width; anything else (typically `CmpXChg`) means the pass should
+// emulate it (usually via a cmpxchg loop).
+static TargetLoweringBase::AtomicExpansionKind
+getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
+                            const NVPTXSubtarget &STI) {
+  using AtomicExpansionKind = TargetLoweringBase::AtomicExpansionKind;
 
-  Type *Ty = AI->getValOperand()->getType();
-
-  if (AI->isFloatingPointOperation()) {
-    if (AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+  if (AtomicRMWInst::isFPOperation(Op)) {
+    if (Op == AtomicRMWInst::FAdd) {
       if (Ty->isHalfTy() && STI.getSmVersion() >= 70 &&
           STI.getPTXVersion() >= 63)
         return AtomicExpansionKind::None;
@@ -7435,22 +7437,24 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
       if (Ty->isDoubleTy() && STI.hasAtomAddF64())
         return AtomicExpansionKind::None;
     }
+    // Scalar atom.{min,max,sub}.{f32,f64} and related FP ops are not
+    // supported by the PTX ISA; use cmpxchg emulation for them.
     return AtomicExpansionKind::CmpXChg;
   }
 
   assert(Ty->isIntegerTy() && "Ty should be integer at this point");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
 
-  switch (AI->getOperation()) {
+  switch (Op) {
   default:
     return AtomicExpansionKind::CmpXChg;
-  case AtomicRMWInst::BinOp::Xchg:
+  case AtomicRMWInst::Xchg:
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
     [[fallthrough]];
-  case AtomicRMWInst::BinOp::And:
-  case AtomicRMWInst::BinOp::Or:
-  case AtomicRMWInst::BinOp::Xor:
+  case AtomicRMWInst::And:
+  case AtomicRMWInst::Or:
+  case AtomicRMWInst::Xor:
     switch (BitWidth) {
     case 8:
     case 16:
@@ -7466,12 +7470,12 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  case AtomicRMWInst::BinOp::Add:
-  case AtomicRMWInst::BinOp::Sub:
-  case AtomicRMWInst::BinOp::Max:
-  case AtomicRMWInst::BinOp::Min:
-  case AtomicRMWInst::BinOp::UMax:
-  case AtomicRMWInst::BinOp::UMin:
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::UMax:
+  case AtomicRMWInst::UMin:
     switch (BitWidth) {
     case 8:
     case 16:
@@ -7487,8 +7491,8 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  case AtomicRMWInst::BinOp::UIncWrap:
-  case AtomicRMWInst::BinOp::UDecWrap:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
     switch (BitWidth) {
     case 32:
       return AtomicExpansionKind::None;
@@ -7503,6 +7507,57 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   }
 
   return AtomicExpansionKind::CmpXChg;
+}
+
+NVPTXTargetLowering::AtomicExpansionKind
+NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  // Elementwise vector atomicrmws use the generic halve-and-recurse driver in
+  // AtomicExpandPass: returning Elementwise at width N tells the pass to halve
+  // into two <N/2 x T> elementwise atomicrmws (or two scalar atomicrmws when
+  // N == 2) and re-query this hook at the halved width. This hook then picks
+  // the tier for the current width:
+  //   1. If the scalar lane op is natively supported by PTX, return
+  //      Elementwise so halving eventually bottoms out at the scalar base
+  //      case, where this hook returns None for each scalar lane and the
+  //      scalar `atom.*` instruction is preserved.
+  //   2. Otherwise, if the whole current vector width fits a single native
+  //      cmpxchg (i.e. `sizeof(<N x T>) <= getMaxAtomicSizeInBitsSupported()`,
+  //      e.g. 128 bits with atom.cas.b128 on sm_90 + ptx83), return CmpXChg
+  //      to emit one wide cmpxchg loop. The vector op inside the loop body
+  //      (fadd/fmax/etc. on `<N x T>`) is already per-lane, so whole-vector
+  //      atomicity satisfies elementwise semantics.
+  //   3. Otherwise the vector is too wide for a single native cmpxchg; return
+  //      Elementwise again so the pass halves further. Recursion keeps
+  //      halving until the width fits the cmpxchg branch above.
+  //
+  // TODO: once the backend supports native elementwise vector atoms
+  // (`atom.v2/v4/v8.{f16,bf16,f16x2,bf16x2}.{add,min,max}` and
+  // `atom.v2/v4.f32.add` per the PTX ISA), return `None` for those matching
+  // widths before running the tier logic here so they are preserved as native
+  // vector atomics instead of being halved or emulated.
+  if (AI->isElementwise()) {
+    auto *VecTy = cast<FixedVectorType>(AI->getType());
+    Type *LaneTy = VecTy->getElementType();
+
+    // Tier 1: scalar lane op is natively supported -> keep halving until we
+    // reach the scalar base case.
+    if (getScalarAtomicRMWExpansion(AI->getOperation(), LaneTy, STI) ==
+        AtomicExpansionKind::None)
+      return AtomicExpansionKind::Elementwise;
+
+    // Tier 2: whole vector fits a single native cmpxchg -> emit one wide
+    // cmpxchg loop at the current width.
+    const DataLayout &DL = AI->getDataLayout();
+    uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
+    if (VecBits <= getMaxAtomicSizeInBitsSupported())
+      return AtomicExpansionKind::CmpXChg;
+
+    // Tier 3: too wide for a single cmpxchg -> halve further.
+    return AtomicExpansionKind::Elementwise;
+  }
+
+  return getScalarAtomicRMWExpansion(AI->getOperation(),
+                                     AI->getValOperand()->getType(), STI);
 }
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(

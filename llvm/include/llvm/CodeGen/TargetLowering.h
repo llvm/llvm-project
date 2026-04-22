@@ -269,8 +269,20 @@ public:
                        // operations; used by X86.
     Expand,            // Generic expansion in terms of other atomic operations.
     CustomExpand,      // Custom target-specific expansion using TLI hooks.
-    Elementwise, // Expand an elementwise vector atomicrmw into per-lane scalar
-                 // atomicrmw instructions.
+
+    // Halve an elementwise vector atomicrmw and re-ask the target how to expand
+    // each half. The pass splits an `atomicrmw elementwise <N x T>` into either
+    // two `atomicrmw elementwise <N/2 x T>` (when N > 2) or two scalar
+    // `atomicrmw T` (when N == 2). An `<1 x T>` elementwise RMW (permitted by
+    // the verifier for some ops) is collapsed directly to a scalar
+    // `atomicrmw T`. Each resulting atomicrmw is fed back through the
+    // expansion pipeline, so the target's `shouldExpandAtomicRMWInIR` is
+    // re-queried at the halved width and may return any expansion kind there:
+    //   - `None` to preserve at that width (e.g. a native vector atomic),
+    //   - `Elementwise` to keep halving,
+    //   - `CmpXChg` (or any other kind) to commit to that expansion for the
+    //     current width.
+    Elementwise,
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
