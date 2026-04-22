@@ -11,12 +11,12 @@ define i32 @split_ctlz_select(i64 %val) {
 ;
 entry:
   %shr = lshr i64 %val, 32
-  %conv_hi = trunc nuw i64 %shr to i32
+  %conv_hi = trunc i64 %shr to i32
   %cmp = icmp eq i32 %conv_hi, 0
-  %conv_lo = trunc nuw i64 %val to i32
+  %conv_lo = trunc i64 %val to i32
   %0 = call i32 @llvm.ctlz.i32(i32 %conv_lo, i1 false)
-  %add = add nuw nsw i32 %0, 32
-  %1 = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %conv_hi, i1 true)
+  %add = add i32 %0, 32
+  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 false)
   %retval = select i1 %cmp, i32 %add, i32 %1
   ret i32 %retval
 }
@@ -32,11 +32,11 @@ define i32 @split_ctlz_select_i64cmp(i64 %val) {
 entry:
   %shr = lshr i64 %val, 32
   %cmp = icmp eq i64 %shr, 0
-  %conv_hi = trunc nuw i64 %shr to i32
-  %conv_lo = trunc nuw i64 %val to i32
+  %conv_hi = trunc i64 %shr to i32
+  %conv_lo = trunc i64 %val to i32
   %0 = call i32 @llvm.ctlz.i32(i32 %conv_lo, i1 false)
-  %add = add nuw nsw i32 %0, 32
-  %1 = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %conv_hi, i1 true)
+  %add = add i32 %0, 32
+  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 false)
   %retval = select i1 %cmp, i32 %add, i32 %1
   ret i32 %retval
 }
@@ -51,12 +51,12 @@ define i32 @split_ctlz_select_ne(i64 %val) {
 ;
 entry:
   %shr = lshr i64 %val, 32
-  %conv_hi = trunc nuw i64 %shr to i32
+  %conv_hi = trunc i64 %shr to i32
   %cmp = icmp ne i32 %conv_hi, 0
-  %conv_lo = trunc nuw i64 %val to i32
+  %conv_lo = trunc i64 %val to i32
   %0 = call i32 @llvm.ctlz.i32(i32 %conv_lo, i1 false)
-  %add = add nuw nsw i32 %0, 32
-  %1 = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %conv_hi, i1 true)
+  %add = add i32 %0, 32
+  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 false)
   %retval = select i1 %cmp, i32 %1, i32 %add
   ret i32 %retval
 }
@@ -71,12 +71,12 @@ define i32 @split_ctlz_select_or(i64 %val) {
 ;
 entry:
   %shr = lshr i64 %val, 32
-  %conv_hi = trunc nuw i64 %shr to i32
+  %conv_hi = trunc i64 %shr to i32
   %cmp = icmp eq i32 %conv_hi, 0
-  %conv_lo = trunc nuw i64 %val to i32
+  %conv_lo = trunc i64 %val to i32
   %0 = call i32 @llvm.ctlz.i32(i32 %conv_lo, i1 false)
   %add = or disjoint i32 %0, 32
-  %1 = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %conv_hi, i1 true)
+  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 false)
   %retval = select i1 %cmp, i32 %add, i32 %1
   ret i32 %retval
 }
@@ -91,12 +91,12 @@ define i16 @split_ctlz_select_i32(i32 %val) {
 ;
 entry:
   %shr = lshr i32 %val, 16
-  %conv_hi = trunc nuw i32 %shr to i16
+  %conv_hi = trunc i32 %shr to i16
   %cmp = icmp eq i16 %conv_hi, 0
   %conv_lo = trunc i32 %val to i16
   %0 = call i16 @llvm.ctlz.i16(i16 %conv_lo, i1 false)
-  %add = add nuw nsw i16 %0, 16
-  %1 = call i16 @llvm.ctlz.i16(i16 %conv_hi, i1 true)
+  %add = add i16 %0, 16
+  %1 = call i16 @llvm.ctlz.i16(i16 %conv_hi, i1 false)
   %retval = select i1 %cmp, i16 %add, i16 %1
   ret i16 %retval
 }
@@ -111,12 +111,12 @@ define i8 @split_ctlz_select_i16(i16 %val) {
 ;
 entry:
   %shr = lshr i16 %val, 8
-  %conv_hi = trunc nuw i16 %shr to i8
+  %conv_hi = trunc i16 %shr to i8
   %cmp = icmp eq i8 %conv_hi, 0
   %conv_lo = trunc i16 %val to i8
   %0 = call i8 @llvm.ctlz.i8(i8 %conv_lo, i1 false)
-  %add = add nuw nsw i8 %0, 8
-  %1 = call i8 @llvm.ctlz.i8(i8 %conv_hi, i1 true)
+  %add = add i8 %0, 8
+  %1 = call i8 @llvm.ctlz.i8(i8 %conv_hi, i1 false)
   %retval = select i1 %cmp, i8 %add, i8 %1
   ret i8 %retval
 }
@@ -131,12 +131,12 @@ define i64 @split_ctlz_select_i128(i128 %val) {
 ;
 entry:
   %shr = lshr i128 %val, 64
-  %conv_hi = trunc nuw i128 %shr to i64
+  %conv_hi = trunc i128 %shr to i64
   %cmp = icmp eq i64 %conv_hi, 0
   %conv_lo = trunc i128 %val to i64
   %0 = call i64 @llvm.ctlz.i64(i64 %conv_lo, i1 false)
-  %add = add nuw nsw i64 %0, 64
-  %1 = call i64 @llvm.ctlz.i64(i64 %conv_hi, i1 true)
+  %add = add i64 %0, 64
+  %1 = call i64 @llvm.ctlz.i64(i64 %conv_hi, i1 false)
   %retval = select i1 %cmp, i64 %add, i64 %1
   ret i64 %retval
 }
@@ -152,12 +152,12 @@ define i128 @split_ctlz_select_i256(i256 %val) {
 ;
 entry:
   %shr = lshr i256 %val, 128
-  %conv_hi = trunc nuw i256 %shr to i128
+  %conv_hi = trunc i256 %shr to i128
   %cmp = icmp eq i128 %conv_hi, 0
   %conv_lo = trunc i256 %val to i128
   %0 = call i128 @llvm.ctlz.i128(i128 %conv_lo, i1 false)
-  %add = add nuw nsw i128 %0, 128
-  %1 = call i128 @llvm.ctlz.i128(i128 %conv_hi, i1 true)
+  %add = add i128 %0, 128
+  %1 = call i128 @llvm.ctlz.i128(i128 %conv_hi, i1 false)
   %retval = select i1 %cmp, i128 %add, i128 %1
   ret i128 %retval
 }
@@ -167,23 +167,23 @@ define i32 @split_ctlz_different_sources(i64 %val, i64 %val2) {
 ; CHECK-LABEL: @split_ctlz_different_sources(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[VAL:%.*]], 32
-; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc nuw i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc i64 [[SHR]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV_HI]], 0
-; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc nuw i64 [[VAL2:%.*]] to i32
+; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc i64 [[VAL2:%.*]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_LO]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 true)
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 false)
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
   %shr = lshr i64 %val, 32
-  %conv_hi = trunc nuw i64 %shr to i32
+  %conv_hi = trunc i64 %shr to i32
   %cmp = icmp eq i32 %conv_hi, 0
-  %conv_lo = trunc nuw i64 %val2 to i32
+  %conv_lo = trunc i64 %val2 to i32
   %0 = call i32 @llvm.ctlz.i32(i32 %conv_lo, i1 false)
-  %add = add nuw nsw i32 %0, 32
-  %1 = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %conv_hi, i1 true)
+  %add = add i32 %0, 32
+  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 false)
   %retval = select i1 %cmp, i32 %add, i32 %1
   ret i32 %retval
 }
@@ -197,8 +197,8 @@ define i32 @split_ctlz_wrong_shift(i64 %val) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV_HI]], 0
 ; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc i64 [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_LO]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 true)
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 false)
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
@@ -208,8 +208,8 @@ entry:
   %cmp = icmp eq i32 %conv_hi, 0
   %conv_lo = trunc i64 %val to i32
   %0 = call i32 @llvm.ctlz.i32(i32 %conv_lo, i1 false)
-  %add = add nuw nsw i32 %0, 32
-  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 true)
+  %add = add i32 %0, 32
+  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 false)
   %retval = select i1 %cmp, i32 %add, i32 %1
   ret i32 %retval
 }
@@ -220,23 +220,23 @@ define i32 @split_ctlz_select_plain_or(i64 %val) {
 ; CHECK-LABEL: @split_ctlz_select_plain_or(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[VAL:%.*]], 32
-; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc nuw i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc i64 [[SHR]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV_HI]], 0
 ; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc i64 [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_LO]], i1 false)
 ; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 false)
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
   %shr = lshr i64 %val, 32
-  %conv_hi = trunc nuw i64 %shr to i32
+  %conv_hi = trunc i64 %shr to i32
   %cmp = icmp eq i32 %conv_hi, 0
   %conv_lo = trunc i64 %val to i32
   %0 = call i32 @llvm.ctlz.i32(i32 %conv_lo, i1 false)
   %add = or i32 %0, 32
-  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 true)
+  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 false)
   %retval = select i1 %cmp, i32 %add, i32 %1
   ret i32 %retval
 }
@@ -246,24 +246,24 @@ define i32 @split_ctlz_select_multiuse(i64 %val) {
 ; CHECK-LABEL: @split_ctlz_select_multiuse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[VAL:%.*]], 32
-; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc nuw i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CONV_HI:%.*]] = trunc i64 [[SHR]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV_HI]], 0
 ; CHECK-NEXT:    [[CONV_LO:%.*]] = trunc i64 [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_LO]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 true)
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[CONV_HI]], i1 false)
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP1]]
 ; CHECK-NEXT:    call void @use_i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
   %shr = lshr i64 %val, 32
-  %conv_hi = trunc nuw i64 %shr to i32
+  %conv_hi = trunc i64 %shr to i32
   %cmp = icmp eq i32 %conv_hi, 0
   %conv_lo = trunc i64 %val to i32
   %0 = call i32 @llvm.ctlz.i32(i32 %conv_lo, i1 false)
-  %add = add nuw nsw i32 %0, 32
-  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 true)
+  %add = add i32 %0, 32
+  %1 = call i32 @llvm.ctlz.i32(i32 %conv_hi, i1 false)
   %retval = select i1 %cmp, i32 %add, i32 %1
   call void @use_i32(i32 %1)
   ret i32 %retval
