@@ -48,8 +48,8 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
-#include "llvm/ADT/SmallVector.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -899,11 +899,10 @@ static void genDerivedTypeComponentInit(
     mlir::Type finalCompFirTy = fir::unwrapPassByRefType(currentAddr.getType());
     mlir::Value initVal;
     if (objDetails) {
-      initVal = fir::factory::createUnallocatedBox(
-          builder, loc, finalCompFirTy, mlir::ValueRange{});
+      initVal = fir::factory::createUnallocatedBox(builder, loc, finalCompFirTy,
+                                                   mlir::ValueRange{});
     } else {
-      initVal =
-          fir::factory::createNullBoxProc(builder, loc, finalCompFirTy);
+      initVal = fir::factory::createNullBoxProc(builder, loc, finalCompFirTy);
     }
     fir::StoreOp::create(builder, loc, initVal, currentAddr);
   }
@@ -993,9 +992,8 @@ static bool isEligibleForComponentWiseInit(
       const auto *procDetails =
           comp.detailsIf<Fortran::semantics::ProcEntityDetails>();
       if ((objDetails && objDetails->init()) ||
-          (procDetails && procDetails->init())) {
+          (procDetails && procDetails->init()))
         return false;
-      }
       if (Fortran::semantics::IsAllocatableOrPointer(comp)) {
         hasPtrOrAlloc = true;
         continue;
@@ -1007,9 +1005,8 @@ static bool isEligibleForComponentWiseInit(
           if (Fortran::lower::hasDefaultInitialization(comp)) {
             // Return false for arrays of derived types requiring
             // initialization.
-            if (comp.Rank() > 0) {
+            if (comp.Rank() > 0)
               return false;
-            }
             worklist.push_back(nestedSpec);
           }
         }
