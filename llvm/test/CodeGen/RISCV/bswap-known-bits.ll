@@ -205,3 +205,25 @@ define i1 @bswap_lo_byte_sign_i16(i16 %x) {
   %neg = icmp slt i16 %b, 0
   ret i1 %neg
 }
+
+; Regression test for the known-zero fold: two disjoint byte masks ANDed
+; together are always zero, but the DAG combiner doesn't structurally
+; simplify to a constant before visiting the bswap. computeKnownBits
+; correctly proves the operand is zero, and the combine must fold
+; bswap(known-zero) to 0.
+define i32 @bswap_nested_and_disjoint_i32(i32 %x, i32 %y) {
+; RV32ZB-LABEL: bswap_nested_and_disjoint_i32:
+; RV32ZB:       # %bb.0:
+; RV32ZB-NEXT:    li a0, 0
+; RV32ZB-NEXT:    ret
+;
+; RV64ZB-LABEL: bswap_nested_and_disjoint_i32:
+; RV64ZB:       # %bb.0:
+; RV64ZB-NEXT:    li a0, 0
+; RV64ZB-NEXT:    ret
+  %m1 = and i32 %x, 255
+  %m2 = and i32 %y, 65280
+  %m3 = and i32 %m1, %m2
+  %b = call i32 @llvm.bswap.i32(i32 %m3)
+  ret i32 %b
+}

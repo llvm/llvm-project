@@ -12139,9 +12139,14 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
   // to the mirror byte. Producer-side dual of the ISD::BSWAP rule in
   // TargetLowering::SimplifyDemandedBits; placed here to fire pre-legalize.
   KnownBits Known = DAG.computeKnownBits(N0);
-  assert(!Known.isZero() && "known-zero should be folded to 0 earlier");
+  // bswap(0) = 0. Catch cases that computeKnownBits can prove are zero but
+  // that structural combines haven't simplified to a constant yet
+  // (e.g. and of disjoint byte masks).
+  if (Known.isZero())
+    return DAG.getConstant(0, DL, VT);
   unsigned Lo = Known.countMinTrailingZeros();
   unsigned Hi = BW - Known.countMinLeadingZeros();
+  assert(Lo < Hi && "non-zero value must have a possibly-nonzero bit");
   if (unsigned SrcByte = Lo / 8; SrcByte == (Hi - 1) / 8) {
     unsigned DstByte = BW / 8 - 1 - SrcByte;
     unsigned Opc = DstByte > SrcByte ? ISD::SHL : ISD::SRL;
