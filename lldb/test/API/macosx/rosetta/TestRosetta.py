@@ -70,4 +70,3 @@ class TestRosetta(TestBase):
                 self.assertTrue(listener.GetNextEvent(event))
             else:
                 self.assertFalse(listener.GetNextEvent(event))
-            self.assertTrue(False)
