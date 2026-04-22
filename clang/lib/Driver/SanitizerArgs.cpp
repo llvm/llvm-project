@@ -360,7 +360,8 @@ bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsNsanRt() || needsHwasanRt() ||
       needsTsanRt() || needsDfsanRt() || needsLsanRt() || needsTysanRt() ||
-      needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
+      needsRtsanRt() || needsCfiCrossDsoDiagRt() ||
+      (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
@@ -668,8 +669,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function),
       std::make_pair(SanitizerKind::Realtime,
                      SanitizerKind::Address | SanitizerKind::Thread |
-                         SanitizerKind::Undefined | SanitizerKind::Memory |
-                         SanitizerKind::Type),
+                         SanitizerKind::Memory | SanitizerKind::Type),
       std::make_pair(SanitizerKind::AllocToken,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::KernelAddress |

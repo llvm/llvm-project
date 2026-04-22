@@ -151,4 +151,19 @@ __rtsan_notify_blocking_call(const char *func_name) {
                     OnViolation);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_print_stack_trace() {
+
+  if (!__rtsan_is_initialized())
+    return;
+
+  UNINITIALIZED __sanitizer::BufferedStackTrace stack;
+
+  GET_CALLER_PC_BP;
+  stack.Unwind(pc, bp, nullptr,
+               __sanitizer::common_flags()->fast_unwind_on_fatal);
+
+  stack.Print();
+}
+
 } // extern "C"
