@@ -7214,6 +7214,31 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::aarch64_sve_umaxv:
   case Intrinsic::aarch64_sve_uminv:
     return simplifySVEIntReduction(IID, ReturnType, Op0, Op1);
+  case Intrinsic::fadd: {
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFAddInst(Op0, Op1, FMF, Q);
+  }
+  case Intrinsic::fsub: {
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFSubInst(Op0, Op1, FMF, Q);
+  }
+  case Intrinsic::fmul: {
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFMulInst(Op0, Op1, FMF, Q);
+  }
+  case Intrinsic::fdiv: {
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFDivInst(Op0, Op1, FMF, Q);
+  }
+  case Intrinsic::frem: {
+    FastMathFlags FMF =
+        Call ? cast<FPMathOperator>(Call)->getFastMathFlags() : FastMathFlags();
+    return llvm::simplifyFRemInst(Op0, Op1, FMF, Q);
+  }
   default:
     break;
   }
@@ -7297,32 +7322,14 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     return nullptr;
   }
-  // FP instruction intrinsics: without operand bundles these have default
-  // rounding mode and exception behavior, equivalent to FP instructions.
-  case Intrinsic::fadd: {
-    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
-    return simplifyFAddInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
-                            RoundingMode::NearestTiesToEven);
-  }
-  case Intrinsic::fsub: {
-    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
-    return simplifyFSubInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
-                            RoundingMode::NearestTiesToEven);
-  }
-  case Intrinsic::fmul: {
-    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
-    return simplifyFMulInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
-                            RoundingMode::NearestTiesToEven);
-  }
-  case Intrinsic::fdiv: {
-    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
-    return simplifyFDivInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
-                            RoundingMode::NearestTiesToEven);
-  }
-  case Intrinsic::frem: {
-    FastMathFlags FMF = cast<FPMathOperator>(Call)->getFastMathFlags();
-    return simplifyFRemInst(Args[0], Args[1], FMF, Q, fp::ebIgnore,
-                            RoundingMode::NearestTiesToEven);
+  case Intrinsic::fcmp: {
+    auto *MD = cast<MetadataAsValue>(Args[2])->getMetadata();
+    StringRef PredStr = cast<MDString>(MD)->getString();
+    if (PredStr == "true")
+      return ConstantInt::getTrue(F->getReturnType());
+    if (PredStr == "false")
+      return ConstantInt::getFalse(F->getReturnType());
+    return nullptr;
   }
   case Intrinsic::experimental_constrained_fma: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);

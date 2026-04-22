@@ -30697,7 +30697,7 @@ be floating-point types; not all targets support all type combinations.
 ::
 
       declare half     @llvm.fptrunc.f32.f16(float %val)
-      declare float    @llvm.fptrunc.f64.f32(double %val)
+      declare float    @llvm.fptrunc.f32.f64(double %val)
       declare half     @llvm.fptrunc.f64.f16(double %val)
 
 Overview:
@@ -30723,7 +30723,7 @@ Example:
 
 ::
 
-      %r = call float @llvm.fptrunc.f64.f32(double %x)
+      %r = call float @llvm.fptrunc.f32.f64(double %x)
 
 .. _int_fpext_intr:
 
@@ -30738,7 +30738,7 @@ be floating-point types; not all targets support all type combinations.
 
 ::
 
-      declare double  @llvm.fpext.f32.f64(float %val)
+      declare double  @llvm.fpext.f64.f32(float %val)
       declare float   @llvm.fpext.f16.f32(half %val)
       declare double  @llvm.fpext.f16.f64(half %val)
 
@@ -30765,7 +30765,7 @@ Example:
 
 ::
 
-      %r = call double @llvm.fpext.f32.f64(float %x)
+      %r = call double @llvm.fpext.f64.f32(float %x)
 
 .. _int_sitofp_intr:
 
@@ -30780,7 +30780,7 @@ the destination type must be a floating-point type.
 
 ::
 
-      declare float  @llvm.sitofp.i32.f32(i32 %val)
+      declare float  @llvm.sitofp.f32.i32(i32 %val)
       declare double @llvm.sitofp.i64.f64(i64 %val)
 
 Overview:
@@ -30808,7 +30808,7 @@ Example:
 
 ::
 
-      %r = call float @llvm.sitofp.i32.f32(i32 %x)
+      %r = call float @llvm.sitofp.f32.i32(i32 %x)
 
 .. _int_uitofp_intr:
 
@@ -30823,7 +30823,7 @@ the destination type must be a floating-point type.
 
 ::
 
-      declare float  @llvm.uitofp.i32.f32(i32 %val)
+      declare float  @llvm.uitofp.f32.i32(i32 %val)
       declare double @llvm.uitofp.i64.f64(i64 %val)
 
 Overview:
@@ -30851,7 +30851,7 @@ Example:
 
 ::
 
-      %r = call float @llvm.uitofp.i32.f32(i32 %x)
+      %r = call float @llvm.uitofp.f32.i32(i32 %x)
 
 .. _int_fptosi_intr:
 
@@ -30866,7 +30866,7 @@ type and the destination type must be an integer type.
 
 ::
 
-      declare i32 @llvm.fptosi.f32.i32(float %val)
+      declare i32 @llvm.fptosi.i32.f32(float %val)
       declare i64 @llvm.fptosi.f64.i64(double %val)
 
 Overview:
@@ -30894,7 +30894,7 @@ Example:
 
 ::
 
-      %r = call i32 @llvm.fptosi.f32.i32(float %x)
+      %r = call i32 @llvm.fptosi.i32.f32(float %x)
 
 .. _int_fptoui_intr:
 
@@ -30909,7 +30909,7 @@ type and the destination type must be an integer type.
 
 ::
 
-      declare i32 @llvm.fptoui.f32.i32(float %val)
+      declare i32 @llvm.fptoui.i32.f32(float %val)
       declare i64 @llvm.fptoui.f64.i64(double %val)
 
 Overview:
@@ -30937,7 +30937,7 @@ Example:
 
 ::
 
-      %r = call i32 @llvm.fptoui.f32.i32(float %x)
+      %r = call i32 @llvm.fptoui.i32.f32(float %x)
 
 
 .. _int_experimental_noalias_scope_decl:

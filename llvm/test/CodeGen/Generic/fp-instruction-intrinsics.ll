@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llc -O0 -mtriple=x86_64-pc-linux < %s | FileCheck %s
 
 ; Verify that each new FP instruction intrinsic lowers to the expected
@@ -39,7 +40,7 @@ define double @test_fdiv(double %a, double %b) {
 define float @test_fptrunc(double %a) {
 ; CHECK-LABEL: test_fptrunc:
 ; CHECK: cvtsd2ss
-  %r = call float @llvm.fptrunc.f64.f32(double %a)
+  %r = call float @llvm.fptrunc.f32.f64(double %a)
   ret float %r
 }
 
@@ -47,7 +48,7 @@ define float @test_fptrunc(double %a) {
 define double @test_fpext(float %a) {
 ; CHECK-LABEL: test_fpext:
 ; CHECK: cvtss2sd
-  %r = call double @llvm.fpext.f32.f64(float %a)
+  %r = call double @llvm.fpext.f64.f32(float %a)
   ret double %r
 }
 
@@ -55,7 +56,7 @@ define double @test_fpext(float %a) {
 define float @test_sitofp(i32 %a) {
 ; CHECK-LABEL: test_sitofp:
 ; CHECK: cvtsi2ss
-  %r = call float @llvm.sitofp.i32.f32(i32 %a)
+  %r = call float @llvm.sitofp.f32.i32(i32 %a)
   ret float %r
 }
 
@@ -63,7 +64,7 @@ define float @test_sitofp(i32 %a) {
 define i32 @test_fptosi(float %a) {
 ; CHECK-LABEL: test_fptosi:
 ; CHECK: cvttss2si
-  %r = call i32 @llvm.fptosi.f32.i32(float %a)
+  %r = call i32 @llvm.fptosi.i32.f32(float %a)
   ret i32 %r
 }
 
@@ -79,8 +80,8 @@ declare double @llvm.fadd.f64(double, double)
 declare double @llvm.fsub.f64(double, double)
 declare double @llvm.fmul.f64(double, double)
 declare double @llvm.fdiv.f64(double, double)
-declare float @llvm.fptrunc.f64.f32(double)
-declare double @llvm.fpext.f32.f64(float)
-declare float @llvm.sitofp.i32.f32(i32)
-declare i32 @llvm.fptosi.f32.i32(float)
+declare float @llvm.fptrunc.f32.f64(double)
+declare double @llvm.fpext.f64.f32(float)
+declare float @llvm.sitofp.f32.i32(i32)
+declare i32 @llvm.fptosi.i32.f32(float)
 declare i1 @llvm.fcmp.f32(float, float, metadata)
