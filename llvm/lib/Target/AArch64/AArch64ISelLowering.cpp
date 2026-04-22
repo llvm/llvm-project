@@ -15048,6 +15048,27 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                        DAG.getConstant(8, DL, MVT::i32));
   }
 
+  if (EltSize == 8 && V2.getValueType() == VT && isZeroOrZeroSplat(V2, true)) {
+    unsigned PrefixElts = 0;
+    while (PrefixElts != NumElts && (ShuffleMask[PrefixElts] < 0 ||
+                                     ShuffleMask[PrefixElts] >= (int)NumElts))
+      ++PrefixElts;
+
+    if (0 < PrefixElts && PrefixElts < NumElts) {
+      bool IsZeroShift = true;
+      for (unsigned I = PrefixElts; I != NumElts; ++I) {
+        if (ShuffleMask[I] >= 0 && ShuffleMask[I] != (int)(I - PrefixElts)) {
+          IsZeroShift = false;
+          break;
+        }
+      }
+
+      if (IsZeroShift)
+        return DAG.getNode(AArch64ISD::EXT, DL, VT, V2, V1,
+                           DAG.getConstant(NumElts - PrefixElts, DL, MVT::i32));
+    }
+  }
+
   bool ReverseEXT = false;
   unsigned Imm;
   if (isEXTMask(ShuffleMask, VT, ReverseEXT, Imm)) {
