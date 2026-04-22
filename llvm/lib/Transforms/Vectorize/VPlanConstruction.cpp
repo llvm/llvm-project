@@ -717,17 +717,11 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   return WideIV;
 }
 
-/// Try to sink users of \p FOR after \p Previous. \returns true if sinking
-/// succeeded or was not necessary.
-static bool
+/// Try to sink users of \p FOR after \p Previous.  \returns true if sinking
+/// -/// succeeded or was not necessary, and false otherwise.
 sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
                                  VPRecipeBase *Previous,
                                  VPDominatorTree &VPDT) {
-  // If Previous is a live-in (no defining recipe), it naturally dominates all
-  // recipes in the loop, so no sinking is needed.
-  if (!Previous)
-    return true;
-
   // Collect recipes that need sinking.
   SmallVector<VPRecipeBase *> WorkList;
   SmallPtrSet<VPRecipeBase *, 8> Seen;
@@ -780,7 +774,7 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
 }
 
 /// Try to hoist \p Previous and its operands before all users of \p FOR.
-/// \returns true if hoisting succeeded or was not necessary.
+/// \returns true if hoisting succeeded or was not necessary, and false otherwise.
 static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
                                         VPRecipeBase *Previous,
                                         VPDominatorTree &VPDT) {
@@ -896,9 +890,15 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
-    // Sink FOR users after Previous or hoist Previous before FOR users.
-    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
-        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
+  // If Previous is a live-in (no defining recipe), it naturally dominates all
+  // recipes in the loop, so no sinking is needed.
+  if (!Previous)
+    return true;
+
+
+    // Sink FOR users after Previous or hoist Previous before FOR users, if i is a recipe.
+    if (Previous && (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
+        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT)))
       return false;
 
     // Create FirstOrderRecurrenceSplice and replace FOR uses.
