@@ -54,6 +54,13 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
   LocalAsyncInfo.ProfilerData = nullptr;
 }
 
+Error AsyncInfoWrapperTy::synchronize() {
+  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
+
+  // Synchronize with the async info's operations without releasing the queue.
+  return Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
+}
+
 void AsyncInfoWrapperTy::finalize(Error &Err) {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
 
@@ -320,8 +327,7 @@ GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
 Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                               ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                               KernelExtraArgsTy *KernelExtraArgs,
-                              AsyncInfoWrapperTy &AsyncInfoWrapper,
-                              RecordReplayTy::HandleTy *RRHandle) const {
+                              AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   llvm::SmallVector<void *, 16> Args;
   llvm::SmallVector<void *, 16> Ptrs;
 
@@ -392,51 +398,27 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                     Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
   }
 
-  // Get max occupancy for this kernel
-  computeMaxOccupancy(GenericDevice);
-  std::string KernelName = getName();
-  KernelRunRecordTy *KernelRecord = GenericDevice.getKernelRunRecords();
-  uint32_t KernelRunCounter = 0;
+  if (auto Err =
+          printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
+    return Err;
 
-  if (KernelRecord) {
-    KernelRunCounter = KernelRecord->getRunCounterForKernel(KernelName);
-  }
-  // If Autotuning is enabled and the kernel is not launched for the first time.
-  if (GenericDevice.enableRuntimeAutotuning() && isSPMDMode() &&
-      KernelRunCounter > 0) {
-    assert(KernelRecord &&
-           "Autotuning is enabled, but KernelRunRecord is not initialized!");
-
-    auto [Teams, Threads] =
-        KernelRecord->getLaunchParamsForKernel(*this, GenericDevice);
-    NumBlocks[0] = Teams;
-    NumThreads[0] = Threads;
-  } else if (!isBareMode()) {
-    NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
-
-    std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(
-        GenericDevice, NumThreads[0], KernelArgs.Tripcount,
-        KernelArgs.ThreadLimit);
-    if (AdjustInfo.first)
-      NumThreads[0] = AdjustInfo.second;
-
-    NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
-                                NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
-  }
-
-  // Record the kernel description after we modified the argument count and num
-  // blocks/threads.
+  RecordReplayTy::HandleTy RRHandle;
   RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
   if (RecordReplay) {
+    // Record replay requires synchronization of any previous operation.
+    if (auto Err = AsyncInfoWrapper.synchronize())
+      return Err;
+
+    // Record the kernel prologue data before kernel launch.
     auto RRHandleOrErr = RecordReplay->recordPrologue(
         *this, KernelArgs, KernelExtraArgs, LaunchParams, NumBlocks, NumThreads,
         DynBlockMemConf.NativeSize);
     if (!RRHandleOrErr)
       return RRHandleOrErr.takeError();
-    if (RRHandle)
-      *RRHandle = *RRHandleOrErr;
+    RRHandle = *RRHandleOrErr;
   }
 
+<<<<<<< HEAD
   // Get achieved occupancy for this kernel.
   computeAchievedOccupancy(GenericDevice, NumThreads[0], NumBlocks[0]);
 
@@ -451,6 +433,22 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   return launchImpl(GenericDevice, NumThreads, NumBlocks,
                     DynBlockMemConf.NativeSize, KernelArgs, LaunchParams,
                     AsyncInfoWrapper);
+=======
+  if (auto Err = launchImpl(GenericDevice, NumThreads, NumBlocks,
+                            DynBlockMemConf.NativeSize, KernelArgs,
+                            LaunchParams, AsyncInfoWrapper))
+    return Err;
+
+  if (RecordReplay) {
+    // Record replay requires synchronization.
+    if (auto Err = AsyncInfoWrapper.synchronize())
+      return Err;
+
+    // Record the epilogue data after kernel synchronization.
+    return RecordReplay->recordEpilogue(*this, RRHandle);
+  }
+  return Plugin::success();
+>>>>>>> d87ac8716018
 }
 
 KernelLaunchParamsTy
@@ -1260,8 +1258,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     KernelArgsTy &KernelArgs,
                                     KernelExtraArgsTy *KernelExtraArgs,
                                     __tgt_async_info *AsyncInfo) {
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this,
-                                      RecordReplay ? nullptr : AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
@@ -1278,16 +1275,10 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
         .emplace(&GenericKernel, std::move(StackTrace), AsyncInfo);
   }
 
-  RecordReplayTy::HandleTy RRHandle;
   auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
-                                  KernelExtraArgs, AsyncInfoWrapper, &RRHandle);
+                                  KernelExtraArgs, AsyncInfoWrapper);
 
-  // 'finalize' here to guarantee next record-replay actions are in-sync
   AsyncInfoWrapper.finalize(Err);
-
-  if (RecordReplay)
-    if (auto Err = RecordReplay->recordEpilogue(GenericKernel, RRHandle))
-      return Err;
 
   return Err;
 }
