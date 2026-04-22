@@ -71,6 +71,25 @@ bool SparseLiveVariables::runOnMachineFunction(MachineFunction &MF) {
         if (!Reachable.count(Succ))
           continue;
         LiveOut |= BlockLiveness[Succ->getNumber()].LiveIn;
+
+        // PHI nodes have special liveness semantics: their uses are evaluated
+        // conditionally on the incoming edge, meaning they are NOT Live-In to
+        // the block containing the PHI node. Therefore, we cannot rely solely
+        // on unioning the successor's LiveIn set. We must actively scan the
+        // successor's PHI nodes and add any registers explicitly tied to the
+        // incoming edge from this MBB directly into our LiveOut set.
+        for (const MachineInstr &MI : *Succ) {
+          if (!MI.isPHI())
+            break;
+          for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+            if (MI.getOperand(i).isReg() &&
+                MI.getOperand(i + 1).getMBB() == MBB) {
+              Register Reg = MI.getOperand(i).getReg();
+              if (Reg.isValid() && Reg.isVirtual())
+                LiveOut.set(Reg.id());
+            }
+          }
+        }
       }
       BlockLiveness[MBB->getNumber()].LiveOut = LiveOut;
 
