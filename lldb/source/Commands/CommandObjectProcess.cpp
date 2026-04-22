@@ -1102,7 +1102,7 @@ public:
     const std::vector<lldb::addr_t> &tokens = process->GetImageTokens();
     const size_t token_num = tokens.size();
     for (size_t i = 0; i < token_num; ++i) {
-      if (tokens[i] == LLDB_INVALID_IMAGE_TOKEN)
+      if (tokens[i] == LLDB_INVALID_ADDRESS)
         continue;
       request.TryCompleteCurrentArg(std::to_string(i));
     }
