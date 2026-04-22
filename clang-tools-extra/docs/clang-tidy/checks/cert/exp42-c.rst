@@ -1,6 +1,3 @@
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/suspicious-memory-comparison.html
-
 cert-exp42-c
 ============
 

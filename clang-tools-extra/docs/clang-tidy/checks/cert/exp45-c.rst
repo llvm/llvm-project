@@ -1,6 +1,3 @@
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/assignment-in-selection-statement.html
-
 cert-exp45-c
 ============
 
