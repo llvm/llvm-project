@@ -38,10 +38,10 @@ namespace TestFunctionRedecl {
 // CHECK: | `-Function 0x[[TestFunctionRedecl_S1]] 'f' 'void ()'
 // CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-8]]:{{.+}} 'f'
 // CHECK:   |-Function 0x[[TestFunctionRedecl_S1]] 'f' 'void ()'
-// CHECK:   |-TemplateArgument {{.+}} type 'int'
-// CHECK:   | `-BuiltinType {{.+}} 'int'
-// CHECK:   `-FunctionProtoTypeLoc {{.+}} 'void ()' cdecl
-// CHECK:     `-BuiltinTypeLoc {{.+}} 'void'
+// CHECK:   |-FunctionProtoTypeLoc {{.+}} 'void ()' cdecl
+// CHECK:   | `-BuiltinTypeLoc {{.+}} 'void'
+// CHECK:   `-TemplateArgument {{.+}} type 'int'
+// CHECK:     `-BuiltinType {{.+}} 'int'
 }
 
 // FIXME: Bogus instantiated_from self-reference.
@@ -59,9 +59,9 @@ namespace TestVariableRedecl {
 // CHECK: |-VarTemplateSpecializationDecl 0x[[TestVariableRedecl_S1]] {{.+}} a 'int' explicit_instantiation_definition cinit instantiated_from 0x[[TestVariableRedecl_D1]]
 // CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-9]]:{{.+}} 'a'
 // CHECK:   |-VarTemplateSpecialization 0x[[TestVariableRedecl_S1]] 'a' 'int'
-// CHECK:   |-TemplateArgument {{.+}} type 'int'
-// CHECK:   | `-BuiltinType {{.+}} 'int'
-// CHECK:   `-BuiltinTypeLoc {{.+}} 'int'
+// CHECK:   |-BuiltinTypeLoc {{.+}} 'int'
+// CHECK:   `-TemplateArgument {{.+}} type 'int'
+// CHECK:     `-BuiltinType {{.+}} 'int'
 }
 
 namespace TestNestedClassRedecl {

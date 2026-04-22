@@ -28,21 +28,21 @@ template void ns::foo<int>(int);
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:31> col:1 explicit_instantiation_definition 'foo'
 // CHECK-NEXT: NestedNameSpecifier Namespace {{.*}} 'ns'
 // CHECK-NEXT: Function {{.*}} 'foo' 'void (int)'
-// CHECK-NEXT: TemplateArgument <col:23> type 'int'
-// CHECK-NEXT:   BuiltinType {{.*}} 'int'
 // CHECK-NEXT: FunctionProtoTypeLoc <col:10, col:31> 'void (int)' cdecl
 // CHECK-NEXT:   ParmVarDecl {{.*}} <col:28> col:31 'int'
 // CHECK-NEXT:     BuiltinTypeLoc <col:28> 'int'
 // CHECK-NEXT:   BuiltinTypeLoc <col:10> 'void'
+// CHECK-NEXT: TemplateArgument <col:23> type 'int'
+// CHECK-NEXT:   BuiltinType {{.*}} 'int'
 
 // (b) variable template
 template int ns::bar<int>;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:25> col:1 explicit_instantiation_definition 'bar'
 // CHECK-NEXT: NestedNameSpecifier Namespace {{.*}} 'ns'
 // CHECK-NEXT: VarTemplateSpecialization {{.*}} 'bar' 'int'
+// CHECK-NEXT: BuiltinTypeLoc <col:10> 'int'
 // CHECK-NEXT: TemplateArgument <col:22> type 'int'
 // CHECK-NEXT:   BuiltinType {{.*}} 'int'
-// CHECK-NEXT: BuiltinTypeLoc <col:10> 'int'
 
 // (c) class template
 template struct ns::S<int>;
@@ -82,12 +82,12 @@ template void ns::S<long>::tmpl<double>(double);
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:47> col:1 explicit_instantiation_definition 'tmpl'
 // CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<long>'
 // CHECK-NEXT: CXXMethod {{.*}} 'tmpl' 'void (double)'
-// CHECK-NEXT: TemplateArgument <col:33> type 'double'
-// CHECK-NEXT:   BuiltinType {{.*}} 'double'
 // CHECK-NEXT: FunctionProtoTypeLoc <col:10, col:47> 'void (double)' cdecl
 // CHECK-NEXT:   ParmVarDecl {{.*}} <col:41> col:47 'double'
 // CHECK-NEXT:     BuiltinTypeLoc <col:41> 'double'
 // CHECK-NEXT:   BuiltinTypeLoc <col:10> 'void'
+// CHECK-NEXT: TemplateArgument <col:33> type 'double'
+// CHECK-NEXT:   BuiltinType {{.*}} 'double'
 
 // (g) nested class
 template struct ns::S<long>::Inner;
@@ -100,12 +100,12 @@ extern template void ns::foo<float>(float);
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:42> col:8 explicit_instantiation_declaration extern 'foo'
 // CHECK-NEXT: NestedNameSpecifier Namespace {{.*}} 'ns'
 // CHECK-NEXT: Function {{.*}} 'foo' 'void (float)'
-// CHECK-NEXT: TemplateArgument <col:30> type 'float'
-// CHECK-NEXT:   BuiltinType {{.*}} 'float'
 // CHECK-NEXT: FunctionProtoTypeLoc <col:17, col:42> 'void (float)' cdecl
 // CHECK-NEXT:   ParmVarDecl {{.*}} <col:37> col:42 'float'
 // CHECK-NEXT:     BuiltinTypeLoc <col:37> 'float'
 // CHECK-NEXT:   BuiltinTypeLoc <col:17> 'void'
+// CHECK-NEXT: TemplateArgument <col:30> type 'float'
+// CHECK-NEXT:   BuiltinType {{.*}} 'float'
 
 extern template struct ns::S<float>;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:35> col:8 explicit_instantiation_declaration extern 'S'
@@ -119,9 +119,9 @@ extern template double ns::bar<double>;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:38> col:8 explicit_instantiation_declaration extern 'bar'
 // CHECK-NEXT: NestedNameSpecifier Namespace {{.*}} 'ns'
 // CHECK-NEXT: VarTemplateSpecialization {{.*}} 'bar' 'double'
+// CHECK-NEXT: BuiltinTypeLoc <col:17> 'double'
 // CHECK-NEXT: TemplateArgument <col:32> type 'double'
 // CHECK-NEXT:   BuiltinType {{.*}} 'double'
-// CHECK-NEXT: BuiltinTypeLoc <col:17> 'double'
 
 // extern template: member function
 extern template void ns::S<double>::method(double);
@@ -145,12 +145,12 @@ extern template void ns::S<double>::tmpl<float>(float);
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:54> col:8 explicit_instantiation_declaration extern 'tmpl'
 // CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<double>'
 // CHECK-NEXT: CXXMethod {{.*}} 'tmpl' 'void (float)'
-// CHECK-NEXT: TemplateArgument <col:42> type 'float'
-// CHECK-NEXT:   BuiltinType {{.*}} 'float'
 // CHECK-NEXT: FunctionProtoTypeLoc <col:17, col:54> 'void (float)' cdecl
 // CHECK-NEXT:   ParmVarDecl {{.*}} <col:49> col:54 'float'
 // CHECK-NEXT:     BuiltinTypeLoc <col:49> 'float'
 // CHECK-NEXT:   BuiltinTypeLoc <col:17> 'void'
+// CHECK-NEXT: TemplateArgument <col:42> type 'float'
+// CHECK-NEXT:   BuiltinType {{.*}} 'float'
 
 // extern template: nested class
 extern template struct ns::S<double>::Inner;
@@ -163,9 +163,9 @@ template double ns::S<long>::mvar<double>;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:41> col:1 explicit_instantiation_definition 'mvar'
 // CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<long>'
 // CHECK-NEXT: VarTemplateSpecialization {{.*}} 'mvar' 'double'
+// CHECK-NEXT: BuiltinTypeLoc <col:10> 'double'
 // CHECK-NEXT: TemplateArgument <col:35> type 'double'
 // CHECK-NEXT:   BuiltinType {{.*}} 'double'
-// CHECK-NEXT: BuiltinTypeLoc <col:10> 'double'
 
 // member class template
 template struct ns::S<long>::Nested<double>;
@@ -180,31 +180,31 @@ template void ns::A<int>::B<double>::deep<float>(float);
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:55> col:1 explicit_instantiation_definition 'deep'
 // CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::A<int>::B<double>'
 // CHECK-NEXT: CXXMethod {{.*}} 'deep' 'void (float)'
-// CHECK-NEXT: TemplateArgument <col:43> type 'float'
-// CHECK-NEXT:   BuiltinType {{.*}} 'float'
 // CHECK-NEXT: FunctionProtoTypeLoc <col:10, col:55> 'void (float)' cdecl
 // CHECK-NEXT:   ParmVarDecl {{.*}} <col:50> col:55 'float'
 // CHECK-NEXT:     BuiltinTypeLoc <col:50> 'float'
 // CHECK-NEXT:   BuiltinTypeLoc <col:10> 'void'
+// CHECK-NEXT: TemplateArgument <col:43> type 'float'
+// CHECK-NEXT:   BuiltinType {{.*}} 'float'
 
 // Same-namespace explicit instantiation (no cross-namespace qualifier)
 namespace ns {
   template void foo<short>(short);
   // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:3, col:33> col:3 explicit_instantiation_definition 'foo'
   // CHECK-NEXT: Function {{.*}} 'foo' 'void (short)'
-  // CHECK-NEXT: TemplateArgument <col:21> type 'short'
-  // CHECK-NEXT:   BuiltinType {{.*}} 'short'
   // CHECK-NEXT: FunctionProtoTypeLoc <col:12, col:33> 'void (short)' cdecl
   // CHECK-NEXT:   ParmVarDecl {{.*}} <col:28> col:33 'short'
   // CHECK-NEXT:     BuiltinTypeLoc <col:28> 'short'
   // CHECK-NEXT:   BuiltinTypeLoc <col:12> 'void'
+  // CHECK-NEXT: TemplateArgument <col:21> type 'short'
+  // CHECK-NEXT:   BuiltinType {{.*}} 'short'
 
   template short bar<short>;
   // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:3, col:27> col:3 explicit_instantiation_definition 'bar'
   // CHECK-NEXT: VarTemplateSpecialization {{.*}} 'bar' 'short'
+  // CHECK-NEXT: BuiltinTypeLoc <col:12> 'short'
   // CHECK-NEXT: TemplateArgument <col:22> type 'short'
   // CHECK-NEXT:   BuiltinType {{.*}} 'short'
-  // CHECK-NEXT: BuiltinTypeLoc <col:12> 'short'
 
   template struct S<short>;
   // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:3, col:26> col:3 explicit_instantiation_definition 'S'
