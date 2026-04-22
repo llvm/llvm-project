@@ -19,8 +19,7 @@ declare void @use(double)
 
 define double @cosh_negated_arg(double %x) {
 ; CHECK-LABEL: @cosh_negated_arg(
-; CHECK-NEXT:    [[X:%.*]] = fneg double [[X1:%.*]]
-; CHECK-NEXT:    [[COSH:%.*]] = call double @cosh(double [[X]])
+; CHECK-NEXT:    [[COSH:%.*]] = call double @cosh(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[COSH]]
 ;
   %neg = fneg double %x
@@ -30,8 +29,7 @@ define double @cosh_negated_arg(double %x) {
 
 define double @cosh_fsub_negated_arg(double %x) {
 ; CHECK-LABEL: @cosh_fsub_negated_arg(
-; CHECK-NEXT:    [[X:%.*]] = fneg double [[X1:%.*]]
-; CHECK-NEXT:    [[COSH:%.*]] = call double @cosh(double [[X]])
+; CHECK-NEXT:    [[COSH:%.*]] = call double @cosh(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[COSH]]
 ;
   %neg = fsub double -0.0, %x
@@ -41,8 +39,7 @@ define double @cosh_fsub_negated_arg(double %x) {
 
 define float @coshf_negated_arg(float %x) {
 ; CHECK-LABEL: @coshf_negated_arg(
-; CHECK-NEXT:    [[X:%.*]] = fneg float [[X1:%.*]]
-; CHECK-NEXT:    [[COSH:%.*]] = call float @coshf(float [[X]])
+; CHECK-NEXT:    [[COSH:%.*]] = call float @coshf(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[COSH]]
 ;
   %neg = fneg float %x
@@ -52,8 +49,7 @@ define float @coshf_negated_arg(float %x) {
 
 define fp128 @coshl_negated_arg(fp128 %x) {
 ; CHECK-LABEL: @coshl_negated_arg(
-; CHECK-NEXT:    [[X:%.*]] = fneg fp128 [[X1:%.*]]
-; CHECK-NEXT:    [[COSH:%.*]] = call fp128 @coshl(fp128 [[X]])
+; CHECK-NEXT:    [[COSH:%.*]] = call fp128 @coshl(fp128 [[X:%.*]])
 ; CHECK-NEXT:    ret fp128 [[COSH]]
 ;
   %neg = fneg fp128 %x
@@ -65,8 +61,7 @@ define fp128 @coshl_negated_arg(fp128 %x) {
 
 define double @cosh_fabs_arg(double %x) {
 ; CHECK-LABEL: @cosh_fabs_arg(
-; CHECK-NEXT:    [[X:%.*]] = call double @llvm.fabs.f64(double [[X1:%.*]])
-; CHECK-NEXT:    [[COSH:%.*]] = call double @cosh(double [[X]])
+; CHECK-NEXT:    [[COSH:%.*]] = call double @cosh(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[COSH]]
 ;
   %fabs = call double @llvm.fabs.f64(double %x)
@@ -80,9 +75,9 @@ declare double @llvm.fabs.f64(double)
 
 define double @sinh_negated_arg(double %x) {
 ; CHECK-LABEL: @sinh_negated_arg(
-; CHECK-NEXT:    [[R2:%.*]] = fneg double [[R1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call double @sinh(double [[R2]])
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call double @sinh(double [[R2:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = fneg double [[R]]
+; CHECK-NEXT:    ret double [[R1]]
 ;
   %neg = fneg double %x
   %r = call double @sinh(double %neg)
@@ -91,9 +86,9 @@ define double @sinh_negated_arg(double %x) {
 
 define double @sinh_fsub_negated_arg(double %x) {
 ; CHECK-LABEL: @sinh_fsub_negated_arg(
-; CHECK-NEXT:    [[R2:%.*]] = fneg double [[R1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call double @sinh(double [[R2]])
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call double @sinh(double [[R2:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = fneg double [[R]]
+; CHECK-NEXT:    ret double [[R1]]
 ;
   %neg = fsub double -0.0, %x
   %r = call double @sinh(double %neg)
@@ -102,9 +97,9 @@ define double @sinh_fsub_negated_arg(double %x) {
 
 define float @sinhf_negated_arg(float %x) {
 ; CHECK-LABEL: @sinhf_negated_arg(
-; CHECK-NEXT:    [[R2:%.*]] = fneg float [[R1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call float @sinhf(float [[R2]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call float @sinhf(float [[R2:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = fneg float [[R]]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %neg = fneg float %x
   %r = call float @sinhf(float %neg)
@@ -113,9 +108,9 @@ define float @sinhf_negated_arg(float %x) {
 
 define fp128 @sinhl_negated_arg(fp128 %x) {
 ; CHECK-LABEL: @sinhl_negated_arg(
-; CHECK-NEXT:    [[R2:%.*]] = fneg fp128 [[R1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call fp128 @sinhl(fp128 [[R2]])
-; CHECK-NEXT:    ret fp128 [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call fp128 @sinhl(fp128 [[R2:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = fneg fp128 [[R]]
+; CHECK-NEXT:    ret fp128 [[R1]]
 ;
   %neg = fneg fp128 %x
   %r = call fp128 @sinhl(fp128 %neg)
@@ -126,10 +121,8 @@ define fp128 @sinhl_negated_arg(fp128 %x) {
 
 define double @neg_sinh_negated_arg(double %x) {
 ; CHECK-LABEL: @neg_sinh_negated_arg(
-; CHECK-NEXT:    [[X:%.*]] = fneg double [[X1:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @sinh(double [[X]])
-; CHECK-NEXT:    [[RN:%.*]] = fneg double [[TMP1]]
-; CHECK-NEXT:    ret double [[RN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @sinh(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %neg = fneg double %x
   %r = call double @sinh(double %neg)
@@ -156,9 +149,9 @@ define double @sinh_negated_arg_extra_use(double %x) {
 
 define double @tanh_negated_arg(double %x) {
 ; CHECK-LABEL: @tanh_negated_arg(
-; CHECK-NEXT:    [[R2:%.*]] = fneg double [[R1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call double @tanh(double [[R2]])
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call double @tanh(double [[R2:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = fneg double [[R]]
+; CHECK-NEXT:    ret double [[R1]]
 ;
   %neg = fneg double %x
   %r = call double @tanh(double %neg)
@@ -167,9 +160,9 @@ define double @tanh_negated_arg(double %x) {
 
 define double @tanh_fsub_negated_arg(double %x) {
 ; CHECK-LABEL: @tanh_fsub_negated_arg(
-; CHECK-NEXT:    [[R2:%.*]] = fneg double [[R1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call double @tanh(double [[R2]])
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call double @tanh(double [[R2:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = fneg double [[R]]
+; CHECK-NEXT:    ret double [[R1]]
 ;
   %neg = fsub double -0.0, %x
   %r = call double @tanh(double %neg)
@@ -178,9 +171,9 @@ define double @tanh_fsub_negated_arg(double %x) {
 
 define float @tanhf_negated_arg(float %x) {
 ; CHECK-LABEL: @tanhf_negated_arg(
-; CHECK-NEXT:    [[R2:%.*]] = fneg float [[R1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call float @tanhf(float [[R2]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call float @tanhf(float [[R2:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = fneg float [[R]]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %neg = fneg float %x
   %r = call float @tanhf(float %neg)
@@ -189,9 +182,9 @@ define float @tanhf_negated_arg(float %x) {
 
 define fp128 @tanhl_negated_arg(fp128 %x) {
 ; CHECK-LABEL: @tanhl_negated_arg(
-; CHECK-NEXT:    [[R2:%.*]] = fneg fp128 [[R1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call fp128 @tanhl(fp128 [[R2]])
-; CHECK-NEXT:    ret fp128 [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call fp128 @tanhl(fp128 [[R2:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = fneg fp128 [[R]]
+; CHECK-NEXT:    ret fp128 [[R1]]
 ;
   %neg = fneg fp128 %x
   %r = call fp128 @tanhl(fp128 %neg)
@@ -202,10 +195,8 @@ define fp128 @tanhl_negated_arg(fp128 %x) {
 
 define double @neg_tanh_negated_arg(double %x) {
 ; CHECK-LABEL: @neg_tanh_negated_arg(
-; CHECK-NEXT:    [[X:%.*]] = fneg double [[X1:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @tanh(double [[X]])
-; CHECK-NEXT:    [[RN:%.*]] = fneg double [[TMP1]]
-; CHECK-NEXT:    ret double [[RN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @tanh(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %neg = fneg double %x
   %r = call double @tanh(double %neg)
