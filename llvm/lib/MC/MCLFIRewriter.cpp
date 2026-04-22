@@ -54,11 +54,6 @@ bool MCLFIRewriter::mayModifyRegister(const MCInst &Inst,
 
 bool MCLFIRewriter::explicitlyModifiesRegister(const MCInst &Inst,
                                                MCRegister Reg) const {
-  const MCInstrDesc &Desc = InstInfo->get(Inst.getOpcode());
-  for (unsigned I = 0, E = Desc.getNumDefs(); I != E; ++I) {
-    if (Desc.operands()[I].OperandType == MCOI::OPERAND_REGISTER &&
-        RegInfo->isSubRegisterEq(Reg, Inst.getOperand(I).getReg()))
-      return true;
-  }
-  return false;
+  return InstInfo->get(Inst.getOpcode())
+      .hasExplicitDefOfPhysReg(Inst, Reg, *RegInfo);
 }
