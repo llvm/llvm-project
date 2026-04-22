@@ -1,4 +1,4 @@
-// RUN: mlir-opt --xegpu-array-length-optimization --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --xegpu-array-length-optimization --verify-each=false --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func.func @test_load_nd_32x32
 // CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)

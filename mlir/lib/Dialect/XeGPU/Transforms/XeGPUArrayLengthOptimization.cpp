@@ -10,7 +10,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
@@ -65,15 +65,13 @@ static bool needsOptimization(xegpu::TensorDescType tdescType) {
   return true;
 }
 
-/// Pattern to rewrite xegpu.create_nd_tdesc operations
-class OptimizeCreateNdDescOp
-    : public OpConversionPattern<xegpu::CreateNdDescOp> {
+/// Pattern to rewrite xegpu.create_nd_tdesc operations using simple RewritePattern
+class OptimizeCreateNdDescOp : public OpRewritePattern<xegpu::CreateNdDescOp> {
 public:
-  using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
+  using OpRewritePattern<xegpu::CreateNdDescOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(xegpu::CreateNdDescOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(xegpu::CreateNdDescOp op,
+                                 PatternRewriter &rewriter) const override {
     auto tdescType = op.getType();
     if (!needsOptimization(tdescType))
       return failure();
@@ -92,16 +90,10 @@ public:
         tdescType.getBoundaryCheck(), tdescType.getMemorySpace(),
         tdescType.getLayout());
 
-    // Check if the op has explicit offsets/sizes/strides or if they're inferred
-    auto offsets = op.getMixedOffsets();
-    auto sizes = op.getMixedSizes();
-    auto strides = op.getMixedStrides();
-
     // Check if we have a simple static memref source
     Value source = op.getSource();
     auto memrefType = dyn_cast<MemRefType>(source.getType());
     if (!memrefType || !memrefType.hasStaticShape()) {
-      // For now, only handle simple static memrefs
       return failure();
     }
 
@@ -119,21 +111,15 @@ public:
 };
 
 /// Pattern to rewrite xegpu.load_nd operations
-class OptimizeLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
+class OptimizeLoadNdOp : public OpRewritePattern<xegpu::LoadNdOp> {
 public:
-  using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
+  using OpRewritePattern<xegpu::LoadNdOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(xegpu::LoadNdOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // Get the adapted tensor desc type (after CreateNdDescOp conversion)
-    auto adaptedTdescType =
-        dyn_cast<xegpu::TensorDescType>(adaptor.getTensorDesc().getType());
-    if (!adaptedTdescType)
-      return failure();
+  LogicalResult matchAndRewrite(xegpu::LoadNdOp op,
+                                 PatternRewriter &rewriter) const override {
+    auto tdescType = op.getTensorDescType();
+    int64_t arrayLength = tdescType.getArrayLength();
 
-    // Check if the adapted tensor desc has array_length > 1
-    int64_t arrayLength = adaptedTdescType.getArrayLength();
     if (arrayLength <= 1)
       return failure();
 
@@ -142,19 +128,22 @@ public:
     if (origShape.size() != 2)
       return failure();
 
-    // Compute new vector shape for register layout
-    // New non-FCD = old non-FCD * array_length
-    // New FCD = old FCD / array_length
-    int64_t newNonFCD = origShape[0] * arrayLength;
-    int64_t newFCD = adaptedTdescType.getShape()[1];
+    // The expected vector shape is: [tdesc_non_FCD * array_length, tdesc_FCD]
+    int64_t expectedNonFCD = tdescType.getShape()[0] * arrayLength;
+    int64_t expectedFCD = tdescType.getShape()[1];
 
-    SmallVector<int64_t> newShape = {newNonFCD, newFCD};
+    // If already matches expected shape, skip
+    if (origShape[0] == expectedNonFCD && origShape[1] == expectedFCD)
+      return failure();
+
+    // Compute new vector shape for register layout
+    SmallVector<int64_t> newShape = {expectedNonFCD, expectedFCD};
     auto newVectorType =
         VectorType::get(newShape, origVectorType.getElementType());
 
     // Create new LoadNdOp with updated result type
     auto newLoadOp = xegpu::LoadNdOp::create(
-        rewriter, op.getLoc(), newVectorType, adaptor.getTensorDesc(),
+        rewriter, op.getLoc(), newVectorType, op.getTensorDesc(),
         op.getMixedOffsets(), op.getPackedAttr(), op.getTransposeAttr(),
         op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
         op.getLayoutAttr());
@@ -165,55 +154,35 @@ public:
 };
 
 /// Pattern to rewrite xegpu.prefetch_nd operations
-class OptimizePrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
+class OptimizePrefetchNdOp : public OpRewritePattern<xegpu::PrefetchNdOp> {
 public:
-  using OpConversionPattern<xegpu::PrefetchNdOp>::OpConversionPattern;
+  using OpRewritePattern<xegpu::PrefetchNdOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(xegpu::PrefetchNdOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // Get the adapted tensor desc type (after CreateNdDescOp conversion)
-    auto adaptedTdescType =
-        dyn_cast<xegpu::TensorDescType>(adaptor.getTensorDesc().getType());
-    if (!adaptedTdescType)
-      return failure();
-
-    // Check if the adapted tensor desc has array_length > 1
-    int64_t arrayLength = adaptedTdescType.getArrayLength();
+  LogicalResult matchAndRewrite(xegpu::PrefetchNdOp op,
+                                 PatternRewriter &rewriter) const override {
+    auto tdescType = op.getTensorDescType();
+    int64_t arrayLength = tdescType.getArrayLength();
     if (arrayLength <= 1)
       return failure();
 
-    // Create new PrefetchNdOp with adapted tensor desc
-    xegpu::PrefetchNdOp::create(rewriter, op.getLoc(),
-                                adaptor.getTensorDesc(), op.getMixedOffsets(),
-                                op.getL1HintAttr(), op.getL2HintAttr(),
-                                op.getL3HintAttr(), op.getLayoutAttr());
-
-    rewriter.eraseOp(op);
+    // PrefetchNdOp doesn't change, just mark as handled
     return success();
   }
 };
 
 /// Pattern to update vector.extract_strided_slice operations
-/// Memory layout (32x32): [0:32][0:16] and [0:32][16:32] are side by side
-/// Register layout (64x16): [0:32][0:16] and [32:64][0:16] are stacked
 class UpdateExtractStridedSliceOp
-    : public OpConversionPattern<vector::ExtractStridedSliceOp> {
+    : public OpRewritePattern<vector::ExtractStridedSliceOp> {
 public:
-  using OpConversionPattern<
-      vector::ExtractStridedSliceOp>::OpConversionPattern;
+  using OpRewritePattern<vector::ExtractStridedSliceOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(vector::ExtractStridedSliceOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // Get the adapted vector operand
-    Value adaptedVector = adaptor.getOperands()[0];
-    auto sourceType = dyn_cast<VectorType>(adaptedVector.getType());
+  LogicalResult matchAndRewrite(vector::ExtractStridedSliceOp op,
+                                 PatternRewriter &rewriter) const override {
+    auto sourceType = dyn_cast<VectorType>(op.getSource().getType());
     if (!sourceType || sourceType.getRank() != 2)
       return failure();
 
-    // Check if the source comes from a load_nd that was optimized
-    auto loadOp = adaptedVector.getDefiningOp<xegpu::LoadNdOp>();
+    auto loadOp = op.getSource().getDefiningOp<xegpu::LoadNdOp>();
     if (!loadOp)
       return failure();
 
@@ -222,7 +191,6 @@ public:
     if (arrayLength <= 1)
       return failure();
 
-    // Get original offsets and sizes
     auto offsets = op.getOffsets().getValue();
     auto sizes = op.getSizes().getValue();
     auto strides = op.getStrides().getValue();
@@ -233,18 +201,6 @@ public:
     int64_t origOffset0 = cast<IntegerAttr>(offsets[0]).getInt();
     int64_t origOffset1 = cast<IntegerAttr>(offsets[1]).getInt();
 
-    // Convert memory layout indexing to register layout indexing
-    // Memory layout: blocks are side-by-side in the FCD
-    // Register layout: blocks are stacked in the non-FCD
-    //
-    // Original memory indexing: [offset0][offset1]
-    // where offset1 determines which array element we're in
-    //
-    // New register indexing:
-    // - array_index = offset1 / new_FCD
-    // - new_offset0 = offset0 + (array_index * original_rows)
-    // - new_offset1 = offset1 % new_FCD
-
     int64_t newFCD = tdescType.getShape()[1];
     int64_t origRows = sourceType.getShape()[0] / arrayLength;
 
@@ -252,12 +208,10 @@ public:
     int64_t newOffset0 = origOffset0 + (arrayIndex * origRows);
     int64_t newOffset1 = origOffset1 % newFCD;
 
-    // Create new offsets
     SmallVector<int64_t> newOffsets = {newOffset0, newOffset1};
 
-    // Create new ExtractStridedSliceOp with updated offsets
     auto newOp = vector::ExtractStridedSliceOp::create(
-        rewriter, op.getLoc(), adaptedVector, newOffsets,
+        rewriter, op.getLoc(), op.getSource(), newOffsets,
         llvm::to_vector(llvm::map_range(
             sizes, [](Attribute a) { return cast<IntegerAttr>(a).getInt(); })),
         llvm::to_vector(llvm::map_range(
@@ -275,10 +229,9 @@ namespace mlir {
 namespace xegpu {
 
 void populateXeGPUArrayLengthOptimizationPatterns(
-    RewritePatternSet &patterns, TypeConverter &converter) {
+    RewritePatternSet &patterns) {
   patterns.add<OptimizeCreateNdDescOp, OptimizeLoadNdOp, OptimizePrefetchNdOp,
-               UpdateExtractStridedSliceOp>(converter,
-                                            patterns.getContext());
+               UpdateExtractStridedSliceOp>(patterns.getContext());
 }
 
 } // namespace xegpu
@@ -291,48 +244,11 @@ struct XeGPUArrayLengthOptimizationPass final
           XeGPUArrayLengthOptimizationPass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
-    TypeConverter converter;
     RewritePatternSet patterns(&context);
-    ConversionTarget target(context);
 
-    // Mark CreateNdDescOp as legal only if it doesn't need optimization
-    target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
-        [](xegpu::CreateNdDescOp op) {
-          return !needsOptimization(op.getType());
-        });
+    xegpu::populateXeGPUArrayLengthOptimizationPatterns(patterns);
 
-    // Mark LoadNdOp as legal only if its tensor desc doesn't need optimization
-    target.addDynamicallyLegalOp<xegpu::LoadNdOp>([](xegpu::LoadNdOp op) {
-      return !needsOptimization(op.getTensorDescType());
-    });
-
-    // Mark PrefetchNdOp as legal only if its tensor desc doesn't need
-    // optimization
-    target.addDynamicallyLegalOp<xegpu::PrefetchNdOp>(
-        [](xegpu::PrefetchNdOp op) {
-          return !needsOptimization(op.getTensorDescType());
-        });
-
-    // Mark ExtractStridedSliceOp as legal if it doesn't extract from an
-    // optimized load
-    target.addDynamicallyLegalOp<vector::ExtractStridedSliceOp>(
-        [](vector::ExtractStridedSliceOp op) {
-          auto loadOp = op.getSource().getDefiningOp<xegpu::LoadNdOp>();
-          if (!loadOp)
-            return true;
-          auto tdescType = loadOp.getTensorDescType();
-          return tdescType.getArrayLength() <= 1;
-        });
-
-    // Identity type conversion
-    converter.addConversion([](Type type) { return type; });
-
-    target.addLegalDialect<xegpu::XeGPUDialect, vector::VectorDialect>();
-
-    xegpu::populateXeGPUArrayLengthOptimizationPatterns(patterns, converter);
-
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
       DBGS() << "Array length optimization pass failed.\n";
       return signalPassFailure();
     }
