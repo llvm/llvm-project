@@ -489,8 +489,8 @@ attributes #1 = { nounwind }
 ; HSA: attributes #[[ATTR13]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
 ; HSA: attributes #[[ATTR14]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
 ;.
-; HSA: [[META0]] = !{i32 1, i32 3, i32 4, i32 10}
-; HSA: [[META1]] = !{i32 1, i32 5, i32 6, i32 10}
-; HSA: [[META2]] = !{i32 2, i32 10}
-; HSA: [[META3]] = !{i32 1, i32 4, i32 5, i32 10}
+; HSA: [[META0]] = !{i32 1, i32 3, i32 4, i32 16}
+; HSA: [[META1]] = !{i32 1, i32 5, i32 6, i32 16}
+; HSA: [[META2]] = !{i32 2, i32 16}
+; HSA: [[META3]] = !{i32 1, i32 4, i32 5, i32 16}
 ;.

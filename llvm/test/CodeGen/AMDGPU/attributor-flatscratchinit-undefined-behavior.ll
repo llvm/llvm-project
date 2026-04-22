@@ -153,7 +153,7 @@ attributes #0 = { "amdgpu-no-flat-scratch-init" }
 ; GFX10: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
 ; GFX10: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; GFX9: [[META0]] = !{i32 1, i32 5, i32 6, i32 10}
+; GFX9: [[META0]] = !{i32 1, i32 5, i32 6, i32 16}
 ;.
-; GFX10: [[META0]] = !{i32 1, i32 5, i32 6, i32 10}
+; GFX10: [[META0]] = !{i32 1, i32 5, i32 6, i32 16}
 ;.
