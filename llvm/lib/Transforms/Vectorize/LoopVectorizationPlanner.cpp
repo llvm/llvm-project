@@ -228,7 +228,7 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
 }
 
 std::optional<unsigned> llvm::getMaxVScale(const Function &F,
-                                     const TargetTransformInfo &TTI) {
+                                           const TargetTransformInfo &TTI) {
   if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
     return MaxVScale;
 

@@ -855,7 +855,6 @@ public:
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
 
-
   /// \returns The smallest bitwidth each instruction can be represented with.
   /// The vector equivalents of these instructions should be truncated to this
   /// type.
