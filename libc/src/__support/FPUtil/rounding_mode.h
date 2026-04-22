@@ -66,8 +66,8 @@ LIBC_INLINE bool fenv_is_round_to_zero() {
 }
 
 // Quick free standing get rounding mode based on the above observations.
-LIBC_INLINE constexpr int quick_get_round() {
-  constexpr float x = 0x1.0p-24f;
+LIBC_INLINE int quick_get_round() {
+  static volatile float x = 0x1.0p-24f;
   float y = x;
   float z = (0x1.000002p0f + y) + (-1.0f - y);
 
