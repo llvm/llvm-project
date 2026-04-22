@@ -165,7 +165,7 @@ define float @fadd_fast_f32(float %a, float %b) {
   ret float %r
 }
 
-; nnan nsz on fmul.f32 — same as regular mul.rn.f32 for NVPTX
+; nnan nsz on fmul.f32 -- same as regular mul.rn.f32 for NVPTX
 define float @fmul_nnan_nsz_f32(float %a, float %b) {
 ; CHECK-LABEL: fmul_nnan_nsz_f32(
 ; CHECK: mul{{.*}}f32 %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
@@ -174,7 +174,7 @@ define float @fmul_nnan_nsz_f32(float %a, float %b) {
   ret float %r
 }
 
-; contract on fmul+fadd → fma.rn.f32 (FMA contraction)
+; contract on fmul+fadd -> fma.rn.f32 (FMA contraction)
 define float @fmadd_contract_f32(float %a, float %b, float %c) {
 ; CHECK-LABEL: fmadd_contract_f32(
 ; CHECK: fma.rn.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
@@ -184,7 +184,7 @@ define float @fmadd_contract_f32(float %a, float %b, float %c) {
   ret float %add
 }
 
-; contract on fmul+fadd for f64 → fma.rn.f64
+; contract on fmul+fadd for f64 -> fma.rn.f64
 define double @fmadd_contract_f64(double %a, double %b, double %c) {
 ; CHECK-LABEL: fmadd_contract_f64(
 ; CHECK: fma.rn.f64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}

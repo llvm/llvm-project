@@ -130,7 +130,7 @@ define i1 @fcmp_oeq(float %a, float %b) {
 
 ;;; Fast-math flags
 
-; fast on fadd.f32 — same f32.add on WebAssembly
+; fast on fadd.f32 -- same f32.add on WebAssembly
 define float @fadd_fast_f32(float %a, float %b) {
 ; CHECK-LABEL: fadd_fast_f32:
 ; CHECK: f32.add
@@ -138,7 +138,7 @@ define float @fadd_fast_f32(float %a, float %b) {
   ret float %r
 }
 
-; nnan nsz on fmul.f32 — same f32.mul on WebAssembly
+; nnan nsz on fmul.f32 -- same f32.mul on WebAssembly
 define float @fmul_nnan_nsz_f32(float %a, float %b) {
 ; CHECK-LABEL: fmul_nnan_nsz_f32:
 ; CHECK: f32.mul
@@ -146,7 +146,7 @@ define float @fmul_nnan_nsz_f32(float %a, float %b) {
   ret float %r
 }
 
-; reassoc on fdiv.f32 — same f32.div on WebAssembly
+; reassoc on fdiv.f32 -- same f32.div on WebAssembly
 define float @fdiv_reassoc_f32(float %a, float %b) {
 ; CHECK-LABEL: fdiv_reassoc_f32:
 ; CHECK: f32.div

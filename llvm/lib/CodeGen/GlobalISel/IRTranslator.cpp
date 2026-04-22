@@ -2757,7 +2757,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::fcmp: {
-    // Quiet comparison — no exception raised on NaN operands.
+    // Quiet comparison -- no exception raised on NaN operands.
     auto *MD = cast<MetadataAsValue>(CI.getArgOperand(2))->getMetadata();
     FCmpInst::Predicate Pred =
         StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
@@ -2788,7 +2788,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::fcmps: {
-    // Signaling comparison — always raises on any NaN, so always strict.
+    // Signaling comparison -- always raises on any NaN, so always strict.
     auto *MD = cast<MetadataAsValue>(CI.getArgOperand(2))->getMetadata();
     FCmpInst::Predicate Pred =
         StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())

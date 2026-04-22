@@ -86,7 +86,7 @@ define float @fptrunc(double %a) {
 
 define double @fpext(float %a) {
 ; CHECK-LABEL: fpext:
-; fpext is a no-op register move on PowerPC — just verify it compiles
+; fpext is a no-op register move on PowerPC -- just verify it compiles
 ; CHECK: blr
   %r = call double @llvm.fpext.f64.f32(float %a)
   ret double %r
@@ -131,7 +131,7 @@ define i1 @fcmp_oeq(float %a, float %b) {
 
 ;;; Fast-math flags
 
-; fast on fadd.f32 — same xsaddsp instruction on PowerPC VSX
+; fast on fadd.f32 -- same xsaddsp instruction on PowerPC VSX
 define float @fadd_fast_f32(float %a, float %b) {
 ; CHECK-LABEL: fadd_fast_f32:
 ; CHECK: xsaddsp
@@ -139,7 +139,7 @@ define float @fadd_fast_f32(float %a, float %b) {
   ret float %r
 }
 
-; nnan nsz on fmul.f32 — same xsmulsp instruction on PowerPC VSX
+; nnan nsz on fmul.f32 -- same xsmulsp instruction on PowerPC VSX
 define float @fmul_nnan_nsz_f32(float %a, float %b) {
 ; CHECK-LABEL: fmul_nnan_nsz_f32:
 ; CHECK: xsmulsp
@@ -147,7 +147,7 @@ define float @fmul_nnan_nsz_f32(float %a, float %b) {
   ret float %r
 }
 
-; reassoc on fdiv.f32 — same xsdivsp instruction on PowerPC VSX
+; reassoc on fdiv.f32 -- same xsdivsp instruction on PowerPC VSX
 define float @fdiv_reassoc_f32(float %a, float %b) {
 ; CHECK-LABEL: fdiv_reassoc_f32:
 ; CHECK: xsdivsp
@@ -155,7 +155,7 @@ define float @fdiv_reassoc_f32(float %a, float %b) {
   ret float %r
 }
 
-; contract on fmul+fadd → xsmaddasp (FMA contraction, f32, VSX)
+; contract on fmul+fadd -> xsmaddasp (FMA contraction, f32, VSX)
 define float @fmadd_contract_f32(float %a, float %b, float %c) {
 ; CHECK-LABEL: fmadd_contract_f32:
 ; CHECK: xsmaddasp
@@ -164,7 +164,7 @@ define float @fmadd_contract_f32(float %a, float %b, float %c) {
   ret float %add
 }
 
-; contract on fmul+fadd for f64 → fmadd
+; contract on fmul+fadd for f64 -> fmadd
 define double @fmadd_contract_f64(double %a, double %b, double %c) {
 ; CHECK-LABEL: fmadd_contract_f64:
 ; CHECK: fmadd

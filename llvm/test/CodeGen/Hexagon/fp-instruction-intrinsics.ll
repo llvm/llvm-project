@@ -89,7 +89,7 @@ define i32 @fcmp_oeq(float %a, float %b) #0 {
 
 ;;; Fast-math flags
 
-; fast on fadd.f32 — same sfadd instruction on Hexagon
+; fast on fadd.f32 -- same sfadd instruction on Hexagon
 define float @fadd_fast_f32(float %a, float %b) #0 {
 ; CHECK-LABEL: fadd_fast_f32:
 ; CHECK: sfadd
@@ -97,7 +97,7 @@ define float @fadd_fast_f32(float %a, float %b) #0 {
   ret float %r
 }
 
-; nnan nsz on fmul.f32 — same sfmpy instruction on Hexagon
+; nnan nsz on fmul.f32 -- same sfmpy instruction on Hexagon
 define float @fmul_nnan_nsz_f32(float %a, float %b) #0 {
 ; CHECK-LABEL: fmul_nnan_nsz_f32:
 ; CHECK: sfmpy
@@ -105,7 +105,7 @@ define float @fmul_nnan_nsz_f32(float %a, float %b) #0 {
   ret float %r
 }
 
-; contract on fmul+fadd → FMA accumulate: rx += sfmpy(ry, rz)
+; contract on fmul+fadd -> FMA accumulate: rx += sfmpy(ry, rz)
 define float @fmadd_contract_f32(float %a, float %b, float %c) #0 {
 ; CHECK-LABEL: fmadd_contract_f32:
 ; CHECK: += sfmpy(

@@ -131,7 +131,7 @@ define i1 @fcmp_oeq(float %a, float %b) {
 
 ;;; Fast-math flags
 
-; nnan nsz flags — same codegen as plain fadd on x86 SSE2
+; nnan nsz flags -- same codegen as plain fadd on x86 SSE2
 define float @fadd_nnan_nsz_f32(float %a, float %b) {
 ; CHECK-LABEL: fadd_nnan_nsz_f32:
 ; CHECK: addss
@@ -139,7 +139,7 @@ define float @fadd_nnan_nsz_f32(float %a, float %b) {
   ret float %r
 }
 
-; fast flags — same codegen as plain fmul on x86 SSE2
+; fast flags -- same codegen as plain fmul on x86 SSE2
 define float @fmul_fast_f32(float %a, float %b) {
 ; CHECK-LABEL: fmul_fast_f32:
 ; CHECK: mulss
@@ -147,7 +147,7 @@ define float @fmul_fast_f32(float %a, float %b) {
   ret float %r
 }
 
-; reassoc on fdiv — still generates divss on plain SSE2
+; reassoc on fdiv -- still generates divss on plain SSE2
 define float @fdiv_reassoc_f32(float %a, float %b) {
 ; CHECK-LABEL: fdiv_reassoc_f32:
 ; CHECK: divss

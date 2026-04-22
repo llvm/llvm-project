@@ -116,7 +116,7 @@ define i1 @fcmp_oeq(float %a, float %b) {
 
 ;;; Fast-math flags
 
-; fast on fadd.f32 — same fadds instruction on SPARC
+; fast on fadd.f32 -- same fadds instruction on SPARC
 define float @fadd_fast_f32(float %a, float %b) {
 ; CHECK-LABEL: fadd_fast_f32:
 ; CHECK: fadds
@@ -124,7 +124,7 @@ define float @fadd_fast_f32(float %a, float %b) {
   ret float %r
 }
 
-; nnan nsz on fmul.f32 — same fmuls instruction on SPARC
+; nnan nsz on fmul.f32 -- same fmuls instruction on SPARC
 define float @fmul_nnan_nsz_f32(float %a, float %b) {
 ; CHECK-LABEL: fmul_nnan_nsz_f32:
 ; CHECK: fmuls
@@ -132,7 +132,7 @@ define float @fmul_nnan_nsz_f32(float %a, float %b) {
   ret float %r
 }
 
-; reassoc on fdiv.f32 — same fdivs instruction on SPARC
+; reassoc on fdiv.f32 -- same fdivs instruction on SPARC
 define float @fdiv_reassoc_f32(float %a, float %b) {
 ; CHECK-LABEL: fdiv_reassoc_f32:
 ; CHECK: fdivs

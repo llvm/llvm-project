@@ -30649,7 +30649,7 @@ Overview:
 
 Performs a **signaling** floating-point comparison.  Unlike
 :ref:`llvm.fcmp <int_fcmp>`, a signaling comparison raises an FP Invalid
-Operation exception whenever either operand is any NaN — including quiet NaNs
+Operation exception whenever either operand is any NaN -- including quiet NaNs
 (qNaN).  There is no corresponding plain instruction; the closest equivalent is
 :ref:`fcmp <i_fcmp>`.  For vector types the return type is a vector of ``i1``
 with the same number of elements as the operands.

@@ -108,7 +108,7 @@ define amdgpu_kernel void @fcmp_oeq(ptr addrspace(1) %out, float %a, float %b) {
 
 ;;; Fast-math flags
 
-; fast on fadd.f32 — same v_add_f32 on AMDGPU
+; fast on fadd.f32 -- same v_add_f32 on AMDGPU
 ; CHECK-LABEL: {{^}}fadd_fast_f32:
 ; CHECK: v_add_f32
 define amdgpu_kernel void @fadd_fast_f32(ptr addrspace(1) %out, float %a, float %b) {
@@ -117,7 +117,7 @@ define amdgpu_kernel void @fadd_fast_f32(ptr addrspace(1) %out, float %a, float 
   ret void
 }
 
-; nnan nsz on fmul.f32 — same v_mul_f32 on AMDGPU
+; nnan nsz on fmul.f32 -- same v_mul_f32 on AMDGPU
 ; CHECK-LABEL: {{^}}fmul_nnan_nsz_f32:
 ; CHECK: v_mul_f32
 define amdgpu_kernel void @fmul_nnan_nsz_f32(ptr addrspace(1) %out, float %a, float %b) {
@@ -126,7 +126,7 @@ define amdgpu_kernel void @fmul_nnan_nsz_f32(ptr addrspace(1) %out, float %a, fl
   ret void
 }
 
-; contract on fmul+fadd → v_fma_f32 or v_mac_f32 (FMA contraction)
+; contract on fmul+fadd -> v_fma_f32 or v_mac_f32 (FMA contraction)
 ; CHECK-LABEL: {{^}}fmadd_contract_f32:
 ; CHECK: v_{{fma|mac}}_f32
 define amdgpu_kernel void @fmadd_contract_f32(ptr addrspace(1) %out, float %a, float %b, float %c) {

@@ -131,7 +131,7 @@ define i1 @fcmp_oeq(float %a, float %b) {
 
 ;;; Fast-math flags
 
-; fast on fadd.f32 — same vadd.f32 on ARM VFP2
+; fast on fadd.f32 -- same vadd.f32 on ARM VFP2
 define float @fadd_fast_f32(float %a, float %b) {
 ; CHECK-LABEL: fadd_fast_f32:
 ; CHECK: vadd.f32
@@ -139,7 +139,7 @@ define float @fadd_fast_f32(float %a, float %b) {
   ret float %r
 }
 
-; nnan nsz on fmul.f32 — same vmul.f32 on ARM VFP2
+; nnan nsz on fmul.f32 -- same vmul.f32 on ARM VFP2
 define float @fmul_nnan_nsz_f32(float %a, float %b) {
 ; CHECK-LABEL: fmul_nnan_nsz_f32:
 ; CHECK: vmul.f32
@@ -147,7 +147,7 @@ define float @fmul_nnan_nsz_f32(float %a, float %b) {
   ret float %r
 }
 
-; reassoc on fdiv.f32 — same vdiv.f32 on ARM VFP2
+; reassoc on fdiv.f32 -- same vdiv.f32 on ARM VFP2
 define float @fdiv_reassoc_f32(float %a, float %b) {
 ; CHECK-LABEL: fdiv_reassoc_f32:
 ; CHECK: vdiv.f32

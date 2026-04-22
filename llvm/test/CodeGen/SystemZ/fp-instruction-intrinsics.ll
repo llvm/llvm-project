@@ -130,7 +130,7 @@ define i1 @fcmp_oeq(float %a, float %b) {
 
 ;;; Fast-math flags
 
-; fast on fadd.f32 — same aebr instruction on SystemZ
+; fast on fadd.f32 -- same aebr instruction on SystemZ
 define float @fadd_fast_f32(float %a, float %b) {
 ; CHECK-LABEL: fadd_fast_f32:
 ; CHECK: aebr
@@ -138,7 +138,7 @@ define float @fadd_fast_f32(float %a, float %b) {
   ret float %r
 }
 
-; nnan nsz on fmul.f32 — same meebr instruction on SystemZ
+; nnan nsz on fmul.f32 -- same meebr instruction on SystemZ
 define float @fmul_nnan_nsz_f32(float %a, float %b) {
 ; CHECK-LABEL: fmul_nnan_nsz_f32:
 ; CHECK: meebr
@@ -146,7 +146,7 @@ define float @fmul_nnan_nsz_f32(float %a, float %b) {
   ret float %r
 }
 
-; reassoc on fdiv.f32 — same debr instruction on SystemZ
+; reassoc on fdiv.f32 -- same debr instruction on SystemZ
 define float @fdiv_reassoc_f32(float %a, float %b) {
 ; CHECK-LABEL: fdiv_reassoc_f32:
 ; CHECK: debr
@@ -154,7 +154,7 @@ define float @fdiv_reassoc_f32(float %a, float %b) {
   ret float %r
 }
 
-; contract on fmul+fadd → wfmasb (FMA contraction, f32, z14 vector FP)
+; contract on fmul+fadd -> wfmasb (FMA contraction, f32, z14 vector FP)
 define float @fmadd_contract_f32(float %a, float %b, float %c) {
 ; CHECK-LABEL: fmadd_contract_f32:
 ; CHECK: wfmasb
@@ -163,7 +163,7 @@ define float @fmadd_contract_f32(float %a, float %b, float %c) {
   ret float %add
 }
 
-; contract on fmul+fadd for f64 → wfmadb (z14 vector FP)
+; contract on fmul+fadd for f64 -> wfmadb (z14 vector FP)
 define double @fmadd_contract_f64(double %a, double %b, double %c) {
 ; CHECK-LABEL: fmadd_contract_f64:
 ; CHECK: wfmadb

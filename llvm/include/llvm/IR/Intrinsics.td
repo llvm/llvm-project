@@ -1245,7 +1245,7 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
 
 // fcmps: signaling FP compare.  Unlike the quiet llvm.fcmp, this raises an
 // Invalid Operation exception for *any* NaN operand (not just sNaN).
-// Exception observability is always strict — this intrinsic has
+// Exception observability is always strict -- this intrinsic has
 // IntrInaccessibleMemOnly so it cannot be reordered or eliminated.
 def int_fcmps : Intrinsic<
     [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
