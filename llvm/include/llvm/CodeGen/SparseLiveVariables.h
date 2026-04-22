@@ -45,8 +45,8 @@ namespace llvm {
 /// This pass computes block-level live-in and live-out sets using a
 /// SparseBitVector representation. It is designed to be a lightweight,
 /// memory-efficient alternative to the legacy LiveVariables pass. It operates
-/// as a read-only analysis but provides mutation APIs (`updateLiveIns`,
-/// `updateKillFlags`) to explicitly update the IR state if desired.
+/// as a read-only analysis but provides mutation APIs (`updateLiveIns`)
+/// to explicitly update the IR state if desired.
 class SparseLiveVariables : public MachineFunctionPass {
 public:
   static char ID;
@@ -169,10 +169,6 @@ public:
 
   /// Update the live-ins of all basic blocks in MF based on computed liveness.
   void updateLiveIns(MachineFunction &MF) const;
-
-  /// Update the kill flags of all instructions in MF based on computed
-  /// liveness.
-  void updateKillFlags(MachineFunction &MF) const;
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

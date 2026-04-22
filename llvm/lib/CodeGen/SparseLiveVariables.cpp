@@ -110,40 +110,7 @@ void SparseLiveVariables::updateLiveIns(MachineFunction &MF) const {
   }
 }
 
-void SparseLiveVariables::updateKillFlags(MachineFunction &MF) const {
-  for (MachineBasicBlock &MBB : MF) {
-    auto It = BlockLiveness.find(&MBB);
-    if (It == BlockLiveness.end())
-      continue;
 
-    LivenessTracker Tracker(It->second.LiveOut, MRI);
-    for (MachineInstr &MI : llvm::reverse(MBB)) {
-      if (MI.isDebugInstr())
-        continue;
-
-      // Check uses and update their kill flags based on whether they are live
-      // BEFORE stepBackward. (Tracker currently represents the liveness state
-      // AFTER this instruction).
-      for (MachineOperand &MO : MI.operands()) {
-        if (!MO.isReg() || !MO.isUse())
-          continue;
-        Register Reg = MO.getReg();
-        if (!Tracker.isTrackableRegister(Reg))
-          continue;
-
-        if (!Tracker.isLive(Reg)) {
-          // If the register is not live after this instruction, it is a kill.
-          MO.setIsKill(true);
-        } else {
-          // Otherwise, clear the kill flag if it was set incorrectly.
-          MO.setIsKill(false);
-        }
-      }
-
-      Tracker.stepBackward(MI);
-    }
-  }
-}
 
 void SparseLiveVariables::recomputeRegisterLiveness(Register Reg,
                                                     MachineInstr *IgnoreMI) {

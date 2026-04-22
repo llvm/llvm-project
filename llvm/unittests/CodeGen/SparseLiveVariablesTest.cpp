@@ -78,15 +78,6 @@ TEST(SparseLiveVariablesTest, APITests) {
   EXPECT_FALSE(LiveOut.test(Reg1.id()));
   EXPECT_FALSE(LiveOut.test(Reg2.id()));
 
-  // Test the mutation APIs
-  LV.updateKillFlags(*MF);
-
-  // Reg0 should have a kill flag on MI1
-  EXPECT_TRUE(MI1->getOperand(1).isKill());
-
-  // Reg1 should have a kill flag on MI2
-  EXPECT_TRUE(MI2->getOperand(1).isKill());
-
   // Test updateLiveIns (won't add virtual registers, but shouldn't crash)
   LV.updateLiveIns(*MF);
   EXPECT_TRUE(MBB->livein_empty());
