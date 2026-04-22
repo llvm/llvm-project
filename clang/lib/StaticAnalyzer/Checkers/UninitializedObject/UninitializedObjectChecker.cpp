@@ -479,8 +479,8 @@ getConstructedRegion(const CXXConstructorDecl *CtorDecl,
   auto &MemMgr = Context.getState()->getStateManager().getRegionManager();
   auto &SVB = Context.getSValBuilder();
 
-  const auto *ElemR = MemMgr.getElementRegion(ThisPointeeTy, SVB.makeZeroArrayIndex(),
-                                              SR, Context.getASTContext());
+  const auto *ElemR = MemMgr.getElementRegion(
+      ThisPointeeTy, SVB.makeZeroArrayIndex(), SR, Context.getASTContext());
 
   return ElemR;
 }
