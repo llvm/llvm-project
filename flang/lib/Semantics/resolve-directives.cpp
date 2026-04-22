@@ -1082,7 +1082,6 @@ private:
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
-  UnorderedSymbolSet privateDataSharingAttributeObjects_; // on one directive
   UnorderedSymbolSet stmtFunctionExprSymbols_;
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, std::optional<DirContext>>>
@@ -1099,13 +1098,6 @@ private:
     ExecutionPart,
   };
   std::vector<PartKind> partStack_;
-
-  void AddPrivateDataSharingAttributeObjects(SymbolRef object) {
-    privateDataSharingAttributeObjects_.insert(object);
-  }
-  void ClearPrivateDataSharingAttributeObjects() {
-    privateDataSharingAttributeObjects_.clear();
-  }
 
   // Predetermined DSA rules
   void PrivatizeAssociatedLoopIndex(const parser::OpenMPLoopConstruct &);
@@ -2015,7 +2007,6 @@ bool OmpAttributeVisitor::Pre(const parser::OmpBlockConstruct &x) {
   llvm::omp::Directive dirId{dirSpec.DirId()};
   PushContext(dirSpec.source, dirId);
   ClearDataSharingAttributeObjects();
-  ClearPrivateDataSharingAttributeObjects();
   return true;
 }
 
@@ -3145,9 +3136,6 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
         name.ToString());
   } else {
     AddDataSharingAttributeObject(target->GetUltimate());
-    if (privateDataSharingAttributeFlags.test(ompFlag)) {
-      AddPrivateDataSharingAttributeObjects(*target);
-    }
   }
 }
 
