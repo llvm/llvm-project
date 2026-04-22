@@ -15,11 +15,13 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 const unsigned DefaultMinimumVariableNameLength = 3;
+const unsigned DefaultMinimumBindingNameLength = 2;
 const unsigned DefaultMinimumLoopCounterNameLength = 2;
 const unsigned DefaultMinimumExceptionNameLength = 2;
 const unsigned DefaultMinimumParameterNameLength = 3;
-const char DefaultIgnoredLoopCounterNames[] = "^[ijk_]$";
 const char DefaultIgnoredVariableNames[] = "";
+const char DefaultIgnoredBindingNames[] = "_";
+const char DefaultIgnoredLoopCounterNames[] = "^[ijk_]$";
 const char DefaultIgnoredExceptionVariableNames[] = "^[e]$";
 const char DefaultIgnoredParameterNames[] = "^[n]$";
 const unsigned DefaultLineCountThreshold = 0;
@@ -33,6 +35,8 @@ IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       MinimumVariableNameLength(Options.get("MinimumVariableNameLength",
                                             DefaultMinimumVariableNameLength)),
+      MinimumBindingNameLength(Options.get("MinimumBindingNameLength",
+                                           DefaultMinimumBindingNameLength)),
       MinimumLoopCounterNameLength(Options.get(
           "MinimumLoopCounterNameLength", DefaultMinimumLoopCounterNameLength)),
       MinimumExceptionNameLength(Options.get(
@@ -42,6 +46,9 @@ IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
       IgnoredVariableNamesInput(
           Options.get("IgnoredVariableNames", DefaultIgnoredVariableNames)),
       IgnoredVariableNames(IgnoredVariableNamesInput),
+      IgnoredBindingNamesInput(
+          Options.get("IgnoredBindingNames", DefaultIgnoredBindingNames)),
+      IgnoredBindingNames(IgnoredBindingNamesInput),
       IgnoredLoopCounterNamesInput(Options.get("IgnoredLoopCounterNames",
                                                DefaultIgnoredLoopCounterNames)),
       IgnoredLoopCounterNames(IgnoredLoopCounterNamesInput),
@@ -81,6 +88,9 @@ void IdentifierLengthCheck::registerMatchers(MatchFinder *Finder) {
 
   if (MinimumParameterNameLength > 1)
     Finder->addMatcher(parmVarDecl().bind("paramVar"), this);
+
+  if (MinimumBindingNameLength > 1)
+    Finder->addMatcher(bindingDecl().bind("bindingVar"), this);
 
   if (MinimumVariableNameLength > 1)
     Finder->addMatcher(
@@ -143,6 +153,21 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
 
     diag(StandaloneVar->getLocation(), ErrorMessage)
         << 0 << StandaloneVar << MinimumVariableNameLength;
+  }
+
+  const auto *BindingVar = Result.Nodes.getNodeAs<VarDecl>("bindingVar");
+  if (BindingVar) {
+    if (!BindingVar->getIdentifier())
+      return;
+
+    const StringRef VarName = BindingVar->getName();
+
+    if (VarName.size() >= MinimumBindingNameLength ||
+        IgnoredBindingNames.match(VarName))
+      return;
+
+    diag(BindingVar->getLocation(), ErrorMessage)
+        << 0 << BindingVar << MinimumBindingNameLength;
   }
 
   auto *ExceptionVarName = Result.Nodes.getNodeAs<VarDecl>("exceptionVar");
