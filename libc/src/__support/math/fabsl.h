@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE long double fabsl(long double x) { return fputil::abs(x); }
+LIBC_INLINE constexpr long double fabsl(long double x) { return fputil::abs(x); }
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

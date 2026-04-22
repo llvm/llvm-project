@@ -21,7 +21,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE float16 fabsf16(float16 x) {
+LIBC_INLINE constexpr float16 fabsf16(float16 x) {
+  if (cpp::is_constant_evaluated())
+    return fputil::abs(x);
   // For x86, GCC generates better code from the generic implementation.
   // https://godbolt.org/z/K9orM4hTa
 #if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT) &&                                 \
