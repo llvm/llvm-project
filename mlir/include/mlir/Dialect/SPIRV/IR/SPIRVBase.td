@@ -4342,6 +4342,14 @@ class SPIRV_MatrixOfType<list<Type> allowedTypes> :
 class SPIRV_VectorOf<Type type> :
     FixedVectorOfRankAndLengthAndType<[1], [2, 3, 4, 8, 16], [type]>;
 
+// Pointer vector type (SPV_INTEL_masked_gather_scatter extension).
+def SPIRV_PtrVector : SPIRV_VectorOf<SPIRV_AnyPtr>;
+// Composite types extended with pointer vectors (SPV_INTEL_masked_gather_scatter).
+def SPIRV_CompositeOrPtrVector :
+    AnyTypeOf<[SPIRV_Vector, SPIRV_PtrVector,
+               SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
+               SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix, SPIRV_AnyTensorArm]>;
+
 class SPIRV_ScalarOrVectorOf<Type type> :
     AnyTypeOf<[type, SPIRV_VectorOf<type>]>;
 
