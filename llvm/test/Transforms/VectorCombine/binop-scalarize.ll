@@ -39,3 +39,14 @@ entry:
   %b = or disjoint <2 x i64> splat (i64 2), %a
   ret <2 x i64> %b
 }
+
+define i32 @pr193271(i32 %0) {
+; CHECK-LABEL: define i32 @pr193271(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[SCALAR:%.*]] = add i32 [[ARG]], 1
+; CHECK-NEXT:  ret i32 [[SCALAR]]
+  %2 = add i32 %0, 1
+  %4 = insertelement <2 x i32> zeroinitializer, i32 %2, i64 0
+  %5 = add nuw <2 x i32> %4, zeroinitializer
+  ret i32 %2
+}
