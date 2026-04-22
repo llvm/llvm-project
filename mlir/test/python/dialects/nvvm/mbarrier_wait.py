@@ -37,6 +37,7 @@ def test_mbarrier_wait():
         wc_try = nvvm.mbarrier_try_wait(addr=addr, state_or_phase=state)
         assert wc_try is not None
 
+
 # CHECK: func.func @none_phase
 # CHECK:   nvvm.mbarrier.test.wait %{{.*}}, %{{.*}} : !llvm.ptr<3>, i64 -> i1
 # CHECK:   nvvm.mbarrier.try_wait %{{.*}}, %{{.*}} : !llvm.ptr<3>, i64 -> i1
