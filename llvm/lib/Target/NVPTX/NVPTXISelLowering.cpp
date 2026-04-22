@@ -7509,7 +7509,7 @@ getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
 
 NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
-  // TODO: once the backend supports native elementwise vector atoms,
+  // TODO: once we support native elementwise vector atoms,
   // return `AtomicExpansionKind::None` to preserve and lower them.
   if (AI->isElementwise()) {
     auto *VecTy = cast<FixedVectorType>(AI->getType());

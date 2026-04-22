@@ -699,7 +699,7 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   }
 
   // N > 2: split into two <N/2 x T> elementwise atomicrmws and recurse via
-  // processAtomicInstr(). The target gets another crack at each halved width.
+  // processAtomicInstr().
   assert(NumLanes % 2 == 0 &&
          "elementwise atomicrmw vector length must be a power of two");
   const unsigned HalfLanes = NumLanes / 2;

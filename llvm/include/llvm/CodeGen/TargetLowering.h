@@ -2490,8 +2490,7 @@ public:
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
-  /// AtomicRMW, if at all. Default is to never expand scalar atomics, expand
-  /// FP atomics via CmpXChg, and scalarize elementwise atomics.
+  /// AtomicRMW, if at all. Default is to never expand.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     return RMW->isFloatingPointOperation() ?
