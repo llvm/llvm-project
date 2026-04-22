@@ -2639,10 +2639,7 @@ cc_library(
         "include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h",
         "include/clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h",
     ]),
-    textual_hdrs = glob([
-        "include/clang/ScalableStaticAnalysisFramework/Core/**/*.def",
-        "include/clang/ScalableStaticAnalysisFramework/*.def",
-    ]),
+    textual_hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Core/**/*.def"]),
     deps = [
         ":ast",
         ":support",
