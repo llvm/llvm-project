@@ -197,7 +197,6 @@ class LibcTest(lit.formats.ExecutableTest):
                 [test_path] + test_args, cwd=exec_dir, env=env
             )
 
-
         if not exit_code:
             return lit.Test.PASS, ""
 
