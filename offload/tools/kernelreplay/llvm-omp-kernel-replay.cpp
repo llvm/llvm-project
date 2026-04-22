@@ -58,8 +58,10 @@ static cl::opt<uint32_t> NumThreadsOpt("num-threads",
 static cl::opt<int32_t> DeviceIdOpt("device-id", cl::desc("Set the device id."),
                                     cl::init(-1), cl::cat(ReplayOptions));
 
-static cl::opt<uint32_t> RepetitionsOpt("repetitions", cl::desc("Set the number of replay repetitions."),
-                                    cl::init(1), cl::cat(ReplayOptions));
+static cl::opt<uint32_t>
+    RepetitionsOpt("repetitions",
+                   cl::desc("Set the number of replay repetitions."),
+                   cl::init(1), cl::cat(ReplayOptions));
 
 template <typename... ArgsTy>
 Error createErr(const char *ErrFmt, ArgsTy &&...Args) {
@@ -322,7 +324,8 @@ Error replayKernel() {
   for (uint32_t R = 0; R < RepetitionsOpt; ++R) {
     Rc = __tgt_target_kernel_replay(
         /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
-        const_cast<char *>(RecordInputBuffer->getBufferStart()), R > 0 ? Outcome.ReplayDeviceAlloc : nullptr,
+        const_cast<char *>(RecordInputBuffer->getBufferStart()),
+        R > 0 ? Outcome.ReplayDeviceAlloc : nullptr,
         RecordInputBuffer->getBufferSize(),
         NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
         TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
@@ -336,11 +339,13 @@ Error replayKernel() {
         return createErr("replay output file was not generated");
 
       Filepath.replace_extension("record_output");
-      if (auto Err = verifyReplayOutput(Filepath.c_str(), Outcome.OutputFilepath.c_str()))
+      if (auto Err = verifyReplayOutput(Filepath.c_str(),
+                                        Outcome.OutputFilepath.c_str()))
         return Err;
     }
 
-    outs() << TOOL_PREFIX << " Replay time (" << R << "): " << Outcome.KernelReplayTimeNano << " ns\n";
+    outs() << TOOL_PREFIX << " Replay time (" << R
+           << "): " << Outcome.KernelReplayTimeNs << " ns\n";
   }
 
   // At this point, any verification done was successful.

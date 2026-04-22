@@ -2390,7 +2390,8 @@ int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
 /// device memory to launch the target kernel with the pre-recorded
 /// configuration.
 int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                  void *DeviceMemory, int64_t DeviceMemorySize, void *ReusableDeviceAlloc,
+                  void *DeviceMemory, int64_t DeviceMemorySize,
+                  void *ReuseDeviceAlloc,
                   const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
                   void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
                   int32_t NumTeams, int32_t ThreadLimit,
@@ -2449,10 +2450,10 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   }
 
   // Reuse a previous device allocation or allocate a new device buffer.
-  void *&TgtPtr = ReusableDeviceAlloc;
+  void *&TgtPtr = ReuseDeviceAlloc;
   if (!TgtPtr)
     TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
-                                  TARGET_ALLOC_DEFAULT);
+                              TARGET_ALLOC_DEFAULT);
   if (!TgtPtr) {
     REPORT() << "Failed to allocate device memory.";
     return OFFLOAD_FAIL;

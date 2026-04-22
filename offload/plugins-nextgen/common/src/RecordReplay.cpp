@@ -99,7 +99,8 @@ Error RecordReplayTy::emitInstanceReport() {
   for (const auto &Inst : Instances)
     llvm::outs()
         << getFilename(Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()
-        << ", " << Inst.Kernel.getName() << ", " << Inst.getRecordedTimeNano() << ", " << Inst.Occurrences << "\n";
+        << ", " << Inst.Kernel.getName() << ", " << Inst.getRecordedTimeNs()
+        << ", " << Inst.Occurrences << "\n";
   llvm::outs() << "=== End Kernel Record Report ===\n";
 
   return Plugin::success();
@@ -166,7 +167,8 @@ Expected<RecordReplayTy::HandleTy> RecordReplayTy::recordPrologue(
     if (auto Err = recordDescImpl(Kernel, Instance, KernelArgs, LaunchParams))
       return Err;
 
-    if (auto Err = recordPrologueImpl(Kernel, Instance, KernelArgs, LaunchParams))
+    if (auto Err =
+            recordPrologueImpl(Kernel, Instance, KernelArgs, LaunchParams))
       return Err;
   }
 
@@ -200,14 +202,15 @@ Error RecordReplayTy::recordEpilogue(const GenericKernelTy &Kernel,
   return Plugin::success();
 }
 
-void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance, KernelReplayOutcomeTy &Outcome) {
+void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance,
+                                           KernelReplayOutcomeTy &Outcome) {
   // Only save the epilogue output filename if it was recorded.
   if (shouldRecordEpilogue()) {
     SmallString<128> Filename = getFilename(Instance, FileTy::EpilogueSnapshot);
     Outcome.OutputFilepath = Filename;
   }
   // Save the kernel replay time.
-  Outcome.KernelReplayTimeNano = Instance.getRecordedTimeNano();
+  Outcome.KernelReplayTimeNs = Instance.getRecordedTimeNs();
 }
 
 Error NativeRecordReplayTy::recordPrologueImpl(

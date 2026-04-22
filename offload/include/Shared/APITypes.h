@@ -136,7 +136,7 @@ struct KernelReplayOutcomeTy {
   llvm::SmallString<128> OutputFilepath;
   /// The execution time of the kernel replay in nanoseconds. This time includes
   /// the the kernel launch and synchronization time. Replay I/O is excluded.
-  uint64_t KernelReplayTimeNano = 0;
+  uint64_t KernelReplayTimeNs = 0;
   /// The pointer to the device memory allocation used to replay. This can be
   /// reused for future replays of the same kernel.
   void *ReplayDeviceAlloc = nullptr;

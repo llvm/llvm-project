@@ -11,9 +11,9 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <chrono>
 #include <filesystem>
 #include <mutex>
 #include <unordered_set>
@@ -140,9 +140,10 @@ protected:
     void recordEndTime() const { EndTime = ClockTy::now(); }
 
     /// Get the kernel execution time in nanoseconds.
-    uint64_t getRecordedTimeNano() const {
-      using NanoDurationTy = std::chrono::duration<uint64_t, std::nano>;
-      return std::chrono::duration_cast<NanoDurationTy>(EndTime - BeginTime).count();
+    uint64_t getRecordedTimeNs() const {
+      using DurationNsTy = std::chrono::duration<uint64_t, std::nano>;
+      return std::chrono::duration_cast<DurationNsTy>(EndTime - BeginTime)
+          .count();
     }
   };
 
@@ -225,12 +226,14 @@ private:
                    uint32_t NumThreads, uint32_t SharedMemorySize,
                    KernelReplayOutcomeTy *ReplayOutcome);
 
-  /// Unregister an instance once it has been replayed. Instances during recording
-  /// cannot be unregistered. Accessing the instance beyond this point is invalid.
+  /// Unregister an instance once it has been replayed. Instances during
+  /// recording cannot be unregistered. Accessing the instance beyond this point
+  /// is invalid.
   Error unregisterInstance(const InstanceTy &Instance);
 
   /// Populate the replay outcome struct to forward some replay information.
-  void populateReplayOutcome(const InstanceTy &Instance, KernelReplayOutcomeTy &Outcome);
+  void populateReplayOutcome(const InstanceTy &Instance,
+                             KernelReplayOutcomeTy &Outcome);
 
   /// Record the prologue data.
   virtual Error
