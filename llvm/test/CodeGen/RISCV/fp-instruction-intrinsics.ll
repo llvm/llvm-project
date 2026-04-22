@@ -154,6 +154,24 @@ define float @fdiv_reassoc_f32(float %a, float %b) {
   ret float %r
 }
 
+; contract on fmul+fadd → fmadd.s (FMA contraction)
+define float @fmadd_contract_f32(float %a, float %b, float %c) {
+; CHECK-LABEL: fmadd_contract_f32:
+; CHECK: fmadd.s fa0, fa0, fa1, fa2
+  %mul = call contract float @llvm.fmul.f32(float %a, float %b)
+  %add = call contract float @llvm.fadd.f32(float %mul, float %c)
+  ret float %add
+}
+
+; contract on fmul+fadd for f64 → fmadd.d
+define double @fmadd_contract_f64(double %a, double %b, double %c) {
+; CHECK-LABEL: fmadd_contract_f64:
+; CHECK: fmadd.d fa0, fa0, fa1, fa2
+  %mul = call contract double @llvm.fmul.f64(double %a, double %b)
+  %add = call contract double @llvm.fadd.f64(double %mul, double %c)
+  ret double %add
+}
+
 declare double @llvm.fadd.f64(double, double)
 declare double @llvm.fsub.f64(double, double)
 declare double @llvm.fmul.f64(double, double)

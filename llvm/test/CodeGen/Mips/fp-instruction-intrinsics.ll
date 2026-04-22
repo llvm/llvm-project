@@ -89,6 +89,16 @@ define float @fdiv_reassoc_f32(float %a, float %b) {
   ret float %r
 }
 
+; contract on fmul+fadd — mips32r2 has no FMA for f32, produces separate mul.s + add.s
+define float @fmadd_contract_f32(float %a, float %b, float %c) {
+; CHECK-LABEL: fmadd_contract_f32:
+; CHECK: mul.s
+; CHECK: add.s
+  %mul = call contract float @llvm.fmul.f32(float %a, float %b)
+  %add = call contract float @llvm.fadd.f32(float %mul, float %c)
+  ret float %add
+}
+
 declare float @llvm.fadd.f32(float, float)
 declare float @llvm.fsub.f32(float, float)
 declare float @llvm.fmul.f32(float, float)

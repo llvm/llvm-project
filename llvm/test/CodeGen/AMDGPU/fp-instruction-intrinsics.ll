@@ -126,6 +126,16 @@ define amdgpu_kernel void @fmul_nnan_nsz_f32(ptr addrspace(1) %out, float %a, fl
   ret void
 }
 
+; contract on fmul+fadd → v_fma_f32 or v_mac_f32 (FMA contraction)
+; CHECK-LABEL: {{^}}fmadd_contract_f32:
+; CHECK: v_{{fma|mac}}_f32
+define amdgpu_kernel void @fmadd_contract_f32(ptr addrspace(1) %out, float %a, float %b, float %c) {
+  %mul = call contract float @llvm.fmul.f32(float %a, float %b)
+  %add = call contract float @llvm.fadd.f32(float %mul, float %c)
+  store float %add, ptr addrspace(1) %out
+  ret void
+}
+
 declare float @llvm.fadd.f32(float, float)
 declare float @llvm.fsub.f32(float, float)
 declare float @llvm.fmul.f32(float, float)

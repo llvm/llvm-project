@@ -105,6 +105,15 @@ define float @fmul_nnan_nsz_f32(float %a, float %b) #0 {
   ret float %r
 }
 
+; contract on fmul+fadd → FMA accumulate: rx += sfmpy(ry, rz)
+define float @fmadd_contract_f32(float %a, float %b, float %c) #0 {
+; CHECK-LABEL: fmadd_contract_f32:
+; CHECK: += sfmpy(
+  %mul = call contract float @llvm.fmul.f32(float %a, float %b)
+  %add = call contract float @llvm.fadd.f32(float %mul, float %c)
+  ret float %add
+}
+
 declare double @llvm.fadd.f64(double, double)
 declare double @llvm.fsub.f64(double, double)
 declare float @llvm.fadd.f32(float, float)
