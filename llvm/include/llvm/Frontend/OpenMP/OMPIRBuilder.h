@@ -1528,7 +1528,6 @@ public:
   LLVM_ABI void emitTaskDependency(IRBuilderBase &Builder, Value *Entry,
                                    const DependData &Dep);
 
-
   /// Generator for '#omp taskwait'
   ///
   /// \param Loc The location where the taskwait directive was encountered.
