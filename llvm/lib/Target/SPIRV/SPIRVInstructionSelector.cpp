@@ -3597,7 +3597,7 @@ bool SPIRVInstructionSelector::selectBitreverse64(Register ResVReg,
   SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
       I32Type, 2 * ComponentCount, MIRBuilder, /*IsSigned=*/false);
 
-  // ---- Stage 1: 64-bit → 2x32-bit (High, Low) ----
+  // ---- Stage 1: 64-bit -> 2x32-bit (High, Low) ----
   Register Vec32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
   if (!selectOpWithSrcs(Vec32, VecI32Type, I, {SrcReg}, SPIRV::OpBitcast))
     return false;
@@ -3622,7 +3622,7 @@ bool SPIRVInstructionSelector::selectBitreverse64(Register ResVReg,
                         SPIRV::OpCompositeConstruct))
     return false;
 
-  // ---- Stage 5: v2i32 → 64-bit ----
+  // ---- Stage 5: v2i32 -> 64-bit ----
   return selectOpWithSrcs(ResVReg, ResType, I, {SwappedVec}, SPIRV::OpBitcast);
 }
 
@@ -3650,10 +3650,12 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
     switch (GR.getScalarOrVectorBitWidth(OpType)) {
     case 16:
       return selectBitreverse16(ResVReg, ResType, I, OpReg);
+    case 32:
+      return selectBitreverseNative(ResVReg, ResType, I, OpReg);
     case 64:
       return selectBitreverse64(ResVReg, ResType, I, OpReg);
     default:
-      return selectBitreverseNative(ResVReg, ResType, I, OpReg);
+      report_fatal_error("G_BITREVERSE only support 16,32,64 bits.");
     }
   }
 
