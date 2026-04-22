@@ -549,4 +549,39 @@ define double @frem_f64(double %a, double %b) {
   ret double %rem
 }
 
+; llvm.fdiv.f32 with afn flag lowers to div.approx.f32, same as 'fdiv afn float'
+define float @fdiv_afn_intrinsic(float %a, float %b) {
+; CHECK-LABEL: fdiv_afn_intrinsic(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [fdiv_afn_intrinsic_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [fdiv_afn_intrinsic_param_1];
+; CHECK-NEXT:    div.approx.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %r = call afn float @llvm.fdiv.f32(float %a, float %b)
+  ret float %r
+}
+
+; llvm.fadd.f32 with fast flag removes the .rn rounding qualifier, same as 'fadd fast float'
+define float @fadd_fast_intrinsic(float %a, float %b) {
+; CHECK-LABEL: fadd_fast_intrinsic(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [fadd_fast_intrinsic_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [fadd_fast_intrinsic_param_1];
+; CHECK-NEXT:    add.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %r = call fast float @llvm.fadd.f32(float %a, float %b)
+  ret float %r
+}
+
+declare float @llvm.fdiv.f32(float, float)
+declare float @llvm.fadd.f32(float, float)
+
 attributes #1 = { denormal_fpenv(float: preservesign) }

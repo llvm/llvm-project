@@ -164,5 +164,32 @@ define <4 x double> @d4recp1(<4 x double> %x) #1 {
 ; CHECK-NOT: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
 }
 
+; Intrinsic variants: llvm.fdiv.f32 with fast flag should lower identically to
+; 'fdiv fast float', producing fdiv (no estimate) or frecpe (with estimate).
+
+define float @frecp0_intrinsic(float %x) #0 {
+  %div = call fast float @llvm.fdiv.f32(float 1.0, float %x)
+  ret float %div
+
+; CHECK-LABEL: frecp0_intrinsic:
+; CHECK-NEXT: %bb.0
+; CHECK-NEXT: fmov
+; CHECK-NEXT: fdiv
+}
+
+define float @frecp1_intrinsic(float %x) #1 {
+  %div = call fast float @llvm.fdiv.f32(float 1.0, float %x)
+  ret float %div
+
+; CHECK-LABEL: frecp1_intrinsic:
+; CHECK-NEXT: %bb.0
+; CHECK-NEXT: frecpe [[R:s[0-7]]]
+; CHECK-NEXT: frecps {{s[0-7](, s[0-7])?}}, [[R]]
+; CHECK: frecps {{s[0-7]}}, {{s[0-7]}}, {{s[0-7]}}
+; CHECK-NOT: frecps {{s[0-7]}}, {{s[0-7]}}, {{s[0-7]}}
+}
+
+declare float @llvm.fdiv.f32(float, float)
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "reciprocal-estimates"="div,vec-div" }
