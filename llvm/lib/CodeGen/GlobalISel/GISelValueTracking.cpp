@@ -285,7 +285,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
-<<<<<<< HEAD
+
   case TargetOpcode::G_STEP_VECTOR: {
     APInt Step = MI.getOperand(1).getCImm()->getValue();
 
@@ -310,7 +310,9 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
-=======
+
+
+>>>>>>> d6326def9f85 ([GlobalISel][KnownBits] Use KnownBits::urem for G_UREM)
   case TargetOpcode::G_UREM: {
     KnownBits LHSKnown(Known.getBitWidth());
     KnownBits RHSKnown(Known.getBitWidth());
@@ -320,24 +322,9 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
                          Depth + 1);
 
-    APInt MaxRHS = RHSKnown.getMaxValue();
+    KnownBits Res = KnownBits::urem(LHSKnown, RHSKnown);
 
-    if (MaxRHS.isPowerOf2()) {
-      unsigned LowBits = MaxRHS.logBase2();
-      // Upper bits are zero
-      Known.Zero.setBitsFrom(LowBits);
-      // Mask for lower bits
-      KnownBits TruncLHS = LHSKnown.trunc(LowBits).zext(Known.getBitWidth());
-
-      Known.One |= TruncLHS.One;
-      Known.Zero |= TruncLHS.Zero;
-      break;
-    }
-    if (!MaxRHS.isZero()) {
-      unsigned LeadingZeros = MaxRHS.countLeadingZeros();
-      Known.Zero.setHighBits(LeadingZeros);
-    }
-
+    Known = Res;
     break;
   }
 
