@@ -607,6 +607,24 @@ func.func private @matrix_size_type(!spirv.matrix<2.0 x vector<3xi32>>) -> ()
 // -----
 
 //===----------------------------------------------------------------------===//
+// Float8_EXT
+//===----------------------------------------------------------------------===//
+
+// CHECK: func private @type_f8E4M3FN(f8E4M3FN)
+func.func private @type_f8E4M3FN(f8E4M3FN) -> ()
+
+// CHECK: func private @vector_type_f8E4M3FN(vector<4xf8E4M3FN>)
+func.func private @vector_type_f8E4M3FN(vector<4xf8E4M3FN>) -> ()
+
+// CHECK: func private @type_f8E5M2(f8E5M2)
+func.func private @type_f8E5M2(f8E5M2) -> ()
+
+// CHECK: func private @vector_type_f8E5M2(vector<4xf8E5M2>)
+func.func private @vector_type_f8E5M2(vector<4xf8E5M2>) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // TensorArm
 //===----------------------------------------------------------------------===//
 
@@ -659,12 +677,15 @@ func.func private @arm_tensor_type_zero_dim(!spirv.arm.tensor<0xi32>) -> ()
 
 // -----
 
-//===----------------------------------------------------------------------===//
-// Float8_EXT
-//===----------------------------------------------------------------------===//
+// CHECK: func private @arm_tensor_type_bf16(!spirv.arm.tensor<2x3xbf16>)
+func.func private @arm_tensor_type_bf16(!spirv.arm.tensor<2x3xbf16>) -> ()
 
-// CHECK: func private @type_f8E4M3FN(f8E4M3FN)
-func.func private @type_f8E4M3FN(f8E4M3FN) -> ()
+// -----
 
-// CHECK: func private @type_f8E5M2(f8E5M2)
-func.func private @type_f8E5M2(f8E5M2) -> ()
+// CHECK: func private @arm_tensor_type_fp8e4m3fn(!spirv.arm.tensor<2x3xf8E4M3FN>)
+func.func private @arm_tensor_type_fp8e4m3fn(!spirv.arm.tensor<2x3xf8E4M3FN>) -> ()
+
+// -----
+
+// CHECK: func private @arm_tensor_type_fp8e5m2(!spirv.arm.tensor<2x3xf8E5M2>)
+func.func private @arm_tensor_type_fp8e5m2(!spirv.arm.tensor<2x3xf8E5M2>) -> ()
