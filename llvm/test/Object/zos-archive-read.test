@@ -1,13 +1,47 @@
-## Test reading a z/OS archive.
+## Test reading a valid z/OS archive.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.valid.a \
+# RUN:   --symtab "foo.txt:0" --member foo.txt:abcd
+# RUN: llvm-ar t %t.valid.a | FileCheck %s --check-prefix=LIST
+# RUN: llvm-nm --print-armap %t.valid.a | FileCheck %s --check-prefix=SYMS
+# RUN: llvm-ar p %t.valid.a foo.txt | FileCheck %s --check-prefix=CONTENT
 
-# RUN: llvm-ar t %p/Inputs/zos-archive-test.a | FileCheck %s --check-prefix=LIST
-# RUN: llvm-nm --print-armap %p/Inputs/zos-archive-test.a | FileCheck %s --check-prefix=SYMS
-
-## Test extracting a member and verifying its content.
-# RUN: llvm-ar p %p/Inputs/zos-archive-test.a foo.o > %t.foo.o
-# RUN: cmp %t.foo.o %p/Inputs/zos-expected-foo.o
-
-# LIST: foo.o
-
+# LIST: foo.txt
 # SYMS: Archive map
-# SYMS-NEXT: foo in foo.o
+# SYMS-NEXT: foo.txt in foo.txt
+# CONTENT: abcd
+
+## Test malformed terminator on member header
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.bad_term.a \
+# RUN:   --member foo.txt --bad-terminator
+# RUN: not llvm-ar t %t.bad_term.a 2>&1 | FileCheck %s --check-prefix=ERR-TERM
+# ERR-TERM: terminator characters in archive member
+
+## Test empty UID field on member header
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.empty_uid.a \
+# RUN:   --member foo.txt --empty-uid
+# RUN: not llvm-ar t %t.empty_uid.a 2>&1 | FileCheck %s --check-prefix=ERR-UID
+# ERR-UID: UID field is empty or contains only spaces
+
+## Test leading space in member name
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.empty_name.a \
+# RUN:   --member foo.txt --empty-name
+# RUN: not llvm-ar t %t.empty_name.a 2>&1 | FileCheck %s --check-prefix=ERR-NAME
+# ERR-NAME: name contains a leading space for archive member header
+
+## Test truncated z/OS symbol table
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.trunc_sym.a \
+# RUN:   --symtab-truncated
+# RUN: not llvm-ar t %t.trunc_sym.a 2>&1 | FileCheck %s --check-prefix=ERR-TRUNC
+# ERR-TRUNC: z/OS symbol table is too small to read the symbol count
+
+## Test z/OS symbol table where count exceeds buffer
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.bad_count.a \
+# RUN:   --symtab-bad-count
+# RUN: not llvm-ar t %t.bad_count.a 2>&1 | FileCheck %s --check-prefix=ERR-COUNT
+# ERR-COUNT: z/OS symbol table count exceeds buffer size
+
+## Test malformed __.SYMDEF header
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.bad_sym_hdr.a \
+# RUN:   --member foo.txt --symtab foo.txt:0 --malform-symtab-hdr empty-mode
+# RUN: not llvm-ar t %t.bad_sym_hdr.a 2>&1 | FileCheck %s --check-prefix=ERR-SYM-HDR
+# ERR-SYM-HDR: AccessMode field is empty or contains only spaces

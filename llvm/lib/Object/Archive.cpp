@@ -105,6 +105,7 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
     *Err = createMemberHeaderParseError(this, RawHeaderPtr, Size);
     return;
   }
+  // '\x79\x15' is the EBCDIC equivalent of '`\n' for the z/OS archive terminator.
   bool ValidTerminator =
       Parent->kind() == Archive::K_ZOS
           ? (ArMemHdr->Terminator[0] == '\x79' &&
@@ -1626,8 +1627,6 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
   StringRef Name = NameOrErr.get();
 
   if (Name == "__.SYMDEF") {
-    // We know that the symbol table is not an external file, but we still must
-    // check any Expected<> return value.
     Expected<StringRef> BufOrErr = C->getBuffer();
     if (!BufOrErr) {
       Err = BufOrErr.takeError();
