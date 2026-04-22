@@ -22,7 +22,11 @@
 // LLVM-DAG: @_ZGVZ29references_param_and_previousiE12magic_static = internal global i64 0
 // CIR-DAG: cir.global "private" internal dso_local @_ZGVZ1fvE1a = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ1fvE1a = internal global i64 0
+// CIR-DAG: cir.global "private" linkonce_odr comdat @_ZGVZ10getInlineAvE1a = #cir.int<0> : !s64i
+// LLVM-DAG: @_ZGVZ10getInlineAvE1a = linkonce_odr global i64 0, comdat
 
+// CIR-BOTH-DAG: cir.global linkonce_odr comdat static_local_guard<"_ZGVZ10getInlineAvE1a"> @_ZZ10getInlineAvE1a = #cir.zero : !rec_A
+// LLVM-DAG: @_ZZ10getInlineAvE1a = linkonce_odr global %class.A zeroinitializer, comdat
 // CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ14test_ctor_dtorvE9ctor_dtor"> @_ZZ14test_ctor_dtorvE9ctor_dtor = #cir.zero : !rec_HasCtorDtor
 // LLVM-DAG: @_ZZ14test_ctor_dtorvE9ctor_dtor = internal global %struct.HasCtorDtor zeroinitializer
 // CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ9test_dtorvE4dtor"> @_ZZ9test_dtorvE4dtor = #cir.zero : !rec_HasDtor
@@ -113,11 +117,62 @@ void f() {
 // LLVM:  call void @_Z3useP1A(ptr noundef @_ZZ1fvE1a)
 // LLVM:  ret void
 }
+
+// Static local in an inline function: the variable and guard both get
+// linkonce_odr linkage and their own COMDAT groups.
+void use(const A *);
+inline const A &getInlineA() {
+  static A a;
+  return a;
+}
+
+void call_inline() {
+  use(&getInlineA());
+}
+
+// CIR-BOTH-LABEL: cir.func no_inline comdat linkonce_odr @_Z10getInlineAv() 
+// CIR-BOTH:  %[[GET_MS:.*]] = cir.get_global static_local @_ZZ10getInlineAvE1a : !cir.ptr<!rec_A>
+//
+// CIR-BEFORE-LPP:  cir.local_init static_local @_ZZ10getInlineAvE1a ctor {
+//
+// CIR: %[[GET_GUARD:.*]] = cir.get_global @_ZGVZ10getInlineAvE1a : !cir.ptr<!s64i>
+// CIR: %[[GUARD_BYTE_PTR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
+// CIR: %[[GUARD_LOAD:.*]] = cir.load{{.*}} syncscope(system) atomic(acquire) %[[GUARD_BYTE_PTR]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
+// CIR: %[[IS_UNINIT:.*]] = cir.cmp eq %[[GUARD_LOAD]], %[[ZERO]] : !s8i
+// CIR: cir.if %[[IS_UNINIT]] {
+// CIR:   %[[ACQUIRE:.*]] = cir.call @__cxa_guard_acquire(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> !s32i
+// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:   %[[IS_UNINIT:.*]] = cir.cmp ne %[[ACQUIRE]], %[[ZERO]] : !s32i
+// CIR:   cir.if %[[IS_UNINIT]] {
+//
+// CIR-BOTH:    %[[GET_MS_INIT:.*]] = cir.get_global static_local @_ZZ10getInlineAvE1a : !cir.ptr<!rec_A>
+// CIR-BOTH:    cir.call @_ZN1AC1Ev(%[[GET_MS_INIT]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
+// CIR-BEFORE-LPP:    cir.yield
+// CIR-BEFORE-LPP:  }
+//
+// CIR:     cir.call @__cxa_guard_release(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> ()
+// CIR:   }
+// CIR: }
+//
+// LLVM-LABEL: define {{.*}}@_Z10getInlineAv()
+// LLVM: %[[GET_GUARD:.*]] = load atomic i8, ptr @_ZGVZ10getInlineAvE1a acquire
+// LLVM: %[[IS_UNINIT:.*]] = icmp eq i8 %[[GET_GUARD]], 0
+// LLVM: br i1 %[[IS_UNINIT]]
+//
+// LLVM:  %[[ACQUIRE:.*]] = call i32 @__cxa_guard_acquire(ptr @_ZGVZ10getInlineAvE1a)
+// LLVM:  %[[IS_UNINIT:.*]] = icmp ne i32 %[[ACQUIRE]], 0
+// LLVM:  br i1 %[[IS_UNINIT]]
+//
+// LLVM:  call void @_ZN1AC1Ev(ptr {{.*}}@_ZZ10getInlineAvE1a)
+// LLVM:  call void @__cxa_guard_release(ptr @_ZGVZ10getInlineAvE1a)
+
 int bar();
 
 void references_param_and_previous(int param) {
   static int magic_static = param + bar();
   static int refs_magic_static = magic_static;
+
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z29references_param_and_previousi
 // CIR-BOTH:    %[[PARAM_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["param", init]
 // CIR-BOTH:    %[[GET_MAG_STATIC:.*]] = cir.get_global static_local @_ZZ29references_param_and_previousiE12magic_static : !cir.ptr<!s32i>
