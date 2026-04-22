@@ -212,12 +212,12 @@ define signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n) {
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label %[[FOR_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i32 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL10:%.*]] = phi i32 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_014:%.*]] = phi i32 [ [[BC_RESUME_VAL9]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL9]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_014:%.*]] = phi i32 [ [[BC_RESUME_VAL10]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP32:%.*]] = xor i32 [[I_014]], -1
 ; CHECK-NEXT:    [[SUB2:%.*]] = add i32 [[TMP32]], [[N]]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[SUB2]] to i64
@@ -494,12 +494,12 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[OUTER_LATCH]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i64 [ 85, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 81, %[[VEC_EPILOG_ITER_CHECK]] ], [ 1, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i8 [ [[IND_END4]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP2]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i64 [ 85, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 81, %[[VEC_EPILOG_ITER_CHECK]] ], [ 1, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi i8 [ [[IND_END4]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP2]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL14]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL14]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL15]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[INNER]] ]
 ; CHECK-NEXT:    [[IV_2_NEXT]] = sub i8 [[IV_2]], [[TRUNC_ADD]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 [[IV_2]], ptr [[GEP_DST]], align 1
@@ -579,12 +579,12 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label %[[OUTER_LATCH]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i64 [ 85, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 85, %[[VEC_EPILOG_ITER_CHECK]] ], [ 1, %[[ITER_CHECK]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i8 [ [[IND_END4]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i64 [ 85, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 85, %[[VEC_EPILOG_ITER_CHECK]] ], [ 1, %[[ITER_CHECK]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi i8 [ [[IND_END4]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[INNER:.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[INNER]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL14]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[INNER]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL14]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL15]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[INNER]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV_2_NEXT]] = sub i8 [[IV_2]], [[TRUNC_ADD]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[IV]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store i8 [[IV_2]], ptr [[GEP_DST]], align 1
@@ -677,10 +677,10 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N5]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL9]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP11]] to i8
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
@@ -743,10 +743,10 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N5]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       [[LOOP]]:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL9]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP11:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP11]] to i8
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
@@ -796,14 +796,14 @@ define void @multiple_ivs_wide(ptr %dst) {
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP0]], 12
 ; CHECK-NEXT:    [[TMP31:%.*]] = add i32 [[TMP0]], 14
 ; CHECK-NEXT:    [[TMP32:%.*]] = add <8 x i32> [[VEC_IND]], splat (i32 2)
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x i32> [[TMP32]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP32]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i32> [[TMP32]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i32> [[TMP32]], i32 3
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP32]], i32 4
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i32> [[TMP32]], i32 5
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP32]], i32 6
-; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <8 x i32> [[TMP32]], i32 7
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x i32> [[TMP32]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP32]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i32> [[TMP32]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i32> [[TMP32]], i64 3
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP32]], i64 4
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i32> [[TMP32]], i64 5
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP32]], i64 6
+; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <8 x i32> [[TMP32]], i64 7
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP3]]
@@ -843,10 +843,10 @@ define void @multiple_ivs_wide(ptr %dst) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <4 x i32> [[VEC_IND2]], splat (i32 2)
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP19]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP19]], i32 1
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP19]], i32 2
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP19]], i32 3
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP19]], i64 0
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP19]], i64 1
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP19]], i64 2
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP19]], i64 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP16]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP17]]
@@ -862,12 +862,12 @@ define void @multiple_ivs_wide(ptr %dst) {
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ 128, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 128, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i32 [ 64, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 64, %[[VEC_EPILOG_ITER_CHECK]] ], [ -64, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i32 [ 128, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 128, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i32 [ 64, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 64, %[[VEC_EPILOG_ITER_CHECK]] ], [ -64, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[BC_RESUME_VAL6]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL6]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[BC_RESUME_VAL7]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 2
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i32 [[IV_2]], 2
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[IV]]

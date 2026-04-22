@@ -328,7 +328,7 @@ define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(
 ; CHECK:       vector.body.interim:
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[WIDE_LOAD2]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[WIDE_LOAD2]], i64 3
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP6]], i1 false)
