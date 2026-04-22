@@ -212,6 +212,15 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   EXPECT_FALSE(parseConstantValue("x86_fp80 0x3FBCC2794DBD00E1", Error, M));
   EXPECT_EQ(Error.getMessage(),
             "floating point constant does not have type 'x86_fp80'");
+
+  EXPECT_FALSE(parseConstantValue("float +nan(0x1", Error, M));
+  EXPECT_EQ(Error.getMessage(), "unclosed nan literal");
+
+  EXPECT_FALSE(parseConstantValue("float +nan(payload)", Error, M));
+  EXPECT_EQ(Error.getMessage(), "bad payload format for nan literal");
+
+  EXPECT_FALSE(parseConstantValue("float 0xz", Error, M));
+  EXPECT_EQ(Error.getMessage(), "expected value token");
 }
 
 TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {

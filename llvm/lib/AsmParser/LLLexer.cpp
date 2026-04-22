@@ -1350,6 +1350,7 @@ lltok::Kind LLLexer::LexFloatStr() {
       // If no close parenthesis, it's a bad token, return it as an error.
       if (*CurPtr++ != ')') {
         CurPtr = TokStart + 1;
+        LexError("unclosed nan literal");
         return lltok::Error;
       }
 
@@ -1366,6 +1367,7 @@ lltok::Kind LLLexer::LexFloatStr() {
     }
 
     // Bad token, return it as an error.
+    LexError("bad payload format for nan literal");
     CurPtr = TokStart + 1;
     return lltok::Error;
   }
