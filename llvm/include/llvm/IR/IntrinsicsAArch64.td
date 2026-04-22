@@ -152,6 +152,21 @@ def int_aarch64_swpal64 : Intrinsic<[llvm_i64_ty],
                                     [llvm_ptr_ty, llvm_i64_ty],
                                     [IntrNoFree, IntrWillReturn]>;
 
+// LDAPR intrinsics — emit LDAPR* directly, regardless of RCPC target feature.
+// LDAPRB/H/W return i32 (zero-extended into GPR32); LDAPRX returns i64.
+def int_aarch64_ldapr8  : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+                                    [IntrNoFree, IntrWillReturn,
+                                     IntrReadMem, IntrArgMemOnly]>;
+def int_aarch64_ldapr16 : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+                                    [IntrNoFree, IntrWillReturn,
+                                     IntrReadMem, IntrArgMemOnly]>;
+def int_aarch64_ldapr32 : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+                                    [IntrNoFree, IntrWillReturn,
+                                     IntrReadMem, IntrArgMemOnly]>;
+def int_aarch64_ldapr64 : Intrinsic<[llvm_i64_ty], [llvm_ptr_ty],
+                                    [IntrNoFree, IntrWillReturn,
+                                     IntrReadMem, IntrArgMemOnly]>;
+
 def int_aarch64_sdiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
                                 LLVMMatchType<0>], [IntrNoMem]>;
 def int_aarch64_udiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,

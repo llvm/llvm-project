@@ -1933,6 +1933,14 @@ let Predicates = [HasRCPC] in {
   def LDAPRX  : RCPCLoad<0b11, "ldapr", GPR64>;
 }
 
+// Code-gen-only LDAPR variants for the __ldapr* MSVC builtins.
+let isCodeGenOnly = 1 in {
+  def LDAPRB_cg : RCPCLoad<0b00, "ldaprb", GPR32>;
+  def LDAPRH_cg : RCPCLoad<0b01, "ldaprh", GPR32>;
+  def LDAPRW_cg : RCPCLoad<0b10, "ldapr", GPR32>;
+  def LDAPRX_cg : RCPCLoad<0b11, "ldapr", GPR64>;
+}
+
 // v8.3a complex add and multiply-accumulate. No predicate here, that is done
 // inside the multiclass as the FP16 versions need different predicates.
 defm FCMLA : SIMDThreeSameVectorTiedComplexHSD<1, 0b110, complexrotateop,

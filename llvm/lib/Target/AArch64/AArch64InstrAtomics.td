@@ -60,6 +60,13 @@ let Predicates = [HasRCPC] in {
   def : Pat<(acquiring_load<atomic_load_nonext_64> GPR64sp:$ptr), (LDAPRX GPR64sp:$ptr)>;
 }
 
+// Unconditional patterns for the __ldapr* MSVC builtins. These force LDAPR*
+// emission regardless of the RCPC subtarget feature.
+def : Pat<(i32 (int_aarch64_ldapr8  GPR64sp:$Rn)), (LDAPRB_cg GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_ldapr16 GPR64sp:$Rn)), (LDAPRH_cg GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_ldapr32 GPR64sp:$Rn)), (LDAPRW_cg GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_ldapr64 GPR64sp:$Rn)), (LDAPRX_cg GPR64sp:$Rn)>;
+
 // 8-bit loads
 def : Pat<(seq_cst_load<atomic_load_azext_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
 def : Pat<(acquiring_load<atomic_load_azext_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
