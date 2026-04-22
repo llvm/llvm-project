@@ -129,21 +129,6 @@ public:
     AvailableLibcallImpls.set(Impl);
   }
 
-  /// Return the first available concrete impl that provides the abstract
-  /// libcall \p LC for the current module's target, or RTLIB::Unsupported
-  /// if no available impl provides it. Mirrors codegen-side
-  /// LibcallLoweringInfo::getLibcallImpl, but available in IR passes that
-  /// don't have a TargetSubtargetInfo.
-  RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall LC) const {
-    return LibcallImpls[LC];
-  }
-
-  /// Convenience: return the entry-point name for the abstract libcall \p LC,
-  /// or an empty StringRef if no impl is available.
-  StringRef getLibcallName(RTLIB::Libcall LC) const {
-    return getLibcallImplName(getLibcallImpl(LC));
-  }
-
   /// Check if a function name is a recognized runtime call of any kind. This
   /// does not consider if this call is available for any current compilation,
   /// just that it is a known call somewhere. This returns the set of all
@@ -192,13 +177,6 @@ private:
   /// Stores the CallingConv that should be used for each libcall
   /// implementation.;
   CallingConv::ID LibcallImplCallingConvs[RTLIB::NumLibcallImpls] = {};
-
-  /// Cache mapping each abstract Libcall to the first available concrete impl
-  /// for the current target. Populated at the end of the constructor (after
-  /// initLibcalls and any vector-library setAvailable calls have run). First
-  /// available impl wins, matching codegen-side LibcallLoweringInfo.
-  RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
-      RTLIB::Unsupported};
 
   /// Names of concrete implementations of runtime calls. e.g. __ashlsi3 for
   /// SHL_I32

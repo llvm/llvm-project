@@ -1312,16 +1312,15 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
   auto *CalleeTy = FunctionType::get(Type::getVoidTy(Context),
                                      {PtrTy, PtrTy, Int64Ty}, false);
   // Look up the runtime entry-point name through the RuntimeLibcalls
-  // registry instead of hardcoding the string. The abstract libcall is
-  // registered in llvm/include/llvm/IR/RuntimeLibcalls.td and a concrete
-  // impl is added to AMDGPUSystemLibrary; the consumer side is in
+  // registry instead of hardcoding the string. The concrete impl is
+  // registered for AMDGPU in llvm/include/llvm/IR/RuntimeLibcalls.td; the
+  // consumer side is in
   // compiler-rt's clang_rt.profile.
-  RTLIB::LibcallImpl IncrImpl =
-      RTLCI.getLibcallImpl(RTLIB::INSTR_PROF_INSTRUMENT_GPU);
-  assert(IncrImpl != RTLIB::Unsupported &&
-         "RuntimeLibcalls.td must register INSTR_PROF_INSTRUMENT_GPU "
-         "for any target that reaches lowerIncrementAMDGPU");
-  StringRef IncrFnName = RTLCI.getLibcallImplName(IncrImpl);
+  assert(RTLCI.isAvailable(RTLIB::impl___llvm_profile_instrument_gpu) &&
+         "RuntimeLibcalls.td must register __llvm_profile_instrument_gpu "
+         "for AMDGPU");
+  StringRef IncrFnName =
+      RTLCI.getLibcallImplName(RTLIB::impl___llvm_profile_instrument_gpu);
   FunctionCallee IncrFn = M.getOrInsertFunction(IncrFnName, CalleeTy);
   Builder.CreateCall(IncrFn, {CastAddr, UniformAddrArg, StepI64});
 
