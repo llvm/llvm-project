@@ -64,6 +64,12 @@ bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 /// VPDerivedIV or the canonical IV).
 bool isUniformAcrossVFsAndUFs(VPValue *V);
 
+/// Returns true if \p R is more profitable to consider a narrow recipe, as
+/// opposed to a wide one. In particular, check that the recipe is
+/// single-scalar, and that considering it narrow would lead to the elimination
+/// of some undesirable broadcasts.
+bool shouldNarrow(const VPSingleDefRecipe *R);
+
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);

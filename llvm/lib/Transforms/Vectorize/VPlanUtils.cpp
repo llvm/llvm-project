@@ -442,6 +442,38 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
       });
 }
 
+bool vputils::shouldNarrow(const VPSingleDefRecipe *R) {
+  // Predicate to check if a user of Op introduces extra broadcasts.
+  auto IntroducesBCastOf = [](const VPValue *Op) {
+    return [Op](const VPUser *U) {
+      if (auto *VPI = dyn_cast<VPInstruction>(U)) {
+        if (is_contained({VPInstruction::ExtractLastLane,
+                          VPInstruction::ExtractLastPart,
+                          VPInstruction::ExtractPenultimateElement},
+                         VPI->getOpcode()))
+          return false;
+      }
+      return !U->usesScalars(Op);
+    };
+  };
+
+  if (!vputils::isSingleScalar(R))
+    return false;
+
+  return none_of(R->users(), IntroducesBCastOf(R)) ||
+         any_of(R->operands(), [&](VPValue *Op) {
+           if (any_of(make_filter_range(Op->users(), not_equal_to(R)),
+                      IntroducesBCastOf(Op)))
+             return false;
+           // Non-constant live-ins require broadcasts, while constants do not
+           // need explicit broadcasts.
+           auto *IRV = dyn_cast<VPIRValue>(Op);
+           bool LiveInNeedsBroadcast = IRV && !isa<Constant>(IRV->getValue());
+           auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
+           return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
+         });
+}
+
 VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
   auto DepthFirst = vp_depth_first_shallow(Plan.getEntry());
   auto I = find_if(DepthFirst, [&VPDT](VPBlockBase *VPB) {

@@ -1864,37 +1864,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Skip recipes that aren't single scalars.
-      if (!RepOrWidenR || !vputils::isSingleScalar(RepOrWidenR))
-        continue;
-
-      // Predicate to check if a user of Op introduces extra broadcasts.
-      auto IntroducesBCastOf = [](const VPValue *Op) {
-        return [Op](const VPUser *U) {
-          if (auto *VPI = dyn_cast<VPInstruction>(U)) {
-            if (is_contained({VPInstruction::ExtractLastLane,
-                              VPInstruction::ExtractLastPart,
-                              VPInstruction::ExtractPenultimateElement},
-                             VPI->getOpcode()))
-              return false;
-          }
-          return !U->usesScalars(Op);
-        };
-      };
-
-      if (any_of(RepOrWidenR->users(), IntroducesBCastOf(RepOrWidenR)) &&
-          none_of(RepOrWidenR->operands(), [&](VPValue *Op) {
-            if (any_of(
-                    make_filter_range(Op->users(), not_equal_to(RepOrWidenR)),
-                    IntroducesBCastOf(Op)))
-              return false;
-            // Non-constant live-ins require broadcasts, while constants do not
-            // need explicit broadcasts.
-            auto *IRV = dyn_cast<VPIRValue>(Op);
-            bool LiveInNeedsBroadcast = IRV && !isa<Constant>(IRV->getValue());
-            auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
-            return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
-          }))
+      // Skip recipes that aren't desirable to narrow.
+      if (!RepOrWidenR || !vputils::shouldNarrow(RepOrWidenR))
         continue;
 
       auto *Clone = new VPReplicateRecipe(
