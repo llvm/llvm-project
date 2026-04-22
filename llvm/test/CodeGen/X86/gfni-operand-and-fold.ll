@@ -6,7 +6,6 @@ declare <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
 define <16 x i8> @test_const_splat_on_const_matrix(<16 x i8> %src) nounwind {
 ; AVX-LABEL: test_const_splat_on_const_matrix:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %and = and <16 x i8> %src, splat(i8 15)
@@ -17,7 +16,6 @@ define <16 x i8> @test_const_splat_on_const_matrix(<16 x i8> %src) nounwind {
 define <32 x i8> @test_const_splat_on_const_matrix256(<32 x i8> %src) nounwind {
 ; AVX-LABEL: test_const_splat_on_const_matrix256:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %and = and <32 x i8> %src, splat(i8 15)
@@ -28,7 +26,6 @@ define <32 x i8> @test_const_splat_on_const_matrix256(<32 x i8> %src) nounwind {
 define <16 x i8> @test_const_splat_parity_matrix(<16 x i8> %src) nounwind {
 ; AVX-LABEL: test_const_splat_parity_matrix:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %and = and <16 x i8> %src, splat(i8 85)
@@ -39,7 +36,6 @@ define <16 x i8> @test_const_splat_parity_matrix(<16 x i8> %src) nounwind {
 define <16 x i8> @test_const_splat_on_const_matrix_nonzero_imm(<16 x i8> %src) nounwind {
 ; AVX-LABEL: test_const_splat_on_const_matrix_nonzero_imm:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %and = and <16 x i8> %src, splat(i8 15)
@@ -52,8 +48,8 @@ define <16 x i8> @test_var_splat_on_const_matrix(<16 x i8> %src, i8 %scalar) nou
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovd %edi, %xmm1
 ; AVX-NEXT:    vpbroadcastb %xmm1, %xmm1
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %inlo = insertelement <16 x i8> poison, i8 %scalar, i64 0
   %varsplat = shufflevector <16 x i8> %inlo, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -67,8 +63,6 @@ define <16 x i8> @test_var_splat_parity_fill_matrix(<16 x i8> %src, i8 %scalar) 
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovd %edi, %xmm1
 ; AVX-NEXT:    vpbroadcastb %xmm1, %xmm1
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %inlo = insertelement <16 x i8> poison, i8 %scalar, i64 0
@@ -83,8 +77,8 @@ define <16 x i8> @test_var_splat_on_const_matrix_nonzero_imm(<16 x i8> %src, i8 
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovd %edi, %xmm1
 ; AVX-NEXT:    vpbroadcastb %xmm1, %xmm1
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vgf2p8affineqb $170, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vgf2p8affineqb $170, %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %inlo = insertelement <16 x i8> poison, i8 %scalar, i64 0
   %varsplat = shufflevector <16 x i8> %inlo, <16 x i8> poison, <16 x i32> zeroinitializer
