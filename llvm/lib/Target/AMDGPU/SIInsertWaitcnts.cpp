@@ -755,15 +755,17 @@ public:
   }
 
   bool hasPendingVMEM(VMEMID ID, AMDGPU::InstCounterType T) const {
-    return getVMemScore(ID, T) > getScoreLB(T);
+    return !Counters[T].obsolete(getVMemScore(ID, T));
   }
 
   /// \Return true if we have no score entries for counter \p T.
   bool empty(AMDGPU::InstCounterType T) const { return getScoreRange(T) == 0; }
 
 private:
+  struct MergeInfo;
   /// A container that holds all counters.
   class AllCounters {
+    friend struct MergeInfo;
     /// A counter of a specific InstCounterType. Whenever this pass visits an
     /// instruction that affects this counter type we "increment" the counter.
     /// Conceptually the counter implements the value of the corresponding
@@ -831,6 +833,9 @@ private:
         LB = std::max(LB, UB - Remaining);
       }
       void clear() { LB = UB; }
+      /// \returns true if \p Score is older than the first tracked score of
+      /// this counter.
+      bool obsolete(unsigned Score) const { return Score <= LB; }
     };
 
     std::array<Counter, AMDGPU::NUM_INST_CNTS> Counters;
@@ -978,8 +983,8 @@ public:
 
 private:
   struct MergeInfo {
-    unsigned OldLB;
-    unsigned OtherLB;
+    const AllCounters::Counter* Counter;
+    const AllCounters::Counter* OtherCounter;
     unsigned MyShift;
     unsigned OtherShift;
   };
@@ -1435,7 +1440,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
 
       for (auto ID : SortedVMEMIDs) {
         unsigned RegScore = VMem.at(ID).Scores[T];
-        if (RegScore <= LB)
+        if (Counters[T].obsolete(RegScore))
           continue;
         unsigned RelScore = RegScore - LB - 1;
         if (ID < REGUNITS_END) {
@@ -1453,7 +1458,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
         sort(SortedSMEMIDs);
         for (auto ID : SortedSMEMIDs) {
           unsigned RegScore = SGPRs.at(ID).get(T);
-          if (RegScore <= LB)
+          if (Counters[T].obsolete(RegScore))
             continue;
           unsigned RelScore = RegScore - LB - 1;
           OS << ' ' << RelScore << ":sRU" << static_cast<unsigned>(ID);
@@ -3063,11 +3068,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   }
 }
 
-bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,
-                                 unsigned OtherScore) {
-  unsigned MyShifted = Score <= M.OldLB ? 0 : Score + M.MyShift;
+bool WaitcntBrackets::mergeScore(const MergeInfo &M,
+                                 unsigned &Score, unsigned OtherScore) {
+  unsigned MyShifted = M.Counter->obsolete(Score) ? 0 : Score + M.MyShift;
   unsigned OtherShifted =
-      OtherScore <= M.OtherLB ? 0 : OtherScore + M.OtherShift;
+      M.OtherCounter->obsolete(OtherScore) ? 0 : OtherScore + M.OtherShift;
   Score = std::max(MyShifted, OtherShifted);
   return OtherShifted > MyShifted;
 }
@@ -3166,8 +3171,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
     // Merge scores for this counter
     MergeInfo &M = MergeInfos[T];
-    M.OldLB = Counters[T].getLB();
-    M.OtherLB = Other.Counters[T].getLB();
+    M.Counter = &Counters[T];
+    M.OtherCounter = &Other.Counters[T];
 
     std::tie(M.MyShift, M.OtherShift) = Counters[T].merge(Other.Counters[T]);
 
