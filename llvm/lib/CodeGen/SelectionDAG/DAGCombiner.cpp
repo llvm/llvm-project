@@ -2987,6 +2987,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
                      m_Deferred(X)))) {
       if (X != Y) {
         // Redistribute shared NUW flag.
+        // TODO: If NSW+NUW occurs on both adds, that can be redistributed too.
         SDNodeFlags NewFlags =
             N->getFlags() & InnerAdd->getFlags() & SDNodeFlags::NoUnsignedWrap;
         SDValue X2 = DAG.getNode(ISD::ADD, DL, VT, X, X, NewFlags);
@@ -17712,6 +17713,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     // creating a cycle in a DAG. Let's undo that by mutating the freeze.
     assert(N->getOperand(0) == FrozenN0 && "Expected cycle in DAG");
     DAG.UpdateNodeOperands(N, N0);
+    // Revisit the node.
+    AddToWorklist(N);
     return FrozenN0;
   }
 

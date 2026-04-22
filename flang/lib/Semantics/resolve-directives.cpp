@@ -1082,7 +1082,6 @@ private:
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
-  UnorderedSymbolSet privateDataSharingAttributeObjects_; // on one directive
   UnorderedSymbolSet stmtFunctionExprSymbols_;
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, std::optional<DirContext>>>
@@ -1099,13 +1098,6 @@ private:
     ExecutionPart,
   };
   std::vector<PartKind> partStack_;
-
-  void AddPrivateDataSharingAttributeObjects(SymbolRef object) {
-    privateDataSharingAttributeObjects_.insert(object);
-  }
-  void ClearPrivateDataSharingAttributeObjects() {
-    privateDataSharingAttributeObjects_.clear();
-  }
 
   // Predetermined DSA rules
   void PrivatizeAssociatedLoopIndex(const parser::OpenMPLoopConstruct &);
@@ -1144,8 +1136,6 @@ private:
   void AddOmpRequiresToScope(Scope &,
       const WithOmpDeclarative::RequiresClauses *,
       const common::OmpMemoryOrderType *);
-  void IssueNonConformanceWarning(llvm::omp::Directive D,
-      parser::CharBlock source, unsigned EmitFromVersion);
 
   void CreateImplicitSymbols(const parser::Name &, const Symbol *symbol);
 
@@ -1166,6 +1156,28 @@ private:
     symbol.flags() |= flags;
   }
 };
+
+void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
+    Scope *topScope) {
+  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
+    AccAttributeVisitor{context, topScope}.Walk(node);
+  }
+}
+
+void ResolveOmpParts(
+    SemanticsContext &context, const parser::ProgramUnit &node) {
+  if (context.IsEnabled(common::LanguageFeature::OpenMP)) {
+    OmpAttributeVisitor{context}.Walk(node);
+    if (!context.AnyFatalError()) {
+      // The data-sharing attribute of the loop iteration variable for a
+      // sequential loop (2.15.1.1) can only be determined when visiting
+      // the corresponding DoConstruct, a second walk is to adjust the
+      // symbols for all the data-refs of that loop iteration variable
+      // prior to the DoConstruct.
+      OmpAttributeVisitor{context}.Walk(node);
+    }
+  }
+}
 
 template <typename T>
 bool DirectiveAttributeVisitor<T>::HasDataSharingAttributeObject(
@@ -1994,12 +2006,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   llvm::omp::Directive dirId{dirSpec.DirId()};
   PushContext(dirSpec.source, dirId);
-
-  if (dirId == llvm::omp::Directive::OMPD_master ||
-      dirId == llvm::omp::Directive::OMPD_parallel_master)
-    IssueNonConformanceWarning(dirId, dirSpec.source, 52);
   ClearDataSharingAttributeObjects();
-  ClearPrivateDataSharingAttributeObjects();
   return true;
 }
 
@@ -2019,14 +2026,6 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
   PushContext(beginName.source, beginName.v);
-
-  if (beginName.v == llvm::omp::OMPD_master_taskloop ||
-      beginName.v == llvm::omp::OMPD_master_taskloop_simd ||
-      beginName.v == llvm::omp::OMPD_parallel_master_taskloop ||
-      beginName.v == llvm::omp::OMPD_parallel_master_taskloop_simd) {
-    unsigned version{context_.langOptions().OpenMPVersion};
-    IssueNonConformanceWarning(beginName.v, beginName.source, version);
-  }
   ClearDataSharingAttributeObjects();
 
   if (beginName.v == llvm::omp::Directive::OMPD_do) {
@@ -3137,31 +3136,6 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
         name.ToString());
   } else {
     AddDataSharingAttributeObject(target->GetUltimate());
-    if (privateDataSharingAttributeFlags.test(ompFlag)) {
-      AddPrivateDataSharingAttributeObjects(*target);
-    }
-  }
-}
-
-void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
-    Scope *topScope) {
-  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
-    AccAttributeVisitor{context, topScope}.Walk(node);
-  }
-}
-
-void ResolveOmpParts(
-    SemanticsContext &context, const parser::ProgramUnit &node) {
-  if (context.IsEnabled(common::LanguageFeature::OpenMP)) {
-    OmpAttributeVisitor{context}.Walk(node);
-    if (!context.AnyFatalError()) {
-      // The data-sharing attribute of the loop iteration variable for a
-      // sequential loop (2.15.1.1) can only be determined when visiting
-      // the corresponding DoConstruct, a second walk is to adjust the
-      // symbols for all the data-refs of that loop iteration variable
-      // prior to the DoConstruct.
-      OmpAttributeVisitor{context}.Walk(node);
-    }
   }
 }
 
@@ -3352,51 +3326,6 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
         },
         symbol->details());
   }
-}
-
-void OmpAttributeVisitor::IssueNonConformanceWarning(llvm::omp::Directive D,
-    parser::CharBlock source, unsigned EmitFromVersion) {
-  std::string warnStr;
-  llvm::raw_string_ostream warnStrOS(warnStr);
-  unsigned version{context_.langOptions().OpenMPVersion};
-  // We only want to emit the warning when the version being used has the
-  // directive deprecated
-  if (version < EmitFromVersion) {
-    return;
-  }
-  warnStrOS << "OpenMP directive " << parser::omp::GetUpperName(D, version)
-            << " has been deprecated";
-
-  auto setAlternativeStr = [&warnStrOS](llvm::StringRef alt) {
-    warnStrOS << ", please use " << alt << " instead.";
-  };
-  switch (D) {
-  case llvm::omp::OMPD_master:
-    setAlternativeStr("MASKED");
-    break;
-  case llvm::omp::OMPD_master_taskloop:
-    setAlternativeStr("MASKED TASKLOOP");
-    break;
-  case llvm::omp::OMPD_master_taskloop_simd:
-    setAlternativeStr("MASKED TASKLOOP SIMD");
-    break;
-  case llvm::omp::OMPD_parallel_master:
-    setAlternativeStr("PARALLEL MASKED");
-    break;
-  case llvm::omp::OMPD_parallel_master_taskloop:
-    setAlternativeStr("PARALLEL MASKED TASKLOOP");
-    break;
-  case llvm::omp::OMPD_parallel_master_taskloop_simd:
-    setAlternativeStr("PARALLEL_MASKED TASKLOOP SIMD");
-    break;
-  case llvm::omp::OMPD_allocate:
-    setAlternativeStr("ALLOCATORS");
-    break;
-  default:
-    break;
-  }
-  context_.Warn(common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US,
-      warnStrOS.str());
 }
 
 #ifndef NDEBUG
