@@ -2891,10 +2891,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     QualType QTy = OutExpr->getType();
     const bool IsScalarOrAggregate = hasScalarEvaluationKind(QTy) ||
                                      hasAggregateEvaluationKind(QTy);
-    // FIXME: Expand this to handle other constraints that include both 'r'
-    // and 'm', such as "g" (which expands to "imr").
     const bool RegisterMemoryConstraints =
-        OutputConstraint == "rm" || OutputConstraint == "mr";
+        llvm::is_contained(OutputConstraint, 'r') &&
+        llvm::is_contained(OutputConstraint, 'm');
 
     if (IsScalarOrAggregate &&
         (!Info.allowsMemory() || RegisterMemoryConstraints)) {

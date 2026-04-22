@@ -6029,8 +6029,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
     // direct "=rm" output with a matching tied input). The register allocator
     // can fold both the output and its tied input to the same memory slot when
     // under pressure.
-    if (OpInfo.Codes.size() == 2 && llvm::is_contained(OpInfo.Codes, "r") &&
-        llvm::is_contained(OpInfo.Codes, "m"))
+    if (is_contained(OpInfo.Codes, "r") && is_contained(OpInfo.Codes, "m"))
       OpInfo.MayFoldRegister = true;
 
     // Compute the value type for each operand.
