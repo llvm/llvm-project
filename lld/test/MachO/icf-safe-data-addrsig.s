@@ -7,30 +7,37 @@
 ## data sections, so the duplicate _cfs2 / _cr2 / _sr2 entries must fold into
 ## _cfs1 / _cr1 / _sr1 whether the compiler lists data symbols in
 ## __llvm_addrsig (with-addrsig.o) or emits no __llvm_addrsig at all
-## (without-addrsig.o), and regardless of ICF level.
+## (without-addrsig.o) when ICF is enabled. At --icf=none, only __cfstring
+## still folds (via --deduplicate-strings, which is on by default);
+## __objc_classrefs and __objc_selrefs stay unique.
 
 # RUN: rm -rf %t && split-file %s %t
 # RUN: llvm-mc -I %t -filetype=obj -triple=arm64-apple-darwin %t/with-addrsig.s -o %t/with-addrsig.o
 # RUN: llvm-mc -I %t -filetype=obj -triple=arm64-apple-darwin %t/without-addrsig.s -o %t/without-addrsig.o
-# RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -map %t/with-addrsig-safe.map -o %t/with-addrsig-safe.dylib %t/with-addrsig.o
-# RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -map %t/without-addrsig-safe.map -o %t/without-addrsig-safe.dylib %t/without-addrsig.o
-# RUN: %lld -arch arm64 -lSystem --icf=safe_thunks -dylib -map %t/with-addrsig-safe-thunks.map -o %t/with-addrsig-thunks.dylib %t/with-addrsig.o
-# RUN: %lld -arch arm64 -lSystem --icf=safe_thunks -dylib -map %t/without-addrsig-safe-thunks.map -o %t/without-addrsig-thunks.dylib %t/without-addrsig.o
-# RUN: %lld -arch arm64 -lSystem --icf=all -dylib -map %t/with-addrsig-all.map -o %t/with-addrsig-all.dylib %t/with-addrsig.o
-# RUN: %lld -arch arm64 -lSystem --icf=all -dylib -map %t/without-addrsig-all.map -o %t/without-addrsig-all.dylib %t/without-addrsig.o
-# RUN: FileCheck %s < %t/with-addrsig-safe.map
-# RUN: FileCheck %s < %t/without-addrsig-safe.map
-# RUN: FileCheck %s < %t/with-addrsig-safe-thunks.map
-# RUN: FileCheck %s < %t/without-addrsig-safe-thunks.map
-# RUN: FileCheck %s < %t/with-addrsig-all.map
-# RUN: FileCheck %s < %t/without-addrsig-all.map
+# RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -map - -o %t/with-addrsig-safe.dylib %t/with-addrsig.o | FileCheck %s --check-prefixes=CHECK,FOLD
+# RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -map - -o %t/without-addrsig-safe.dylib %t/without-addrsig.o | FileCheck %s --check-prefixes=CHECK,FOLD
+# RUN: %lld -arch arm64 -lSystem --icf=safe_thunks -dylib -map - -o %t/with-addrsig-thunks.dylib %t/with-addrsig.o | FileCheck %s --check-prefixes=CHECK,FOLD
+# RUN: %lld -arch arm64 -lSystem --icf=safe_thunks -dylib -map - -o %t/without-addrsig-thunks.dylib %t/without-addrsig.o | FileCheck %s --check-prefixes=CHECK,FOLD
+# RUN: %lld -arch arm64 -lSystem --icf=all -dylib -map - -o %t/with-addrsig-all.dylib %t/with-addrsig.o | FileCheck %s --check-prefixes=CHECK,FOLD
+# RUN: %lld -arch arm64 -lSystem --icf=all -dylib -map - -o %t/without-addrsig-all.dylib %t/without-addrsig.o | FileCheck %s --check-prefixes=CHECK,FOLD
+# RUN: %lld -arch arm64 -lSystem --icf=none -dylib -map - -o %t/with-addrsig-none.dylib %t/with-addrsig.o | FileCheck %s --check-prefixes=CHECK,NOFOLD
+# RUN: %lld -arch arm64 -lSystem --icf=none -dylib -map - -o %t/without-addrsig-none.dylib %t/without-addrsig.o | FileCheck %s --check-prefixes=CHECK,NOFOLD
 
+## __cfstring folds whenever --deduplicate-strings is on, i.e. at every ICF
+## level including --icf=none.
 # CHECK:      0x00000020 [  2] _cfs1
 # CHECK-NEXT: 0x00000000 [  2] _cfs2
-# CHECK:      0x00000008 [  2] _cr1
-# CHECK-NEXT: 0x00000000 [  2] _cr2
-# CHECK:      0x00000008 [  2] _sr1
-# CHECK-NEXT: 0x00000000 [  2] _sr2
+
+## __objc_classrefs / __objc_selrefs fold only when ICF runs.
+# FOLD:      0x00000008 [  2] _cr1
+# FOLD-NEXT: 0x00000000 [  2] _cr2
+# FOLD:      0x00000008 [  2] _sr1
+# FOLD-NEXT: 0x00000000 [  2] _sr2
+
+# NOFOLD:      0x00000008 [  2] _cr1
+# NOFOLD-NEXT: 0x00000008 [  2] _cr2
+# NOFOLD:      0x00000008 [  2] _sr1
+# NOFOLD-NEXT: 0x00000008 [  2] _sr2
 
 #--- common.s
 .subsections_via_symbols
