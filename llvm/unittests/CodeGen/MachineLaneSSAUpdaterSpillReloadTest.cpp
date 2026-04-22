@@ -8,14 +8,18 @@
 //
 // Unit tests for MachineLaneSSAUpdater focusing on spill/reload scenarios.
 //
-// NOTE: This file is currently a placeholder for future spiller-specific tests.
-// Analysis showed that repairSSAForNewDef() is sufficient for spill/reload 
-// scenarios - no special spill handling is needed. The spiller workflow is:
-//   1. Insert reload instruction before use
-//   2. Call repairSSAForNewDef(ReloadMI, SpilledReg)
-//   3. Done! Uses are rewritten, LiveIntervals naturally pruned
+// Two spiller integration patterns are covered here:
 //
-// Future spiller-specific scenarios (if needed) can be added here.
+//   1. repairSSAForNewDef(ReloadMI, SpilledReg, PHIDefOps)
+//      The caller inserts a reload MI that still writes the spilled register,
+//      then asks the updater to rename the def and repair SSA in one step.
+//      Covered by: SimpleLinearSpillReload.
+//
+//   2. repairSSAForReload(NewVReg, OrigVReg, DefMask, DefBB)
+//      The caller builds a reload MI that already defines a FRESH vreg, then
+//      asks the updater to insert PHIs at IDF blocks and rewrite dominated
+//      uses. No renaming happens inside the updater.
+//      Covered by: RepairSSAForReloadInsertsPHI.
 //
 //===----------------------------------------------------------------------===//
 
@@ -282,7 +286,8 @@ TEST(MachineLaneSSAUpdaterSpillReloadTest, SimpleLinearSpillReload) {
       //   - Rewrite uses dominated by the reload
       //   - Naturally prune OrigReg's LiveInterval via recomputation
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register ReloadReg = Updater.repairSSAForNewDef(*ReloadMI, OrigReg);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register ReloadReg = Updater.repairSSAForNewDef(*ReloadMI, OrigReg, PHIDefOps);
       
       // VERIFY RESULTS:
       
@@ -325,6 +330,139 @@ TEST(MachineLaneSSAUpdaterSpillReloadTest, SimpleLinearSpillReload) {
       SlotIndex BB2Start = LIS.getMBBStartIdx(BB2);
       EXPECT_LE(OrigEnd, BB2Start) 
           << "Original register should not extend into BB2 after reload";
+    });
+}
+
+//===----------------------------------------------------------------------===//
+// Test 2: repairSSAForReload on a diamond CFG (new API coverage)
+//
+// Unlike repairSSAForNewDef, this API assumes the caller has ALREADY built an
+// MI that defines a fresh NewVReg (a reload). The updater is asked to insert
+// PHIs at IDF blocks and rewrite dominated uses of OrigVReg.
+//
+// CFG:
+//       bb.0 (entry: %0 = orig def, cond branch)
+//       /  \
+//    bb.1   bb.2     bb.1 = spill path: test builds "%reload = V_MOV 42"
+//       \  /                            and calls repairSSAForReload
+//       bb.3 (use %0)
+//===----------------------------------------------------------------------===//
+TEST(MachineLaneSSAUpdaterSpillReloadTest, RepairSSAForReloadInsertsPHI) {
+  liveIntervalsTest(R"MIR(
+    successors: %bb.1, %bb.2
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    S_NOP 0
+    S_BRANCH %bb.3
+
+  bb.3:
+    %99:vgpr_32 = V_ADD_U32_e32 %0, %0, implicit $exec
+    S_ENDPGM 0
+)MIR",
+    [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+
+      ASSERT_EQ(MF.size(), 4u) << "Should have bb.0..bb.3";
+
+      MachineBasicBlock *BB0 = MF.getBlockNumbered(0);
+      MachineBasicBlock *BB1 = MF.getBlockNumbered(1);  // spill path
+      MachineBasicBlock *BB2 = MF.getBlockNumbered(2);  // clean path
+      MachineBasicBlock *BB3 = MF.getBlockNumbered(3);  // join
+
+      MachineInstr *OrigDefMI = &*BB0->begin();
+      Register OrigReg = OrigDefMI->getOperand(0).getReg();
+      ASSERT_TRUE(OrigReg.isValid());
+      unsigned MovOpcode = OrigDefMI->getOpcode();
+      Register ExecReg = OrigDefMI->getOperand(2).getReg();
+
+      // Build a reload-like MI in bb.1 that defines a FRESH vreg.
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      const TargetRegisterClass *RC = MRI.getRegClass(OrigReg);
+      Register ReloadReg = MRI.createVirtualRegister(RC);
+
+      auto InsertPt = BB1->getFirstTerminator();
+      MachineInstr *ReloadMI = BuildMI(*BB1, InsertPt, DebugLoc(),
+                                       TII->get(MovOpcode), ReloadReg)
+                                  .addImm(42)
+                                  .addReg(ExecReg, RegState::Implicit);
+      LIS.InsertMachineInstrInMaps(*ReloadMI);
+
+      MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
+      MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+
+      LaneBitmask DefMask = MRI.getMaxLaneMaskForVReg(OrigReg);
+
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      SmallVector<MachineOperand *, 4> PHIDefOps =
+          Updater.repairSSAForReload(ReloadReg, OrigReg, DefMask, BB1);
+
+      ASSERT_FALSE(PHIDefOps.empty())
+          << "repairSSAForReload should return PHI def operands";
+
+      EXPECT_EQ(ReloadMI->getOperand(0).getReg(), ReloadReg);
+
+      MachineInstr *JoinPHI = nullptr;
+      for (MachineInstr &MI : *BB3) {
+        if (MI.isPHI()) { JoinPHI = &MI; break; }
+      }
+      ASSERT_NE(JoinPHI, nullptr) << "Expected a PHI at join block bb.3";
+      ASSERT_EQ(JoinPHI->getNumOperands(), 5u)
+          << "PHI: 1 def + 2*(reg,mbb) = 5 operands";
+
+      DenseMap<MachineBasicBlock *, Register> Incoming;
+      for (unsigned i = 1, e = JoinPHI->getNumOperands(); i < e; i += 2) {
+        Register R = JoinPHI->getOperand(i).getReg();
+        MachineBasicBlock *P = JoinPHI->getOperand(i + 1).getMBB();
+        Incoming[P] = R;
+      }
+      ASSERT_EQ(Incoming.size(), 2u);
+      EXPECT_EQ(Incoming[BB1], ReloadReg)
+          << "PHI operand from spill-path predecessor must be ReloadReg";
+      EXPECT_EQ(Incoming[BB2], OrigReg)
+          << "PHI operand from clean-path predecessor must be OrigReg";
+
+      Register PHIRes = JoinPHI->getOperand(0).getReg();
+      bool JoinUseRewritten = false;
+      for (MachineInstr &MI : *BB3) {
+        if (MI.isPHI()) continue;
+        for (const MachineOperand &MO : MI.uses()) {
+          if (MO.isReg() && MO.getReg() == PHIRes) {
+            JoinUseRewritten = true;
+            break;
+          }
+        }
+        if (JoinUseRewritten) break;
+      }
+      EXPECT_TRUE(JoinUseRewritten)
+          << "Use at join must be rewritten to the PHI result";
+
+      for (MachineInstr &MI : *BB3) {
+        if (MI.isPHI()) continue;
+        for (const MachineOperand &MO : MI.uses()) {
+          if (MO.isReg())
+            EXPECT_NE(MO.getReg(), OrigReg)
+                << "No non-PHI use of OrigReg should remain in bb.3";
+        }
+      }
+
+      EXPECT_TRUE(LIS.hasInterval(ReloadReg));
+      EXPECT_TRUE(LIS.hasInterval(OrigReg));
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed after SSA repair";
     });
 }
 

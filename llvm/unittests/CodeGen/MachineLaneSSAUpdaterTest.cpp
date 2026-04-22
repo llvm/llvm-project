@@ -273,7 +273,8 @@ TEST(MachineLaneSSAUpdaterTest, NewDefInsertsPhiAndRewritesUses) {
       //         NewDefMI in bb.3 also defines %1 (violating SSA!)
       // After repair: NewDefMI will define a new vreg, bb.4 gets PHI
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg, PHIDefOps);
       
       // VERIFY RESULTS:
       
@@ -302,6 +303,401 @@ TEST(MachineLaneSSAUpdaterTest, NewDefInsertsPhiAndRewritesUses) {
       // Verify the MachineFunction is still valid after SSA repair
       EXPECT_TRUE(MF.verify(nullptr, /* Banner=*/nullptr, /*OS=*/nullptr, /* AbortOnError=*/false))
           << "MachineFunction verification failed after SSA repair";
+    });
+}
+
+//===----------------------------------------------------------------------===//
+// Test: Parallel-path PHI operands & use-rewriting (regression for d481f9ac9a90)
+//
+// On a diamond where only ONE path redefines OrigReg (simulating a reload on a
+// spill-path), the repair must:
+//   (a) insert a PHI at the join that merges NewReg (from the redef pred) with
+//       OrigReg (from the clean pred),
+//   (b) rewrite the dominated use at the join to consume the PHI result (NOT
+//       the raw OrigReg).
+//
+// Prior to d481f9ac9a90, defReachesUse incorrectly checked only dominance of
+// the def to the PHI's predecessor, so the clean-path predecessor was skipped
+// and the join use kept pointing at OrigReg.
+//
+// CFG:
+//       bb.0 (entry: %0 = orig def, cond branch)
+//       /  \
+//    bb.1   bb.2        <- bb.1 = spill path; test inserts %0 = NEW_DEF here
+//       \  /
+//       bb.3 (use %0)
+//===----------------------------------------------------------------------===//
+TEST(MachineLaneSSAUpdaterTest, ParallelPathPhiOperandsAfterRedef) {
+  liveIntervalsTest(R"MIR(
+    successors: %bb.1, %bb.2
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    S_NOP 0
+    S_BRANCH %bb.3
+
+  bb.3:
+    %99:vgpr_32 = V_ADD_U32_e32 %0, %0, implicit $exec
+    S_ENDPGM 0
+)MIR",
+    [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+      ASSERT_EQ(MF.size(), 4u) << "Should have bb.0..bb.3";
+
+      MachineBasicBlock *BB0 = MF.getBlockNumbered(0);
+      MachineBasicBlock *BB1 = MF.getBlockNumbered(1);  // spill path
+      MachineBasicBlock *BB2 = MF.getBlockNumbered(2);  // clean path
+      MachineBasicBlock *BB3 = MF.getBlockNumbered(3);  // join
+
+      MachineInstr *OrigDefMI = &*BB0->begin();
+      Register OrigReg = OrigDefMI->getOperand(0).getReg();
+      ASSERT_TRUE(OrigReg.isValid());
+      unsigned MovOpcode = OrigDefMI->getOpcode();
+      Register ExecReg = OrigDefMI->getOperand(2).getReg();
+
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      auto InsertPt = BB1->getFirstTerminator();
+      MachineInstr *NewDefMI = BuildMI(*BB1, InsertPt, DebugLoc(),
+                                       TII->get(MovOpcode), OrigReg)
+                                  .addImm(42)
+                                  .addReg(ExecReg, RegState::Implicit);
+
+      MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
+      MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg, PHIDefOps);
+
+      ASSERT_TRUE(NewReg.isValid());
+      EXPECT_NE(NewReg, OrigReg);
+      EXPECT_EQ(NewDefMI->getOperand(0).getReg(), NewReg);
+
+      EXPECT_FALSE(PHIDefOps.empty())
+          << "repair should have reported PHI operands via PHIDefOps";
+
+      MachineInstr *JoinPHI = nullptr;
+      for (MachineInstr &MI : *BB3) {
+        if (MI.isPHI()) { JoinPHI = &MI; break; }
+      }
+      ASSERT_NE(JoinPHI, nullptr) << "Expected a PHI at join block bb.3";
+
+      ASSERT_EQ(JoinPHI->getNumOperands(), 5u)
+          << "PHI: 1 def + 2*(reg,mbb) = 5 operands";
+
+      DenseMap<MachineBasicBlock *, Register> Incoming;
+      for (unsigned i = 1, e = JoinPHI->getNumOperands(); i < e; i += 2) {
+        Register R = JoinPHI->getOperand(i).getReg();
+        MachineBasicBlock *P = JoinPHI->getOperand(i + 1).getMBB();
+        Incoming[P] = R;
+      }
+      ASSERT_EQ(Incoming.size(), 2u);
+      EXPECT_EQ(Incoming[BB1], NewReg)
+          << "PHI operand from spill-path predecessor bb.1 must be NewReg";
+      EXPECT_EQ(Incoming[BB2], OrigReg)
+          << "PHI operand from clean-path predecessor bb.2 must be OrigReg";
+
+      Register PHIRes = JoinPHI->getOperand(0).getReg();
+      bool JoinUseRewritten = false;
+      for (MachineInstr &MI : *BB3) {
+        if (MI.isPHI()) continue;
+        for (const MachineOperand &MO : MI.uses()) {
+          if (MO.isReg() && MO.getReg() == PHIRes) {
+            JoinUseRewritten = true;
+            break;
+          }
+        }
+        if (JoinUseRewritten) break;
+      }
+      EXPECT_TRUE(JoinUseRewritten)
+          << "Use at join must be rewritten to the PHI result";
+
+      for (MachineInstr &MI : *BB3) {
+        if (MI.isPHI()) continue;
+        for (const MachineOperand &MO : MI.uses()) {
+          if (MO.isReg())
+            EXPECT_NE(MO.getReg(), OrigReg)
+                << "No non-PHI use of OrigReg should remain in bb.3";
+        }
+      }
+
+      EXPECT_TRUE(LIS.hasInterval(NewReg));
+      EXPECT_TRUE(LIS.hasInterval(OrigReg));
+      EXPECT_TRUE(MF.verify(nullptr, nullptr, nullptr, false))
+          << "MachineFunction verification failed after SSA repair";
+    });
+}
+
+//===----------------------------------------------------------------------===//
+// Test: isUseReachableFromDef coverage (both overloads, all paths)
+//
+// The API has two fast paths and one slow path:
+//   - Same block: instruction-order check.
+//   - Different blocks, def dominates use block: true.
+//   - Different blocks, not dominated: compute pruned IDF of def block and
+//     check whether the use block (or PHI predecessor) is in/dominated-by it.
+//
+// CFG (extended parallel-path diamond with an extra same-block use):
+//       bb.0 (entry: %0 = orig def, then %10 = V_ADD %0,%0, then cond branch)
+//       /  \
+//    bb.1   bb.2
+//       \  /
+//       bb.3 (use %0)
+//===----------------------------------------------------------------------===//
+TEST(MachineLaneSSAUpdaterTest, IsUseReachableFromDef) {
+  liveIntervalsTest(R"MIR(
+    successors: %bb.1, %bb.2
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %10:vgpr_32 = V_ADD_U32_e32 %0, %0, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    S_NOP 0
+    S_BRANCH %bb.3
+
+  bb.3:
+    %99:vgpr_32 = V_ADD_U32_e32 %0, %0, implicit $exec
+    S_ENDPGM 0
+)MIR",
+    [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+
+      ASSERT_EQ(MF.size(), 4u);
+      MachineBasicBlock *BB0 = MF.getBlockNumbered(0);
+      MachineBasicBlock *BB1 = MF.getBlockNumbered(1);
+      MachineBasicBlock *BB3 = MF.getBlockNumbered(3);
+
+      MachineInstr *OrigDefMI = &*BB0->begin();
+      Register OrigReg = OrigDefMI->getOperand(0).getReg();
+      ASSERT_TRUE(OrigReg.isValid());
+      unsigned MovOpcode = OrigDefMI->getOpcode();
+      Register ExecReg = OrigDefMI->getOperand(2).getReg();
+
+      // Pre-diamond use of %0 in bb.0.
+      MachineInstr *UseBeforeMI = nullptr;
+      for (MachineInstr &MI : *BB0) {
+        if (&MI == OrigDefMI) continue;
+        for (const MachineOperand &MO : MI.uses()) {
+          if (MO.isReg() && MO.getReg() == OrigReg) {
+            UseBeforeMI = &MI; break;
+          }
+        }
+        if (UseBeforeMI) break;
+      }
+      ASSERT_NE(UseBeforeMI, nullptr);
+
+      // Join-block use of %0 in bb.3.
+      MachineInstr *UseAfterMI = nullptr;
+      for (MachineInstr &MI : *BB3) {
+        if (MI.isPHI()) continue;
+        for (const MachineOperand &MO : MI.uses()) {
+          if (MO.isReg() && MO.getReg() == OrigReg) {
+            UseAfterMI = &MI; break;
+          }
+        }
+        if (UseAfterMI) break;
+      }
+      ASSERT_NE(UseAfterMI, nullptr);
+
+      // We need a DefMI whose parent is bb.1 so the reachability query can
+      // treat bb.1 as the "def block". The API under test inspects only
+      // DefMI->getParent() (and, for the MachineOperand overload, the def
+      // operand's lane mask); it does NOT look at what vreg the instruction
+      // actually defines. That gives us a choice:
+      //
+      //   (a) redef OrigReg (%0) in bb.1 -- violates SSA (two defs of %0)
+      //       and the test harness's MF.verify() call would legitimately
+      //       fail at teardown, making the test report a false failure;
+      //
+      //   (b) define a FRESH vreg in bb.1 -- SSA stays clean, MF.verify()
+      //       passes, and the query still uses bb.1 as the def block.
+      //
+      // Option (b) is what we do here: DefInBB1MI writes a brand-new
+      // DummyReg of the same register class as OrigReg, purely to anchor
+      // a MachineInstr in bb.1. We continue to pass OrigReg as the
+      // "register under analysis" argument to isUseReachableFromDef.
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      Register DummyReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
+      MachineInstr *DefInBB1MI = BuildMI(*BB1, BB1->getFirstTerminator(),
+                                         DebugLoc(), TII->get(MovOpcode), DummyReg)
+                                     .addImm(42)
+                                     .addReg(ExecReg, RegState::Implicit);
+      LIS.InsertMachineInstrInMaps(*DefInBB1MI);
+      // DummyReg is a brand-new vreg; LIS expects every vreg to have a
+      // LiveInterval. Compute it now so MF.verify() at teardown is happy.
+      LIS.createAndComputeVirtRegInterval(DummyReg);
+
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      LaneBitmask FullMask = MRI.getMaxLaneMaskForVReg(OrigReg);
+
+      // (1) Same-block fast path: OrigDefMI precedes UseBeforeMI in bb.0.
+      EXPECT_TRUE(Updater.isUseReachableFromDef(OrigDefMI, UseBeforeMI,
+                                                OrigReg, FullMask))
+          << "Same-block def before use should be reachable";
+
+      // (2) Dominance fast path: bb.0 dominates bb.3.
+      EXPECT_TRUE(Updater.isUseReachableFromDef(OrigDefMI, UseAfterMI,
+                                                OrigReg, FullMask))
+          << "Def block dominates use block -> reachable";
+
+      // (3) IDF slow path: bb.1 does NOT dominate bb.3, but bb.3 is in IDF(bb.1).
+      EXPECT_TRUE(Updater.isUseReachableFromDef(DefInBB1MI, UseAfterMI,
+                                                OrigReg, FullMask))
+          << "Use is not dominated but is in IDF of def block -> reachable";
+
+      // (4) Negative: bb.0 is upstream of bb.1; not in IDF(bb.1), not dominated.
+      EXPECT_FALSE(Updater.isUseReachableFromDef(DefInBB1MI, UseBeforeMI,
+                                                 OrigReg, FullMask))
+          << "Upstream use is not reachable from def";
+
+      // (5) MachineOperand overload agrees on the IDF case.
+      MachineOperand &DefInBB1Op = DefInBB1MI->getOperand(0);
+      MachineOperand *UseAfterOp =
+          UseAfterMI->findRegisterUseOperand(OrigReg, TRI, /*isKill=*/false);
+      ASSERT_NE(UseAfterOp, nullptr);
+      EXPECT_TRUE(Updater.isUseReachableFromDef(DefInBB1Op, *UseAfterOp, OrigReg))
+          << "MachineOperand overload should agree on IDF-reachable case";
+    });
+}
+
+//===----------------------------------------------------------------------===//
+// Test: IDF cache hit/miss/clear + IDFCacheKey hash behavior
+//
+// Exercises:
+//   - getPrunedIDF() deterministic result (cache HIT on repeat call)
+//   - Different DefBlock key gets its own cache entry (no cross-talk)
+//   - clearIDFCache() invalidates; recompute still correct
+//   - IDFCacheKey equality / DenseMapInfo hash stability
+//
+// CFG: 4-block diamond. For %0 defined in bb.0 and used in bb.3, the pruned
+// IDF of bb.1 (or bb.2) is {bb.3}.
+//===----------------------------------------------------------------------===//
+TEST(MachineLaneSSAUpdaterTest, IDFCacheBehavior) {
+  liveIntervalsTest(R"MIR(
+    successors: %bb.1, %bb.2
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    S_NOP 0
+    S_BRANCH %bb.3
+
+  bb.3:
+    %99:vgpr_32 = V_ADD_U32_e32 %0, %0, implicit $exec
+    S_ENDPGM 0
+)MIR",
+    [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+
+      ASSERT_EQ(MF.size(), 4u);
+      MachineBasicBlock *BB0 = MF.getBlockNumbered(0);
+      MachineBasicBlock *BB1 = MF.getBlockNumbered(1);
+      MachineBasicBlock *BB2 = MF.getBlockNumbered(2);
+      MachineBasicBlock *BB3 = MF.getBlockNumbered(3);
+
+      Register OrigReg = BB0->begin()->getOperand(0).getReg();
+      ASSERT_TRUE(OrigReg.isValid());
+
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      LaneBitmask FullMask = MRI.getMaxLaneMaskForVReg(OrigReg);
+
+      // (1) First call: cache MISS. Compute and remember result.
+      SmallVector<MachineBasicBlock *, 4> Out1;
+      Updater.getPrunedIDF(OrigReg, FullMask, BB1, Out1);
+      ASSERT_EQ(Out1.size(), 1u)
+          << "IDF(bb.1) for this diamond should be {bb.3}";
+      EXPECT_EQ(Out1[0], BB3);
+
+      // (2) Repeat with the SAME key: cache HIT. Result must be identical
+      //     (both size and contents, in the same order).
+      SmallVector<MachineBasicBlock *, 4> Out2;
+      Updater.getPrunedIDF(OrigReg, FullMask, BB1, Out2);
+      ASSERT_EQ(Out2.size(), Out1.size());
+      for (size_t i = 0, e = Out1.size(); i < e; ++i)
+        EXPECT_EQ(Out2[i], Out1[i])
+            << "Cache HIT must return the same vector as the original compute";
+
+      // (3) Different DefBlock key: gets its own cache entry. In this
+      //     symmetric diamond IDF(bb.2) is also {bb.3}, but it's stored
+      //     under a distinct IDFCacheKey (different DefBlockNum).
+      SmallVector<MachineBasicBlock *, 4> Out3;
+      Updater.getPrunedIDF(OrigReg, FullMask, BB2, Out3);
+      ASSERT_EQ(Out3.size(), 1u);
+      EXPECT_EQ(Out3[0], BB3);
+
+      // (4) Clear cache, then recompute: must still be correct.
+      Updater.clearIDFCache();
+      SmallVector<MachineBasicBlock *, 4> Out4;
+      Updater.getPrunedIDF(OrigReg, FullMask, BB1, Out4);
+      ASSERT_EQ(Out4.size(), Out1.size());
+      for (size_t i = 0, e = Out1.size(); i < e; ++i)
+        EXPECT_EQ(Out4[i], Out1[i])
+            << "After clearIDFCache(), recompute must match original result";
+
+      // (5) IDFCacheKey: operator== + DenseMapInfo hash behavior.
+      using Key = MachineLaneSSAUpdater::IDFCacheKey;
+      using DMI = DenseMapInfo<Key>;
+
+      const unsigned BB1Num = static_cast<unsigned>(BB1->getNumber());
+      const unsigned BB2Num = static_cast<unsigned>(BB2->getNumber());
+
+      Key KA{OrigReg, FullMask, BB1Num};
+      Key KB{OrigReg, FullMask, BB1Num};        // equal to KA
+      Key KDiffBlock{OrigReg, FullMask, BB2Num}; // different DefBlockNum
+      Key KDiffMask{OrigReg, LaneBitmask::getNone(), BB1Num}; // different mask
+
+      EXPECT_TRUE(KA == KB);
+      EXPECT_FALSE(KA == KDiffBlock);
+      EXPECT_FALSE(KA == KDiffMask);
+
+      EXPECT_TRUE(DMI::isEqual(KA, KB));
+      EXPECT_FALSE(DMI::isEqual(KA, KDiffBlock));
+      EXPECT_FALSE(DMI::isEqual(KA, KDiffMask));
+
+      // Equal keys MUST hash equal. (Unequal keys usually hash differently,
+      // but that's not a DenseMap requirement, so we don't assert it.)
+      EXPECT_EQ(DMI::getHashValue(KA), DMI::getHashValue(KB));
+
+      // Empty/Tombstone keys from DenseMapInfo must compare unequal to KA.
+      EXPECT_FALSE(DMI::isEqual(KA, DMI::getEmptyKey()));
+      EXPECT_FALSE(DMI::isEqual(KA, DMI::getTombstoneKey()));
     });
 }
 
@@ -425,7 +821,8 @@ TEST(MachineLaneSSAUpdaterTest, MultiplePhiInsertion) {
       
       // Call MachineLaneSSAUpdater
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg, PHIDefOps);
       
       EXPECT_TRUE(NewReg.isValid()) << "Updater should create a new register";
       EXPECT_NE(NewReg, OrigReg) << "New register should be different from original";
@@ -648,7 +1045,8 @@ TEST(MachineLaneSSAUpdaterTest, SubregisterLaneTracking) {
       // Call MachineLaneSSAUpdater to repair the SSA violation
       // This should create a new vreg for the subreg def and insert lane-aware PHIs
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, Reg64);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, Reg64, PHIDefOps);
       
       LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << " (raw: " << NewReg << ")\n");
       
@@ -833,7 +1231,8 @@ TEST(MachineLaneSSAUpdaterTest, SubregDefToFullRegPHI) {
       
       // Call SSA updater
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, RegX);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, RegX, PHIDefOps);
       
       LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << " (raw: " << NewReg << ")\n");
       
@@ -995,7 +1394,8 @@ TEST(MachineLaneSSAUpdaterTest, LoopWithDefInBody) {
       
       // Call SSA updater
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg, PHIDefOps);
       
       LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
@@ -1216,7 +1616,8 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
       
       // Call SSA updater
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg, PHIDefOps);
       
       LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
@@ -1505,7 +1906,8 @@ body: |
       
       // Create SSA updater and repair after first insertion
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg1 = Updater.repairSSAForNewDef(NewDefMI1, OrigReg);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg1 = Updater.repairSSAForNewDef(NewDefMI1, OrigReg, PHIDefOps);
       
       LLVM_DEBUG(dbgs() << "SSA repair #1 created new register: %" << NewReg1.virtRegIndex() << "\n");
       
@@ -1544,7 +1946,7 @@ body: |
       LLVM_DEBUG(NewDefMI2.print(dbgs()));
       
       // Repair SSA after second insertion (for %3, the increment result)
-      Register NewReg2 = Updater.repairSSAForNewDef(NewDefMI2, IncrementReg);
+      Register NewReg2 = Updater.repairSSAForNewDef(NewDefMI2, IncrementReg, PHIDefOps);
       
       LLVM_DEBUG(dbgs() << "SSA repair #2 created new register: %" << NewReg2.virtRegIndex() << "\n");
       
@@ -1753,7 +2155,8 @@ body: |
       
       // Create SSA updater and repair
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg, PHIDefOps);
       
       LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
@@ -2054,7 +2457,8 @@ body: |
       
       // Create SSA updater and repair
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg, PHIDefOps);
       
       LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
@@ -2254,7 +2658,8 @@ body: |
       
       // Create SSA updater and repair
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      SmallVector<MachineOperand *, 4> PHIDefOps;
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg, PHIDefOps);
       
       LLVM_DEBUG(dbgs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n");
       
