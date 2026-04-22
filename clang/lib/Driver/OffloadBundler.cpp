@@ -1591,30 +1591,6 @@ Error OffloadBundler::UnbundleFiles() {
   if (std::error_code EC = CodeOrErr.getError())
     return createFileError(BundlerConfig.InputFileNames.front(), EC);
 
-  // Decompress the input if necessary.
-  Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
-      CompressedOffloadBundle::decompress(**CodeOrErr, BundlerConfig.Verbose);
-  if (!DecompressedBufferOrErr)
-    return createStringError(
-        inconvertibleErrorCode(),
-        "Failed to decompress input: " +
-            llvm::toString(DecompressedBufferOrErr.takeError()));
-
-  MemoryBuffer &Input = **DecompressedBufferOrErr;
-
-  // Select the right files handler.
-  Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
-      CreateFileHandler(Input, BundlerConfig);
-  if (!FileHandlerOrErr)
-    return FileHandlerOrErr.takeError();
-
-  std::unique_ptr<FileHandler> &FH = *FileHandlerOrErr;
-  assert(FH);
-
-  // Read the header of the bundled file.
-  if (Error Err = FH->ReadHeader(Input.getBuffer()))
-    return Err;
-
   // Create a work list that consist of the map triple/output file.
   StringMap<StringRef> Worklist;
   auto Output = BundlerConfig.OutputFileNames.begin();
@@ -1626,51 +1602,111 @@ Error OffloadBundler::UnbundleFiles() {
     ++Output;
   }
 
-  // Read all the bundles that are in the work list. If we find no bundles we
-  // assume the file is meant for the host target.
+  // The input may contain multiple concatenated fat binary blobs (e.g. when
+  // the linker merges .hip_fatbin sections from multiple TUs into one). Walk
+  // through each blob exactly as ListBundleIDsInFile does, draining worklist
+  // entries as matching targets are found.
   bool FoundHostBundle = false;
-  while (!Worklist.empty()) {
-    Expected<std::optional<StringRef>> CurTripleOrErr =
-        FH->ReadBundleStart(Input.getBuffer());
-    if (!CurTripleOrErr)
-      return CurTripleOrErr.takeError();
+  size_t Offset = 0;
+  size_t NextBundleStart = 0;
+  std::unique_ptr<MemoryBuffer> Buffer;
 
-    // We don't have more bundles.
-    if (!*CurTripleOrErr)
-      break;
+  while ((NextBundleStart != StringRef::npos) &&
+         (Offset < (**CodeOrErr).getBufferSize())) {
 
-    StringRef CurTriple = **CurTripleOrErr;
-    assert(!CurTriple.empty());
-    if (!checkOffloadBundleID(CurTriple))
-      return createStringError(errc::invalid_argument,
-                               "invalid bundle id read from the bundle");
+    Buffer = MemoryBuffer::getMemBuffer(
+        (**CodeOrErr).getBuffer().drop_front(Offset), "",
+        /*RequiresNullTerminator=*/false);
 
-    auto Output = Worklist.begin();
-    for (auto E = Worklist.end(); Output != E; Output++) {
-      if (isCodeObjectCompatible(
-              OffloadTargetInfo(CurTriple, BundlerConfig),
-              OffloadTargetInfo((*Output).first(), BundlerConfig))) {
+    if (identify_magic((*Buffer).getBuffer()) ==
+        file_magic::offload_bundle_compressed) {
+      NextBundleStart = (*Buffer).getBuffer().find("CCOB", 4);
+    } else if (identify_magic((*Buffer).getBuffer()) ==
+               file_magic::offload_bundle) {
+      NextBundleStart = (*Buffer).getBuffer().find(
+          OFFLOAD_BUNDLER_MAGIC_STR, sizeof(OFFLOAD_BUNDLER_MAGIC_STR));
+    } else
+      NextBundleStart = StringRef::npos;
+
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BlobOrErr =
+        MemoryBuffer::getMemBuffer(
+            (*Buffer).getBuffer().take_front(NextBundleStart),
+            BundlerConfig.InputFileNames.front(),
+            /*RequiresNullTerminator=*/false);
+    if (std::error_code EC = BlobOrErr.getError())
+      return createFileError(BundlerConfig.InputFileNames.front(), EC);
+
+    // Decompress the blob if necessary.
+    Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
+        CompressedOffloadBundle::decompress(**BlobOrErr, BundlerConfig.Verbose);
+    if (!DecompressedBufferOrErr)
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Failed to decompress input: " +
+              llvm::toString(DecompressedBufferOrErr.takeError()));
+
+    MemoryBuffer &Input = **DecompressedBufferOrErr;
+
+    // Select the right file handler for this blob.
+    Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+        CreateFileHandler(Input, BundlerConfig);
+    if (!FileHandlerOrErr)
+      return FileHandlerOrErr.takeError();
+
+    std::unique_ptr<FileHandler> &FH = *FileHandlerOrErr;
+    assert(FH);
+
+    // Read the header of this blob.
+    if (Error Err = FH->ReadHeader(Input.getBuffer()))
+      return Err;
+
+    // Drain worklist entries satisfied by this blob.
+    while (!Worklist.empty()) {
+      Expected<std::optional<StringRef>> CurTripleOrErr =
+          FH->ReadBundleStart(Input.getBuffer());
+      if (!CurTripleOrErr)
+        return CurTripleOrErr.takeError();
+
+      // No more bundles in this blob.
+      if (!*CurTripleOrErr)
         break;
+
+      StringRef CurTriple = **CurTripleOrErr;
+      assert(!CurTriple.empty());
+      if (!checkOffloadBundleID(CurTriple))
+        return createStringError(errc::invalid_argument,
+                                 "invalid bundle id read from the bundle");
+
+      auto Output = Worklist.begin();
+      for (auto E = Worklist.end(); Output != E; Output++) {
+        if (isCodeObjectCompatible(
+                OffloadTargetInfo(CurTriple, BundlerConfig),
+                OffloadTargetInfo((*Output).first(), BundlerConfig)))
+          break;
       }
+
+      if (Output == Worklist.end())
+        continue;
+
+      // Check if the output file can be opened and copy the bundle to it.
+      std::error_code EC;
+      raw_fd_ostream OutputFile((*Output).second, EC, sys::fs::OF_None);
+      if (EC)
+        return createFileError((*Output).second, EC);
+      if (Error Err = FH->ReadBundle(OutputFile, Input))
+        return Err;
+      if (Error Err = FH->ReadBundleEnd(Input))
+        return Err;
+      Worklist.erase(Output);
+
+      // Record if we found the host bundle.
+      auto OffloadInfo = OffloadTargetInfo(CurTriple, BundlerConfig);
+      if (OffloadInfo.hasHostKind())
+        FoundHostBundle = true;
     }
 
-    if (Output == Worklist.end())
-      continue;
-    // Check if the output file can be opened and copy the bundle to it.
-    std::error_code EC;
-    raw_fd_ostream OutputFile((*Output).second, EC, sys::fs::OF_None);
-    if (EC)
-      return createFileError((*Output).second, EC);
-    if (Error Err = FH->ReadBundle(OutputFile, Input))
-      return Err;
-    if (Error Err = FH->ReadBundleEnd(Input))
-      return Err;
-    Worklist.erase(Output);
-
-    // Record if we found the host bundle.
-    auto OffloadInfo = OffloadTargetInfo(CurTriple, BundlerConfig);
-    if (OffloadInfo.hasHostKind())
-      FoundHostBundle = true;
+    if (NextBundleStart != StringRef::npos)
+      Offset += NextBundleStart;
   }
 
   if (!BundlerConfig.AllowMissingBundles && !Worklist.empty()) {
@@ -1706,7 +1742,8 @@ Error OffloadBundler::UnbundleFiles() {
       // because the entire WorkList has been checked above.
       auto OffloadInfo = OffloadTargetInfo(E.getKey(), BundlerConfig);
       if (OffloadInfo.hasHostKind())
-        OutputFile.write(Input.getBufferStart(), Input.getBufferSize());
+        OutputFile.write((**CodeOrErr).getBufferStart(),
+                         (**CodeOrErr).getBufferSize());
     }
     return Error::success();
   }

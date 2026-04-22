@@ -71,6 +71,56 @@
 // MULTI-DAG: hip-amdgcn-amd-amdhsa--gfx1030
 // MULTI-DAG: hip-amdgcn-amd-amdhsa--gfx1100
 
+//
+// ===--- Uncompressed multi-bundle tests ---===
+//
+// Repeat the same --list and --unbundle tests using uncompressed fat binary
+// blobs (__CLANG_OFFLOAD_BUNDLE__ binary format without CCOB).
+//
+
+// Bundle 1 (uncompressed): gfx906 + gfx908
+// RUN: clang-offload-bundler -type=bc \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx908 \
+// RUN:   -input=%t.dev1 -input=%t.dev2 \
+// RUN:   -output=%t.unc.bundle1.bc
+
+// Bundle 2 (uncompressed): gfx1030 + gfx1100
+// RUN: clang-offload-bundler -type=bc \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx1030,hip-amdgcn-amd-amdhsa--gfx1100 \
+// RUN:   -input=%t.dev1 -input=%t.dev2 \
+// RUN:   -output=%t.unc.bundle2.bc
+
+// Concatenate the two uncompressed blobs.
+// RUN: cat %t.unc.bundle1.bc %t.unc.bundle2.bc > %t.unc.multi.fatbin
+
+// --list must enumerate all bundle IDs from both uncompressed blobs.
+// RUN: clang-offload-bundler -type=o -list -input=%t.unc.multi.fatbin \
+// RUN:   | FileCheck %s --check-prefix=UNC-MULTI
+// UNC-MULTI-DAG: hip-amdgcn-amd-amdhsa--gfx906
+// UNC-MULTI-DAG: hip-amdgcn-amd-amdhsa--gfx908
+// UNC-MULTI-DAG: hip-amdgcn-amd-amdhsa--gfx1030
+// UNC-MULTI-DAG: hip-amdgcn-amd-amdhsa--gfx1100
+
+// --unbundle must extract targets spanning both uncompressed blobs.
+// RUN: clang-offload-bundler -type=o -unbundle \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx1100 \
+// RUN:   -output=%t.unc.res.gfx906 -output=%t.unc.res.gfx1100 \
+// RUN:   -input=%t.unc.multi.fatbin
+// RUN: diff %t.dev1 %t.unc.res.gfx906
+// RUN: diff %t.dev2 %t.unc.res.gfx1100
+
+//
+// --unbundle on the same concatenated CCOB file must correctly extract targets
+// that span both blobs in a single call. gfx906 comes from bundle1 and gfx1100
+// comes from bundle2, so this exercises cross-blob extraction.
+//
+// RUN: clang-offload-bundler -type=o -unbundle \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx1100 \
+// RUN:   -output=%t.res.gfx906 -output=%t.res.gfx1100 \
+// RUN:   -input=%t.multi.fatbin
+// RUN: diff %t.dev1 %t.res.gfx906
+// RUN: diff %t.dev2 %t.res.gfx1100
+
 // Some code so that we can compile this file as a host object.
 int A = 0;
 void test_func(void) { ++A; }
