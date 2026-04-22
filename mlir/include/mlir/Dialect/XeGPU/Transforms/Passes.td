@@ -118,5 +118,20 @@ def XeGPUSgToWiDistributeExperimental : Pass<"xegpu-sg-to-wi-distribute-experime
                            "vector::VectorDialect", "index::IndexDialect"];
 }
 
+def XeGPUArrayLengthOptimization : Pass<"xegpu-array-length-optimization"> {
+  let summary = "Optimize XeGPU ops by introducing array_length attribute";
+  let description = [{
+    This pass optimizes xegpu.load_nd and xegpu.prefetch_nd operations by
+    introducing the array_length attribute when the FCD (fastest changing
+    dimension) is larger than the subgroup size (16). The transformation
+    updates:
+    1. The tensor_desc type to use array_length and a reduced FCD
+    2. The load_nd/prefetch_nd result vector shape to match register layout
+    3. The vector.extract_strided_slice operations to account for the
+       memory vs register layout difference
+  }];
+  let dependentDialects = ["xegpu::XeGPUDialect", "vector::VectorDialect"];
+}
+
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
