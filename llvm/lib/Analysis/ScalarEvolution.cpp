@@ -3749,13 +3749,32 @@ const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
   if (!Mul || !Mul->hasNoUnsignedWrap())
     return getUDivExpr(LHS, RHS);
 
+  const SCEVMulExpr *RHSMul = dyn_cast<SCEVMulExpr>(RHS);
+  if (RHSMul && RHSMul->hasNoUnsignedWrap()) {
+    const SCEV *CurrSCEV = Mul;
+    SmallVector<SCEVUse, 2> Operands;
+    for (SCEVUse Op : RHSMul->operands()) {
+      const SCEV *NewSCEV = getUDivExactExpr(CurrSCEV, Op);
+      if (isa<SCEVUDivExpr>(NewSCEV)) {
+        Operands.push_back(Op);
+        continue;
+      }
+      CurrSCEV = NewSCEV;
+    }
+    if (Operands.size())
+      return getUDivExpr(CurrSCEV,
+                         getMulExpr(Operands, RHSMul->getNoWrapFlags()));
+    else
+      return CurrSCEV;
+  }
+
   if (const SCEVConstant *RHSCst = dyn_cast<SCEVConstant>(RHS)) {
     // If the mulexpr multiplies by a constant, then that constant must be the
     // first element of the mulexpr.
     if (const auto *LHSCst = dyn_cast<SCEVConstant>(Mul->getOperand(0))) {
       if (LHSCst == RHSCst) {
         SmallVector<SCEVUse, 2> Operands(drop_begin(Mul->operands()));
-        return getMulExpr(Operands);
+        return getMulExpr(Operands, Mul->getNoWrapFlags());
       }
 
       // We can't just assume that LHSCst divides RHSCst cleanly, it could be
@@ -3770,7 +3789,7 @@ const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
         SmallVector<SCEVUse, 2> Operands;
         Operands.push_back(LHSCst);
         append_range(Operands, Mul->operands().drop_front());
-        LHS = getMulExpr(Operands);
+        LHS = getMulExpr(Operands, Mul->getNoWrapFlags());
         RHS = RHSCst;
         Mul = dyn_cast<SCEVMulExpr>(LHS);
         if (!Mul)
