@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <ranges>
+#include <type_traits>
 #include <vector>
 
 #include "../types.h"

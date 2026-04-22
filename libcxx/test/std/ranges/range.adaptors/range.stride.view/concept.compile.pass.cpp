@@ -11,6 +11,7 @@
 // template <input_range V> requires view<V>
 
 #include <ranges>
+#include <type_traits>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"

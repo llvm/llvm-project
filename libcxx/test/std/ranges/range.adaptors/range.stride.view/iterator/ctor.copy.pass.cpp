@@ -13,6 +13,7 @@
 //                 convertible_to<sentinel_t<V>, sentinel_t<Base>>
 
 #include <cassert>
+#include <concepts>
 #include <ranges>
 #include <utility>
 

@@ -11,6 +11,7 @@
 // Test that stride_view's member functions are properly marked nodiscard.
 
 #include <ranges>
+#include <utility>
 
 void test() {
   int range[] = {1, 2, 3};

@@ -11,6 +11,7 @@
 // iterator() requires default_initializable<iterator_t<Base>> = default;
 
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 

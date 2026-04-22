@@ -15,8 +15,10 @@
 // friend constexpr auto operator<=>(const iterator& x, const iterator& y)
 
 #include <cassert>
+#include <compare>
 #include <functional>
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 #include "test_iterators.h"

@@ -12,7 +12,9 @@
 // constexpr V base() &&;
 
 #include <cassert>
+#include <concepts>
 #include <ranges>
+#include <utility>
 
 #include "test_iterators.h"
 #include "types.h"

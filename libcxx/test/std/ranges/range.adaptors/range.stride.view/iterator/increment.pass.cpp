@@ -15,6 +15,7 @@
 #include <cassert>
 #include <iterator>
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 

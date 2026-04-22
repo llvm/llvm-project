@@ -12,6 +12,7 @@
 
 #include <cassert>
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 #include "test_iterators.h"

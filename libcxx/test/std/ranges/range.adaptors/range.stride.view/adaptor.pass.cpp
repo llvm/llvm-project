@@ -11,7 +11,9 @@
 // std::views::stride
 
 #include <cassert>
+#include <concepts>
 #include <ranges>
+#include <type_traits>
 
 #include "test_iterators.h"
 #include "types.h"

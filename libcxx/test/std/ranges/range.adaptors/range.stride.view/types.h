@@ -9,10 +9,12 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 
+#include <concepts>
 #include <cstddef>
 #include <functional>
 #include <iterator>
 #include <ranges>
+#include <utility>
 
 #include "test_iterators.h"
 #include "test_range.h"
