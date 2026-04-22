@@ -79,7 +79,7 @@ define float @fneg_f32(float %a) {
 
 define float @fptrunc(double %a) {
 ; CHECK-LABEL: fptrunc:
-; CHECK: xscvdpsp
+; CHECK: xsrsp
   %r = call float @llvm.fptrunc.f32.f64(double %a)
   ret float %r
 }
