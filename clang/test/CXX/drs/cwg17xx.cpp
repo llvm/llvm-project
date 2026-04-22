@@ -236,7 +236,7 @@ auto l = []() -> int { return 5; };
 using L = decltype(l);
 class A {
     friend CONSTEXPR auto L::operator()() const -> int;
-    // since-cxx11-error@-1{{a member of a lambda should not be the target of a friend declaration}}
+    // since-cxx11-error@-1 {{a member of a lambda should not be the target of a friend declaration}}
 };
 
 #undef CONSTEXPR
@@ -247,7 +247,7 @@ using GL = decltype(gl);
 
 template <>
 auto GL::operator()(int a) const {
-// since-cxx11-error@-1{{a member of a lambda should not be explicitly specialized}}
+// since-cxx11-error@-1 {{a member of a lambda should not be explicitly specialized}}
 //   since-cxx11-note-re@#cwg1780-spec{{{{'\(lambda at .+\)'}} defined here}}
     return 6;
 }
@@ -256,8 +256,8 @@ auto gll = [](auto a) -> int { return 5; }; // #cwg1780-inst
 
 using GLL = decltype(gll);
 template auto GLL::operator()<int>(int a) const -> int;
-// since-cxx11-error@-1{{a member of a lambda should not be explicitly instantiated}}
-//   since-cxx11-note-re@#cwg1780-inst{{{{'\(lambda at .+\)'}} defined here}}
+// since-cxx11-error@-1 {{a member of a lambda should not be explicitly instantiated}}
+//   since-cxx11-note-re@#cwg1780-inst {{{{'\(lambda at .+\)'}} defined here}}
 #endif
 
 #endif
