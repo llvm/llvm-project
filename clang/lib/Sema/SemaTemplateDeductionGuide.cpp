@@ -991,39 +991,6 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
                                  QualType ReturnType,
                                  SmallVector<NamedDecl *> TemplateParams) {
   ASTContext &Context = SemaRef.Context;
-  // Constraint AST nodes must use uninstantiated depth.
-  if (auto *PrimaryTemplate =
-          AliasTemplate->getInstantiatedFromMemberTemplate();
-      PrimaryTemplate && TemplateParams.size() > 0) {
-    LocalInstantiationScope Scope(SemaRef);
-
-    // Adjust the depth for TemplateParams.
-    unsigned AdjustDepth = PrimaryTemplate->getTemplateDepth();
-    SmallVector<TemplateArgument> TransformedTemplateArgs;
-    for (auto *TP : TemplateParams) {
-      // Rebuild any internal references to earlier parameters and reindex
-      // as we go.
-      MultiLevelTemplateArgumentList Args;
-      Args.setKind(TemplateSubstitutionKind::Rewrite);
-      Args.addOuterTemplateArguments(TransformedTemplateArgs);
-      NamedDecl *NewParam = transformTemplateParameter(
-          SemaRef, AliasTemplate->getDeclContext(), TP, Args,
-          /*NewIndex=*/TransformedTemplateArgs.size(),
-          getDepthAndIndex(TP).first + AdjustDepth);
-
-      TemplateArgument NewTemplateArgument =
-          Context.getInjectedTemplateArg(NewParam);
-      TransformedTemplateArgs.push_back(NewTemplateArgument);
-    }
-    // Transformed the ReturnType to restore the uninstantiated depth.
-    MultiLevelTemplateArgumentList Args;
-    Args.setKind(TemplateSubstitutionKind::Rewrite);
-    Args.addOuterTemplateArguments(TransformedTemplateArgs);
-    ReturnType = SemaRef.SubstType(
-        ReturnType, Args, AliasTemplate->getLocation(),
-        Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate));
-  }
-
   SmallVector<TypeSourceInfo *> IsDeducibleTypeTraitArgs = {
       Context.getTrivialTypeSourceInfo(
           Context.getDeducedTemplateSpecializationType(
