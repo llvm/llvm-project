@@ -815,6 +815,15 @@ private:
       /// \returns true if the counter includes \p Score, i.e., it has
       /// contributed to its current value, or in other words it is pending.
       bool contains(unsigned Score) const { return LB < Score && Score <= UB; }
+      /// Increment the counter.
+      unsigned advance() {
+        // We are setting the value with setUB() to make sure it goes through
+        // the EXP_CNT limit enforcing code.
+        setUB(UB + 1);
+        if (UB == 0)
+          report_fatal_error("InsertWaitcnt score wraparound");
+        return UB;
+      }
     };
 
     std::array<Counter, AMDGPU::NUM_INST_CNTS> Counters;
@@ -1167,15 +1176,11 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   AMDGPU::InstCounterType T = Context->getCounterFromEvent(E);
   assert(T < Context->MaxCounter);
 
-  unsigned UB = getScoreUB(T);
-  unsigned CurrScore = UB + 1;
-  if (CurrScore == 0)
-    report_fatal_error("InsertWaitcnt score wraparound");
-  // PendingEvents and ScoreUB need to be update regardless if this event
+  unsigned CurrScore = Counters[T].advance();
+  // PendingEvents and ScoreUB need to be updated regardless if this event
   // changes the score of a register or not.
   // Examples including vm_cnt when buffer-store or lgkm_cnt when send-message.
   PendingEvents.insert(E);
-  setScoreUB(T, CurrScore);
 
   const SIRegisterInfo &TRI = Context->TRI;
   const MachineRegisterInfo &MRI = Context->MRI;
