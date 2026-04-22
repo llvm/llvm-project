@@ -8611,8 +8611,15 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     }
   } else {
     StringRef Arch = Args.getLastArgValue(options::OPT__SLASH_arch);
-    if (Arch == "AVX10.1" || Arch == "AVX10.2")
+    if (Arch == "AVX10.1" || Arch == "AVX10.2") {
       CmdArgs.push_back("-mprefer-vector-width=256");
+      CmdArgs.push_back("-target-feature");
+      CmdArgs.push_back("-amx-tile");
+    }
+    if (Arch == "AVX10.2") {
+      CmdArgs.push_back("-target-feature");
+      CmdArgs.push_back("+avx10.2");
+    }
   }
 
   Arg *MostGeneralArg = Args.getLastArg(options::OPT__SLASH_vmg);
@@ -9435,7 +9442,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fprofile_generate,
       OPT_fprofile_generate_EQ,
       OPT_fprofile_instr_generate,
-      OPT_fprofile_instr_generate_EQ};
+      OPT_fprofile_instr_generate_EQ,
+      OPT_fsanitize_EQ,
+      OPT_fno_sanitize_EQ,
+      OPT_fsanitize_minimal_runtime,
+      OPT_fno_sanitize_minimal_runtime,
+      OPT_fsanitize_trap_EQ,
+      OPT_fno_sanitize_trap_EQ};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
     auto HasProfileRT = TC.getVFS().exists(
@@ -9447,6 +9460,16 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
          A->getOption().matches(OPT_fprofile_generate_EQ) ||
          A->getOption().matches(OPT_fprofile_instr_generate) ||
          A->getOption().matches(OPT_fprofile_instr_generate_EQ)))
+      return false;
+    auto HasUBSanRT = TC.getVFS().exists(
+        TC.getCompilerRT(Args, "ubsan_minimal", ToolChain::FT_Static));
+    // Don't forward sanitizer arguments if the toolchain doesn't support it.
+    // Without this check using it on the host would result in linker errors.
+    if (!HasUBSanRT &&
+        (A->getOption().matches(OPT_fsanitize_EQ) ||
+         A->getOption().matches(OPT_fno_sanitize_EQ) ||
+         A->getOption().matches(OPT_fsanitize_minimal_runtime) ||
+         A->getOption().matches(OPT_fno_sanitize_minimal_runtime)))
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || A->getOption().getID() != OPT_mllvm;

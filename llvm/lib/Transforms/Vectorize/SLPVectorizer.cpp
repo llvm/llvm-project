@@ -2021,13 +2021,15 @@ static bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
 /// registers, returns 1.
 static unsigned
 getNumberOfParts(const TargetTransformInfo &TTI, VectorType *VecTy,
+                 Type *ScalarTy,
                  const unsigned Limit = std::numeric_limits<unsigned>::max()) {
   unsigned NumParts = TTI.getNumberOfParts(VecTy);
   if (NumParts == 0 || NumParts >= Limit)
     return 1;
   unsigned Sz = getNumElements(VecTy);
-  if (NumParts >= Sz || Sz % NumParts != 0 ||
-      !hasFullVectorsOrPowerOf2(TTI, VecTy->getElementType(), Sz / NumParts))
+  unsigned ScalarSz = getNumElements(ScalarTy);
+  if (NumParts >= Sz || Sz % NumParts != 0 || (Sz / NumParts) % ScalarSz != 0 ||
+      !hasFullVectorsOrPowerOf2(TTI, ScalarTy, Sz / NumParts))
     return 1;
   return NumParts;
 }
@@ -3902,8 +3904,10 @@ private:
                                SmallPtrSetImpl<Value *> &CheckedExtracts);
 
   /// Estimates spill/reload cost from vector register pressure for \p E at the
-  /// point of emitting its vector result type \p FinalVecTy.
-  InstructionCost getVectorSpillReloadCost(const TreeEntry *E,
+  /// point of emitting its vector result type \p FinalVecTy. \p ScalarTy is the
+  /// scalar/slot type used to widen into \p VecTy/\p FinalVecTy and may itself
+  /// be a FixedVectorType in ReVec mode or an adjusted type due to MinBWs.
+  InstructionCost getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
                                            VectorType *VecTy,
                                            VectorType *FinalVecTy,
                                            TTI::TargetCostKind CostKind) const;
@@ -6594,7 +6598,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
   if (!isValidElementType(ScalarTy))
     return std::nullopt;
   auto *VecTy = getWidenedType(ScalarTy, NumScalars);
-  unsigned NumParts = ::getNumberOfParts(*TTI, VecTy, NumScalars);
+  unsigned NumParts = ::getNumberOfParts(*TTI, VecTy, ScalarTy, NumScalars);
   SmallVector<int> ExtractMask;
   SmallVector<int> Mask;
   SmallVector<SmallVector<const TreeEntry *>> Entries;
@@ -8159,8 +8163,10 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
       }
     }
     if (Sz == 2 && TE.getVectorFactor() == 4 &&
-        ::getNumberOfParts(*TTI, getWidenedType(TE.Scalars.front()->getType(),
-                                                2 * TE.getVectorFactor())) == 1)
+        ::getNumberOfParts(*TTI,
+                           getWidenedType(getValueType(TE.Scalars.front()),
+                                          2 * TE.getVectorFactor()),
+                           getValueType(TE.Scalars.front())) == 1)
       return std::nullopt;
     if (TE.ReuseShuffleIndices.size() % Sz != 0)
       return std::nullopt;
@@ -12031,65 +12037,94 @@ public:
           isCommutative(MainOp) && MainOp->getNumOperands() == 2;
       Operands.assign(MainOp->getNumOperands(),
                       BoUpSLP::ValueList(VL.size(), nullptr));
-      // Build operands and simultaneously count (ID0, ID1) pair
-      // frequencies for commutative operand normalization. Pairs and
-      // their inverses are tracked under a canonical key so that
-      // (Load, Add) and (Add, Load) contribute to the same bucket.
-      struct PairInfo {
-        unsigned FwdCount = 0;
-        unsigned RevCount = 0;
-      };
-      SmallMapVector<std::pair<unsigned, unsigned>, PairInfo, 8> PairCounts;
-      unsigned MajID0 = 0, MajID1 = 0;
+      // Populate operands for every lane.
       for (auto [Idx, V] : enumerate(VL)) {
         SmallVector<Value *> OperandsForValue = getOperands(S, V);
         for (auto [OperandIdx, Operand] : enumerate(OperandsForValue))
           Operands[OperandIdx][Idx] = Operand;
-        if (!IsCommutative || S.isCopyableElement(V) || isa<PoisonValue>(V))
-          continue;
-        unsigned ID0 = OperandsForValue[0]->getValueID();
-        unsigned ID1 = OperandsForValue[1]->getValueID();
-        if (ID0 == ID1)
-          continue;
-        unsigned MinID = std::min(ID0, ID1);
-        unsigned MaxID = std::max(ID0, ID1);
-        auto [It, Inserted] =
-            PairCounts.try_emplace(std::make_pair(MinID, MaxID));
-        PairInfo &Info = It->second;
-        if (ID0 < ID1)
-          ++Info.FwdCount;
-        else
-          ++Info.RevCount;
       }
-      // Find the most frequent (ID0, ID1) pair across non-copyable
-      // lanes. Select the orientation (original or inverse) that has
-      // more votes as the majority pattern.
-      unsigned BestCount = 0;
-      for (const auto &P : PairCounts) {
-        const PairInfo &Info = P.second;
-        unsigned Total = Info.FwdCount + Info.RevCount;
-        if (Total > BestCount) {
-          BestCount = Total;
-          if (Info.FwdCount >= Info.RevCount) {
-            MajID0 = P.first.first;
-            MajID1 = P.first.second;
-          } else {
-            MajID0 = P.first.second;
-            MajID1 = P.first.first;
-          }
-        }
-      }
-      // For commutative ops, swap lanes whose operand types are the
-      // exact inverse of the majority pattern, making the non-copyable
-      // lanes consistent.
-      if (BestCount > 0) {
+      // Operand-order normalization below swaps OpIdx 0 and OpIdx 1
+      // of non-copyable lanes. That is only safe when the main op is
+      // commutative (e.g. 0 - X is not X - 0, so `sub` must be
+      // excluded).
+      if (IsCommutative) {
+        // Count (ID0, ID1) pair frequencies for operand normalization.
+        // Pairs and their inverses are tracked under a canonical key
+        // so that (Load, Add) and (Add, Load) contribute to the same
+        // bucket.
+        struct PairInfo {
+          unsigned FwdCount = 0;
+          unsigned RevCount = 0;
+        };
+        SmallMapVector<std::pair<unsigned, unsigned>, PairInfo, 8> PairCounts;
+        unsigned MajID0 = 0, MajID1 = 0;
         for (auto [Idx, V] : enumerate(VL)) {
           if (S.isCopyableElement(V) || isa<PoisonValue>(V))
             continue;
           unsigned ID0 = Operands[0][Idx]->getValueID();
           unsigned ID1 = Operands[1][Idx]->getValueID();
-          if (ID0 == MajID1 && ID1 == MajID0)
-            std::swap(Operands[0][Idx], Operands[1][Idx]);
+          if (ID0 == ID1)
+            continue;
+          unsigned MinID = std::min(ID0, ID1);
+          unsigned MaxID = std::max(ID0, ID1);
+          auto [It, Inserted] =
+              PairCounts.try_emplace(std::make_pair(MinID, MaxID));
+          PairInfo &Info = It->second;
+          if (ID0 < ID1)
+            ++Info.FwdCount;
+          else
+            ++Info.RevCount;
+        }
+        // Find the most frequent (ID0, ID1) pair across non-copyable
+        // lanes. Select the orientation (original or inverse) that
+        // has more votes as the majority pattern.
+        unsigned BestCount = 0;
+        for (const auto &P : PairCounts) {
+          const PairInfo &Info = P.second;
+          unsigned Total = Info.FwdCount + Info.RevCount;
+          if (Total > BestCount) {
+            BestCount = Total;
+            if (Info.FwdCount >= Info.RevCount) {
+              MajID0 = P.first.first;
+              MajID1 = P.first.second;
+            } else {
+              MajID0 = P.first.second;
+              MajID1 = P.first.first;
+            }
+          }
+        }
+        // Normalize non-copyable lanes in two steps:
+        // 1) Swap lanes whose operand types are the exact inverse of
+        //    the majority pattern, making the non-copyable lanes
+        //    consistent.
+        // 2) Independently, if a strict majority of non-copyable lanes
+        //    have loads at OpIdx 1, swap those lanes to put loads at
+        //    OpIdx 0 for better downstream vectorization.
+        unsigned LAt0 = 0, LAt1 = 0, TotalNC = 0;
+        for (auto [Idx, V] : enumerate(VL)) {
+          if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+            continue;
+          // Step 1: swap exact-inverse lanes.
+          if (BestCount > 0) {
+            unsigned ID0 = Operands[0][Idx]->getValueID();
+            unsigned ID1 = Operands[1][Idx]->getValueID();
+            if (ID0 == MajID1 && ID1 == MajID0)
+              std::swap(Operands[0][Idx], Operands[1][Idx]);
+          }
+          ++TotalNC;
+          LAt0 += isa<LoadInst>(Operands[0][Idx]);
+          LAt1 += isa<LoadInst>(Operands[1][Idx]);
+        }
+        // Step 2: if most non-copyable lanes have loads at OpIdx 1,
+        // swap those lanes to put loads at OpIdx 0.
+        if (TotalNC > 1 && LAt1 > LAt0 && LAt1 * 2 > TotalNC) {
+          for (auto [Idx, V] : enumerate(VL)) {
+            if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+              continue;
+            if (!isa<LoadInst>(Operands[0][Idx]) &&
+                isa<LoadInst>(Operands[1][Idx]))
+              std::swap(Operands[0][Idx], Operands[1][Idx]);
+          }
         }
       }
     } else {
@@ -14429,7 +14464,8 @@ void BoUpSLP::transformNodes() {
           bool IsTwoRegisterSplat = true;
           if (IsSplat && VF == 2) {
             unsigned NumRegs2VF = ::getNumberOfParts(
-                *TTI, getWidenedType(Slice.front()->getType(), 2 * VF));
+                *TTI, getWidenedType(getValueType(Slice.front()), 2 * VF),
+                getValueType(Slice.front()));
             IsTwoRegisterSplat = NumRegs2VF == 2;
           }
           if (Slices.empty() || !IsSplat || !IsTwoRegisterSplat ||
@@ -15563,7 +15599,8 @@ public:
     }
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
-    unsigned NumParts = ::getNumberOfParts(TTI, MaskVecTy, Mask.size());
+    unsigned NumParts =
+        ::getNumberOfParts(TTI, MaskVecTy, ScalarTy, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
@@ -15577,7 +15614,8 @@ public:
     }
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
-    unsigned NumParts = ::getNumberOfParts(TTI, MaskVecTy, Mask.size());
+    unsigned NumParts =
+        ::getNumberOfParts(TTI, MaskVecTy, ScalarTy, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
@@ -15892,8 +15930,8 @@ unsigned BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
 }
 
 InstructionCost
-BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
-                                  VectorType *FinalVecTy,
+BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
+                                  VectorType *VecTy, VectorType *FinalVecTy,
                                   TTI::TargetCostKind CostKind) const {
   InstructionCost SpillsReloads = 0;
 
@@ -15919,7 +15957,8 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
     PressureByClass[RegClass] += Parts;
   };
 
-  auto GetEntryVecTy = [&](const TreeEntry *TE) -> VectorType * {
+  auto GetEntryVecTy =
+      [&](const TreeEntry *TE) -> std::pair<Type *, VectorType *> {
     Type *ScalarTy = getValueType(TE->Scalars.front());
     auto BWIt = MinBWs.find(TE);
     if (BWIt != MinBWs.end()) {
@@ -15928,7 +15967,8 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
       if (VTy)
         ScalarTy = getWidenedType(ScalarTy, VTy->getNumElements());
     }
-    return getWidenedType(ScalarTy, TE->getVectorFactor());
+    return std::make_pair(ScalarTy,
+                          getWidenedType(ScalarTy, TE->getVectorFactor()));
   };
 
   if (E->State == TreeEntry::SplitVectorize) {
@@ -15937,8 +15977,8 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
 
       if (!CountedOpEntries.insert(OpTE).second)
         continue;
-      auto *OpVecTy = GetEntryVecTy(OpTE);
-      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy);
+      auto [ScalarTy, OpVecTy] = GetEntryVecTy(OpTE);
+      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy, ScalarTy);
       if (Parts == 0)
         continue;
       const unsigned RC =
@@ -15951,8 +15991,8 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
     SmallDenseMap<unsigned, unsigned> MaxOpPressureByClass;
     for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
       const TreeEntry *OpTE = getOperandEntry(E, Idx);
-      auto *OpVecTy = GetEntryVecTy(OpTE);
-      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy);
+      auto [ScalarTy, OpVecTy] = GetEntryVecTy(OpTE);
+      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy, ScalarTy);
       if (Parts == 0)
         continue;
       const unsigned RC =
@@ -15978,7 +16018,7 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
       if (!CountedOpEntries.insert(OpTE).second)
         continue;
       auto *OpVecTy = getWidenedType(Op->getType(), Ops.size());
-      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy);
+      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy, Op->getType());
       if (Parts == 0)
         continue;
       const unsigned RC =
@@ -15988,13 +16028,14 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
   }
 
   if (E->getOpcode() != Instruction::Load) {
-    const unsigned ResParts = ::getNumberOfParts(*TTI, VecTy);
+    const unsigned ResParts = ::getNumberOfParts(*TTI, VecTy, ScalarTy);
     if (ResParts != 0) {
       const unsigned RC = TTI->getRegisterClassForType(/*Vector=*/true, VecTy);
       AddPartsToClass(RC, ResParts);
     }
     if (VecTy != FinalVecTy) {
-      const unsigned FinalResParts = ::getNumberOfParts(*TTI, FinalVecTy);
+      const unsigned FinalResParts =
+          ::getNumberOfParts(*TTI, FinalVecTy, ScalarTy);
       if (FinalResParts != 0) {
         const unsigned RC =
             TTI->getRegisterClassForType(/*Vector=*/true, FinalVecTy);
@@ -16052,7 +16093,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
 
   const InstructionCost SpillsReloads =
-      getVectorSpillReloadCost(E, VecTy, FinalVecTy, CostKind);
+      getVectorSpillReloadCost(E, ScalarTy, VecTy, FinalVecTy, CostKind);
   if (E->isGather() || TransformedToGatherNodes.contains(E)) {
     if (allConstant(VL))
       return 0;
@@ -16342,7 +16383,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     unsigned const NumElts = SrcVecTy->getNumElements();
     unsigned const NumScalars = VL.size();
 
-    unsigned NumOfParts = ::getNumberOfParts(*TTI, SrcVecTy);
+    unsigned NumOfParts =
+        ::getNumberOfParts(*TTI, SrcVecTy, VL0->getOperand(1)->getType());
 
     SmallVector<int> InsertMask(NumElts, PoisonMaskElem);
     unsigned OffsetBeg = *getElementIndex(VL.front());
@@ -16549,27 +16591,51 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       CmpPredicate CurrentPred = ScalarTy->isFloatingPointTy()
                                      ? CmpInst::BAD_FCMP_PREDICATE
                                      : CmpInst::BAD_ICMP_PREDICATE;
+      Value *LHS = nullptr, *RHS = nullptr;
       auto MatchCmp = m_Cmp(CurrentPred, m_Value(), m_Value());
-      if ((!match(VI, m_Select(MatchCmp, m_Value(), m_Value())) &&
-           !match(VI, MatchCmp)) ||
+      bool IsSelect =
+          ShuffleOrOp == Instruction::Select &&
+          (match(VI, m_Select(MatchCmp, m_Value(LHS), m_Value(RHS))) ||
+           match(VI, m_Select(m_Value(), m_Value(LHS), m_Value(RHS))));
+      if ((!IsSelect && !match(VI, MatchCmp)) ||
           (CurrentPred != static_cast<CmpInst::Predicate>(VecPred) &&
            CurrentPred != static_cast<CmpInst::Predicate>(SwappedVecPred)))
         VecPred = SwappedVecPred = ScalarTy->isFloatingPointTy()
                                        ? CmpInst::BAD_FCMP_PREDICATE
                                        : CmpInst::BAD_ICMP_PREDICATE;
 
-      // For selects, the "condition type" arg is the condition operand's
-      // type; for standalone compares, it is the result type (i1).
-      InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
-          E->getOpcode(), OrigScalarTy,
-          ShuffleOrOp == Instruction::Select ? VL0->getOperand(0)->getType()
-                                             : VL0->getType(),
-          CurrentPred, CostKind,
-          getOperandInfo(
-              VI->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
-          getOperandInfo(
-              VI->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
-          VI);
+      // Check if operands are of i1 types, like a condition expression.
+      // TODO: consider implementing this in TTI.
+      InstructionCost ScalarCost = InstructionCost::getInvalid();
+      if (IsSelect && LHS->getType() == VI->getOperand(0)->getType()) {
+        assert(LHS->getType() == RHS->getType() &&
+               "Expected same type for LHS/RHS");
+        // select i1 v, i1 true, i1 b -> or i1 v, i1 b
+        if (match(LHS, m_AllOnes())) {
+          ScalarCost = TTI->getArithmeticInstrCost(
+              Instruction::Or, LHS->getType(), CostKind,
+              getOperandInfo(VI->getOperand(0)), getOperandInfo(RHS));
+        } else if (match(RHS, m_Zero())) {
+          // select i1 v, i1 b, i1 false -> and i1 v, i1 b
+          ScalarCost = TTI->getArithmeticInstrCost(
+              Instruction::And, LHS->getType(), CostKind,
+              getOperandInfo(VI->getOperand(0)), getOperandInfo(LHS));
+        }
+      }
+      if (!ScalarCost.isValid()) {
+        // For selects, the "condition type" arg is the condition operand's
+        // type; for standalone compares, it is the result type (i1).
+        ScalarCost = TTI->getCmpSelInstrCost(
+            E->getOpcode(), OrigScalarTy,
+            ShuffleOrOp == Instruction::Select ? VL0->getOperand(0)->getType()
+                                               : VL0->getType(),
+            CurrentPred, CostKind,
+            getOperandInfo(
+                VI->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
+            getOperandInfo(
+                VI->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
+            VI);
+      }
       InstructionCost IntrinsicCost = GetMinMaxCost(OrigScalarTy, VI);
       if (IntrinsicCost.isValid())
         ScalarCost = IntrinsicCost;
@@ -16586,26 +16652,52 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                         : VL0->getType(),
                                     VL.size());
 
-      InstructionCost VecCost = TTI->getCmpSelInstrCost(
-          E->getOpcode(), VecTy, MaskTy, VecPred, CostKind,
-          getOperandInfo(
-              E->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
-          getOperandInfo(
-              E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
-          VL0);
-      if (isa<SelectInst>(VL0)) {
-        unsigned CondNumElements = getNumElements(MaskTy);
-        unsigned VecTyNumElements = getNumElements(VecTy);
-        assert(VecTyNumElements >= CondNumElements &&
-               VecTyNumElements % CondNumElements == 0 &&
-               "Cannot vectorize Instruction::Select");
-        if (CondNumElements != VecTyNumElements) {
-          // When the return type is i1 but the source is fixed vector type, we
-          // need to duplicate the condition value.
-          VecCost += ::getShuffleCost(
-              *TTI, TTI::SK_PermuteSingleSrc, MaskTy,
-              createReplicatedMask(VecTyNumElements / CondNumElements,
-                                   CondNumElements));
+      InstructionCost VecCost = InstructionCost::getInvalid();
+      if (ShuffleOrOp == Instruction::Select) {
+        ArrayRef<Value *> Cond = E->getOperand(0);
+        ArrayRef<Value *> LHS = E->getOperand(1);
+        ArrayRef<Value *> RHS = E->getOperand(2);
+        // select <VF x i1>, <VF x i1>, <VF x i1>?
+        // TODO: consider implementing this in TTI.
+        if (Cond.front()->getType() == LHS.front()->getType()) {
+          // select <VF x i1> v, <VF x i1> true, <VF x i1> b -> or <VF x i1> v,
+          // <VF x i1> b
+          if (all_of(LHS, [&](Value *V) { return match(V, m_AllOnes()); })) {
+            VecCost = TTI->getArithmeticInstrCost(
+                Instruction::Or, VecTy, CostKind, getOperandInfo(Cond),
+                getOperandInfo(RHS));
+          } else if (all_of(RHS,
+                            [&](Value *V) { return match(V, m_Zero()); })) {
+            // select <VF x i1> v, <VF x i1> b, <VF x i1> false -> and <VF x i1>
+            // v, <VF x i1> b
+            VecCost = TTI->getArithmeticInstrCost(
+                Instruction::And, VecTy, CostKind, getOperandInfo(Cond),
+                getOperandInfo(LHS));
+          }
+        }
+      }
+      if (!VecCost.isValid()) {
+        VecCost = TTI->getCmpSelInstrCost(
+            E->getOpcode(), VecTy, MaskTy, VecPred, CostKind,
+            getOperandInfo(
+                E->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
+            getOperandInfo(
+                E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
+            VL0);
+        if (isa<SelectInst>(VL0)) {
+          unsigned CondNumElements = getNumElements(MaskTy);
+          unsigned VecTyNumElements = getNumElements(VecTy);
+          assert(VecTyNumElements >= CondNumElements &&
+                 VecTyNumElements % CondNumElements == 0 &&
+                 "Cannot vectorize Instruction::Select");
+          if (CondNumElements != VecTyNumElements) {
+            // When the return type is i1 but the source is fixed vector type,
+            // we need to duplicate the condition value.
+            VecCost += ::getShuffleCost(
+                *TTI, TTI::SK_PermuteSingleSrc, MaskTy,
+                createReplicatedMask(VecTyNumElements / CondNumElements,
+                                     CondNumElements));
+          }
         }
       }
       return VecCost + CommonCost;
@@ -21133,7 +21225,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   SmallVector<SmallVector<const TreeEntry *>> Entries;
   Type *OrigScalarTy = GatheredScalars.front()->getType();
   auto *VecTy = getWidenedType(ScalarTy, GatheredScalars.size());
-  unsigned NumParts = ::getNumberOfParts(*TTI, VecTy, GatheredScalars.size());
+  unsigned NumParts =
+      ::getNumberOfParts(*TTI, VecTy, ScalarTy, GatheredScalars.size());
   if (!all_of(GatheredScalars, IsaPred<UndefValue>)) {
     // Check for gathered extracts.
     bool Resized = false;
@@ -21166,8 +21259,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             Resized = true;
             GatheredScalars.append(VF - GatheredScalars.size(),
                                    PoisonValue::get(OrigScalarTy));
-            NumParts =
-                ::getNumberOfParts(*TTI, getWidenedType(OrigScalarTy, VF), VF);
+            NumParts = ::getNumberOfParts(
+                *TTI, getWidenedType(OrigScalarTy, VF), OrigScalarTy, VF);
           }
       }
     }
@@ -21395,9 +21488,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
     }
     if (!GatherShuffles.empty()) {
-      unsigned SliceSize =
-          getPartNumElems(E->Scalars.size(),
-                          ::getNumberOfParts(*TTI, VecTy, E->Scalars.size()));
+      unsigned SliceSize = getPartNumElems(
+          E->Scalars.size(),
+          ::getNumberOfParts(*TTI, VecTy, ScalarTy, E->Scalars.size()));
       SmallVector<int> VecMask(Mask.size(), PoisonMaskElem);
       for (const auto [I, TEs] : enumerate(Entries)) {
         if (TEs.empty()) {
@@ -23631,10 +23724,13 @@ void BoUpSLP::optimizeGatherSequence() {
     // Check if the last undefs actually change the final number of used vector
     // registers.
     return SM1.size() - LastUndefsCnt > 1 &&
-           ::getNumberOfParts(*TTI, SI1->getType()) ==
+           ::getNumberOfParts(*TTI, SI1->getType(),
+                              SI1->getType()->getElementType()) ==
                ::getNumberOfParts(
-                   *TTI, getWidenedType(SI1->getType()->getElementType(),
-                                        SM1.size() - LastUndefsCnt));
+                   *TTI,
+                   getWidenedType(SI1->getType()->getElementType(),
+                                  SM1.size() - LastUndefsCnt),
+                   SI1->getType()->getElementType());
   };
   // Perform O(N^2) search over the gather/shuffle sequences and merge identical
   // instructions. TODO: We can further optimize this scan if we split the
@@ -24660,6 +24756,17 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
     if (!Bundles.empty()) {
       for (ScheduleBundle *Bundle : Bundles) {
         Bundle->setSchedulingPriority(Idx++);
+        if (const TreeEntry *TE = Bundle->getTreeEntry();
+            TE && Bundle->hasValidDependencies() && TE->UserTreeIndex &&
+            TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+            TE->UserTreeIndex.UserTE->doesNotNeedToSchedule() &&
+            any_of(TE->UserTreeIndex.UserTE->Scalars, [&](Value *V) {
+              return TE->UserTreeIndex.UserTE->isExpandedBinOp(V);
+            })) {
+          for (ScheduleEntity *SE : Bundle->getBundle())
+            if (auto *SD = dyn_cast<ScheduleData>(SE))
+              SD->clearDirectDependencies();
+        }
         if (!Bundle->hasValidDependencies()) {
           SmallPtrSet<Value *, 4> ExpandedOps;
           BS->calculateDependencies(*Bundle, /*InsertInReadyList=*/false, this,
@@ -24948,12 +25055,14 @@ bool BoUpSLP::collectValuesToDemote(
       const unsigned VF = E.Scalars.size();
       Type *OrigScalarTy = E.Scalars.front()->getType();
       if (UniqueBases.size() <= 2 ||
-          ::getNumberOfParts(*TTI, getWidenedType(OrigScalarTy, VF)) >=
+          ::getNumberOfParts(*TTI, getWidenedType(OrigScalarTy, VF),
+                             OrigScalarTy) >=
               ::getNumberOfParts(
                   *TTI,
                   getWidenedType(
                       IntegerType::get(OrigScalarTy->getContext(), BitWidth),
-                      VF))) {
+                      VF),
+                  IntegerType::get(OrigScalarTy->getContext(), BitWidth))) {
         ToDemote.push_back(E.Idx);
         return true;
       }
@@ -25395,7 +25504,6 @@ void BoUpSLP::computeMinimumValueSizes() {
 
     unsigned VF = E.getVectorFactor();
     Type *ScalarTy = E.Scalars.front()->getType();
-    unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     auto *TreeRootIT = dyn_cast<IntegerType>(ScalarTy->getScalarType());
     if (!TreeRootIT)
       return 0u;
@@ -25404,8 +25512,8 @@ void BoUpSLP::computeMinimumValueSizes() {
                [&](Value *V) { return AnalyzedMinBWVals.contains(V); }))
       return 0u;
 
-    unsigned NumParts = ::getNumberOfParts(
-        *TTI, getWidenedType(TreeRootIT, VF * ScalarTyNumElements));
+    unsigned NumParts =
+        ::getNumberOfParts(*TTI, getWidenedType(ScalarTy, VF), ScalarTy);
 
     // The maximum bit width required to represent all the values that can be
     // demoted without loss of precision. It would be safe to truncate the roots
@@ -25479,9 +25587,11 @@ void BoUpSLP::computeMinimumValueSizes() {
     if (NumParts > 1 &&
         NumParts ==
             ::getNumberOfParts(
-                *TTI, getWidenedType(IntegerType::get(F->getContext(),
-                                                      bit_ceil(MaxBitWidth)),
-                                     VF)))
+                *TTI,
+                getWidenedType(
+                    IntegerType::get(F->getContext(), bit_ceil(MaxBitWidth)),
+                    VF),
+                IntegerType::get(F->getContext(), bit_ceil(MaxBitWidth))))
       return 0u;
 
     unsigned Opcode = E.getOpcode();
@@ -27818,14 +27928,14 @@ public:
         ReduxWidth =
             getFloorFullVectorNumberOfElements(TTI, ScalarTy, ReduxWidth);
         VectorType *Tp = getWidenedType(ScalarTy, ReduxWidth);
-        NumParts = ::getNumberOfParts(TTI, Tp);
+        NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
         NumRegs =
             TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
         while (NumParts > NumRegs) {
           assert(ReduxWidth > 0 && "ReduxWidth is unexpectedly 0.");
           ReduxWidth = bit_floor(ReduxWidth - 1);
           VectorType *Tp = getWidenedType(ScalarTy, ReduxWidth);
-          NumParts = ::getNumberOfParts(TTI, Tp);
+          NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
           NumRegs =
               TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
         }

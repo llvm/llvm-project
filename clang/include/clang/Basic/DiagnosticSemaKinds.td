@@ -6534,6 +6534,9 @@ def err_inline_declaration_block_scope : Error<
   "inline declaration of %0 not allowed in block scope">;
 def err_static_non_static : Error<
   "static declaration of %0 follows non-static declaration">;
+def err_internal_extern_mismatch : Error<
+  "variable %0 declared with both internal and external linkage "
+  "in the same translation unit%select{; behavior is undefined|}1">;
 def err_different_language_linkage : Error<
   "declaration of %0 has a different language linkage">;
 def ext_retained_language_linkage : Extension<
@@ -10962,6 +10965,10 @@ def warn_lifetime_safety_use_after_scope_moved : Warning<
    "This could be false positive as the storage may have been moved later">,
    InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
+def warn_lifetime_safety_use_after_free : Warning<
+    "%select{allocated object|parameter}0 does not live long enough">,
+    InGroup<LifetimeSafetyUseAfterFree>, DefaultIgnore;
+
 def warn_lifetime_safety_return_stack_addr
     : Warning<"address of stack memory is returned later">,
       InGroup<LifetimeSafetyReturnStackAddr>,
@@ -11002,6 +11009,7 @@ def warn_lifetime_safety_dangling_global_moved
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
+def note_lifetime_safety_freed_here : Note<"freed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
@@ -14198,6 +14206,10 @@ def warn_amdgpu_s_wait_event_mask_no_effect_target :
 
 def note_amdgpu_s_wait_event_suggested_value :
   Note<"value of 2 valid for export_ready for gfx11 and gfx12+">;
+
+def warn_amdgpu_num_reg_attr_deprecated : Warning<
+  "the %0 attribute is deprecated; use 'amdgpu_waves_per_eu' instead">,
+  InGroup<DeprecatedDeclarations>;
 
 def warn_comparison_in_enum_initializer : Warning<
   "comparison operator '%0' is potentially a typo for a shift operator '%1'">,
