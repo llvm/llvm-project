@@ -1203,6 +1203,10 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
     return SPIRV::LinkageType::LinkOnceODR;
 
+  if (GV.hasWeakLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_AMD_weak_linkage))
+    return SPIRV::LinkageType::Weak;
+
   return SPIRV::LinkageType::Export;
 }
 
