@@ -117,6 +117,20 @@ void setCurrentDebugTypes(const char **Types, unsigned Count) {
 
 } // namespace llvm
 
+namespace llvm {
+  struct CreateLogDebugToStdOut {
+    static void *call() {
+      return new cl::opt<bool>(
+        "debug-to-stdout",
+        cl::desc("Log debugging to stdout instead of stderr"),
+        cl::Hidden,
+        cl::init(false));
+    }
+  };
+
+  static ManagedStatic<cl::opt<bool>, CreateLogDebugToStdOut> LogDebugToStdOut;
+}
+
 // All Debug.h functionality is a no-op in NDEBUG mode.
 #ifndef NDEBUG
 
@@ -190,6 +204,7 @@ void llvm::initDebugOptions() {
   *Debug;
   *DebugBufferSize;
   *DebugOnly;
+  *LogDebugToStdOut;
 }
 
 // Signal handlers - dump debug output on termination.
@@ -205,13 +220,16 @@ static void debug_user_sig_handler(void *Cookie) {
 
 /// dbgs - Return a circular-buffered debug stream.
 raw_ostream &llvm::dbgs() {
+  if (*LogDebugToStdOut)
+    return outs();
+
   // Do one-time initialization in a thread-safe way.
   static struct dbgstream {
     circular_raw_ostream strm;
 
     dbgstream()
         : strm(errs(), "*** Debug Log Output ***\n",
-               (!EnableDebugBuffering || !DebugFlag) ? 0 : *DebugBufferSize) {
+                (!EnableDebugBuffering || !DebugFlag) ? 0 : *DebugBufferSize) {
       if (EnableDebugBuffering && DebugFlag && *DebugBufferSize != 0)
         // TODO: Add a handler for SIGUSER1-type signals so the user can
         // force a debug dump.
@@ -229,10 +247,12 @@ raw_ostream &llvm::dbgs() {
 namespace llvm {
   /// dbgs - Return errs().
   raw_ostream &dbgs() {
-    return errs();
+    return *LogDebugToStdOut ? outs() : errs();
   }
 }
-void llvm::initDebugOptions() {}
+void llvm::initDebugOptions() {
+  *LogDebugToStdOut;
+}
 #endif
 
 /// EnableDebugBuffering - Turn on signal handler installation.
