@@ -269,9 +269,9 @@ function (flang_module_target tgtname)
 
   if (ARG_FLANG_RT)
     # fortran-compile-options only applies compile options, not dependencies
-    target_link_libraries(${tgtname} INTERFACE fortran-compile-options)
+    target_link_libraries(${tgtname} PRIVATE fortran-compile-options)
   else ()
-    target_link_libraries(${tgtname} INTERFACE fortran-compile-depends)
+    target_link_libraries(${tgtname} PRIVATE fortran-compile-depends)
   endif ()
 
   if (ARG_PUBLIC)
