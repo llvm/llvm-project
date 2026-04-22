@@ -1256,7 +1256,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                 std::optional<bool> ProvidedAllowPeeling,
                 std::optional<bool> ProvidedAllowProfileBasedPeeling,
                 std::optional<unsigned> ProvidedFullUnrollMaxCount,
-                AAResults *AA = nullptr, UniformityInfo *UI = nullptr) {
+                UniformityInfo *UI = nullptr, AAResults *AA = nullptr) {
 
   LLVM_DEBUG(dbgs() << "Loop Unroll: F["
                     << L->getHeader()->getParent()->getName() << "] Loop %"
@@ -1627,8 +1627,7 @@ public:
         /*OnlyFullUnroll*/ false, OnlyWhenForced, ForgetAllSCEV, ProvidedCount,
         ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime,
         ProvidedUpperBound, ProvidedAllowPeeling,
-        ProvidedAllowProfileBasedPeeling, ProvidedFullUnrollMaxCount,
-        /*AA=*/ nullptr, UI);
+        ProvidedAllowProfileBasedPeeling, ProvidedFullUnrollMaxCount, UI);
 
     if (Result == LoopUnrollResult::FullyUnrolled)
       LPM.markLoopAsDeleted(*L);
@@ -1834,8 +1833,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
         /*Count*/ std::nullopt,
         /*Threshold*/ std::nullopt, UnrollOpts.AllowPartial,
         UnrollOpts.AllowRuntime, UnrollOpts.AllowUpperBound, LocalAllowPeeling,
-        UnrollOpts.AllowProfileBasedPeeling, UnrollOpts.FullUnrollMaxCount, &AA,
-        UI);
+        UnrollOpts.AllowProfileBasedPeeling, UnrollOpts.FullUnrollMaxCount, UI,
+        &AA);
     Changed |= Result != LoopUnrollResult::Unmodified;
 
     // The parent must not be damaged by unrolling!
