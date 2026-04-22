@@ -688,7 +688,8 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
 UnrollCostEstimator::UnrollCostEstimator(
     const Loop *L, const TargetTransformInfo &TTI,
-    const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns) {
+    const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns,
+    bool TripCountIsUniform) {
   CodeMetrics Metrics;
   for (BasicBlock *BB : L->blocks())
     Metrics.analyzeBasicBlock(BB, TTI, EphValues, /* PrepareForLTO= */ false,
@@ -698,8 +699,9 @@ UnrollCostEstimator::UnrollCostEstimator(
   Convergence = Metrics.Convergence;
   LoopSize = Metrics.NumInsts;
   ConvergenceAllowsRuntime =
-      Metrics.Convergence != ConvergenceKind::Uncontrolled &&
-      !getLoopConvergenceHeart(L);
+      (Metrics.Convergence != ConvergenceKind::Uncontrolled &&
+       !getLoopConvergenceHeart(L)) ||
+      TripCountIsUniform;
 
   // Don't allow an estimate of size zero.  This would allows unrolling of loops
   // with huge iteration counts, which is a compile time problem even if it's
@@ -768,14 +770,18 @@ static bool hasRuntimeUnrollDisablePragma(const Loop *L) {
 
 /// Returns true if the SCEV expression is uniform, i.e., all threads in a
 /// convergent execution agree on its value. Recursively checks operands.
+/// Returns false if the SCEV could not be computed.
 static bool isSCEVUniform(const SCEV *S, UniformityInfo &UI) {
+  if (isa<SCEVCouldNotCompute>(S))
+    return false;
   if (isa<SCEVConstant>(S))
     return true;
   if (auto *U = dyn_cast<SCEVUnknown>(S))
     return UI.isUniform(U->getValue());
-  for (const SCEV *Op : S->operands())
+  for (const SCEV *Op : S->operands()) {
     if (!isSCEVUniform(Op, UI))
       return false;
+  }
   return true;
 }
 
@@ -1335,7 +1341,13 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
 
-  UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
+  // Check if the backedge-taken count is uniform before constructing UCE.
+  // This is used to allow runtime unrolling with a remainder for convergent
+  // loops when all threads agree on the trip count.
+  const SCEV *BTC = SE.getBackedgeTakenCount(L);
+  bool TripCountIsUniform = UI && isSCEVUniform(BTC, *UI);
+
+  UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns, TripCountIsUniform);
   if (!UCE.canUnroll((TM & TM_ForcedByUser) ? &ORE : nullptr, L))
     return LoopUnrollResult::Unmodified;
 
@@ -1390,14 +1402,9 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // to do the first few instructions before we hit the unrolled loop
   // is unsafe -- it adds a control-flow dependency to the convergent
   // operation.  Therefore restrict remainder loop (try unrolling without).
-  //
-  // However, if the trip count is uniform across all threads, all threads
-  // will take the same path through the prelude, so the remainder is safe.
-  const SCEV *BTC = SE.getBackedgeTakenCount(L);
-  bool TripCountIsUniform = !UCE.ConvergenceAllowsRuntime && UI &&
-                            !isa<SCEVCouldNotCompute>(BTC) &&
-                            isSCEVUniform(BTC, *UI);
-  UP.AllowRemainder &= UCE.ConvergenceAllowsRuntime || TripCountIsUniform;
+  // This is already accounted for in UCE.ConvergenceAllowsRuntime, which
+  // also considers whether the trip count is uniform across all threads.
+  UP.AllowRemainder &= UCE.ConvergenceAllowsRuntime;
 
   // Try to find the trip count upper bound if we cannot find the exact trip
   // count.
@@ -1425,7 +1432,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     return LoopUnrollResult::Unmodified;
   }
 
-  UP.Runtime &= UCE.ConvergenceAllowsRuntime || TripCountIsUniform;
+  UP.Runtime &= UCE.ConvergenceAllowsRuntime;
 
   if (PP.PeelCount) {
     assert(UP.Count == 1 && "Cannot perform peel and unroll in the same step");
@@ -1621,7 +1628,7 @@ public:
         ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime,
         ProvidedUpperBound, ProvidedAllowPeeling,
         ProvidedAllowProfileBasedPeeling, ProvidedFullUnrollMaxCount,
-        /*AA*/ nullptr, UI);
+        /*AA=*/ nullptr, UI);
 
     if (Result == LoopUnrollResult::FullyUnrolled)
       LPM.markLoopAsDeleted(*L);
@@ -1769,9 +1776,9 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   AAResults &AA = AM.getResult<AAManager>(F);
 
-  UniformityInfo *UI = nullptr;
-  if (TTI.hasBranchDivergence(&F))
-    UI = &AM.getResult<UniformityInfoAnalysis>(F);
+  UniformityInfo *UI = TTI.hasBranchDivergence(&F)
+                           ? &AM.getResult<UniformityInfoAnalysis>(F)
+                           : nullptr;
 
   LoopAnalysisManager *LAM = nullptr;
   if (auto *LAMProxy = AM.getCachedResult<LoopAnalysisManagerFunctionProxy>(F))
