@@ -1380,3 +1380,14 @@ def skipUnlessArm64eSupported(func):
         return None
 
     return skipTestIfFn(can_build_and_run_arm64e)(func)
+
+
+def skipUnlessPackageAvailable(name):
+    """Skip the test case if the named package is not available on the system."""
+    available = True
+    try:
+        __import__(name)
+    except ImportError:
+        available = False
+
+    return unittest.skipUnless(available, f"requires the '{name}' package")
