@@ -1725,5 +1725,6 @@ hsa_status_t asan_hsa_init() {
   }
   return status;
 }
-#endif
 }  // namespace __asan
+
+#endif  // SANITIZER_AMDGPU
