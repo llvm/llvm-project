@@ -28,23 +28,23 @@ bar:
 # OBJ:      <foo>:
 # OBJ-EMPTY:
 # OBJ-NEXT: ; foo():
-# OBJ-NEXT: ; {{.*}}line-numbers.s:13
+# OBJ-NEXT: ; {{.*}}line-numbers.s:16
 # OBJ-NEXT:        3: 01            nop
-# OBJ-NEXT: ; {{.*}}line-numbers.s:14
+# OBJ-NEXT: ; {{.*}}line-numbers.s:17
 # OBJ-NEXT:        4: 0f            return
-# OBJ-NEXT: ; {{.*}}line-numbers.s:15
+# OBJ-NEXT: ; {{.*}}line-numbers.s:18
 # OBJ-NEXT:        5: 0b            end
 
 # OBJ:      <bar>:
 # OBJ-EMPTY:
 # OBJ-NEXT: ; bar():
-# OBJ-NEXT: ; {{.*}}line-numbers.s:20
-# OBJ-NEXT:        8: 20 00         local.get 0
-# OBJ-NEXT: ; {{.*}}line-numbers.s:21
-# OBJ-NEXT:        a: 01            nop
-# OBJ-NEXT: ; {{.*}}line-numbers.s:22
-# OBJ-NEXT:        b: 0f            return
 # OBJ-NEXT: ; {{.*}}line-numbers.s:23
+# OBJ-NEXT:        8: 20 00         local.get 0
+# OBJ-NEXT: ; {{.*}}line-numbers.s:24
+# OBJ-NEXT:        a: 01            nop
+# OBJ-NEXT: ; {{.*}}line-numbers.s:25
+# OBJ-NEXT:        b: 0f            return
+# OBJ-NEXT: ; {{.*}}line-numbers.s:26
 # OBJ-NEXT:        c: 0b            end
 
 
@@ -57,21 +57,21 @@ bar:
 # LINKED:      <foo>:
 # LINKED-EMPTY:
 # LINKED-NEXT: ; foo():
-# LINKED-NEXT: ; {{.*}}line-numbers.s:13
+# LINKED-NEXT: ; {{.*}}line-numbers.s:16
 # LINKED-NEXT:        44: 01            nop
-# LINKED-NEXT: ; {{.*}}line-numbers.s:14
+# LINKED-NEXT: ; {{.*}}line-numbers.s:17
 # LINKED-NEXT:        {{.*}}: 0f            return
-# LINKED-NEXT: ; {{.*}}line-numbers.s:15
+# LINKED-NEXT: ; {{.*}}line-numbers.s:18
 # LINKED-NEXT:        {{.*}}: 0b            end
 
 # LINKED:      <bar>:
 # LINKED-EMPTY:
 # LINKED-NEXT: ; bar():
-# LINKED-NEXT: ; {{.*}}line-numbers.s:20
-# LINKED-NEXT:        49: 20 00         local.get 0
-# LINKED-NEXT: ; {{.*}}line-numbers.s:21
-# LINKED-NEXT:        {{.*}}: 01            nop
-# LINKED-NEXT: ; {{.*}}line-numbers.s:22
-# LINKED-NEXT:        {{.*}}: 0f            return
 # LINKED-NEXT: ; {{.*}}line-numbers.s:23
+# LINKED-NEXT:        49: 20 00         local.get 0
+# LINKED-NEXT: ; {{.*}}line-numbers.s:24
+# LINKED-NEXT:        {{.*}}: 01            nop
+# LINKED-NEXT: ; {{.*}}line-numbers.s:25
+# LINKED-NEXT:        {{.*}}: 0f            return
+# LINKED-NEXT: ; {{.*}}line-numbers.s:26
 # LINKED-NEXT:        {{.*}}: 0b            end
