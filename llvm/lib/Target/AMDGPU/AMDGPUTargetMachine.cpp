@@ -705,6 +705,10 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteAGPRCopyMFMALegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
+  initializeAMDGPURegPressureEstimatorWrapperPassPass(*PR);
+  initializeRegPressureBaselineMeasurementPassPass(*PR);
+  initializeRegPressureVerificationPassPass(*PR);
+  initializeAMDGPURegPressureGuardLegacyPassPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeAMDGPULowerVGPREncodingLegacyPass(*PR);
@@ -1400,6 +1404,13 @@ AMDGPUPassConfig::AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM)
   disablePass(&ShadowStackGCLoweringID);
 }
 
+void AMDGPUPassConfig::addAMDGPURegPressureGuardedPass(
+    Pass *P, const AMDGPURegPressureGuardConfig &Config) {
+  addPass(createRegPressureBaselineMeasurementPass(Config));
+  addPass(P);
+  addPass(createRegPressureVerificationPass());
+}
+
 void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
     addPass(createGVNPass());
@@ -1508,7 +1519,7 @@ void AMDGPUPassConfig::addIRPasses() {
     // Try to hoist loop invariant parts of divisions AMDGPUCodeGenPrepare may
     // have expanded.
     if (TM.getOptLevel() > CodeGenOptLevel::Less)
-      addPass(createLICMPass());
+      addAMDGPURegPressureGuardedPass(createLICMPass());
   }
 
   TargetPassConfig::addIRPasses();
@@ -1585,7 +1596,7 @@ bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createSinkingPass());
+    addAMDGPURegPressureGuardedPass(createSinkingPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
     addPass(createAMDGPULateCodeGenPrepareLegacyPass());
