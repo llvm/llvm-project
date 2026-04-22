@@ -19,7 +19,7 @@ define i32 @f2(i32 %a, i32 %b) {
     ret i32 %ret
 }
 ; CHECK-LABEL: f2:
-; CHECK: 	cmn	{{.*}}, r1
+; CHECK: 	cmn	{{.*}}, r0
 
 define i32 @f3(i32 %a, i32 %b) {
     %nb = sub i32 0, %b
@@ -37,7 +37,7 @@ define i32 @f4(i32 %a, i32 %b) {
     ret i32 %ret
 }
 ; CHECK-LABEL: f4:
-; CHECK: 	cmn	{{.*}}, r1
+; CHECK: 	cmn	{{.*}}, r0
 
 define i32 @f5(i32 %a, i32 %b) {
     %tmp = shl i32 %b, 5

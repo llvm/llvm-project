@@ -5140,12 +5140,6 @@ def : ARMPat<(ARMcmp  GPR:$src, mod_imm_neg:$imm),
              (CMNri   GPR:$src, mod_imm_neg:$imm)>;
 def : ARMPat<(ARMcmpZ GPR:$src, mod_imm_neg:$imm),
              (CMNri   GPR:$src, mod_imm_neg:$imm)>;
-def : ARMPat<(ARMcmpZ GPR:$src, (ineg GPR:$rhs)),
-             (CMNrr GPR:$src, GPR:$rhs)>;
-def : ARMPat<(ARMcmpZ GPR:$src, (ineg so_reg_imm:$rhs)),
-             (CMNrsi GPR:$src, so_reg_imm:$rhs)>;
-def : ARMPat<(ARMcmpZ GPRnopc:$src, (ineg so_reg_reg:$rhs)),
-             (CMNrsr GPRnopc:$src, so_reg_reg:$rhs)>;
 
 // Note that TST/TEQ don't set all the same flags that CMP does!
 defm TST  : AI1_cmp_irs<0b1000, "tst",

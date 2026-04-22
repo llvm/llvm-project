@@ -1576,10 +1576,6 @@ def tInt_WIN_eh_sjlj_longjmp
 def : T1Pat<(ARMcmpZ tGPR:$Rn, imm0_255:$imm8),
             (tCMPi8  tGPR:$Rn, imm0_255:$imm8)>;
 
-// Fold compare-equal of a negated register into CMN register form.
-def : T1Pat<(ARMcmpZ tGPR:$Rn, (ineg tGPR:$Rm)),
-            (tCMN tGPR:$Rn, tGPR:$Rm)>;
-
 def : T1Pat<(ARMcmpZ tGPR:$Rn, tGPR:$Rm),
             (tCMPr   tGPR:$Rn, tGPR:$Rm)>;
 

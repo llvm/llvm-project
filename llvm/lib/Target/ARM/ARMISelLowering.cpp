@@ -4583,6 +4583,22 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     return Shift.getValue(1);
   }
 
+  unsigned CompareType = ARMISD::CMP;
+
+  if (isIntEqualitySetCC(CC))
+    CompareType = ARMISD::CMPZ;
+
+  if (isCMN(RHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    RHS = RHS.getOperand(1);
+  } else if (isCMN(LHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    LHS = LHS.getOperand(1);
+
+    // We have to swap the predicate!
+    CC = ISD::getSetCCSwappedOperands(CC);
+  }
+
   ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
 
   // If the RHS is a constant zero then the V (overflow) flag will never be
@@ -4598,32 +4614,6 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         CondCode = ARMCC::MI;
         break;
     }
-  }
-
-  unsigned CompareType;
-  switch (CondCode) {
-  default:
-    CompareType = ARMISD::CMP;
-    break;
-  case ARMCC::EQ:
-  case ARMCC::NE:
-    // Uses only Z Flag
-    CompareType = ARMISD::CMPZ;
-    break;
-  }
-
-  // TODO: Remove CMPZ check once we generalize and remove the CMPZ enum from
-  // the codebase.
-
-  // TODO: When we have a solution to the vselect predicate not allowing pl/mi
-  // all the time, allow those cases to be cmn too no matter what.
-  if (CompareType != ARMISD::CMPZ && isCMN(RHS, CC, DAG)) {
-    CompareType = ARMISD::CMN;
-    RHS = RHS.getOperand(1);
-  } else if (CompareType != ARMISD::CMPZ && isCMN(LHS, CC, DAG)) {
-    CompareType = ARMISD::CMN;
-    LHS = LHS.getOperand(1);
-    CondCode = IntCCToARMCC(ISD::getSetCCSwappedOperands(CC));
   }
 
   ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
