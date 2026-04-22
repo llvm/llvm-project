@@ -12289,6 +12289,7 @@ cc_library(
         ":ConvertToLLVMInterface",
         ":FunctionInterfaces",
         ":IR",
+        ":InliningUtils",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LoopLikeInterface",
