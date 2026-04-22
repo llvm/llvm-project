@@ -706,7 +706,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       Status error;
       return child_sp->GetData(data, error);
     }
-    return true;
+    return 0;
   } else /* (items > 1) */
   {
     Status error;
@@ -2522,7 +2522,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
             child_valobj_sp = root->GetSyntheticArrayMember(index, true);
           if (!child_valobj_sp)
             if (root->HasSyntheticValue() &&
-                llvm::expectedToStdOptional(
+                llvm::expectedToOptional(
                     root->GetSyntheticValue()->GetNumChildren())
                         .value_or(0) > index)
               child_valobj_sp =
