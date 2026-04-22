@@ -1393,14 +1393,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   if (!ConstCoeff)
     return false;
 
-  if (SE->isKnownNegative(ConstCoeff)) {
-    ConstCoeff = dyn_cast<SCEVConstant>(SE->getNegativeSCEV(ConstCoeff));
-    assert(ConstCoeff &&
-           "dynamic cast of negative of ConstCoeff should yield constant");
-    Delta = SE->getNegativeSCEV(Delta);
-  }
-  assert(SE->isKnownPositive(ConstCoeff) && "ConstCoeff should be positive");
-
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   if (!ConstDelta)
     return false;
