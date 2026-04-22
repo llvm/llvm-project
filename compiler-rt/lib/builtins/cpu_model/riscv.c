@@ -160,6 +160,8 @@ struct {
 #define ZIFENCEI_BITMASK (1ULL << 11)
 #define ZMMUL_GROUPID 1
 #define ZMMUL_BITMASK (1ULL << 12)
+#define ZIBI_GROUPID 1
+#define ZIBI_BITMASK (1ULL << 13)
 #define SUPM_GROUPID 1
 #define SUPM_BITMASK (1ULL << 14)
 #define ZICNTR_GROUPID 1

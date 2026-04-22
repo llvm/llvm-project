@@ -79,7 +79,8 @@ def FeatureStdExtE
       RISCVExtensionBitmask<0, 4>;
 
 def FeatureStdExtZibi
-    : RISCVExperimentalExtension<0, 1, "Branch with Immediate">;
+    : RISCVExperimentalExtension<0, 1, "Branch with Immediate">,
+      RISCVExtensionBitmask<1, 13>;
 def HasStdExtZibi : Predicate<"Subtarget->hasStdExtZibi()">,
                     AssemblerPredicate<(all_of FeatureStdExtZibi),
                                        "'Zibi' (Branch with Immediate)">;
