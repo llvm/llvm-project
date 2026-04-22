@@ -52,15 +52,13 @@ public:
 
 private:
   Kind K;
-  const llvm::PointerUnion<const clang::MaterializeTemporaryExpr *,
-                           const CXXNewExpr *, const clang::ValueDecl *,
-                           const ParmVarDecl *, const CXXMethodDecl *>
-      Root;
+  const uintptr_t Root;
 
 public:
-  AccessPath(const clang::ValueDecl *D) : K(Kind::ValueDecl), Root(D) {}
+  AccessPath(const clang::ValueDecl *D)
+      : K(Kind::ValueDecl), Root(reinterpret_cast<uintptr_t>(D)) {}
   AccessPath(const clang::MaterializeTemporaryExpr *MTE)
-      : K(Kind::MaterializeTemporary), Root(MTE) {}
+      : K(Kind::MaterializeTemporary), Root(reinterpret_cast<uintptr_t>(MTE)) {}
   static AccessPath Placeholder(const ParmVarDecl *PVD) {
     return AccessPath(Kind::PlaceholderParam, PVD);
   }
@@ -72,21 +70,24 @@ public:
   Kind getKind() const { return K; }
 
   const clang::ValueDecl *getAsValueDecl() const {
-    return K == Kind::ValueDecl ? Root.dyn_cast<const clang::ValueDecl *>()
-                                : nullptr;
+    return K == Kind::ValueDecl
+               ? reinterpret_cast<const clang::ValueDecl *>(Root)
+               : nullptr;
   }
   const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
     return K == Kind::MaterializeTemporary
-               ? Root.dyn_cast<const clang::MaterializeTemporaryExpr *>()
+               ? reinterpret_cast<const clang::MaterializeTemporaryExpr *>(Root)
                : nullptr;
   }
   const ParmVarDecl *getAsPlaceholderParam() const {
-    return K == Kind::PlaceholderParam ? Root.dyn_cast<const ParmVarDecl *>()
-                                       : nullptr;
+    return K == Kind::PlaceholderParam
+               ? reinterpret_cast<const ParmVarDecl *>(Root)
+               : nullptr;
   }
   const CXXMethodDecl *getAsPlaceholderThis() const {
-    return K == Kind::PlaceholderThis ? Root.dyn_cast<const CXXMethodDecl *>()
-                                      : nullptr;
+    return K == Kind::PlaceholderThis
+               ? reinterpret_cast<const CXXMethodDecl *>(Root)
+               : nullptr;
   }
 
   bool operator==(const AccessPath &RHS) const {
@@ -96,8 +97,10 @@ public:
   void dump(llvm::raw_ostream &OS) const;
 
 private:
-  AccessPath(Kind K, const ParmVarDecl *PVD) : K(K), Root(PVD) {}
-  AccessPath(Kind K, const CXXMethodDecl *MD) : K(K), Root(MD) {}
+  AccessPath(Kind K, const ParmVarDecl *PVD)
+      : K(K), Root(reinterpret_cast<uintptr_t>(PVD)) {}
+  AccessPath(Kind K, const CXXMethodDecl *MD)
+      : K(K), Root(reinterpret_cast<uintptr_t>(MD)) {}
 };
 
 /// Represents lending a storage location.
