@@ -215,6 +215,10 @@ def unsigned_matchinfo: GIDefMatchData<"unsigned">;
 def register_vector_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 def mi_vector_matchinfo : GIDefMatchData<"SmallVector<MachineInstr *>">;
 
+class BuildFnCombineRule<dag a0>
+  : GICombineRule<(defs root:$root, build_fn_matchinfo:$matchinfo), a0,
+     (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 def copy_prop : GICombineRule<
   (defs root:$d),
   (match (COPY $d, $s):$mi,
@@ -1409,19 +1413,19 @@ def constant_fold_cast_op : GICombineRule<
    [{ return Helper.matchConstantFoldCastOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
-def constant_fold_bitcast_of_const : GICombineRule<
-  (defs root:$d, build_fn_matchinfo:$matchinfo),
-  (match (G_CONSTANT $src, $imm),
-         (G_BITCAST $d, $src):$mi,
-   [{ return Helper.matchConstantFoldBitcast(*${mi}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
 
-def constant_fold_bitcast_of_fconst : GICombineRule<
-  (defs root:$d, build_fn_matchinfo:$matchinfo),
+def constant_fold_bitcast_of_const : BuildFnCombineRule<
+  (match (G_CONSTANT $src, $imm),
+         (G_BITCAST $d, $src):$root,
+   [{ return Helper.matchConstantFoldBitcast(
+        ${d}, ${imm}.getCImm()->getValue(), ${matchinfo}); }])>;
+
+def constant_fold_bitcast_of_fconst : BuildFnCombineRule<
   (match (G_FCONSTANT $src, $imm),
-         (G_BITCAST $d, $src):$mi,
-   [{ return Helper.matchConstantFoldBitcast(*${mi}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
+         (G_BITCAST $d, $src):$root,
+   [{ return Helper.matchConstantFoldBitcast(
+        ${d}, ${imm}.getFPImm()->getValueAPF().bitcastToAPInt(),
+        ${matchinfo}); }])>;
 
 def constant_fold_bitcast : GICombineGroup<[constant_fold_bitcast_of_const,
                                             constant_fold_bitcast_of_fconst]>;
