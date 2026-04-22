@@ -62149,13 +62149,17 @@ static SDValue combineAndOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
   // Removing the same bit within each matrix's row effectively treats the
   // corresponding source bit like it is set to zero
   // TODO: Add reverse fold when X is constant
-  if (sd_match(N, m_TernaryOp(X86ISD::GF2P8AFFINEQB,
-                              m_OneUse(m_And(m_Value(X), m_Value(SplatOp))),
-                              m_Value(Y), m_ConstInt(Imm))) &&
+  if (sd_match(N, m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(AndOp), m_Value(Y),
+                              m_ConstInt(Imm))) &&
+      sd_match(AndOp, m_And(m_Value(X), m_Value(SplatOp))) &&
       getTargetConstantBitsFromNode(Y, Y.getScalarValueSizeInBits(), ConstUndef,
                                     ConstEltBits, /*AllowWholeUndefs=*/false)) {
     bool splatIsConst =
         X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false);
+
+    // Can still shorten the chain when constant folded with the matrix
+    if (!AndOp->hasOneUse() && !splatIsConst)
+      return SDValue();
 
     if (!(splatIsConst || DAG.isSplatValue(SplatOp, /*AllowUndefs=*/false) ||
           SplatOp.getOpcode() == X86ISD::VBROADCAST ||
