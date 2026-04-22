@@ -137,6 +137,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case Instruction::Store:
+  case Instruction::Switch:
     return Type::getVoidTy(Ctx);
   case Instruction::Load:
     return cast<LoadInst>(R->getUnderlyingValue())->getType();
