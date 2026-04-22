@@ -5212,7 +5212,6 @@ void VPlanTransforms::materializeVectorTripCount(
   // iterations are not required for correctness, or N - Step, otherwise. Step
   // is equal to the vectorization factor (number of SIMD elements) times the
   // unroll factor (number of SIMD instructions).
-
   VPValue *R =
       Builder.createNaryOp(Instruction::URem, {TC, Step},
                            DebugLoc::getCompilerGenerated(), "n.mod.vf");
