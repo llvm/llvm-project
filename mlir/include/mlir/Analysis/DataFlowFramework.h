@@ -342,7 +342,7 @@ public:
   /// This preserves all previously computed analysis states and is intended for
   /// staged analysis pipelines where later analyses depend on the converged
   /// results of earlier ones.
-  LogicalResult initializeAndRunPendingAnalyses(Operation *top);
+  LogicalResult initializeAndRunPendingAnalyses();
 
   /// Lookup an analysis state for the given lattice anchor. Returns null if one
   /// does not exist.

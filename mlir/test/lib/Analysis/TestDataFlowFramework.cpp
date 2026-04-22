@@ -330,7 +330,7 @@ void TestStagedAnalysesPass::runOnOperation() {
   if (failed(solver.initializeAndRun(func)))
     return signalPassFailure();
   solver.load<BarAnalysis>();
-  if (failed(solver.initializeAndRunPendingAnalyses(func)))
+  if (failed(solver.initializeAndRunPendingAnalyses()))
     return signalPassFailure();
 
   func.walk([&](Operation *op) {

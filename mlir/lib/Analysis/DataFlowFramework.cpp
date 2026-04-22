@@ -111,21 +111,18 @@ Location LatticeAnchor::getLoc() const {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
-  eraseAllStates();
+  initializedAnalysisCount = 0;
+  analysisRoot = top;
   return initializeAndRunImpl(top, /*firstAnalysis=*/0);
 }
 
-LogicalResult DataFlowSolver::initializeAndRunPendingAnalyses(Operation *top) {
-  if (hasFailedRun) {
-    return top->emitError("dataflow solver is in a failed state after a "
+LogicalResult DataFlowSolver::initializeAndRunPendingAnalyses() {
+  assert(!hasFailedRun && "dataflow solver is in a failed state after a "
                           "previous run; call 'initializeAndRun()' to "
                           "restart or 'eraseAllStates()' before reusing it");
-  }
-  if (analysisRoot && analysisRoot != top) {
-    return top->emitError("dataflow solver can only be resumed with the same "
-                          "top-level operation used for the original run");
-  }
-  return initializeAndRunImpl(top, initializedAnalysisCount);
+  assert(analysisRoot && "dataflow solver has not been run yet; call "
+                         "'initializeAndRun()' first");
+  return initializeAndRunImpl(analysisRoot, initializedAnalysisCount);
 }
 
 LogicalResult DataFlowSolver::initializeAndRunImpl(Operation *top,
