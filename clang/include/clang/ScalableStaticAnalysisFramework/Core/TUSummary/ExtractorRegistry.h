@@ -9,15 +9,17 @@
 // Registry for TUSummaryExtractors, and some helper functions.
 // To register some custom extractor, insert this code:
 //
-//   namespace clang::ssaf {
 //   // NOLINTNEXTLINE(misc-use-internal-linkage)
-//   const volatile int MyExtractorAnchorSource = 0;
-//   } // namespace clang::ssaf
+//   volatile int SSAFMyExtractorAnchorSource = 0;
 //   static TUSummaryExtractorRegistry::Add<MyExtractor>
 //     X("MyExtractor", "My awesome extractor");
 //
-// Finally, extend the `AnchorSources` list in the force-linker header:
+// Finally, insert a use of the new anchor symbol into the force-linker header:
 // clang/include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h:
+//
+//   extern volatile int SSAFMyExtractorAnchorSource;
+//   [[maybe_unused]] static int SSAFMyExtractorAnchorDestination =
+//       SSAFMyExtractorAnchorSource;
 //
 //===----------------------------------------------------------------------===//
 

@@ -98,10 +98,9 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     assert(InsertionSucceeded && "duplicated contributor extraction");
   }
 }
-namespace clang::ssaf {
+
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-const volatile int UnsafeBufferUsageExtractorAnchorSource = 0;
-} // namespace clang::ssaf
+volatile int UnsafeBufferUsageTUSummaryExtractorAnchorSource = 0;
 
 static clang::ssaf::TUSummaryExtractorRegistry::Add<
     ssaf::UnsafeBufferUsageTUSummaryExtractor>
