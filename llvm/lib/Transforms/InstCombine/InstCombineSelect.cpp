@@ -3347,33 +3347,17 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
   return ChangedFMF ? &SI : nullptr;
 }
 
-static bool matchIsNotNaNTest(Value *Cond, Value *X, InstCombinerImpl &IC) {
-  Instruction *CmpI;
-  Value *Other;
-
-  // Match:
-  //   fcmp ord X, Other
-  //   fcmp ord Other, X
-  // where Other is known non-NaN.
-  if (!match(Cond,
-             m_OneUse(m_Instruction(
-                 CmpI,
-                 m_CombineOr(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Specific(X),
-                                            m_Value(Other)),
-                             m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(Other),
-                                            m_Specific(X)))))))
-    return false;
-
-  return isKnownNeverNaN(Other, IC.getSimplifyQuery().getWithInstruction(CmpI));
-}
-
 // Match a select that returns X when X is not NaN, and Y otherwise.
-static Value *matchNaNScrubbedValue(Value *V, Value *Y, InstCombinerImpl &IC) {
+static Value *matchNaNScrubbedValue(Value *V, Value *Y) {
   Value *Cond, *X;
   if (!match(V, m_Select(m_Value(Cond), m_Value(X), m_Specific(Y))))
     return nullptr;
 
-  return matchIsNotNaNTest(Cond, X, IC) ? X : nullptr;
+  if (!match(Cond, m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Specific(X),
+                                           m_AnyZeroFP()))))
+    return nullptr;
+
+  return X;
 }
 
 // Fold a select of an ordered fcmp using fabs of a NaN-scrubbed value:
@@ -3402,7 +3386,7 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
 
   Value *Y = SI.getFalseValue();
   Value *InnerSel = SI.getTrueValue();
-  Value *X = matchNaNScrubbedValue(InnerSel, Y, IC);
+  Value *X = matchNaNScrubbedValue(InnerSel, Y);
   if (!X)
     return nullptr;
 
