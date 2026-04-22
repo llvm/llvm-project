@@ -101,6 +101,8 @@ bool SIMergeVGPRCopies::run(MachineFunction &MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;) {
       MachineInstr &MI = *I;
 
+      // Move to next non-debug instruction. If the instructions are not merged,
+      // this becomes the origin of the next iteration.
       I = next_nodbg(I, E);
       if (I == E || I->getOpcode() != AMDGPU::COPY ||
           MI.getOpcode() != AMDGPU::COPY)
@@ -131,20 +133,8 @@ bool SIMergeVGPRCopies::run(MachineFunction &MF) {
       Register DstBase;
       if (!getBaseIfConsecutive(MIDstReg, NextMIDstReg, TRI, DstBase))
         continue;
-
-      // If the target requires aligned VGPRs, the destination base must be
-      // even-aligned.
-      if (ST.needsAlignedVGPRs() && TRI->getHWRegIndex(DstBase) % 2 != 0)
-        continue;
-
       Register SrcBase;
       if (!getBaseIfConsecutive(MISrcReg, NextMISrcReg, TRI, SrcBase))
-        continue;
-
-      // If the sources are SGPRs or the target requires aligned VGPRs, the
-      // source base must be even-aligned.
-      if ((UsesSGPRSources || ST.needsAlignedVGPRs()) &&
-          TRI->getHWRegIndex(SrcBase) % 2 != 0)
         continue;
 
       // The sources must also be consecutive and even-aligned, but they can be
@@ -184,7 +174,7 @@ bool SIMergeVGPRCopies::run(MachineFunction &MF) {
       }
 
       LLVM_DEBUG(dbgs() << "Merged VGPR32 copy pair into 64-bit copy from "
-                        << MI << " and " << NextMI << '\n');
+                        << MI << " and " << NextMI);
       I = next_nodbg(I, E); // Advance past NextMI before erasing it.
       MI.eraseFromParent();
       NextMI.eraseFromParent();
