@@ -476,14 +476,13 @@ Changes in existing checks
     ``empty`` function.
 
 - Improved :doc:`readability-convert-member-functions-to-static
-  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
-  avoiding false positive on ``const`` member functions to static when they are
-  a part of const/non-const overload pair.
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check:
 
-- Improved :doc:`readability-convert-member-functions-to-static
-  <clang-tidy/checks/readability/convert-member-functions-to-static>` check to
-  correctly detect ``this`` usage within a member function with a call to an
-  overloaded method inside a generic lambda.
+  - Fixing a false positive where ``const`` member functions were incorrectly
+    flagged when they are part of a const/non-const overload pair.
+
+  - Correctly detecting ``this`` usage when a generic lambda calls an overloaded
+    member function.
 
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
