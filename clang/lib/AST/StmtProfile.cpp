@@ -2362,14 +2362,14 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
 }
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
-  VisitStmtNoChildren(E);
-  Visit(E->getIndexExpr());
+  VisitExpr(E->getIndexExpr());
+
   if (E->expandsToEmptyPack() || E->getExpressions().size() != 0) {
     ID.AddInteger(E->getExpressions().size());
     for (const Expr *Sub : E->getExpressions())
       Visit(Sub);
   } else {
-    Visit(E->getPackIdExpression());
+    VisitExpr(E->getPackIdExpression());
   }
 }
 
