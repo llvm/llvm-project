@@ -2461,20 +2461,24 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     Symbol::Flags dsa;
 
     Scope &scope{context_.FindScope(dirContext.directiveSource)};
-    auto it{scope.find(symbol->name())};
-    if (it != scope.end()) {
-      // There is already a symbol in the current scope, use its DSA.
-      dsa = GetSymbolDSA(*it->second);
-    } else {
-      for (auto symMap : dirContext.objectWithDSA) {
-        if (symMap.first->name() == symbol->name()) {
-          // `symbol` already has a data-sharing attribute in the current
-          // context, use it.
-          dsa.set(symMap.second);
-          break;
+
+    auto initSymbolDSA = [&](const Symbol *sym, Symbol::Flags &dsa) {
+      auto it{scope.find(sym->name())};
+      if (it != scope.end()) {
+        // There is already a symbol in the current scope, use its DSA.
+        dsa = GetSymbolDSA(*it->second);
+      } else {
+        for (auto symMap : dirContext.objectWithDSA) {
+          if (symMap.first->name() == sym->name()) {
+            // `sym` already has a data-sharing attribute in the current
+            // context, use it.
+            dsa.set(symMap.second);
+            break;
+          }
         }
       }
-    }
+    };
+    initSymbolDSA(symbol, dsa);
 
     // When handling each implicit rule for a given symbol, one of the
     // following actions may be taken:
@@ -2542,27 +2546,35 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     LLVM_DEBUG(llvm::dbgs()
         << "HasStaticStorageDuration(" << symbol->name() << "):\n");
 
-    if ((checkDefaultNone = checkDefaultNone |
-                (dsa.none() &&
-                    dirContext.defaultDSA == Symbol::Flag::OmpNone))) {
+    const Symbol *crayPtr = nullptr;
+    Symbol::Flags crayPtrDSA;
+    if (symbol->GetUltimate().test(Symbol::Flag::CrayPointee)) {
+      crayPtr =
+          currScope().FindSymbol(semantics::GetCrayPointer(*symbol).name());
+      if (crayPtr) {
+        initSymbolDSA(crayPtr, crayPtrDSA);
+      }
+    }
+    if (dsa.none() && crayPtrDSA.none() &&
+        dirContext.defaultDSA == Symbol::Flag::OmpNone) {
+      checkDefaultNone = true;
+    }
+    if (checkDefaultNone) {
       auto defaultNoneError = [&](parser::CharBlock loc, const Symbol *sym) {
-        if (sym->GetUltimate().test(Symbol::Flag::CrayPointee)) {
-          std::string crayPtrName{
-              semantics::GetCrayPointer(*sym).name().ToString()};
-          if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName))) {
-            context_.Say(loc,
-                "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
-                crayPtrName);
-          }
+        if (crayPtr) {
+          context_.Say(loc,
+              "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+              crayPtr->name());
         } else {
           context_.Say(loc,
               "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
               sym->name());
         }
       };
-      if (dsa.test(Symbol::Flag::OmpPrivate)) {
+      if (dsa.test(Symbol::Flag::OmpPrivate) ||
+          crayPtrDSA.test(Symbol::Flag::OmpPrivate)) {
         checkDefaultNone = false;
-      } else if (dsa.any()) {
+      } else if (dsa.any() || crayPtrDSA.any()) {
         defaultNoneError(dirContext.directiveSource, symbol);
       } else if (dirDepth == (int)dirContext_.size() - 1) {
         defaultNoneError(name.source, symbol);
