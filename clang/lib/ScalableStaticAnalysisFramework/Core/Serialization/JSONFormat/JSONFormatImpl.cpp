@@ -11,16 +11,21 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "llvm/Support/Registry.h"
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFJSONFormatAnchorSource = 0;
-LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
-LLVM_INSTANTIATE_REGISTRY(
-    llvm::Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Codec>)
+using namespace clang;
+using namespace ssaf;
 
-static clang::ssaf::SerializationFormatRegistry::Add<clang::ssaf::JSONFormat>
+LLVM_INSTANTIATE_REGISTRY(
+    llvm::Registry<JSONFormat::AnalysisResultRegistry::Codec>)
+
+LLVM_INSTANTIATE_REGISTRY(llvm::Registry<JSONFormat::FormatInfo>)
+
+static SerializationFormatRegistry::Add<JSONFormat>
     RegisterJSONFormat("json", "JSON serialization format");
 
 namespace clang::ssaf {
+
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+const volatile int JSONFormatAnchorSource = 0;
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer
