@@ -470,18 +470,23 @@ static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
 
 // Retreive the set of DXIL Attributes given the version and map them to an
 // llvm function attribute that is set onto the instruction
-static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
-                              VersionTuple DXILVersion) {
+static AttributeList getDXILFnAttributeList(LLVMContext &Ctx,
+                                            dxil::OpCode OpCode,
+                                            VersionTuple DXILVersion) {
   dxil::Attributes Attributes = getDXILAttributes(OpCode, DXILVersion);
+  AttrBuilder FnAttrs(Ctx);
+
   if (Attributes.ReadNone)
-    CI->setDoesNotAccessMemory();
+    FnAttrs.addMemoryAttr(MemoryEffects::none());
   if (Attributes.ReadOnly)
-    CI->setOnlyReadsMemory();
+    FnAttrs.addMemoryAttr(MemoryEffects::readOnly());
   if (Attributes.NoReturn)
-    CI->setDoesNotReturn();
+    FnAttrs.addAttribute(Attribute::NoReturn);
   if (Attributes.NoDuplicate)
-    CI->setCannotDuplicate();
-  return;
+    FnAttrs.addAttribute(Attribute::NoDuplicate);
+  FnAttrs.addAttribute(Attribute::NoUnwind);
+
+  return AttributeList::get(Ctx, AttributeList::FunctionIndex, FnAttrs);
 }
 
 namespace llvm {
@@ -569,8 +574,11 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   if (!(ValidShaderKindMask & ModuleStagekind))
     return makeOpError(OpCode, "Invalid stage");
 
+  AttributeList DXILFnAttrs =
+      getDXILFnAttributeList(M.getContext(), OpCode, DXILVersion);
   std::string DXILFnName = constructOverloadName(Kind, OverloadTy, *Prop);
-  FunctionCallee DXILFn = M.getOrInsertFunction(DXILFnName, DXILOpFT);
+  FunctionCallee DXILFn =
+      M.getOrInsertFunction(DXILFnName, DXILOpFT, DXILFnAttrs);
 
   // We need to inject the opcode as the first argument.
   SmallVector<Value *> OpArgs;
@@ -579,9 +587,6 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
 
   // Create the function call instruction
   CallInst *CI = IRB.CreateCall(DXILFn, OpArgs, Name);
-
-  // We then need to attach available function attributes
-  setDXILAttributes(CI, OpCode, DXILVersion);
 
   return CI;
 }
