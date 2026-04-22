@@ -1,8 +1,11 @@
-# REQUIRES: webassembly-registered-target, lld
+# REQUIRES: webassembly-registered-target
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj %s -o %t.o -g
-# RUN: wasm-ld %t.o -o %t.wasm --no-entry --export=foo --export=bar
 # RUN: llvm-objdump -d --line-numbers %t.o | FileCheck --check-prefix=OBJ %s
-# RUN: llvm-objdump -d --line-numbers %t.wasm | FileCheck --check-prefix=LINKED %s
+
+# The pre-compiled line-numbers.wasm test was created by linking this object file:
+#  wasm-ld %t.o -o %t.wasm --no-entry --export=foo --export=bar
+# However the binary is checked in to avoid a dependence on wasm-ld.
+# RUN: llvm-objdump -d --line-numbers %S/Inputs/line-numbers.wasm | FileCheck --check-prefix=LINKED %s
 
 # This test mirrors test/tools/llvm-symbolizer/wasm-basic.s and tests that line
 # numbers are correctly printed from DWARF information.
