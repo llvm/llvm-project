@@ -1450,20 +1450,18 @@ Constant *llvm::ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
   return ConstantFoldBinaryInstruction(Opcode, LHS, RHS);
 }
 
-static ConstantFP *flushDenormalConstant(Type *Ty, const APFloat &APF,
-                                         DenormalMode::DenormalModeKind Mode) {
+static Constant *flushDenormalConstant(Type *Ty, const APFloat &APF,
+                                       DenormalMode::DenormalModeKind Mode) {
   switch (Mode) {
   case DenormalMode::Dynamic:
     return nullptr;
   case DenormalMode::IEEE:
-    return ConstantFP::get(Ty->getContext(), APF);
+    return ConstantFP::get(Ty, APF);
   case DenormalMode::PreserveSign:
     return ConstantFP::get(
-        Ty->getContext(),
-        APFloat::getZero(APF.getSemantics(), APF.isNegative()));
+        Ty, APFloat::getZero(APF.getSemantics(), APF.isNegative()));
   case DenormalMode::PositiveZero:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat::getZero(APF.getSemantics(), false));
+    return ConstantFP::get(Ty, APFloat::getZero(APF.getSemantics(), false));
   default:
     break;
   }
@@ -1480,9 +1478,9 @@ static DenormalMode getInstrDenormalMode(const Instruction *CtxI, Type *Ty) {
       Ty->getScalarType()->getFltSemantics());
 }
 
-static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
-                                           const Instruction *Inst,
-                                           bool IsOutput) {
+static Constant *flushDenormalConstantFP(ConstantFP *CFP,
+                                         const Instruction *Inst,
+                                         bool IsOutput) {
   const APFloat &APF = CFP->getValueAPF();
   if (!APF.isDenormal())
     return CFP;
@@ -1504,7 +1502,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   VectorType *VecTy = dyn_cast<VectorType>(Ty);
   if (VecTy) {
     if (auto *Splat = dyn_cast_or_null<ConstantFP>(Operand->getSplatValue())) {
-      ConstantFP *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
+      Constant *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
       if (!Folded)
         return nullptr;
       return ConstantVector::getSplat(VecTy->getElementCount(), Folded);
@@ -1529,7 +1527,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
       if (!CFP)
         return nullptr;
 
-      ConstantFP *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
+      Constant *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
       if (!Folded)
         return nullptr;
       NewElts.push_back(Folded);
@@ -1546,7 +1544,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
         NewElts.push_back(ConstantFP::get(Ty, Elt));
       } else {
         DenormalMode Mode = getInstrDenormalMode(Inst, Ty);
-        ConstantFP *Folded =
+        Constant *Folded =
             flushDenormalConstant(Ty, Elt, IsOutput ? Mode.Output : Mode.Input);
         if (!Folded)
           return nullptr;
