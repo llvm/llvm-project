@@ -20,24 +20,39 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_SSAFBUILTINFORCELINKER_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_SSAFBUILTINFORCELINKER_H
 
-namespace clang::ssaf {
+// TODO: Move these to the `clang::ssaf` namespace.
 
-#define ANCHOR(NAME) extern const volatile int NAME;
-#include "BuiltinAnchorSources.def"
+// This anchor is used to force the linker to link the JSONFormat registration.
+extern volatile int SSAFJSONFormatAnchorSource;
+[[maybe_unused]] static int SSAFJSONFormatAnchorDestination =
+    SSAFJSONFormatAnchorSource;
 
-// Force the linker to link in the built-in SSAF registrations.
-[[maybe_unused]] static const int BuiltinAnchorDestination = [] {
-  int AnchorSources[]{
-#define ANCHOR(NAME) NAME,
-#include "BuiltinAnchorSources.def"
-  };
+// This anchor is used to force the linker to link the AnalysisRegistry.
+extern volatile int SSAFAnalysisRegistryAnchorSource;
+[[maybe_unused]] static int SSAFAnalysisRegistryAnchorDestination =
+    SSAFAnalysisRegistryAnchorSource;
 
-  int SomeUse = 0;
-  for (int V : AnchorSources)
-    SomeUse |= V;
-  return SomeUse;
-}();
+// This anchor is used to force the linker to link the UnsafeBufferUsage
+// JSON format.
+extern volatile int UnsafeBufferUsageSSAFJSONFormatAnchorSource;
+[[maybe_unused]] static int UnsafeBufferUsageSSAFJSONFormatAnchorDestination =
+    UnsafeBufferUsageSSAFJSONFormatAnchorSource;
 
-} // namespace clang::ssaf
+// This anchor is used to force the linker to link the
+// UnsafeBufferUsageTUSummaryExtractor.
+extern volatile int UnsafeBufferUsageTUSummaryExtractorAnchorSource;
+[[maybe_unused]] static int
+    UnsafeBufferUsageTUSummaryExtractorAnchorDestination =
+        UnsafeBufferUsageTUSummaryExtractorAnchorSource;
+
+// This anchor is used to force the linker to link the CallGraphExtractor.
+extern volatile int CallGraphExtractorAnchorSource;
+[[maybe_unused]] static int CallGraphExtractorAnchorDestination =
+    CallGraphExtractorAnchorSource;
+
+// This anchor is used to force the linker to link the CallGraph JSON format.
+extern volatile int CallGraphJSONFormatAnchorSource;
+[[maybe_unused]] static int CallGraphJSONFormatAnchorDestination =
+    CallGraphJSONFormatAnchorSource;
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_SSAFBUILTINFORCELINKER_H

@@ -48,6 +48,8 @@ public:
 };
 } // namespace
 
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int SSAFNoOpExtractorAnchorSource = 0;
 static TUSummaryExtractorRegistry::Add<NoOpExtractor>
     RegisterNoOp("NoOpExtractor", "No-op extractor for frontend action tests");
 
@@ -112,6 +114,8 @@ public:
 };
 } // namespace
 
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int SSAFFailingSerializationFormatAnchorSource = 0;
 static SerializationFormatRegistry::Add<FailingSerializationFormat>
     RegisterFormat(
         "FailingSerializationFormat",
