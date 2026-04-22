@@ -25,9 +25,13 @@ TEST_F(LlvmLibcSockaddrStorageTest, SizeAndAlignment) {
                 alignof(struct sockaddr_storage));
 }
 
+// Test only makes sense in the full build, as otherwise we're testing the
+// system type definitions (and some of those don't handle aliasing properly).
+#if defined(LIBC_FULL_BUILD)
 TEST_F(LlvmLibcSockaddrStorageTest, MemberAccess) {
   struct sockaddr_storage ss = {};
   auto *sun = reinterpret_cast<struct sockaddr_un *>(&ss);
   ASSERT_EQ(static_cast<sa_family_t>(AF_UNIX),
             test_sockaddr_aliasing(&ss, sun));
 }
+#endif
