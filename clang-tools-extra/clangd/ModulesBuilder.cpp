@@ -92,8 +92,7 @@ public:
 
   // We shouldn't adjust the compilation commands based on
   // FailedPrerequisiteModules.
-  void adjustHeaderSearchOptions(HeaderSearchOptions &Options) const override {
-  }
+  void adjustHeaderSearchOptions(HeaderSearchOptions &Options) const override {}
 
   // FailedPrerequisiteModules can never be reused.
   bool
@@ -395,73 +394,158 @@ bool ReusablePrerequisiteModules::canReuse(
   return IsModuleFilesUpToDate(BMIPaths, *this, VFS);
 }
 
+/// A cache for built module files. Currently this can handle cases for
+/// - A module name to the corresponding built module file.
+/// - A module name and the module unit path to the corresponding built
+///   module file. This is needed as there might be cases where we have
+///   multiple module units declaring the same module name.
+///
+/// FIXME: A missing point is, technically, we need to handle the cases
+/// we have multiple built module file from the same module units with
+/// different compilation options.
 class ModuleFileCache {
 public:
   ModuleFileCache(const GlobalCompilationDatabase &CDB) : CDB(CDB) {}
   const GlobalCompilationDatabase &getCDB() const { return CDB; }
 
-  std::shared_ptr<const ModuleFile> getModule(StringRef ModuleName);
-
-  void add(StringRef ModuleName, std::shared_ptr<const ModuleFile> ModuleFile) {
+  std::shared_ptr<const ModuleFile>
+  getUniqueModuleForModuleName(StringRef ModuleName) {
     std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
 
-    ModuleFiles[ModuleName] = ModuleFile;
+    auto Iter = ModuleNameToUniqueModuleCache.find(ModuleName);
+    if (Iter == ModuleNameToUniqueModuleCache.end())
+      return nullptr;
+
+    if (auto Res = Iter->second.lock())
+      return Res;
+
+    ModuleNameToUniqueModuleCache.erase(Iter);
+    return nullptr;
   }
 
-  void remove(StringRef ModuleName);
+  void addUniqueEntry(StringRef ModuleName,
+                      std::shared_ptr<const ModuleFile> ModuleFile) {
+    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
+    ModuleNameToUniqueModuleCache[ModuleName] = ModuleFile;
+  }
+
+  void eraseUniqueEntry(StringRef ModuleName) {
+    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
+    ModuleNameToUniqueModuleCache.erase(ModuleName);
+  }
+
+  std::shared_ptr<const ModuleFile>
+  getMultipleModuleForModuleName(StringRef ModuleName,
+                                 PathRef ModuleUnitSource) {
+    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
+
+    auto Outer = ModuleNameToMultipleModuleCache.find(ModuleName);
+    if (Outer == ModuleNameToMultipleModuleCache.end())
+      return nullptr;
+
+    auto Inner = Outer->second.find(maybeCaseFoldPath(ModuleUnitSource));
+    if (Inner == Outer->second.end())
+      return nullptr;
+
+    if (auto Res = Inner->second.lock())
+      return Res;
+
+    Outer->second.erase(Inner);
+    if (Outer->second.empty())
+      ModuleNameToMultipleModuleCache.erase(Outer);
+    return nullptr;
+  }
+
+  void addMultipleEntry(StringRef ModuleName, PathRef ModuleUnitSource,
+                        std::shared_ptr<const ModuleFile> ModuleFile) {
+    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
+    ModuleNameToMultipleModuleCache[ModuleName]
+                                   [maybeCaseFoldPath(ModuleUnitSource)] =
+                                       ModuleFile;
+  }
+
+  void eraseMultipleEntry(StringRef ModuleName, PathRef ModuleUnitSource) {
+    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
+    auto Outer = ModuleNameToMultipleModuleCache.find(ModuleName);
+    if (Outer == ModuleNameToMultipleModuleCache.end())
+      return;
+    Outer->second.erase(maybeCaseFoldPath(ModuleUnitSource));
+    if (Outer->second.empty())
+      ModuleNameToMultipleModuleCache.erase(Outer);
+  }
 
 private:
   const GlobalCompilationDatabase &CDB;
 
-  llvm::StringMap<std::weak_ptr<const ModuleFile>> ModuleFiles;
-  // Mutex to guard accesses to ModuleFiles.
+  llvm::StringMap<std::weak_ptr<const ModuleFile>>
+      ModuleNameToUniqueModuleCache;
+  // Map from module name to a map from source to module unit to the built
+  // module files.
+  llvm::StringMap<llvm::StringMap<std::weak_ptr<const ModuleFile>>>
+      ModuleNameToMultipleModuleCache;
+  // Mutex to guard accesses to Caches.
   std::mutex ModuleFilesMutex;
 };
 
-std::shared_ptr<const ModuleFile>
-ModuleFileCache::getModule(StringRef ModuleName) {
-  std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
-
-  auto Iter = ModuleFiles.find(ModuleName);
-  if (Iter == ModuleFiles.end())
-    return nullptr;
-
-  if (auto Res = Iter->second.lock())
-    return Res;
-
-  ModuleFiles.erase(Iter);
-  return nullptr;
-}
-
-void ModuleFileCache::remove(StringRef ModuleName) {
-  std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
-
-  ModuleFiles.erase(ModuleName);
-}
-
 class ModuleNameToSourceCache {
 public:
-  std::string getSourceForModuleName(llvm::StringRef ModuleName) {
+  std::string getUniqueSourceForModuleName(llvm::StringRef ModuleName) {
     std::lock_guard<std::mutex> Lock(CacheMutex);
-    auto Iter = ModuleNameToSourceCache.find(ModuleName);
-    if (Iter != ModuleNameToSourceCache.end())
+    auto Iter = ModuleNameToUniqueSourceCache.find(ModuleName);
+    if (Iter != ModuleNameToUniqueSourceCache.end())
       return Iter->second;
     return "";
   }
 
-  void addEntry(llvm::StringRef ModuleName, PathRef Source) {
+  void addUniqueEntry(llvm::StringRef ModuleName, PathRef Source) {
     std::lock_guard<std::mutex> Lock(CacheMutex);
-    ModuleNameToSourceCache[ModuleName] = Source.str();
+    ModuleNameToUniqueSourceCache[ModuleName] = Source.str();
   }
 
-  void eraseEntry(llvm::StringRef ModuleName) {
+  void eraseUniqueEntry(llvm::StringRef ModuleName) {
     std::lock_guard<std::mutex> Lock(CacheMutex);
-    ModuleNameToSourceCache.erase(ModuleName);
+    ModuleNameToUniqueSourceCache.erase(ModuleName);
+  }
+
+  std::string getMultipleSourceForModuleName(llvm::StringRef ModuleName,
+                                             PathRef RequiredSrcFile) {
+    std::lock_guard<std::mutex> Lock(CacheMutex);
+    auto Outer = ModuleNameToMultipleSourceCache.find(ModuleName);
+    if (Outer == ModuleNameToMultipleSourceCache.end())
+      return "";
+    auto Inner = Outer->second.find(maybeCaseFoldPath(RequiredSrcFile));
+    if (Inner == Outer->second.end())
+      return "";
+    return Inner->second;
+  }
+
+  void addMultipleEntry(llvm::StringRef ModuleName, PathRef RequiredSrcFile,
+                        PathRef Source) {
+    std::lock_guard<std::mutex> Lock(CacheMutex);
+    ModuleNameToMultipleSourceCache[ModuleName]
+                                   [maybeCaseFoldPath(RequiredSrcFile)] =
+                                       Source.str();
+  }
+
+  void eraseMultipleEntry(llvm::StringRef ModuleName, PathRef RequiredSrcFile) {
+    std::lock_guard<std::mutex> Lock(CacheMutex);
+    auto Outer = ModuleNameToMultipleSourceCache.find(ModuleName);
+    if (Outer == ModuleNameToMultipleSourceCache.end())
+      return;
+    Outer->second.erase(maybeCaseFoldPath(RequiredSrcFile));
+    if (Outer->second.empty())
+      ModuleNameToMultipleSourceCache.erase(Outer);
   }
 
 private:
   std::mutex CacheMutex;
-  llvm::StringMap<std::string> ModuleNameToSourceCache;
+  llvm::StringMap<std::string> ModuleNameToUniqueSourceCache;
+
+  // Map from module name to a map from required source to module unit source
+  // which declares the corresponding module name.
+  // This looks inefficiency. We can only assume there won't too many duplicated
+  // module names with different module units in a project.
+  llvm::StringMap<llvm::StringMap<std::string>> ModuleNameToMultipleSourceCache;
 };
 
 class CachingProjectModules : public ProjectModules {
@@ -481,9 +565,41 @@ public:
     return MDB->getModuleNameForSource(File);
   }
 
+  ModuleNameState getModuleNameState(llvm::StringRef ModuleName) override {
+    return MDB->getModuleNameState(ModuleName);
+  }
+
   std::string getSourceForModuleName(llvm::StringRef ModuleName,
                                      PathRef RequiredSrcFile) override {
-    std::string CachedResult = Cache.getSourceForModuleName(ModuleName);
+    auto ModuleState = MDB->getModuleNameState(ModuleName);
+
+    if (ModuleState == ModuleNameState::Multiple) {
+      std::string CachedResult =
+          Cache.getMultipleSourceForModuleName(ModuleName, RequiredSrcFile);
+
+      // Verify Cached Result by seeing if the source declaring the same module
+      // as we query.
+      if (!CachedResult.empty()) {
+        std::string ModuleNameOfCachedSource =
+            MDB->getModuleNameForSource(CachedResult);
+        if (ModuleNameOfCachedSource == ModuleName)
+          return CachedResult;
+
+        // Cached Result is invalid. Clear it.
+        Cache.eraseMultipleEntry(ModuleName, RequiredSrcFile);
+      }
+
+      auto Result = MDB->getSourceForModuleName(ModuleName, RequiredSrcFile);
+      if (!Result.empty())
+        Cache.addMultipleEntry(ModuleName, RequiredSrcFile, Result);
+      return Result;
+    }
+
+    // For unknown module name state, assume it is unique. This may give user
+    // higher usability.
+    assert(ModuleState == ModuleNameState::Unique ||
+           ModuleState == ModuleNameState::Unknown);
+    std::string CachedResult = Cache.getUniqueSourceForModuleName(ModuleName);
 
     // Verify Cached Result by seeing if the source declaring the same module
     // as we query.
@@ -494,11 +610,12 @@ public:
         return CachedResult;
 
       // Cached Result is invalid. Clear it.
-      Cache.eraseEntry(ModuleName);
+      Cache.eraseUniqueEntry(ModuleName);
     }
 
     auto Result = MDB->getSourceForModuleName(ModuleName, RequiredSrcFile);
-    Cache.addEntry(ModuleName, Result);
+    if (!Result.empty())
+      Cache.addUniqueEntry(ModuleName, Result);
 
     return Result;
   }
@@ -632,7 +749,18 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
     if (BuiltModuleFiles.isModuleUnitBuilt(ReqModuleName))
       continue;
 
-    if (auto Cached = Cache.getModule(ReqModuleName)) {
+    auto ModuleState = MDB.getModuleNameState(ReqModuleName);
+    std::string ReqFileName =
+        MDB.getSourceForModuleName(ReqModuleName, RequiredSource);
+
+    std::shared_ptr<const ModuleFile> Cached;
+    if (ModuleState == ProjectModules::ModuleNameState::Multiple) {
+      Cached = Cache.getMultipleModuleForModuleName(ReqModuleName, ReqFileName);
+    } else {
+      Cached = Cache.getUniqueModuleForModuleName(ReqModuleName);
+    }
+
+    if (Cached) {
       if (IsModuleFileUpToDate(Cached->getModuleFilePath(), BuiltModuleFiles,
                                TFS.view(std::nullopt))) {
         log("Reusing module {0} from {1}", ReqModuleName,
@@ -640,18 +768,22 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
         BuiltModuleFiles.addModuleFile(std::move(Cached));
         continue;
       }
-      Cache.remove(ReqModuleName);
+      if (ModuleState == ProjectModules::ModuleNameState::Multiple)
+        Cache.eraseMultipleEntry(ReqModuleName, ReqFileName);
+      else
+        Cache.eraseUniqueEntry(ReqModuleName);
     }
 
-    std::string ReqFileName =
-        MDB.getSourceForModuleName(ReqModuleName, RequiredSource);
     llvm::Expected<std::shared_ptr<BuiltModuleFile>> MF = buildModuleFile(
         ReqModuleName, ReqFileName, getCDB(), TFS, BuiltModuleFiles);
     if (llvm::Error Err = MF.takeError())
       return Err;
 
     log("Built module {0} to {1}", ReqModuleName, (*MF)->getModuleFilePath());
-    Cache.add(ReqModuleName, *MF);
+    if (ModuleState == ProjectModules::ModuleNameState::Multiple)
+      Cache.addMultipleEntry(ReqModuleName, ReqFileName, *MF);
+    else
+      Cache.addUniqueEntry(ReqModuleName, *MF);
     BuiltModuleFiles.addModuleFile(std::move(*MF));
   }
 
