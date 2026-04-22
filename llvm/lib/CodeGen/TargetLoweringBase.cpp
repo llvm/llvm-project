@@ -1252,6 +1252,11 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
 
     setOperationAction(ISD::MSTORE, VT, Expand);
+
+    setOperationAction(ISD::MASKED_UDIV, VT, Expand);
+    setOperationAction(ISD::MASKED_SDIV, VT, Expand);
+    setOperationAction(ISD::MASKED_UREM, VT, Expand);
+    setOperationAction(ISD::MASKED_SREM, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -1952,10 +1957,6 @@ EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,
                                            EVT VT) const {
   assert(!VT.isVector() && "No default SetCC type for vectors!");
   return getPointerTy(DL).SimpleTy;
-}
-
-MVT::SimpleValueType TargetLoweringBase::getCmpLibcallReturnType() const {
-  return MVT::i32; // return the default value
 }
 
 /// getVectorTypeBreakdown - Vector types are broken down into some number of

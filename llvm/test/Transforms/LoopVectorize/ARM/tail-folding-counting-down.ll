@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s --check-prefixes=COMMON,DEFAULT
-; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilogue=predicate-dont-vectorize -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
-; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
+; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -tail-folding-policy=must-fold-tail -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
+; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -tail-folding-policy=prefer-fold-tail -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
 ; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-ENABLE-TP
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -419,7 +419,7 @@ for.body:
   %add = add nuw nsw i32 %i.022, 1
   br label %for.body4
 
-for.body4:                                        ; preds = %for.body, %for.body4
+for.body4:
   %j.020 = phi i32 [ %add, %for.body ], [ %dec, %for.body4 ]
   %arrayidx = getelementptr inbounds i8, ptr %a, i32 %j.020
   %0 = load i8, ptr %arrayidx, align 1

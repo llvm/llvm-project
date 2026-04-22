@@ -656,7 +656,7 @@ void DYLDRendezvous::UpdateFileSpecIfNecessary(SOEntry &entry) {
     Status region_status =
         m_process->GetMemoryRegionInfo(entry.dyn_addr, region);
     if (!region.GetName().IsEmpty())
-      entry.file_spec.SetFile(region.GetName().AsCString(),
+      entry.file_spec.SetFile(region.GetName().GetStringRef(),
                               FileSpec::Style::native);
   }
 }

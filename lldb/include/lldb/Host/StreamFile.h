@@ -24,7 +24,7 @@ namespace lldb_private {
 
 class StreamFile : public Stream {
 public:
-  StreamFile(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
+  StreamFile(uint32_t flags, lldb::ByteOrder byte_order);
 
   StreamFile(int fd, bool transfer_ownership);
 

@@ -38,10 +38,13 @@ template <typename T> class ArrayRef;
 
 template <typename IteratorT> class iterator_range;
 
+template <class Iterator, class Tag>
+using HasIteratorTag = std::is_convertible<
+    typename std::iterator_traits<Iterator>::iterator_category, Tag>;
+
 template <class Iterator>
-using EnableIfConvertibleToInputIterator = std::enable_if_t<std::is_convertible<
-    typename std::iterator_traits<Iterator>::iterator_category,
-    std::input_iterator_tag>::value>;
+using EnableIfConvertibleToInputIterator =
+    std::enable_if_t<HasIteratorTag<Iterator, std::input_iterator_tag>::value>;
 
 /// This is all the stuff common to all SmallVectors.
 ///
@@ -684,11 +687,17 @@ public:
   /// Add the specified range to the end of the SmallVector.
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
   void append(ItTy in_start, ItTy in_end) {
-    this->assertSafeToAddRange(in_start, in_end);
-    size_type NumInputs = std::distance(in_start, in_end);
-    this->reserve(this->size() + NumInputs);
-    this->uninitialized_copy(in_start, in_end, this->end());
-    this->set_size(this->size() + NumInputs);
+    if constexpr (HasIteratorTag<ItTy, std::forward_iterator_tag>::value) {
+      this->assertSafeToAddRange(in_start, in_end);
+      size_type NumInputs = std::distance(in_start, in_end);
+      this->reserve(this->size() + NumInputs);
+      this->uninitialized_copy(in_start, in_end, this->end());
+      this->set_size(this->size() + NumInputs);
+    } else {
+      // Input iterator, we can't know ahead how many elements we'll add.
+      for (; in_start != in_end; ++in_start)
+        this->emplace_back(*in_start);
+    }
   }
 
   /// Append \p NumInputs copies of \p Elt to the end.
@@ -888,6 +897,15 @@ public:
     if (I == this->end()) {  // Important special case for empty vector.
       append(From, To);
       return this->begin()+InsertElt;
+    }
+
+    if constexpr (!HasIteratorTag<ItTy, std::forward_iterator_tag>::value) {
+      // For input iterators, we don't know the number of elements to insert.
+      size_t OldSize = this->size();
+      append(From, To);
+      I = this->begin() + InsertElt; // Uninvalidate the iterator.
+      std::rotate(I, this->begin() + OldSize, this->end());
+      return I;
     }
 
     assert(this->isReferenceToStorage(I) && "Insertion iterator is out of bounds.");

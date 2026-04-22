@@ -10,8 +10,10 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -7119,6 +7121,155 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   EXPECT_TRUE(isa<ReturnInst>(ExitBlock->getFirstNonPHIIt()));
 }
 
+TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.setConfig(
+      OpenMPIRBuilderConfig(true, false, false, false, false, false, false));
+  OMPBuilder.initialize();
+
+  Function *OutlinedFn = nullptr;
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Builder.SetCurrentDebugLocation(DL);
+  auto *Alloca = Builder.CreateAlloca(Builder.getInt32Ty());
+
+  llvm::SmallVector<llvm::Value *, 1> CapturedArgs = {
+      Alloca, Constant::getNullValue(PointerType::get(Ctx, 0))};
+
+  auto SimpleArgAccessorCB =
+      [&](llvm::Argument &Arg, llvm::Value *Input, llvm::Value *&RetVal,
+          llvm::OpenMPIRBuilder::InsertPointTy AllocaIP,
+          llvm::OpenMPIRBuilder::InsertPointTy CodeGenIP) {
+        IRBuilderBase::InsertPointGuard guard(Builder);
+        Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+        if (!OMPBuilder.Config.isTargetDevice()) {
+          RetVal = cast<llvm::Value>(&Arg);
+          return CodeGenIP;
+        }
+        Builder.restoreIP(AllocaIP);
+        llvm::Value *Addr = Builder.CreateAlloca(
+            Arg.getType()->isPointerTy()
+                ? Arg.getType()
+                : Type::getInt64Ty(Builder.getContext()),
+            OMPBuilder.M.getDataLayout().getAllocaAddrSpace());
+        llvm::Value *AddrAscast =
+            Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Input->getType());
+        Builder.CreateStore(&Arg, AddrAscast);
+        Builder.restoreIP(CodeGenIP);
+        RetVal = Builder.CreateLoad(Arg.getType(), AddrAscast);
+        return Builder.saveIP();
+      };
+
+  llvm::OpenMPIRBuilder::MapInfosTy CombinedInfos;
+  auto GenMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP)
+      -> llvm::OpenMPIRBuilder::MapInfosTy & {
+    CreateDefaultMapInfos(OMPBuilder, CapturedArgs, CombinedInfos);
+    return CombinedInfos;
+  };
+
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
+  auto BodyGenCB = [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
+                       OpenMPIRBuilder::InsertPointTy CodeGenIP)
+      -> OpenMPIRBuilder::InsertPointTy {
+    IRBuilderBase::InsertPointGuard guard(Builder);
+    Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+    Builder.restoreIP(CodeGenIP);
+    auto *mainSP = F->getSubprogram();
+    DIBuilder DIB(*M, false, mainSP->getUnit());
+    auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+    auto SP = DIB.createFunction(
+        mainSP->getScope(), "target", "", mainSP->getFile(), 2, Type, 2,
+        DINode::FlagZero,
+        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
+    OutlinedFn = CodeGenIP.getBlock()->getParent();
+    OutlinedFn->setSubprogram(SP);
+    DebugLoc Loc = DILocation::get(Ctx, 3, 7, SP);
+    DIType *VoidPtrTy =
+        DIB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
+    // The location of this variable is in the CapturedArgs so it will get the
+    // alloca/load/store chain in the auto SimpleArgAccessorCB and the location
+    // will change to the load instruction.
+    DILocalVariable *Var1 = DIB.createParameterVariable(
+        SP, "test1", /*ArgNo*/ 1, SP->getFile(), /*LineNo=*/1, VoidPtrTy);
+    DIB.insertDeclare(Alloca, Var1, DIB.createExpression(), Loc,
+                      Builder.GetInsertPoint());
+    // This variable will point directly to the function argument.
+    DILocalVariable *Var2 = DIB.createParameterVariable(
+        SP, "test2", /*ArgNo*/ 2, SP->getFile(), /*LineNo=*/1, VoidPtrTy);
+    DIB.insertDeclare(OutlinedFn->getArg(1), Var2, DIB.createExpression(), Loc,
+                      Builder.GetInsertPoint());
+
+    // One DbgVariableRecord with multiple location operands: fixup cannot pick
+    // a single anchor block, so locations should be poisoned.
+    DIType *IntDbgTy = DIB.createBasicType("int", 32, dwarf::DW_ATE_signed);
+    DILocalVariable *VarMulti = DIB.createAutoVariable(
+        SP, "multi_loc", SP->getFile(), /*LineNo=*/4, IntDbgTy);
+    Value *C0 = ConstantInt::get(Builder.getInt32Ty(), 0);
+    Value *C1 = ConstantInt::get(Builder.getInt32Ty(), 1);
+    SmallVector<ValueAsMetadata *, 2> ArgVMs = {ValueAsMetadata::get(C0),
+                                                ValueAsMetadata::get(C1)};
+    DIArgList *ArgList = DIArgList::get(Ctx, ArgVMs);
+    DIExpression *MultiExpr = DIExpression::get(
+        Ctx, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 1,
+              dwarf::DW_OP_plus, dwarf::DW_OP_stack_value});
+    auto *MultiDVR =
+        new DbgVariableRecord(ArgList, VarMulti, MultiExpr, Loc.get(),
+                              DbgVariableRecord::LocationType::Value);
+    Builder.GetInsertBlock()->insertDbgRecordBefore(MultiDVR,
+                                                    Builder.GetInsertPoint());
+
+    return Builder.saveIP();
+  };
+
+  IRBuilder<>::InsertPoint EntryIP(&F->getEntryBlock(),
+                                   F->getEntryBlock().end());
+  TargetRegionEntryInfo EntryInfo("parent", /*DeviceID=*/1, /*FileID=*/2,
+                                  /*Line=*/3, /*Count=*/0);
+  OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
+  OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
+      /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
+      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(
+      /*RequiresDevicePointerInfo=*/false,
+      /*SeparateBeginEndCalls=*/true);
+
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP,
+      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
+                              Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
+                              /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
+                              BodyGenCB, SimpleArgAccessorCB, CustomMapperCB,
+                              {}, false));
+  EXPECT_EQ(DL, Builder.getCurrentDebugLocation());
+  Builder.restoreIP(AfterIP);
+
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  // Check outlined function
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_NE(OutlinedFn, nullptr);
+  unsigned MultiLocPoisoned = 0;
+  for (Instruction &I : instructions(OutlinedFn)) {
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+      if (DVR.getNumVariableLocationOps() != 1u) {
+        ASSERT_EQ(DVR.getNumVariableLocationOps(), 2u);
+        EXPECT_TRUE(isa<PoisonValue>(DVR.getVariableLocationOp(0u)));
+        EXPECT_TRUE(isa<PoisonValue>(DVR.getVariableLocationOp(1u)));
+        ++MultiLocPoisoned;
+        continue;
+      }
+      auto Loc = DVR.getVariableLocationOp(0u);
+      if (Instruction *LocInst = dyn_cast<Instruction>(Loc))
+        EXPECT_EQ(DVR.getParent(), LocInst->getParent());
+      else if (isa<llvm::Argument>(Loc))
+        EXPECT_EQ(DVR.getParent(), &(OutlinedFn->getEntryBlock()));
+    }
+  }
+  EXPECT_EQ(MultiLocPoisoned, 1u);
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateTask) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -7350,7 +7501,8 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskDepend) {
       OMPBuilder.createTask(
           Loc, InsertPointTy(AllocaBB, AllocaBB->getFirstInsertionPt()),
           BodyGenCB,
-          /*Tied=*/false, /*Final*/ nullptr, /*IfCondition*/ nullptr, DDS));
+          /*Tied=*/false, /*Final*/ nullptr, /*IfCondition*/ nullptr,
+          OpenMPIRBuilder::DependenciesInfo{std::move(DDS)}));
   Builder.restoreIP(AfterIP);
   OMPBuilder.finalize();
   Builder.CreateRetVoid();

@@ -354,9 +354,9 @@ function(create_libc_unittest fq_target_name)
     )
   endif()
 
-  # The SUITE variable can be used to group tests into a custom target. 
-  # If a target named ${LIBC_UNITTEST_SUITE}-build exists, we add the 
-  # test executable to it as a dependency. This allows building the 
+  # The SUITE variable can be used to group tests into a custom target.
+  # If a target named ${LIBC_UNITTEST_SUITE}-build exists, we add the
+  # test executable to it as a dependency. This allows building the
   # test binaries for Lit without triggering their execution.
   if(LIBC_UNITTEST_SUITE)
     add_dependencies(${LIBC_UNITTEST_SUITE} ${fq_target_name})
@@ -643,12 +643,6 @@ function(add_integration_test test_name)
                    libc.test.IntegrationTest.test
                    ${INTEGRATION_TEST_DEPENDS})
 
-  # Tests on the GPU require an external loader utility to launch the kernel.
-  if(TARGET libc.utils.gpu.loader)
-    add_dependencies(${fq_build_target_name} libc.utils.gpu.loader)
-    get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
-  endif()
-
   # We have to use a separate var to store the command as a list because
   # the COMMAND option of `add_custom_target` cannot handle empty vars in the
   # command. For example, if INTEGRATION_TEST_ENV is empty, the actual
@@ -658,7 +652,6 @@ function(add_integration_test test_name)
   set(test_cmd
       ${INTEGRATION_TEST_ENV}
       $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
-      $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}>
       ${CMAKE_CROSSCOMPILING_EMULATOR}
       ${INTEGRATION_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
@@ -689,8 +682,8 @@ function(add_integration_test test_name)
   )
   if(INTEGRATION_TEST_SUITE)
     add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
-    # If a target named ${INTEGRATION_TEST_SUITE}-build exists, we add the 
-    # test executable to it as a dependency. This allows building the 
+    # If a target named ${INTEGRATION_TEST_SUITE}-build exists, we add the
+    # test executable to it as a dependency. This allows building the
     # test binaries for Lit without triggering their execution.
     if(TARGET ${INTEGRATION_TEST_SUITE}-build)
       add_dependencies(${INTEGRATION_TEST_SUITE}-build ${fq_build_target_name})
@@ -896,12 +889,6 @@ function(add_libc_hermetic test_name)
     )
   endif()
 
-  # Tests on the GPU require an external loader utility to launch the kernel.
-  if(TARGET libc.utils.gpu.loader)
-    add_dependencies(${fq_build_target_name} libc.utils.gpu.loader)
-    get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
-  endif()
-
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if (LIBC_TEST_CMD)
       # In the form of "<command> binary=@BINARY@", e.g. "qemu-system-arm -loader$<COMMA>file=@BINARY@"
@@ -910,9 +897,32 @@ function(add_libc_hermetic test_name)
     else()
       set(test_cmd ${HERMETIC_TEST_ENV}
         $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
-        $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+        ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
         $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
     endif()
+
+  set(_params_content "")
+  foreach(_arg IN LISTS HERMETIC_TEST_LOADER_ARGS)
+    string(APPEND _params_content "${_arg}\n")
+  endforeach()
+  string(APPEND _params_content "---\n")
+  foreach(_arg IN LISTS HERMETIC_TEST_ARGS)
+    string(APPEND _params_content "${_arg}\n")
+  endforeach()
+  string(APPEND _params_content "---\n")
+  foreach(_env_entry IN LISTS HERMETIC_TEST_ENV)
+    string(APPEND _params_content "${_env_entry}\n")
+  endforeach()
+  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    string(APPEND _params_content "LIBOMPTARGET_STACK_SIZE=3072\n")
+  endif()
+
+  if(HERMETIC_TEST_LOADER_ARGS OR HERMETIC_TEST_ARGS OR HERMETIC_TEST_ENV OR LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    file(GENERATE
+      OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}.params"
+      CONTENT "${_params_content}"
+    )
+  endif()
 
     add_custom_target(
       ${fq_target_name}
@@ -940,8 +950,8 @@ function(add_libc_hermetic test_name)
     add_dependencies(libc-hermetic-tests ${fq_target_name})
     if(LIBC_HERMETIC_TEST_SUITE)
       add_dependencies(${LIBC_HERMETIC_TEST_SUITE} ${fq_target_name})
-      # If a target named ${LIBC_HERMETIC_TEST_SUITE}-build exists, we add the 
-      # test executable to it as a dependency. This allows building the 
+      # If a target named ${LIBC_HERMETIC_TEST_SUITE}-build exists, we add the
+      # test executable to it as a dependency. This allows building the
       # test binaries for Lit without triggering their execution.
       if(TARGET ${LIBC_HERMETIC_TEST_SUITE}-build)
         add_dependencies(${LIBC_HERMETIC_TEST_SUITE}-build ${fq_build_target_name})
