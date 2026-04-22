@@ -3596,10 +3596,6 @@ public:
     return false;
   }
 
-  /// Should usub.sat(X, 1) prefer the generic lowering X - zext(X != 0) over
-  /// the default overflow/select expansion?
-  virtual bool preferSubOfZextForUsubSatOne(EVT VT) const { return true; }
-
   /// True if target has some particular form of dealing with pointer arithmetic
   /// semantics for pointers with the given value type. False if pointer
   /// arithmetic should not be preserved for passes such as instruction
