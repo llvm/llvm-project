@@ -266,11 +266,16 @@ LLVMState initLLVM(const TargetIdentifier &TI) {
     return S;
   }
 
+  // MCInstrAnalysis is optional -- AMDGPU may not implement one -- so we
+  // don't fail initLLVM if it comes back null. Consumers must null-check.
+  S.MIA.reset(S.Target->createMCInstrAnalysis(S.MCII.get()));
+
   // Resolve AMDGPU instruction primitives through the asm parser so we pick
   // up the subtarget-appropriate opcode variant (e.g. S_BRANCH_gfx12 vs
-  // S_BRANCH_gfx10) without hardcoding names or bits. s_branch is cached as
-  // an MC opcode index; s_nop is pre-encoded to 4 bytes since its
-  // representation is a constant.
+  // S_BRANCH_gfx10) without hardcoding names or bits. s_branch / s_nop are
+  // cached as MC opcode indices; s_nop is additionally pre-encoded to 4
+  // bytes since its representation is a constant and pad loops memcpy it
+  // directly.
   S.SBranchOpcode = resolveOpcodeViaParse("s_branch 0", S);
   if (S.SBranchOpcode >= S.MCII->getNumOpcodes()) {
     log() << "hotswap: error: initLLVM: failed to resolve 's_branch' opcode "
@@ -278,9 +283,16 @@ LLVMState initLLVM(const TargetIdentifier &TI) {
     return S;
   }
 
-  SmallVector<uint8_t> NopBytes = assembleSingleInst("s_nop 0", S);
+  SmallVector<MCInst, 2> NopInsts = parseAsmToMCInsts("s_nop 0", S);
+  if (NopInsts.size() != 1) {
+    log() << "hotswap: error: initLLVM: failed to parse 's_nop 0' for CPU '"
+          << S.Cpu << "'.\n";
+    return S;
+  }
+  S.SNopOpcode = NopInsts[0].getOpcode();
+  SmallVector<uint8_t> NopBytes = encodeMCInst(NopInsts[0], S);
   if (NopBytes.size() != MinInstSize) {
-    log() << "hotswap: error: initLLVM: 's_nop 0' assembled to "
+    log() << "hotswap: error: initLLVM: 's_nop 0' encoded to "
           << NopBytes.size() << " bytes; expected " << MinInstSize
           << " for CPU '" << S.Cpu << "'.\n";
     return S;

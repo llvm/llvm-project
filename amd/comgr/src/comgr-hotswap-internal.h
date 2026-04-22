@@ -12,6 +12,7 @@
 /// Module structure:
 ///   comgr-hotswap-elf.cpp       ELF parsing, binary helpers, trampoline growth
 ///   comgr-hotswap-llvm.cpp      LLVM MC infrastructure (disasm/asm/encode)
+///   comgr-hotswap-b0a0.cpp      GFX1250 B0-to-A0 policy + public API
 ///
 //===----------------------------------------------------------------------===//
 
@@ -30,7 +31,10 @@
 #include <vector>
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -38,6 +42,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -266,12 +271,23 @@ struct LLVMState {
   std::unique_ptr<llvm::MCDisassembler> MCD;
   std::unique_ptr<llvm::MCInstPrinter> MCIP;
   std::unique_ptr<llvm::MCCodeEmitter> MCE;
+  /// Target-provided branch / call / relocation analysis. May be null on
+  /// targets that do not implement MCInstrAnalysis; callers must check
+  /// before dispatching. Cached here so downstream patch passes can ask
+  /// `MIA->isBranch(Inst)` / `isCall(Inst)` / `evaluateBranch(...)` instead
+  /// of matching mnemonic strings.
+  std::unique_ptr<llvm::MCInstrAnalysis> MIA;
   std::string Cpu;
 
-  /// MC opcode index for `s_branch`, resolved once at initLLVM() via
-  /// MCInstrInfo::getName. Used by encodeSBranch() below to construct a
-  /// fresh MCInst per call.
+  /// MC opcode index for `s_branch`, resolved once at initLLVM() via the
+  /// asm parser. Used by encodeSBranch() below to construct a fresh MCInst
+  /// per call.
   unsigned SBranchOpcode = 0;
+
+  /// MC opcode index for `s_nop`. Resolved via the asm parser at initLLVM()
+  /// time so decoded-stream consumers (e.g. buildNopSledMap) can match NOPs
+  /// by opcode rather than mnemonic string.
+  unsigned SNopOpcode = 0;
 
   /// Pre-encoded bytes for `s_nop 0` (MinInstSize bytes). Populated at
   /// initLLVM() time via MCCodeEmitter and used by applyByteReplace() and
@@ -335,6 +351,137 @@ Trampoline buildTrampoline(llvm::ArrayRef<std::string> AsmLines,
 bool checkVgprOverlap(const llvm::MCInst &WmmaInst,
                       const llvm::MCInst &ValuInst,
                       const llvm::MCRegisterInfo &MRI);
+
+// -- VGPR liveness types ------------------------------------------------------
+
+/// Per-instruction def/use bitvectors over the VGPR index space. Populated by
+/// getInstRegDefUse() during liveness analysis; each bit position corresponds
+/// to one VGPR (index matches AMDGPU VGPR numbering, e.g. bit 5 = V5).
+struct RegDefUse {
+  llvm::BitVector Defs;
+  llvm::BitVector Uses;
+};
+
+/// A basic block in the decoded-instruction CFG. Offsets are byte offsets
+/// into .text; \c InstIndices stores positions in the flat Decoded vector;
+/// \c Successors / \c Predecessors are indices into CFG::Blocks.
+struct BasicBlock {
+  uint64_t StartOffset = 0;
+  uint64_t EndOffset = 0;
+  llvm::SmallVector<size_t> InstIndices;
+  llvm::SmallVector<unsigned> Successors;
+  llvm::SmallVector<unsigned> Predecessors;
+};
+
+/// Control-flow graph over the decoded instruction stream. \c OffsetToBlock
+/// is the inverted index mapping a .text byte offset to its owning block
+/// index in \c Blocks, used to resolve branch-target / fall-through edges
+/// during CFG construction.
+struct CFG {
+  std::vector<BasicBlock> Blocks;
+  llvm::DenseMap<uint64_t, unsigned> OffsetToBlock;
+};
+
+/// Dataflow-liveness result for a kernel's VGPR set. \c LiveBefore[i] and
+/// \c LiveAfter[i] are the live-in / live-out bitvectors for Decoded[i].
+/// \c Converged is false when the iterative solver hit its iteration cap;
+/// callers fall back to a conservative all-VGPRs-live analysis in that case.
+struct LivenessInfo {
+  std::vector<llvm::BitVector> LiveBefore;
+  std::vector<llvm::BitVector> LiveAfter;
+  bool Converged = false;
+};
+
+/// Allocates scratch VGPRs for a patch point, preferring to reuse dead slots
+/// from the kernel's existing allocation before extending the allocation past
+/// the kernel descriptor's reported VGPR count. Constructed per patch site
+/// with the live-set at that site and the kernel's current / maximum VGPR
+/// counts.
+struct ScratchAllocator {
+  llvm::BitVector LiveAtPoint;
+  unsigned KdAllocatedVgprs = 0;
+  unsigned NextAboveKd = 0;
+  unsigned MaxVgprs = 0;
+  unsigned ExtraAllocated = 0;
+
+  ScratchAllocator(const llvm::BitVector &Live, unsigned KdVgprs, unsigned Max)
+      : LiveAtPoint(Live), KdAllocatedVgprs(KdVgprs), NextAboveKd(KdVgprs),
+        MaxVgprs(Max) {}
+
+  /// Allocate one VGPR not currently marked live. Returns std::nullopt if
+  /// the kernel's existing VGPR pool is saturated and there is no headroom
+  /// below MaxVgprs for an additional allocation.
+  std::optional<unsigned> alloc() {
+    for (unsigned V = KdAllocatedVgprs; V-- > 0;) {
+      if (!LiveAtPoint.test(V)) {
+        LiveAtPoint.set(V);
+        return V;
+      }
+    }
+    if (NextAboveKd >= MaxVgprs)
+      return std::nullopt;
+    unsigned V = NextAboveKd++;
+    ExtraAllocated++;
+    LiveAtPoint.set(V);
+    return V;
+  }
+
+  unsigned extraVgprsNeeded() const { return ExtraAllocated; }
+};
+
+/// Bookkeeping for a single patch site's scratch allocation. \c Offset is
+/// the .text byte offset of the patch; \c ScratchRegs is the bitvector of
+/// VGPRs the patch claimed at that site. Consumed by the post-patch
+/// verifier (verifyPatchCorrectness) to check the patches are mutually
+/// consistent across the kernel.
+struct ScratchPatchInfo {
+  uint64_t Offset = 0;
+  llvm::BitVector ScratchRegs;
+};
+
+// -- Patch types --------------------------------------------------------------
+
+/// Per-kernel counters accumulated by the patch passes. Reported via log()
+/// at the end of the rewrite and exposed through the public
+/// amd_comgr_hotswap_result_t once that result struct is wired up.
+struct KernelPatchStats {
+  unsigned ExtraVgprs = 0;
+  unsigned ScratchReused = 0;
+  unsigned ScratchAboveKd = 0;
+};
+
+/// Mutable per-run context threaded through all patch passes. Bundles the
+/// input config, decoded instruction stream, raw .text bytes, MC state,
+/// output streams (trampolines / scratch info), and the shared ELF view +
+/// liveness result so patch passes have a single parameter to pass around.
+struct PatchContext {
+  const RewriteConfig &Config;
+  std::vector<InternalDecodedInst> &Decoded;
+  uint8_t *Text = nullptr;
+  uint64_t TextSize = 0;
+  const LLVMState &LS;
+  std::vector<Trampoline> &OutTrampolines;
+  std::vector<NopSled> &NopSleds;
+  ElfView &Elf;
+  const LivenessInfo &Liveness;
+  llvm::StringMap<KernelPatchStats> &KernelStats;
+  std::vector<ScratchPatchInfo> &OutScratchPatches;
+};
+
+// -- Function declarations (B0-to-A0 policy layer) ----------------------------
+
+/// Run the full GFX1250 B0-to-A0 rewrite pipeline on \p ElfData / \p ElfSize.
+/// \p TargetIdent is the parsed target ISA (produced upstream by Comgr's
+/// parseTargetIdentifier()); it is threaded into the MC init so the subtarget
+/// triple and feature flags are preserved rather than being reconstructed
+/// from just the processor name. On success \p Out is populated with an owned
+/// buffer containing the rewritten code object. The caller can transfer the
+/// buffer directly to a comgr DataObject via
+/// DataObject::setData(std::unique_ptr<MemoryBuffer>).
+amd_comgr_status_t
+retargetCodeObjectB0A0(const void *ElfData, size_t ElfSize,
+                       const TargetIdentifier &TargetIdent,
+                       std::unique_ptr<llvm::MemoryBuffer> &Out);
 
 } // namespace hotswap
 } // namespace COMGR

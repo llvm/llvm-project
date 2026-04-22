@@ -77,6 +77,7 @@ set(SOURCES
   src/comgr-disassembly.cpp
   src/comgr-env.cpp
   src/comgr-hotswap.cpp
+  src/comgr-hotswap-b0a0.cpp
   src/comgr-hotswap-elf.cpp
   src/comgr-hotswap-llvm.cpp
   src/comgr-libcxx-headers.cpp
