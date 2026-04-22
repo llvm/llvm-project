@@ -147,6 +147,10 @@ static void abort_with_message(const char *kind, uintptr_t caller) {
     android_set_abort_message(msg_buf);
   abort();
 }
+#elif SANITIZER_AMDGPU || SANITIZER_NVPTX
+static void abort_with_message(const char *kind, uintptr_t caller) {
+  __builtin_verbose_trap("ubsan", "unrecoverable error");
+}
 #else
 static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
 #endif
