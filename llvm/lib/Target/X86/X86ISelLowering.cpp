@@ -57150,6 +57150,111 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Strip TRUNCATE/ZERO_EXTEND/ANY_EXTEND wrappers and `and x, C` where C
+// preserves the low log2(BW) bits; these are transparent to BT/BTR/BTS/BTC,
+// which implicitly mask the bit index to log2(BW) bits.
+static SDValue peekThroughBitPosExtTrunc(SDValue V, unsigned BW) {
+  APInt LowBits =
+      APInt::getLowBitsSet(V.getScalarValueSizeInBits(), Log2_32(BW));
+  for (;;) {
+    unsigned Op = V.getOpcode();
+    if (Op == ISD::TRUNCATE || Op == ISD::ZERO_EXTEND ||
+        Op == ISD::ANY_EXTEND) {
+      V = V.getOperand(0);
+      LowBits = LowBits.zextOrTrunc(V.getScalarValueSizeInBits());
+      continue;
+    }
+    if (Op == ISD::AND) {
+      auto *C = dyn_cast<ConstantSDNode>(V.getOperand(1));
+      if (C && LowBits.isSubsetOf(C->getAPIntValue())) {
+        V = V.getOperand(0);
+        continue;
+      }
+    }
+    return V;
+  }
+}
+
+// Try to merge a (X86ISD::BT Src, BitNo) with a sibling bit-modifying op on
+// Src (AND(Src, rotl -2, X), OR(Src, shl 1, X), XOR(Src, shl 1, X)) into a
+// single flag-producing X86ISD::{BTR,BTS,BTC} node. Both BT and BTR/BTS/BTC
+// set CF from the pre-op bit value, so one instruction subsumes the other.
+// Fixes llvm#165291.
+static SDValue combineBTToBitOpFlag(SDNode *N, SelectionDAG &DAG) {
+  SDValue Src = N->getOperand(0);
+  SDValue BitNo = N->getOperand(1);
+  EVT VT = Src.getValueType();
+  SDLoc DL(N);
+
+  // BT is only emitted for legal integer widths (16/32/64); match those.
+  if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  unsigned BW = VT.getScalarSizeInBits();
+  SDValue PeeledBitNo = peekThroughBitPosExtTrunc(BitNo, BW);
+
+  for (SDNode *User : Src->users()) {
+    if (User == N)
+      continue;
+    unsigned UOpc = User->getOpcode();
+    if (UOpc != ISD::AND && UOpc != ISD::OR && UOpc != ISD::XOR)
+      continue;
+    if (User->getValueType(0) != VT)
+      continue;
+
+    // Identify which operand of User is Src; the other is the mask.
+    SDValue UOp0 = User->getOperand(0);
+    SDValue UOp1 = User->getOperand(1);
+    SDValue Mask;
+    if (UOp0 == SDValue(Src.getNode(), Src.getResNo()))
+      Mask = UOp1;
+    else if (UOp1 == SDValue(Src.getNode(), Src.getResNo()))
+      Mask = UOp0;
+    else
+      continue;
+    // We will replace the mask's consumer (User); require the mask to have no
+    // other live uses so we can drop it.
+    if (!Mask.hasOneUse())
+      continue;
+
+    unsigned FlagOp = 0;
+    SDValue ShAmt;
+    if (UOpc == ISD::AND && Mask.getOpcode() == ISD::ROTL) {
+      // (and Src, (rotl -2, X)): clears bit X.
+      if (auto *C = dyn_cast<ConstantSDNode>(Mask.getOperand(0)))
+        if (C->getAPIntValue() == APInt::getAllOnes(BW) - 1) {
+          FlagOp = X86ISD::BTR;
+          ShAmt = Mask.getOperand(1);
+        }
+    } else if ((UOpc == ISD::OR || UOpc == ISD::XOR) &&
+               Mask.getOpcode() == ISD::SHL) {
+      // (or/xor Src, (shl 1, X)): sets/flips bit X.
+      if (auto *C = dyn_cast<ConstantSDNode>(Mask.getOperand(0)))
+        if (C->getAPIntValue() == 1) {
+          FlagOp = UOpc == ISD::OR ? X86ISD::BTS : X86ISD::BTC;
+          ShAmt = Mask.getOperand(1);
+        }
+    }
+    if (!FlagOp)
+      continue;
+
+    // The BT and the bit-op must address the same bit. They can differ only
+    // by truncation/extension or an AND that preserves the low log2(BW) bits.
+    if (peekThroughBitPosExtTrunc(ShAmt, BW) != PeeledBitNo)
+      continue;
+
+    // BTR/BTS/BTC *rr take the bit index in a register of the same width as
+    // the source. Extend or truncate to VT to match the instruction signature.
+    SDValue BN = DAG.getZExtOrTrunc(BitNo, DL, VT);
+    SDValue New = DAG.getNode(FlagOp, DL, DAG.getVTList(VT, MVT::i32), Src, BN);
+    // Reroute the value output through User's consumers.
+    DAG.ReplaceAllUsesOfValueWith(SDValue(User, 0), New.getValue(0));
+    // Return the flags output so combineBT installs it as N's replacement.
+    return New.getValue(1);
+  }
+  return SDValue();
+}
+
 static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
                          TargetLowering::DAGCombinerInfo &DCI) {
   SDValue N1 = N->getOperand(1);
@@ -57162,6 +57267,9 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
       DCI.AddToWorklist(N);
     return SDValue(N, 0);
   }
+
+  if (SDValue V = combineBTToBitOpFlag(N, DAG))
+    return V;
 
   return SDValue();
 }

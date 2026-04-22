@@ -9,10 +9,8 @@
 define i1 @fuse_and_mask_on_modify(ptr %word, i32 %position) nounwind {
 ; CHECK-LABEL: fuse_and_mask_on_modify:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl (%rdi), %ecx
 ; CHECK-NEXT:    btcl %esi, %ecx
-; CHECK-NEXT:    btl %esi, %eax
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    movl %ecx, (%rdi)
 ; CHECK-NEXT:    retq
@@ -30,10 +28,8 @@ define i1 @fuse_and_mask_on_modify(ptr %word, i32 %position) nounwind {
 define i1 @fuse_and_mask_on_bt(ptr %word, i64 %position) nounwind {
 ; CHECK-LABEL: fuse_and_mask_on_bt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    movq (%rdi), %rcx
 ; CHECK-NEXT:    btsq %rsi, %rcx
-; CHECK-NEXT:    btq %rsi, %rax
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    movq %rcx, (%rdi)
 ; CHECK-NEXT:    retq
@@ -53,10 +49,8 @@ define i1 @fuse_zext_pos(ptr %word, i32 %position) nounwind {
 ; CHECK-LABEL: fuse_zext_pos:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    movq (%rdi), %rcx
 ; CHECK-NEXT:    btrq %rsi, %rcx
-; CHECK-NEXT:    btq %rsi, %rax
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    movq %rcx, (%rdi)
 ; CHECK-NEXT:    retq

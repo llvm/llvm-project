@@ -165,6 +165,14 @@ let IsStrictFP = true in {
 // X86 bit-test instructions.
 def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
 
+// X86 bit-test-and-modify instructions: res, EFLAGS = op src, bitno.
+// CF is set from the pre-operation bit value; BT on the same operands is
+// therefore redundant after one of these nodes. The atomic (locked) variants
+// live under X86ISD::LBTR/LBTS/LBTC.
+def X86btr_flag : SDNode<"X86ISD::BTR", SDTBinaryArithWithFlags>;
+def X86bts_flag : SDNode<"X86ISD::BTS", SDTBinaryArithWithFlags>;
+def X86btc_flag : SDNode<"X86ISD::BTC", SDTBinaryArithWithFlags>;
+
 // Conditional compare instructions
 def X86ccmp    : SDNode<"X86ISD::CCMP",     SDTX86Ccmp>;
 def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;

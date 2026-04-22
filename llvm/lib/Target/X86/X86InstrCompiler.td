@@ -2087,6 +2087,23 @@ defm : OneBitPats<GR16, i16, BTR16rr, BTS16rr, BTC16rr, shiftMask16>;
 defm : OneBitPats<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
 defm : OneBitPats<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
 
+// Flag-producing variants: reuse the BTR/BTS/BTC encodings so CF can replace
+// a separate X86ISD::BT. Emitted by a DAG combine in combineBT.
+multiclass OneBitFlagPats<RegisterClass rc, Instruction btr, Instruction bts,
+                          Instruction btc, SDNode btr_flag, SDNode bts_flag,
+                          SDNode btc_flag> {
+  def : Pat<(btr_flag rc:$src1, rc:$src2), (btr rc:$src1, rc:$src2)>;
+  def : Pat<(bts_flag rc:$src1, rc:$src2), (bts rc:$src1, rc:$src2)>;
+  def : Pat<(btc_flag rc:$src1, rc:$src2), (btc rc:$src1, rc:$src2)>;
+}
+
+defm : OneBitFlagPats<GR16, BTR16rr, BTS16rr, BTC16rr,
+                      X86btr_flag, X86bts_flag, X86btc_flag>;
+defm : OneBitFlagPats<GR32, BTR32rr, BTS32rr, BTC32rr,
+                      X86btr_flag, X86bts_flag, X86btc_flag>;
+defm : OneBitFlagPats<GR64, BTR64rr, BTS64rr, BTC64rr,
+                      X86btr_flag, X86bts_flag, X86btc_flag>;
+
 //===----------------------------------------------------------------------===//
 // EFLAGS-defining Patterns
 //===----------------------------------------------------------------------===//
