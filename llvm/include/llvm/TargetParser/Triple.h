@@ -260,7 +260,8 @@ public:
     ChipStar,
     Firmware,
     QURT,
-    LastOSType = QURT
+    H2,
+    LastOSType = H2
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -379,6 +380,12 @@ public:
                   const Twine &OSStr);
   LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr,
                   const Twine &OSStr, const Twine &EnvironmentStr);
+  LLVM_ABI Triple(ArchType A, SubArchType SA = NoSubArch,
+                  VendorType V = UnknownVendor, OSType OS = UnknownOS);
+  LLVM_ABI Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
+                  EnvironmentType E);
+  LLVM_ABI Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
+                  EnvironmentType E, ObjectFormatType OF);
 
   bool operator==(const Triple &Other) const {
     return Arch == Other.Arch && SubArch == Other.SubArch &&
@@ -767,6 +774,9 @@ public:
 
   /// Tests whether the OS is QURT.
   bool isOSQurt() const { return getOS() == Triple::QURT; }
+
+  /// Tests whether the OS is H2.
+  bool isOSH2() const { return getOS() == Triple::H2; }
 
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const { return getObjectFormat() == Triple::ELF; }

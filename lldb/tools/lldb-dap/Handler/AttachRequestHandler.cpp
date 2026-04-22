@@ -38,8 +38,10 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     return err;
 
   dap.SetConfiguration(args.configuration, /*is_attach=*/true);
-  if (!args.coreFile.empty())
+  if (!args.coreFile.empty()) {
     dap.stop_at_entry = true;
+    dap.is_live_session = false;
+  }
 
   PrintWelcomeMessage();
 

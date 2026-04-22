@@ -693,7 +693,7 @@ void ScheduleDAGLinearize::ScheduleNode(SDNode *N) {
         // Glue operand is already scheduled.
         continue;
 
-      DenseMap<SDNode*, SDNode*>::iterator DI = GluedMap.find(OpN);
+      auto DI = GluedMap.find(OpN);
       if (DI != GluedMap.end() && DI->second != N)
         // Users of glues are counted against the glued users.
         OpN = DI->second;

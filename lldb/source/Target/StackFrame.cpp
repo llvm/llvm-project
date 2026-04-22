@@ -595,12 +595,8 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
 
   const bool check_ptr_vs_member =
       (options & eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
   const bool no_synth_child =
       (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
-  // const bool no_synth_array = (options &
-  // eExpressionPathOptionsNoSyntheticArrayRange) != 0;
   error.Clear();
   bool deref = false;
   bool address_of = false;
@@ -641,9 +637,9 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     // Check for direct ivars access which helps us with implicit access to
     // ivars using "this" or "self".
     GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
-    llvm::StringRef instance_var_name = m_sc.GetInstanceVariableName();
-    if (!instance_var_name.empty()) {
-      var_sp = variable_list->FindVariable(ConstString(instance_var_name));
+    llvm::StringRef instance_name = m_sc.GetInstanceName();
+    if (!instance_name.empty()) {
+      var_sp = variable_list->FindVariable(ConstString(instance_name));
       if (var_sp) {
         separator_idx = 0;
         if (Type *var_type = var_sp->GetType())
@@ -706,19 +702,6 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
       expr_is_ptr = true;
       if (var_expr.size() >= 2 && var_expr[1] != '>')
         return ValueObjectSP();
-
-      if (no_fragile_ivar) {
-        // Make sure we aren't trying to deref an objective
-        // C ivar if this is not allowed
-        const uint32_t pointer_type_flags =
-            valobj_sp->GetCompilerType().GetTypeInfo(nullptr);
-        if ((pointer_type_flags & eTypeIsObjC) &&
-            (pointer_type_flags & eTypeIsPointer)) {
-          // This was an objective C object pointer and it was requested we
-          // skip any fragile ivars so return nothing here
-          return ValueObjectSP();
-        }
-      }
 
       // If we have a non-pointer type with a synthetic value then lets check if
       // we have a synthetic dereference specified.

@@ -11,5 +11,7 @@ define i32 @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %p = alloca i32, align 4 => ptr 0x8 [p]
-; CHECK-NEXT: Immediate UB detected: freeing a non-heap allocation.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @free(ptr %p) at @main
+; CHECK-NEXT: Immediate UB detected: freeing a non-heap allocation at 0x8.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
