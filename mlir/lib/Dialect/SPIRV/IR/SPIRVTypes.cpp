@@ -190,7 +190,8 @@ bool CompositeType::classof(Type type) {
 bool CompositeType::isValid(VectorType type) {
   return type.getRank() == 1 &&
          llvm::is_contained({2, 3, 4, 8, 16}, type.getNumElements()) &&
-         isa<ScalarType>(type.getElementType());
+         (isa<ScalarType>(type.getElementType()) ||
+          isa<PointerType>(type.getElementType()));
 }
 
 Type CompositeType::getElementType(unsigned index) const {
@@ -540,6 +541,8 @@ bool ScalarType::classof(Type type) {
 }
 
 bool ScalarType::isValid(FloatType type) {
+  if (type.isF8E4M3FN() || type.isF8E5M2())
+    return true;
   return llvm::is_contained({16u, 32u, 64u}, type.getWidth());
 }
 
@@ -548,12 +551,12 @@ bool ScalarType::isValid(IntegerType type) {
 }
 
 void TypeExtensionVisitor::addConcrete(ScalarType type) {
-  if (isa<BFloat16Type>(type)) {
+  if (type.isBF16()) {
     static constexpr auto ext = Extension::SPV_KHR_bfloat16;
     extensions.push_back(ext);
   }
 
-  if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+  if (type.isF8E4M3FN() || type.isF8E5M2()) {
     static constexpr auto ext = Extension::SPV_EXT_float8;
     extensions.push_back(ext);
   }
@@ -656,7 +659,7 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
     case 8: {
-      if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+      if (type.isF8E4M3FN() || type.isF8E5M2()) {
         static constexpr auto cap = Capability::Float8EXT;
         capabilities.push_back(cap);
       } else {
@@ -665,7 +668,7 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
       break;
     }
     case 16: {
-      if (isa<BFloat16Type>(type)) {
+      if (type.isBF16()) {
         static constexpr auto cap = Capability::BFloat16TypeKHR;
         capabilities.push_back(cap);
       } else {
