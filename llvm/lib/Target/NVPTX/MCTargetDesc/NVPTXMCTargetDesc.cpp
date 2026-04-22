@@ -37,7 +37,7 @@ using namespace llvm;
 
 // Temporary option to assist with the migration to new NVPTXAsmStreamer.
 static cl::opt<bool> UsePTXAsmStreamer(
-    "use-ptx-asm-streamer", cl::init(false), cl::Hidden,
+    "use-ptx-asm-streamer", cl::init(true), cl::Hidden,
     cl::desc("Use NVPTXAsmStreamer in printer instead of MCAsmStreamer."));
 
 static MCInstrInfo *createNVPTXMCInstrInfo() {

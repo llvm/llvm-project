@@ -38,11 +38,29 @@ class NVPTXAsmStreamer final : public MCAsmBaseStreamer {
   raw_svector_ostream CommentStream;
   raw_null_ostream NullStream;
 
-  bool EmittedSectionDirective = false;
-
   bool IsVerboseAsm = false;
   bool ShowInst = false;
   bool UseDwarfDirectory = false;
+  bool EmittedSectionDirective = false;
+
+  void PrintQuotedString(StringRef Data, raw_ostream &OS) const;
+  void printDwarfFileDirective(unsigned FileNo, StringRef Directory,
+                               StringRef Filename,
+                               std::optional<MD5::MD5Result> Checksum,
+                               std::optional<StringRef> Source,
+                               bool UseDwarfDirectory,
+                               raw_svector_ostream &OS) const;
+
+  /// Helper to emit common .loc directive flags, isa, and discriminator.
+  void emitDwarfLocDirectiveFlags(unsigned Flags, unsigned Isa,
+                                  unsigned Discriminator);
+
+  /// Helper to emit the common suffix of .loc directives (flags, comment, EOL,
+  /// parent call).
+  void emitDwarfLocDirectiveSuffix(unsigned FileNo, unsigned Line,
+                                   unsigned Column, unsigned Flags,
+                                   unsigned Isa, unsigned Discriminator,
+                                   StringRef FileName, StringRef Comment);
 
 public:
   NVPTXAsmStreamer(MCContext &Context,
@@ -64,16 +82,68 @@ public:
 
   void EmitCommentsAndEOL();
 
+  /// Return true if this streamer supports verbose assembly at all.
+  bool isVerboseAsm() const override { return IsVerboseAsm; }
+
+  bool hasRawTextSupport() const override { return true; }
+
+  void AddComment(const Twine &T, bool EOL = true) override;
+
+  /// Return a raw_ostream that comments can be written to.
+  /// Unlike AddComment, you are required to terminate comments with \n if you
+  /// use this method.
+  raw_ostream &getCommentOS() override {
+    if (!IsVerboseAsm)
+      return nulls(); // Discard comments unless in verbose asm mode.
+    return CommentStream;
+  }
+
+  void emitRawComment(const Twine &T, bool TabPrefix = true) override;
+
   void emitExplicitComments() override;
 
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
-    return false;
-  }
+  void addBlankLine() override { EmitEOL(); }
+
+  void switchSection(MCSection *Section, uint32_t Subsection) override;
+
+  void emitBytes(StringRef Data) override;
+
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
 
   void emitRawTextImpl(StringRef String) override;
+
+  Expected<unsigned> tryEmitDwarfFileDirective(
+      unsigned FileNo, StringRef Directory, StringRef Filename,
+      std::optional<MD5::MD5Result> Checksum = std::nullopt,
+      std::optional<StringRef> Source = std::nullopt,
+      unsigned CUID = 0) override;
+
+  void emitDwarfFile0Directive(StringRef Directory, StringRef Filename,
+                               std::optional<MD5::MD5Result> Checksum,
+                               std::optional<StringRef> Source,
+                               unsigned CUID = 0) override;
+
+  void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
+                             unsigned Flags, unsigned Isa,
+                             unsigned Discriminator, StringRef FileName,
+                             StringRef Location = {}) override;
+
+  /// This is same as emitDwarfLocDirective, except also emits inlined function
+  /// and inlined callsite information.
+  void emitDwarfLocDirectiveWithInlinedAt(unsigned FileNo, unsigned Line,
+                                          unsigned Column, unsigned FileIA,
+                                          unsigned LineIA, unsigned ColIA,
+                                          const MCSymbol *Sym, unsigned Flags,
+                                          unsigned Isa, unsigned Discriminator,
+                                          StringRef FileName,
+                                          StringRef Comment = {}) override;
 };
 } // namespace llvm
 
