@@ -1,4 +1,4 @@
-! The length of the line below is exactly 133 characters
-      program aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-      end
+! The length of the line below is exactly 35 characters
+program arbitrary_program_test_name 
+end
 

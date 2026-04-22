@@ -32,7 +32,7 @@
 ! INVALIDLENGTH: invalid value 'abcd' in 'ffree-line-length=', value must be 'none' or a positive integer
 
 ! The line should not be trimmed and should be read.
-! UNLIMITEDLENGTH: program {{(a{118})}}
+! UNLIMITEDLENGTH: program arbitrary_program_test_name
 
-! LENGTH13: program
+! LENGTH13: program arbit
 
