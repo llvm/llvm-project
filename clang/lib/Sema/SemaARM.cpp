@@ -1750,10 +1750,8 @@ bool SemaARM::checkTargetClonesAttr(
     NewParams.push_back(NewParam);
     HasNonDefault = true;
   }
-  if (!HasNonDefault)
-    return true;
 
-  return false;
+  return !HasNonDefault;
 }
 
 bool SemaARM::checkSVETypeSupport(QualType Ty, SourceLocation Loc,
