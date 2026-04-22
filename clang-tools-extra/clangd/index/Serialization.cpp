@@ -328,7 +328,7 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
   writeVar(Strings.index(Sym.Documentation), OS);
   writeVar(Strings.index(Sym.ReturnType), OS);
   writeVar(Strings.index(Sym.Type), OS);
-  writeVar(Sym.Tags, OS);
+  writeVar(Sym.Tags.raw(), OS);
 
   auto WriteInclude = [&](const Symbol::IncludeHeaderWithReferences &Include) {
     writeVar(Strings.index(Include.IncludeHeader), OS);
@@ -358,7 +358,7 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings,
   Sym.Documentation = Data.consumeString(Strings);
   Sym.ReturnType = Data.consumeString(Strings);
   Sym.Type = Data.consumeString(Strings);
-  Sym.Tags = Data.consumeVar();
+  Sym.Tags = SymbolTags::fromRaw(Data.consumeVar());
   if (!Data.consumeSize(Sym.IncludeHeaders))
     return Sym;
   for (auto &I : Sym.IncludeHeaders) {
