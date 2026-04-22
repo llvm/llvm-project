@@ -512,7 +512,6 @@ Bug Fixes to C++ Support
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
-- Fixed a bug matching constrained out-of-line definitions of class members.
 - Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
