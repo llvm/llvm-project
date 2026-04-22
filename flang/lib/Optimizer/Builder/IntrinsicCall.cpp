@@ -6828,6 +6828,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
 void IntrinsicLibrary::genMoveAlloc(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
 
+  // TODO: Handling coarray deallocation.
   const fir::ExtendedValue &from = args[0];
   const fir::ExtendedValue &to = args[1];
   const fir::ExtendedValue &status = args[2];
@@ -8680,6 +8681,39 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
 
   assert(args.size() >= 2); // args.size() == 2 when size argument is omitted.
 
+  bool absentSize = (args.size() == 2);
+
+  // Inline scalar-to-scalar transfers when the result is a trivial type
+  // (integer, real, etc.) and both source and result have the same storage
+  // size.
+  if (absentSize && fir::isa_trivial(resultType)) {
+    mlir::Value sourceBase = fir::getBase(args[0]);
+    mlir::Type sourceType = fir::unwrapRefType(sourceBase.getType());
+    mlir::Type moldType = fir::unwrapRefType(fir::getBase(args[1]).getType());
+    if (fir::isa_ref_type(sourceBase.getType()) &&
+        (fir::isa_trivial(sourceType) ||
+         mlir::isa<fir::RecordType>(sourceType)) &&
+        fir::isa_trivial(moldType)) {
+      auto sourceSizeAndAlign = fir::getTypeSizeAndAlignment(
+          loc, sourceType, builder.getDataLayout(), builder.getKindMap());
+      auto resultSizeAndAlign = fir::getTypeSizeAndAlignment(
+          loc, resultType, builder.getDataLayout(), builder.getKindMap());
+      if (sourceSizeAndAlign && resultSizeAndAlign &&
+          sourceSizeAndAlign->first == resultSizeAndAlign->first) {
+        if (mlir::isa<mlir::IntegerType, mlir::FloatType>(sourceType) &&
+            mlir::isa<mlir::IntegerType, mlir::FloatType>(resultType)) {
+          mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
+          if (sourceType != resultType)
+            val = mlir::arith::BitcastOp::create(builder, loc, resultType, val);
+          return val;
+        }
+        mlir::Type refTy = builder.getRefType(resultType);
+        mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
+        return fir::LoadOp::create(builder, loc, cast);
+      }
+    }
+  }
+
   // Handle source argument
   mlir::Value source = builder.createBox(loc, args[0]);
 
@@ -8687,8 +8721,6 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
   mlir::Value mold = builder.createBox(loc, args[1]);
   fir::BoxValue moldTmp = mold;
   unsigned moldRank = moldTmp.rank();
-
-  bool absentSize = (args.size() == 2);
 
   // Create mutable fir.box to be passed to the runtime for the result.
   mlir::Type type = (moldRank == 0 && absentSize)

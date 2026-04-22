@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/struct_linger.h"
 #include "src/sys/socket/getsockopt.h"
 #include "src/sys/socket/setsockopt.h"
 #include "src/sys/socket/socket.h"
@@ -41,19 +42,37 @@ TEST_F(LlvmLibcSocketOptTest, BasicSocketOpt) {
                                          &optval, &optlen),
               Succeeds(0));
   ASSERT_EQ(optval, 1);
-  ASSERT_EQ(optlen, sizeof(optval));
+  ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(optval)));
 
   // Test SO_TYPE (read-only)
   ASSERT_THAT(
       LIBC_NAMESPACE::getsockopt(sock, SOL_SOCKET, SO_TYPE, &optval, &optlen),
       Succeeds(0));
   ASSERT_EQ(optval, SOCK_STREAM);
-  ASSERT_EQ(optlen, sizeof(optval));
+  ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(optval)));
 
   optval = SOCK_DGRAM;
   ASSERT_THAT(
       LIBC_NAMESPACE::setsockopt(sock, SOL_SOCKET, SO_TYPE, &optval, optlen),
       Fails(ENOPROTOOPT));
+
+  // Test SO_LINGER (uses a struct)
+  struct linger lin;
+  lin.l_onoff = 1;
+  lin.l_linger = 5;
+  optlen = sizeof(lin);
+  ASSERT_THAT(
+      LIBC_NAMESPACE::setsockopt(sock, SOL_SOCKET, SO_LINGER, &lin, optlen),
+      Succeeds(0));
+
+  lin = {};
+  optlen = sizeof(lin);
+  ASSERT_THAT(
+      LIBC_NAMESPACE::getsockopt(sock, SOL_SOCKET, SO_LINGER, &lin, &optlen),
+      Succeeds(0));
+  ASSERT_EQ(lin.l_onoff, 1);
+  ASSERT_EQ(lin.l_linger, 5);
+  ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(lin)));
 
   ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0));
 }

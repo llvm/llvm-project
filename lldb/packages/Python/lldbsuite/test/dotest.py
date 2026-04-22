@@ -276,6 +276,8 @@ def parseOptionsAndInitTestdirs():
         configuration.dsymutil = seven.get_command_output(
             "xcrun -find -toolchain default dsymutil"
         )
+    if args.resource_dir:
+        configuration.resource_dir = args.resource_dir
     if args.llvm_tools_dir:
         configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
@@ -338,12 +340,9 @@ def parseOptionsAndInitTestdirs():
     if args.triple:
         configuration.triple = args.triple
 
-    if args.arch:
-        configuration.arch = args.arch
-    elif args.triple:
-        configuration.arch = args.triple.split("-")[0]
-    else:
-        configuration.arch = platform_machine
+    configuration.arch = (
+        configuration.triple.split("-")[0] if configuration.triple else platform_machine
+    )
 
     if args.categories_list:
         configuration.categories_list = set(

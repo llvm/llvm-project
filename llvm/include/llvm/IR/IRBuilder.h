@@ -244,7 +244,14 @@ public:
   }
 
   /// Set location information used by debugging information.
-  void SetCurrentDebugLocation(DebugLoc L) {
+  void SetCurrentDebugLocation(const DebugLoc &L) {
+    // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
+    // to include optional introspection data for use in Debugify.
+    StoredDL = L;
+  }
+
+  /// Set location information used by debugging information.
+  void SetCurrentDebugLocation(DebugLoc &&L) {
     // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
     // to include optional introspection data for use in Debugify.
     StoredDL = std::move(L);
@@ -1871,6 +1878,16 @@ public:
     Align AllocaAlign = DL.getPrefTypeAlign(Ty);
     unsigned AddrSpace = DL.getAllocaAddrSpace();
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
+  }
+
+  CallInst *CreateStructuredAlloca(Type *BaseType, const Twine &Name = "") {
+    const DataLayout &DL = BB->getDataLayout();
+    PointerType *PtrTy = DL.getAllocaPtrType(Context);
+    CallInst *Output =
+        CreateIntrinsic(Intrinsic::structured_alloca, {PtrTy}, {}, {}, Name);
+    Output->addRetAttr(
+        Attribute::get(getContext(), Attribute::ElementType, BaseType));
+    return Output;
   }
 
   /// Provided to resolve 'CreateLoad(Ty, Ptr, "...")' correctly, instead of

@@ -1094,6 +1094,11 @@ public:
   /// true at the current insertion point (inside the conditional branch).
   Address createCleanupActiveFlag();
 
+  /// Set up the last cleanup that was pushed as a conditional
+  /// full-expression cleanup.
+  void initFullExprCleanup();
+  void initFullExprCleanupWithFlag(Address activeFlag);
+
   /// Promote a single pending cleanup entry onto the EH scope stack. If the
   /// entry has a valid activeFlag, the cleanup is configured as conditional.
   /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
@@ -1395,6 +1400,9 @@ public:
 
   static Destroyer destroyCXXObject;
 
+  void pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind, Address addr,
+                             QualType type);
+
   void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
                    QualType type);
 
@@ -1519,6 +1527,7 @@ public:
   mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+  LValue emitInitListLValue(const InitListExpr *e);
 
   LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
 
