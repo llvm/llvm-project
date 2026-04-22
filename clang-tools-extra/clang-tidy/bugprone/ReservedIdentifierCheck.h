@@ -31,7 +31,7 @@ namespace clang::tidy::bugprone {
 class ReservedIdentifierCheck final : public RenamerClangTidyCheck {
   const bool Invert;
   const std::vector<StringRef> AllowedIdentifiersRaw;
-  const llvm::SmallVector<llvm::Regex> AllowedIdentifiers;
+  const SmallVector<llvm::Regex> AllowedIdentifiers;
 
 public:
   ReservedIdentifierCheck(StringRef Name, ClangTidyContext *Context);
@@ -47,7 +47,7 @@ private:
                       const SourceManager &SM) const override;
   DiagInfo getDiagInfo(const NamingCheckId &ID,
                        const NamingCheckFailure &Failure) const override;
-  llvm::SmallVector<llvm::Regex> parseAllowedIdentifiers() const;
+  SmallVector<llvm::Regex> parseAllowedIdentifiers() const;
 };
 
 } // namespace clang::tidy::bugprone

@@ -361,6 +361,24 @@ that is present in `SET`, or zero if none is.
 `VERIFY` is essentially the opposite: it returns the index of the first (or last) character
 in `STRING` that is *not* present in `SET`, or zero if all are.
 
+### Character intrinsic subroutines (Fortran 2023)
+```
+CALL SPLIT(CHARACTER(k,n) STRING, CHARACTER(k,m) SET, INTEGER(any) POS, LOGICAL(any) BACK=.FALSE.)
+CALL TOKENIZE(CHARACTER(k,n) STRING, CHARACTER(k,m) SET, CHARACTER(k,:) TOKENS(:) [, SEPARATOR])
+CALL TOKENIZE(CHARACTER(k,n) STRING, CHARACTER(k,m) SET, INTEGER FIRST(:), INTEGER LAST(:))
+```
+
+`SPLIT` scans for separator characters in `STRING` from the set `SET`.
+When `BACK` is absent or `.FALSE.`, it returns (in `POS`) the position of the
+leftmost character in `SET` whose position in `STRING` is greater than `POS`,
+or `LEN(STRING)+1` if no such character exists.
+When `BACK` is `.TRUE.`, it returns the position of the rightmost character in
+`SET` whose position in `STRING` is less than `POS`, or 0 if no such character exists.
+
+`TOKENIZE` extracts tokens from `STRING` delimited by characters in `SET`.
+In Form 1, it returns the tokens as an array of characters and optionally the separator characters.
+In Form 2, it returns the starting and ending positions of each token.
+
 ## Transformational intrinsic functions
 
 This category comprises a large collection of intrinsic functions that
@@ -1182,6 +1200,18 @@ END PROGRAM example_dsecnds
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
 
+### Non-Standard Intrinsics: RTC
+
+#### Description
+`RTC()` returns the current time of the system as a REAL(8), interpreted as
+seconds since the Unix epoch.
+
+#### Usage and Info
+
+- **Standard:** Intel extension
+- **Class:** function
+- **Syntax:** `RESULT = RTC()`
+
 ### Non-Standard Intrinsics: TIME
 
 #### Description
@@ -1288,6 +1318,40 @@ program chdir_func
 end program chdir_func
 ```
 
+### Non-Standard Intrinsics: FLUSH
+
+#### Description
+`FLUSH(UNIT)` causes all pending I/O operations for the file connected to the
+specified unit to be completed. If `UNIT` is omitted, all units are flushed.
+
+#### Arguments
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `UNIT`     | (Optional) The unit number of an open file. If omitted, all open units are flushed. The type shall be `INTEGER`. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL FLUSH([UNIT])`
+
+#### Example
+```Fortran
+program demo_flush
+  integer :: unit
+
+  ! Flush all units
+  call flush()
+
+  ! Flush specific unit
+  open(unit=10, file='output.dat')
+  write(10, *) 'Data'
+  call flush(10)
+  close(10)
+end program demo_flush
+```
+
 ### Non-Standard Intrinsics: FSEEK and FTELL
 
 #### Description
@@ -1379,3 +1443,87 @@ This is prefixed by `STRING`, a colon and a space.
 - **Standard:** GNU extension
 - **Class:** subroutine
 - **Syntax:** `CALL PERROR(STRING)`
+
+### Non-Standard Intrinsics: SRAND
+
+#### Description
+`SRAND` reinitializes the pseudo-random number generator called by `RAND` and `IRAND`.
+The new seed used by the generator is specified by the required argument `SEED`.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL SRAND(SEED)`
+
+### Non-Standard Intrinsics: IRAND
+
+#### Description
+`IRAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and a system-dependent limit.
+If `FLAG` is 0, the next number in the current sequence is returned;
+If `FLAG` is 1, the generator is restarted by `CALL SRAND(0)`;
+If `FLAG` has any other value, it is used as a new seed with `SRAND`.
+The return value is of `INTEGER` type of kind 4.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = IRAND(I)`
+
+### Non-Standard Intrinsics: RAND
+
+#### Description
+`RAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and 1.
+If `FLAG` is 0, the next number in the current sequence is returned;
+If `FLAG` is 1, the generator is restarted by `CALL SRAND(0)`;
+If `FLAG` has any other value, it is used as a new seed with `SRAND`.
+The return value is of `REAL` type with the default kind.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = RAND(I)`
+
+### Non-Standard Intrinsics: SHOW_DESCRIPTOR
+
+#### Description
+`SHOW_DESCRIPTOR(VAR)` prints (on the C stderr stream) a contents of a descriptor for the variable VAR,
+which can be of any type and rank, including scalars.
+Requires use of flang_debug module.
+
+Here is an example of its output:
+```
+Descriptor @ 0x7ffe506fc368:
+  base_addr 0x55944caef0f0
+  elem_len  4
+  version   20240719
+  rank      1
+  type      9 "INTEGER(kind=4)"
+  attribute 2 (allocatable)
+  extra     0
+    addendum  0
+    alloc_idx 0
+  dim[0] lower_bound 1
+         extent      5
+         sm          4
+```
+
+#### Usage and Info
+- **Standard:** flang extension
+- **Class:** subroutine
+- **Syntax:** `CALL show_descriptor(VAR)`
+
+#### Example
+```Fortran
+subroutine test
+  use flang_debug
+  implicit none
+  character(len=9) :: c = 'Hey buddy'
+  integer :: a(5)
+  call show_descriptor(c)
+  call show_descriptor(c(1:3))
+  call show_descriptor(a)
+end subroutine test
+```

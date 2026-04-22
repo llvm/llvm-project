@@ -41,6 +41,7 @@ public:
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<const MCSubtargetInfo> STI;
+  MCTargetOptions MCOptions;
   const Target *TheTarget;
 
   struct StreamerContext {
@@ -62,7 +63,6 @@ public:
       return;
 
     MRI.reset(TheTarget->createMCRegInfo(TT));
-    MCTargetOptions MCOptions;
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
     STI.reset(TheTarget->createMCSubtargetInfo(TT, "", ""));
   }
@@ -93,7 +93,7 @@ public:
     MCStreamer *TheStreamer = C.Streamer.get();
     MCAssembler &Assembler =
         static_cast<MCObjectStreamer *>(TheStreamer)->getAssembler();
-    TheStreamer->initSections(false, *STI);
+    TheStreamer->initSections(*STI);
 
     // Create a mock function
     MCSection *Section = C.MOFI->getTextSection();

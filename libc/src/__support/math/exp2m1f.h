@@ -26,7 +26,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float exp2m1f(float x) {
+LIBC_INLINE constexpr float exp2m1f(float x) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   constexpr size_t N_EXCEPTS_LO = 8;
 

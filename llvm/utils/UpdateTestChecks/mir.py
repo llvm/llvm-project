@@ -52,7 +52,7 @@ MIR_FUNC_RE = re.compile(
 
 
 def build_function_info_dictionary(
-    test, raw_tool_output, triple, prefixes, func_dict, verbose
+    test, raw_tool_output, triple, prefixes, func_dict, verbose, filters=None
 ):
     for m in MIR_FUNC_RE.finditer(raw_tool_output):
         func = m.group("func")
@@ -84,10 +84,11 @@ def build_function_info_dictionary(
                 )
             mangled.append(func_line)
         body = "".join(mangled)
+        filtered_body = common.do_filter(body, filters)
 
         for prefix in prefixes:
             info = common.function_body(
-                body, fixedStack, None, None, None, None, ginfo=None
+                filtered_body, fixedStack, None, None, None, None, ginfo=None
             )
             if func in func_dict[prefix]:
                 if (
@@ -163,13 +164,15 @@ def add_mir_checks_for_function(
     print_fixed_stack,
     first_check_is_next,
     at_the_function_name,
+    check_indent=None,
 ):
     printed_prefixes = set()
     for run in run_list:
         for prefix in run[0]:
             if prefix in printed_prefixes:
                 break
-            if not func_dict[prefix][func_name]:
+            # func_info can be empty if there was a prefix conflict.
+            if not func_dict[prefix].get(func_name):
                 continue
             if printed_prefixes:
                 # Add some space between different check prefixes.
@@ -185,6 +188,7 @@ def add_mir_checks_for_function(
                 func_dict[prefix][func_name],
                 print_fixed_stack,
                 first_check_is_next,
+                check_indent,
             )
             break
         else:
@@ -204,6 +208,7 @@ def add_mir_check_lines(
     func_info,
     print_fixed_stack,
     first_check_is_next,
+    check_indent=None,
 ):
     func_body = str(func_info).splitlines()
     if single_bb:
@@ -220,7 +225,10 @@ def add_mir_check_lines(
     first_line = func_body[0]
     indent = len(first_line) - len(first_line.lstrip(" "))
     # A check comment, indented the appropriate amount
-    check = "{:>{}}; {}".format("", indent, prefix)
+    if check_indent is not None:
+        check = "{}; {}".format(check_indent, prefix)
+    else:
+        check = "{:>{}}; {}".format("", indent, prefix)
 
     output_lines.append("{}-LABEL: name: {}".format(check, func_name))
 

@@ -173,6 +173,14 @@ void DWARFIndex::GetNamespacesWithParents(
   });
 }
 
+void DWARFIndex::GetFunctions(
+    const std::vector<Module::LookupInfo> &lookup_infos, SymbolFileDWARF &dwarf,
+    const CompilerDeclContext &parent_decl_ctx,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
+  for (auto &lookup_info : lookup_infos)
+    GetFunctions(lookup_info, dwarf, parent_decl_ctx, callback);
+}
+
 IterationAction DWARFIndex::ProcessNamespaceDieMatchParents(
     const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
     llvm::function_ref<IterationAction(DWARFDIE die)> callback) {

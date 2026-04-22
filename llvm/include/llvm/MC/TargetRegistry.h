@@ -21,6 +21,7 @@
 #include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -46,6 +47,7 @@ class MCDisassembler;
 class MCInstPrinter;
 class MCInstrAnalysis;
 class MCInstrInfo;
+class MCLFIRewriter;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCRelocationInfo;
@@ -237,6 +239,11 @@ public:
       mca::InstrumentManager *(*)(const MCSubtargetInfo &STI,
                                   const MCInstrInfo &MCII);
 
+  using MCLFIRewriterCtorTy =
+      MCLFIRewriter *(*)(MCContext & Ctx,
+                         std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                         std::unique_ptr<MCInstrInfo> &&InstInfo);
+
 private:
   /// Next - The next registered target in the linked list, maintained by the
   /// TargetRegistry.
@@ -351,6 +358,10 @@ private:
   /// InstrumentManager, if registered (default = nullptr).
   InstrumentManagerCtorTy InstrumentManagerCtorFn = nullptr;
 
+  // MCLFIRewriterCtorFn - Construction function for this target's
+  // MCLFIRewriter, if registered (default = nullptr).
+  MCLFIRewriterCtorTy MCLFIRewriterCtorFn = nullptr;
+
 public:
   Target() = default;
 
@@ -389,15 +400,6 @@ public:
   /// @name Feature Constructors
   /// @{
 
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCAsmInfo *createMCAsmInfo(const MCRegisterInfo &MRI, StringRef TheTriple,
-                             const MCTargetOptions &Options) const {
-    if (!MCAsmInfoCtorFn)
-      return nullptr;
-    return MCAsmInfoCtorFn(MRI, Triple(TheTriple), Options);
-  }
-
   /// Create a MCAsmInfo implementation for the specified
   /// target triple.
   ///
@@ -409,7 +411,10 @@ public:
                              const MCTargetOptions &Options) const {
     if (!MCAsmInfoCtorFn)
       return nullptr;
-    return MCAsmInfoCtorFn(MRI, TheTriple, Options);
+    auto *MAI = MCAsmInfoCtorFn(MRI, TheTriple, Options);
+    if (MAI)
+      MAI->setTargetOptions(Options);
+    return MAI;
   }
 
   /// Create a MCObjectFileInfo implementation for the specified target
@@ -441,28 +446,11 @@ public:
     return MCInstrAnalysisCtorFn(Info);
   }
 
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCRegisterInfo *createMCRegInfo(StringRef TT) const {
-    if (!MCRegInfoCtorFn)
-      return nullptr;
-    return MCRegInfoCtorFn(Triple(TT));
-  }
-
   /// Create a MCRegisterInfo implementation.
   MCRegisterInfo *createMCRegInfo(const Triple &TT) const {
     if (!MCRegInfoCtorFn)
       return nullptr;
     return MCRegInfoCtorFn(TT);
-  }
-
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCSubtargetInfo *createMCSubtargetInfo(StringRef TheTriple, StringRef CPU,
-                                         StringRef Features) const {
-    if (!MCSubtargetInfoCtorFn)
-      return nullptr;
-    return MCSubtargetInfoCtorFn(Triple(TheTriple), CPU, Features);
   }
 
   /// createMCSubtargetInfo - Create a MCSubtargetInfo implementation.
@@ -477,6 +465,8 @@ public:
   MCSubtargetInfo *createMCSubtargetInfo(const Triple &TheTriple, StringRef CPU,
                                          StringRef Features) const {
     if (!MCSubtargetInfoCtorFn)
+      return nullptr;
+    if (!isValidFeatureListFormat(Features))
       return nullptr;
     return MCSubtargetInfoCtorFn(TheTriple, CPU, Features);
   }
@@ -592,10 +582,12 @@ public:
     return nullptr;
   }
 
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCRelocationInfo *createMCRelocationInfo(StringRef TT, MCContext &Ctx) const {
-    return createMCRelocationInfo(Triple(TT), Ctx);
+  MCLFIRewriter *
+  createMCLFIRewriter(MCContext &Ctx, std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                      std::unique_ptr<MCInstrInfo> &&InstInfo) const {
+    if (MCLFIRewriterCtorFn)
+      return MCLFIRewriterCtorFn(Ctx, std::move(RegInfo), std::move(InstInfo));
+    return nullptr;
   }
 
   /// createMCRelocationInfo - Create a target specific MCRelocationInfo.
@@ -608,17 +600,6 @@ public:
                                     ? MCRelocationInfoCtorFn
                                     : llvm::createMCRelocationInfo;
     return Fn(TT, Ctx);
-  }
-
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCSymbolizer *
-  createMCSymbolizer(StringRef TT, LLVMOpInfoCallback GetOpInfo,
-                     LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
-                     MCContext *Ctx,
-                     std::unique_ptr<MCRelocationInfo> &&RelInfo) const {
-    return createMCSymbolizer(Triple(TT), GetOpInfo, SymbolLookUp, DisInfo, Ctx,
-                              std::move(RelInfo));
   }
 
   /// createMCSymbolizer - Create a target specific MCSymbolizer.
@@ -672,6 +653,20 @@ public:
       return InstrumentManagerCtorFn(STI, MCII);
     return nullptr;
   }
+
+  /// isValidFeatureListFormat - check that FeatureString
+  /// has the format:
+  ///   "+attr1,+attr2,-attr3,...,+attrN"
+  /// A comma separates each feature from the next (all lowercase).
+  /// Each of the remaining features is prefixed with '+' or '-' indicating
+  /// whether that feature should be enabled or disabled contrary to the cpu
+  /// specification.
+  /// The string must match exactly that format otherwise
+  /// MCSubtargetInfo::ApplyFeatureFlag will fail.
+  /// For example feature string "+a,+m,c" is accepted, and results in feature
+  /// list {"+a", "+m", "c"}. Later in ApplyFeatureFlag, it asserts
+  /// that all features must start with '+' or '-' and assert is failed.
+  static bool isValidFeatureListFormat(StringRef FeaturesString);
 
   /// @}
 };
@@ -1062,6 +1057,10 @@ struct TargetRegistry {
   static void RegisterInstrumentManager(Target &T,
                                         Target::InstrumentManagerCtorTy Fn) {
     T.InstrumentManagerCtorFn = Fn;
+  }
+
+  static void RegisterMCLFIRewriter(Target &T, Target::MCLFIRewriterCtorTy Fn) {
+    T.MCLFIRewriterCtorFn = Fn;
   }
 
   /// @}

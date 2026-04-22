@@ -46,12 +46,11 @@ using namespace llvm;
 //    Context
 //===----------------------------------------------------------------------===//
 
-namespace llvm::detail {
 /// This class represents the internal implementation of the RecordKeeper.
 /// It contains all of the contextual static state of the Record classes. It is
 /// kept out-of-line to simplify dependencies, and also make it easier for
 /// internal classes to access the uniquer state of the keeper.
-struct RecordKeeperImpl {
+struct detail::RecordKeeperImpl {
   RecordKeeperImpl(RecordKeeper &RK)
       : SharedBitRecTy(RK), SharedIntRecTy(RK), SharedStringRecTy(RK),
         SharedDagRecTy(RK), AnyRecord(RK, {}), TheUnsetInit(RK),
@@ -99,7 +98,6 @@ struct RecordKeeperImpl {
 
   void dumpAllocationStats(raw_ostream &OS) const;
 };
-} // namespace llvm::detail
 
 void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
   // Dump memory allocation related stats.
@@ -770,7 +768,8 @@ const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
 const Record *ListInit::getElementAsRecord(unsigned Idx) const {
   const auto *DI = dyn_cast<DefInit>(getElement(Idx));
   if (!DI)
-    PrintFatalError("Expected record in list!");
+    PrintFatalError("expected record type for the element with index " +
+                    Twine(Idx) + " in list " + getAsString());
   return DI->getDef();
 }
 

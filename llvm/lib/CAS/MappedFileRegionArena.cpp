@@ -55,6 +55,7 @@
 #include "llvm/CAS/MappedFileRegionArena.h"
 #include "OnDiskCommon.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 
 #if LLVM_ON_UNIX
 #include <sys/stat.h>
@@ -159,6 +160,7 @@ struct FileSizeInfo {
 
 Expected<MappedFileRegionArena> MappedFileRegionArena::create(
     const Twine &Path, uint64_t Capacity, uint64_t HeaderOffset,
+    std::shared_ptr<ondisk::OnDiskCASLogger> Logger,
     function_ref<Error(MappedFileRegionArena &)> NewFileConstructor) {
   uint64_t MinCapacity = HeaderOffset + sizeof(Header);
   if (Capacity < MinCapacity)
@@ -168,8 +170,9 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
 
   MappedFileRegionArena Result;
   Result.Path = Path.str();
+  Result.Logger = std::move(Logger);
 
-  // Open the shared lock file. See file comment for details of locking scheme.
+  // Open the support file. See file comment for details of locking scheme.
   SmallString<128> SharedFilePath(Result.Path);
   SharedFilePath.append(".shared");
 
@@ -225,6 +228,11 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
               ") does not match existing config (" + utostr(H.HeaderOffset) +
               ")");
 
+    if (H.Capacity < MinCapacity)
+      return createStringError(
+          std::make_error_code(std::errc::bad_file_descriptor),
+          "capacity inside the MappedFileRegionArena is too small");
+
     // If the capacity doesn't match, use the existing capacity instead.
     if (H.Capacity != Capacity)
       Capacity = H.Capacity;
@@ -232,24 +240,44 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
 
   // If the size is smaller than capacity, we need to resize the file.
   if (FileSize->Size < Capacity) {
-    assert(MainFile->Locked == sys::fs::LockKind::Exclusive);
+    // Acquire the exclusive lock before resizing the file. In the rare case
+    // when opening a large CAS using a small requested size, a shared lock
+    // needs to switch to an exclusive lock here.
+    if (MainFile->Locked != sys::fs::LockKind::Exclusive) {
+      if (Error E = MainFile->switchLock(sys::fs::LockKind::Exclusive))
+        return std::move(E);
+    }
     if (std::error_code EC =
             sys::fs::resize_file_sparse(MainFile->FD, Capacity))
       return createFileError(Result.Path, EC);
+    if (Result.Logger)
+      Result.Logger->logMappedFileRegionArenaResizeFile(
+          Result.Path, FileSize->Size, Capacity);
   }
 
   // Create the mapped region.
   {
     std::error_code EC;
+    const char *Name = nullptr;
+#ifdef _WIN32
+    // Give the file mapping a name to ensure the same mappings are
+    // shared across processes.
+    std::string MapName = Result.Path;
+    std::replace(MapName.begin(), MapName.end(), '\\', '/');
+    MapName = "Local\\" + MapName;
+    Name = MapName.c_str();
+#endif
     sys::fs::mapped_file_region Map(
-        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC);
+        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC, Name);
     if (EC)
       return createFileError(Result.Path, EC);
     Result.Region = std::move(Map);
   }
 
   // Initialize the header.
-  Result.initializeHeader(HeaderOffset);
+  if (Error E = Result.initializeHeader(HeaderOffset))
+    return std::move(E);
+
   if (FileSize->Size < MinCapacity) {
     assert(MainFile->Locked == sys::fs::LockKind::Exclusive);
     // If we need to fully initialize the file, call NewFileConstructor.
@@ -290,6 +318,7 @@ void MappedFileRegionArena::destroyImpl() {
     assert(SharedLockFD && "Must have shared lock file open");
     if (tryLockFileThreadSafe(*SharedLockFD) == std::error_code()) {
       size_t Size = size();
+      size_t Capacity = capacity();
       // sync to file system to make sure all contents are up-to-date.
       (void)Region.sync();
       // unmap the file before resizing since that is the requirement for
@@ -297,6 +326,8 @@ void MappedFileRegionArena::destroyImpl() {
       Region.unmap();
       (void)sys::fs::resize_file(*FD, Size);
       (void)unlockFileThreadSafe(*SharedLockFD);
+      if (Logger)
+        Logger->logMappedFileRegionArenaResizeFile(Path, Capacity, Size);
     }
   }
 
@@ -311,21 +342,35 @@ void MappedFileRegionArena::destroyImpl() {
   // Close the file and shared lock.
   Close(FD);
   Close(SharedLockFD);
+
+  if (Logger)
+    Logger->logMappedFileRegionArenaClose(Path);
 }
 
-void MappedFileRegionArena::initializeHeader(uint64_t HeaderOffset) {
-  assert(capacity() < (uint64_t)INT64_MAX && "capacity must fit in int64_t");
+Error MappedFileRegionArena::initializeHeader(uint64_t HeaderOffset) {
+  if (capacity() >= static_cast<uint64_t>(INT64_MAX))
+    return createStringError(make_error_code(std::errc::protocol_error),
+                             "arena capacity does not fit in int64_t");
   uint64_t HeaderEndOffset = HeaderOffset + sizeof(decltype(*H));
-  assert(HeaderEndOffset <= capacity() &&
-         "Expected end offset to be pre-allocated");
-  assert(isAligned(Align::Of<decltype(*H)>(), HeaderOffset) &&
-         "Expected end offset to be aligned");
+  if (HeaderEndOffset > capacity())
+    return createStringError(make_error_code(std::errc::protocol_error),
+                             "arena header extends past capacity");
+  if (!isAligned(Align::Of<decltype(*H)>(), HeaderOffset))
+    return createStringError(make_error_code(std::errc::protocol_error),
+                             "arena header offset is not aligned");
   H = reinterpret_cast<decltype(H)>(data() + HeaderOffset);
 
   uint64_t ExistingValue = 0;
   if (!H->BumpPtr.compare_exchange_strong(ExistingValue, HeaderEndOffset))
-    assert(ExistingValue >= HeaderEndOffset &&
-           "Expected 0, or past the end of the header itself");
+    if (ExistingValue < HeaderEndOffset)
+      return createStringError(
+          make_error_code(std::errc::protocol_error),
+          "arena bump pointer is corrupt: 0x" +
+              utohexstr(ExistingValue, /*LowerCase=*/true));
+  if (Logger)
+    Logger->logMappedFileRegionArenaCreate(Path, *FD, data(), capacity(),
+                                           size());
+  return Error::success();
 }
 
 static Error createAllocatorOutOfSpaceError() {
@@ -347,6 +392,9 @@ Expected<int64_t> MappedFileRegionArena::allocateOffset(uint64_t AllocSize) {
     if (OldEnd <= capacity())
       (void)H->BumpPtr.exchange(OldEnd);
 
+    if (Logger)
+      Logger->logMappedFileRegionArenaOom(Path, capacity(), OldEnd, AllocSize);
+
     return createAllocatorOutOfSpaceError();
   }
 
@@ -367,6 +415,10 @@ Expected<int64_t> MappedFileRegionArena::allocateOffset(uint64_t AllocSize) {
     while (DiskSize < NewSize)
       H->AllocatedSize.compare_exchange_strong(DiskSize, NewSize);
   }
+
+  if (Logger)
+    Logger->logMappedFileRegionArenaAllocate(data(), OldEnd, AllocSize);
+
   return OldEnd;
 }
 

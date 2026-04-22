@@ -1141,10 +1141,25 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    lui a1, %hi(.LCPI67_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI67_0)
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v9, a1
+; CHECK-NEXT:    li a1, 33
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vmulhu.vv v10, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
+; CHECK-NEXT:    vmulhu.vv v8, v8, v9
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vmv.v.i v9, 3
+; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
+; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1287,9 +1302,16 @@ define void @mulhs_v6i16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    li a1, 22
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vmv.v.i v9, -7
-; CHECK-NEXT:    vmerge.vim v9, v9, 7, v0
-; CHECK-NEXT:    vdiv.vv v8, v8, v9
+; CHECK-NEXT:    lui a1, 1048571
+; CHECK-NEXT:    addi a1, a1, 1755
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    lui a1, 5
+; CHECK-NEXT:    addi a1, a1, -1755
+; CHECK-NEXT:    vmerge.vxm v9, v9, a1, v0
+; CHECK-NEXT:    vmulh.vv v8, v8, v9
+; CHECK-NEXT:    vsra.vi v8, v8, 1
+; CHECK-NEXT:    vsrl.vi v9, v8, 15
+; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1493,7 +1515,6 @@ define void @smin_vx_v16i8(ptr %x, i8 %y) {
   store <16 x i8> %d, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.smin.v16i8(<16 x i8>, <16 x i8>)
 
 define void @smin_vx_v8i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: smin_vx_v8i16:
@@ -1510,7 +1531,6 @@ define void @smin_vx_v8i16(ptr %x, i16 %y) {
   store <8 x i16> %d, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.smin.v8i16(<8 x i16>, <8 x i16>)
 
 define void @smin_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: smin_vx_v6i16:
@@ -1527,7 +1547,6 @@ define void @smin_vx_v6i16(ptr %x, i16 %y) {
   store <6 x i16> %d, ptr %x
   ret void
 }
-declare <6 x i16> @llvm.smin.v6i16(<6 x i16>, <6 x i16>)
 
 define void @smin_vx_v4i32(ptr %x, i32 %y) {
 ; CHECK-LABEL: smin_vx_v4i32:
@@ -1544,7 +1563,6 @@ define void @smin_vx_v4i32(ptr %x, i32 %y) {
   store <4 x i32> %d, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)
 
 define void @smin_xv_v16i8(ptr %x, i8 %y) {
 ; CHECK-LABEL: smin_xv_v16i8:
@@ -1710,7 +1728,6 @@ define void @smax_vx_v16i8(ptr %x, i8 %y) {
   store <16 x i8> %d, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.smax.v16i8(<16 x i8>, <16 x i8>)
 
 define void @smax_vx_v8i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: smax_vx_v8i16:
@@ -1727,7 +1744,6 @@ define void @smax_vx_v8i16(ptr %x, i16 %y) {
   store <8 x i16> %d, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.smax.v8i16(<8 x i16>, <8 x i16>)
 
 define void @smax_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: smax_vx_v6i16:
@@ -1744,7 +1760,6 @@ define void @smax_vx_v6i16(ptr %x, i16 %y) {
   store <6 x i16> %d, ptr %x
   ret void
 }
-declare <6 x i16> @llvm.smax.v6i16(<6 x i16>, <6 x i16>)
 
 define void @smax_vx_v4i32(ptr %x, i32 %y) {
 ; CHECK-LABEL: smax_vx_v4i32:
@@ -1761,7 +1776,6 @@ define void @smax_vx_v4i32(ptr %x, i32 %y) {
   store <4 x i32> %d, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
 
 define void @smax_xv_v16i8(ptr %x, i8 %y) {
 ; CHECK-LABEL: smax_xv_v16i8:
@@ -1927,7 +1941,6 @@ define void @umin_vx_v16i8(ptr %x, i8 %y) {
   store <16 x i8> %d, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.umin.v16i8(<16 x i8>, <16 x i8>)
 
 define void @umin_vx_v8i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: umin_vx_v8i16:
@@ -1944,7 +1957,6 @@ define void @umin_vx_v8i16(ptr %x, i16 %y) {
   store <8 x i16> %d, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.umin.v8i16(<8 x i16>, <8 x i16>)
 
 define void @umin_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: umin_vx_v6i16:
@@ -1961,7 +1973,6 @@ define void @umin_vx_v6i16(ptr %x, i16 %y) {
   store <6 x i16> %d, ptr %x
   ret void
 }
-declare <6 x i16> @llvm.umin.v6i16(<6 x i16>, <6 x i16>)
 
 define void @umin_vx_v4i32(ptr %x, i32 %y) {
 ; CHECK-LABEL: umin_vx_v4i32:
@@ -1978,7 +1989,6 @@ define void @umin_vx_v4i32(ptr %x, i32 %y) {
   store <4 x i32> %d, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>)
 
 define void @umin_xv_v16i8(ptr %x, i8 %y) {
 ; CHECK-LABEL: umin_xv_v16i8:
@@ -2144,7 +2154,6 @@ define void @umax_vx_v16i8(ptr %x, i8 %y) {
   store <16 x i8> %d, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.umax.v16i8(<16 x i8>, <16 x i8>)
 
 define void @umax_vx_v8i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: umax_vx_v8i16:
@@ -2161,7 +2170,6 @@ define void @umax_vx_v8i16(ptr %x, i16 %y) {
   store <8 x i16> %d, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.umax.v8i16(<8 x i16>, <8 x i16>)
 
 define void @umax_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: umax_vx_v6i16:
@@ -2178,7 +2186,6 @@ define void @umax_vx_v6i16(ptr %x, i16 %y) {
   store <6 x i16> %d, ptr %x
   ret void
 }
-declare <6 x i16> @llvm.umax.v6i16(<6 x i16>, <6 x i16>)
 
 define void @umax_vx_v4i32(ptr %x, i32 %y) {
 ; CHECK-LABEL: umax_vx_v4i32:
@@ -2195,7 +2202,6 @@ define void @umax_vx_v4i32(ptr %x, i32 %y) {
   store <4 x i32> %d, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.umax.v4i32(<4 x i32>, <4 x i32>)
 
 define void @umax_xv_v16i8(ptr %x, i8 %y) {
 ; CHECK-LABEL: umax_xv_v16i8:

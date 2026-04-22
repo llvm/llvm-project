@@ -1,6 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 \
-; RUN:  -polly-invariant-load-hoisting \
-; RUN:  | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output -polly-invariant-load-hoisting < %s 2>&1 | FileCheck %s
 
 ; Make sure we choose a canonical element that is not the first invariant load,
 ; but the first that is an array base pointer.

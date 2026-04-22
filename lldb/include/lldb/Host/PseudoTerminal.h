@@ -27,18 +27,15 @@ public:
     invalid_fd = -1 ///< Invalid file descriptor value
   };
 
-  /// Default constructor
-  ///
   /// Constructs this object with invalid primary and secondary file
   /// descriptors.
   PseudoTerminal();
 
-  /// Destructor
+  /// The destructor will close the primary and secondary file
+  /// descriptor/HANDLEs if they are valid and ownership has not been released.
   ///
-  /// The destructor will close the primary and secondary file descriptors if
-  /// they are valid and ownership has not been released using one of: @li
-  /// PseudoTerminal::ReleasePrimaryFileDescriptor() @li
-  /// PseudoTerminal::ReleaseSaveFileDescriptor()
+  /// \see PseudoTerminal::ReleasePrimaryFileDescriptor()
+  /// \see PseudoTerminal::ReleaseSecondaryFileDescriptor()
   ~PseudoTerminal();
 
   /// Close the primary file descriptor if it is valid.
@@ -58,14 +55,17 @@ public:
   /// closed as it is no longer needed by the child process.
   ///
   /// This class will close the file descriptors for the primary/secondary when
-  /// the destructor is called. The file handles can be released using either:
-  /// @li PseudoTerminal::ReleasePrimaryFileDescriptor() @li
-  /// PseudoTerminal::ReleaseSaveFileDescriptor()
+  /// the destructor is called. The file handles can be released using one of:
+  /// @li PseudoTerminal::ReleasePrimaryFileDescriptor()
+  /// @li PseudoTerminal::ReleaseSecondaryFileDescriptor()
   ///
   /// \return
   ///     \b Parent process: a child process ID that is greater
   ///         than zero, or an error if the fork fails.
   ///     \b Child process: zero.
+  ///
+  /// \see PseudoTerminal::ReleasePrimaryFileDescriptor()
+  /// \see PseudoTerminal::ReleaseSecondaryFileDescriptor()
   llvm::Expected<lldb::pid_t> Fork();
 
   /// The primary file descriptor accessor.

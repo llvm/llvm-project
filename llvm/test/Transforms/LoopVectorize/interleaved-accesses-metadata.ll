@@ -20,17 +20,16 @@ define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias 
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_VEC4R:%.*]], ptr [[P]], i64 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_VEC4R:%.*]], ptr [[P]], i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP2]], align 8, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP3]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], splat (double 2.000000e+00)
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [20 x %struct.Vec2r], ptr [[CP]], i64 0, i64 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [20 x %struct.Vec2r], ptr [[CP]], i64 0, i64 [[INDEX]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[INDEX]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr [[TMP10]], align 8, !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[TMP11]], align 8, !tbaa [[TBAA5]]
@@ -52,7 +51,7 @@ define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias 
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %x = getelementptr inbounds %struct.Vec4r, ptr %p, i64 %iv, i32 0
   %0 = load double, ptr %x, align 8, !tbaa !3
@@ -102,6 +101,9 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[SRC]], align 4, !alias.scope [[META10:![0-9]+]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP11]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -109,9 +111,6 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[SRC]], align 4, !alias.scope [[META10:![0-9]+]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP11]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4, !alias.scope [[META13:![0-9]+]], !noalias [[META10]]
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 1, i32 3>

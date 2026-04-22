@@ -333,6 +333,27 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     Token OpToken = Tok;
     ConsumeToken();
 
+    // The reflection operator is not valid here (i.e., in the place of the
+    // operator token in a binary expression), so if reflection and blocks are
+    // enabled, we split caretcaret into two carets: the first being the binary
+    // operator and the second being the introducer for the block.
+    if (OpToken.is(tok::caretcaret)) {
+      assert(getLangOpts().Reflection);
+      if (getLangOpts().Blocks) {
+        OpToken.setKind(tok::caret);
+        Token Caret;
+        {
+          Caret.startToken();
+          Caret.setKind(tok::caret);
+          Caret.setLocation(OpToken.getLocation().getLocWithOffset(1));
+          Caret.setLength(1);
+        }
+        UnconsumeToken(OpToken);
+        PP.EnterToken(Caret, /*IsReinject=*/true);
+        return ParseRHSOfBinaryExpression(LHS, MinPrec);
+      }
+    }
+
     // If we're potentially in a template-id, we may now be able to determine
     // whether we're actually in one or not.
     if (OpToken.isOneOf(tok::comma, tok::greater, tok::greatergreater,
@@ -460,7 +481,9 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     else
       RHS = ParseCastExpression(CastParseKind::AnyCastExpr);
 
-    if (RHS.isInvalid()) {
+    // We preserve the LHS only if we hit a clear statement boundary (tok::semi)
+    // to avoid additional bogus diagnostics.
+    if (RHS.isInvalid() && Tok.isNot(tok::semi)) {
       LHS = ExprError();
     }
 
@@ -492,7 +515,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
                             static_cast<prec::Level>(ThisPrec + !isRightAssoc));
       RHSIsInitList = false;
 
-      if (RHS.isInvalid()) {
+      if (RHS.isInvalid() && Tok.isNot(tok::semi)) {
         LHS = ExprError();
       }
 
@@ -519,7 +542,11 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
 
     if (!LHS.isInvalid()) {
       // Combine the LHS and RHS into the LHS (e.g. build AST).
-      if (TernaryMiddle.isInvalid()) {
+      if (RHS.isInvalid()) {
+        LHS = Actions.CreateRecoveryExpr(LHS.get()->getBeginLoc(),
+                                         PrevTokLocation,
+                                         {LHS.get()});
+      } else if (TernaryMiddle.isInvalid()) {
         // If we're using '>>' as an operator within a template
         // argument list (in C++98), suggest the addition of
         // parentheses so that the code remains well-formed in C++0x.
@@ -902,7 +929,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
                Next.isOneOf(tok::coloncolon, tok::less, tok::l_paren,
                             tok::l_brace)) {
         // If TryAnnotateTypeOrScopeToken annotates the token, tail recurse.
-        if (TryAnnotateTypeOrScopeToken())
+        if (TryAnnotateTypeOrScopeToken(isAddressOfOperand))
           return ExprError();
         if (!Tok.is(tok::identifier))
           return ParseCastExpression(ParseKind, isAddressOfOperand, NotCastExpr,
@@ -1208,6 +1235,18 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     AllowSuffix = false;
     Res = ParseUnaryExprOrTypeTraitExpression();
     break;
+  case tok::caretcaret: {
+    if (!getLangOpts().Reflection) {
+      NotCastExpr = true;
+      return ExprError();
+    }
+
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    AllowSuffix = false;
+    Res = ParseCXXReflectExpression();
+    break;
+  }
   case tok::ampamp: {      // unary-expression: '&&' identifier
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
@@ -1527,7 +1566,8 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::code_completion: {
     cutOffParsing();
     Actions.CodeCompletion().CodeCompleteExpression(
-        getCurScope(), PreferredType.get(Tok.getLocation()));
+        getCurScope(), PreferredType.get(Tok.getLocation()),
+        /*IsParenthesized=*/false, /*IsAddressOfOperand=*/isAddressOfOperand);
     return ExprError();
   }
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
@@ -3430,6 +3470,15 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
       Diag(PlatformIdentifier->getLoc(),
            diag::err_avail_query_unrecognized_platform_name)
           << GivenPlatform;
+      return std::nullopt;
+    }
+
+    // Validate anyAppleOS version; reject versions older than 26.0.
+    if (Platform == "anyappleos" &&
+        !AvailabilitySpec::validateAnyAppleOSVersion(Version)) {
+      Diag(VersionRange.getBegin(),
+           diag::err_avail_query_anyappleos_min_version)
+          << Version.getAsString();
       return std::nullopt;
     }
 

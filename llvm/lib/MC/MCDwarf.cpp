@@ -745,7 +745,6 @@ static uint64_t SpecialAddr(MCDwarfLineTableParams Params, uint64_t op) {
 void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
                              int64_t LineDelta, uint64_t AddrDelta,
                              SmallVectorImpl<char> &Out) {
-  uint8_t Buf[16];
   uint64_t Temp, Opcode;
   bool NeedCopy = false;
 
@@ -763,7 +762,7 @@ void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
       Out.push_back(dwarf::DW_LNS_const_add_pc);
     else if (AddrDelta) {
       Out.push_back(dwarf::DW_LNS_advance_pc);
-      Out.append(Buf, Buf + encodeULEB128(AddrDelta, Buf));
+      appendLEB128<LEB128Sign::Unsigned>(Out, AddrDelta);
     }
     Out.push_back(dwarf::DW_LNS_extended_op);
     Out.push_back(1);
@@ -779,7 +778,7 @@ void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
   if (Temp >= Params.DWARF2LineRange ||
       Temp + Params.DWARF2LineOpcodeBase > 255) {
     Out.push_back(dwarf::DW_LNS_advance_line);
-    Out.append(Buf, Buf + encodeSLEB128(LineDelta, Buf));
+    appendLEB128<LEB128Sign::Signed>(Out, LineDelta);
 
     LineDelta = 0;
     Temp = 0 - Params.DWARF2LineBase;
@@ -815,7 +814,7 @@ void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
 
   // Otherwise use DW_LNS_advance_pc.
   Out.push_back(dwarf::DW_LNS_advance_pc);
-  Out.append(Buf, Buf + encodeULEB128(AddrDelta, Buf));
+  appendLEB128<LEB128Sign::Unsigned>(Out, AddrDelta);
 
   if (NeedCopy)
     Out.push_back(dwarf::DW_LNS_copy);
@@ -861,7 +860,12 @@ static void EmitGenDwarfAbbrev(MCStreamer *MCOS) {
   if (!DwarfDebugFlags.empty())
     EmitAbbrev(MCOS, dwarf::DW_AT_APPLE_flags, dwarf::DW_FORM_string);
   EmitAbbrev(MCOS, dwarf::DW_AT_producer, dwarf::DW_FORM_string);
-  EmitAbbrev(MCOS, dwarf::DW_AT_language, dwarf::DW_FORM_data2);
+
+  if (context.getDwarfVersion() >= 6)
+    EmitAbbrev(MCOS, dwarf::DW_AT_language_name, dwarf::DW_FORM_data2);
+  else
+    EmitAbbrev(MCOS, dwarf::DW_AT_language, dwarf::DW_FORM_data2);
+
   EmitAbbrev(MCOS, 0, 0);
 
   // DW_TAG_label DIE abbrev (2).
@@ -1093,9 +1097,15 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     MCOS->emitBytes(StringRef("llvm-mc (based on LLVM " PACKAGE_VERSION ")"));
   MCOS->emitInt8(0); // NULL byte to terminate the string.
 
-  // AT_language, a 4 byte value.  We use DW_LANG_Mips_Assembler as the dwarf2
-  // draft has no standard code for assembler.
-  MCOS->emitInt16(dwarf::DW_LANG_Mips_Assembler);
+  if (context.getDwarfVersion() >= 6) {
+    // AT_language_name, a 4 byte value.
+    MCOS->emitInt16(dwarf::DW_LNAME_Assembly);
+  } else {
+    // AT_language, a 4 byte value.  We use DW_LANG_Mips_Assembler as the dwarf2
+    // draft has no standard code for assembler.
+    // FIXME: dwarf4 has DW_LANG_Assembly which we could use instead.
+    MCOS->emitInt16(dwarf::DW_LANG_Mips_Assembler);
+  }
 
   // Third part: the list of label DIEs.
 
@@ -1857,13 +1867,13 @@ namespace {
 struct CIEKey {
   CIEKey() = default;
 
-  explicit CIEKey(const MCDwarfFrameInfo &Frame)
+  explicit CIEKey(const MCDwarfFrameInfo &Frame, bool IsEH)
       : Personality(Frame.Personality),
         PersonalityEncoding(Frame.PersonalityEncoding),
         LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
         IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
         IsBKeyFrame(Frame.IsBKeyFrame),
-        IsMTETaggedFrame(Frame.IsMTETaggedFrame) {}
+        IsMTETaggedFrame(Frame.IsMTETaggedFrame), IsEH(IsEH) {}
 
   StringRef PersonalityName() const {
     if (!Personality)
@@ -1872,6 +1882,11 @@ struct CIEKey {
   }
 
   bool operator<(const CIEKey &Other) const {
+    assert(IsEH == Other.IsEH);
+    if (!IsEH)
+      return std::make_tuple(RAReg, IsSimple) <
+             std::make_tuple(Other.RAReg, Other.IsSimple);
+
     return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
                            IsSignalFrame, IsSimple, RAReg, IsBKeyFrame,
                            IsMTETaggedFrame) <
@@ -1882,6 +1897,10 @@ struct CIEKey {
   }
 
   bool operator==(const CIEKey &Other) const {
+    assert(IsEH == Other.IsEH);
+    if (!IsEH)
+      return RAReg == Other.RAReg && IsSimple == Other.IsSimple;
+
     return Personality == Other.Personality &&
            PersonalityEncoding == Other.PersonalityEncoding &&
            LsdaEncoding == Other.LsdaEncoding &&
@@ -1899,12 +1918,12 @@ struct CIEKey {
   unsigned RAReg = UINT_MAX;
   bool IsBKeyFrame = false;
   bool IsMTETaggedFrame = false;
+  bool IsEH = false;
 };
 
 } // end anonymous namespace
 
-void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
-                               bool IsEH) {
+void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   MCContext &Context = Streamer.getContext();
   const MCObjectFileInfo *MOFI = Context.getObjectFileInfo();
   const MCAsmInfo *AsmInfo = Context.getAsmInfo();
@@ -1914,7 +1933,7 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   // Emit the compact unwind info if available.
   bool NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();
   if (IsEH && MOFI->getCompactUnwindSection()) {
-    Streamer.generateCompactUnwindEncodings(MAB);
+    Streamer.generateCompactUnwindEncodings();
     bool SectionEmitted = false;
     for (const MCDwarfFrameInfo &Frame : FrameArray) {
       if (Frame.CompactUnwindEncoding == 0) continue;
@@ -1950,10 +1969,10 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   // but the Android libunwindstack rejects eh_frame sections where
   // an FDE refers to a CIE other than the closest previous CIE.
   std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
-  llvm::stable_sort(FrameArrayX,
-                    [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
-                      return CIEKey(X) < CIEKey(Y);
-                    });
+  llvm::stable_sort(FrameArrayX, [IsEH](const MCDwarfFrameInfo &X,
+                                        const MCDwarfFrameInfo &Y) {
+    return CIEKey(X, IsEH) < CIEKey(Y, IsEH);
+  });
   CIEKey LastKey;
   const MCSymbol *LastCIEStart = nullptr;
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
@@ -1969,8 +1988,8 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
       // section, do not emit anything.
       continue;
 
-    CIEKey Key(Frame);
-    if (!LastCIEStart || (IsEH && Key != LastKey)) {
+    CIEKey Key(Frame, IsEH);
+    if (!LastCIEStart || Key != LastKey) {
       LastKey = Key;
       LastCIEStart = &Emitter.EmitCIE(Frame);
     }

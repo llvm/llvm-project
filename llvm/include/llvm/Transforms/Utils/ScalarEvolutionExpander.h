@@ -61,7 +61,7 @@ struct PoisonFlags {
 /// Clients should create an instance of this class when rewriting is needed,
 /// and destroy it when finished to allow the release of the associated
 /// memory.
-class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
+class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   friend class SCEVExpanderCleaner;
 
   ScalarEvolution &SE;
@@ -74,7 +74,7 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   bool PreserveLCSSA;
 
   // InsertedExpressions caches Values for reuse, so must track RAUW.
-  DenseMap<std::pair<const SCEV *, Instruction *>, TrackingVH<Value>>
+  DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
       InsertedExpressions;
 
   // InsertedValues only flags inserted instructions so needs no RAUW.
@@ -179,16 +179,16 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   const char *DebugType;
 #endif
 
-  friend struct SCEVVisitor<SCEVExpander, Value *>;
+  friend struct SCEVUseVisitor<SCEVExpander, Value *>;
 
 public:
   /// Construct a SCEVExpander in "canonical" mode.
-  explicit SCEVExpander(ScalarEvolution &se, const DataLayout &DL,
-                        const char *name, bool PreserveLCSSA = true)
-      : SE(se), DL(DL), IVName(name), PreserveLCSSA(PreserveLCSSA),
-        IVIncInsertLoop(nullptr), IVIncInsertPos(nullptr), CanonicalMode(true),
-        LSRMode(false),
-        Builder(se.getContext(), InstSimplifyFolder(DL),
+  explicit SCEVExpander(ScalarEvolution &SE, const char *Name,
+                        bool PreserveLCSSA = true)
+      : SE(SE), DL(SE.getDataLayout()), IVName(Name),
+        PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
+        IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
+        Builder(SE.getContext(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -313,9 +313,8 @@ public:
 
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
-  LLVM_ABI Value *expandCodeFor(const SCEV *SH, Type *Ty,
-                                BasicBlock::iterator I);
-  Value *expandCodeFor(const SCEV *SH, Type *Ty, Instruction *I) {
+  LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty, BasicBlock::iterator I);
+  Value *expandCodeFor(SCEVUse SH, Type *Ty, Instruction *I) {
     return expandCodeFor(SH, Ty, I->getIterator());
   }
 
@@ -323,7 +322,7 @@ public:
   /// program.  The code is inserted into the SCEVExpander's current
   /// insertion point. If a type is specified, the result will be expanded to
   /// have that type, with a cast if necessary.
-  LLVM_ABI Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr);
+  LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty = nullptr);
 
   /// Generates a code sequence that evaluates this predicate.  The inserted
   /// instructions will be at position \p Loc.  The result will be of type i1
@@ -475,15 +474,15 @@ private:
   /// DropPoisonGeneratingInsts is populated with instructions for which
   /// poison-generating flags must be dropped if the value is reused.
   Value *FindValueInExprValueMap(
-      const SCEV *S, const Instruction *InsertPt,
+      SCEVUse S, const Instruction *InsertPt,
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
-  LLVM_ABI Value *expand(const SCEV *S);
-  Value *expand(const SCEV *S, BasicBlock::iterator I) {
+  LLVM_ABI Value *expand(SCEVUse S);
+  Value *expand(SCEVUse S, BasicBlock::iterator I) {
     setInsertPoint(I);
     return expand(S);
   }
-  Value *expand(const SCEV *S, Instruction *I) {
+  Value *expand(SCEVUse S, Instruction *I) {
     setInsertPoint(I);
     return expand(S);
   }
@@ -491,40 +490,45 @@ private:
   /// Determine the most "relevant" loop for the given SCEV.
   const Loop *getRelevantLoop(const SCEV *);
 
-  Value *expandMinMaxExpr(const SCEVNAryExpr *S, Intrinsic::ID IntrinID,
-                          Twine Name, bool IsSequential = false);
+  Value *expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
+                          Intrinsic::ID IntrinID, Twine Name,
+                          bool IsSequential = false);
 
-  Value *visitConstant(const SCEVConstant *S) { return S->getValue(); }
+  Value *visitConstant(SCEVUseT<const SCEVConstant *> S) {
+    return S->getValue();
+  }
 
-  Value *visitVScale(const SCEVVScale *S);
+  Value *visitVScale(SCEVUseT<const SCEVVScale *> S);
 
-  Value *visitPtrToIntExpr(const SCEVPtrToIntExpr *S);
+  Value *visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S);
 
-  Value *visitTruncateExpr(const SCEVTruncateExpr *S);
+  Value *visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S);
 
-  Value *visitZeroExtendExpr(const SCEVZeroExtendExpr *S);
+  Value *visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S);
 
-  Value *visitSignExtendExpr(const SCEVSignExtendExpr *S);
+  Value *visitZeroExtendExpr(SCEVUseT<const SCEVZeroExtendExpr *> S);
 
-  Value *visitAddExpr(const SCEVAddExpr *S);
+  Value *visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> S);
 
-  Value *visitMulExpr(const SCEVMulExpr *S);
+  Value *visitAddExpr(SCEVUseT<const SCEVAddExpr *> S);
 
-  Value *visitUDivExpr(const SCEVUDivExpr *S);
+  Value *visitMulExpr(SCEVUseT<const SCEVMulExpr *> S);
 
-  Value *visitAddRecExpr(const SCEVAddRecExpr *S);
+  Value *visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S);
 
-  Value *visitSMaxExpr(const SCEVSMaxExpr *S);
+  Value *visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S);
 
-  Value *visitUMaxExpr(const SCEVUMaxExpr *S);
+  Value *visitSMaxExpr(SCEVUseT<const SCEVSMaxExpr *> S);
 
-  Value *visitSMinExpr(const SCEVSMinExpr *S);
+  Value *visitUMaxExpr(SCEVUseT<const SCEVUMaxExpr *> S);
 
-  Value *visitUMinExpr(const SCEVUMinExpr *S);
+  Value *visitSMinExpr(SCEVUseT<const SCEVSMinExpr *> S);
 
-  Value *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *S);
+  Value *visitUMinExpr(SCEVUseT<const SCEVUMinExpr *> S);
 
-  Value *visitUnknown(const SCEVUnknown *S) { return S->getValue(); }
+  Value *visitSequentialUMinExpr(SCEVUseT<const SCEVSequentialUMinExpr *> S);
+
+  Value *visitUnknown(SCEVUseT<const SCEVUnknown *> S) { return S->getValue(); }
 
   LLVM_ABI void rememberInstruction(Value *I);
 
@@ -534,8 +538,8 @@ private:
 
   bool isExpandedAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
 
-  Value *tryToReuseLCSSAPhi(const SCEVAddRecExpr *S);
-  Value *expandAddRecExprLiterally(const SCEVAddRecExpr *);
+  Value *tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S);
+  Value *expandAddRecExprLiterally(SCEVUseT<const SCEVAddRecExpr *> S);
   PHINode *getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
                                      const Loop *L, Type *&TruncTy,
                                      bool &InvertStep);

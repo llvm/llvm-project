@@ -87,7 +87,7 @@ public:
       // Note that the first level gets no prefix.
       {
         OS << '\n';
-        ColorScope Color(OS, ShowColors, IndentColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::Indent);
         OS << Prefix << (IsLastChild ? '`' : '|') << '-';
         if (!Label.empty())
           OS << Label << ": ";
@@ -286,6 +286,7 @@ public:
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
   void VisitMemberExpr(const MemberExpr *Node);
   void VisitExtVectorElementExpr(const ExtVectorElementExpr *Node);
+  void VisitMatrixElementExpr(const MatrixElementExpr *Node);
   void VisitBinaryOperator(const BinaryOperator *Node);
   void VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
   void VisitAddrLabelExpr(const AddrLabelExpr *Node);
@@ -342,6 +343,7 @@ public:
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T);
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
+  void VisitDeducedType(const DeducedType *T);
   void VisitAutoType(const AutoType *T);
   void VisitDeducedTemplateSpecializationType(
       const DeducedTemplateSpecializationType *T);

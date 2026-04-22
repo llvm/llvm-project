@@ -20,7 +20,9 @@ llvm::SmallString<128> appendPathNative(llvm::StringRef Base,
 llvm::SmallString<128> appendPathPosix(llvm::StringRef Base,
                                        llvm::StringRef Path);
 
-void getMustacheHtmlFiles(llvm::StringRef AssetsPath,
-                          clang::doc::ClangDocContext &CDCtx);
+void getHtmlFiles(llvm::StringRef AssetsPath,
+                  clang::doc::ClangDocContext &CDCtx);
+
+void getMdFiles(llvm::StringRef AssetsPath, clang::doc::ClangDocContext &CDCtx);
 
 #endif

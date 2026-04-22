@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float frexpf(float x, int *exp) {
+LIBC_INLINE constexpr float frexpf(float x, int *exp) {
   return fputil::frexp(x, *exp);
 }
 

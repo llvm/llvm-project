@@ -156,6 +156,22 @@ void __asan_report_ ## type ## _n_noabort(uptr addr, uptr size) {           \
 ASAN_REPORT_ERROR_N(load, false)
 ASAN_REPORT_ERROR_N(store, true)
 
+extern "C" NOINLINE INTERFACE_ATTRIBUTE void
+__asan_report_assume_dereferenceable(uptr addr, uptr size) {
+  if (__asan_region_is_poisoned(addr, size)) {
+    GET_CALLER_PC_BP_SP;
+    ReportAssumeDereferenceableError(pc, bp, sp, addr, size, true);
+  }
+}
+
+extern "C" NOINLINE INTERFACE_ATTRIBUTE void
+__asan_report_assume_dereferenceable_noabort(uptr addr, uptr size) {
+  if (__asan_region_is_poisoned(addr, size)) {
+    GET_CALLER_PC_BP_SP;
+    ReportAssumeDereferenceableError(pc, bp, sp, addr, size, false);
+  }
+}
+
 #define ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, exp_arg, fatal) \
   uptr sp = MEM_TO_SHADOW(addr);                                               \
   uptr s = size <= ASAN_SHADOW_GRANULARITY ? *reinterpret_cast<u8 *>(sp)       \
@@ -618,7 +634,9 @@ static void UnpoisonDefaultStack() {
     int local_stack;
     const uptr page_size = GetPageSizeCached();
     top = curr_thread->stack_top();
-    bottom = ((uptr)&local_stack - page_size) & ~(page_size - 1);
+    bottom = (uptr)&local_stack & ~(page_size - 1);
+    if (AddrIsInMem(bottom - page_size))
+      bottom -= page_size;
   } else {
     CHECK(!SANITIZER_FUCHSIA);
     // If we haven't seen this thread, try asking the OS for stack bounds.

@@ -39,13 +39,13 @@ module attributes {omp.is_target_device = false} {
 // CHECK-NEXT:  ret void
 
 // CHECK: define internal void @omp_target_depend_..omp_par
-// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_depend__l[[LINE:.*]](ptr {{.*}})
+// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_depend__l[[LINE:.*]](ptr {{.*}}, ptr null)
 // CHECK-NEXT: br label %[[BLOCK_AFTER_TARGET_TASK_BODY:.*]]
 // CHECK: [[BLOCK_AFTER_TARGET_TASK_BODY]]:
 // CHECK-NEXT: ret void
 
 
-// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_depend__l[[LINE]](ptr %[[ADDR_A:.*]])
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_depend__l[[LINE]](ptr %[[ADDR_A:.*]], ptr %{{.*}})
 // CHECK: store i32 100, ptr %[[ADDR_A]], align 4
 
 // The following check test for the fix of problem #1 as described in https://github.com/llvm/llvm-project/issues/126949

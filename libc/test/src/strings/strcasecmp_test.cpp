@@ -44,3 +44,50 @@ TEST(LlvmLibcStrCaseCmpTest, Case) {
   result = LIBC_NAMESPACE::strcasecmp(s2, s1);
   ASSERT_EQ(result, 0);
 }
+
+TEST(LlvmLibcStrCaseCmpTest, EqualStringsShouldReturnZero) {
+  const char *s1 = "abc";
+  const char *s2 = "abc";
+  int result = LIBC_NAMESPACE::strcasecmp(s1, s2);
+  ASSERT_EQ(result, 0);
+
+  result = LIBC_NAMESPACE::strcasecmp(s2, s1);
+  ASSERT_EQ(result, 0);
+}
+
+TEST(LlvmLibcStrCaseCmpTest, ShouldReturnResultOfFirstDifference) {
+  const char *s1 = "___B42__";
+  const char *s2 = "___C55__";
+  int result = LIBC_NAMESPACE::strcasecmp(s1, s2);
+  ASSERT_LT(result, 0);
+
+  result = LIBC_NAMESPACE::strcasecmp(s2, s1);
+  ASSERT_GT(result, 0);
+}
+
+TEST(LlvmLibcStrCaseCmpTest, UnequalLengthStringsShouldNotReturnZero) {
+  const char *s1 = "abc";
+  const char *s2 = "abcd";
+  int result = LIBC_NAMESPACE::strcasecmp(s1, s2);
+  ASSERT_LT(result, 0);
+
+  result = LIBC_NAMESPACE::strcasecmp(s2, s1);
+  ASSERT_GT(result, 0);
+}
+
+TEST(LlvmLibcStrCaseCmpTest, StringArgumentSwapChangesSign) {
+  const char *a = "a";
+  const char *b = "b";
+  int result = LIBC_NAMESPACE::strcasecmp(b, a);
+  ASSERT_GT(result, 0);
+
+  result = LIBC_NAMESPACE::strcasecmp(a, b);
+  ASSERT_LT(result, 0);
+}
+
+TEST(LlvmLibcStrCaseCmpTest, CharactersGreaterThan127ShouldBePositive) {
+  const char s1[] = {static_cast<char>(128), '\0'};
+  const char s2[] = {'\0'};
+  int result = LIBC_NAMESPACE::strcasecmp(s1, s2);
+  ASSERT_GT(result, 0);
+}

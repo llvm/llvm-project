@@ -186,7 +186,8 @@ std::string buildTraceGraph(StringRef Json) {
 
 } // namespace
 
-TEST(TimeProfilerTest, ConstantEvaluationCxx20) {
+// FIXME: Flaky test. See https://github.com/llvm/llvm-project/pull/138613
+TEST(TimeProfilerTest, DISABLED_ConstantEvaluationCxx20) {
   std::string Code = R"(
 void print(double value);
 
@@ -218,30 +219,31 @@ constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc"));
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
-Frontend (test.cc)
-| ParseDeclarationOrFunctionDefinition (test.cc:2:1)
-| ParseDeclarationOrFunctionDefinition (test.cc:6:1)
-| | ParseFunctionDefinition (slow_func)
-| | | EvaluateAsRValue (<test.cc:8:21>)
-| | | EvaluateForOverflow (<test.cc:8:21, col:25>)
-| | | EvaluateForOverflow (<test.cc:8:30, col:32>)
-| | | EvaluateAsRValue (<test.cc:9:14>)
-| | | EvaluateForOverflow (<test.cc:9:9, col:14>)
-| | | isPotentialConstantExpr (slow_namespace::slow_func)
-| | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
-| | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
-| | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
-| | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
-| ParseDeclarationOrFunctionDefinition (test.cc:16:1)
-| | ParseFunctionDefinition (slow_test)
-| | | EvaluateAsInitializer (slow_value)
-| | | EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
-| | | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
-| ParseDeclarationOrFunctionDefinition (test.cc:22:1)
-| | EvaluateAsConstantExpr (<test.cc:23:31, col:57>)
-| | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
-| ParseDeclarationOrFunctionDefinition (test.cc:25:1)
-| | EvaluateAsInitializer (slow_init_list)
+ExecuteCompiler
+| Frontend (test.cc)
+| | ParseDeclarationOrFunctionDefinition (test.cc:2:1)
+| | ParseDeclarationOrFunctionDefinition (test.cc:6:1)
+| | | ParseFunctionDefinition (slow_func)
+| | | | EvaluateAsRValue (<test.cc:8:21>)
+| | | | EvaluateForOverflow (<test.cc:8:21, col:25>)
+| | | | EvaluateForOverflow (<test.cc:8:30, col:32>)
+| | | | EvaluateAsRValue (<test.cc:9:14>)
+| | | | EvaluateForOverflow (<test.cc:9:9, col:14>)
+| | | | isPotentialConstantExpr (slow_namespace::slow_func)
+| | | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
+| | | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
+| | | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
+| | | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
+| | ParseDeclarationOrFunctionDefinition (test.cc:16:1)
+| | | ParseFunctionDefinition (slow_test)
+| | | | EvaluateAsInitializer (slow_value)
+| | | | EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
+| | | | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
+| | ParseDeclarationOrFunctionDefinition (test.cc:22:1)
+| | | EvaluateAsConstantExpr (<test.cc:23:31, col:57>)
+| | | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
+| | ParseDeclarationOrFunctionDefinition (test.cc:25:1)
+| | | EvaluateAsInitializer (slow_init_list)
 | PerformPendingInstantiations
 )",
             buildTraceGraph(Json));
@@ -269,15 +271,19 @@ TEST(TimeProfilerTest, ClassTemplateInstantiations) {
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc"));
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
-Frontend (test.cc)
-| ParseClass (S)
-| InstantiateClass (S<double>, test.cc:9)
-| InstantiateFunction (S<double>::foo, test.cc:5)
-| ParseDeclarationOrFunctionDefinition (test.cc:11:5)
-| | ParseFunctionDefinition (user)
-| | | InstantiateClass (S<int>, test.cc:3)
-| | | InstantiateClass (S<float>, test.cc:3)
-| | | DeferInstantiation (S<float>::foo)
+ExecuteCompiler
+| Frontend (test.cc)
+| | ParseClass (S)
+| | CheckConstraintSatisfaction (<test.cc:9:21, col:29>)
+| | InstantiateClass (S<double>, test.cc:9)
+| | InstantiateFunction (S<double>::foo, test.cc:5)
+| | ParseDeclarationOrFunctionDefinition (test.cc:11:5)
+| | | ParseFunctionDefinition (user)
+| | | | CheckConstraintSatisfaction (<test.cc:12:7, col:12>)
+| | | | InstantiateClass (S<int>, test.cc:3)
+| | | | CheckConstraintSatisfaction (<test.cc:13:7, col:14>)
+| | | | InstantiateClass (S<float>, test.cc:3)
+| | | | DeferInstantiation (S<float>::foo)
 | PerformPendingInstantiations
 | | InstantiateFunction (S<float>::foo, test.cc:5)
 )",
@@ -317,20 +323,23 @@ TEST(TimeProfilerTest, TemplateInstantiations) {
                                 /*Headers=*/{{"a.h", A_H}, {"b.h", B_H}}));
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
-Frontend (test.cc)
-| ParseFunctionDefinition (fooC)
-| ParseFunctionDefinition (fooB)
-| ParseFunctionDefinition (fooMTA)
-| ParseFunctionDefinition (fooA)
-| ParseDeclarationOrFunctionDefinition (test.cc:3:5)
-| | ParseFunctionDefinition (user)
-| | | DeferInstantiation (fooA<int>)
+ExecuteCompiler
+| Frontend (test.cc)
+| | ParseFunctionDefinition (fooC)
+| | ParseFunctionDefinition (fooB)
+| | ParseFunctionDefinition (fooMTA)
+| | ParseFunctionDefinition (fooA)
+| | ParseDeclarationOrFunctionDefinition (test.cc:3:5)
+| | | ParseFunctionDefinition (user)
+| | | | DeferInstantiation (fooA<int>)
 | PerformPendingInstantiations
 | | InstantiateFunction (fooA<int>, a.h:7)
 | | | InstantiateFunction (fooB<int>, b.h:8)
 | | | | DeferInstantiation (fooC<int>)
+| | | | BuildCFG
 | | | DeferInstantiation (fooMTA<int>)
 | | | InstantiateFunction (fooC<int>, b.h:3)
+| | | | BuildCFG
 | | | InstantiateFunction (fooMTA<int>, a.h:4)
 )",
             buildTraceGraph(Json));
@@ -347,10 +356,11 @@ struct {
   ASSERT_TRUE(compileFromString(Code, "-std=c99", "test.c"));
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
-Frontend (test.c)
-| ParseDeclarationOrFunctionDefinition (test.c:2:1)
-| | isIntegerConstantExpr (<test.c:3:18>)
-| | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
+ExecuteCompiler
+| Frontend (test.c)
+| | ParseDeclarationOrFunctionDefinition (test.c:2:1)
+| | | isIntegerConstantExpr (<test.c:3:18>)
+| | | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
 | PerformPendingInstantiations
 )",
             buildTraceGraph(Json));

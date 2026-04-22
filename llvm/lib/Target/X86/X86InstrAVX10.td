@@ -119,30 +119,30 @@ multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
                                                        (i32 timm:$src3)))]>,
                        Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
       }
-      defm rri : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
-                                 (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
+      defm rri : AVX512_maskable_scalar<0x53, MRMSrcReg, _, (outs _.RC:$dst),
+                                 (ins _.RC:$src1, _.RC:$src2, i32u8imm:$src3),
                                   OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
                                   (_.VT (OpNode (_.VT _.RC:$src1), (_.VT _.RC:$src2),
                                                 (i32 timm:$src3))),
-                                 0, 0, 0, vselect_mask, "", "_Int">,
+                                  "_Int">,
                        Sched<[WriteFMAX]>;
 
-      defm rmi : AVX512_maskable<0x53, MRMSrcMem, _, (outs VR128X:$dst),
-                                 (ins VR128X:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
+      defm rmi : AVX512_maskable_scalar<0x53, MRMSrcMem, _, (outs _.RC:$dst),
+                                 (ins _.RC:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
                                   OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
                                   (_.VT (OpNode (_.VT _.RC:$src1), (_.ScalarIntMemFrags addr:$src2),
                                                 (i32 timm:$src3))),
-                                 0, 0, 0, vselect_mask, "", "_Int">,
+                                  "_Int">,
                        Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
     }
     let Uses = []<Register>, mayRaiseFPException = 0 in
-      defm rrib : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
-                                  (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
+      defm rrib : AVX512_maskable_scalar<0x53, MRMSrcReg, _, (outs _.RC:$dst),
+                                  (ins _.RC:$src1, _.RC:$src2, i32u8imm:$src3),
                                    OpStr, "$src3, {sae}, $src2, $src1",
                                    "$src1, $src2, {sae}, $src3",
                                    (_.VT (OpNodeSAE (_.VT _.RC:$src1), (_.VT _.RC:$src2),
                                                     (i32 timm:$src3))),
-                                  0, 0, 0, vselect_mask, "", "_Int">,
+                                  "_Int">,
                        Sched<[WriteFMAX]>, EVEX_B;
   }
 }
@@ -164,11 +164,11 @@ defm VMINMAXPS : avx10_minmax_packed<"vminmaxps", avx512vl_f32_info, X86vminmax>
                  avx10_minmax_packed_sae<"vminmaxps", avx512vl_f32_info, X86vminmaxSae>,
                  AVX512PDIi8Base, TA, EVEX_CD8<32, CD8VF>;
 
-defm VMINMAXSD : avx10_minmax_scalar<"vminmaxsd", v2f64x_info, X86vminmaxs, X86vminmaxsSae>,
+defm VMINMAXSD : avx10_minmax_scalar<"vminmaxsd", f64x_info, X86vminmaxs, X86vminmaxsSae>,
                  AVX512AIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<64, CD8VT1>, REX_W;
-defm VMINMAXSH : avx10_minmax_scalar<"vminmaxsh", v8f16x_info, X86vminmaxs, X86vminmaxsSae>,
+defm VMINMAXSH : avx10_minmax_scalar<"vminmaxsh", f16x_info, X86vminmaxs, X86vminmaxsSae>,
                  AVX512PSIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<16, CD8VT1>, TA;
-defm VMINMAXSS : avx10_minmax_scalar<"vminmaxss", v4f32x_info, X86vminmaxs, X86vminmaxsSae>,
+defm VMINMAXSS : avx10_minmax_scalar<"vminmaxss", f32x_info, X86vminmaxs, X86vminmaxsSae>,
                  AVX512AIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<32, CD8VT1>;
 
 //-------------------------------------------------
@@ -246,83 +246,95 @@ multiclass avx10_sat_cvt_base<bits<8> Opc, string OpStr, X86SchedWriteWidths sch
   }
 }
 
+let ExeDomain = SSEPackedInt in {
 defm VCVTBF162IBS : avx10_sat_cvt_base<0x69, "vcvtbf162ibs",
                                        SchedWriteVecIMul, X86vcvtp2ibs,
                                        avx512vl_i16_info, avx512vl_bf16_info>,
-                      AVX512XDIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
+                      XD, T_MAP5, EVEX_CD8<16, CD8VF>;
 defm VCVTBF162IUBS : avx10_sat_cvt_base<0x6b, "vcvtbf162iubs",
                                         SchedWriteVecIMul, X86vcvtp2iubs,
                                         avx512vl_i16_info, avx512vl_bf16_info>,
-                       AVX512XDIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
+                       XD, T_MAP5, EVEX_CD8<16, CD8VF>;
+}
 
+let ExeDomain = SSEPackedSingle in {
 defm VCVTPH2IBS : avx10_sat_cvt_base<0x69, "vcvtph2ibs", SchedWriteVecIMul,
                                      X86vcvtp2ibs, avx512vl_i16_info,
                                      avx512vl_f16_info>,
                   avx10_sat_cvt_rc<0x69, "vcvtph2ibs", SchedWriteVecIMul,
                                    avx512vl_i16_info, avx512vl_f16_info,
                                    X86vcvtp2ibsRnd>,
-                  AVX512PSIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
+                  T_MAP5, EVEX_CD8<16, CD8VF>;
 defm VCVTPH2IUBS : avx10_sat_cvt_base<0x6b, "vcvtph2iubs", SchedWriteVecIMul,
                                       X86vcvtp2iubs, avx512vl_i16_info,
                                       avx512vl_f16_info>,
                    avx10_sat_cvt_rc<0x6b, "vcvtph2iubs", SchedWriteVecIMul,
                                     avx512vl_i16_info, avx512vl_f16_info,
                                     X86vcvtp2iubsRnd>,
-                   AVX512PSIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
+                   T_MAP5, EVEX_CD8<16, CD8VF>;
+}
 
+let ExeDomain = SSEPackedDouble in {
 defm VCVTPS2IBS : avx10_sat_cvt_base<0x69, "vcvtps2ibs", SchedWriteVecIMul,
                                      X86vcvtp2ibs, avx512vl_i32_info,
                                      avx512vl_f32_info>,
                   avx10_sat_cvt_rc<0x69, "vcvtps2ibs", SchedWriteVecIMul,
                                    avx512vl_i32_info, avx512vl_f32_info,
                                    X86vcvtp2ibsRnd>,
-                  AVX512PDIi8Base, T_MAP5, EVEX_CD8<32, CD8VF>;
+                  PD, T_MAP5, EVEX_CD8<32, CD8VF>;
 defm VCVTPS2IUBS : avx10_sat_cvt_base<0x6b, "vcvtps2iubs", SchedWriteVecIMul,
                                       X86vcvtp2iubs, avx512vl_i32_info,
                                       avx512vl_f32_info>,
                    avx10_sat_cvt_rc<0x6b, "vcvtps2iubs", SchedWriteVecIMul,
                                     avx512vl_i32_info, avx512vl_f32_info,
                                     X86vcvtp2iubsRnd>,
-                   AVX512PDIi8Base, T_MAP5, EVEX_CD8<32, CD8VF>;
+                   PD, T_MAP5, EVEX_CD8<32, CD8VF>;
+}
 
+let ExeDomain = SSEPackedInt in {
 defm VCVTTBF162IBS : avx10_sat_cvt_base<0x68, "vcvttbf162ibs",
                                         SchedWriteVecIMul, X86vcvttp2ibs,
                                         avx512vl_i16_info, avx512vl_bf16_info>,
-                       AVX512XDIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
+                       XD, T_MAP5, EVEX_CD8<16, CD8VF>;
 defm VCVTTBF162IUBS : avx10_sat_cvt_base<0x6a, "vcvttbf162iubs",
                                          SchedWriteVecIMul, X86vcvttp2iubs,
                                          avx512vl_i16_info, avx512vl_bf16_info>,
-                        AVX512XDIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
+                        XD, T_MAP5, EVEX_CD8<16, CD8VF>;
+}
 
+let ExeDomain = SSEPackedSingle in {
 defm VCVTTPH2IBS : avx10_sat_cvt_base<0x68, "vcvttph2ibs", SchedWriteVecIMul,
                                       X86vcvttp2ibs, avx512vl_i16_info,
                                       avx512vl_f16_info>,
                    avx10_sat_cvt_sae<0x68, "vcvttph2ibs", SchedWriteVecIMul,
                                      avx512vl_i16_info, avx512vl_f16_info,
                                      X86vcvttp2ibsSAE>,
-                   AVX512PSIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
+                   T_MAP5, EVEX_CD8<16, CD8VF>;
 defm VCVTTPH2IUBS : avx10_sat_cvt_base<0x6a, "vcvttph2iubs", SchedWriteVecIMul,
                                        X86vcvttp2iubs, avx512vl_i16_info,
                                        avx512vl_f16_info>,
                     avx10_sat_cvt_sae<0x6a, "vcvttph2iubs", SchedWriteVecIMul,
                                       avx512vl_i16_info, avx512vl_f16_info,
                                       X86vcvttp2iubsSAE>,
-                    AVX512PSIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
+                    T_MAP5, EVEX_CD8<16, CD8VF>;
+}
 
+let ExeDomain = SSEPackedDouble in {
 defm VCVTTPS2IBS : avx10_sat_cvt_base<0x68, "vcvttps2ibs", SchedWriteVecIMul,
                                       X86vcvttp2ibs, avx512vl_i32_info,
                                       avx512vl_f32_info>,
                    avx10_sat_cvt_sae<0x68, "vcvttps2ibs", SchedWriteVecIMul,
                                      avx512vl_i32_info, avx512vl_f32_info,
                                      X86vcvttp2ibsSAE>,
-                   AVX512PDIi8Base, T_MAP5, EVEX_CD8<32, CD8VF>;
+                   PD, T_MAP5, EVEX_CD8<32, CD8VF>;
 defm VCVTTPS2IUBS : avx10_sat_cvt_base<0x6a, "vcvttps2iubs", SchedWriteVecIMul,
                                        X86vcvttp2iubs, avx512vl_i32_info,
                                        avx512vl_f32_info>,
                     avx10_sat_cvt_sae<0x6a, "vcvttps2iubs", SchedWriteVecIMul,
                                       avx512vl_i32_info, avx512vl_f32_info,
                                       X86vcvttp2iubsSAE>,
-                    AVX512PDIi8Base, T_MAP5, EVEX_CD8<32, CD8VF>;
+                    PD, T_MAP5, EVEX_CD8<32, CD8VF>;
+}
 
 //-------------------------------------------------
 // AVX10 SATCVT-DS instructions
@@ -958,9 +970,10 @@ multiclass avx10_convert_2op_nomb<string OpcodeStr, AVX512VLVectorVTInfo _dest,
   }
 }
 
+let ExeDomain = SSEPackedInt in
 defm VCVTHF82PH : avx10_convert_2op_nomb<"vcvthf82ph", avx512vl_f16_info,
                                          avx512vl_i8_info, 0x1e, X86vcvthf82ph>,
-                  AVX512XDIi8Base, T_MAP5, EVEX, EVEX_CD8<16, CD8VH>;
+                  TB, XD, T_MAP5, EVEX, EVEX_CD8<16, CD8VH>;
 
 //-------------------------------------------------
 // AVX10 BF16 instructions

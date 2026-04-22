@@ -32,16 +32,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-subtarget"
 
-AMDGPUSubtarget::AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
-
-bool AMDGPUSubtarget::useRealTrue16Insts() const {
-  return hasTrue16BitInsts() && EnableRealTrue16Insts;
-}
-
-bool AMDGPUSubtarget::hasD16Writes32BitVgpr() const {
-  return EnableD16Writes32BitVgpr;
-}
-
 // Returns the maximum per-workgroup LDS allocation size (in bytes) that still
 // allows the given function to achieve an occupancy of NWaves waves per
 // SIMD / EU, taking into account only the function's *maximum* workgroup size.
@@ -183,6 +173,10 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   return Requested;
 }
 
+bool AMDGPUSubtarget::isSingleWavefrontWorkgroup(const Function &F) const {
+  return getFlatWorkGroupSizes(F).second <= getWavefrontSize();
+}
+
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
     std::pair<unsigned, unsigned> RequestedWavesPerEU,
     std::pair<unsigned, unsigned> FlatWorkGroupSizes, unsigned LDSBytes) const {
@@ -278,11 +272,16 @@ bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
       return false;
   }
 
+  // If the function may call the WWM intrinsic, just return false as
+  // all threads will be active at some point
+  if (!Func.hasFnAttribute("amdgpu-no-wwm"))
+    return false;
+
   return true;
 }
 
 bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
-  Function *Kernel = I->getParent()->getParent();
+  Function *Kernel = I->getFunction();
   unsigned MinSize = 0;
   unsigned MaxSize = getFlatWorkGroupSizes(*Kernel).second;
   bool IdQuery = false;
@@ -350,7 +349,6 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
 }
 
 unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
-  assert(AMDGPU::isKernel(F.getCallingConv()));
 
   // We don't allocate the segment if we know the implicit arguments weren't
   // used, even if the ABI implies we need them.

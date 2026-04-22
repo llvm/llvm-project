@@ -21,9 +21,9 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
-static constexpr const char kIntegerPrefix[] = "i_0x";
-static constexpr const char kDoublePrefix[] = "f_";
-static constexpr const char kInvalidOperand[] = "INVALID";
+static constexpr char kIntegerPrefix[] = "i_0x";
+static constexpr char kDoublePrefix[] = "f_";
+static constexpr char kInvalidOperand[] = "INVALID";
 
 namespace llvm {
 
@@ -245,8 +245,8 @@ template <> struct SequenceElementTraits<exegesis::RegisterValue> {
 };
 
 template <> struct ScalarTraits<exegesis::RegisterValue> {
-  static constexpr const unsigned kRadix = 16;
-  static constexpr const bool kSigned = false;
+  static constexpr unsigned kRadix = 16;
+  static constexpr bool kSigned = false;
 
   static void output(const exegesis::RegisterValue &RV, void *Ctx,
                      raw_ostream &Out) {
@@ -297,7 +297,6 @@ template <> struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
       std::string Str;
       raw_string_ostream OSS(Str);
       Binary.writeAsBinary(OSS);
-      OSS.flush();
       Data.assign(Str.begin(), Str.end());
       return Data;
     }
@@ -394,7 +393,7 @@ Expected<std::vector<Benchmark>> Benchmark::readYamls(const LLVMState &State,
 }
 
 Error Benchmark::writeYamlTo(const LLVMState &State, raw_ostream &OS) {
-  auto Cleanup = make_scope_exit([&] { OS.flush(); });
+  llvm::scope_exit Cleanup([&] { OS.flush(); });
   yaml::Output Yout(OS, nullptr /*Ctx*/, 200 /*WrapColumn*/);
   YamlContext Context(State);
   Yout.beginDocuments();

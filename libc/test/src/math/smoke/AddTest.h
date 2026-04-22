@@ -153,6 +153,27 @@ public:
                  func(InFPBits::create_value(Sign::POS, 2U, 0U).get_val(),
                       InFPBits::create_value(Sign::POS, 0U, 0b10U).get_val()));
   }
+
+  void test_mixed_signs(AddFunc func) {
+    EXPECT_FP_EQ(OutType(3.0), func(InType(1.0), InType(2.0)));
+    EXPECT_FP_EQ(OutType(-1.0), func(InType(1.0), InType(-2.0)));
+    EXPECT_FP_EQ(OutType(1.0), func(InType(-1.0), InType(2.0)));
+    EXPECT_FP_EQ(OutType(-3.0), func(InType(-1.0), InType(-2.0)));
+
+    EXPECT_FP_EQ(OutType(3.0), func(InType(2.0), InType(1.0)));
+    EXPECT_FP_EQ(OutType(1.0), func(InType(2.0), InType(-1.0)));
+    EXPECT_FP_EQ(OutType(-1.0), func(InType(-2.0), InType(1.0)));
+    EXPECT_FP_EQ(OutType(-3.0), func(InType(-2.0), InType(-1.0)));
+  }
+
+  void test_signed_zero_result(AddFunc func) {
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, func(in.zero, in.zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, func(in.neg_zero, in.neg_zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, zero, neg_zero, zero,
+                              func(in.neg_zero, in.zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, zero, neg_zero, zero,
+                              func(in.zero, in.neg_zero));
+  }
 };
 
 #define LIST_ADD_TESTS(OutType, InType, func)                                  \
@@ -163,7 +184,9 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcAddTest, RangeErrors) { test_range_errors(&func); }           \
   TEST_F(LlvmLibcAddTest, InexactResults) { test_inexact_results(&func); }     \
-  TEST_F(LlvmLibcAddTest, MixedNormality) { test_mixed_normality(&func); }
+  TEST_F(LlvmLibcAddTest, MixedNormality) { test_mixed_normality(&func); }     \
+  TEST_F(LlvmLibcAddTest, MixedSigns) { test_mixed_signs(&func); }             \
+  TEST_F(LlvmLibcAddTest, SignedZeroResult) { test_signed_zero_result(&func); }
 
 #define LIST_ADD_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
   using LlvmLibcAddTest##suffix = AddTest<OutType, InType>;                    \
@@ -179,6 +202,10 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcAddTest##suffix, MixedNormality) {                            \
     test_mixed_normality(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcAddTest##suffix, MixedSigns) { test_mixed_signs(&func); }     \
+  TEST_F(LlvmLibcAddTest##suffix, SignedZeroResult) {                          \
+    test_signed_zero_result(&func);                                            \
   }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ADDTEST_H

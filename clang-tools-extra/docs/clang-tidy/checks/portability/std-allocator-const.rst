@@ -9,11 +9,11 @@ elements). These are not allowed in standard C++, and should usually be
 
 Per C++ ``[allocator.requirements.general]``: "T is any cv-unqualified object
 type", ``std::allocator<const T>`` is undefined. Many standard containers use
-``std::allocator`` by default and therefore their ``const T`` instantiations are
-undefined.
+``std::allocator`` by default and therefore their ``const T`` instantiations
+are undefined.
 
-libc++ defines ``std::allocator<const T>`` as an extension which will be removed
-in the future.
+libc++ defines ``std::allocator<const T>`` as an extension which will be
+removed in the future.
 
 libstdc++ and MSVC do not support ``std::allocator<const T>``:
 

@@ -12,7 +12,7 @@ int test_too_many_arg(int p0) {
 
 double test_int_builtin(double p0) {
   return firstbithigh(p0);
-  // expected-error@-1 {{call to 'firstbithigh' is ambiguous}}
+  // expected-error@-1 {{no matching function for call to 'firstbithigh'}}
 }
 
 double2 test_int_builtin_2(double2 p0) {

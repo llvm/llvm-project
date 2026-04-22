@@ -15,11 +15,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <atomic>
 
 using namespace llvm;
@@ -232,6 +234,19 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
+static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
+
+static cl::opt<unsigned> TimeTraceGranularity(
+    "time-trace-granularity",
+    cl::desc(
+        "Minimum time granularity (in microseconds) traced by time profiler"),
+    cl::init(500), cl::Hidden);
+
+static cl::opt<std::string>
+    TimeTraceFile("time-trace-file",
+                  cl::desc("Specify time trace file destination"),
+                  cl::value_desc("filename"));
+
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
@@ -266,6 +281,16 @@ static int usage() {
 
 static int run(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "Resolution-based LTO test harness");
+
+  if (TimeTrace)
+    timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
+  llvm::scope_exit TimeTraceScopeExit([]() {
+    if (TimeTrace) {
+      check(timeTraceProfilerWrite(TimeTraceFile, OutputFilename),
+            "timeTraceProfilerWrite failed");
+      timeTraceProfilerCleanup();
+    }
+  });
 
   // FIXME: Workaround PR30396 which means that a symbol can appear
   // more than once if it is defined in module-level assembly and
@@ -304,7 +329,10 @@ static int run(int argc, char **argv) {
   std::vector<std::unique_ptr<MemoryBuffer>> MBs;
 
   Config Conf;
-
+  if (TimeTrace) {
+    Conf.TimeTraceEnabled = TimeTrace;
+    Conf.TimeTraceGranularity = TimeTraceGranularity;
+  }
   Conf.CPU = codegen::getMCPU();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
   Conf.MAttrs = codegen::getMAttrs();
@@ -348,7 +376,7 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.Freestanding = EnableFreestanding;
-  llvm::append_range(Conf.PassPlugins, PassPlugins);
+  llvm::append_range(Conf.PassPluginFilenames, PassPlugins);
   if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
     Conf.CGOptLevel = *Level;
   } else {
@@ -383,6 +411,24 @@ static int run(int argc, char **argv) {
   auto DTLTOCompilerArgsSV = llvm::to_vector<0>(llvm::map_range(
       DTLTOCompilerArgs, [](const std::string &S) { return StringRef(S); }));
 
+  auto AddStream =
+      [&](size_t Task,
+          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
+    std::string Path = OutputFilename + "." + utostr(Task);
+
+    std::error_code EC;
+    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
+    check(EC, Path);
+    return std::make_unique<CachedFileStream>(std::move(S), Path);
+  };
+
+  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
+                       std::unique_ptr<MemoryBuffer> MB) {
+    auto Stream = AddStream(Task, ModuleName);
+    *Stream->OS << MB->getBuffer();
+    check(Stream->commit(), "Failed to commit cache");
+  };
+
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -397,7 +443,7 @@ static int run(int argc, char **argv) {
         llvm::heavyweight_hardware_concurrency(Threads),
         /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
         DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps);
+        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps, AddBuffer);
   } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
@@ -467,24 +513,6 @@ static int run(int argc, char **argv) {
   }
   if (HasErrors)
     return 1;
-
-  auto AddStream =
-      [&](size_t Task,
-          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
-    std::string Path = OutputFilename + "." + utostr(Task);
-
-    std::error_code EC;
-    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
-    check(EC, Path);
-    return std::make_unique<CachedFileStream>(std::move(S), Path);
-  };
-
-  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
-                       std::unique_ptr<MemoryBuffer> MB) {
-    auto Stream = AddStream(Task, ModuleName);
-    *Stream->OS << MB->getBuffer();
-    check(Stream->commit(), "Failed to commit cache");
-  };
 
   FileCache Cache;
   if (!CacheDir.empty())

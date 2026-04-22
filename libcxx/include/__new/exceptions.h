@@ -17,6 +17,12 @@
 #  pragma GCC system_header
 #endif
 
+// <vcruntime_exception.h> defines its own std::bad_alloc type,
+// which we use in order to be ABI-compatible with other STLs on Windows.
+#if defined(_LIBCPP_ABI_VCRUNTIME)
+#  include <vcruntime_exception.h>
+#endif
+
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 #if !defined(_LIBCPP_ABI_VCRUNTIME)
 
@@ -26,7 +32,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bad_alloc(const bad_alloc&) _NOEXCEPT            = default;
   _LIBCPP_HIDE_FROM_ABI bad_alloc& operator=(const bad_alloc&) _NOEXCEPT = default;
   ~bad_alloc() _NOEXCEPT override;
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 };
 
 class _LIBCPP_EXPORTED_FROM_ABI bad_array_new_length : public bad_alloc {
@@ -35,7 +41,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bad_array_new_length(const bad_array_new_length&) _NOEXCEPT            = default;
   _LIBCPP_HIDE_FROM_ABI bad_array_new_length& operator=(const bad_array_new_length&) _NOEXCEPT = default;
   ~bad_array_new_length() _NOEXCEPT override;
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 };
 
 #elif defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0 // !_LIBCPP_ABI_VCRUNTIME

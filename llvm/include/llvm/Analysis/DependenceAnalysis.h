@@ -105,13 +105,8 @@ public:
     };
     unsigned char Direction : 3; // Init to ALL, then refine.
     bool Scalar : 1;             // Init to true.
-    bool PeelFirst : 1; // Peeling the first iteration will break dependence.
-    bool PeelLast : 1;  // Peeling the last iteration will break the dependence.
-    bool Splitable : 1; // Splitting the loop will break dependence.
     const SCEV *Distance = nullptr; // NULL implies no distance available.
-    DVEntry()
-        : Direction(ALL), Scalar(true), PeelFirst(false), PeelLast(false),
-          Splitable(false) {}
+    DVEntry() : Direction(ALL), Scalar(true) {}
   };
 
   /// getSrc - Returns the source instruction for this dependence.
@@ -146,10 +141,6 @@ public:
   /// (the compiler understands nothing and makes worst-case assumptions).
   virtual bool isConfused() const { return true; }
 
-  /// isConsistent - Returns true if this dependence is consistent
-  /// (occurs every time the source and destination are executed).
-  virtual bool isConsistent() const { return false; }
-
   /// getLevels - Returns the number of common loops surrounding the
   /// source and destination of the dependence.
   virtual unsigned getLevels() const { return 0; }
@@ -178,29 +169,15 @@ public:
   /// vector means Src and Dst are reversed in the actual program.
   virtual bool isDirectionNegative() const { return false; }
 
+  /// Negate the dependence by swapping the source and destination, and
+  /// reversing the direction and distance information.
+  virtual void negate(ScalarEvolution &SE) {}
+
   /// If the direction vector is negative, normalize the direction
   /// vector to make it non-negative. Normalization is done by reversing
   /// Src and Dst, plus reversing the dependence directions and distances
   /// in the vector.
   virtual bool normalize(ScalarEvolution *SE) { return false; }
-
-  /// isPeelFirst - Returns true if peeling the first iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  virtual bool isPeelFirst(unsigned Level, bool SameSD = false) const {
-    return false;
-  }
-
-  /// isPeelLast - Returns true if peeling the last iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  virtual bool isPeelLast(unsigned Level, bool SameSD = false) const {
-    return false;
-  }
-
-  /// isSplitable - Returns true if splitting the loop will break
-  /// the dependence.
-  virtual bool isSplitable(unsigned Level, bool SameSD = false) const {
-    return false;
-  }
 
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and
@@ -268,10 +245,6 @@ public:
   /// assumptions).
   bool isConfused() const override { return false; }
 
-  /// isConsistent - Returns true if this dependence is consistent
-  /// (occurs every time the source and destination are executed).
-  bool isConsistent() const override { return Consistent; }
-
   /// getLevels - Returns the number of common loops surrounding the
   /// source and destination of the dependence.
   unsigned getLevels() const override { return Levels; }
@@ -306,23 +279,13 @@ public:
   /// vector means Src and Dst are reversed in the actual program.
   bool isDirectionNegative() const override;
 
+  void negate(ScalarEvolution &SE) override;
+
   /// If the direction vector is negative, normalize the direction
   /// vector to make it non-negative. Normalization is done by reversing
   /// Src and Dst, plus reversing the dependence directions and distances
   /// in the vector.
   bool normalize(ScalarEvolution *SE) override;
-
-  /// isPeelFirst - Returns true if peeling the first iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  bool isPeelFirst(unsigned Level, bool SameSD = false) const override;
-
-  /// isPeelLast - Returns true if peeling the last iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  bool isPeelLast(unsigned Level, bool SameSD = false) const override;
-
-  /// isSplitable - Returns true if splitting the loop will break
-  /// the dependence.
-  bool isSplitable(unsigned Level, bool SameSD = false) const override;
 
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and
@@ -338,7 +301,6 @@ private:
   unsigned short Levels;
   unsigned short SameSDLevels;
   bool LoopIndependent;
-  bool Consistent; // Init to true, then refine.
   std::unique_ptr<DVEntry[]> DV;
   std::unique_ptr<DVEntry[]> DVSameSD; // DV entries on SameSD levels
   friend class DependenceInfo;
@@ -365,60 +327,13 @@ public:
   depends(Instruction *Src, Instruction *Dst,
           bool UnderRuntimeAssumptions = false);
 
-  /// getSplitIteration - Give a dependence that's splittable at some
-  /// particular level, return the iteration that should be used to split
-  /// the loop.
-  ///
-  /// Generally, the dependence analyzer will be used to build
-  /// a dependence graph for a function (basically a map from instructions
-  /// to dependences). Looking for cycles in the graph shows us loops
-  /// that cannot be trivially vectorized/parallelized.
-  ///
-  /// We can try to improve the situation by examining all the dependences
-  /// that make up the cycle, looking for ones we can break.
-  /// Sometimes, peeling the first or last iteration of a loop will break
-  /// dependences, and there are flags for those possibilities.
-  /// Sometimes, splitting a loop at some other iteration will do the trick,
-  /// and we've got a flag for that case. Rather than waste the space to
-  /// record the exact iteration (since we rarely know), we provide
-  /// a method that calculates the iteration. It's a drag that it must work
-  /// from scratch, but wonderful in that it's possible.
-  ///
-  /// Here's an example:
-  ///
-  ///    for (i = 0; i < 10; i++)
-  ///        A[i] = ...
-  ///        ... = A[11 - i]
-  ///
-  /// There's a loop-carried flow dependence from the store to the load,
-  /// found by the weak-crossing SIV test. The dependence will have a flag,
-  /// indicating that the dependence can be broken by splitting the loop.
-  /// Calling getSplitIteration will return 5.
-  /// Splitting the loop breaks the dependence, like so:
-  ///
-  ///    for (i = 0; i <= 5; i++)
-  ///        A[i] = ...
-  ///        ... = A[11 - i]
-  ///    for (i = 6; i < 10; i++)
-  ///        A[i] = ...
-  ///        ... = A[11 - i]
-  ///
-  /// breaks the dependence and allows us to vectorize/parallelize
-  /// both loops.
-  LLVM_ABI const SCEV *getSplitIteration(const Dependence &Dep, unsigned Level);
-
   Function *getFunction() const { return F; }
-
-  /// getRuntimeAssumptions - Returns all the runtime assumptions under which
-  /// the dependence test is valid.
-  LLVM_ABI SCEVUnionPredicate getRuntimeAssumptions() const;
 
 private:
   AAResults *AA;
   ScalarEvolution *SE;
   LoopInfo *LI;
   Function *F;
-  SmallVector<const SCEVPredicate *, 4> Assumptions;
 
   /// Subscript - This private struct represents a pair of subscripts from
   /// a pair of potentially multi-dimensional array references. We use a
@@ -445,106 +360,6 @@ private:
     const SCEV *Lower[8];
     unsigned char Direction;
     unsigned char DirSet;
-  };
-
-  /// Constraint - This private class represents a constraint, as defined
-  /// in the paper
-  ///
-  ///           Practical Dependence Testing
-  ///           Goff, Kennedy, Tseng
-  ///           PLDI 1991
-  ///
-  /// There are 5 kinds of constraint, in a hierarchy.
-  ///   1) Any - indicates no constraint, any dependence is possible.
-  ///   2) Line - A line ax + by = c, where a, b, and c are parameters,
-  ///             representing the dependence equation.
-  ///   3) Distance - The value d of the dependence distance;
-  ///   4) Point - A point <x, y> representing the dependence from
-  ///              iteration x to iteration y.
-  ///   5) Empty - No dependence is possible.
-  class Constraint {
-  private:
-    enum ConstraintKind { Empty, Point, Distance, Line, Any } Kind;
-    ScalarEvolution *SE;
-    const SCEV *A;
-    const SCEV *B;
-    const SCEV *C;
-    const Loop *AssociatedSrcLoop;
-    const Loop *AssociatedDstLoop;
-
-  public:
-    /// isEmpty - Return true if the constraint is of kind Empty.
-    bool isEmpty() const { return Kind == Empty; }
-
-    /// isPoint - Return true if the constraint is of kind Point.
-    bool isPoint() const { return Kind == Point; }
-
-    /// isDistance - Return true if the constraint is of kind Distance.
-    bool isDistance() const { return Kind == Distance; }
-
-    /// isLine - Return true if the constraint is of kind Line.
-    /// Since Distance's can also be represented as Lines, we also return
-    /// true if the constraint is of kind Distance.
-    bool isLine() const { return Kind == Line || Kind == Distance; }
-
-    /// isAny - Return true if the constraint is of kind Any;
-    bool isAny() const { return Kind == Any; }
-
-    /// getX - If constraint is a point <X, Y>, returns X.
-    /// Otherwise assert.
-    LLVM_ABI const SCEV *getX() const;
-
-    /// getY - If constraint is a point <X, Y>, returns Y.
-    /// Otherwise assert.
-    LLVM_ABI const SCEV *getY() const;
-
-    /// getA - If constraint is a line AX + BY = C, returns A.
-    /// Otherwise assert.
-    LLVM_ABI const SCEV *getA() const;
-
-    /// getB - If constraint is a line AX + BY = C, returns B.
-    /// Otherwise assert.
-    LLVM_ABI const SCEV *getB() const;
-
-    /// getC - If constraint is a line AX + BY = C, returns C.
-    /// Otherwise assert.
-    LLVM_ABI const SCEV *getC() const;
-
-    /// getD - If constraint is a distance, returns D.
-    /// Otherwise assert.
-    LLVM_ABI const SCEV *getD() const;
-
-    /// getAssociatedSrcLoop - Returns the source loop associated with this
-    /// constraint.
-    LLVM_ABI const Loop *getAssociatedSrcLoop() const;
-
-    /// getAssociatedDstLoop - Returns the destination loop associated with
-    /// this constraint.
-    LLVM_ABI const Loop *getAssociatedDstLoop() const;
-
-    /// setPoint - Change a constraint to Point.
-    LLVM_ABI void setPoint(const SCEV *X, const SCEV *Y,
-                           const Loop *CurrentSrcLoop,
-                           const Loop *CurrentDstLoop);
-
-    /// setLine - Change a constraint to Line.
-    LLVM_ABI void setLine(const SCEV *A, const SCEV *B, const SCEV *C,
-                          const Loop *CurrentSrcLoop,
-                          const Loop *CurrentDstLoop);
-
-    /// setDistance - Change a constraint to Distance.
-    LLVM_ABI void setDistance(const SCEV *D, const Loop *CurrentSrcLoop,
-                              const Loop *CurrentDstLoop);
-
-    /// setEmpty - Change a constraint to Empty.
-    LLVM_ABI void setEmpty();
-
-    /// setAny - Change a constraint to Any.
-    LLVM_ABI void setAny(ScalarEvolution *SE);
-
-    /// dump - For debugging purposes. Dumps the constraint
-    /// out to OS.
-    LLVM_ABI void dump(raw_ostream &OS) const;
   };
 
   /// Returns true if two loops have the Same iteration Space and Depth. To be
@@ -631,18 +446,6 @@ private:
   /// in LoopNest.
   bool isLoopInvariant(const SCEV *Expression, const Loop *LoopNest) const;
 
-  /// Makes sure all subscript pairs share the same integer type by
-  /// sign-extending as necessary.
-  /// Sign-extending a subscript is safe because getelementptr assumes the
-  /// array subscripts are signed.
-  void unifySubscriptType(ArrayRef<Subscript *> Pairs);
-
-  /// removeMatchingExtensions - Examines a subscript pair.
-  /// If the source and destination are identically sign (or zero)
-  /// extended, it strips off the extension in an effort to
-  /// simplify the actual analysis.
-  void removeMatchingExtensions(Subscript *Pair);
-
   /// collectCommonLoops - Finds the set of loops from the LoopNest that
   /// have a level <= CommonLevels and are referred to by the SCEV Expression.
   void collectCommonLoops(const SCEV *Expression, const Loop *LoopNest,
@@ -658,24 +461,6 @@ private:
   bool checkDstSubscript(const SCEV *Dst, const Loop *LoopNest,
                          SmallBitVector &Loops);
 
-  /// isKnownPredicate - Compare X and Y using the predicate Pred.
-  /// Basically a wrapper for SCEV::isKnownPredicate,
-  /// but tries harder, especially in the presence of sign and zero
-  /// extensions and symbolics.
-  bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
-                        const SCEV *Y) const;
-
-  /// isKnownLessThan - Compare to see if S is less than Size
-  /// Another wrapper for isKnownNegative(S - max(Size, 1)) with some extra
-  /// checking if S is an AddRec and we can prove lessthan using the loop
-  /// bounds.
-  bool isKnownLessThan(const SCEV *S, const SCEV *Size) const;
-
-  /// isKnownNonNegative - Compare to see if S is known not to be negative
-  /// Uses the fact that S comes from Ptr, which may be an inbound GEP,
-  /// Proving there is no wrapping going on.
-  bool isKnownNonNegative(const SCEV *S, const Value *Ptr) const;
-
   /// collectUpperBound - All subscripts are the same type (on my machine,
   /// an i64). The loop bound may be a smaller type. collectUpperBound
   /// find the bound, if available, and zero extends it to the Type T.
@@ -683,10 +468,11 @@ private:
   /// If no upper bound is available, return NULL.
   const SCEV *collectUpperBound(const Loop *l, Type *T) const;
 
-  /// collectConstantUpperBound - Calls collectUpperBound(), then
-  /// attempts to cast it to SCEVConstant. If the cast fails,
-  /// returns NULL.
-  const SCEVConstant *collectConstantUpperBound(const Loop *l, Type *T) const;
+  /// collectNonNegativeConstantUpperBound - Calls collectUpperBound(), then
+  /// attempts to cast it to APInt. If the cast fails, or the value is negative,
+  /// returns std::nullopt.
+  std::optional<APInt> collectNonNegativeConstantUpperBound(const Loop *L,
+                                                            Type *T) const;
 
   /// classifyPair - Examines the subscript pair (the Src and Dst SCEVs)
   /// and classifies it as either ZIV, SIV, RDIV, MIV, or Nonlinear.
@@ -699,7 +485,6 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// If the dependence isn't proven to exist,
-  /// marks the Result as inconsistent.
   bool testZIV(const SCEV *Src, const SCEV *Dst, FullDependence &Result) const;
 
   /// testSIV - Tests the SIV subscript pair (Src and Dst) for dependence.
@@ -711,10 +496,8 @@ private:
   /// Sets appropriate direction vector entry and, when possible,
   /// the distance vector entry.
   /// If the dependence isn't proven to exist,
-  /// marks the Result as inconsistent.
   bool testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
-               FullDependence &Result, Constraint &NewConstraint,
-               const SCEV *&SplitIter) const;
+               FullDependence &Result, bool UnderRuntimeAssumptions);
 
   /// testRDIV - Tests the RDIV subscript pair (Src and Dst) for dependence.
   /// Things of the form [c1 + a1*i] and [c2 + a2*j]
@@ -724,7 +507,6 @@ private:
   /// [c1 + a1*i + a2*j][c2].
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
-  /// Marks the Result as inconsistent.
   bool testRDIV(const SCEV *Src, const SCEV *Dst, FullDependence &Result) const;
 
   /// testMIV - Tests the MIV subscript pair (Src and Dst) for dependence.
@@ -733,7 +515,7 @@ private:
   bool testMIV(const SCEV *Src, const SCEV *Dst, const SmallBitVector &Loops,
                FullDependence &Result) const;
 
-  /// strongSIVtest - Tests the strong SIV subscript pair (Src and Dst)
+  /// strongSIVtest - Tests the strong SIV subscript pair (\p Src and \p Dst)
   /// for dependence.
   /// Things of the form [c1 + a*i] and [c2 + a*i],
   /// where i is an induction variable, c1 and c2 are loop invariant,
@@ -741,10 +523,9 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction and distance.
-  bool strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
-                     const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                     const Loop *CurrentDstLoop, unsigned Level,
-                     FullDependence &Result, Constraint &NewConstraint) const;
+  bool strongSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                     unsigned Level, FullDependence &Result,
+                     bool UnderRuntimeAssumptions);
 
   /// weakCrossingSIVtest - Tests the weak-crossing SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -754,13 +535,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  /// Marks the dependence as splitable.
-  bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                           const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                           const Loop *CurrentDstLoop, unsigned Level,
-                           FullDependence &Result, Constraint &NewConstraint,
-                           const SCEV *&SplitIter) const;
+  bool weakCrossingSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                           unsigned Level, FullDependence &Result) const;
 
   /// ExactSIVtest - Tests the SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -770,12 +546,13 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  bool exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                    const SCEV *SrcConst, const SCEV *DstConst,
-                    const Loop *CurrentSrcLoop, const Loop *CurrentDstLoop,
-                    unsigned Level, FullDependence &Result,
-                    Constraint &NewConstraint) const;
+  bool exactSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                    unsigned Level, FullDependence &Result) const;
+
+  /// weakZeroSIVtestImpl - Core implementation for weakZeroSrcSIVtest and
+  /// weakZeroDstSIVtest.
+  bool weakZeroSIVtestImpl(const SCEVAddRecExpr *AR, const SCEV *Const,
+                           unsigned Level, FullDependence &Result) const;
 
   /// weakZeroSrcSIVtest - Tests the weak-zero SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -785,13 +562,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  /// If loop peeling will break the dependence, mark appropriately.
-  bool weakZeroSrcSIVtest(const SCEV *DstCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                          const Loop *CurrentDstLoop, unsigned Level,
-                          FullDependence &Result,
-                          Constraint &NewConstraint) const;
+  bool weakZeroSrcSIVtest(const SCEV *SrcConst, const SCEVAddRecExpr *Dst,
+                          unsigned Level, FullDependence &Result) const;
 
   /// weakZeroDstSIVtest - Tests the weak-zero SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -801,43 +573,29 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  /// If loop peeling will break the dependence, mark appropriately.
-  bool weakZeroDstSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                          const Loop *CurrentDstLoop, unsigned Level,
-                          FullDependence &Result,
-                          Constraint &NewConstraint) const;
+  bool weakZeroDstSIVtest(const SCEVAddRecExpr *Src, const SCEV *DstConst,
+                          unsigned Level, FullDependence &Result) const;
 
   /// exactRDIVtest - Tests the RDIV subscript pair for dependence.
   /// Things of the form [c1 + a*i] and [c2 + b*j],
   /// where i and j are induction variable, c1 and c2 are loop invariant,
   /// and a and b are constants.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Works in some cases that symbolicRDIVtest doesn't,
   /// and vice versa.
-  bool exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                     const SCEV *SrcConst, const SCEV *DstConst,
-                     const Loop *SrcLoop, const Loop *DstLoop,
+  bool exactRDIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                      FullDependence &Result) const;
 
-  /// symbolicRDIVtest - Tests the RDIV subscript pair for dependence.
-  /// Things of the form [c1 + a*i] and [c2 + b*j],
-  /// where i and j are induction variable, c1 and c2 are loop invariant,
-  /// and a and b are constants.
-  /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
-  /// Works in some cases that exactRDIVtest doesn't,
-  /// and vice versa. Can also be used as a backup for
-  /// ordinary SIV tests.
-  bool symbolicRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                        const SCEV *SrcConst, const SCEV *DstConst,
-                        const Loop *SrcLoop, const Loop *DstLoop) const;
+  /// exactTestImpl - Core implementation shared by the Exact SIV test and the
+  /// Exact RDIV test. Returns true if any possible dependence is disproved. If
+  /// \p Level is provided, this function will also attempt to explore
+  /// directions and refine \p Result for the given level.
+  bool exactTestImpl(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                     FullDependence &Result,
+                     std::optional<unsigned> Level) const;
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Can sometimes disprove the equal direction for 1 or more loops.
   //  Can handle some symbolics that even the SIV tests don't get,
   /// so we use it as a backup for everything.
@@ -846,7 +604,6 @@ private:
 
   /// banerjeeMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Computes directions.
   bool banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                        const SmallBitVector &Loops,
@@ -855,8 +612,9 @@ private:
   /// collectCoeffInfo - Walks through the subscript, collecting each
   /// coefficient, the associated loop bounds, and recording its positive and
   /// negative parts for later use.
-  CoefficientInfo *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
-                                    const SCEV *&Constant) const;
+  void collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
+                        const SCEV *&Constant,
+                        SmallVectorImpl<CoefficientInfo> &CI) const;
 
   /// Given \p Expr of the form
   ///
@@ -886,107 +644,47 @@ private:
   /// getLowerBound - Looks through all the bounds info and
   /// computes the lower bound given the current direction settings
   /// at each level.
-  const SCEV *getLowerBound(BoundInfo *Bound) const;
+  const SCEV *getLowerBound(ArrayRef<BoundInfo> Bound) const;
 
   /// getUpperBound - Looks through all the bounds info and
   /// computes the upper bound given the current direction settings
   /// at each level.
-  const SCEV *getUpperBound(BoundInfo *Bound) const;
+  const SCEV *getUpperBound(ArrayRef<BoundInfo> Bound) const;
 
   /// exploreDirections - Hierarchically expands the direction vector
   /// search space, combining the directions of discovered dependences
   /// in the DirSet field of Bound. Returns the number of distinct
   /// dependences discovered. If the dependence is disproved,
   /// it will return 0.
-  unsigned exploreDirections(unsigned Level, CoefficientInfo *A,
-                             CoefficientInfo *B, BoundInfo *Bound,
+  unsigned exploreDirections(unsigned Level, ArrayRef<CoefficientInfo> A,
+                             ArrayRef<CoefficientInfo> B,
+                             MutableArrayRef<BoundInfo> Bound,
                              const SmallBitVector &Loops,
                              unsigned &DepthExpanded, const SCEV *Delta) const;
 
   /// testBounds - Returns true iff the current bounds are plausible.
-  bool testBounds(unsigned char DirKind, unsigned Level, BoundInfo *Bound,
-                  const SCEV *Delta) const;
+  bool testBounds(unsigned char DirKind, unsigned Level,
+                  MutableArrayRef<BoundInfo> Bound, const SCEV *Delta) const;
 
   /// findBoundsALL - Computes the upper and lower bounds for level K
   /// using the * direction. Records them in Bound.
-  void findBoundsALL(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                     unsigned K) const;
+  void findBoundsALL(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsLT - Computes the upper and lower bounds for level K
   /// using the < direction. Records them in Bound.
-  void findBoundsLT(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                    unsigned K) const;
+  void findBoundsLT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                    MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsGT - Computes the upper and lower bounds for level K
   /// using the > direction. Records them in Bound.
-  void findBoundsGT(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                    unsigned K) const;
+  void findBoundsGT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                    MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsEQ - Computes the upper and lower bounds for level K
   /// using the = direction. Records them in Bound.
-  void findBoundsEQ(CoefficientInfo *A, CoefficientInfo *B, BoundInfo *Bound,
-                    unsigned K) const;
-
-  /// intersectConstraints - Updates X with the intersection
-  /// of the Constraints X and Y. Returns true if X has changed.
-  bool intersectConstraints(Constraint *X, const Constraint *Y);
-
-  /// propagate - Review the constraints, looking for opportunities
-  /// to simplify a subscript pair (Src and Dst).
-  /// Return true if some simplification occurs.
-  /// If the simplification isn't exact (that is, if it is conservative
-  /// in terms of dependence), set consistent to false.
-  bool propagate(const SCEV *&Src, const SCEV *&Dst, SmallBitVector &Loops,
-                 SmallVectorImpl<Constraint> &Constraints, bool &Consistent);
-
-  /// propagateDistance - Attempt to propagate a distance
-  /// constraint into a subscript pair (Src and Dst).
-  /// Return true if some simplification occurs.
-  /// If the simplification isn't exact (that is, if it is conservative
-  /// in terms of dependence), set consistent to false.
-  bool propagateDistance(const SCEV *&Src, const SCEV *&Dst,
-                         Constraint &CurConstraint, bool &Consistent);
-
-  /// propagatePoint - Attempt to propagate a point
-  /// constraint into a subscript pair (Src and Dst).
-  /// Return true if some simplification occurs.
-  bool propagatePoint(const SCEV *&Src, const SCEV *&Dst,
-                      Constraint &CurConstraint);
-
-  /// propagateLine - Attempt to propagate a line
-  /// constraint into a subscript pair (Src and Dst).
-  /// Return true if some simplification occurs.
-  /// If the simplification isn't exact (that is, if it is conservative
-  /// in terms of dependence), set consistent to false.
-  bool propagateLine(const SCEV *&Src, const SCEV *&Dst,
-                     Constraint &CurConstraint, bool &Consistent);
-
-  /// findCoefficient - Given a linear SCEV,
-  /// return the coefficient corresponding to specified loop.
-  /// If there isn't one, return the SCEV constant 0.
-  /// For example, given a*i + b*j + c*k, returning the coefficient
-  /// corresponding to the j loop would yield b.
-  const SCEV *findCoefficient(const SCEV *Expr, const Loop *TargetLoop) const;
-
-  /// zeroCoefficient - Given a linear SCEV,
-  /// return the SCEV given by zeroing out the coefficient
-  /// corresponding to the specified loop.
-  /// For example, given a*i + b*j + c*k, zeroing the coefficient
-  /// corresponding to the j loop would yield a*i + c*k.
-  const SCEV *zeroCoefficient(const SCEV *Expr, const Loop *TargetLoop) const;
-
-  /// addToCoefficient - Given a linear SCEV Expr,
-  /// return the SCEV given by adding some Value to the
-  /// coefficient corresponding to the specified TargetLoop.
-  /// For example, given a*i + b*j + c*k, adding 1 to the coefficient
-  /// corresponding to the j loop would yield a*i + (b+1)*j + c*k.
-  const SCEV *addToCoefficient(const SCEV *Expr, const Loop *TargetLoop,
-                               const SCEV *Value) const;
-
-  /// updateDirection - Update direction vector entry
-  /// based on the current constraint.
-  void updateDirection(Dependence::DVEntry &Level,
-                       const Constraint &CurConstraint) const;
+  void findBoundsEQ(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+                    MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// Given a linear access function, tries to recover subscripts
   /// for each dimension of the array element access.
@@ -994,8 +692,8 @@ private:
                       SmallVectorImpl<Subscript> &Pair);
 
   /// Tries to delinearize \p Src and \p Dst access functions for a fixed size
-  /// multi-dimensional array. Calls tryDelinearizeFixedSizeImpl() to
-  /// delinearize \p Src and \p Dst separately,
+  /// multi-dimensional array. Calls delinearizeFixedSizeArray() to delinearize
+  /// \p Src and \p Dst separately,
   bool tryDelinearizeFixedSize(Instruction *Src, Instruction *Dst,
                                const SCEV *SrcAccessFn, const SCEV *DstAccessFn,
                                SmallVectorImpl<const SCEV *> &SrcSubscripts,

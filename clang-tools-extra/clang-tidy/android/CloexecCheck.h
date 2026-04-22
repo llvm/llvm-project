@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -29,9 +29,9 @@ public:
       : ClangTidyCheck(Name, Context) {}
 
 protected:
-  void
-  registerMatchersImpl(ast_matchers::MatchFinder *Finder,
-                       ast_matchers::internal::Matcher<FunctionDecl> Function);
+  void registerMatchersImpl(
+      ast_matchers::MatchFinder *Finder,
+      const ast_matchers::internal::Matcher<FunctionDecl> &Function);
 
   /// Currently, we have three types of fixes.
   ///
@@ -97,4 +97,4 @@ protected:
 
 } // namespace clang::tidy::android
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCHECK_H

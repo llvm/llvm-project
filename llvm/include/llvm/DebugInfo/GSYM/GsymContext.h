@@ -12,7 +12,6 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include <cstdint>
 #include <memory>
-#include <string>
 
 namespace llvm {
 

@@ -10118,7 +10118,7 @@ TEST(APFloatTest, Float4E2M1FNToFloat) {
 }
 
 TEST(APFloatTest, AddOrSubtractSignificand) {
-  typedef detail::IEEEFloatUnitTestHelper Helper;
+  using Helper = detail::IEEEFloatUnitTestHelper;
   // Test cases are all combinations of:
   // {equal exponents, LHS larger exponent, RHS larger exponent}
   // {equal significands, LHS larger significand, RHS larger significand}
@@ -10180,6 +10180,30 @@ TEST(APFloatTest, FrexpQuietSNaN) {
   int Exp;
   APFloat Result = frexp(SNaN, Exp, APFloat::rmNearestTiesToEven);
   EXPECT_FALSE(Result.isSignaling());
+}
+
+TEST(APFloatTest, isValidArbitraryFPFormat) {
+  // Test all valid format strings.
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E5M2"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E5M2FNUZ"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3FNUZ"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3B11FNUZ"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E3M4"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E8M0FNU"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float6E3M2FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float6E2M3FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float4E2M1FN"));
+
+  // Test invalid format strings.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat(""));
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("Float8"));
+  EXPECT_FALSE(
+      APFloat::isValidArbitraryFPFormat("Float8E5M2FN")); // Should be FNUZ.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("float8e4m3")); // Wrong case.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("Float16E5M10"));
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("unknown"));
 }
 
 } // namespace

@@ -25,8 +25,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY $w1
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
-    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY1]], %subreg.sub_32
     ; CHECK-NEXT: [[BFMXri:%[0-9]+]]:gpr64 = BFMXri [[SUBREG_TO_REG]], [[SUBREG_TO_REG1]], 32, 31
     ; CHECK-NEXT: $x0 = COPY [[BFMXri]]
     %0(s32) = COPY $w0

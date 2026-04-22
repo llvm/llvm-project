@@ -49,6 +49,12 @@ int GlobalArray3[5];
 // CHECK-NEXT: DeclRefExpr{{.*}}'Global3' 'int'
 // CHECK-NEXT: device_resident clause
 // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray3' 'int[5]'
+int GlobalArray4[5];
+// CHECK-NEXT: VarDecl{{.*}}GlobalArray4 'int[5]'
+#pragma acc declare link(GlobalArray4[1:1])
+// CHECK-NEXT: OpenACCDeclareDecl
+// CHECK-NEXT: link clause
+// CHECK-NEXT: ArraySectionExpr
 
 namespace NS {
 int NSVar;

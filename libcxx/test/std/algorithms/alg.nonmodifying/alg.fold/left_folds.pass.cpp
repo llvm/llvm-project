@@ -36,6 +36,7 @@
 #include <iterator>
 #include <list>
 #include <ranges>
+#include <set>
 #include <string_view>
 #include <string>
 #include <vector>
@@ -115,10 +116,11 @@ constexpr void check_lvalue_range(R& r, T const& init, F f, Expected const& expe
   }
 
   {
-    auto telemetry                               = invocable_telemetry();
-    auto f2                                      = invocable_with_telemetry(f, telemetry);
-    std::same_as<Expected> decltype(auto) result = fold_left(r, init, f2);
-    assert(result == expected);
+    auto telemetry                                        = invocable_telemetry();
+    auto f2                                               = invocable_with_telemetry(f, telemetry);
+    is_in_value_result<R, Expected> decltype(auto) result = fold_left_with_iter(r, init, f2);
+    assert(result.in == r.end());
+    assert(result.value == expected);
     assert(telemetry.invocations == std::ranges::distance(r));
     assert(telemetry.moves == 0);
     assert(telemetry.copies == 1);
@@ -321,6 +323,12 @@ void runtime_only_test_case() {
                                  // int(-10.4) + -5.5 = -10 + -5.5 = -15.5
                                  // int(-15.5) + -6.6 = -15 + -6.6 = -21.6.
     check(data, 0.0, plus, expected);
+  }
+
+  {
+    auto const data     = std::set<int>{2, 4, 6, 8, 10, 12};
+    auto const expected = triangular_sum(data);
+    check(data, 0, std::plus<long>(), static_cast<long>(expected));
   }
 }
 

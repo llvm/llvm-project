@@ -365,6 +365,10 @@ public:
   bool isS16ImmX4() const { return isExtImm<16>(/*Signed*/ true, 4); }
   bool isS16ImmX16() const { return isExtImm<16>(/*Signed*/ true, 16); }
   bool isS17Imm() const { return isExtImm<17>(/*Signed*/ true, 1); }
+  bool isS32Imm() const {
+    // TODO: Is ContextImmediate needed?
+    return Kind == Expression || isSImm<32>();
+  }
   bool isS34Imm() const {
     // Once the PC-Rel ABI is finalized, evaluate whether a 34-bit
     // ContextImmediate is needed.
@@ -454,7 +458,7 @@ public:
     Inst.addOperand(MCOperand::createReg(RRegs[getRegNum()]));
   }
 
-  void addRegGPRCNoR0Operands(MCInst &Inst, unsigned N) const {
+  void addRegGPRC_NOR0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(RRegsNoR0[getRegNum()]));
   }
@@ -464,7 +468,7 @@ public:
     Inst.addOperand(MCOperand::createReg(XRegs[getRegNum()]));
   }
 
-  void addRegG8RCNoX0Operands(MCInst &Inst, unsigned N) const {
+  void addRegG8RC_NOX0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(XRegsNoX0[getRegNum()]));
   }
@@ -483,9 +487,9 @@ public:
 
   void addRegGxRCNoR0Operands(MCInst &Inst, unsigned N) const {
     if (isPPC64())
-      addRegG8RCNoX0Operands(Inst, N);
+      addRegG8RC_NOX0Operands(Inst, N);
     else
-      addRegGPRCNoR0Operands(Inst, N);
+      addRegGPRC_NOR0Operands(Inst, N);
   }
 
   void addRegF4RCOperands(MCInst &Inst, unsigned N) const {

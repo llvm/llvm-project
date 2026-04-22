@@ -57,9 +57,23 @@ if (COMPILER_RT_STANDALONE_BUILD)
     ON)
 endif()
 
+function(set_special_properties source_file)
+  cmake_parse_arguments(ARG "" "" "SUPERSEDES;PROVIDES" ${ARGN})
+  if(ARG_SUPERSEDES)
+    set_property(SOURCE ${source_file}
+      PROPERTY crt_supersedes "${ARG_SUPERSEDES}")
+  endif()
+  if(ARG_PROVIDES AND NOT COMPILER_RT_BUILTINS_STANDALONE_BUILD)
+    set_property(SOURCE ${source_file}
+      DIRECTORY ${COMPILER_RT_SOURCE_DIR}
+      PROPERTY crt_provides "${ARG_PROVIDES}")
+  endif()
+endfunction()
+
 include(builtin-config-ix)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
+include(CheckAssemblerFlag)
 
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
@@ -335,13 +349,16 @@ if (NOT MSVC)
     )
   endif()
 
-  if (NOT ANDROID)
+  if(NOT ANDROID AND (NOT WIN32 OR MINGW))
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
       ${x86_80_BIT_SOURCES}
       x86_64/floatdixf.c
     )
-    if (NOT WIN32)
+
+    # TODO(compnerd) floatundixf.S currently implements the SysV calling
+    # convention, this must be ported to the Windows ABI.
+    if(NOT WIN32)
       set(x86_64_SOURCES
         ${x86_64_SOURCES}
         x86_64/floatundixf.S
@@ -379,7 +396,6 @@ if (NOT MSVC)
   if (NOT ANDROID)
     set(i386_SOURCES
       ${i386_SOURCES}
-      ${x86_80_BIT_SOURCES}
       i386/floatdixf.S
       i386/floatundixf.S
     )
@@ -389,7 +405,14 @@ if (NOT MSVC)
     set(i386_SOURCES
       ${i386_SOURCES}
       i386/chkstk.S
+      i386/chkstk2.S
     )
+  endif()
+
+  if(NOT ANDROID AND NOT (WIN32 AND NOT MINGW))
+    set(i386_SOURCES
+      ${i386_SOURCES}
+      ${x86_80_BIT_SOURCES})
   endif()
 else () # MSVC
   # Use C versions of functions when building on MSVC
@@ -421,6 +444,45 @@ set(arm_or_thumb2_base_SOURCES
   arm/umodsi3.S
   ${GENERIC_SOURCES}
 )
+
+option(COMPILER_RT_ARM_OPTIMIZED_FP
+  "On 32-bit Arm, use optimized assembly implementations of FP arithmetic. Likely to increase code size, but be faster." ON)
+
+set(arm_or_thumb2_optimized_fp_SOURCES)
+if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
+  check_assembler_flag(COMPILER_RT_HAS_MIMPLICIT_IT -mimplicit-it=always)
+  if(COMPILER_RT_HAS_MIMPLICIT_IT)
+    set(implicit_it_flag -mimplicit-it=always)
+  else()
+    check_assembler_flag(
+      COMPILER_RT_HAS_WA_MIMPLICIT_IT -Wa,-mimplicit-it=always)
+    if(COMPILER_RT_HAS_WA_MIMPLICIT_IT)
+      set(implicit_it_flag -Wa,-mimplicit-it=always)
+    else()
+      message(WARNING "Don't know how to set the -mimplicit-it=always flag in this assembler; not including Arm optimized implementations")
+      set(implicit_it_flag "")
+    endif()
+  endif()
+
+  if(implicit_it_flag)
+    set(assembly_files
+      arm/mulsf3.S
+      arm/divsf3.S
+      arm/adddf3.S
+      )
+    set_source_files_properties(${assembly_files}
+      PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
+    set(arm_or_thumb2_optimized_fp_SOURCES
+      ${assembly_files}
+      arm/fnan2.c
+      arm/fnorm2.c
+      arm/funder.c
+      arm/dnan2.c
+      arm/dnorm2.c
+      arm/dunder.c
+      )
+  endif()
+endif()
 
 set(arm_sync_SOURCES
   arm/sync_fetch_and_add_4.S
@@ -454,6 +516,17 @@ set(thumb1_base_SOURCES
   arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
+
+if(COMPILER_RT_ARM_OPTIMIZED_FP)
+  set(thumb1_base_SOURCES
+    arm/thumb1/mulsf3.S
+    arm/fnan2.c
+    arm/fnorm2.c
+    arm/funder.c
+    ${thumb1_base_SOURCES}
+  )
+endif()
 
 set(arm_EABI_RT_SOURCES
   arm/aeabi_cdcmp.S
@@ -469,6 +542,10 @@ set(arm_EABI_RT_SOURCES
   arm/aeabi_ldivmod.S
   arm/aeabi_uidivmod.S
   arm/aeabi_uldivmod.S
+  arm/aeabi_uread4.S
+  arm/aeabi_uread8.S
+  arm/aeabi_uwrite4.S
+  arm/aeabi_uwrite8.S
 )
 
 set(arm_EABI_CLIB_SOURCES
@@ -566,6 +643,7 @@ if(MINGW)
     arm/aeabi_uldivmod.S
     arm/chkstk.S
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
   )
 
@@ -576,6 +654,7 @@ elseif(NOT WIN32)
   # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
     ${arm_EABI_SOURCES}
     ${arm_Thumb1_SOURCES}
@@ -611,7 +690,7 @@ if (COMPILER_RT_HAS_AARCH64_SME)
   elseif (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
     list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-assert.c)
     if(COMPILER_RT_HAS_ARM_UNALIGNED AND COMPILER_RT_HAS_ARM_FP)
-      list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S)
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S aarch64/sme-libc-opt-memcpy-memmove-sve.S)
     elseif(COMPILER_RT_HAS_ARM_UNALIGNED)
       list(APPEND aarch64_SOURCES aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-opt-memcpy-memmove.S)
       message(WARNING "AArch64 SME ABI assembly-optimized memset/memchr disabled: target does not have hardware floating-point support.")
@@ -692,6 +771,7 @@ set(arm64_SOURCES ${aarch64_SOURCES})
 set(arm64e_SOURCES ${aarch64_SOURCES})
 set(arm64_32_SOURCES ${aarch64_SOURCES})
 set(arm64ec_SOURCES ${aarch64_SOURCES})
+set(aarch64_lfi_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})
@@ -789,6 +869,16 @@ if (NOT OS_NAME MATCHES "AIX")
     ${powerpc64_SOURCES}
   )
 endif()
+if (OS_NAME MATCHES "AIX")
+  set(powerpc_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc_SOURCES}
+  )
+  set(powerpc64_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc64_SOURCES}
+  )
+endif()
 set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
 set(riscv_SOURCES
@@ -811,6 +901,8 @@ set(riscv64_SOURCES
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 
+set(spirv64_SOURCES ${GENERIC_SOURCES})
+
 set(s390x_SOURCES
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
@@ -818,8 +910,6 @@ set(s390x_SOURCES
 
 
 set(wasm_SOURCES
-  wasm/__c_longjmp.S
-  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
@@ -831,6 +921,8 @@ set(ve_SOURCES
   ve/grow_stack_align.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES})
+
+set(m68k_SOURCES ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
 set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
@@ -854,6 +946,9 @@ else ()
   append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ BUILTIN_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
 
+  # Builtins use __COUNTER__
+  append_list_if(COMPILER_RT_HAS_WNO_C2Y_EXTENSIONS -Wno-c2y-extensions BUILTIN_CFLAGS)
+
   # Don't embed directives for picking any specific CRT
   if (MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "")
@@ -876,12 +971,10 @@ else ()
   endif()
 
   # Directly targeting the GPU requires a few extra flags.
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64")
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
-    append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
-                   -fconvergent-functions BUILTIN_CFLAGS)
 
     # AMDGPU targets want to use a generic ABI.
     if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
@@ -901,7 +994,7 @@ else ()
   elseif(COMPILER_RT_BAREMETAL_BUILD)
     foreach (arch ${BUILTIN_SUPPORTED_ARCH})
       if("${arch}" MATCHES "arm64|aarch64")
-        list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+        list(APPEND BUILTIN_DEFS TARGET_BAREMETAL_AARCH64)
       endif()
     endforeach ()
   endif()
@@ -939,9 +1032,6 @@ else ()
           endif()
         endif()
       endif()
-      check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }
-                               int main(void) { return 0; }"
-                              COMPILER_RT_HAS_${arch}_FLOAT16)
       append_list_if(COMPILER_RT_HAS_${arch}_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS_${arch})
       check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }
                                int main(void) { return 0; }"
@@ -960,9 +1050,10 @@ else ()
         list(APPEND BUILTIN_CFLAGS_${arch} -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
       endif()
 
-      # For RISCV32, we must force enable int128 for compiling long
+      # For RISCV32 and 32-bit SPARC, we must force enable int128 for compiling long
       # double routines.
-      if(COMPILER_RT_ENABLE_SOFTWARE_INT128 OR "${arch}" STREQUAL "riscv32")
+      if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ("${arch}" MATCHES "riscv32|sparc$"
+        AND NOT CMAKE_COMPILER_IS_GNUCC))
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
 
@@ -976,6 +1067,12 @@ else ()
                               C_STANDARD 11
                               CXX_STANDARD 17
                               PARENT_TARGET builtins)
+
+      # Write out the sources that were used to compile the builtins so that tests can be run in
+      # an independent compiler-rt build (see: compiler-rt/test/builtins/CMakeLists.txt)
+      get_compiler_rt_output_dir(${arch} BUILTIN_LIB_OUTPUT_DIR)
+      set_output_name(BUILTIN_LIB_OUTPUT_NAME clang_rt.builtins ${arch})
+      file(WRITE "${BUILTIN_LIB_OUTPUT_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" "${${arch}_SOURCES}")
       cmake_pop_check_state()
     endif ()
   endforeach ()
