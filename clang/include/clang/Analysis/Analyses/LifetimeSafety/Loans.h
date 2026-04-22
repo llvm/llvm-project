@@ -70,24 +70,25 @@ public:
 
   const clang::ValueDecl *getAsValueDecl() const {
     return K == Kind::ValueDecl
-               ? cast<clang::ValueDecl>(Root.dyn_cast<const clang::Decl *>())
+               ? dyn_cast<clang::ValueDecl>(Root.dyn_cast<const clang::Decl *>())
                : nullptr;
   }
   const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
     return K == Kind::MaterializeTemporary
-               ? cast<clang::MaterializeTemporaryExpr>(
-                     Root.dyn_cast<const clang::Expr *>())
+               ? dyn_cast<clang::MaterializeTemporaryExpr>(
+                      Root.dyn_cast<const clang::Expr *>())
                : nullptr;
   }
   const ParmVarDecl *getAsPlaceholderParam() const {
     return K == Kind::PlaceholderParam
-               ? cast<clang::ParmVarDecl>(Root.dyn_cast<const clang::Decl *>())
+               ? dyn_cast<clang::ParmVarDecl>(
+                     Root.dyn_cast<const clang::Decl *>())
                : nullptr;
   }
   const CXXMethodDecl *getAsPlaceholderThis() const {
     return K == Kind::PlaceholderThis
-               ? cast<clang::CXXMethodDecl>(
-                     Root.dyn_cast<const clang::Decl *>())
+               ? dyn_cast<clang::CXXMethodDecl>(
+                      Root.dyn_cast<const clang::Decl *>())
                : nullptr;
   }
 
