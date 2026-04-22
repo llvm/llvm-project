@@ -162,9 +162,8 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_TRUE(Sym1.Flags & Symbol::IndexedForCodeCompletion);
   EXPECT_FALSE(Sym1.Flags & Symbol::Deprecated);
   // Tags: Deprecated | Static
-  EXPECT_EQ(Sym1.Tags,
-            SymbolTags::fromTag(SymbolTag::Deprecated) |
-                SymbolTags::fromTag(SymbolTag::Static));
+  EXPECT_EQ(Sym1.Tags, SymbolTags::fromTag(SymbolTag::Deprecated) |
+                           SymbolTags::fromTag(SymbolTag::Static));
   EXPECT_TRUE((Sym1.Tags & SymbolTags::fromTag(SymbolTag::Deprecated)));
   EXPECT_TRUE((Sym1.Tags & SymbolTags::fromTag(SymbolTag::Static)));
   EXPECT_THAT(
