@@ -234,11 +234,38 @@ INTERCEPTOR(void *, bzero, void *block, usize size) {
 #endif  // SANITIZER_INTERCEPT_BZERO
 
 namespace __sanitizer {
+
+#if SANITIZER_WINDOWS64
+// On Windows x64, memcpy and memmove used to share a single implementation in
+// the CRT (vcruntime140.dll), but newer CRTs ship them as distinct functions.
+// Detect this at interceptor init time so the rest of the runtime can pick the
+// right code path (e.g. asan_allocator's Reallocate). See
+// InitializeMemintrinsicInterceptors below.
+bool win64_memcpy_memmove_are_disjoint;
+#endif
+
 // This does not need to be called if InitializeCommonInterceptors() is called.
 void InitializeMemintrinsicInterceptors() {
   INIT_MEMSET;
+#if SANITIZER_WINDOWS64
+  // Use volatile to keep the compiler from folding &memcpy != &memmove at
+  // compile time (the two declarations are distinct symbols even if the
+  // runtime resolves them to the same address).
+  volatile uptr memcpy_addr = (uptr)&memcpy;
+  volatile uptr memmove_addr = (uptr)&memmove;
+  win64_memcpy_memmove_are_disjoint = (memcpy_addr != memmove_addr);
+  INIT_MEMMOVE;
+  if (win64_memcpy_memmove_are_disjoint) {
+    COMMON_INTERCEPT_FUNCTION(memcpy);
+  } else {
+    // Legacy CRT: memcpy and memmove are the same function; just share REAL.
+    ASSIGN_REAL(memcpy, memmove);
+  }
+  CHECK(REAL(memcpy));
+#else
   INIT_MEMMOVE;
   INIT_MEMCPY;
+#endif
   INIT_AEABI_MEM;
   INIT___BZERO;
   INIT_BZERO;

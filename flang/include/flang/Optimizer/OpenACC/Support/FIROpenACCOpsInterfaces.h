@@ -14,6 +14,7 @@
 #define FLANG_OPTIMIZER_OPENACC_FIROPENACC_OPS_INTERFACES_H_
 
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
@@ -87,7 +88,16 @@ struct IndirectGlobalAccessModel
 template <typename Op>
 struct OutlineRematerializationModel
     : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
-          OutlineRematerializationModel<Op>, Op> {};
+          OutlineRematerializationModel<Op>, Op> {
+  bool isRematerializationCandidate(mlir::Operation *op) const { return true; }
+};
+
+template <>
+struct OutlineRematerializationModel<fir::ConvertOp>
+    : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
+          OutlineRematerializationModel<fir::ConvertOp>, fir::ConvertOp> {
+  bool isRematerializationCandidate(mlir::Operation *op) const;
+};
 
 /// External model for OffloadRegionOpInterface.
 /// This interface marks operations whose regions are targets for offloading
