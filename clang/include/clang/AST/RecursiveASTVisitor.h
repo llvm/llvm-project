@@ -1748,6 +1748,17 @@ DEF_TRAVERSE_DECL(StaticAssertDecl, {
   TRY_TO(TraverseStmt(D->getMessage()));
 })
 
+DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
+  // No double visiting: getTypeAsWritten() returns null for class
+  // templates/nested classes where the qualifier lives inside the TSI.
+  if (D->getQualifierLoc())
+    TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
+  if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+    TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
+  for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I)
+    TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
+})
+
 DEF_TRAVERSE_DECL(TranslationUnitDecl, {
   // Code in an unnamed namespace shows up automatically in
   // decls_begin()/decls_end().  Thus we don't need to recurse on
@@ -2027,8 +2038,10 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
-      // FIXME: For now traverse explicit instantiations here. Change that
-      // once they are represented as dedicated nodes in the AST.
+      // Unlike class/variable template specializations, function template
+      // specializations are not independent children of the DeclContext —
+      // they are only reachable via FunctionTemplateDecl::specializations().
+      // We must traverse them here so visitors can see the instantiated body.
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
         TRY_TO(TraverseDecl(RD));
@@ -2196,14 +2209,16 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        the source code anywhere.  (Note the instatiated *type* --              \
        set<int> -- is written, and will still get a callback of                \
        TemplateSpecializationType).  For explicit instantiations               \
-       ("template set<int>;"), we do need a callback, since this               \
-       is the only callback that's made for this instantiation.                \
-       We use getTemplateArgsAsWritten() to distinguish. */                    \
+       ("template set<int>;"), the ExplicitInstantiationDecl node              \
+       handles traversal of template args and qualifier.                       \
+       For explicit specializations ("template<> set<int> {...};"),            \
+       we traverse template args here since there is no EID. */                \
     if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
       assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
-      /* The args that remains unspecialized. */                               \
-      TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
-          ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
+      if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {  \
+        TRY_TO(TraverseTemplateArgumentLocsHelper(                             \
+            ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));    \
+      }                                                                        \
     }                                                                          \
                                                                                \
     if (getDerived().shouldVisitTemplateInstantiations() ||                    \
@@ -2211,8 +2226,6 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
       /* Traverse base definition for explicit specializations */              \
       TRY_TO(Traverse##DECLKIND##Helper(D));                                   \
     } else {                                                                   \
-      TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));            \
-                                                                               \
       /* Returning from here skips traversing the                              \
          declaration context of the *TemplateSpecializationDecl                \
          (embedded in the DEF_TRAVERSE_DECL() macro)                           \
