@@ -115,7 +115,7 @@ struct LoweringPreparePass
       cir::FuncType type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
 
-  cir::GlobalOp buildRuntimeVariable(
+  cir::GlobalOp getOrCreateRuntimeVariable(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
       mlir::Type type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
@@ -244,7 +244,7 @@ struct LoweringPreparePass
                                    mlir::Block &entryBB) {
     // Create a variable that binds the atexit to this shared object.
     builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
-    cir::GlobalOp handle = buildRuntimeVariable(
+    cir::GlobalOp handle = getOrCreateRuntimeVariable(
         builder, "__dso_handle", global.getLoc(), builder.getI8Type(),
         cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
 
@@ -345,7 +345,7 @@ struct LoweringPreparePass
       mlir::Block *insertBlock = builder.getInsertionBlock();
       if (!ctorRegion.empty()) {
         if (!ctorRegion.hasOneBlock())
-          llvm_unreachable("Multiple blocks NYI");
+          globalOp->emitError("NYI: ctor region with multiple blocks");
 
         mlir::Block &block = ctorRegion.front();
         insertBlock->getOperations().splice(
@@ -355,7 +355,7 @@ struct LoweringPreparePass
 
       if (!dtorRegion.empty()) {
         if (!dtorRegion.hasOneBlock())
-          llvm_unreachable("Multiple blocks NYI");
+          globalOp->emitError("NYI: dtor region with multiple blocks");
 
         emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion,
                                     *insertBlock);
@@ -397,7 +397,7 @@ struct LoweringPreparePass
 
 } // namespace
 
-cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
+cir::GlobalOp LoweringPreparePass::getOrCreateRuntimeVariable(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
     mlir::Type type, cir::GlobalLinkageKind linkage,
     cir::VisibilityKind visibility) {

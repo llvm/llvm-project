@@ -955,8 +955,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 
 defvar CIR_YieldableScopes = [
   "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "DoWhileOp",
-  "ForOp", "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp", "TryOp",
-  "WhileOp", "LocalInitOp"
+  "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
+  "TernaryOp", "TryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -2991,7 +2991,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 
     Example:
     ```
-    cir.local_init thread_local @GlobalName ctor {
+    cir.local_init static_local @GlobalName ctor {
       %4 = cir.get_global static_local @GlobalName : !cir.ptr<!rec_CtorDtor>
       %5 = cir.call @_Z5get_iv() : () -> !s32i
       cir.call @_ZN8CtorDtorC1Ei(%4, %5) : !cir.ptr<!rec_CtorDtor>
