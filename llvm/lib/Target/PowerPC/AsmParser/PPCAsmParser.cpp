@@ -655,9 +655,8 @@ public:
     }
 
     // Create an MCOperand using the static helper function.
-    assert(Ctx && "MCContext is required for for non immediates");
     MCOperand Op = MCOperand::createExpr(getExpr());
-    addNegOperand(Inst, Op, *Ctx);
+    addNegOperand(Inst, Op, Ctx);
   }
 
   void addBranchTargetOperands(MCInst &Inst, unsigned N) const {
