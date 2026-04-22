@@ -220,7 +220,6 @@ void SimpleExecutorMemoryManager::addBootstrapSymbols(
     M[SNs.DeinitializeName] = ExecutorAddr::fromPtr(deinitializeWrapper);
     M[SNs.ReleaseName] = ExecutorAddr::fromPtr(releaseWrapper);
   }
-
 }
 
 Expected<SimpleExecutorMemoryManager::SlabInfo &>

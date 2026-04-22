@@ -46,17 +46,15 @@ public:
   /// Create an EPCGenericJITLinkMemoryManager using the given implementation
   /// symbol names. These will be looked up in the given JITDylib.
   static Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-  Create(JITDylib &JD,
-         rt::SimpleExecutorMemoryManagerSymbolNames SNs =
-             rt::orc_rt_SimpleNativeMemoryMapSPSSymbols);
+  Create(JITDylib &JD, rt::SimpleExecutorMemoryManagerSymbolNames SNs =
+                           rt::orc_rt_SimpleNativeMemoryMapSPSSymbols);
 
   /// Create an EPCGenericJITLinkMemoryManager using the given implementation
   /// symbol names. These will be looked up in the given ExecutionSession's
   /// Bootstrap JITDylib.
   static Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-  Create(ExecutionSession &ES,
-         rt::SimpleExecutorMemoryManagerSymbolNames SNs =
-             rt::orc_rt_SimpleNativeMemoryMapSPSSymbols);
+  Create(ExecutionSession &ES, rt::SimpleExecutorMemoryManagerSymbolNames SNs =
+                                   rt::orc_rt_SimpleNativeMemoryMapSPSSymbols);
 
   void allocate(const jitlink::JITLinkDylib *JD, jitlink::LinkGraph &G,
                 OnAllocatedFunction OnAllocated) override;

@@ -83,8 +83,6 @@ const char *RunAsVoidFunctionWrapperName =
 const char *RunAsIntFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_int_function_wrapper";
 
-
-
 const SimpleExecutorMemoryManagerSymbolNames
     orc_rt_SimpleNativeMemoryMapSPSSymbols = {
         "orc_rt_SimpleNativeMemoryMap_Instance",

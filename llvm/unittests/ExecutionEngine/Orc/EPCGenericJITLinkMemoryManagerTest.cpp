@@ -214,8 +214,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromExecutionSession) {
     }
   };
 
-  auto &SNs =
-      rt::orc_rt_SimpleNativeMemoryMapSPSSymbols;
+  auto &SNs = rt::orc_rt_SimpleNativeMemoryMapSPSSymbols;
 
   ExecutorAddr AllocatorAddr(1), ReserveAddr(2), InitAddr(3), DeinitAddr(4),
       ReleaseAddr(5);
