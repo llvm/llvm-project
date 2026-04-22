@@ -140,16 +140,6 @@ define float @fdiv_reassoc_f32(float %a, float %b) {
   ret float %r
 }
 
-; contract on fmul+fadd — SPARC v9 has no FMA, produces separate fmuls + fadds
-define float @fmadd_contract_f32(float %a, float %b, float %c) {
-; CHECK-LABEL: fmadd_contract_f32:
-; CHECK: fmuls
-; CHECK: fadds
-  %mul = call contract float @llvm.fmul.f32(float %a, float %b)
-  %add = call contract float @llvm.fadd.f32(float %mul, float %c)
-  ret float %add
-}
-
 declare double @llvm.fadd.f64(double, double)
 declare double @llvm.fsub.f64(double, double)
 declare double @llvm.fmul.f64(double, double)

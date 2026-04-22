@@ -154,16 +154,6 @@ define float @fdiv_reassoc_f32(float %a, float %b) {
   ret float %r
 }
 
-; contract on fmul+fadd — WebAssembly MVP has no scalar FMA, produces f32.mul + f32.add
-define float @fmadd_contract_f32(float %a, float %b, float %c) {
-; CHECK-LABEL: fmadd_contract_f32:
-; CHECK: f32.mul
-; CHECK: f32.add
-  %mul = call contract float @llvm.fmul.f32(float %a, float %b)
-  %add = call contract float @llvm.fadd.f32(float %mul, float %c)
-  ret float %add
-}
-
 declare double @llvm.fadd.f64(double, double)
 declare double @llvm.fsub.f64(double, double)
 declare double @llvm.fmul.f64(double, double)

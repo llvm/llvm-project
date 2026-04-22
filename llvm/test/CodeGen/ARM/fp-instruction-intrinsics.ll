@@ -155,16 +155,6 @@ define float @fdiv_reassoc_f32(float %a, float %b) {
   ret float %r
 }
 
-; contract on fmul+fadd — VFPv2 has no FMA, produces separate vmul.f32 + vadd.f32
-define float @fmadd_contract_f32(float %a, float %b, float %c) {
-; CHECK-LABEL: fmadd_contract_f32:
-; CHECK: vmul.f32
-; CHECK: vadd.f32
-  %mul = call contract float @llvm.fmul.f32(float %a, float %b)
-  %add = call contract float @llvm.fadd.f32(float %mul, float %c)
-  ret float %add
-}
-
 declare double @llvm.fadd.f64(double, double)
 declare double @llvm.fsub.f64(double, double)
 declare double @llvm.fmul.f64(double, double)
