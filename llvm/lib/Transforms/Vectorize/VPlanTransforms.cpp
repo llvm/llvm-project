@@ -871,7 +871,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         continue;
 
       // VPReplicateRecipe is not compatible
-      if (isa<ExtractValueInst>(Def->getUnderlyingInstr()))
+      if (match(Def,
+                m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
 
       auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),

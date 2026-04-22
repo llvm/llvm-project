@@ -4,14 +4,13 @@
 ; Regression test from https://github.com/llvm/llvm-project/issues/193275
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-grtev4-linux-gnu"
 
 ; Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none)
-declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64)
 
-define i1 @pch_swap() #1 {
-; CHECK-LABEL: define i1 @pch_swap(
-; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+define void @func(ptr %p) #1 {
+; CHECK-LABEL: define void @func(
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -22,46 +21,39 @@ define i1 @pch_swap() #1 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call { <2 x i64>, <2 x i1> } @llvm.sadd.with.overflow.v2i64(<2 x i64> [[VEC_IND]], <2 x i64> splat (i64 1))
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr null, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], -9223372036854775808
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[FOR_BODY_TRAP_CRIT_EDGE:.*]]
-; CHECK:       [[FOR_BODY_TRAP_CRIT_EDGE]]:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %cont38
+  br label %loop.header
 
-for.body.trap_crit_edge:                          ; preds = %for.body
-  ret i1 false
-
-for.body:                                         ; preds = %cont38
-  %n.02 = phi i64 [ %1, %cont38 ]
-  %arrayidx37 = getelementptr [8 x i8], ptr null, i64 %n.02
-  store i64 0, ptr %arrayidx37, align 8
-  %company = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %dividends7, i64 1)
-  %dividends = extractvalue { i64, i1 } %company, 0
-  %buybacks = extractvalue { i64, i1 } %company, 1
-  br i1 %buybacks, label %for.body.trap_crit_edge, label %cont38
-
-cont38:                                           ; preds = %for.body, %entry
-  %dividends7 = phi i64 [ 0, %entry ], [ %dividends, %for.body ]
-  %n.026 = phi i64 [ 0, %entry ], [ %1, %for.body ]
+loop.header:                                           ; preds = %loop.latch, %entry
+  %var4 = phi i64 [ 0, %entry ], [ %var2, %loop.latch ]
+  %n.026 = phi i64 [ 0, %entry ], [ %1, %loop.latch ]
   %0 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %n.026, i64 1)
   %1 = extractvalue { i64, i1 } %0, 0
-  br label %for.body
+  br label %loop.latch
 
-; uselistorder directives
-  uselistorder i64 %1, { 1, 0 }
+loop.latch:                                         ; preds = %loop.header
+  %n.02 = phi i64 [ %1, %loop.header ]
+  %arrayidx37 = getelementptr [8 x i8], ptr %p, i64 %n.02
+  store i64 0, ptr %arrayidx37, align 8
+  %var1 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %var4, i64 1)
+  %var2 = extractvalue { i64, i1 } %var1, 0
+  %var3 = extractvalue { i64, i1 } %var1, 1
+  br i1 %var3, label %exit, label %loop.header
+
+exit:                          ; preds = %loop.latch
+  ret void
 }
-
-attributes #0 = { nocallback }
-attributes #1 = { "target-features"="+avx" }
-
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
