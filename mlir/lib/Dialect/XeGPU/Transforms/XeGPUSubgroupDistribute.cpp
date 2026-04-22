@@ -173,7 +173,7 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
           gpuFuncOp, "expected gpu.func terminator to be gpu.return");
     // Create a new function with the same signature and same attributes.
     SmallVector<Type> workgroupAttributionsTypes =
-        llvm::map_to_vector(gpuFuncOp.getWorkgroupAttributions(),
+        llvm::map_to_vector(gpuFuncOp.getWorkgroupAttributionBBArgs(),
                             [](BlockArgument arg) { return arg.getType(); });
     SmallVector<Type> privateAttributionsTypes =
         llvm::map_to_vector(gpuFuncOp.getPrivateAttributions(),
