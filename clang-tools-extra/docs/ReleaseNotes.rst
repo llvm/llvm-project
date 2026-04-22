@@ -475,6 +475,11 @@ Changes in existing checks
   - Reduce verbosity by removing the note indicating source location of the
     ``empty`` function.
 
+- Improved :doc:`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
+  avoiding false positive on ``const`` member functions to static when they are
+  a part of const/non-const overload pair.
+
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
 
@@ -553,6 +558,11 @@ Changes in existing checks
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
+
+- Improved :doc:`readability-use-anyofallof
+  <clang-tidy/checks/readability/use-anyofallof>` check by emitting a diagnostic
+  note to suggest materializing the temporary range when iterating over temporary
+  range expressions or initializer lists, as reusing them directly could be unsafe.
 
 Removed checks
 ^^^^^^^^^^^^^^
