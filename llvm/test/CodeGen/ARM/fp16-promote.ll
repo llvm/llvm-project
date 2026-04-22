@@ -554,10 +554,9 @@ define void @test_phi(ptr %p) #0 {
 ; CHECK-VFP-NEXT:    ldrh r6, [r0]
 ; CHECK-VFP-NEXT:    mov r4, r0
 ; CHECK-VFP-NEXT:  .LBB13_1:
+; CHECK-VFP-NEXT:    mov r0, r4
 ; CHECK-VFP-NEXT:    mov r5, r6
 ; CHECK-VFP-NEXT:    ldrh r6, [r4]
-; CHECK-VFP-NEXT:    mov r0, r4
-; CHECK-VFP-NEXT:    vmov s0, r6
 ; CHECK-VFP-NEXT:    bl test_dummy
 ; CHECK-VFP-NEXT:    tst r0, #1
 ; CHECK-VFP-NEXT:    bne .LBB13_1
