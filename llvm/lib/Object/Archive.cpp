@@ -105,7 +105,8 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
     *Err = createMemberHeaderParseError(this, RawHeaderPtr, Size);
     return;
   }
-  // '\x79\x15' is the EBCDIC equivalent of '`\n' for the z/OS archive terminator.
+  // '\x79\x15' is the EBCDIC equivalent of '`\n' for the z/OS archive
+  // terminator.
   bool ValidTerminator =
       Parent->kind() == Archive::K_ZOS
           ? (ArMemHdr->Terminator[0] == '\x79' &&
