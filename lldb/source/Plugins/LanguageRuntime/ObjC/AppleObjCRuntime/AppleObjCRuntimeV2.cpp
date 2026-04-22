@@ -777,8 +777,8 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
   return symbol_load_addr;
 }
 
-// Batched version of ExtractRuntimeGlobalSymbol. Resolves symbols and reads
-// their values in a single batch using ReadUnsignedIntegersFromMemory.
+/// Batched version of ExtractRuntimeGlobalSymbol. Resolves symbols and reads
+/// their values in a single batch using ReadUnsignedIntegersFromMemory.
 static llvm::SmallVector<RuntimeGlobalSymbolResult>
 ExtractRuntimeGlobalSymbolsBatched(
     Process *process, const ModuleSP &module_sp,
