@@ -67,14 +67,11 @@ void test_r(Fn f, Args... args) {
   T gr;
   T *result;
   std::string buff;
-  buff.resize(10000);
 
   int r;
   do {
+    buff.resize(1000 + buff.size() * 2);
     r = f(args..., &gr, buff.data(), buff.size(), &result);
-    if (r == ERANGE) {
-      buff.resize(buff.size() * 2);
-    }
   } while (r == ERANGE);
 
   assert(!r);
