@@ -667,11 +667,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 
   // On AIX, the env OBJECT_MODE may affect the resulting arch variant.
   // However, if --target was explicitly specified, it takes precedence.
-  // Only apply OBJECT_MODE if the target architecture is PowerPC.
-  if (Target.isOSAIX() && !Args.hasArg(options::OPT_target) &&
-      (Target.getArch() == llvm::Triple::ppc ||
-       Target.getArch() == llvm::Triple::ppc64 ||
-       Target.getArch() == llvm::Triple::ppc64le)) {
+  if (Target.isOSAIX() && !Args.hasArg(options::OPT_target) {
     if (std::optional<std::string> ObjectModeValue =
             llvm::sys::Process::GetEnv("OBJECT_MODE")) {
       StringRef ObjectMode = *ObjectModeValue;
