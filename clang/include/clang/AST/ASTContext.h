@@ -3175,6 +3175,8 @@ public:
   /// actually be an array type).
   QualType getBaseElementType(QualType QT) const;
 
+  QualType getMatrixBaseElementType(QualType QT) const;
+
   /// Return number of constant array elements.
   uint64_t getConstantArrayElementCount(const ConstantArrayType *CA) const;
 

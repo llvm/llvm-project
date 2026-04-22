@@ -30,15 +30,6 @@ template <typename T> struct enable_if<true, T> {
 template <bool B, class T = void>
 using enable_if_t = typename enable_if<B, T>::Type;
 
-template <typename U, typename T, int C, int R>
-constexpr enable_if_t<sizeof(U) == sizeof(T), matrix<U, C, R>>
-bit_cast(matrix<T, C, R> V) {
-  matrix<U, C, R> Result;
-  for (int i = 0; i < C * R; ++i)
-    Result[i / R][i % R] = __builtin_bit_cast(U, V[i / R][i % R]);
-  return Result;
-}
-
 template <typename U, typename T, int N>
 constexpr enable_if_t<sizeof(U) == sizeof(T), vector<U, N>>
 bit_cast(vector<T, N> V) {
