@@ -173,6 +173,7 @@ public:
                       bool HasInstructions = false);
   MCFragment(const MCFragment &) = delete;
   MCFragment &operator=(const MCFragment &) = delete;
+  ~MCFragment() = default;
 
   MCFragment *getNext() const { return Next; }
 

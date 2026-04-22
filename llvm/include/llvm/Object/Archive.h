@@ -339,6 +339,7 @@ public:
   // Explicitly non-copyable.
   Archive(Archive const &) = delete;
   Archive &operator=(Archive const &) = delete;
+  ~Archive() = default;
 
   /// Size field is 10 decimal digits long
   static const uint64_t MaxMemberSize = 9999999999;
