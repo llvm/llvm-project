@@ -46,7 +46,7 @@ static constexpr uint16_t fold_64_to_16(const uint64_t Value) {
   return Res;
 }
 
-// It's used to serialize data.
+// Keep stable to serialize data.
 static_assert(hashing::detail::hash_16_bytes(1, 2) == 9684580150926652833ull,
               "Hash function must be stable");
 static_assert(hashing::detail::hash_16_bytes(-1, -2) == 7819786907124864172ull,
