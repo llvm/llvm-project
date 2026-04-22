@@ -1971,11 +1971,35 @@ namespace OverflowOps {
   }
   static_assert(add_bool());
 
+  constexpr bool add_bool_non_overflow_true() {
+    bool r = false;
+    return !__builtin_add_overflow(1u, 0u, &r) && r == true;
+  }
+  static_assert(add_bool_non_overflow_true());
+
+  constexpr bool add_bool_non_overflow_false() {
+    bool r = true;
+    return !__builtin_add_overflow(0u, 0u, &r) && r == false;
+  }
+  static_assert(add_bool_non_overflow_false());
+
   constexpr bool sub_bool() {
     bool r = false;
     return __builtin_sub_overflow(0u, 1u, &r) && r == true;
   }
   static_assert(sub_bool());
+
+  constexpr bool sub_bool_non_overflow_true() {
+    bool r = false;
+    return !__builtin_sub_overflow(1u, 0u, &r) && r == true;
+  }
+  static_assert(sub_bool_non_overflow_true());
+
+  constexpr bool sub_bool_non_overflow_false() {
+    bool r = true;
+    return !__builtin_sub_overflow(1u, 1u, &r) && r == false;
+  }
+  static_assert(sub_bool_non_overflow_false());
 
   constexpr int add_sub() {
     int r = 0;
