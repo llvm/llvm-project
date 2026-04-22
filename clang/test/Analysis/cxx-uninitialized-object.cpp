@@ -4,12 +4,29 @@
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
 // RUN:   -analyzer-config \
 // RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true
+// RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config \
+// RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true -DHEAP_ALLOCATION
 
 // RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config \
 // RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true
+// RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config \
+// RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true -DHEAP_ALLOCATION
+
+#ifdef HEAP_ALLOCATION
+#define INIT(CLS, ARGS) new CLS ARGS
+#else
+#define INIT(CLS, ARGS) (void) CLS ARGS
+#endif
 
 //===----------------------------------------------------------------------===//
 // Default constructor test.
@@ -23,13 +40,12 @@ public:
 };
 
 void fCompilerGeneratedConstructorTest() {
-  CompilerGeneratedConstructorTest();
-  new CompilerGeneratedConstructorTest();
+  INIT(CompilerGeneratedConstructorTest, ());
 }
 
 #ifdef PEDANTIC
 class DefaultConstructorTest {
-  int a; // expected-note{{uninitialized field 'this->a'}} expected-note{{uninitialized field 'this->a'}}
+  int a; // expected-note{{uninitialized field 'this->a'}}
 
 public:
   DefaultConstructorTest();
@@ -38,8 +54,7 @@ public:
 DefaultConstructorTest::DefaultConstructorTest() = default;
 
 void fDefaultConstructorTest() {
-  DefaultConstructorTest(); // expected-warning{{1 uninitialized field}}
-  new DefaultConstructorTest(); // expected-warning{{1 uninitialized field}}
+  INIT(DefaultConstructorTest, ()); // expected-warning{{1 uninitialized field}}
 }
 #else
 class DefaultConstructorTest {
@@ -52,8 +67,7 @@ public:
 DefaultConstructorTest::DefaultConstructorTest() = default;
 
 void fDefaultConstructorTest() {
-  DefaultConstructorTest();
-  new DefaultConstructorTest();
+  INIT(DefaultConstructorTest, ());
 }
 #endif // PEDANTIC
 
@@ -74,36 +88,33 @@ public:
 };
 
 void fInitListTest1() {
-  InitListTest1();
-  new InitListTest1();
+  INIT(InitListTest1, ());
 }
 
 class InitListTest2 {
   int a;
-  int b; // expected-note{{uninitialized field 'this->b'}} expected-note{{uninitialized field 'this->b'}}
+  int b; // expected-note{{uninitialized field 'this->b'}}
 
 public:
   InitListTest2()
-      : a(3) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+      : a(3) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fInitListTest2() {
-  InitListTest2();
-  new InitListTest2();
+  INIT(InitListTest2, ());
 }
 
 class InitListTest3 {
-  int a; // expected-note{{uninitialized field 'this->a'}} expected-note{{uninitialized field 'this->a'}}
+  int a; // expected-note{{uninitialized field 'this->a'}}
   int b;
 
 public:
   InitListTest3()
-      : b(4) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+      : b(4) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fInitListTest3() {
-  InitListTest3();
-  new InitListTest3();
+  INIT(InitListTest3, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -122,52 +133,48 @@ public:
 };
 
 void fCtorBodyTest1() {
-  CtorBodyTest1();
-  new CtorBodyTest1();
+  INIT(CtorBodyTest1, ());
 }
 
 class CtorBodyTest2 {
   int a;
-  int b; // expected-note{{uninitialized field 'this->b'}} expected-note{{uninitialized field 'this->b'}}
+  int b; // expected-note{{uninitialized field 'this->b'}}
 
 public:
   CtorBodyTest2() {
-    a = 7; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+    a = 7; // expected-warning{{1 uninitialized field}}
   }
 };
 
 void fCtorBodyTest2() {
-  CtorBodyTest2();
-  new CtorBodyTest2();
+  INIT(CtorBodyTest2, ());
 }
 
 class CtorBodyTest3 {
-  int a; // expected-note{{uninitialized field 'this->a'}} expected-note{{uninitialized field 'this->a'}}
+  int a; // expected-note{{uninitialized field 'this->a'}}
   int b;
 
 public:
   CtorBodyTest3() {
-    b = 8; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+    b = 8; // expected-warning{{1 uninitialized field}}
   }
 };
 
 void fCtorBodyTest3() {
-  CtorBodyTest3();
-  new CtorBodyTest3();
+  INIT(CtorBodyTest3, ());
 }
 
 #ifdef PEDANTIC
 class CtorBodyTest4 {
-  int a; // expected-note{{uninitialized field 'this->a'}} expected-note{{uninitialized field 'this->a'}}
-  int b; // expected-note{{uninitialized field 'this->b'}} expected-note{{uninitialized field 'this->b'}}
+  int a; // expected-note{{uninitialized field 'this->a'}}
+  int b; // expected-note{{uninitialized field 'this->b'}}
 
 public:
   CtorBodyTest4() {}
 };
 
 void fCtorBodyTest4() {
-  CtorBodyTest4(); // expected-warning{{2 uninitialized fields}}
-  new CtorBodyTest4(); // expected-warning{{2 uninitialized fields}}
+  INIT(CtorBodyTest4, ()); // expected-warning{{2 uninitialized fields}}
 }
 #else
 class CtorBodyTest4 {
@@ -179,8 +186,7 @@ public:
 };
 
 void fCtorBodyTest4() {
-  CtorBodyTest4();
-  new CtorBodyTest4();
+  INIT(CtorBodyTest4, ());
 }
 #endif
 
@@ -206,12 +212,11 @@ public:
 };
 
 void fCtorDelegationTest1() {
-  CtorDelegationTest1();
-  new CtorDelegationTest1();
+  INIT(CtorDelegationTest1, ());
 }
 
 class CtorDelegationTest2 {
-  int a; // expected-note{{uninitialized field 'this->a'}} expected-note{{uninitialized field 'this->a'}}
+  int a; // expected-note{{uninitialized field 'this->a'}}
   int b;
 
 public:
@@ -221,13 +226,12 @@ public:
   }
 
   CtorDelegationTest2()
-      : CtorDelegationTest2(int{}) { // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+      : CtorDelegationTest2(int{}) { // expected-warning{{1 uninitialized field}}
   }
 };
 
 void fCtorDelegationTest2() {
-  CtorDelegationTest2();
-  new CtorDelegationTest2();
+  INIT(CtorDelegationTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -251,14 +255,13 @@ public:
 };
 
 void fContainsRecordTest1() {
-  ContainsRecordTest1();
-  new ContainsRecordTest1();
+  INIT(ContainsRecordTest1, ());
 }
 
 class ContainsRecordTest2 {
   struct RecordType {
     int x;
-    int y; // expected-note{{uninitialized field 'this->rec.y'}} expected-note{{uninitialized field 'this->rec.y'}}
+    int y; // expected-note{{uninitialized field 'this->rec.y'}}
   } rec;
   int c, d;
 
@@ -266,50 +269,47 @@ public:
   ContainsRecordTest2()
       : c(16),
         d(17) {
-    rec.x = 18; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+    rec.x = 18; // expected-warning{{1 uninitialized field}}
   }
 };
 
 void fContainsRecordTest2() {
-  ContainsRecordTest2();
-  new ContainsRecordTest2();
+  INIT(ContainsRecordTest2, ());
 }
 
 class ContainsRecordTest3 {
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'this->rec.x'}} expected-note{{uninitialized field 'this->rec.x'}}
-    int y; // expected-note{{uninitialized field 'this->rec.y'}} expected-note{{uninitialized field 'this->rec.y'}}
+    int x; // expected-note{{uninitialized field 'this->rec.x'}}
+    int y; // expected-note{{uninitialized field 'this->rec.y'}}
   } rec;
   int c, d;
 
 public:
   ContainsRecordTest3()
       : c(19),
-        d(20) { // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+        d(20) { // expected-warning{{2 uninitialized fields}}
   }
 };
 
 void fContainsRecordTest3() {
-  ContainsRecordTest3();
-  new ContainsRecordTest3();
+  INIT(ContainsRecordTest3, ());
 }
 
 class ContainsRecordTest4 {
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'this->rec.x'}} expected-note{{uninitialized field 'this->rec.x'}}
-    int y; // expected-note{{uninitialized field 'this->rec.y'}} expected-note{{uninitialized field 'this->rec.y'}}
+    int x; // expected-note{{uninitialized field 'this->rec.x'}}
+    int y; // expected-note{{uninitialized field 'this->rec.y'}}
   } rec;
-  int c, d; // expected-note{{uninitialized field 'this->d'}} expected-note{{uninitialized field 'this->d'}}
+  int c, d; // expected-note{{uninitialized field 'this->d'}}
 
 public:
   ContainsRecordTest4()
-      : c(19) { // expected-warning{{3 uninitialized fields}} expected-warning{{3 uninitialized fields}}
+      : c(19) { // expected-warning{{3 uninitialized fields}}
   }
 };
 
 void fContainsRecordTest4() {
-  ContainsRecordTest4();
-  new ContainsRecordTest4();
+  INIT(ContainsRecordTest4, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -330,29 +330,27 @@ public:
 };
 
 void fIntTemplateClassTest1() {
-  IntTemplateClassTest1<int>(22);
-  new IntTemplateClassTest1<int>(22);
+  INIT(IntTemplateClassTest1<int>, (22));
 }
 
 template <class T>
 class IntTemplateClassTest2 {
-  T t; // expected-note{{uninitialized field 'this->t'}} expected-note{{uninitialized field 'this->t'}}
+  T t; // expected-note{{uninitialized field 'this->t'}}
   int b;
 
 public:
   IntTemplateClassTest2() {
-    b = 23; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+    b = 23; // expected-warning{{1 uninitialized field}}
   }
 };
 
 void fIntTemplateClassTest2() {
-  IntTemplateClassTest2<int>();
-  new IntTemplateClassTest2<int>();
+  INIT(IntTemplateClassTest2<int>, ());
 }
 
 struct Record {
-  int x; // expected-note{{uninitialized field 'this->t.x'}} expected-note{{uninitialized field 'this->t.x'}}
-  int y; // expected-note{{uninitialized field 'this->t.y'}} expected-note{{uninitialized field 'this->t.y'}}
+  int x; // expected-note{{uninitialized field 'this->t.x'}}
+  int y; // expected-note{{uninitialized field 'this->t.y'}}
 };
 
 template <class T>
@@ -362,13 +360,12 @@ class RecordTemplateClassTest {
 
 public:
   RecordTemplateClassTest() {
-    b = 24; // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+    b = 24; // expected-warning{{2 uninitialized fields}}
   }
 };
 
 void fRecordTemplateClassTest() {
-  RecordTemplateClassTest<Record>();
-  new RecordTemplateClassTest<Record>();
+  INIT(RecordTemplateClassTest<Record>, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -403,28 +400,24 @@ public:
 };
 
 void fPassingToUnknownFunctionTest1() {
-  PassingToUnknownFunctionTest1();
-  new PassingToUnknownFunctionTest1();
-  PassingToUnknownFunctionTest1(int());
-  new PassingToUnknownFunctionTest1(int());
-  PassingToUnknownFunctionTest1(int(), int());
-  new PassingToUnknownFunctionTest1(int(), int());
+  INIT(PassingToUnknownFunctionTest1, ());
+  INIT(PassingToUnknownFunctionTest1, (int()));
+  INIT(PassingToUnknownFunctionTest1, (int(), int()));
 }
 
 class PassingToUnknownFunctionTest2 {
-  int a; // expected-note{{uninitialized field 'this->a'}} expected-note{{uninitialized field 'this->a'}}
+  int a; // expected-note{{uninitialized field 'this->a'}}
   int b;
 
 public:
   PassingToUnknownFunctionTest2() {
     wontInitialize(a);
-    b = 4; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+    b = 4; // expected-warning{{1 uninitialized field}}
   }
 };
 
 void fPassingToUnknownFunctionTest2() {
-  PassingToUnknownFunctionTest2();
-  new PassingToUnknownFunctionTest2();
+  INIT(PassingToUnknownFunctionTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -451,8 +444,7 @@ public:
 };
 
 void fContainsSimpleUnionTest1() {
-  ContainsSimpleUnionTest1();
-  new ContainsSimpleUnionTest1();
+  INIT(ContainsSimpleUnionTest1, ());
 }
 
 class ContainsSimpleUnionTest2 {
@@ -469,8 +461,7 @@ public:
 
 void fContainsSimpleUnionTest2() {
   // TODO: we'd expect the warning: {{1 uninitialized field}}
-  ContainsSimpleUnionTest2(); // no-warning
-  new ContainsSimpleUnionTest2(); // no-warning
+  INIT(ContainsSimpleUnionTest2, ()); // no-warning
 }
 
 class UnionPointerTest1 {
@@ -493,8 +484,7 @@ public:
 void fUnionPointerTest1() {
   UnionPointerTest1::SimpleUnion u;
   u.uf = 41;
-  UnionPointerTest1(&u, int());
-  new UnionPointerTest1(&u, int());
+  INIT(UnionPointerTest1, (&u, int()));
 }
 
 class UnionPointerTest2 {
@@ -516,8 +506,7 @@ public:
 void fUnionPointerTest2() {
   UnionPointerTest2::SimpleUnion u;
   // TODO: we'd expect the warning: {{1 uninitialized field}}
-  UnionPointerTest2(&u, int()); // no-warning
-  new UnionPointerTest2(&u, int()); // no-warning
+  INIT(UnionPointerTest2, (&u, int())); // no-warning
 }
 
 class ContainsUnionWithRecordTest1 {
@@ -540,8 +529,7 @@ public:
 };
 
 void fContainsUnionWithRecordTest1() {
-  ContainsUnionWithRecordTest1();
-  new ContainsUnionWithRecordTest1();
+  INIT(ContainsUnionWithRecordTest1, ());
 }
 
 class ContainsUnionWithRecordTest2 {
@@ -564,8 +552,7 @@ public:
 };
 
 void fContainsUnionWithRecordTest2() {
-  ContainsUnionWithRecordTest1();
-  new ContainsUnionWithRecordTest1();
+  INIT(ContainsUnionWithRecordTest1, ());
 }
 
 class ContainsUnionWithRecordTest3 {
@@ -591,8 +578,7 @@ public:
 };
 
 void fContainsUnionWithRecordTest3() {
-  ContainsUnionWithRecordTest3();
-  new ContainsUnionWithRecordTest3();
+  INIT(ContainsUnionWithRecordTest3, ());
 }
 
 class ContainsUnionWithSimpleUnionTest1 {
@@ -614,8 +600,7 @@ public:
 };
 
 void fContainsUnionWithSimpleUnionTest1() {
-  ContainsUnionWithSimpleUnionTest1();
-  new ContainsUnionWithSimpleUnionTest1();
+  INIT(ContainsUnionWithSimpleUnionTest1, ());
 }
 
 class ContainsUnionWithSimpleUnionTest2 {
@@ -636,8 +621,7 @@ public:
 
 void fContainsUnionWithSimpleUnionTest2() {
   // TODO: we'd expect the warning: {{1 uninitialized field}}
-  ContainsUnionWithSimpleUnionTest2(); // no-warning
-  new ContainsUnionWithSimpleUnionTest2(); // no-warning
+  INIT(ContainsUnionWithSimpleUnionTest2, ()); // no-warning
 }
 
 //===----------------------------------------------------------------------===//
@@ -661,7 +645,7 @@ void funcToSquelchCompilerWarnings(const T &t);
 
 #ifdef PEDANTIC
 struct CopyConstructorTest {
-  int i; // expected-note{{uninitialized field 'this->i'}} expected-note{{uninitialized field 'this->i'}}
+  int i; // expected-note{{uninitialized field 'this->i'}}
 
   CopyConstructorTest() : i(1337) {}
   CopyConstructorTest(const CopyConstructorTest &other) {}
@@ -669,9 +653,7 @@ struct CopyConstructorTest {
 
 void fCopyConstructorTest() {
   CopyConstructorTest cct;
-  CopyConstructorTest copy = cct; // expected-warning{{1 uninitialized field}}
-  new CopyConstructorTest(cct); // expected-warning{{1 uninitialized field}}
-  funcToSquelchCompilerWarnings(copy);
+  INIT(CopyConstructorTest, (cct)); // expected-warning{{1 uninitialized field}}
 }
 #else
 struct CopyConstructorTest {
@@ -683,9 +665,7 @@ struct CopyConstructorTest {
 
 void fCopyConstructorTest() {
   CopyConstructorTest cct;
-  CopyConstructorTest copy = cct;
-  new CopyConstructorTest(cct);
-  funcToSquelchCompilerWarnings(copy);
+  INIT(CopyConstructorTest, (cct));
 }
 #endif // PEDANTIC
 
@@ -701,9 +681,7 @@ struct MoveConstructorTest {
 void fMoveConstructorTest() {
   MoveConstructorTest cct;
   // TODO: we'd expect the warning: {{1 uninitialized field}}
-  MoveConstructorTest copy(static_cast<MoveConstructorTest &&>(cct)); // no-warning
-  new MoveConstructorTest(static_cast<MoveConstructorTest &&>(cct)); // no-warning
-  funcToSquelchCompilerWarnings(copy);
+  INIT(MoveConstructorTest, (static_cast<MoveConstructorTest &&>(cct))); // no-warning
 }
 
 //===----------------------------------------------------------------------===//
@@ -719,8 +697,7 @@ struct IntArrayTest {
 };
 
 void fIntArrayTest() {
-  IntArrayTest();
-  new IntArrayTest();
+  INIT(IntArrayTest, ());
 }
 
 struct RecordTypeArrayTest {
@@ -734,8 +711,7 @@ struct RecordTypeArrayTest {
 };
 
 void fRecordTypeArrayTest() {
-  RecordTypeArrayTest();
-  new RecordTypeArrayTest();
+  INIT(RecordTypeArrayTest, ());
 }
 
 template <class T>
@@ -764,8 +740,7 @@ struct MemsetTest1 {
 };
 
 void fMemsetTest1() {
-  MemsetTest1();
-  new MemsetTest1();
+  INIT(MemsetTest1, ());
 }
 
 struct MemsetTest2 {
@@ -777,8 +752,7 @@ struct MemsetTest2 {
 };
 
 void fMemsetTest2() {
-  MemsetTest2();
-  new MemsetTest2();
+  INIT(MemsetTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -812,8 +786,7 @@ struct LambdaTest1 {
 
 void fLambdaTest1() {
   auto isEven = [](int a) { return a % 2 == 0; };
-  LambdaTest1<decltype(isEven)>(isEven, int());
-  new LambdaTest1<decltype(isEven)>(isEven, int());
+  INIT(LambdaTest1<decltype(isEven)>, (isEven, int()));
 }
 
 #ifdef PEDANTIC
@@ -821,16 +794,13 @@ template <class Callable>
 struct LambdaTest2 {
   Callable functor;
 
-  LambdaTest2(const Callable &functor, int) : functor(functor) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  LambdaTest2(const Callable &functor, int) : functor(functor) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fLambdaTest2() {
   int b;
   auto equals = [&b](int a) { return a == b; }; // expected-note{{uninitialized pointee 'this->functor./*captured variable*/b'}}
-  LambdaTest2<decltype(equals)>(equals, int());
-  int bp;
-  auto equalsp = [&bp](int a) { return a == bp; }; // expected-note{{uninitialized pointee 'this->functor./*captured variable*/bp'}}
-  new LambdaTest2<decltype(equalsp)>(equalsp, int());
+  INIT(LambdaTest2<decltype(equals)>, (equals, int()));
 }
 #else
 template <class Callable>
@@ -843,8 +813,7 @@ struct LambdaTest2 {
 void fLambdaTest2() {
   int b;
   auto equals = [&b](int a) { return a == b; };
-  LambdaTest2<decltype(equals)>(equals, int());
-  new LambdaTest2<decltype(equals)>(equals, int());
+  INIT(LambdaTest2<decltype(equals)>, (equals, int()));
 }
 #endif //PEDANTIC
 
@@ -852,8 +821,8 @@ void fLambdaTest2() {
 namespace LT3Detail {
 
 struct RecordType {
-  int x; // expected-note{{uninitialized field 'this->functor./*captured variable*/rec1.x'}} expected-note{{uninitialized field 'this->functor./*captured variable*/rec1p.x'}}
-  int y; // expected-note{{uninitialized field 'this->functor./*captured variable*/rec1.y'}} expected-note{{uninitialized field 'this->functor./*captured variable*/rec1p.y'}}
+  int x; // expected-note{{uninitialized field 'this->functor./*captured variable*/rec1.x'}}
+  int y; // expected-note{{uninitialized field 'this->functor./*captured variable*/rec1.y'}}
 };
 
 } // namespace LT3Detail
@@ -861,7 +830,7 @@ template <class Callable>
 struct LambdaTest3 {
   Callable functor;
 
-  LambdaTest3(const Callable &functor, int) : functor(functor) {} // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+  LambdaTest3(const Callable &functor, int) : functor(functor) {} // expected-warning{{2 uninitialized fields}}
 };
 
 void fLambdaTest3() {
@@ -869,12 +838,7 @@ void fLambdaTest3() {
   auto equals = [&rec1](LT3Detail::RecordType rec2) {
     return rec1.x == rec2.x;
   };
-  LambdaTest3<decltype(equals)>(equals, int());
-  LT3Detail::RecordType rec1p;
-  auto equalsp = [&rec1p](LT3Detail::RecordType rec2) {
-    return rec1p.x == rec2.x;
-  };
-  new LambdaTest3<decltype(equalsp)>(equalsp, int());
+  INIT(LambdaTest3<decltype(equals)>, (equals, int()));
 }
 #else
 namespace LT3Detail {
@@ -897,8 +861,7 @@ void fLambdaTest3() {
   auto equals = [&rec1](LT3Detail::RecordType rec2) {
     return rec1.x == rec2.x;
   };
-  LambdaTest3<decltype(equals)>(equals, int());
-  new LambdaTest3<decltype(equals)>(equals, int());
+  INIT(LambdaTest3<decltype(equals)>, (equals, int()));
 }
 #endif //PEDANTIC
 
@@ -907,18 +870,14 @@ struct MultipleLambdaCapturesTest1 {
   Callable functor;
   int dontGetFilteredByNonPedanticMode = 0;
 
-  MultipleLambdaCapturesTest1(const Callable &functor, int) : functor(functor) {} // expected-warning{{2 uninitialized field}} expected-warning{{2 uninitialized field}}
+  MultipleLambdaCapturesTest1(const Callable &functor, int) : functor(functor) {} // expected-warning{{2 uninitialized field}}
 };
 
 void fMultipleLambdaCapturesTest1() {
   int b1, b2 = 3, b3;
   auto equals = [&b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized pointee 'this->functor./*captured variable*/b1'}}
   // expected-note@-1{{uninitialized pointee 'this->functor./*captured variable*/b3'}}
-  MultipleLambdaCapturesTest1<decltype(equals)>(equals, int());
-  int b1p, b2p = 3, b3p;
-  auto equalsp = [&b1p, &b2p, &b3p](int a) { return a == b1p == b2p == b3p; }; // expected-note{{uninitialized pointee 'this->functor./*captured variable*/b1p'}}
-  // expected-note@-1{{uninitialized pointee 'this->functor./*captured variable*/b3p'}}
-  new MultipleLambdaCapturesTest1<decltype(equalsp)>(equalsp, int());
+  INIT(MultipleLambdaCapturesTest1<decltype(equals)>, (equals, int()));
 }
 
 template <class Callable>
@@ -926,16 +885,13 @@ struct MultipleLambdaCapturesTest2 {
   Callable functor;
   int dontGetFilteredByNonPedanticMode = 0;
 
-  MultipleLambdaCapturesTest2(const Callable &functor, int) : functor(functor) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  MultipleLambdaCapturesTest2(const Callable &functor, int) : functor(functor) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fMultipleLambdaCapturesTest2() {
   int b1, b2 = 3, b3;
   auto equals = [b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized pointee 'this->functor./*captured variable*/b3'}}
-  MultipleLambdaCapturesTest2<decltype(equals)>(equals, int());
-  int b1p, b2p = 3, b3p;
-  auto equalsp = [b1p, &b2p, &b3p](int a) { return a == b1p == b2p == b3p; }; // expected-note{{uninitialized pointee 'this->functor./*captured variable*/b3p'}}
-  new MultipleLambdaCapturesTest2<decltype(equalsp)>(equalsp, int());
+  INIT(MultipleLambdaCapturesTest2<decltype(equals)>, (equals, int()));
 }
 
 struct LambdaWrapper {
@@ -978,25 +934,23 @@ struct SystemHeaderTest1 {
 };
 
 void fSystemHeaderTest1() {
-  SystemHeaderTest1();
-  new SystemHeaderTest1();
+  INIT(SystemHeaderTest1, ());
 }
 
 #ifdef PEDANTIC
 struct SystemHeaderTest2 {
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'this->container.t.x}} expected-note{{uninitialized field 'this->container.t.x}}
-    int y; // expected-note{{uninitialized field 'this->container.t.y}} expected-note{{uninitialized field 'this->container.t.y}}
+    int x; // expected-note{{uninitialized field 'this->container.t.x}}
+    int y; // expected-note{{uninitialized field 'this->container.t.y}}
   };
   ContainerInSystemHeader<RecordType> container;
 
-  SystemHeaderTest2(RecordType &rec, int) : container(rec) {} // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+  SystemHeaderTest2(RecordType &rec, int) : container(rec) {} // expected-warning{{2 uninitialized fields}}
 };
 
 void fSystemHeaderTest2() {
-  SystemHeaderTest2::RecordType rec, recp;
-  SystemHeaderTest2(rec, int());
-  new SystemHeaderTest2(recp, int());
+  SystemHeaderTest2::RecordType rec;
+  INIT(SystemHeaderTest2, (rec, int()));
 }
 #else
 struct SystemHeaderTest2 {
@@ -1011,8 +965,7 @@ struct SystemHeaderTest2 {
 
 void fSystemHeaderTest2() {
   SystemHeaderTest2::RecordType rec;
-  SystemHeaderTest2(rec, int());
-  new SystemHeaderTest2(rec, int());
+  INIT(SystemHeaderTest2, (rec, int()));
 }
 #endif //PEDANTIC
 
@@ -1023,15 +976,14 @@ void fSystemHeaderTest2() {
 struct IncompleteTypeTest1 {
   struct RecordType;
   // no-crash
-  RecordType *recptr; // expected-note{{uninitialized pointer 'this->recptr}} expected-note{{uninitialized pointer 'this->recptr}}
+  RecordType *recptr; // expected-note{{uninitialized pointer 'this->recptr}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  IncompleteTypeTest1() {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  IncompleteTypeTest1() {} // expected-warning{{1 uninitialized field}}
 };
 
 void fIncompleteTypeTest1() {
-  IncompleteTypeTest1();
-  new IncompleteTypeTest1();
+  INIT(IncompleteTypeTest1, ());
 }
 
 struct IncompleteTypeTest2 {
@@ -1045,8 +997,7 @@ struct IncompleteTypeTest2 {
 };
 
 void fIncompleteTypeTest2() {
-  IncompleteTypeTest2();
-  new IncompleteTypeTest2();
+  INIT(IncompleteTypeTest2, ());
 }
 
 struct IncompleteTypeTest3 {
@@ -1060,8 +1011,7 @@ struct IncompleteTypeTest3 {
 };
 
 void fIncompleteTypeTest3() {
-  IncompleteTypeTest3();
-  new IncompleteTypeTest3();
+  INIT(IncompleteTypeTest3, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1069,58 +1019,54 @@ void fIncompleteTypeTest3() {
 //===----------------------------------------------------------------------===//
 
 struct IntegralTypeTest {
-  int a; // expected-note{{uninitialized field 'this->a'}} expected-note{{uninitialized field 'this->a'}}
+  int a; // expected-note{{uninitialized field 'this->a'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  IntegralTypeTest() {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  IntegralTypeTest() {} // expected-warning{{1 uninitialized field}}
 };
 
 void fIntegralTypeTest() {
-  IntegralTypeTest();
-  new IntegralTypeTest();
+  INIT(IntegralTypeTest, ());
 }
 
 struct FloatingTypeTest {
-  float a; // expected-note{{uninitialized field 'this->a'}} expected-note{{uninitialized field 'this->a'}}
+  float a; // expected-note{{uninitialized field 'this->a'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  FloatingTypeTest() {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  FloatingTypeTest() {} // expected-warning{{1 uninitialized field}}
 };
 
 void fFloatingTypeTest() {
-  FloatingTypeTest();
-  new FloatingTypeTest();
+  INIT(FloatingTypeTest, ());
 }
 
 struct NullptrTypeTypeTest {
-  decltype(nullptr) a; // expected-note{{uninitialized field 'this->a'}} expected-note{{uninitialized field 'this->a'}}
+  decltype(nullptr) a; // expected-note{{uninitialized field 'this->a'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  NullptrTypeTypeTest() {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  NullptrTypeTypeTest() {} // expected-warning{{1 uninitialized field}}
 };
 
 void fNullptrTypeTypeTest() {
-  NullptrTypeTypeTest();
-  new NullptrTypeTypeTest();
+  INIT(NullptrTypeTypeTest, ());
 }
 
 struct EnumTest {
   enum Enum {
     A,
     B
-  } enum1; // expected-note{{uninitialized field 'this->enum1'}} expected-note{{uninitialized field 'this->enum1'}}
+  } enum1; // expected-note{{uninitialized field 'this->enum1'}}
   enum class Enum2 {
     A,
     B
-  } enum2; // expected-note{{uninitialized field 'this->enum2'}} expected-note{{uninitialized field 'this->enum2'}}
+  } enum2; // expected-note{{uninitialized field 'this->enum2'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  EnumTest() {} // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+  EnumTest() {} // expected-warning{{2 uninitialized fields}}
 };
 
 void fEnumTest() {
-  EnumTest();
-  new EnumTest();
+  INIT(EnumTest, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1137,12 +1083,12 @@ void assert(int b) {
 // While a singleton would make more sense as a static variable, that would zero
 // initialize all of its fields, hence the not too practical implementation.
 struct Singleton {
-  int i; // expected-note{{uninitialized field 'this->i'}} expected-note{{uninitialized field 'this->i'}}
+  int i; // expected-note{{uninitialized field 'this->i'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
   Singleton() {
     assert(!isInstantiated);
-    isInstantiated = true; // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+    isInstantiated = true; // expected-warning{{1 uninitialized field}}
   }
 
   ~Singleton() {
@@ -1158,8 +1104,7 @@ struct SingletonTest {
   int dontGetFilteredByNonPedanticMode = 0;
 
   SingletonTest() {
-    Singleton();
-    new Singleton();
+    INIT(Singleton, ());
   }
 };
 
@@ -1180,8 +1125,7 @@ struct CXX11MemberInitTest1 {
 };
 
 void fCXX11MemberInitTest1() {
-  CXX11MemberInitTest1();
-  new CXX11MemberInitTest1();
+  INIT(CXX11MemberInitTest1, ());
 }
 
 struct CXX11MemberInitTest2 {
@@ -1202,8 +1146,7 @@ struct CXX11MemberInitTest2 {
 
 void fCXX11MemberInitTest2() {
   // TODO: we'd expect the warning: {{2 uninitializeds field}}
-  CXX11MemberInitTest2(); // no-warning
-  new CXX11MemberInitTest2(); // no-warning
+  INIT(CXX11MemberInitTest2, ()); // no-warning
 }
 
 //===----------------------------------------------------------------------===//
@@ -1211,15 +1154,14 @@ void fCXX11MemberInitTest2() {
 //===----------------------------------------------------------------------===//
 
 struct MyAtomicInt {
-  _Atomic(int) x; // expected-note{{uninitialized field 'this->x'}} expected-note{{uninitialized field 'this->x'}}
+  _Atomic(int) x; // expected-note{{uninitialized field 'this->x'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  MyAtomicInt() {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  MyAtomicInt() {} // expected-warning{{1 uninitialized field}}
 };
 
 void _AtomicTest() {
-  MyAtomicInt b;
-  new MyAtomicInt();
+  INIT(MyAtomicInt, ());
 }
 
 struct VectorSizeLong {
@@ -1250,12 +1192,10 @@ struct ComplexInitTest {
 };
 
 void fComplexTest() {
-  ComplexInitTest x;
-  new ComplexInitTest();
+  INIT(ComplexInitTest, ());
 
   // TODO: we should emit a warning for x2.x and x2.y.
-  ComplexUninitTest x2;
-  new ComplexUninitTest();
+  INIT(ComplexUninitTest, ());
 }
 
 struct PaddingBitfieldTest {

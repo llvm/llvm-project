@@ -2,10 +2,23 @@
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++11 -verify  %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN:   -std=c++11 -verify  %s -DHEAP_ALLOCATION
 
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++11 -verify  %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN:   -std=c++11 -verify  %s -DHEAP_ALLOCATION
+
+#ifdef HEAP_ALLOCATION
+#define INIT(CLS, ARGS) new CLS ARGS
+#else
+#define INIT(CLS, ARGS) (void) CLS ARGS
+#endif
 
 //===----------------------------------------------------------------------===//
 // Concrete location tests.
@@ -18,8 +31,7 @@ struct ConcreteIntLocTest {
 };
 
 void fConcreteIntLocTest() {
-  ConcreteIntLocTest();
-  new ConcreteIntLocTest();
+  INIT(ConcreteIntLocTest, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -29,17 +41,15 @@ void fConcreteIntLocTest() {
 using intptr_t = unsigned long long;
 
 struct LocAsIntegerTest {
-  intptr_t ptr; // expected-note{{uninitialized pointee 'reinterpret_cast<char *>(this->ptr)'}} expected-note{{uninitialized pointee 'reinterpret_cast<char *>(this->ptr)'}}
+  intptr_t ptr; // expected-note{{uninitialized pointee 'reinterpret_cast<char *>(this->ptr)'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  LocAsIntegerTest(void *ptr) : ptr(reinterpret_cast<intptr_t>(ptr)) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  LocAsIntegerTest(void *ptr) : ptr(reinterpret_cast<intptr_t>(ptr)) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fLocAsIntegerTest() {
   char c;
-  LocAsIntegerTest t(&c);
-  char cp;
-  new LocAsIntegerTest(&cp);
+  INIT(LocAsIntegerTest, (&c));
 }
 
 //===----------------------------------------------------------------------===//
@@ -63,8 +73,7 @@ public:
 };
 
 void fNullPtrTest() {
-  NullPtrTest();
-  new NullPtrTest();
+  INIT(NullPtrTest, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -144,8 +153,7 @@ public:
 };
 
 void fHeapPointerTest1() {
-  HeapPointerTest1();
-  new HeapPointerTest1();
+  INIT(HeapPointerTest1, ());
 }
 
 class HeapPointerTest2 {
@@ -165,8 +173,7 @@ public:
 };
 
 void fHeapPointerTest2() {
-  HeapPointerTest2();
-  new HeapPointerTest2();
+  INIT(HeapPointerTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -193,34 +200,30 @@ public:
 void fStackPointerTest1() {
   int ok_a = 28;
   StackPointerTest1::RecordType ok_rec{29, 30};
-  StackPointerTest1(&ok_a, &ok_rec); // 'a', 'rec.x', 'rec.y' uninitialized
-  new StackPointerTest1(&ok_a, &ok_rec);
+  INIT(StackPointerTest1, (&ok_a, &ok_rec)); // 'a', 'rec.x', 'rec.y' uninitialized
 }
 
 #ifdef PEDANTIC
 class StackPointerTest2 {
 public:
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'this->recPtr->x'}} expected-note{{uninitialized field 'this->recPtr->x'}}
-    int y; // expected-note{{uninitialized field 'this->recPtr->y'}} expected-note{{uninitialized field 'this->recPtr->y'}}
+    int x; // expected-note{{uninitialized field 'this->recPtr->x'}}
+    int y; // expected-note{{uninitialized field 'this->recPtr->y'}}
   };
 
 private:
-  int *ptr; // expected-note{{uninitialized pointee 'this->ptr'}} expected-note{{uninitialized pointee 'this->ptr'}}
+  int *ptr; // expected-note{{uninitialized pointee 'this->ptr'}}
   RecordType *recPtr;
 
 public:
-  StackPointerTest2(int *_ptr, RecordType *_recPtr) : ptr(_ptr), recPtr(_recPtr) { // expected-warning{{3 uninitialized fields}} expected-warning{{3 uninitialized fields}}
+  StackPointerTest2(int *_ptr, RecordType *_recPtr) : ptr(_ptr), recPtr(_recPtr) { // expected-warning{{3 uninitialized fields}}
   }
 };
 
 void fStackPointerTest2() {
   int a;
   StackPointerTest2::RecordType rec;
-  StackPointerTest2(&a, &rec); // 'a', 'rec.x', 'rec.y' uninitialized
-  int ap;
-  StackPointerTest2::RecordType recp;
-  new StackPointerTest2(&ap, &recp);
+  INIT(StackPointerTest2, (&a, &rec)); // 'a', 'rec.x', 'rec.y' uninitialized
 }
 #else
 class StackPointerTest2 {
@@ -242,8 +245,7 @@ public:
 void fStackPointerTest2() {
   int a;
   StackPointerTest2::RecordType rec;
-  StackPointerTest2(&a, &rec); // 'a', 'rec.x', 'rec.y' uninitialized
-  new StackPointerTest2(&a, &rec);
+  INIT(StackPointerTest2, (&a, &rec)); // 'a', 'rec.x', 'rec.y' uninitialized
 }
 #endif // PEDANTIC
 
@@ -253,17 +255,16 @@ class UninitPointerTest {
     int y;
   };
 
-  int *ptr; // expected-note{{uninitialized pointer 'this->ptr'}} expected-note{{uninitialized pointer 'this->ptr'}}
+  int *ptr; // expected-note{{uninitialized pointer 'this->ptr'}}
   RecordType *recPtr;
 
 public:
-  UninitPointerTest() : recPtr(new RecordType{13, 13}) { // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  UninitPointerTest() : recPtr(new RecordType{13, 13}) { // expected-warning{{1 uninitialized field}}
   }
 };
 
 void fUninitPointerTest() {
-  UninitPointerTest();
-  new UninitPointerTest();
+  INIT(UninitPointerTest, ());
 }
 
 struct CharPointerTest {
@@ -274,19 +275,17 @@ struct CharPointerTest {
 };
 
 void fCharPointerTest() {
-  CharPointerTest();
-  new CharPointerTest();
+  INIT(CharPointerTest, ());
 }
 
 struct VectorSizePointer {
-  VectorSizePointer() {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
-  __attribute__((__vector_size__(8))) int *x; // expected-note{{uninitialized pointer 'this->x'}} expected-note{{uninitialized pointer 'this->x'}}
+  VectorSizePointer() {} // expected-warning{{1 uninitialized field}}
+  __attribute__((__vector_size__(8))) int *x; // expected-note{{uninitialized pointer 'this->x'}}
   int dontGetFilteredByNonPedanticMode = 0;
 };
 
 void __vector_size__PointerTest() {
-  VectorSizePointer v;
-  new VectorSizePointer();
+  INIT(VectorSizePointer, ());
 }
 
 struct VectorSizePointee {
@@ -299,32 +298,29 @@ struct VectorSizePointee {
 void __vector_size__PointeeTest() {
   VectorSizePointee::MyVectorType i;
   // TODO: Report v.x's pointee.
-  VectorSizePointee v(&i);
-  new VectorSizePointee(&i);
+  INIT(VectorSizePointee, (&i));
 }
 
 struct CyclicPointerTest1 {
-  int *ptr; // expected-note{{object references itself 'this->ptr'}} expected-note{{object references itself 'this->ptr'}}
+  int *ptr; // expected-note{{object references itself 'this->ptr'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  CyclicPointerTest1() : ptr(reinterpret_cast<int *>(&ptr)) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  CyclicPointerTest1() : ptr(reinterpret_cast<int *>(&ptr)) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fCyclicPointerTest1() {
-  CyclicPointerTest1();
-  new CyclicPointerTest1();
+  INIT(CyclicPointerTest1, ());
 }
 
 struct CyclicPointerTest2 {
-  int **pptr; // expected-note{{object references itself 'this->pptr'}} expected-note{{object references itself 'this->pptr'}}
+  int **pptr; // expected-note{{object references itself 'this->pptr'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  CyclicPointerTest2() : pptr(reinterpret_cast<int **>(&pptr)) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  CyclicPointerTest2() : pptr(reinterpret_cast<int **>(&pptr)) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fCyclicPointerTest2() {
-  CyclicPointerTest2();
-  new CyclicPointerTest2();
+  INIT(CyclicPointerTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -349,8 +345,7 @@ public:
 
 void fVoidPointerTest1() {
   void *vptr = calloc(1, sizeof(int));
-  VoidPointerTest1(vptr, char());
-  new VoidPointerTest1(vptr, char());
+  INIT(VoidPointerTest1, (vptr, char()));
   free(vptr);
 }
 
@@ -365,8 +360,7 @@ public:
 
 void fVoidPointerTest2() {
   void *vptr = calloc(1, sizeof(int));
-  VoidPointerTest2(&vptr, char());
-  new VoidPointerTest2(&vptr, char());
+  INIT(VoidPointerTest2, (&vptr, char()));
   free(vptr);
 }
 
@@ -425,72 +419,64 @@ void fVoidPointerLRefTest() {
 }
 
 struct CyclicVoidPointerTest {
-  void *vptr; // expected-note{{object references itself 'this->vptr'}} expected-note{{object references itself 'this->vptr'}}
+  void *vptr; // expected-note{{object references itself 'this->vptr'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  CyclicVoidPointerTest() : vptr(&vptr) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  CyclicVoidPointerTest() : vptr(&vptr) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fCyclicVoidPointerTest() {
-  CyclicVoidPointerTest();
-  new CyclicVoidPointerTest();
+  INIT(CyclicVoidPointerTest, ());
 }
 
 struct IntDynTypedVoidPointerTest1 {
-  void *vptr; // expected-note{{uninitialized pointee 'static_cast<int *>(this->vptr)'}} expected-note{{uninitialized pointee 'static_cast<int *>(this->vptr)'}}
+  void *vptr; // expected-note{{uninitialized pointee 'static_cast<int *>(this->vptr)'}}
   int dontGetFilteredByNonPedanticMode = 0;
 
-  IntDynTypedVoidPointerTest1(void *vptr) : vptr(vptr) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  IntDynTypedVoidPointerTest1(void *vptr) : vptr(vptr) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fIntDynTypedVoidPointerTest1() {
   int a;
-  IntDynTypedVoidPointerTest1 tmp(&a);
-  int ap;
-  new IntDynTypedVoidPointerTest1(&ap);
+  INIT(IntDynTypedVoidPointerTest1, (&a));
 }
 
 struct RecordDynTypedVoidPointerTest {
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}} expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
-    int y; // expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}} expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
+    int x; // expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
+    int y; // expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
   };
 
   void *vptr;
   int dontGetFilteredByNonPedanticMode = 0;
 
-  RecordDynTypedVoidPointerTest(void *vptr) : vptr(vptr) {} // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+  RecordDynTypedVoidPointerTest(void *vptr) : vptr(vptr) {} // expected-warning{{2 uninitialized fields}}
 };
 
 void fRecordDynTypedVoidPointerTest() {
   RecordDynTypedVoidPointerTest::RecordType a;
-  RecordDynTypedVoidPointerTest tmp(&a);
-  RecordDynTypedVoidPointerTest::RecordType ap;
-  new RecordDynTypedVoidPointerTest(&ap);
+  INIT(RecordDynTypedVoidPointerTest, (&a));
 }
 
 struct NestedNonVoidDynTypedVoidPointerTest {
   struct RecordType {
-    int x;      // expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}} expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
-    int y;      // expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}} expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
-    void *vptr; // expected-note{{uninitialized pointee 'static_cast<char *>(static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->vptr)'}} expected-note{{uninitialized pointee 'static_cast<char *>(static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->vptr)'}}
+    int x;      // expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
+    int y;      // expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
+    void *vptr; // expected-note{{uninitialized pointee 'static_cast<char *>(static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->vptr)'}}
   };
 
   void *vptr;
   int dontGetFilteredByNonPedanticMode = 0;
 
   NestedNonVoidDynTypedVoidPointerTest(void *vptr, void *c) : vptr(vptr) {
-    static_cast<RecordType *>(vptr)->vptr = c; // expected-warning{{3 uninitialized fields}} expected-warning{{3 uninitialized fields}}
+    static_cast<RecordType *>(vptr)->vptr = c; // expected-warning{{3 uninitialized fields}}
   }
 };
 
 void fNestedNonVoidDynTypedVoidPointerTest() {
   NestedNonVoidDynTypedVoidPointerTest::RecordType a;
   char c;
-  NestedNonVoidDynTypedVoidPointerTest tmp(&a, &c);
-  NestedNonVoidDynTypedVoidPointerTest::RecordType ap;
-  char cp;
-  new NestedNonVoidDynTypedVoidPointerTest(&ap, &cp);
+  INIT(NestedNonVoidDynTypedVoidPointerTest, (&a, &c));
 }
 
 //===----------------------------------------------------------------------===//
@@ -506,20 +492,17 @@ public:
   };
 
 private:
-  RecordType **mptr; // expected-note{{uninitialized pointee 'this->mptr'}} expected-note{{uninitialized pointee 'this->mptr'}}
+  RecordType **mptr; // expected-note{{uninitialized pointee 'this->mptr'}}
 
 public:
-  MultiPointerTest1(RecordType **p, int) : mptr(p) { // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  MultiPointerTest1(RecordType **p, int) : mptr(p) { // expected-warning{{1 uninitialized field}}
   }
 };
 
 void fMultiPointerTest1() {
   MultiPointerTest1::RecordType *p1;
   MultiPointerTest1::RecordType **mptr = &p1;
-  MultiPointerTest1(mptr, int()); // '*mptr' uninitialized
-  MultiPointerTest1::RecordType *p1p;
-  MultiPointerTest1::RecordType **mptrp = &p1p;
-  new MultiPointerTest1(mptrp, int());
+  INIT(MultiPointerTest1, (mptr, int())); // '*mptr' uninitialized
 }
 #else
 class MultiPointerTest1 {
@@ -539,8 +522,7 @@ public:
 void fMultiPointerTest1() {
   MultiPointerTest1::RecordType *p1;
   MultiPointerTest1::RecordType **mptr = &p1;
-  MultiPointerTest1(mptr, int()); // '*mptr' uninitialized
-  new MultiPointerTest1(mptr, int());
+  INIT(MultiPointerTest1, (mptr, int())); // '*mptr' uninitialized
 }
 #endif // PEDANTIC
 
@@ -548,15 +530,15 @@ void fMultiPointerTest1() {
 class MultiPointerTest2 {
 public:
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'this->mptr->x'}} expected-note{{uninitialized field 'this->mptr->x'}}
-    int y; // expected-note{{uninitialized field 'this->mptr->y'}} expected-note{{uninitialized field 'this->mptr->y'}}
+    int x; // expected-note{{uninitialized field 'this->mptr->x'}}
+    int y; // expected-note{{uninitialized field 'this->mptr->y'}}
   };
 
 private:
   RecordType **mptr;
 
 public:
-  MultiPointerTest2(RecordType **p, int) : mptr(p) { // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+  MultiPointerTest2(RecordType **p, int) : mptr(p) { // expected-warning{{2 uninitialized fields}}
   }
 };
 
@@ -564,11 +546,7 @@ void fMultiPointerTest2() {
   MultiPointerTest2::RecordType i;
   MultiPointerTest2::RecordType *p1 = &i;
   MultiPointerTest2::RecordType **mptr = &p1;
-  MultiPointerTest2(mptr, int()); // '**mptr' uninitialized
-  MultiPointerTest2::RecordType ip;
-  MultiPointerTest2::RecordType *p1p = &ip;
-  MultiPointerTest2::RecordType **mptrp = &p1p;
-  new MultiPointerTest2(mptrp, int());
+  INIT(MultiPointerTest2, (mptr, int())); // '**mptr' uninitialized
 }
 #else
 class MultiPointerTest2 {
@@ -590,8 +568,7 @@ void fMultiPointerTest2() {
   MultiPointerTest2::RecordType i;
   MultiPointerTest2::RecordType *p1 = &i;
   MultiPointerTest2::RecordType **mptr = &p1;
-  MultiPointerTest2(mptr, int()); // '**mptr' uninitialized
-  new MultiPointerTest2(mptr, int());
+  INIT(MultiPointerTest2, (mptr, int())); // '**mptr' uninitialized
 }
 #endif // PEDANTIC
 
@@ -615,8 +592,7 @@ void fMultiPointerTest3() {
   MultiPointerTest3::RecordType i{31, 32};
   MultiPointerTest3::RecordType *p1 = &i;
   MultiPointerTest3::RecordType **mptr = &p1;
-  MultiPointerTest3(mptr, int()); // '**mptr' uninitialized
-  new MultiPointerTest3(mptr, int());
+  INIT(MultiPointerTest3, (mptr, int())); // '**mptr' uninitialized
 }
 
 //===----------------------------------------------------------------------===//
@@ -633,8 +609,7 @@ struct IncompletePointeeTypeTest {
 };
 
 void fIncompletePointeeTypeTest(void *ptr) {
-  IncompletePointeeTypeTest(reinterpret_cast<IncompleteType *>(ptr));
-  new IncompletePointeeTypeTest(reinterpret_cast<IncompleteType *>(ptr));
+  INIT(IncompletePointeeTypeTest, (reinterpret_cast<IncompleteType *>(ptr)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -666,13 +641,12 @@ struct UsefulFunctions {
 
 #ifdef PEDANTIC
 struct PointerToMemberFunctionTest1 {
-  void (UsefulFunctions::*f)(void); // expected-note{{uninitialized field 'this->f'}} expected-note{{uninitialized field 'this->f'}}
+  void (UsefulFunctions::*f)(void); // expected-note{{uninitialized field 'this->f'}}
   PointerToMemberFunctionTest1() {}
 };
 
 void fPointerToMemberFunctionTest1() {
-  PointerToMemberFunctionTest1(); // expected-warning{{1 uninitialized field}}
-  new PointerToMemberFunctionTest1(); // expected-warning{{1 uninitialized field}}
+  INIT(PointerToMemberFunctionTest1, ()); // expected-warning{{1 uninitialized field}}
 }
 
 struct PointerToMemberFunctionTest2 {
@@ -684,18 +658,16 @@ struct PointerToMemberFunctionTest2 {
 
 void fPointerToMemberFunctionTest2() {
   void (UsefulFunctions::*f)(void) = &UsefulFunctions::print;
-  PointerToMemberFunctionTest2 a(f);
-  new PointerToMemberFunctionTest2(f);
+  INIT(PointerToMemberFunctionTest2, (f));
 }
 
 struct MultiPointerToMemberFunctionTest1 {
-  void (UsefulFunctions::**f)(void); // expected-note{{uninitialized pointer 'this->f'}} expected-note{{uninitialized pointer 'this->f'}}
+  void (UsefulFunctions::**f)(void); // expected-note{{uninitialized pointer 'this->f'}}
   MultiPointerToMemberFunctionTest1() {}
 };
 
 void fMultiPointerToMemberFunctionTest1() {
-  MultiPointerToMemberFunctionTest1(); // expected-warning{{1 uninitialized field}}
-  new MultiPointerToMemberFunctionTest1(); // expected-warning{{1 uninitialized field}}
+  INIT(MultiPointerToMemberFunctionTest1, ()); // expected-warning{{1 uninitialized field}}
 }
 
 struct MultiPointerToMemberFunctionTest2 {
@@ -707,18 +679,16 @@ struct MultiPointerToMemberFunctionTest2 {
 
 void fMultiPointerToMemberFunctionTest2() {
   void (UsefulFunctions::*f)(void) = &UsefulFunctions::print;
-  MultiPointerToMemberFunctionTest2 a(&f);
-  new MultiPointerToMemberFunctionTest2(&f);
+  INIT(MultiPointerToMemberFunctionTest2, (&f));
 }
 
 struct PointerToMemberDataTest1 {
-  int UsefulFunctions::*d; // expected-note{{uninitialized field 'this->d'}} expected-note{{uninitialized field 'this->d'}}
+  int UsefulFunctions::*d; // expected-note{{uninitialized field 'this->d'}}
   PointerToMemberDataTest1() {}
 };
 
 void fPointerToMemberDataTest1() {
-  PointerToMemberDataTest1(); // expected-warning{{1 uninitialized field}}
-  new PointerToMemberDataTest1(); // expected-warning{{1 uninitialized field}}
+  INIT(PointerToMemberDataTest1, ()); // expected-warning{{1 uninitialized field}}
 }
 
 struct PointerToMemberDataTest2 {
@@ -730,18 +700,16 @@ struct PointerToMemberDataTest2 {
 
 void fPointerToMemberDataTest2() {
   int UsefulFunctions::*d = &UsefulFunctions::a;
-  PointerToMemberDataTest2 a(d);
-  new PointerToMemberDataTest2(d);
+  INIT(PointerToMemberDataTest2, (d));
 }
 
 struct MultiPointerToMemberDataTest1 {
-  int UsefulFunctions::**d; // expected-note{{uninitialized pointer 'this->d'}} expected-note{{uninitialized pointer 'this->d'}}
+  int UsefulFunctions::**d; // expected-note{{uninitialized pointer 'this->d'}}
   MultiPointerToMemberDataTest1() {}
 };
 
 void fMultiPointerToMemberDataTest1() {
-  MultiPointerToMemberDataTest1(); // expected-warning{{1 uninitialized field}}
-  new MultiPointerToMemberDataTest1(); // expected-warning{{1 uninitialized field}}
+  INIT(MultiPointerToMemberDataTest1, ()); // expected-warning{{1 uninitialized field}}
 }
 
 struct MultiPointerToMemberDataTest2 {
@@ -753,8 +721,7 @@ struct MultiPointerToMemberDataTest2 {
 
 void fMultiPointerToMemberDataTest2() {
   int UsefulFunctions::*d = &UsefulFunctions::a;
-  MultiPointerToMemberDataTest2 a(&d);
-  new MultiPointerToMemberDataTest2(&d);
+  INIT(MultiPointerToMemberDataTest2, (&d));
 }
 #endif // PEDANTIC
 
@@ -779,44 +746,41 @@ public:
 };
 
 void fListTest1() {
-  ListTest1();
-  new ListTest1();
+  INIT(ListTest1, ());
 }
 
 class ListTest2 {
 public:
   struct Node {
     Node *next = nullptr;
-    int i; // expected-note{{uninitialized field 'this->head->i'}} expected-note{{uninitialized field 'this->head->i'}}
+    int i; // expected-note{{uninitialized field 'this->head->i'}}
   };
 
 private:
   Node *head = nullptr;
 
 public:
-  ListTest2(Node *node, int) : head(node) { // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  ListTest2(Node *node, int) : head(node) { // expected-warning{{1 uninitialized field}}
   }
 };
 
 void fListTest2() {
   ListTest2::Node n;
-  ListTest2(&n, int());
-  ListTest2::Node np;
-  new ListTest2(&np, int());
+  INIT(ListTest2, (&n, int()));
 }
 
 class CyclicList {
 public:
   struct Node {
     Node *next = nullptr;
-    int i; // expected-note{{uninitialized field 'this->head->i'}} expected-note{{uninitialized field 'this->head->i'}}
+    int i; // expected-note{{uninitialized field 'this->head->i'}}
   };
 
 private:
   Node *head = nullptr;
 
 public:
-  CyclicList(Node *node, int) : head(node) { // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  CyclicList(Node *node, int) : head(node) { // expected-warning{{1 uninitialized field}}
   }
 };
 
@@ -836,16 +800,7 @@ void fCyclicList() {
   n3.i = 50;
   n1.next = &n3;
   // note that n1.i is uninitialized
-  CyclicList(&n1, int());
-  CyclicList::Node n1p;
-  CyclicList::Node n2p;
-  n2p.next = &n1p;
-  n2p.i = 50;
-  CyclicList::Node n3p;
-  n3p.next = &n2p;
-  n3p.i = 50;
-  n1p.next = &n3p;
-  new CyclicList(&n1p, int());
+  INIT(CyclicList, (&n1, int()));
 }
 
 struct RingListTest {
@@ -854,8 +809,7 @@ struct RingListTest {
 };
 
 void fRingListTest() {
-  RingListTest();
-  new RingListTest();
+  INIT(RingListTest, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -881,16 +835,15 @@ public:
 
 void fReferenceTest1() {
   ReferenceTest1::RecordType d{33, 34};
-  ReferenceTest1(d, d);
-  new ReferenceTest1(d, d);
+  INIT(ReferenceTest1, (d, d));
 }
 
 #ifdef PEDANTIC
 class ReferenceTest2 {
 public:
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'this->lref.x'}} expected-note{{uninitialized field 'this->lref.x'}}
-    int y; // expected-note{{uninitialized field 'this->lref.y'}} expected-note{{uninitialized field 'this->lref.y'}}
+    int x; // expected-note{{uninitialized field 'this->lref.x'}}
+    int y; // expected-note{{uninitialized field 'this->lref.y'}}
   };
 
 private:
@@ -899,15 +852,13 @@ private:
 
 public:
   ReferenceTest2(RecordType &lref, RecordType &rref)
-      : lref(lref), rref(static_cast<RecordType &&>(rref)) { // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+      : lref(lref), rref(static_cast<RecordType &&>(rref)) { // expected-warning{{2 uninitialized fields}}
   }
 };
 
 void fReferenceTest2() {
   ReferenceTest2::RecordType c;
-  ReferenceTest2(c, c);
-  ReferenceTest2::RecordType cp;
-  new ReferenceTest2(cp, cp);
+  INIT(ReferenceTest2, (c, c));
 }
 #else
 class ReferenceTest2 {
@@ -929,16 +880,15 @@ public:
 
 void fReferenceTest2() {
   ReferenceTest2::RecordType c;
-  ReferenceTest2(c, c);
-  new ReferenceTest2(c, c);
+  INIT(ReferenceTest2, (c, c));
 }
 #endif // PEDANTIC
 
 class ReferenceTest3 {
 public:
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'this->lref.x'}} expected-note{{uninitialized field 'this->lref.x'}}
-    int y; // expected-note{{uninitialized field 'this->lref.y'}} expected-note{{uninitialized field 'this->lref.y'}}
+    int x; // expected-note{{uninitialized field 'this->lref.x'}}
+    int y; // expected-note{{uninitialized field 'this->lref.y'}}
   };
 
 private:
@@ -947,22 +897,20 @@ private:
 
 public:
   ReferenceTest3(RecordType &lref, RecordType &rref)
-      : lref(lref), rref(static_cast<RecordType &&>(rref)) { // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+      : lref(lref), rref(static_cast<RecordType &&>(rref)) { // expected-warning{{2 uninitialized fields}}
   }
 };
 
 void fReferenceTest3() {
   ReferenceTest3::RecordType c, d{35, 36};
-  ReferenceTest3(c, d);
-  ReferenceTest3::RecordType cp, dp{35, 36};
-  new ReferenceTest3(cp, dp);
+  INIT(ReferenceTest3, (c, d));
 }
 
 class ReferenceTest4 {
 public:
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'this->rref.x'}} expected-note{{uninitialized field 'this->rref.x'}}
-    int y; // expected-note{{uninitialized field 'this->rref.y'}} expected-note{{uninitialized field 'this->rref.y'}}
+    int x; // expected-note{{uninitialized field 'this->rref.x'}}
+    int y; // expected-note{{uninitialized field 'this->rref.y'}}
   };
 
 private:
@@ -971,15 +919,13 @@ private:
 
 public:
   ReferenceTest4(RecordType &lref, RecordType &rref)
-      : lref(lref), rref(static_cast<RecordType &&>(rref)) { // expected-warning{{2 uninitialized fields}} expected-warning{{2 uninitialized fields}}
+      : lref(lref), rref(static_cast<RecordType &&>(rref)) { // expected-warning{{2 uninitialized fields}}
   }
 };
 
 void fReferenceTest5() {
   ReferenceTest4::RecordType c, d{37, 38};
-  ReferenceTest4(d, c);
-  ReferenceTest4::RecordType cp, dp{37, 38};
-  new ReferenceTest4(dp, cp);
+  INIT(ReferenceTest4, (d, c));
 }
 
 //===----------------------------------------------------------------------===//
@@ -987,27 +933,25 @@ void fReferenceTest5() {
 //===----------------------------------------------------------------------===//
 
 struct IntMultipleReferenceToSameObjectTest {
-  int *iptr; // expected-note{{uninitialized pointee 'this->iptr'}} expected-note{{uninitialized pointee 'this->iptr'}}
+  int *iptr; // expected-note{{uninitialized pointee 'this->iptr'}}
   int &iref; // no-note, pointee of this->iref was already reported
 
   int dontGetFilteredByNonPedanticMode = 0;
 
-  IntMultipleReferenceToSameObjectTest(int *i) : iptr(i), iref(*i) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  IntMultipleReferenceToSameObjectTest(int *i) : iptr(i), iref(*i) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fIntMultipleReferenceToSameObjectTest() {
   int a;
-  IntMultipleReferenceToSameObjectTest Test(&a);
-  int ap;
-  new IntMultipleReferenceToSameObjectTest(&ap);
+  INIT(IntMultipleReferenceToSameObjectTest, (&a));
 }
 
 struct IntReferenceWrapper1 {
-  int &a; // expected-note{{uninitialized pointee 'this->a'}} expected-note{{uninitialized pointee 'this->a'}}
+  int &a; // expected-note{{uninitialized pointee 'this->a'}}
 
   int dontGetFilteredByNonPedanticMode = 0;
 
-  IntReferenceWrapper1(int &a) : a(a) {} // expected-warning{{1 uninitialized field}} expected-warning{{1 uninitialized field}}
+  IntReferenceWrapper1(int &a) : a(a) {} // expected-warning{{1 uninitialized field}}
 };
 
 struct IntReferenceWrapper2 {
@@ -1020,11 +964,6 @@ struct IntReferenceWrapper2 {
 
 void fMultipleObjectsReferencingTheSameObjectTest() {
   int a;
-
-  IntReferenceWrapper1 T1(a);
-  IntReferenceWrapper2 T2(a);
-
-  int ap;
-  new IntReferenceWrapper1(ap);
-  new IntReferenceWrapper2(ap);
+  INIT(IntReferenceWrapper1, (a));
+  INIT(IntReferenceWrapper2, (a));
 }

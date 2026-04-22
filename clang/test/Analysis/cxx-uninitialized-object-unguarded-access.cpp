@@ -2,6 +2,16 @@
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:IgnoreGuardedFields=true \
 // RUN:   -std=c++11 -verify  %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:IgnoreGuardedFields=true \
+// RUN:   -std=c++11 -verify  %s -DHEAP_ALLOCATION
+
+#ifdef HEAP_ALLOCATION
+#define INIT(CLS, ARGS) new CLS ARGS
+#else
+#define INIT(CLS, ARGS) (void) CLS ARGS
+#endif
 
 //===----------------------------------------------------------------------===//
 // Helper functions for tests.
@@ -55,10 +65,8 @@ public:
 };
 
 void fNoUnguardedFieldsTest() {
-  NoUnguardedFieldsTest T1(NoUnguardedFieldsTest::Kind::A);
-  new NoUnguardedFieldsTest(NoUnguardedFieldsTest::Kind::A);
-  NoUnguardedFieldsTest T2(NoUnguardedFieldsTest::Kind::V);
-  new NoUnguardedFieldsTest(NoUnguardedFieldsTest::Kind::V);
+  INIT(NoUnguardedFieldsTest, (NoUnguardedFieldsTest::Kind::A));
+  INIT(NoUnguardedFieldsTest, (NoUnguardedFieldsTest::Kind::V));
 }
 
 class NoUngardedFieldsNoReturnFuncCalledTest {
@@ -96,12 +104,8 @@ public:
 };
 
 void fNoUngardedFieldsNoReturnFuncCalledTest() {
-  NoUngardedFieldsNoReturnFuncCalledTest
-    T1(NoUngardedFieldsNoReturnFuncCalledTest::Kind::A);
-  new NoUngardedFieldsNoReturnFuncCalledTest(NoUngardedFieldsNoReturnFuncCalledTest::Kind::A);
-  NoUngardedFieldsNoReturnFuncCalledTest
-    T2(NoUngardedFieldsNoReturnFuncCalledTest::Kind::V);
-  new NoUngardedFieldsNoReturnFuncCalledTest(NoUngardedFieldsNoReturnFuncCalledTest::Kind::V);
+  INIT(NoUngardedFieldsNoReturnFuncCalledTest, (NoUngardedFieldsNoReturnFuncCalledTest::Kind::A));
+  INIT(NoUngardedFieldsNoReturnFuncCalledTest, (NoUngardedFieldsNoReturnFuncCalledTest::Kind::V));
 }
 
 class NoUnguardedFieldsWithUndefMethodTest {
@@ -143,12 +147,8 @@ public:
 };
 
 void fNoUnguardedFieldsWithUndefMethodTest() {
-  NoUnguardedFieldsWithUndefMethodTest
-      T1(NoUnguardedFieldsWithUndefMethodTest::Kind::A);
-  new NoUnguardedFieldsWithUndefMethodTest(NoUnguardedFieldsWithUndefMethodTest::Kind::A);
-  NoUnguardedFieldsWithUndefMethodTest
-      T2(NoUnguardedFieldsWithUndefMethodTest::Kind::V);
-  new NoUnguardedFieldsWithUndefMethodTest(NoUnguardedFieldsWithUndefMethodTest::Kind::V);
+  INIT(NoUnguardedFieldsWithUndefMethodTest, (NoUnguardedFieldsWithUndefMethodTest::Kind::A));
+  INIT(NoUnguardedFieldsWithUndefMethodTest, (NoUnguardedFieldsWithUndefMethodTest::Kind::V));
 }
 
 class UnguardedFieldThroughMethodTest {
@@ -159,7 +159,7 @@ public:
   };
 
 private:
-  int Volume, Area; // expected-note {{uninitialized field 'this->Volume'}} expected-note {{uninitialized field 'this->Volume'}}
+  int Volume, Area; // expected-note {{uninitialized field 'this->Volume'}}
   Kind K;
 
 public:
@@ -170,7 +170,7 @@ public:
       break;
     case A:
       Area = 0;
-      break; // expected-warning {{1 uninitialized field}} expected-warning {{1 uninitialized field}}
+      break; // expected-warning {{1 uninitialized field}}
     }
   }
 
@@ -185,8 +185,7 @@ public:
 };
 
 void fUnguardedFieldThroughMethodTest() {
-  UnguardedFieldThroughMethodTest T1(UnguardedFieldThroughMethodTest::Kind::A);
-  new UnguardedFieldThroughMethodTest(UnguardedFieldThroughMethodTest::Kind::A);
+  INIT(UnguardedFieldThroughMethodTest, (UnguardedFieldThroughMethodTest::Kind::A));
 }
 
 class UnguardedPublicFieldsTest {
@@ -198,7 +197,7 @@ public:
 
 public:
   // Note that fields are public.
-  int Volume, Area; // expected-note {{uninitialized field 'this->Volume'}} expected-note {{uninitialized field 'this->Volume'}}
+  int Volume, Area; // expected-note {{uninitialized field 'this->Volume'}}
   Kind K;
 
 public:
@@ -209,7 +208,7 @@ public:
       break;
     case A:
       Area = 0;
-      break; // expected-warning {{1 uninitialized field}} expected-warning {{1 uninitialized field}}
+      break; // expected-warning {{1 uninitialized field}}
     }
   }
 
@@ -225,8 +224,7 @@ public:
 };
 
 void fUnguardedPublicFieldsTest() {
-  UnguardedPublicFieldsTest T1(UnguardedPublicFieldsTest::Kind::A);
-  new UnguardedPublicFieldsTest(UnguardedPublicFieldsTest::Kind::A);
+  INIT(UnguardedPublicFieldsTest, (UnguardedPublicFieldsTest::Kind::A));
 }
 
 //===----------------------------------------------------------------------===//
@@ -270,8 +268,7 @@ public:
 };
 
 void fUnguardedFalseNegativeTest1() {
-  UnguardedFalseNegativeTest1 T1(UnguardedFalseNegativeTest1::Kind::A);
-  new UnguardedFalseNegativeTest1(UnguardedFalseNegativeTest1::Kind::A);
+  INIT(UnguardedFalseNegativeTest1, (UnguardedFalseNegativeTest1::Kind::A));
 }
 
 class UnguardedFalseNegativeTest2 {
@@ -309,8 +306,7 @@ public:
 };
 
 void fUnguardedFalseNegativeTest2() {
-  UnguardedFalseNegativeTest2 T1(UnguardedFalseNegativeTest2::Kind::A);
-  new UnguardedFalseNegativeTest2(UnguardedFalseNegativeTest2::Kind::A);
+  INIT(UnguardedFalseNegativeTest2, (UnguardedFalseNegativeTest2::Kind::A));
 }
 
 //===----------------------------------------------------------------------===//
@@ -359,10 +355,8 @@ public:
 };
 
 void fIfGuardedFieldsTest() {
-  IfGuardedFieldsTest T1(IfGuardedFieldsTest::Kind::A);
-  new IfGuardedFieldsTest(IfGuardedFieldsTest::Kind::A);
-  IfGuardedFieldsTest T2(IfGuardedFieldsTest::Kind::V);
-  new IfGuardedFieldsTest(IfGuardedFieldsTest::Kind::V);
+  INIT(IfGuardedFieldsTest, (IfGuardedFieldsTest::Kind::A));
+  INIT(IfGuardedFieldsTest, (IfGuardedFieldsTest::Kind::V));
 }
 
 class SwitchGuardedFieldsTest {
@@ -408,10 +402,8 @@ public:
 };
 
 void fSwitchGuardedFieldsTest() {
-  SwitchGuardedFieldsTest T1(SwitchGuardedFieldsTest::Kind::A);
-  new SwitchGuardedFieldsTest(SwitchGuardedFieldsTest::Kind::A);
-  SwitchGuardedFieldsTest T2(SwitchGuardedFieldsTest::Kind::V);
-  new SwitchGuardedFieldsTest(SwitchGuardedFieldsTest::Kind::V);
+  INIT(SwitchGuardedFieldsTest, (SwitchGuardedFieldsTest::Kind::A));
+  INIT(SwitchGuardedFieldsTest, (SwitchGuardedFieldsTest::Kind::V));
 }
 
 class ConditionalOperatorGuardedFieldsTest {
@@ -447,10 +439,6 @@ public:
 };
 
 void fConditionalOperatorGuardedFieldsTest() {
-  ConditionalOperatorGuardedFieldsTest
-      T1(ConditionalOperatorGuardedFieldsTest::Kind::A);
-  new ConditionalOperatorGuardedFieldsTest(ConditionalOperatorGuardedFieldsTest::Kind::A);
-  ConditionalOperatorGuardedFieldsTest
-      T2(ConditionalOperatorGuardedFieldsTest::Kind::V);
-  new ConditionalOperatorGuardedFieldsTest(ConditionalOperatorGuardedFieldsTest::Kind::V);
+  INIT(ConditionalOperatorGuardedFieldsTest, (ConditionalOperatorGuardedFieldsTest::Kind::A));
+  INIT(ConditionalOperatorGuardedFieldsTest, (ConditionalOperatorGuardedFieldsTest::Kind::V));
 }
