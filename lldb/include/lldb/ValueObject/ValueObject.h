@@ -789,7 +789,8 @@ public:
   lldb::ValueObjectSP CreateChildValueObjectFromData(
       llvm::StringRef name, const DataExtractor &data,
       const ExecutionContext &exe_ctx, CompilerType type) {
-    return CreateValueObjectFromData(name, data, exe_ctx, type, /*parent=*/this);
+    return CreateValueObjectFromData(name, data, exe_ctx, type,
+                                     /*parent=*/this);
   }
 
   /// Create a value object containing the given APInt value.
@@ -805,7 +806,8 @@ public:
   CreateChildValueObjectFromAPFloat(const ExecutionContext &exe_ctx,
                                     const llvm::APFloat &v, CompilerType type,
                                     llvm::StringRef name) {
-    return CreateValueObjectFromAPFloat(exe_ctx, v, type, name, /*parent=*/this);
+    return CreateValueObjectFromAPFloat(exe_ctx, v, type, name,
+                                        /*parent=*/this);
   }
 
   /// Create a value object containing the given Scalar value.
