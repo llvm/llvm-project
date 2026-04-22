@@ -6,13 +6,18 @@
 # RUN: %clang_host %t/test.o -o %t/main
 # RUN: %lldb %t/main -s %t/lldb.script 2>&1 | FileCheck %s --check-prefix=FAIL
 # RUN: sed "s|DIR|%/t|g" %t/cas-config.template > %t/.cas-config
-# RUN: %lldb %t/main -s %t/lldb.script 2>&1 | FileCheck %s
+# RUN: cd %t && %lldb main -s lldb.script 2>&1 | FileCheck %s
 
-# FAIL: Failed to load module 'Bottom' at '{{.*}}' from CAS: no CAS available
+# FAIL: Failed to load module 'Bottom' at '{{.*}}' from CAS: no CAS associated with module
 # FAIL: Unable to locate module needed for external types.
 # CHECK: Loading module 'Bottom' from CAS at
+# CHECK: Initialized CAS at [[CAS:.*]]
 # CHECK: Loading module 'Top' from CAS at
 # CHECK: top = (x = 1)
+# CHECK: CAS at [[CAS]] was garbage-collected
+# CHECK: Initialized CAS at [[CAS]]
+# CHECK: Loading module 'Top' from CAS at
+
 
 //--- module.modulemap
 module Top { header "Top.h" export *}
@@ -44,6 +49,12 @@ int main(void) {
 
 //--- lldb.script
 log enable lldb module
+b tu.c:7
+run
+v _bottom
+process kill
+target delete --clean
+target create main
 b tu.c:7
 run
 expr _bottom

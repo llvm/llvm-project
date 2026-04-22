@@ -1140,6 +1140,14 @@ protected:
   std::once_flag m_toolchain_mismatch_warning;
 #endif
 
+  // BEGIN CAS
+  /// CAS configuration associated with this module, if any.
+  std::optional<llvm::cas::CASConfiguration> m_cas_config;
+  /// Many modules may share the same CAS instance.
+  std::shared_ptr<llvm::cas::ObjectStore> m_cas_object_store;
+  std::shared_ptr<llvm::cas::ActionCache> m_cas_action_cache;
+  // END CAS
+
   /// A set of hashes of all warnings and errors, to avoid reporting them
   /// multiple times to the same Debugger.
   llvm::DenseMap<llvm::stable_hash, std::unique_ptr<std::once_flag>>
