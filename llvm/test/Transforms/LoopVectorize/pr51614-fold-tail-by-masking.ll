@@ -23,7 +23,7 @@ define i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IV]], splat (i32 40)
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i16 [[OFFSET_IDX]], -1
@@ -37,7 +37,7 @@ define i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK:       pred.load.continue:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP10]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4]]
 ; CHECK:       pred.load.if1:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i16 [[OFFSET_IDX]], -1

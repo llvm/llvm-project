@@ -187,7 +187,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ule <16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
@@ -200,7 +200,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue:
 ; CHECK-NEXT:    [[TMP21:%.*]] = phi <16 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP20]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP103:%.*]] = phi <16 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP102]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <16 x i1> [[TMP16]], i32 1
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <16 x i1> [[TMP16]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; CHECK:       pred.load.if1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
@@ -214,7 +214,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue2:
 ; CHECK-NEXT:    [[TMP26:%.*]] = phi <16 x i8> [ [[TMP21]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP25]], [[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[TMP111:%.*]] = phi <16 x i8> [ [[TMP103]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP109]], [[PRED_LOAD_IF1]] ]
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <16 x i1> [[TMP16]], i32 2
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <16 x i1> [[TMP16]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; CHECK:       pred.load.if3:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
@@ -228,7 +228,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue4:
 ; CHECK-NEXT:    [[TMP31:%.*]] = phi <16 x i8> [ [[TMP26]], [[PRED_LOAD_CONTINUE2]] ], [ [[TMP30]], [[PRED_LOAD_IF3]] ]
 ; CHECK-NEXT:    [[TMP115:%.*]] = phi <16 x i8> [ [[TMP111]], [[PRED_LOAD_CONTINUE2]] ], [ [[TMP114]], [[PRED_LOAD_IF3]] ]
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <16 x i1> [[TMP16]], i32 3
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <16 x i1> [[TMP16]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP32]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
 ; CHECK:       pred.load.if5:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -242,7 +242,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP36:%.*]] = phi <16 x i8> [ [[TMP31]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP35]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP123:%.*]] = phi <16 x i8> [ [[TMP115]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP122]], [[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <16 x i1> [[TMP16]], i32 4
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <16 x i1> [[TMP16]], i64 4
 ; CHECK-NEXT:    br i1 [[TMP37]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; CHECK:       pred.load.if7:
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 4
@@ -256,7 +256,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue8:
 ; CHECK-NEXT:    [[TMP41:%.*]] = phi <16 x i8> [ [[TMP36]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP40]], [[PRED_LOAD_IF7]] ]
 ; CHECK-NEXT:    [[TMP131:%.*]] = phi <16 x i8> [ [[TMP123]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP129]], [[PRED_LOAD_IF7]] ]
-; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <16 x i1> [[TMP16]], i32 5
+; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <16 x i1> [[TMP16]], i64 5
 ; CHECK-NEXT:    br i1 [[TMP42]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
 ; CHECK:       pred.load.if9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 5
@@ -270,7 +270,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue10:
 ; CHECK-NEXT:    [[TMP46:%.*]] = phi <16 x i8> [ [[TMP41]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP45]], [[PRED_LOAD_IF9]] ]
 ; CHECK-NEXT:    [[TMP135:%.*]] = phi <16 x i8> [ [[TMP131]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP134]], [[PRED_LOAD_IF9]] ]
-; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <16 x i1> [[TMP16]], i32 6
+; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <16 x i1> [[TMP16]], i64 6
 ; CHECK-NEXT:    br i1 [[TMP47]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; CHECK:       pred.load.if11:
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 6
@@ -284,7 +284,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue12:
 ; CHECK-NEXT:    [[TMP51:%.*]] = phi <16 x i8> [ [[TMP46]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP50]], [[PRED_LOAD_IF11]] ]
 ; CHECK-NEXT:    [[TMP143:%.*]] = phi <16 x i8> [ [[TMP135]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP142]], [[PRED_LOAD_IF11]] ]
-; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <16 x i1> [[TMP16]], i32 7
+; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <16 x i1> [[TMP16]], i64 7
 ; CHECK-NEXT:    br i1 [[TMP52]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14:%.*]]
 ; CHECK:       pred.load.if13:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 7
@@ -298,7 +298,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue14:
 ; CHECK-NEXT:    [[TMP56:%.*]] = phi <16 x i8> [ [[TMP51]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP55]], [[PRED_LOAD_IF13]] ]
 ; CHECK-NEXT:    [[TMP150:%.*]] = phi <16 x i8> [ [[TMP143]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP149]], [[PRED_LOAD_IF13]] ]
-; CHECK-NEXT:    [[TMP57:%.*]] = extractelement <16 x i1> [[TMP16]], i32 8
+; CHECK-NEXT:    [[TMP57:%.*]] = extractelement <16 x i1> [[TMP16]], i64 8
 ; CHECK-NEXT:    br i1 [[TMP57]], label [[PRED_LOAD_IF15:%.*]], label [[PRED_LOAD_CONTINUE16:%.*]]
 ; CHECK:       pred.load.if15:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 8
@@ -312,7 +312,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue16:
 ; CHECK-NEXT:    [[TMP61:%.*]] = phi <16 x i8> [ [[TMP56]], [[PRED_LOAD_CONTINUE14]] ], [ [[TMP60]], [[PRED_LOAD_IF15]] ]
 ; CHECK-NEXT:    [[TMP154:%.*]] = phi <16 x i8> [ [[TMP150]], [[PRED_LOAD_CONTINUE14]] ], [ [[TMP153]], [[PRED_LOAD_IF15]] ]
-; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <16 x i1> [[TMP16]], i32 9
+; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <16 x i1> [[TMP16]], i64 9
 ; CHECK-NEXT:    br i1 [[TMP62]], label [[PRED_LOAD_IF17:%.*]], label [[PRED_LOAD_CONTINUE18:%.*]]
 ; CHECK:       pred.load.if17:
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 9
@@ -326,7 +326,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue18:
 ; CHECK-NEXT:    [[TMP66:%.*]] = phi <16 x i8> [ [[TMP61]], [[PRED_LOAD_CONTINUE16]] ], [ [[TMP65]], [[PRED_LOAD_IF17]] ]
 ; CHECK-NEXT:    [[TMP100:%.*]] = phi <16 x i8> [ [[TMP154]], [[PRED_LOAD_CONTINUE16]] ], [ [[TMP98]], [[PRED_LOAD_IF17]] ]
-; CHECK-NEXT:    [[TMP67:%.*]] = extractelement <16 x i1> [[TMP16]], i32 10
+; CHECK-NEXT:    [[TMP67:%.*]] = extractelement <16 x i1> [[TMP16]], i64 10
 ; CHECK-NEXT:    br i1 [[TMP67]], label [[PRED_LOAD_IF19:%.*]], label [[PRED_LOAD_CONTINUE20:%.*]]
 ; CHECK:       pred.load.if19:
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 10
@@ -340,7 +340,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue20:
 ; CHECK-NEXT:    [[TMP71:%.*]] = phi <16 x i8> [ [[TMP66]], [[PRED_LOAD_CONTINUE18]] ], [ [[TMP70]], [[PRED_LOAD_IF19]] ]
 ; CHECK-NEXT:    [[TMP110:%.*]] = phi <16 x i8> [ [[TMP100]], [[PRED_LOAD_CONTINUE18]] ], [ [[TMP108]], [[PRED_LOAD_IF19]] ]
-; CHECK-NEXT:    [[TMP72:%.*]] = extractelement <16 x i1> [[TMP16]], i32 11
+; CHECK-NEXT:    [[TMP72:%.*]] = extractelement <16 x i1> [[TMP16]], i64 11
 ; CHECK-NEXT:    br i1 [[TMP72]], label [[PRED_LOAD_IF21:%.*]], label [[PRED_LOAD_CONTINUE22:%.*]]
 ; CHECK:       pred.load.if21:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 11
@@ -354,7 +354,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue22:
 ; CHECK-NEXT:    [[TMP76:%.*]] = phi <16 x i8> [ [[TMP71]], [[PRED_LOAD_CONTINUE20]] ], [ [[TMP75]], [[PRED_LOAD_IF21]] ]
 ; CHECK-NEXT:    [[TMP120:%.*]] = phi <16 x i8> [ [[TMP110]], [[PRED_LOAD_CONTINUE20]] ], [ [[TMP118]], [[PRED_LOAD_IF21]] ]
-; CHECK-NEXT:    [[TMP77:%.*]] = extractelement <16 x i1> [[TMP16]], i32 12
+; CHECK-NEXT:    [[TMP77:%.*]] = extractelement <16 x i1> [[TMP16]], i64 12
 ; CHECK-NEXT:    br i1 [[TMP77]], label [[PRED_LOAD_IF23:%.*]], label [[PRED_LOAD_CONTINUE24:%.*]]
 ; CHECK:       pred.load.if23:
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 12
@@ -368,7 +368,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue24:
 ; CHECK-NEXT:    [[TMP81:%.*]] = phi <16 x i8> [ [[TMP76]], [[PRED_LOAD_CONTINUE22]] ], [ [[TMP80]], [[PRED_LOAD_IF23]] ]
 ; CHECK-NEXT:    [[TMP130:%.*]] = phi <16 x i8> [ [[TMP120]], [[PRED_LOAD_CONTINUE22]] ], [ [[TMP128]], [[PRED_LOAD_IF23]] ]
-; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <16 x i1> [[TMP16]], i32 13
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <16 x i1> [[TMP16]], i64 13
 ; CHECK-NEXT:    br i1 [[TMP82]], label [[PRED_LOAD_IF25:%.*]], label [[PRED_LOAD_CONTINUE26:%.*]]
 ; CHECK:       pred.load.if25:
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 13
@@ -382,7 +382,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue26:
 ; CHECK-NEXT:    [[TMP86:%.*]] = phi <16 x i8> [ [[TMP81]], [[PRED_LOAD_CONTINUE24]] ], [ [[TMP85]], [[PRED_LOAD_IF25]] ]
 ; CHECK-NEXT:    [[TMP140:%.*]] = phi <16 x i8> [ [[TMP130]], [[PRED_LOAD_CONTINUE24]] ], [ [[TMP138]], [[PRED_LOAD_IF25]] ]
-; CHECK-NEXT:    [[TMP87:%.*]] = extractelement <16 x i1> [[TMP16]], i32 14
+; CHECK-NEXT:    [[TMP87:%.*]] = extractelement <16 x i1> [[TMP16]], i64 14
 ; CHECK-NEXT:    br i1 [[TMP87]], label [[PRED_LOAD_IF27:%.*]], label [[PRED_LOAD_CONTINUE28:%.*]]
 ; CHECK:       pred.load.if27:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 14
@@ -396,7 +396,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK:       pred.load.continue28:
 ; CHECK-NEXT:    [[TMP91:%.*]] = phi <16 x i8> [ [[TMP86]], [[PRED_LOAD_CONTINUE26]] ], [ [[TMP90]], [[PRED_LOAD_IF27]] ]
 ; CHECK-NEXT:    [[TMP172:%.*]] = phi <16 x i8> [ [[TMP140]], [[PRED_LOAD_CONTINUE26]] ], [ [[TMP148]], [[PRED_LOAD_IF27]] ]
-; CHECK-NEXT:    [[TMP92:%.*]] = extractelement <16 x i1> [[TMP16]], i32 15
+; CHECK-NEXT:    [[TMP92:%.*]] = extractelement <16 x i1> [[TMP16]], i64 15
 ; CHECK-NEXT:    br i1 [[TMP92]], label [[PRED_LOAD_IF29:%.*]], label [[PRED_LOAD_CONTINUE62]]
 ; CHECK:       pred.load.if29:
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 15

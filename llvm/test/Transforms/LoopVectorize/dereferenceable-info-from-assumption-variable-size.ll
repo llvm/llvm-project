@@ -5,7 +5,7 @@
 ; %a is known dereferenceable via assume for the whole loop.
 define void @deref_assumption_in_preheader_non_constant_trip_count_access_i8(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_non_constant_trip_count_access_i8(
-; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 [[N]]) ]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
@@ -84,7 +84,7 @@ exit:
 ; %a is known dereferenceable via assume for the whole loop.
 define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32(
-; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[N]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 [[MUL]]) ]
@@ -166,7 +166,7 @@ exit:
 ; %a is NOT known dereferenceable via assume for the whole loop.
 define void @deref_assumption_in_preheader_too_small_non_constant_trip_count_access_i32(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_too_small_non_constant_trip_count_access_i32(
-; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 [[N]]) ]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
@@ -180,16 +180,16 @@ define void @deref_assumption_in_preheader_too_small_non_constant_trip_count_acc
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP15]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP18]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP15]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP15]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP0]], 1
@@ -262,7 +262,7 @@ exit:
 ; %a is NOT known dereferenceable via assume for the whole loop.
 define void @deref_assumption_in_preheader_too_small2_non_constant_trip_count_access_i32(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_too_small2_non_constant_trip_count_access_i32(
-; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i64 100) ]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
@@ -276,16 +276,16 @@ define void @deref_assumption_in_preheader_too_small2_non_constant_trip_count_ac
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP15]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP18]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP15]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP15]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP0]], 1
@@ -358,7 +358,7 @@ exit:
 ; %a is known dereferenceable via assume for the whole loop, alignment is known via function attribute.
 define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32_align_attribute(ptr noalias noundef align 4 %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32_align_attribute(
-; CHECK-SAME: ptr noalias noundef align 4 [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias noundef align 4 [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[N]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 [[MUL]]) ]
@@ -439,7 +439,7 @@ exit:
 ; Alignment via argument attribute is too small (1 but needs 4).
 define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32_align_attribute_too_small(ptr noalias noundef align 1 %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32_align_attribute_too_small(
-; CHECK-SAME: ptr noalias noundef align 1 [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias noundef align 1 [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[N]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 [[MUL]]) ]
@@ -454,25 +454,25 @@ define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32_al
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP8]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP5]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[TMP13]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP13]], i32 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x i32> [ [[TMP9]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], %[[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x i32> [ [[TMP8]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x i32> [[TMP15]], <2 x i32> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP16]], align 1
@@ -538,7 +538,7 @@ exit:
 ; for IV.
 define void @deref_assumption_loop_access_start_variable(i8 %v, ptr noundef %P, i64 range(i64 0, 2000) %N, ptr noalias %b, ptr noalias %c, i64 range(i64 0, 2000) %iv.start) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_loop_access_start_variable(
-; CHECK-SAME: i8 [[V:%.*]], ptr noundef [[P:%.*]], i64 range(i64 0, 2000) [[N:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 range(i64 0, 2000) [[IV_START:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i8 [[V:%.*]], ptr noundef [[P:%.*]], i64 range(i64 0, 2000) [[N:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 range(i64 0, 2000) [[IV_START:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[P]], i64 16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_START]], [[N]]
@@ -560,7 +560,7 @@ define void @deref_assumption_loop_access_start_variable(i8 %v, ptr noundef %P, 
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
@@ -568,17 +568,17 @@ define void @deref_assumption_loop_access_start_variable(i8 %v, ptr noundef %P, 
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> poison, i32 [[TMP19]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP9]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP9]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP13]], align 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i32> [[TMP10]], i32 [[TMP14]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP14]], i32 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi <2 x i32> [ [[TMP10]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP15]], %[[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi <2 x i32> [ [[TMP8]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP15]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[TMP20]], <2 x i32> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP17]], align 1
@@ -648,7 +648,7 @@ exit:
 ; Same as previous test, but `iv.start` is not known nonnegative.
 define void @deref_assumption_loop_access_start_variable_unknown_range(i8 %v, ptr noundef %P, i64 range(i64 0, 2000) %N, ptr noalias %b, ptr noalias %c, i64 %iv.start) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_loop_access_start_variable_unknown_range(
-; CHECK-SAME: i8 [[V:%.*]], ptr noundef [[P:%.*]], i64 range(i64 0, 2000) [[N:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[IV_START:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i8 [[V:%.*]], ptr noundef [[P:%.*]], i64 range(i64 0, 2000) [[N:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[IV_START:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[P]], i64 16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_START]], [[N]]
@@ -670,7 +670,7 @@ define void @deref_assumption_loop_access_start_variable_unknown_range(i8 %v, pt
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
@@ -679,7 +679,7 @@ define void @deref_assumption_loop_access_start_variable_unknown_range(i8 %v, pt
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP9]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 1
@@ -757,7 +757,7 @@ exit:
 ; Test to check type mismatch while calling getUMaxExpr()
 define void @test_assumed_bounds_type_mismatch(ptr noalias %array, ptr readonly %pred, i32 %n) nosync nofree {
 ; CHECK-LABEL: define void @test_assumed_bounds_type_mismatch(
-; CHECK-SAME: ptr noalias [[ARRAY:%.*]], ptr readonly [[PRED:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias [[ARRAY:%.*]], ptr readonly [[PRED:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[N_BYTES:%.*]] = mul nuw nsw i32 [[N]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PRED]], i32 [[N_BYTES]]) ]

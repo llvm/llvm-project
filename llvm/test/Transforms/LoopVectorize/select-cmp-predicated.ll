@@ -18,7 +18,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC1]], i64 [[TMP0]]
 ; CHECK-VF2IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; CHECK-VF2IC1-NEXT:    [[TMP4:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], splat (i32 35)
-; CHECK-VF2IC1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
+; CHECK-VF2IC1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-VF2IC1-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK-VF2IC1:       [[PRED_LOAD_IF]]:
 ; CHECK-VF2IC1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[TMP0]]
@@ -27,7 +27,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK-VF2IC1:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-VF2IC1-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP8]], %[[PRED_LOAD_IF]] ]
-; CHECK-VF2IC1-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
+; CHECK-VF2IC1-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; CHECK-VF2IC1-NEXT:    br i1 [[TMP10]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK-VF2IC1:       [[PRED_LOAD_IF1]]:
 ; CHECK-VF2IC1-NEXT:    [[TMP11:%.*]] = add i64 [[TMP0]], 1

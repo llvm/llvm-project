@@ -29,7 +29,7 @@ define void @simplify_udiv_1_in_replicate_region(i8 %arg, ptr %src) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i8> zeroinitializer, <4 x i8> [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i8> [[PREDPHI]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i32>
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP6]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP6]], i64 3
 ; CHECK-NEXT:    br label %[[LATCH:.*]]
 ; CHECK:       [[LATCH]]:
 ;
@@ -91,7 +91,7 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP7]]
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i1> [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i1> [[TMP10]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i8, ptr [[TMP12]], align 1
@@ -99,7 +99,7 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP31:%.*]] = phi <4 x i8> [ poison, %[[VECTOR_BODY]] ], [ [[TMP30]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i1> [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i1> [[TMP10]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP32]], label %[[PRED_LOAD_IF2:.*]], label %[[PRED_LOAD_CONTINUE3:.*]]
 ; CHECK:       [[PRED_LOAD_IF2]]:
 ; CHECK-NEXT:    [[TMP33:%.*]] = load i8, ptr [[TMP13]], align 1
@@ -107,7 +107,7 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE3]]
 ; CHECK:       [[PRED_LOAD_CONTINUE3]]:
 ; CHECK-NEXT:    [[TMP35:%.*]] = phi <4 x i8> [ [[TMP31]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP34]], %[[PRED_LOAD_IF2]] ]
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i1> [[TMP10]], i32 2
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i1> [[TMP10]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP36]], label %[[PRED_LOAD_IF4:.*]], label %[[PRED_LOAD_CONTINUE5:.*]]
 ; CHECK:       [[PRED_LOAD_IF4]]:
 ; CHECK-NEXT:    [[TMP37:%.*]] = load i8, ptr [[TMP14]], align 1
@@ -115,7 +115,7 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE5]]
 ; CHECK:       [[PRED_LOAD_CONTINUE5]]:
 ; CHECK-NEXT:    [[TMP39:%.*]] = phi <4 x i8> [ [[TMP35]], %[[PRED_LOAD_CONTINUE3]] ], [ [[TMP38]], %[[PRED_LOAD_IF4]] ]
-; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <4 x i1> [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <4 x i1> [[TMP10]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP40]], label %[[PRED_LOAD_IF6:.*]], label %[[PRED_LOAD_CONTINUE7:.*]]
 ; CHECK:       [[PRED_LOAD_IF6]]:
 ; CHECK-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP15]], align 1
@@ -123,7 +123,7 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE7]]
 ; CHECK:       [[PRED_LOAD_CONTINUE7]]:
 ; CHECK-NEXT:    [[TMP43:%.*]] = phi <4 x i8> [ [[TMP39]], %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP42]], %[[PRED_LOAD_IF6]] ]
-; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i1> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i1> [[TMP11]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP44]], label %[[PRED_LOAD_IF8:.*]], label %[[PRED_LOAD_CONTINUE9:.*]]
 ; CHECK:       [[PRED_LOAD_IF8]]:
 ; CHECK-NEXT:    [[TMP45:%.*]] = load i8, ptr [[TMP20]], align 1
@@ -131,7 +131,7 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE9]]
 ; CHECK:       [[PRED_LOAD_CONTINUE9]]:
 ; CHECK-NEXT:    [[TMP47:%.*]] = phi <4 x i8> [ poison, %[[PRED_LOAD_CONTINUE7]] ], [ [[TMP46]], %[[PRED_LOAD_IF8]] ]
-; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP11]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP48]], label %[[PRED_LOAD_IF10:.*]], label %[[PRED_LOAD_CONTINUE11:.*]]
 ; CHECK:       [[PRED_LOAD_IF10]]:
 ; CHECK-NEXT:    [[TMP49:%.*]] = load i8, ptr [[TMP21]], align 1
@@ -139,7 +139,7 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE11]]
 ; CHECK:       [[PRED_LOAD_CONTINUE11]]:
 ; CHECK-NEXT:    [[TMP51:%.*]] = phi <4 x i8> [ [[TMP47]], %[[PRED_LOAD_CONTINUE9]] ], [ [[TMP50]], %[[PRED_LOAD_IF10]] ]
-; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i1> [[TMP11]], i32 2
+; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i1> [[TMP11]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP52]], label %[[PRED_LOAD_IF12:.*]], label %[[PRED_LOAD_CONTINUE13:.*]]
 ; CHECK:       [[PRED_LOAD_IF12]]:
 ; CHECK-NEXT:    [[TMP53:%.*]] = load i8, ptr [[TMP22]], align 1
@@ -147,7 +147,7 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE13]]
 ; CHECK:       [[PRED_LOAD_CONTINUE13]]:
 ; CHECK-NEXT:    [[TMP55:%.*]] = phi <4 x i8> [ [[TMP51]], %[[PRED_LOAD_CONTINUE11]] ], [ [[TMP54]], %[[PRED_LOAD_IF12]] ]
-; CHECK-NEXT:    [[TMP56:%.*]] = extractelement <4 x i1> [[TMP11]], i32 3
+; CHECK-NEXT:    [[TMP56:%.*]] = extractelement <4 x i1> [[TMP11]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP56]], label %[[PRED_LOAD_IF14:.*]], label %[[PRED_LOAD_CONTINUE15:.*]]
 ; CHECK:       [[PRED_LOAD_IF14]]:
 ; CHECK-NEXT:    [[TMP57:%.*]] = load i8, ptr [[TMP23]], align 1
@@ -159,49 +159,49 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[TMP61:%.*]] = lshr <4 x i8> [[TMP59]], splat (i8 1)
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP63:%.*]] = extractelement <4 x i8> [[TMP60]], i32 0
+; CHECK-NEXT:    [[TMP63:%.*]] = extractelement <4 x i8> [[TMP60]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP63]], ptr [[TMP12]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    br i1 [[TMP32]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17:.*]]
 ; CHECK:       [[PRED_STORE_IF16]]:
-; CHECK-NEXT:    [[TMP65:%.*]] = extractelement <4 x i8> [[TMP60]], i32 1
+; CHECK-NEXT:    [[TMP65:%.*]] = extractelement <4 x i8> [[TMP60]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP65]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE17]]
 ; CHECK:       [[PRED_STORE_CONTINUE17]]:
 ; CHECK-NEXT:    br i1 [[TMP36]], label %[[PRED_STORE_IF18:.*]], label %[[PRED_STORE_CONTINUE19:.*]]
 ; CHECK:       [[PRED_STORE_IF18]]:
-; CHECK-NEXT:    [[TMP67:%.*]] = extractelement <4 x i8> [[TMP60]], i32 2
+; CHECK-NEXT:    [[TMP67:%.*]] = extractelement <4 x i8> [[TMP60]], i64 2
 ; CHECK-NEXT:    store i8 [[TMP67]], ptr [[TMP14]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE19]]
 ; CHECK:       [[PRED_STORE_CONTINUE19]]:
 ; CHECK-NEXT:    br i1 [[TMP40]], label %[[PRED_STORE_IF20:.*]], label %[[PRED_STORE_CONTINUE21:.*]]
 ; CHECK:       [[PRED_STORE_IF20]]:
-; CHECK-NEXT:    [[TMP69:%.*]] = extractelement <4 x i8> [[TMP60]], i32 3
+; CHECK-NEXT:    [[TMP69:%.*]] = extractelement <4 x i8> [[TMP60]], i64 3
 ; CHECK-NEXT:    store i8 [[TMP69]], ptr [[TMP15]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE21]]
 ; CHECK:       [[PRED_STORE_CONTINUE21]]:
 ; CHECK-NEXT:    br i1 [[TMP44]], label %[[PRED_STORE_IF22:.*]], label %[[PRED_STORE_CONTINUE23:.*]]
 ; CHECK:       [[PRED_STORE_IF22]]:
-; CHECK-NEXT:    [[TMP71:%.*]] = extractelement <4 x i8> [[TMP61]], i32 0
+; CHECK-NEXT:    [[TMP71:%.*]] = extractelement <4 x i8> [[TMP61]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP71]], ptr [[TMP20]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE23]]
 ; CHECK:       [[PRED_STORE_CONTINUE23]]:
 ; CHECK-NEXT:    br i1 [[TMP48]], label %[[PRED_STORE_IF24:.*]], label %[[PRED_STORE_CONTINUE25:.*]]
 ; CHECK:       [[PRED_STORE_IF24]]:
-; CHECK-NEXT:    [[TMP73:%.*]] = extractelement <4 x i8> [[TMP61]], i32 1
+; CHECK-NEXT:    [[TMP73:%.*]] = extractelement <4 x i8> [[TMP61]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP73]], ptr [[TMP21]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE25]]
 ; CHECK:       [[PRED_STORE_CONTINUE25]]:
 ; CHECK-NEXT:    br i1 [[TMP52]], label %[[PRED_STORE_IF26:.*]], label %[[PRED_STORE_CONTINUE27:.*]]
 ; CHECK:       [[PRED_STORE_IF26]]:
-; CHECK-NEXT:    [[TMP75:%.*]] = extractelement <4 x i8> [[TMP61]], i32 2
+; CHECK-NEXT:    [[TMP75:%.*]] = extractelement <4 x i8> [[TMP61]], i64 2
 ; CHECK-NEXT:    store i8 [[TMP75]], ptr [[TMP22]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE27]]
 ; CHECK:       [[PRED_STORE_CONTINUE27]]:
 ; CHECK-NEXT:    br i1 [[TMP56]], label %[[PRED_STORE_IF28:.*]], label %[[PRED_STORE_CONTINUE29]]
 ; CHECK:       [[PRED_STORE_IF28]]:
-; CHECK-NEXT:    [[TMP77:%.*]] = extractelement <4 x i8> [[TMP61]], i32 3
+; CHECK-NEXT:    [[TMP77:%.*]] = extractelement <4 x i8> [[TMP61]], i64 3
 ; CHECK-NEXT:    store i8 [[TMP77]], ptr [[TMP23]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE29]]
 ; CHECK:       [[PRED_STORE_CONTINUE29]]:
@@ -212,7 +212,7 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x i8> [[TMP61]], <4 x i8> zeroinitializer
 ; CHECK-NEXT:    [[TMP78:%.*]] = icmp ne <4 x i8> [[PREDPHI]], zeroinitializer
 ; CHECK-NEXT:    [[TMP79:%.*]] = zext <4 x i1> [[TMP78]] to <4 x i32>
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP79]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP79]], i64 3
 ; CHECK-NEXT:    br label %[[LATCH:.*]]
 ; CHECK:       [[LATCH]]:
 ;
