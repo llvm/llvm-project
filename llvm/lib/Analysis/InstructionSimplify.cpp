@@ -7323,11 +7323,10 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     return nullptr;
   }
   case Intrinsic::fcmp: {
-    auto *MD = cast<MetadataAsValue>(Args[2])->getMetadata();
-    StringRef PredStr = cast<MDString>(MD)->getString();
-    if (PredStr == "true")
+    FCmpInst::Predicate Pred = cast<FPCmpIntrinsic>(Call)->getPredicate();
+    if (Pred == FCmpInst::FCMP_TRUE)
       return ConstantInt::getTrue(F->getReturnType());
-    if (PredStr == "false")
+    if (Pred == FCmpInst::FCMP_FALSE)
       return ConstantInt::getFalse(F->getReturnType());
     return nullptr;
   }

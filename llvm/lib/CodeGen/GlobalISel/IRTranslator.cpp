@@ -2758,28 +2758,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::fcmp: {
     // Quiet comparison -- no exception raised on NaN operands.
-    auto *MD = cast<MetadataAsValue>(CI.getArgOperand(2))->getMetadata();
-    FCmpInst::Predicate Pred =
-        StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
-            .Case("oeq", FCmpInst::FCMP_OEQ)
-            .Case("ogt", FCmpInst::FCMP_OGT)
-            .Case("oge", FCmpInst::FCMP_OGE)
-            .Case("olt", FCmpInst::FCMP_OLT)
-            .Case("ole", FCmpInst::FCMP_OLE)
-            .Case("one", FCmpInst::FCMP_ONE)
-            .Case("ord", FCmpInst::FCMP_ORD)
-            .Case("uno", FCmpInst::FCMP_UNO)
-            .Case("ueq", FCmpInst::FCMP_UEQ)
-            .Case("ugt", FCmpInst::FCMP_UGT)
-            .Case("uge", FCmpInst::FCMP_UGE)
-            .Case("ult", FCmpInst::FCMP_ULT)
-            .Case("ule", FCmpInst::FCMP_ULE)
-            .Case("une", FCmpInst::FCMP_UNE)
-            .Case("true", FCmpInst::FCMP_TRUE)
-            .Case("false", FCmpInst::FCMP_FALSE)
-            .Default(FCmpInst::BAD_FCMP_PREDICATE);
-    assert(Pred != FCmpInst::BAD_FCMP_PREDICATE &&
-           "invalid predicate in llvm.fcmp");
+    FCmpInst::Predicate Pred = cast<FPCmpIntrinsic>(&CI)->getPredicate();
     uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
     Register Op0 = getOrCreateVReg(*CI.getArgOperand(0));
     Register Op1 = getOrCreateVReg(*CI.getArgOperand(1));
@@ -2789,26 +2768,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::fcmps: {
     // Signaling comparison -- always raises on any NaN, so always strict.
-    auto *MD = cast<MetadataAsValue>(CI.getArgOperand(2))->getMetadata();
-    FCmpInst::Predicate Pred =
-        StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
-            .Case("oeq", FCmpInst::FCMP_OEQ)
-            .Case("ogt", FCmpInst::FCMP_OGT)
-            .Case("oge", FCmpInst::FCMP_OGE)
-            .Case("olt", FCmpInst::FCMP_OLT)
-            .Case("ole", FCmpInst::FCMP_OLE)
-            .Case("one", FCmpInst::FCMP_ONE)
-            .Case("ord", FCmpInst::FCMP_ORD)
-            .Case("uno", FCmpInst::FCMP_UNO)
-            .Case("ueq", FCmpInst::FCMP_UEQ)
-            .Case("ugt", FCmpInst::FCMP_UGT)
-            .Case("uge", FCmpInst::FCMP_UGE)
-            .Case("ult", FCmpInst::FCMP_ULT)
-            .Case("ule", FCmpInst::FCMP_ULE)
-            .Case("une", FCmpInst::FCMP_UNE)
-            .Default(FCmpInst::BAD_FCMP_PREDICATE);
-    assert(Pred != FCmpInst::BAD_FCMP_PREDICATE &&
-           "invalid predicate in llvm.fcmps");
+    FCmpInst::Predicate Pred = cast<FPCmpIntrinsic>(&CI)->getPredicate();
     uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
     Register Op0 = getOrCreateVReg(*CI.getArgOperand(0));
     Register Op1 = getOrCreateVReg(*CI.getArgOperand(1));

@@ -7167,26 +7167,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::fcmp: {
-    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
-    FCmpInst::Predicate Pred =
-        StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
-            .Case("oeq", FCmpInst::FCMP_OEQ)
-            .Case("ogt", FCmpInst::FCMP_OGT)
-            .Case("oge", FCmpInst::FCMP_OGE)
-            .Case("olt", FCmpInst::FCMP_OLT)
-            .Case("ole", FCmpInst::FCMP_OLE)
-            .Case("one", FCmpInst::FCMP_ONE)
-            .Case("ord", FCmpInst::FCMP_ORD)
-            .Case("uno", FCmpInst::FCMP_UNO)
-            .Case("ueq", FCmpInst::FCMP_UEQ)
-            .Case("ugt", FCmpInst::FCMP_UGT)
-            .Case("uge", FCmpInst::FCMP_UGE)
-            .Case("ult", FCmpInst::FCMP_ULT)
-            .Case("ule", FCmpInst::FCMP_ULE)
-            .Case("une", FCmpInst::FCMP_UNE)
-            .Default(FCmpInst::BAD_FCMP_PREDICATE);
-    assert(Pred != FCmpInst::BAD_FCMP_PREDICATE &&
-           "invalid predicate in llvm.fcmp");
+    FCmpInst::Predicate Pred = cast<FPCmpIntrinsic>(&I)->getPredicate();
     ISD::CondCode Condition = getFCmpCondCode(Pred);
     EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     setValue(&I, DAG.getSetCC(sdl, DestVT, getValue(I.getArgOperand(0)),
@@ -7198,26 +7179,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Chain = getFPOperationRoot(fp::ebStrict);
     SDValue LHS = getValue(I.getArgOperand(0));
     SDValue RHS = getValue(I.getArgOperand(1));
-    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
-    FCmpInst::Predicate Pred =
-        StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
-            .Case("oeq", FCmpInst::FCMP_OEQ)
-            .Case("ogt", FCmpInst::FCMP_OGT)
-            .Case("oge", FCmpInst::FCMP_OGE)
-            .Case("olt", FCmpInst::FCMP_OLT)
-            .Case("ole", FCmpInst::FCMP_OLE)
-            .Case("one", FCmpInst::FCMP_ONE)
-            .Case("ord", FCmpInst::FCMP_ORD)
-            .Case("uno", FCmpInst::FCMP_UNO)
-            .Case("ueq", FCmpInst::FCMP_UEQ)
-            .Case("ugt", FCmpInst::FCMP_UGT)
-            .Case("uge", FCmpInst::FCMP_UGE)
-            .Case("ult", FCmpInst::FCMP_ULT)
-            .Case("ule", FCmpInst::FCMP_ULE)
-            .Case("une", FCmpInst::FCMP_UNE)
-            .Default(FCmpInst::BAD_FCMP_PREDICATE);
-    assert(Pred != FCmpInst::BAD_FCMP_PREDICATE &&
-           "invalid predicate in llvm.fcmps");
+    FCmpInst::Predicate Pred = cast<FPCmpIntrinsic>(&I)->getPredicate();
     ISD::CondCode Condition = getFCmpCondCode(Pred);
     if (DAG.isKnownNeverNaN(LHS) && DAG.isKnownNeverNaN(RHS))
       Condition = getFCmpCodeWithoutNaN(Condition);
