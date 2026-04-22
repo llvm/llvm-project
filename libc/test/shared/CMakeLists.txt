@@ -279,6 +279,8 @@ add_fp_unittest(
     libc.src.__support.math.ceilf128
     libc.src.__support.math.ceilf16
     libc.src.__support.math.ceill
+    libc.src.__support.math.dmulf128
+    libc.src.__support.math.dmull
     libc.src.__support.math.log
 )
 
