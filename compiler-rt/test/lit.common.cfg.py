@@ -244,7 +244,26 @@ compiler_libdir = find_compiler_libdir()
 if compiler_libdir:
     compiler_rt_libdir_real = os.path.realpath(config.compiler_rt_libdir)
     if compiler_libdir != compiler_rt_libdir_real:
-        if not config.test_standalone_build_libs:
+        lit_config.warning(
+            "Compiler lib dir != compiler-rt lib dir\n"
+            f'Compiler libdir:     "{compiler_libdir}"\n'
+            f'compiler-rt libdir:  "{compiler_rt_libdir_real}"'
+        )
+        if config.test_standalone_build_libs:
+            # Use just built runtime libraries, i.e. the libraries this build just built.
+            if not config.test_suite_supports_overriding_runtime_lib_path:
+                # Test suite doesn't support this configuration.
+                # TODO(dliew): This should be an error but it seems several bots are
+                # testing incorrectly and having this as an error breaks them.
+                lit_config.warning(
+                    "COMPILER_RT_TEST_STANDALONE_BUILD_LIBS=ON, but this test suite "
+                    "does not support testing the just-built runtime libraries "
+                    "when the test compiler is configured to use different runtime "
+                    "libraries. Either modify this test suite to support this test "
+                    "configuration, or set COMPILER_RT_TEST_STANDALONE_BUILD_LIBS=OFF "
+                    "to test the runtime libraries included in the compiler instead."
+                )
+        else:
             # Use Compiler's resource library directory instead.
             config.compiler_rt_libdir = compiler_libdir
         lit_config.note(f'Testing using libraries in "{config.compiler_rt_libdir}"')
