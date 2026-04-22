@@ -52,8 +52,8 @@ public:
 
 private:
   Kind K;
-  const llvm::PointerUnion<const clang::ValueDecl *,
-                           const clang::MaterializeTemporaryExpr *,
+  const llvm::PointerUnion<const clang::MaterializeTemporaryExpr *,
+                           const CXXNewExpr *, const clang::ValueDecl *,
                            const ParmVarDecl *, const CXXMethodDecl *>
       Root;
 
