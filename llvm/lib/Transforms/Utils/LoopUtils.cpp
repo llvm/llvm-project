@@ -1369,9 +1369,9 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
   // for replacing that edge with EntryBB -> LoopBB -> {ExitBB, LoopBB}.
   if (DT)
     DT->applyUpdates({{DominatorTree::Insert, EntryBB, LoopBB},
-                       {DominatorTree::Insert, LoopBB, LoopBB},
-                       {DominatorTree::Insert, LoopBB, ExitBB},
-                       {DominatorTree::Delete, EntryBB, ExitBB}});
+                      {DominatorTree::Insert, LoopBB, LoopBB},
+                      {DominatorTree::Insert, LoopBB, ExitBB},
+                      {DominatorTree::Delete, EntryBB, ExitBB}});
 
   if (LI) {
     Loop *NewLoop = LI->AllocateLoop();
