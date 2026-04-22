@@ -9,6 +9,14 @@
 # CHECK: .data         00000008 0000000000002000 DATA
 # CHECK: .data2        00000008 0000000000003000 DATA
 
+## An empty INCLUDE between two region declarations is accepted.
+# RUN: ld.lld -T empty.lds a.o -o empty
+# RUN: llvm-readelf -Sl empty | FileCheck %s --check-prefix=EMPTY
+# EMPTY:      .text PROGBITS 0000000000001000 {{.*}} AX
+# EMPTY-NEXT: .data PROGBITS 0000000000002000 {{.*}} WA
+# EMPTY:      LOAD {{.*}} 0x0000000000001000 0x0000000000001000 {{.*}} R E
+# EMPTY-NEXT: LOAD {{.*}} 0x0000000000002000 0x0000000000002000 {{.*}} RW
+
 #--- a.s
 .section .text,"ax"
 .global _start
@@ -32,3 +40,17 @@ SECTIONS {
 
 #--- inc.lds
 RAM2 (rwx): ORIGIN = 0x3000, LENGTH = 0x100
+
+#--- empty.lds
+MEMORY {
+  ROM (rx): ORIGIN = 0x1000, LENGTH = 0x100
+  INCLUDE "inc-empty.lds"
+  RAM (rw): ORIGIN = 0x2000, LENGTH = 0x100
+}
+
+SECTIONS {
+  .text : { *(.text*) } > ROM
+  .data : { *(.data*) } > RAM
+}
+
+#--- inc-empty.lds
