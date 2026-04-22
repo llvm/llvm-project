@@ -797,8 +797,6 @@ private:
       unsigned getWait(unsigned Score) const { return UB - Score; }
       // TODO: Make private: we should not provide raw access to the internals.
       unsigned getUB() const { return UB; }
-      // TODO: Make private: we should not provide raw access to the internals.
-      unsigned getLB() const { return LB; }
       /// Merge \p Other into this counter. This sets this counter to the
       /// maximum counter value of this and \p Other.
       /// \returns the pair of score shifts for this and \p Other.
@@ -838,6 +836,8 @@ private:
       bool obsolete(unsigned Score) const { return Score <= LB; }
       /// \returns the offset of \p Score from the bottom of the counter.
       unsigned getOffset(unsigned Score) const { return Score - LB - 1; }
+      /// \returns true if \p Score matches the top of the counter.
+      bool isCurrent(unsigned Score) const { return Score >= UB; }
     };
 
     std::array<Counter, AMDGPU::NUM_INST_CNTS> Counters;
@@ -851,18 +851,8 @@ private:
     const Counter &operator[](unsigned Idx) const { return Counters[Idx]; }
   };
 
-  unsigned getScoreLB(AMDGPU::InstCounterType T) const {
-    assert(T < AMDGPU::NUM_INST_CNTS);
-    return Counters[T].getLB();
-  }
-
-  unsigned getScoreUB(AMDGPU::InstCounterType T) const {
-    assert(T < AMDGPU::NUM_INST_CNTS);
-    return Counters[T].getUB();
-  }
-
   unsigned getScoreRange(AMDGPU::InstCounterType T) const {
-    return getScoreUB(T) - getScoreLB(T);
+    return Counters[T].getCount();
   }
 
   unsigned getSGPRScore(MCRegUnit RU, AMDGPU::InstCounterType T) const {
@@ -1732,8 +1722,7 @@ void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait) {
 }
 
 void WaitcntBrackets::applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count) {
-  const unsigned UB = getScoreUB(T);
-  if (Count >= UB)
+  if (Counters[T].isCurrent(Count))
     return;
   if (Count != 0) {
     if (counterOutOfOrder(T))
