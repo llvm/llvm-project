@@ -1116,12 +1116,18 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto sizeBytes =
       LLVM::PtrToIntOp::create(rewriter, loc, getIndexType(), gepPtr);
 
-  auto src = bitAndAddrspaceCast(loc, rewriter, llvmPointerType,
-                                 srcDesc.alignedPtr(rewriter, loc),
-                                 *getTypeConverter());
+  // Use bufferPtr to fold the descriptor's runtime offset into the base
+  // pointer; otherwise an offset coming from a subview/reinterpret_cast would
+  // be silently dropped by the runtime memcpy.
+  auto dstMemRefType = cast<MemRefType>(memcpyOp.getDst().getType());
+  auto src = bitAndAddrspaceCast(
+      loc, rewriter, llvmPointerType,
+      srcDesc.bufferPtr(rewriter, loc, *getTypeConverter(), memRefType),
+      *getTypeConverter());
   auto dst = bitAndAddrspaceCast(
       loc, rewriter, llvmPointerType,
-      MemRefDescriptor(adaptor.getDst()).alignedPtr(rewriter, loc),
+      MemRefDescriptor(adaptor.getDst())
+          .bufferPtr(rewriter, loc, *getTypeConverter(), dstMemRefType),
       *getTypeConverter());
 
   auto stream = adaptor.getAsyncDependencies().front();
@@ -1160,9 +1166,11 @@ LogicalResult ConvertMemsetOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   auto value =
       LLVM::BitcastOp::create(rewriter, loc, bitCastType, adaptor.getValue());
-  auto dst = bitAndAddrspaceCast(loc, rewriter, llvmPointerType,
-                                 dstDesc.alignedPtr(rewriter, loc),
-                                 *getTypeConverter());
+  // Fold the descriptor's runtime offset into the base pointer.
+  auto dst = bitAndAddrspaceCast(
+      loc, rewriter, llvmPointerType,
+      dstDesc.bufferPtr(rewriter, loc, *getTypeConverter(), memRefType),
+      *getTypeConverter());
 
   auto stream = adaptor.getAsyncDependencies().front();
   FunctionCallBuilder builder =

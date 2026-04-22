@@ -1269,13 +1269,12 @@ void PyUnitAttribute::bindDerived(ClassTy &c) {
 void PyStridedLayoutAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
-      [](int64_t offset, const std::vector<int64_t> &strides,
-         DefaultingPyMlirContext ctx) {
+      [](const std::vector<int64_t> &strides, DefaultingPyMlirContext ctx) {
         MlirAttribute attr = mlirStridedLayoutAttrGet(
-            ctx->get(), offset, strides.size(), strides.data());
+            ctx->get(), strides.size(), strides.data());
         return PyStridedLayoutAttribute(ctx->getRef(), attr);
       },
-      nb::arg("offset"), nb::arg("strides"), nb::arg("context") = nb::none(),
+      nb::arg("strides"), nb::arg("context") = nb::none(),
       "Gets a strided layout attribute.");
   c.def_static(
       "get_fully_dynamic",
@@ -1284,19 +1283,11 @@ void PyStridedLayoutAttribute::bindDerived(ClassTy &c) {
         std::vector<int64_t> strides(rank);
         std::fill(strides.begin(), strides.end(), dynamic);
         MlirAttribute attr = mlirStridedLayoutAttrGet(
-            ctx->get(), dynamic, strides.size(), strides.data());
+            ctx->get(), strides.size(), strides.data());
         return PyStridedLayoutAttribute(ctx->getRef(), attr);
       },
       nb::arg("rank"), nb::arg("context") = nb::none(),
-      "Gets a strided layout attribute with dynamic offset and strides of "
-      "a "
-      "given rank.");
-  c.def_prop_ro(
-      "offset",
-      [](PyStridedLayoutAttribute &self) {
-        return mlirStridedLayoutAttrGetOffset(self);
-      },
-      "Returns the value of the float point attribute");
+      "Gets a strided layout attribute with dynamic strides of a given rank.");
   c.def_prop_ro(
       "strides",
       [](PyStridedLayoutAttribute &self) {

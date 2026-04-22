@@ -1537,8 +1537,7 @@ struct FoldI1Select : public OpRewritePattern<arith::SelectOp> {
 static FailureOr<size_t>
 getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   SmallVector<int64_t> srcStrides;
-  int64_t srcOffset;
-  if (failed(srcType.getStridesAndOffset(srcStrides, srcOffset)))
+  if (failed(srcType.getStrides(srcStrides)))
     return failure();
 
   auto isUnitDim = [](VectorType type, int dim) {

@@ -24,7 +24,7 @@ TEST(InferShapeTest, inferRankReducedShapeIdentity) {
       /*resultShape=*/{2}, sourceMemref, {2, 3}, {1, 2}, {1, 1});
   auto expectedType = MemRefType::get(
       {2}, b.getIndexType(),
-      StridedLayoutAttr::get(&ctx, /*offset=*/13, /*strides=*/{1}));
+      StridedLayoutAttr::get(&ctx, /*strides=*/{1}));
   EXPECT_EQ(reducedType, expectedType);
 }
 
@@ -40,7 +40,7 @@ TEST(InferShapeTest, inferRankReducedShapeNonIdentity) {
       /*resultShape=*/{2}, sourceMemref, {2, 3}, {1, 2}, {1, 1});
   auto expectedType = MemRefType::get(
       {2}, b.getIndexType(),
-      StridedLayoutAttr::get(&ctx, /*offset=*/2003, /*strides=*/{1}));
+      StridedLayoutAttr::get(&ctx, /*strides=*/{1}));
   EXPECT_EQ(reducedType, expectedType);
 }
 
@@ -55,6 +55,6 @@ TEST(InferShapeTest, inferRankReducedShapeToScalar) {
       /*resultShape=*/{}, sourceMemref, {2, 3}, {1, 1}, {1, 1});
   auto expectedType = MemRefType::get(
       {}, b.getIndexType(),
-      StridedLayoutAttr::get(&ctx, /*offset=*/2003, /*strides=*/{}));
+      StridedLayoutAttr::get(&ctx, /*strides=*/{}));
   EXPECT_EQ(reducedType, expectedType);
 }

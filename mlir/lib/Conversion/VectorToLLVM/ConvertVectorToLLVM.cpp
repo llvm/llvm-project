@@ -1385,9 +1385,8 @@ public:
 /// static layout.
 static std::optional<SmallVector<int64_t, 4>>
 computeContiguousStrides(MemRefType memRefType) {
-  int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(memRefType.getStridesAndOffset(strides, offset)))
+  if (failed(memRefType.getStrides(strides)))
     return std::nullopt;
   if (!strides.empty() && strides.back() != 1)
     return std::nullopt;
@@ -1459,10 +1458,12 @@ public:
     Value allocated = sourceMemRef.allocatedPtr(rewriter, loc);
     desc.setAllocatedPtr(rewriter, loc, allocated);
 
-    // Set aligned ptr.
-    Value ptr = sourceMemRef.alignedPtr(rewriter, loc);
+    // Set aligned ptr. Element type changes between source and target, so
+    // bake the source's runtime offset (in source-element units) into the
+    // aligned pointer and leave the target descriptor's offset at 0.
+    Value ptr = sourceMemRef.bufferPtr(rewriter, loc, *getTypeConverter(),
+                                       sourceMemRefType);
     desc.setAlignedPtr(rewriter, loc, ptr);
-    // Fill offset 0.
     auto attr = rewriter.getIntegerAttr(rewriter.getIndexType(), 0);
     auto zero = LLVM::ConstantOp::create(rewriter, loc, int64Ty, attr);
     desc.setOffset(rewriter, loc, zero);

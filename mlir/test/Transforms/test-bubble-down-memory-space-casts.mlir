@@ -66,32 +66,32 @@ func.func @view(%arg0: memref<?xi8, 1>, %arg1: index, %arg2: index) -> memref<?x
 
 // CHECK-LABEL:   func.func @subview(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?x?xf32, 1>,
-// CHECK-SAME:      %[[ARG1:.*]]: index) -> memref<8x2xf32, strided<[?, 2], offset: ?>> {
-// CHECK:           %[[VAL_0:.*]] = memref.subview %[[ARG0]][4, 2] [8, 2] [3, 2] : memref<?x?xf32, 1> to memref<8x2xf32, strided<[?, 2], offset: ?>, 1>
-// CHECK:           %[[VAL_1:.*]] = memref.memory_space_cast %[[VAL_0]] : memref<8x2xf32, strided<[?, 2], offset: ?>, 1> to memref<8x2xf32, strided<[?, 2], offset: ?>>
-// CHECK:           return %[[VAL_1]] : memref<8x2xf32, strided<[?, 2], offset: ?>>
+// CHECK-SAME:      %[[ARG1:.*]]: index) -> memref<8x2xf32, strided<[?, 2]>> {
+// CHECK:           %[[VAL_0:.*]] = memref.subview %[[ARG0]][4, 2] [8, 2] [3, 2] : memref<?x?xf32, 1> to memref<8x2xf32, strided<[?, 2]>, 1>
+// CHECK:           %[[VAL_1:.*]] = memref.memory_space_cast %[[VAL_0]] : memref<8x2xf32, strided<[?, 2]>, 1> to memref<8x2xf32, strided<[?, 2]>>
+// CHECK:           return %[[VAL_1]] : memref<8x2xf32, strided<[?, 2]>>
 // CHECK:         }
-func.func @subview(%arg0: memref<?x?xf32, 1>, %arg1: index) -> memref<8x2xf32, strided<[?, 2], offset: ?>> {
+func.func @subview(%arg0: memref<?x?xf32, 1>, %arg1: index) -> memref<8x2xf32, strided<[?, 2]>> {
   %memspacecast = memref.memory_space_cast %arg0 : memref<?x?xf32, 1> to memref<?x?xf32>
-  %subview = memref.subview %memspacecast[4, 2] [8, 2] [3, 2] : memref<?x?xf32> to memref<8x2xf32, strided<[?, 2], offset: ?>>
-  return %subview : memref<8x2xf32, strided<[?, 2], offset: ?>>
+  %subview = memref.subview %memspacecast[4, 2] [8, 2] [3, 2] : memref<?x?xf32> to memref<8x2xf32, strided<[?, 2]>>
+  return %subview : memref<8x2xf32, strided<[?, 2]>>
 }
 
 // CHECK-LABEL:   func.func @reinterpret_cast(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?xf32, 1>,
-// CHECK-SAME:      %[[ARG1:.*]]: index) -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
+// CHECK-SAME:      %[[ARG1:.*]]: index) -> memref<10x?xf32, strided<[?, 1]>> {
 // CHECK-DAG:       %[[VAL_0:.*]] = arith.constant 10 : index
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_2:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: {{\[}}%[[VAL_1]]], sizes: [10, %[[VAL_0]]], strides: {{\[}}%[[VAL_0]], 1] : memref<?xf32, 1> to memref<10x?xf32, strided<[?, 1], offset: ?>, 1>
-// CHECK:           %[[VAL_3:.*]] = memref.memory_space_cast %[[VAL_2]] : memref<10x?xf32, strided<[?, 1], offset: ?>, 1> to memref<10x?xf32, strided<[?, 1], offset: ?>>
-// CHECK:           return %[[VAL_3]] : memref<10x?xf32, strided<[?, 1], offset: ?>>
+// CHECK:           %[[VAL_2:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: {{\[}}%[[VAL_1]]], sizes: [10, %[[VAL_0]]], strides: {{\[}}%[[VAL_0]], 1] : memref<?xf32, 1> to memref<10x?xf32, strided<[?, 1]>, 1>
+// CHECK:           %[[VAL_3:.*]] = memref.memory_space_cast %[[VAL_2]] : memref<10x?xf32, strided<[?, 1]>, 1> to memref<10x?xf32, strided<[?, 1]>>
+// CHECK:           return %[[VAL_3]] : memref<10x?xf32, strided<[?, 1]>>
 // CHECK:         }
-func.func @reinterpret_cast(%arg0: memref<?xf32, 1>, %arg1: index) -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
+func.func @reinterpret_cast(%arg0: memref<?xf32, 1>, %arg1: index) -> memref<10x?xf32, strided<[?, 1]>> {
   %memspacecast = memref.memory_space_cast %arg0 : memref<?xf32, 1> to memref<?xf32>
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
-  %reinterpret_cast = memref.reinterpret_cast %memspacecast to offset: [%c0], sizes: [10, %c10], strides: [%c10, 1] : memref<?xf32> to memref<10x?xf32, strided<[?, 1], offset: ?>>
-  return %reinterpret_cast : memref<10x?xf32, strided<[?, 1], offset: ?>>
+  %reinterpret_cast = memref.reinterpret_cast %memspacecast to offset: [%c0], sizes: [10, %c10], strides: [%c10, 1] : memref<?xf32> to memref<10x?xf32, strided<[?, 1]>>
+  return %reinterpret_cast : memref<10x?xf32, strided<[?, 1]>>
 }
 
 // CHECK-LABEL:   func.func @reshape(

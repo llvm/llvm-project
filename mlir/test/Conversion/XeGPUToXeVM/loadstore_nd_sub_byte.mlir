@@ -10,11 +10,13 @@ gpu.module @load_store_check {
         // CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
         // CHECK: %[[C128_I32:.*]] = arith.constant 128 : i32
         // CHECK: %[[SRCCE:.*]] = memref.memory_space_cast %[[ARG0]]
-        // CHECK: %[[SRCINDEX:.*]] = memref.extract_aligned_pointer_as_index %[[SRCCE]]
+        // CHECK: %[[SRC_BASE:.*]], %{{.*}}, %{{.*}}:2, %{{.*}}:2 = memref.extract_strided_metadata %[[SRCCE]]
+        // CHECK: %[[SRCINDEX:.*]] = memref.extract_aligned_pointer_as_index %[[SRC_BASE]]
         // CHECK: %[[SRCPTR64:.*]] = arith.index_castui %[[SRCINDEX]] : index to i64
         %srcce = memref.memory_space_cast %src : memref<16x128xi4, 1> to memref<16x128xi4>
         // CHECK: %[[DSTTE:.*]] = memref.memory_space_cast %[[ARG1]]
-        // CHECK: %[[DSTINDEX:.*]] = memref.extract_aligned_pointer_as_index %[[DSTTE]]
+        // CHECK: %[[DST_BASE:.*]], %{{.*}}, %{{.*}}:2, %{{.*}}:2 = memref.extract_strided_metadata %[[DSTTE]]
+        // CHECK: %[[DSTINDEX:.*]] = memref.extract_aligned_pointer_as_index %[[DST_BASE]]
         // CHECK: %[[DSTPTR64:.*]] = arith.index_castui %[[DSTINDEX]] : index to i64
         %dstte = memref.memory_space_cast %dst : memref<16x128xi4, 1> to memref<16x128xi4>
 

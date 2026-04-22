@@ -315,7 +315,7 @@ static Value getBaseMemref(Operation *op) {
 /// vector write stores a full lane pack and a subsequent scalar load reads an
 /// element from that lane pack. EXAMPLE:
 ///  vector.transfer_write %V, %arg[%x, %y, ..., 0] {in_bounds = [true]} :
-///             vector<4xf32>, memref<4xf32, strided<[1], offset: ?>>
+///             vector<4xf32>, memref<4xf32, strided<[1]>>
 ///  scf.for %iter = %c0 to %c4 step %c1 iter_args(...) -> (f32) {
 ///    %0 = memref.load %arg[%x, %y, ..., %iter] : memref<1x128x16x4xf32>
 ///    ...

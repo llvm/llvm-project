@@ -93,8 +93,8 @@ module {
         scf.for %arg15 = %c0 to %c2 step %c1 {
           %38 = arith.muli %arg14, %c64 : index
           %39 = arith.muli %arg15, %c64 : index
-          %subview = memref.subview %view[%arg14, %arg15, 0, 0] [1, 1, 64, 64] [1, 1, 1, 1] : memref<2x2x64x64xf16, #gpu.address_space<workgroup>> to memref<64x64xf16, strided<[64, 1], offset: ?>, #gpu.address_space<workgroup>>
-          %subview_0 = memref.subview %dstMemref[%38, %39] [64, 64] [1, 1] : memref<128x128xf16> to memref<64x64xf16, strided<[128, 1], offset: ?>>
+          %subview = memref.subview %view[%arg14, %arg15, 0, 0] [1, 1, 64, 64] [1, 1, 1, 1] : memref<2x2x64x64xf16, #gpu.address_space<workgroup>> to memref<64x64xf16, strided<[64, 1]>, #gpu.address_space<workgroup>>
+          %subview_0 = memref.subview %dstMemref[%38, %39] [64, 64] [1, 1] : memref<128x128xf16> to memref<64x64xf16, strided<[128, 1]>>
           %block_dim_x = gpu.block_dim x
           %thread_id_y = gpu.thread_id y
           %40 = arith.muli %thread_id_y, %block_dim_x : index
@@ -108,8 +108,8 @@ module {
           scf.if %45 {
             scf.for %arg16 = %c0 to %c64 step %c1 {
               scf.for %arg17 = %c0 to %c64 step %c1 {
-                %46 = memref.load %subview[%arg16, %arg17] : memref<64x64xf16, strided<[64, 1], offset: ?>, #gpu.address_space<workgroup>>
-                memref.store %46, %subview_0[%arg16, %arg17] : memref<64x64xf16, strided<[128, 1], offset: ?>>
+                %46 = memref.load %subview[%arg16, %arg17] : memref<64x64xf16, strided<[64, 1]>, #gpu.address_space<workgroup>>
+                memref.store %46, %subview_0[%arg16, %arg17] : memref<64x64xf16, strided<[128, 1]>>
               }
             }
           }

@@ -694,10 +694,9 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
 
   assert(strides.size() == sizes.size() && sizes.size() == rank);
 
-  int64_t dynamicOffset = ShapedType::kDynamic;
   SmallVector<int64_t> dynamicStrides(rank, ShapedType::kDynamic);
-  auto stridedLayout = StridedLayoutAttr::get(convertedVal.getContext(),
-                                              dynamicOffset, dynamicStrides);
+  auto stridedLayout =
+      StridedLayoutAttr::get(convertedVal.getContext(), dynamicStrides);
 
   SmallVector<int64_t> dynamicShape(rank, ShapedType::kDynamic);
   memRefTy =

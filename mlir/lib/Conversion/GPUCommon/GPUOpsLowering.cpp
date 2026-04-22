@@ -778,15 +778,18 @@ LogicalResult GPUReturnOpLowering::matchAndRewrite(
 
   bool useBarePtrCallConv = getTypeConverter()->getOptions().useBarePtrCallConv;
   if (useBarePtrCallConv) {
-    // For the bare-ptr calling convention, extract the aligned pointer to
-    // be returned from the memref descriptor.
+    // For the bare-ptr calling convention, extract the buffer pointer
+    // (aligned ptr + runtime offset) to be returned from the memref
+    // descriptor; the bare-ptr ABI cannot carry the offset separately.
     for (auto it : llvm::zip(op->getOperands(), adaptor.getOperands())) {
       Type oldTy = std::get<0>(it).getType();
       Value newOperand = std::get<1>(it);
-      if (isa<MemRefType>(oldTy) && getTypeConverter()->canConvertToBarePtr(
-                                        cast<BaseMemRefType>(oldTy))) {
+      if (auto memrefType = dyn_cast<MemRefType>(oldTy);
+          memrefType && getTypeConverter()->canConvertToBarePtr(
+                            cast<BaseMemRefType>(oldTy))) {
         MemRefDescriptor memrefDesc(newOperand);
-        newOperand = memrefDesc.allocatedPtr(rewriter, loc);
+        newOperand = memrefDesc.bufferPtr(rewriter, loc, *getTypeConverter(),
+                                          memrefType);
       } else if (isa<UnrankedMemRefType>(oldTy)) {
         // Unranked memref is not supported in the bare pointer calling
         // convention.

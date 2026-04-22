@@ -124,7 +124,6 @@ gpu.func @load_dynamic_source2(%source: memref<?x8x16xf32>,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8x16xindex>
 // CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>
 // CHECK-SAME:   %[[PASS_THRU:.+]]: vector<8x16xf32>) -> vector<8x16xf32> {
-// CHECK-NOT:    memref.extract_strided_metadata %[[SRC]]
 // CHECK-COUNT2: arith.muli {{.*}} : index
 // CHECK-COUNT2: arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
@@ -158,9 +157,9 @@ gpu.func @gather_from_subview(%source: memref<4096x4096xf16>,
                               %pass_thru: vector<8xf16>) -> vector<8xf16> {
   %subview = memref.subview %source[%memref_off, %memref_off] [256, 256] [1, 1]
       : memref<4096x4096xf16>
-        to memref<256x256xf16, strided<[4096, 1], offset: ?>>
+        to memref<256x256xf16, strided<[4096, 1]>>
   %0 = vector.gather %subview[%off1, %off2][%indices], %mask, %pass_thru
-       : memref<256x256xf16, strided<[4096, 1], offset: ?>>,
+       : memref<256x256xf16, strided<[4096, 1]>>,
          vector<8xindex>, vector<8xi1>, vector<8xf16>
          into vector<8xf16>
   gpu.return %0 : vector<8xf16>
@@ -172,13 +171,13 @@ gpu.func @gather_from_subview(%source: memref<4096x4096xf16>,
 // CHECK-SAME:   %[[MASK:.+]]: vector<8xi1>,
 // CHECK-SAME:   %[[PASS:.+]]: vector<8xf16>) -> vector<8xf16> {
 // CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[MEMREF_OFF]], %[[MEMREF_OFF]]] [256, 256] [1, 1]
-// CHECK:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> memref<f16>, index, index, index, index, index
+// CHECK:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1]>> -> memref<f16>, index, index, index, index, index
 // CHECK:        arith.muli {{.*}}%[[OFF1]]{{.*}} : index
 // CHECK:        arith.addi %[[OFFSET]]{{.*}} : index
 // CHECK:        %[[BASE_OFF:.+]] = arith.addi {{.*}}%[[OFF2]]{{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast %[[BASE_OFF]] : index to vector<8xindex>
 // CHECK:        %[[LIN:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
-// CHECK:        %[[BASE_IDX:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> index
+// CHECK:        %[[BASE_IDX:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1]>> -> index
 // CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE_IDX]] : index to i64
 // CHECK:        %[[VEC:.+]] = xegpu.load %[[BASE_I64]]{{\[}}%[[LIN]]{{\]}}, %[[MASK]]
 // CHECK-SAME:     : i64, vector<8xindex>, vector<8xi1> -> vector<8xf16>
@@ -189,28 +188,28 @@ gpu.func @gather_from_subview(%source: memref<4096x4096xf16>,
 // -----
 gpu.module @xevm_module {
 gpu.func @non_unit_inner_stride_1D(
-    %source: memref<32xf32, strided<[?], offset: ?>>,
+    %source: memref<32xf32, strided<[?]>>,
     %off: index, %indices: vector<8xindex>, %mask: vector<8xi1>,
     %pass_thru: vector<8xf32>) -> vector<8xf32> {
   %0 = vector.gather %source[%off][%indices], %mask, %pass_thru
-       : memref<32xf32, strided<[?], offset: ?>>,
+       : memref<32xf32, strided<[?]>>,
          vector<8xindex>, vector<8xi1>, vector<8xf32>
          into vector<8xf32>
   gpu.return %0 : vector<8xf32>
 }
 // CHECK-LABEL:  @non_unit_inner_stride_1D(
-// CHECK-SAME:   %[[SRC:.+]]: memref<32xf32, strided<[?], offset: ?>>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<32xf32, strided<[?]>>,
 // CHECK-SAME:   %[[OFF1:.+]]: index,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>,
 // CHECK-SAME:   %[[MASK:.+]]: vector<8xi1>, %[[PASS:.+]]: vector<8xf32>) -> vector<8xf32> {
 // CHECK:        %[[BB:.+]], %[[M_OFF:.+]], %[[SZ:.+]], %[[STRIDE:.+]] = memref.extract_strided_metadata %[[SRC]]
 // CHECK:        arith.muli %[[OFF1]], %[[STRIDE]] : index
-// CHECK:        arith.addi {{.*}} : index
+// CHECK:        arith.addi %[[M_OFF]]{{.*}} : index
 // CHECK:        %[[STRD_VEC:.+]] = vector.broadcast %[[STRIDE]] : index to vector<8xindex>
 // CHECK:        %[[STRD_INDICES:.+]] = arith.muli %[[STRD_VEC:.+]], %[[INDICES]] : vector<8xindex>
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[STRD_INDICES]] : vector<8xindex>
-// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<32xf32, strided<[?], offset: ?>> -> index
+// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<32xf32, strided<[?]>> -> index
 // CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE]] : index to i64
 // CHECK:        %[[V:.+]] = xegpu.load %[[BASE_I64]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf32>
 // CHECK:        %[[RES:.+]] = arith.select %[[MASK]], %[[V]], %[[PASS]] : vector<8xi1>, vector<8xf32>
@@ -220,18 +219,18 @@ gpu.func @non_unit_inner_stride_1D(
 // -----
 gpu.module @xevm_module {
 gpu.func @non_unit_inner_stride_3D(
-    %source: memref<4x8x32xf32, strided<[?, 128, 2], offset: ?>>,
+    %source: memref<4x8x32xf32, strided<[?, 128, 2]>>,
     %off0: index, %off1: index, %off2: index,
     %indices: vector<8xindex>, %mask: vector<8xi1>,
     %pass_thru: vector<8xf32>) -> vector<8xf32> {
   %0 = vector.gather %source[%off0, %off1, %off2][%indices], %mask, %pass_thru
-       : memref<4x8x32xf32, strided<[?, 128, 2], offset: ?>>,
+       : memref<4x8x32xf32, strided<[?, 128, 2]>>,
          vector<8xindex>, vector<8xi1>, vector<8xf32>
          into vector<8xf32>
   gpu.return %0 : vector<8xf32>
 }
 // CHECK-LABEL:  @non_unit_inner_stride_3D(
-// CHECK-SAME:   %[[SRC:.+]]: memref<4x8x32xf32, strided<[?, 128, 2], offset: ?>>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<4x8x32xf32, strided<[?, 128, 2]>>,
 // CHECK-SAME:   %[[OFF0:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>, %[[MASK:.+]]: vector<8xi1>,
 // CHECK-SAME:   %[[PASS:.+]]: vector<8xf32>) -> vector<8xf32> {
@@ -243,7 +242,7 @@ gpu.func @non_unit_inner_stride_3D(
 // CHECK:        %[[STRD_INDICES:.+]] = arith.muli {{.*}}%[[INDICES]]{{.*}} : vector<8xindex>
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[STRD_INDICES]] : vector<8xindex>
-// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<4x8x32xf32, strided<[?, 128, 2], offset: ?>> -> index
+// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<4x8x32xf32, strided<[?, 128, 2]>> -> index
 // CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE]] : index to i64
 // CHECK:        %[[V:.+]] = xegpu.load %[[BASE_I64]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf32>
 // CHECK:        %[[RES:.+]] = arith.select %[[MASK]], %[[V]], %[[PASS]] : vector<8xi1>, vector<8xf32>

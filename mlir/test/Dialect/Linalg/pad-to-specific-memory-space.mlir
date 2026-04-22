@@ -4,9 +4,9 @@
 #map = affine_map<()[s0] -> (-s0 + 12, 7)>
 
 // CHECK-LABEL: func @pad_to_memory_space(
-//  CHECK-SAME:     %[[arg0:.*]]: memref<24x12xf32, strided<[?, ?], offset: ?>>,
-//  CHECK-SAME:     %[[arg1:.*]]: memref<12x25xf32, strided<[?, ?], offset: ?>>,
-//  CHECK-SAME:     %[[arg2:.*]]: memref<24x25xf32, strided<[?, ?], offset: ?>>,
+//  CHECK-SAME:     %[[arg0:.*]]: memref<24x12xf32, strided<[?, ?]>>,
+//  CHECK-SAME:     %[[arg1:.*]]: memref<12x25xf32, strided<[?, ?]>>,
+//  CHECK-SAME:     %[[arg2:.*]]: memref<24x25xf32, strided<[?, ?]>>,
 func.func @pad_to_memory_space(%arg0: tensor<24x12xf32>,
                                %arg1: tensor<12x25xf32>,
                                %arg2: tensor<24x25xf32>,
@@ -66,9 +66,9 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<()[s0] -> (-s0 + 12, 7)>
 
 // CHECK-LABEL: func @vectorize_and_bufferize_pad(
-//  CHECK-SAME:     %[[arg0:.*]]: memref<24x12xf32, strided<[?, ?], offset: ?>>,
-//  CHECK-SAME:     %[[arg1:.*]]: memref<12x25xf32, strided<[?, ?], offset: ?>>,
-//  CHECK-SAME:     %[[arg2:.*]]: memref<24x25xf32, strided<[?, ?], offset: ?>>,
+//  CHECK-SAME:     %[[arg0:.*]]: memref<24x12xf32, strided<[?, ?]>>,
+//  CHECK-SAME:     %[[arg1:.*]]: memref<12x25xf32, strided<[?, ?]>>,
+//  CHECK-SAME:     %[[arg2:.*]]: memref<24x25xf32, strided<[?, ?]>>,
 func.func @vectorize_and_bufferize_pad(%arg0: tensor<24x12xf32>,
                                        %arg1: tensor<12x25xf32>,
                                        %arg2: tensor<24x25xf32>,

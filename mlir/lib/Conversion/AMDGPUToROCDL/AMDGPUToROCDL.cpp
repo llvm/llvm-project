@@ -227,16 +227,30 @@ struct FatRawBufferCastLowering
     int64_t elementByteWidth =
         dataLayout.getTypeSizeInBits(memrefType.getElementType()) / 8;
 
-    int64_t unusedOffset = 0;
     SmallVector<int64_t, 5> strideVals;
-    if (failed(memrefType.getStridesAndOffset(strideVals, unusedOffset)))
+    if (failed(memrefType.getStrides(strideVals)))
       return op.emitOpError("Can't lower non-stride-offset memrefs");
 
     Value numRecords = adaptor.getValidBytes();
-    if (!numRecords)
+    if (!numRecords) {
       numRecords =
           getNumRecords(rewriter, loc, memrefType, descriptor, strideVals,
                         elementByteWidth, chipset, adaptor.getBoundsCheck());
+      // When the rsrc base is the raw aligned pointer (i.e. we did not bake
+      // the descriptor offset into the base), the runtime offset is added on
+      // top by the buffer rsrc, so num_records must cover that extra range.
+      if (!adaptor.getResetOffset()) {
+        Value descOffset = descriptor.offset(rewriter, loc);
+        Value descOffsetI64 =
+            convertUnsignedToI64(rewriter, loc, descOffset);
+        Value byteWidthConst =
+            createI64Constant(rewriter, loc, elementByteWidth);
+        Value descOffsetBytes =
+            LLVM::MulOp::create(rewriter, loc, descOffsetI64, byteWidthConst);
+        numRecords =
+            LLVM::AddOp::create(rewriter, loc, numRecords, descOffsetBytes);
+      }
+    }
 
     Value basePointer =
         adaptor.getResetOffset()
@@ -398,9 +412,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     }
 
     // Construct buffer descriptor from memref, attributes
-    int64_t offset = 0;
     SmallVector<int64_t, 5> strides;
-    if (failed(memrefType.getStridesAndOffset(strides, offset)))
+    if (failed(memrefType.getStrides(strides)))
       return gpuOp.emitOpError("Can't lower non-stride-offset memrefs");
 
     MemRefDescriptor memrefDescriptor(memref);

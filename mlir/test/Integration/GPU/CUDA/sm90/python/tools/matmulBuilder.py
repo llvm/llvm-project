@@ -611,7 +611,7 @@ def generate_matmul_ws(
                 rty = ir.MemRefType.get(
                     (BLOCK_M, BLOCK_N),
                     c_elem_ty,
-                    ir.Attribute.parse("strided<[" + str(N) + ", 1], offset: ?>"),
+                    ir.Attribute.parse("strided<[" + str(N) + ", 1]>"),
                 )
                 c_device_per_block = memref.SubViewOp(
                     rty,
@@ -1113,7 +1113,7 @@ def generate_matmul_multistage(
                 rty = ir.MemRefType.get(
                     (BLOCK_M, BLOCK_N),
                     c_elem_ty,
-                    ir.Attribute.parse("strided<[" + str(N) + ", 1], offset: ?>"),
+                    ir.Attribute.parse("strided<[" + str(N) + ", 1]>"),
                 )
                 c_device_per_block = memref.SubViewOp(
                     rty,

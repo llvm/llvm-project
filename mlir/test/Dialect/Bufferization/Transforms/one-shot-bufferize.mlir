@@ -227,7 +227,7 @@ func.func @tensor_copy(%arg0: tensor<5xf32>) -> tensor<5xf32> {
 
 // CHECK-LABEL: func @materialize_in_destination_buffer(
 //  CHECK-SAME:     %[[t:.*]]: tensor<5xf32>, %[[m:.*]]: memref<5xf32>)
-//       CHECK:   %[[b:.*]] = bufferization.to_buffer %[[t]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[b:.*]] = bufferization.to_buffer %[[t]] : tensor<5xf32> to memref<5xf32, strided<[?]>>
 //       CHECK:   memref.copy %[[b]], %[[m]]
 func.func @materialize_in_destination_buffer(%t: tensor<5xf32>, %m: memref<5xf32>) {
   bufferization.materialize_in_destination %t in restrict writable %m

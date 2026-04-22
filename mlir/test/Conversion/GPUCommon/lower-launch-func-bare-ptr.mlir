@@ -18,7 +18,9 @@ module attributes {gpu.container_module} {
   func.func @foo() {
     // CHECK: [[MEMREF:%.*]] = gpu.alloc () : memref<10xf32, 1>
     // CHECK: [[DESCRIPTOR:%.*]] = builtin.unrealized_conversion_cast [[MEMREF]] : memref<10xf32, 1> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: [[PTR:%.*]] = llvm.extractvalue [[DESCRIPTOR]][1] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[ALIGNED:%.*]] = llvm.extractvalue [[DESCRIPTOR]][1] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[OFF:%.*]] = llvm.extractvalue [[DESCRIPTOR]][2] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[PTR:%.*]] = llvm.getelementptr [[ALIGNED]][[[OFF]]] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, f32
     // CHECK: gpu.launch_func  @kernels::@kernel_1 blocks in ({{.*}}) threads in ({{.*}}) : i64
     // CHECK: args(%{{.*}} : f32, [[PTR]] : !llvm.ptr<1>)
     %0 = arith.constant 0. : f32

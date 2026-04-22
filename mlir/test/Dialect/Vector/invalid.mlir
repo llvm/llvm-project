@@ -2084,10 +2084,10 @@ func.func @load_non_pow_of_2_alignment(%memref: memref<4xi32>, %c0: index) {
 
 // -----
 
-func.func @load_non_unit_stride(%src : memref<?xi8, strided<[2], offset: ?>>) {
+func.func @load_non_unit_stride(%src : memref<?xi8, strided<[2]>>) {
   %c0 = arith.constant 0 : index
   // expected-error @+1 {{'vector.load' op most minor memref dim must have unit stride}}
-  %0 = vector.load %src[%c0] : memref<?xi8, strided<[2], offset: ?>>, vector<16xi8>
+  %0 = vector.load %src[%c0] : memref<?xi8, strided<[2]>>, vector<16xi8>
   return
 }
 
@@ -2121,9 +2121,9 @@ func.func @store_non_pow_of_2_alignment(%memref: memref<4xi32>, %val: vector<4xi
 }
 
 // -----
-func.func @store_non_unit_stride(%src : memref<?xi8, strided<[2], offset:?>>,%val : vector<16xi8>, %c0: index) {
+func.func @store_non_unit_stride(%src : memref<?xi8, strided<[2]>>,%val : vector<16xi8>, %c0: index) {
   // expected-error @below {{'vector.store' op most minor memref dim must have unit stride}}
-  vector.store %val, %src[%c0] : memref<?xi8, strided<[2], offset: ?>>, vector<16xi8>
+  vector.store %val, %src[%c0] : memref<?xi8, strided<[2]>>, vector<16xi8>
   return
 }
 

@@ -458,7 +458,7 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:       %[[SMEM_EPI:.*]] = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
 # DUMPIR:       %[[C0_VIEW:.*]] = arith.constant 0 : index
 # DUMPIR:       %[[VIEW_EPI:.*]] = memref.view %[[SMEM_EPI]][%[[C0_VIEW]]][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<128x128xf32, #gpu.address_space<workgroup>>
-# DUMPIR:       %[[SUBVIEW_EPI:.*]] = memref.subview %{{.*}}[%[[DIMX_EPI]], %[[DIMY_EPI]]] [128, 128] [1, 1] : memref<512x256xf32> to memref<128x128xf32, strided<[256, 1], offset: ?>>
+# DUMPIR:       %[[SUBVIEW_EPI:.*]] = memref.subview %{{.*}}[%[[DIMX_EPI]], %[[DIMY_EPI]]] [128, 128] [1, 1] : memref<512x256xf32> to memref<128x128xf32, strided<[256, 1]>>
 # DUMPIR:       nvgpu.warpgroup.mma.store %[[LOOP_RES]]#0, %[[VIEW_EPI]] : <fragmented = vector<128x128xf32>> to memref<128x128xf32, #gpu.address_space<workgroup>>
 # DUMPIR:       gpu.barrier
 # DUMPIR:       %[[C0_STORE:.*]] = arith.constant 0 : index
@@ -466,4 +466,4 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:       %[[C1_STORE:.*]] = arith.constant 1 : index
 # DUMPIR:       scf.for %arg15 = %[[C0_STORE]] to %[[C128_STORE]] step %[[C1_STORE]] {
 # DUMPIR:         %[[VAL_LOAD:.*]] = memref.load %[[VIEW_EPI]][%arg15, %[[TID_X_EPI]]] : memref<128x128xf32, #gpu.address_space<workgroup>>
-# DUMPIR:         memref.store %[[VAL_LOAD]], %[[SUBVIEW_EPI]][%arg15, %[[TID_X_EPI]]] : memref<128x128xf32, strided<[256, 1], offset: ?>>
+# DUMPIR:         memref.store %[[VAL_LOAD]], %[[SUBVIEW_EPI]][%arg15, %[[TID_X_EPI]]] : memref<128x128xf32, strided<[256, 1]>>

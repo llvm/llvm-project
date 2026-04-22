@@ -676,8 +676,7 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
 
         // Currently only handle innermost stride being 1, checking
         SmallVector<int64_t> strides;
-        int64_t offset;
-        if (failed(ty.getStridesAndOffset(strides, offset)))
+        if (failed(ty.getStrides(strides)))
           return nullptr;
         if (!strides.empty() && strides.back() != 1)
           return nullptr;
@@ -690,26 +689,11 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
         if (!newElemTy)
           return nullptr;
 
-        StridedLayoutAttr layoutAttr;
-        // If the offset is 0, we do not need a strided layout as the stride is
-        // 1, so we only use the strided layout if the offset is not 0.
-        if (offset != 0) {
-          if (offset == ShapedType::kDynamic) {
-            layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                                ArrayRef<int64_t>{1});
-          } else {
-            // Check if the number of bytes are a multiple of the loadStoreWidth
-            // and if so, divide it by the loadStoreWidth to get the offset.
-            if ((offset * width) % loadStoreWidth != 0)
-              return std::nullopt;
-            offset = (offset * width) / loadStoreWidth;
-
-            layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                                ArrayRef<int64_t>{1});
-          }
-        }
-
+        // The strided layout no longer carries offset information; runtime
+        // offsets live on the producing op. The linearized memref keeps its
+        // identity layout.
         return MemRefType::get(getLinearizedShape(ty, width, loadStoreWidth),
-                               newElemTy, layoutAttr, ty.getMemorySpace());
+                               newElemTy, MemRefLayoutAttrInterface(),
+                               ty.getMemorySpace());
       });
 }

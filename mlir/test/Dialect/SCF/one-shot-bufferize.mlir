@@ -9,8 +9,8 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
 
 // CHECK-LABEL: func private @scf_for_yield_only(
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
-//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>,
+//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>
 //  CHECK-SAME:   ) -> memref<?xf32> {
 func.func private @scf_for_yield_only(
     %A : tensor<?xf32> {bufferization.writable = false},
@@ -39,7 +39,7 @@ func.func private @scf_for_yield_only(
 // -----
 
 // CHECK-LABEL: func @scf_for_is_reading(
-//  CHECK-SAME:     %[[A:.*]]: memref<?xf32, strided<[?], offset: ?>>, %[[B:.*]]: memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:     %[[A:.*]]: memref<?xf32, strided<[?]>>, %[[B:.*]]: memref<?xf32, strided<[?]>>
 func.func @scf_for_is_reading(%A : tensor<?xf32>, %B : tensor<?xf32>,
                               %lb : index, %ub : index)
   -> (f32, f32)
@@ -86,9 +86,9 @@ func.func @nested_scf_for(%A : tensor<?xf32> {bufferization.writable = true},
 // -----
 
 // CHECK-LABEL: func private @scf_for_with_tensor.insert_slice
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
-//  CHECK-SAME:   %[[B:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
-//  CHECK-SAME:   %[[C:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>
+//  CHECK-SAME:   %[[B:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?]>>
+//  CHECK-SAME:   %[[C:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?]>>
 func.func private @scf_for_with_tensor.insert_slice(
     %A : tensor<?xf32> {bufferization.writable = false},
     %B : tensor<?xf32> {bufferization.writable = true},
@@ -575,7 +575,7 @@ func.func @matmul(%arg0: tensor<8x8xf32>, %arg1: tensor<8x8xf32>, %arg2: tensor<
     %6 = tensor.extract_slice %arg1[0, %4] [8, 4] [1, 1] : tensor<8x8xf32> to tensor<8x4xf32>
     %7 = tensor.extract_slice %o[%1, %4] [4, 4] [1, 1] : tensor<8x8xf32> to tensor<4x4xf32>
 
-    //      CHECK: linalg.matmul ins({{.*}}memref<4x8xf32, strided<[?, ?], offset: ?>>, memref<8x4xf32, strided<[?, ?], offset: ?>>) outs({{.*}} : memref<4x4xf32, strided<[?, ?], offset: ?>>)
+    //      CHECK: linalg.matmul ins({{.*}}memref<4x8xf32, strided<[?, ?]>>, memref<8x4xf32, strided<[?, ?]>>) outs({{.*}} : memref<4x4xf32, strided<[?, ?]>>)
     %8 = linalg.matmul ins(%3, %6 : tensor<4x8xf32>, tensor<8x4xf32>) outs(%7 : tensor<4x4xf32>) -> tensor<4x4xf32>
     scf.forall.in_parallel {
       tensor.parallel_insert_slice %8 into %o[%1, %4] [4, 4] [1, 1] : tensor<4x4xf32> into tensor<8x8xf32>
@@ -927,21 +927,21 @@ func.func @index_switch(%pred: index, %b: tensor<5xf32>, %c: tensor<5xf32>) -> t
   // CHECK: %[[a:.*]] = memref.alloc() {{.*}} : memref<5xf32>
   %a = bufferization.alloc_tensor() : tensor<5xf32>
 
-  // CHECK: %[[r:.*]] = scf.index_switch %[[pred]] -> memref<5xf32, strided<[?], offset: ?>>
+  // CHECK: %[[r:.*]] = scf.index_switch %[[pred]] -> memref<5xf32, strided<[?]>>
   %0 = scf.index_switch %pred -> tensor<5xf32>
   // CHECK: case 2 {
-  // CHECK:   %[[cast:.*]] = memref.cast %[[a]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
+  // CHECK:   %[[cast:.*]] = memref.cast %[[a]] : memref<5xf32> to memref<5xf32, strided<[?]>>
   // CHECK:   scf.yield %[[cast]]
   case 2 {
     scf.yield %a: tensor<5xf32>
   }
   // CHECK: case 5 {
-  // CHECK:   scf.yield %[[b]] : memref<5xf32, strided<[?], offset: ?>>
+  // CHECK:   scf.yield %[[b]] : memref<5xf32, strided<[?]>>
   case 5 {
     scf.yield %b: tensor<5xf32>
   }
   // CHECK: default {
-  // CHECK:   scf.yield %[[c]] : memref<5xf32, strided<[?], offset: ?>>
+  // CHECK:   scf.yield %[[c]] : memref<5xf32, strided<[?]>>
   default {
     scf.yield %c: tensor<5xf32>
   }

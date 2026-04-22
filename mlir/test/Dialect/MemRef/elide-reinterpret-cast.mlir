@@ -35,7 +35,7 @@ func.func private @concat_nonzero_offset(%src : memref<1x1xf32>,
   %reinterpret_cast = memref.reinterpret_cast %dst
     to offset: [1], sizes: [1, 1], strides: [1, 1]
     : memref<1x108xf32>
-      to memref<1x1xf32, strided<[1, 1], offset: 1>>
+      to memref<1x1xf32, strided<[1, 1]>>
 
   // CHECK-NOT:  memref.copy
   // CHECK:      %[[C0:.*]] = arith.constant 0 : index
@@ -44,7 +44,7 @@ func.func private @concat_nonzero_offset(%src : memref<1x1xf32>,
   // CHECK:      memref.store %[[VAL]], %[[DST]][%[[C0]], %[[C1]]] : memref<1x108xf32>
   memref.copy %src, %reinterpret_cast
     : memref<1x1xf32>
-      to memref<1x1xf32, strided<[1, 1], offset: 1>>
+      to memref<1x1xf32, strided<[1, 1]>>
   return
 }
 
@@ -58,7 +58,7 @@ func.func private @concat_dynamic_offset(%offset: index, %src : memref<1x1xf32>,
   %reinterpret_cast = memref.reinterpret_cast %dst
     to offset: [%offset], sizes: [1, 1], strides: [1, 1]
     : memref<1x108xf32>
-      to memref<1x1xf32, strided<[1, 1], offset: ?>>
+      to memref<1x1xf32, strided<[1, 1]>>
 
   // CHECK-NOT:  memref.copy
   // CHECK:      %[[C0:.*]] = arith.constant 0 : index
@@ -68,7 +68,7 @@ func.func private @concat_dynamic_offset(%offset: index, %src : memref<1x1xf32>,
   // CHECK:      memref.store %[[VAL]], %[[DST]][%[[C0]], %[[OFF]]] : memref<1x108xf32>
   memref.copy %src, %reinterpret_cast
     : memref<1x1xf32>
-      to memref<1x1xf32, strided<[1, 1], offset: ?>>
+      to memref<1x1xf32, strided<[1, 1]>>
   return
 }
 
@@ -167,13 +167,13 @@ func.func private @negative_concat_strided_base(%src: memref<1x1xf32>,
   %reinterpret_cast = memref.reinterpret_cast %dst
     to offset: [6], sizes: [1, 1], strides: [11, 80]
     : memref<8x1xf32, strided<[10, 2]>>
-      to memref<1x1xf32, strided<[11, 80], offset: 6>>
+      to memref<1x1xf32, strided<[11, 80]>>
 
   // CHECK:      memref.copy %arg0, %reinterpret_cast
   // CHECK-NOT:  memref.load
   // CHECK-NOT:  memref.store
   memref.copy %src, %reinterpret_cast
-    : memref<1x1xf32> to memref<1x1xf32, strided<[11, 80], offset: 6>>
+    : memref<1x1xf32> to memref<1x1xf32, strided<[11, 80]>>
 
   return
 }

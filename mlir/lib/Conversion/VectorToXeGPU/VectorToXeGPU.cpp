@@ -84,8 +84,7 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
 
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
+  if (failed(srcTy.getStrides(strides)) || strides.back() != 1)
     return rewriter.notifyMatchFailure(
         xferOp, "Buffer must be contiguous in the innermost dimension");
 
@@ -115,16 +114,12 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
                                                 TypedValue<MemRefType> src) {
   MemRefType srcTy = src.getType();
   assert(srcTy.isStrided() && "Expected strided memref type");
-  auto [strides, offset] = srcTy.getStridesAndOffset();
-  bool isStatic = true;
-
-  // Memref is dynamic if any of its shape, offset or strides is dynamic.
-  if (!srcTy.hasStaticShape())
-    isStatic = false;
-
-  if (!ShapedType::isStatic(offset))
-    isStatic = false;
-
+  auto strides = srcTy.getStrides();
+  // Pass the memref directly only when shape and strides are static and the
+  // layout is identity. The type no longer pins a static offset, so any
+  // explicit strided layout may carry a runtime offset that has to be
+  // materialized through extract_strided_metadata.
+  bool isStatic = srcTy.hasStaticShape() && srcTy.getLayout().isIdentity();
   for (auto stride : strides) {
     if (!ShapedType::isStatic(stride)) {
       isStatic = false;
@@ -201,11 +196,12 @@ computeMemrefMeta(OpType xferOp, PatternRewriter &rewriter) {
   MemRefType memrefType = dyn_cast<MemRefType>(baseMemref.getType());
 
   Location loc = xferOp.getLoc();
+  // Offset is no longer carried by the type; the runtime offset comes from
+  // memref.extract_strided_metadata below.
   Value offsetVal = nullptr;
   if (memrefType.hasStaticShape()) {
-    int64_t offset;
     SmallVector<int64_t> intStrides;
-    if (failed(memrefType.getStridesAndOffset(intStrides, offset)))
+    if (failed(memrefType.getStrides(intStrides)))
       return {{}, offsetVal};
     bool hasDynamicStrides = llvm::any_of(intStrides, [](int64_t strideVal) {
       return ShapedType::isDynamic(strideVal);
@@ -214,9 +210,6 @@ computeMemrefMeta(OpType xferOp, PatternRewriter &rewriter) {
     if (!hasDynamicStrides)
       for (int64_t s : intStrides)
         strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, s));
-
-    if (!ShapedType::isDynamic(offset))
-      offsetVal = arith::ConstantIndexOp::create(rewriter, loc, offset);
   }
 
   if (strides.empty() || !offsetVal) {

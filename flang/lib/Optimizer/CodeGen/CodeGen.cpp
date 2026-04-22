@@ -945,9 +945,9 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       mlir::Value basePtr = adaptor.getValue();
       assert(basePtr && "null base pointer");
 
-      auto [strides, offset] = memRefTy.getStridesAndOffset();
+      // Offset is no longer carried by MemRefType; only strides matter here.
+      llvm::SmallVector<int64_t> strides = memRefTy.getStrides();
       bool hasStaticLayout =
-          mlir::ShapedType::isStatic(offset) &&
           llvm::none_of(strides, mlir::ShapedType::isDynamic);
 
       auto *firConv =

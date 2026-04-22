@@ -173,7 +173,9 @@ func.func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
 func.func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
 //   CHECK-DAG:  %[[I:.*]] = builtin.unrealized_conversion_cast %[[Iarg]]
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
-//       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//       CHECK:  %[[aligned:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//  CHECK-NEXT:  %[[descOff:.*]] = llvm.extractvalue %[[ld]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//  CHECK-NEXT:  %[[ptr:.*]] = llvm.getelementptr %[[aligned]][%[[descOff]]]
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
 //  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
@@ -190,7 +192,9 @@ func.func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
 func.func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
 //   CHECK-DAG:  %[[I:.*]] = builtin.unrealized_conversion_cast %[[Iarg]]
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
-//       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//       CHECK:  %[[aligned:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//  CHECK-NEXT:  %[[descOff:.*]] = llvm.extractvalue %[[ld]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//  CHECK-NEXT:  %[[ptr:.*]] = llvm.getelementptr %[[aligned]][%[[descOff]]]
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
 //  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
@@ -207,7 +211,9 @@ func.func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
 func.func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
 //      CHECK-DAG:  %[[I:.*]] = builtin.unrealized_conversion_cast %[[Iarg]]
 //      CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
-//      CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//      CHECK:  %[[aligned:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-NEXT:  %[[descOff:.*]] = llvm.extractvalue %[[ld]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-NEXT:  %[[ptr:.*]] = llvm.getelementptr %[[aligned]][%[[descOff]]]
 // CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
 // CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
@@ -228,7 +234,9 @@ func.func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
 func.func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %val : f32) {
 //   CHECK-DAG:  %[[I:.*]] = builtin.unrealized_conversion_cast %[[Iarg]]
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
-//       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//       CHECK:  %[[aligned:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//  CHECK-NEXT:  %[[descOff:.*]] = llvm.extractvalue %[[ld]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//  CHECK-NEXT:  %[[ptr:.*]] = llvm.getelementptr %[[aligned]][%[[descOff]]]
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
 //  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
@@ -245,7 +253,9 @@ func.func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %va
 func.func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val : f32) {
 //   CHECK-DAG:  %[[I:.*]] = builtin.unrealized_conversion_cast %[[Iarg]]
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
-//       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//       CHECK:  %[[aligned:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//  CHECK-NEXT:  %[[descOff:.*]] = llvm.extractvalue %[[ld]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+//  CHECK-NEXT:  %[[ptr:.*]] = llvm.getelementptr %[[aligned]][%[[descOff]]]
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
 //  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
@@ -478,7 +488,7 @@ func.func @memref_reinterpret_cast_unranked_to_dynamic_shape(%offset: index,
   %output = memref.reinterpret_cast %input to
            offset: [%offset], sizes: [%size_0, %size_1],
            strides: [%stride_0, %stride_1]
-           : memref<*xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+           : memref<*xf32> to memref<?x?xf32, strided<[?, ?]>>
   return
 }
 // CHECK-SAME: ([[OFFSETarg:%[a-z,0-9]+]]: index,
@@ -542,7 +552,9 @@ func.func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
 // Iterate over shape operand in reverse order and set sizes and strides.
 // CHECK: [[SIZES_PTR:%.*]] = llvm.getelementptr [[UNDERLYING_DESC]]{{\[}}0, 3]
 // CHECK: [[STRIDES_PTR:%.*]] = llvm.getelementptr [[SIZES_PTR]]{{\[}}[[RANK]]]
-// CHECK: [[SHAPE_IN_PTR:%.*]] = llvm.extractvalue [[SHAPE]][1] : [[SHAPE_TY]]
+// CHECK: [[SHAPE_ALIGNED:%.*]] = llvm.extractvalue [[SHAPE]][1] : [[SHAPE_TY]]
+// CHECK: [[SHAPE_OFF:%.*]] = llvm.extractvalue [[SHAPE]][2] : [[SHAPE_TY]]
+// CHECK: [[SHAPE_IN_PTR:%.*]] = llvm.getelementptr [[SHAPE_ALIGNED]][[[SHAPE_OFF]]]
 // CHECK: [[C1_:%.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK: [[RANK_MIN_1:%.*]] = llvm.sub [[RANK]], [[C1_]] : i64
 // CHECK: llvm.br ^bb1([[RANK_MIN_1]], [[C1_]] : i64, i64)

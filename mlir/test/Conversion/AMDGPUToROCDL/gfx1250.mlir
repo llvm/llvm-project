@@ -193,8 +193,12 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu.address_space<glo
   // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32) : i32
   // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32) : i32
 
-  // CHECK-DAG: %[[MEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_MEM]][1] : !llvm.struct<(ptr<1>
-  // CHECK-DAG: %[[SMEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_SMEM]][1] : !llvm.struct<(ptr<3>
+  // CHECK-DAG: %[[MEM_ALIGNED:.+]] = llvm.extractvalue %[[MEMREF_DESC_MEM]][1] : !llvm.struct<(ptr<1>
+  // CHECK-DAG: %[[MEM_DESC_OFF:.+]] = llvm.extractvalue %[[MEMREF_DESC_MEM]][2] : !llvm.struct<(ptr<1>
+  // CHECK-DAG: %[[MEM_BASE_PTR:.+]] = llvm.getelementptr %[[MEM_ALIGNED]][%[[MEM_DESC_OFF]]]
+  // CHECK-DAG: %[[SMEM_ALIGNED:.+]] = llvm.extractvalue %[[MEMREF_DESC_SMEM]][1] : !llvm.struct<(ptr<3>
+  // CHECK-DAG: %[[SMEM_DESC_OFF:.+]] = llvm.extractvalue %[[MEMREF_DESC_SMEM]][2] : !llvm.struct<(ptr<3>
+  // CHECK-DAG: %[[SMEM_BASE_PTR:.+]] = llvm.getelementptr %[[SMEM_ALIGNED]][%[[SMEM_DESC_OFF]]]
 
   // CHECK-DAG: %[[MEM_BASE_OFFSET:.+]] = llvm.getelementptr %[[MEM_BASE_PTR]][%[[INT]]]
   // CHECK-DAG: %[[SMEM_BASE_OFFSET:.+]] = llvm.getelementptr %[[SMEM_BASE_PTR]][%[[INT]]]
@@ -362,7 +366,9 @@ func.func @make_dma_descriptor_atomic_barrier(%base: !amdgpu.tdm_base<i32>, %bar
   // CHECK: %[[ATOMIC_BARRIER_ENABLE_FIELD:.+]] = llvm.shl %[[C1]], %[[ATOMIC_BARRIER_ENABLE_OFFSET]]
   // CHECK: %[[SGPR0:.+]] = llvm.or disjoint %[[SGPR0_0]], %[[ATOMIC_BARRIER_ENABLE_FIELD]]
 
-  // CHECK: %[[ATOMIC_BARRIER_ALIGNED_PTR:.+]] = llvm.extractvalue %[[BARRIER_MEMREF_DESC]][1]
+  // CHECK: %[[ATOMIC_BARRIER_ALIGNED_RAW:.+]] = llvm.extractvalue %[[BARRIER_MEMREF_DESC]][1]
+  // CHECK: %[[ATOMIC_BARRIER_DESC_OFF:.+]] = llvm.extractvalue %[[BARRIER_MEMREF_DESC]][2]
+  // CHECK: %[[ATOMIC_BARRIER_ALIGNED_PTR:.+]] = llvm.getelementptr %[[ATOMIC_BARRIER_ALIGNED_RAW]][%[[ATOMIC_BARRIER_DESC_OFF]]]
   // CHECK: %[[ATOMIC_BARRIER_ADDR:.+]] = llvm.getelementptr %[[ATOMIC_BARRIER_ALIGNED_PTR]][%[[INDEX]]
   // CHECK: %[[ATOMIC_BARRIER_I32:.+]] = llvm.ptrtoint %[[ATOMIC_BARRIER_ADDR]] : !llvm.ptr<3> to i32
   // CHECK: %[[ATOMIC_BARRIER_NO_3_LSB:.+]] = llvm.lshr %[[ATOMIC_BARRIER_I32]], %[[C3]]
@@ -854,7 +860,9 @@ func.func @make_gather_dma_descriptor(%base: !amdgpu.tdm_gather_base<i32, i16>, 
 // CHECK-LABEL: func @ds_barrier_init
 func.func @ds_barrier_init(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, %participants: i32) {
   // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast %arg0
-  // CHECK: [[PTR:%.*]] = llvm.extractvalue [[CAST]][1]
+  // CHECK: [[ALIGNED:%.*]] = llvm.extractvalue [[CAST]][1]
+  // CHECK: [[DESCOFF:%.*]] = llvm.extractvalue [[CAST]][2]
+  // CHECK: [[PTR:%.*]] = llvm.getelementptr [[ALIGNED]][[[DESCOFF]]]
   // CHECK: [[C1:%.*]] = llvm.mlir.constant(1 : i32)
   // CHECK: [[SUB:%.*]] = llvm.sub %arg1, [[C1]]
   // CHECK: [[MASK:%.*]] = llvm.mlir.constant(536870911 : i32)
@@ -871,7 +879,9 @@ func.func @ds_barrier_init(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.addre
 // CHECK-LABEL: func @ds_barrier_poll_state
 func.func @ds_barrier_poll_state(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>) -> !amdgpu.ds_barrier_state {
   // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast %arg0
-  // CHECK: [[PTR:%.*]] = llvm.extractvalue [[CAST]][1]
+  // CHECK: [[ALIGNED:%.*]] = llvm.extractvalue [[CAST]][1]
+  // CHECK: [[DESCOFF:%.*]] = llvm.extractvalue [[CAST]][2]
+  // CHECK: [[PTR:%.*]] = llvm.getelementptr [[ALIGNED]][[[DESCOFF]]]
   // CHECK: [[LOADED:%.*]] = llvm.load [[PTR]] atomic syncscope("workgroup") acquire
   // CHECK: builtin.unrealized_conversion_cast [[LOADED]]
   %state = amdgpu.ds_barrier_poll_state %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>> -> !amdgpu.ds_barrier_state
@@ -881,7 +891,9 @@ func.func @ds_barrier_poll_state(%barrier: memref<!amdgpu.ds_barrier_state, #gpu
 // CHECK-LABEL: func @ds_async_barrier_arrive
 func.func @ds_async_barrier_arrive(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>) {
   // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast %arg0
-  // CHECK: [[PTR:%.*]] = llvm.extractvalue [[CAST]][1]
+  // CHECK: [[ALIGNED:%.*]] = llvm.extractvalue [[CAST]][1]
+  // CHECK: [[DESCOFF:%.*]] = llvm.extractvalue [[CAST]][2]
+  // CHECK: [[PTR:%.*]] = llvm.getelementptr [[ALIGNED]][[[DESCOFF]]]
   // CHECK: rocdl.ds.atomic.async.barrier.arrive.b64 [[PTR]] : !llvm.ptr<3>
   amdgpu.ds_async_barrier_arrive %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>
   func.return
@@ -890,7 +902,9 @@ func.func @ds_async_barrier_arrive(%barrier: memref<!amdgpu.ds_barrier_state, #g
 // CHECK-LABEL: func @ds_barrier_arrive
 func.func @ds_barrier_arrive(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, %count: i64) -> !amdgpu.ds_barrier_state {
   // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast %arg0
-  // CHECK: [[PTR:%.*]] = llvm.extractvalue [[CAST]][1]
+  // CHECK: [[ALIGNED:%.*]] = llvm.extractvalue [[CAST]][1]
+  // CHECK: [[DESCOFF:%.*]] = llvm.extractvalue [[CAST]][2]
+  // CHECK: [[PTR:%.*]] = llvm.getelementptr [[ALIGNED]][[[DESCOFF]]]
   // CHECK: [[OLD:%.*]] = rocdl.ds.atomic.barrier.arrive.rtn.b64 [[PTR]], %arg1 : !llvm.ptr<3>, i64 -> i64
   // CHECK: builtin.unrealized_conversion_cast [[OLD]]
   %old_state = amdgpu.ds_barrier_arrive %barrier[], %count : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i64 -> !amdgpu.ds_barrier_state

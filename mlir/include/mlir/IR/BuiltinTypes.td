@@ -802,18 +802,17 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     even elements of the dense consecutive storage along the innermost
     dimension.
 
-    The strided layout supports an optional _offset_ that indicates the
-    distance, in the number of elements, between the beginning of the memref
-    and the first accessed element. When omitted, the offset is considered to
-    be zero. That is, `memref<2, strided<[2], offset: 0>>` and
-    `memref<2, strided<[2]>>` are strictly the same type.
+    The strided layout does not carry an offset. The offset between the
+    base pointer of the underlying buffer and the first accessed element is
+    a runtime concept exposed by ops such as `memref.subview`,
+    `memref.reinterpret_cast`, and `memref.extract_strided_metadata`.
 
-    Both offsets and strides may be _dynamic_, that is, unknown at compile time.
-    This is represented by using a question mark (`?`) instead of the value in
-    the textual form of the IR.
+    Strides may be _dynamic_, that is, unknown at compile time. This is
+    represented by using a question mark (`?`) instead of the value in the
+    textual form of the IR.
 
     The strided layout converts into the following canonical one-dimensional
-    affine form through explicit linearization:
+    affine form through explicit linearization, with a symbolic offset:
 
     ```mlir
     affine_map<(d0, ... dN)[offset, stride0, ... strideN] ->
@@ -1027,12 +1026,11 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     /// static or dynamic (encoded with ShapedType::kDynamic). Strides encode
     /// the distance in the number of elements between successive entries along
     /// a particular dimension.
-    LogicalResult getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
-                                      int64_t &offset) const;
+    LogicalResult getStrides(SmallVectorImpl<int64_t> &strides) const;
 
-    /// Wrapper around getStridesAndOffset(SmallVectorImpl<int64_t>, int64_t)
-    /// that will assert if the logical result is not succeeded.
-    std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset() const;
+    /// Wrapper around getStrides(SmallVectorImpl<int64_t>) that will assert if
+    /// the logical result is not succeeded.
+    SmallVector<int64_t> getStrides() const;
 
     /// Return "true" if the layout is compatible with strided semantics.
     bool isStrided();

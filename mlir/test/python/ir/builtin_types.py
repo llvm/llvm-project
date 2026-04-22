@@ -953,8 +953,8 @@ def testCustomTypeTypeCaster():
 # CHECK-LABEL: TEST: testTypeWrappers
 @run
 def testTypeWrappers():
-    def stride(strides, offset=0):
-        return StridedLayoutAttr.get(offset, strides)
+    def stride(strides):
+        return StridedLayoutAttr.get(strides)
 
     with Context(), Location.unknown():
         ia = T.i(5)
@@ -986,12 +986,6 @@ def testTypeWrappers():
 
         m3 = T.memref(2, 3, 4, T.f64(), memory_space=1, layout=stride([5, 7, 13]))
         assert repr(m3) == "MemRefType(memref<2x3x4xf64, strided<[5, 7, 13]>, 1>)"
-
-        m4 = T.memref(2, 3, 4, T.f64(), memory_space=1, layout=stride([5, 7, 13], 42))
-        assert (
-            repr(m4)
-            == "MemRefType(memref<2x3x4xf64, strided<[5, 7, 13], offset: 42>, 1>)"
-        )
 
         S = ShapedType.get_dynamic_size()
 

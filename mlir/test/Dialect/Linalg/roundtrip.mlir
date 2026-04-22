@@ -26,65 +26,65 @@ func.func @views(%arg0: index) {
 
 // -----
 
-func.func @ops(%arg0: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-          %arg1: memref<?xf32, strided<[1], offset: ?>>,
-          %arg2: memref<?xf32, strided<[1], offset: ?>>,
+func.func @ops(%arg0: memref<?x?xf32, strided<[?, 1]>>,
+          %arg1: memref<?xf32, strided<[1]>>,
+          %arg2: memref<?xf32, strided<[1]>>,
           %arg3: memref<f32>) {
-  linalg.matmul ins(%arg0, %arg0 : memref<?x?xf32, strided<[?, 1], offset: ?>>,
-                                   memref<?x?xf32, strided<[?, 1], offset: ?>>)
-               outs(%arg0 : memref<?x?xf32, strided<[?, 1], offset: ?>>)
-  linalg.matvec ins(%arg0, %arg1: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-                                  memref<?xf32, strided<[1], offset: ?>>)
-               outs(%arg2: memref<?xf32, strided<[1], offset: ?>>)
-  linalg.dot ins(%arg1, %arg2: memref<?xf32, strided<[1], offset: ?>>,
-                               memref<?xf32, strided<[1], offset: ?>>)
+  linalg.matmul ins(%arg0, %arg0 : memref<?x?xf32, strided<[?, 1]>>,
+                                   memref<?x?xf32, strided<[?, 1]>>)
+               outs(%arg0 : memref<?x?xf32, strided<[?, 1]>>)
+  linalg.matvec ins(%arg0, %arg1: memref<?x?xf32, strided<[?, 1]>>,
+                                  memref<?xf32, strided<[1]>>)
+               outs(%arg2: memref<?xf32, strided<[1]>>)
+  linalg.dot ins(%arg1, %arg2: memref<?xf32, strided<[1]>>,
+                               memref<?xf32, strided<[1]>>)
             outs(%arg3: memref<f32>)
   return
 }
 // CHECK-LABEL: func @ops(%
 // CHECK: linalg.matmul
-// CHECK-SAME:   ins(%{{.*}}, %{{.*}} : memref<?x?xf32, strided<[?, 1], offset: ?>>,
-// CHECK-SAME:                          memref<?x?xf32, strided<[?, 1], offset: ?>>)
-// CHECK-SAME:  outs(%{{.*}} : memref<?x?xf32, strided<[?, 1], offset: ?>>)
+// CHECK-SAME:   ins(%{{.*}}, %{{.*}} : memref<?x?xf32, strided<[?, 1]>>,
+// CHECK-SAME:                          memref<?x?xf32, strided<[?, 1]>>)
+// CHECK-SAME:  outs(%{{.*}} : memref<?x?xf32, strided<[?, 1]>>)
 // CHECK: linalg.matvec
-// CHECK-SAME:   ins(%{{.*}}, %{{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-// CHECK-SAME:                         memref<?xf32, strided<[1], offset: ?>>)
-// CHECK-SAME:  outs(%{{.*}}: memref<?xf32, strided<[1], offset: ?>>)
+// CHECK-SAME:   ins(%{{.*}}, %{{.*}}: memref<?x?xf32, strided<[?, 1]>>,
+// CHECK-SAME:                         memref<?xf32, strided<[1]>>)
+// CHECK-SAME:  outs(%{{.*}}: memref<?xf32, strided<[1]>>)
 // CHECK: linalg.dot
-// CHECK-SAME:   ins(%{{.*}}, %{{.*}}: memref<?xf32, strided<[1], offset: ?>>,
-// CHECK-SAME:                         memref<?xf32, strided<[1], offset: ?>>)
+// CHECK-SAME:   ins(%{{.*}}, %{{.*}}: memref<?xf32, strided<[1]>>,
+// CHECK-SAME:                         memref<?xf32, strided<[1]>>)
 // CHECK-SAME:  outs(%{{.*}}: memref<f32>)
 
 // -----
 
-func.func @fill_view(%arg0: memref<?xf32, strided<[1], offset: ?>>, %arg1: f32) {
-  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?xf32, strided<[1], offset: ?>>)
+func.func @fill_view(%arg0: memref<?xf32, strided<[1]>>, %arg1: f32) {
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?xf32, strided<[1]>>)
   return
 }
 // CHECK-LABEL: func @fill_view(
-//       CHECK:  %{{.*}}: memref<?xf32, strided<[1], offset: ?>>, %{{.*}}: f32) {
-//       CHECK:   linalg.fill ins(%{{.*}} : f32) outs(%{{.*}} : memref<?xf32, strided<[1], offset: ?>>)
+//       CHECK:  %{{.*}}: memref<?xf32, strided<[1]>>, %{{.*}}: f32) {
+//       CHECK:   linalg.fill ins(%{{.*}} : f32) outs(%{{.*}} : memref<?xf32, strided<[1]>>)
 
 // -----
 
-func.func @memref_transpose(%arg0: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>) {
-  %0 = memref.transpose %arg0 (i, j, k) -> (k, j, i) : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>> to memref<?x?x?xf32, strided<[1, ?, ?], offset: ?>>
+func.func @memref_transpose(%arg0: memref<?x?x?xf32, strided<[?, ?, 1]>>) {
+  %0 = memref.transpose %arg0 (i, j, k) -> (k, j, i) : memref<?x?x?xf32, strided<[?, ?, 1]>> to memref<?x?x?xf32, strided<[1, ?, ?]>>
   return
 }
 // CHECK-LABEL: func @memref_transpose
 //       CHECK:   memref.transpose %{{.*}} ([[i:.*]], [[j:.*]], [[k:.*]]) -> ([[k]], [[j]], [[i]]) :
-//  CHECK-SAME:      memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>> to memref<?x?x?xf32, strided<[1, ?, ?], offset: ?>>
+//  CHECK-SAME:      memref<?x?x?xf32, strided<[?, ?, 1]>> to memref<?x?x?xf32, strided<[1, ?, ?]>>
 
 // -----
 
 
-func.func @fill_view3(%arg0: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>, %arg1: f32) {
-  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>)
+func.func @fill_view3(%arg0: memref<?x?x?xf32, strided<[?, ?, 1]>>, %arg1: f32) {
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?x?xf32, strided<[?, ?, 1]>>)
   return
 }
 // CHECK-LABEL: func @fill_view3(
-//       CHECK:  %{{.*}}: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>, %{{.*}}: f32) {
-//       CHECK:   linalg.fill ins(%{{.*}} : f32) outs(%{{.*}} : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>)
+//       CHECK:  %{{.*}}: memref<?x?x?xf32, strided<[?, ?, 1]>>, %{{.*}}: f32) {
+//       CHECK:   linalg.fill ins(%{{.*}} : f32) outs(%{{.*}} : memref<?x?x?xf32, strided<[?, ?, 1]>>)
 
 // -----
 
@@ -100,12 +100,12 @@ func.func @fill_view3(%arg0: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>, %
   library_call = "some_external_function_name_1"
 }
 
-func.func @generic(%arg0: memref<?x?xvector<3x4xi4>, strided<[?, 1], offset: ?>>,
-              %arg1: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>) {
+func.func @generic(%arg0: memref<?x?xvector<3x4xi4>, strided<[?, 1]>>,
+              %arg1: memref<?x?x?xf32, strided<[?, ?, 1]>>) {
   %cst = arith.constant 0.0 : f32
   linalg.generic #trait_0
-       ins(%arg0, %cst : memref<?x?xvector<3x4xi4>, strided<[?, 1], offset: ?>>, f32)
-      outs(%arg1 : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>)
+       ins(%arg0, %cst : memref<?x?xvector<3x4xi4>, strided<[?, 1]>>, f32)
+      outs(%arg1 : memref<?x?x?xf32, strided<[?, ?, 1]>>)
       attrs = {foo = 1} {
     ^bb(%0: vector<3x4xi4>, %1: f32, %2: f32) :
       linalg.yield %1 : f32
@@ -117,8 +117,8 @@ func.func @generic(%arg0: memref<?x?xvector<3x4xi4>, strided<[?, 1], offset: ?>>
 //  CHECK-SAME:     indexing_maps = [#{{[0-9a-z]*}}, #{{[0-9a-z]*}}, #{{[0-9a-z]*}}],
 //  CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel"],
 //  CHECK-SAME:     library_call = "some_external_function_name_1"}
-//  CHECK-SAME:      ins({{.*}}, {{.*}} : memref<?x?xvector<3x4xi4>, strided<[?, 1], offset: ?>>, f32)
-//  CHECK-SAME:     outs({{.*}} : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>)
+//  CHECK-SAME:      ins({{.*}}, {{.*}} : memref<?x?xvector<3x4xi4>, strided<[?, 1]>>, f32)
+//  CHECK-SAME:     outs({{.*}} : memref<?x?x?xf32, strided<[?, ?, 1]>>)
 //  CHECK-SAME:     {foo = 1 : i64}
 
 // -----
@@ -247,11 +247,11 @@ func.func @generic_op_zero_rank(%arg0: tensor<f32>, %arg1 : tensor<3x4xf32>) -> 
   library_call = "some_external_function_name_2"
 }
 
-func.func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, strided<[?, 1], offset: ?>>,
-                     %arg1: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>) {
+func.func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, strided<[?, 1]>>,
+                     %arg1: memref<?x?x?xf32, strided<[?, ?, 1]>>) {
   linalg.generic #trait_3
-       ins(%arg0 : memref<?x?xvector<3x4xi4>, strided<[?, 1], offset: ?>>)
-      outs(%arg1 : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>)
+       ins(%arg0 : memref<?x?xvector<3x4xi4>, strided<[?, 1]>>)
+      outs(%arg1 : memref<?x?x?xf32, strided<[?, ?, 1]>>)
       attrs = {foo = 1} {
     ^bb(%a: vector<3x4xi4>, %b: f32) :
       %0 = linalg.index 0 : index
@@ -266,8 +266,8 @@ func.func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, strided<[?, 1], offs
 //  CHECK-SAME:     indexing_maps = [#{{[0-9a-z]*}}, #{{[0-9a-z]*}}],
 //  CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel"],
 //  CHECK-SAME:     library_call = "some_external_function_name_2"
-//  CHECK-SAME:      ins({{.*}} : memref<?x?xvector<3x4xi4>, strided<[?, 1], offset: ?>>)
-//  CHECK-SAME:     outs({{.*}} : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>)
+//  CHECK-SAME:      ins({{.*}} : memref<?x?xvector<3x4xi4>, strided<[?, 1]>>)
+//  CHECK-SAME:     outs({{.*}} : memref<?x?x?xf32, strided<[?, ?, 1]>>)
 //  CHECK-SAME:     attrs = {foo = 1 : i64} {
 //       CHECK:  ^{{.*}}(%{{.*}}: vector<3x4xi4>, %{{.*}}: f32):
 //       CHECK:    %{{.*}} = linalg.index 0 : index

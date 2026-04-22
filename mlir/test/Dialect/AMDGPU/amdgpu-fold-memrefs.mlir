@@ -40,10 +40,10 @@ func.func @subview_folding_offset(%offset_i: index, %offset_j: index) {
 
   %alloc = memref.alloc() : memref<64x64xf16, #gpu_lds_addrspace>
   %mem = memref.alloc() : memref<64x128xf16>
-  %subview = memref.subview %mem[32, 64][32, 64][1, 1] : memref<64x128xf16> to memref<32x64xf16, strided<[128, 1], offset: 4160>>
+  %subview = memref.subview %mem[32, 64][32, 64][1, 1] : memref<64x128xf16> to memref<32x64xf16, strided<[128, 1]>>
   %c0 = arith.constant 0 : index
   amdgpu.gather_to_lds %subview[%offset_i, %offset_j], %alloc[%c0, %c0]
-    : vector<8xf16>, memref<32x64xf16, strided<[128, 1], offset: 4160>>, memref<64x64xf16, #gpu_lds_addrspace>
+    : vector<8xf16>, memref<32x64xf16, strided<[128, 1]>>, memref<64x64xf16, #gpu_lds_addrspace>
   func.return
 }
 
@@ -222,9 +222,9 @@ func.func @test_transpose_load_subview_offset(%offset_i: index, %offset_j: index
   %alloc = memref.alloc() : memref<64x128xf16, #gpu_wg>
   %subview = memref.subview %alloc[32, 64][32, 64][1, 1]
     : memref<64x128xf16, #gpu_wg>
-    to memref<32x64xf16, strided<[128, 1], offset: 4160>, #gpu_wg>
+    to memref<32x64xf16, strided<[128, 1]>, #gpu_wg>
   %result = amdgpu.transpose_load %subview[%offset_i, %offset_j]
-    : memref<32x64xf16, strided<[128, 1], offset: 4160>, #gpu_wg> -> vector<4xf16>
+    : memref<32x64xf16, strided<[128, 1]>, #gpu_wg> -> vector<4xf16>
   return %result : vector<4xf16>
 }
 
@@ -374,10 +374,10 @@ func.func @test_make_dma_base_both_fold(%mem: memref<64x128xf16, #gpu_global_add
   // CHECK: amdgpu.make_dma_base %[[MEM]][%[[GI]], %[[GJ]]], %[[LDS]][%[[IDX]]]
   // CHECK-SAME: memref<64x128xf16, #gpu.address_space<global>>, memref<4096xf16, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<f16>
 
-  %subview = memref.subview %mem[32, 64][32, 64][1, 1] : memref<64x128xf16, #gpu_global_addrspace> to memref<32x64xf16, strided<[128, 1], offset: 4160>, #gpu_global_addrspace>
+  %subview = memref.subview %mem[32, 64][32, 64][1, 1] : memref<64x128xf16, #gpu_global_addrspace> to memref<32x64xf16, strided<[128, 1]>, #gpu_global_addrspace>
   %expand_lds = memref.expand_shape %lds [[0, 1]] output_shape [64, 64] : memref<4096xf16, #gpu_lds_addrspace> into memref<64x64xf16, #gpu_lds_addrspace>
   %base = amdgpu.make_dma_base %subview[%global_i, %global_j], %expand_lds[%lds_i, %lds_j]
-    : memref<32x64xf16, strided<[128, 1], offset: 4160>, #gpu_global_addrspace>, memref<64x64xf16, #gpu_lds_addrspace> -> !amdgpu.tdm_base<f16>
+    : memref<32x64xf16, strided<[128, 1]>, #gpu_global_addrspace>, memref<64x64xf16, #gpu_lds_addrspace> -> !amdgpu.tdm_base<f16>
   func.return
 }
 

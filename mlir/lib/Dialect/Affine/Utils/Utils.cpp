@@ -1785,6 +1785,24 @@ mlir::affine::normalizeMemRef(memref::ReinterpretCastOp reinterpretCastOp) {
   AffineMap oldLayoutMap = memrefType.getLayout().getAffineMap();
   Value oldMemRef = reinterpretCastOp.getResult();
 
+  // Incorporate the op's static offset (if any) into the layout map: memref
+  // types no longer carry offsets, so the affine map used for indexRemap and
+  // for computing the normalized shape must account for the static offset
+  // operand here.
+  ArrayRef<int64_t> staticOffsets = reinterpretCastOp.getStaticOffsets();
+  int64_t staticOffset = 0;
+  if (!staticOffsets.empty() &&
+      !ShapedType::isDynamic(staticOffsets.front()))
+    staticOffset = staticOffsets.front();
+  if (staticOffset != 0) {
+    MLIRContext *ctx = reinterpretCastOp.getContext();
+    AffineMap offsetMap = AffineMap::get(
+        1, 0, getAffineDimExpr(0, ctx) + staticOffset);
+    oldLayoutMap = offsetMap.compose(oldLayoutMap);
+    memrefType =
+        MemRefType::Builder(memrefType).setLayout(AffineMapAttr::get(oldLayoutMap));
+  }
+
   // If `oldLayoutMap` is identity, `memrefType` is already normalized.
   if (oldLayoutMap.isIdentity())
     return success();

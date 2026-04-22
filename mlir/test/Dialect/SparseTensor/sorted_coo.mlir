@@ -44,7 +44,7 @@
 // C_HECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
 // C_HECK-DAG:       %[[VAL_4:.*]] = arith.constant 2.000000e+00 : f32
 // C_HECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<?x?xf32, #sparse{{[0-9]*}}> to memref<?xindex>
-// C_HECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xf32, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
+// C_HECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xf32, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?]>>
 // C_HECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // C_HECK-DAG:       %[[VAL_8:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_2]]] : memref<?xindex>
 // C_HECK-DAG:       %[[VAL_9:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
@@ -53,11 +53,11 @@
 // C_HECK:             scf.condition(%[[VAL_12]]) %[[VAL_11]] : index
 // C_HECK:           } do {
 // C_HECK:           ^bb0(%[[VAL_13:.*]]: index):
-// C_HECK:             %[[VAL_14:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_13]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:             %[[VAL_14:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_13]]] : memref<?xindex, strided<[?]>>
 // C_HECK:             %[[VAL_15:.*]] = scf.while (%[[VAL_16:.*]] = %[[VAL_13]]) : (index) -> index {
 // C_HECK:               %[[VAL_17:.*]] = arith.cmpi ult, %[[VAL_16]], %[[VAL_9]] : index
 // C_HECK:               %[[VAL_18:.*]] = scf.if %[[VAL_17]] -> (i1) {
-// C_HECK:                 %[[VAL_19:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_16]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:                 %[[VAL_19:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_16]]] : memref<?xindex, strided<[?]>>
 // C_HECK:                 %[[VAL_20:.*]] = arith.cmpi eq, %[[VAL_19]], %[[VAL_14]] : index
 // C_HECK:                 scf.yield %[[VAL_20]] : i1
 // C_HECK:               } else {
@@ -98,8 +98,8 @@ func.func @sparse_scale(%argx: tensor<?x?xf32, #SortedCOO>) -> tensor<?x?xf32, #
 // C_HECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // C_HECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // C_HECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// C_HECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
-// C_HECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
+// C_HECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?]>>
+// C_HECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?]>>
 // C_HECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // C_HECK:           %[[VAL_10:.*]] = bufferization.to_buffer %[[VAL_2]] : tensor<32xf64> to memref<32xf64>
 // C_HECK:           %[[VAL_11:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
@@ -109,12 +109,12 @@ func.func @sparse_scale(%argx: tensor<?x?xf32, #SortedCOO>) -> tensor<?x?xf32, #
 // C_HECK:             scf.condition(%[[VAL_15]]) %[[VAL_14]] : index
 // C_HECK:           } do {
 // C_HECK:           ^bb0(%[[VAL_16:.*]]: index):
-// C_HECK:             %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_16]]] : memref<?xindex, strided<[?], offset: ?>>
-// C_HECK:             %[[VAL_18:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_16]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:             %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_16]]] : memref<?xindex, strided<[?]>>
+// C_HECK:             %[[VAL_18:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_16]]] : memref<?xindex, strided<[?]>>
 // C_HECK:             %[[VAL_19:.*]] = scf.while (%[[VAL_20:.*]] = %[[VAL_16]]) : (index) -> index {
 // C_HECK:               %[[VAL_21:.*]] = arith.cmpi ult, %[[VAL_20]], %[[VAL_12]] : index
 // C_HECK:               %[[VAL_22:.*]] = scf.if %[[VAL_21]] -> (i1) {
-// C_HECK:                 %[[VAL_23:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_20]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:                 %[[VAL_23:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_20]]] : memref<?xindex, strided<[?]>>
 // C_HECK:                 %[[VAL_24:.*]] = arith.cmpi eq, %[[VAL_23]], %[[VAL_18]] : index
 // C_HECK:                 scf.yield %[[VAL_24]] : i1
 // C_HECK:               } else {
@@ -128,7 +128,7 @@ func.func @sparse_scale(%argx: tensor<?x?xf32, #SortedCOO>) -> tensor<?x?xf32, #
 // C_HECK:             }
 // C_HECK:             %[[VAL_28:.*]] = tensor.extract %[[VAL_2]]{{\[}}%[[VAL_17]]] : tensor<32xf64>
 // C_HECK:             %[[VAL_29:.*]] = scf.for %[[VAL_30:.*]] = %[[VAL_16]] to %[[VAL_31:.*]] step %[[VAL_5]] iter_args(%[[VAL_32:.*]] = %[[VAL_28]]) -> (f64) {
-// C_HECK:               %[[VAL_33:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_30]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:               %[[VAL_33:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_30]]] : memref<?xindex, strided<[?]>>
 // C_HECK:               %[[VAL_34:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_30]]] : memref<?xf64>
 // C_HECK:               %[[VAL_35:.*]] = tensor.extract %[[VAL_1]]{{\[}}%[[VAL_33]]] : tensor<64xf64>
 // C_HECK:               %[[VAL_36:.*]] = arith.mulf %[[VAL_34]], %[[VAL_35]] : f64
@@ -163,12 +163,12 @@ func.func @matvec(%arga: tensor<32x64xf64, #SortedCOO>,
 // C_HECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // C_HECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
 // C_HECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// C_HECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
-// C_HECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
+// C_HECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?]>>
+// C_HECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?]>>
 // C_HECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // C_HECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// C_HECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
-// C_HECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
+// C_HECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?]>>
+// C_HECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?]>>
 // C_HECK-DAG:       %[[VAL_14:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // C_HECK:           %[[VAL_15:.*]] = bufferization.to_buffer %[[VAL_2]] : tensor<32x64xf64> to memref<32x64xf64>
 // C_HECK:           linalg.fill ins(%[[VAL_4]] : f64) outs(%[[VAL_15]] : memref<32x64xf64>)
@@ -183,13 +183,13 @@ func.func @matvec(%arga: tensor<32x64xf64, #SortedCOO>,
 // C_HECK:             scf.condition(%[[VAL_25]]) %[[VAL_21]], %[[VAL_22]] : index, index
 // C_HECK:           } do {
 // C_HECK:           ^bb0(%[[VAL_26:.*]]: index, %[[VAL_27:.*]]: index):
-// C_HECK:             %[[VAL_28:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_26]]] : memref<?xindex, strided<[?], offset: ?>>
-// C_HECK:             %[[VAL_29:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_27]]] : memref<?xindex, strided<[?], offset: ?>>
-// C_HECK:             %[[VAL_32:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_26]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:             %[[VAL_28:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_26]]] : memref<?xindex, strided<[?]>>
+// C_HECK:             %[[VAL_29:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_27]]] : memref<?xindex, strided<[?]>>
+// C_HECK:             %[[VAL_32:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_26]]] : memref<?xindex, strided<[?]>>
 // C_HECK:             %[[VAL_33:.*]] = scf.while (%[[VAL_34:.*]] = %[[VAL_26]]) : (index) -> index {
 // C_HECK:               %[[VAL_35:.*]] = arith.cmpi ult, %[[VAL_34]], %[[VAL_17]] : index
 // C_HECK:               %[[VAL_36:.*]] = scf.if %[[VAL_35]] -> (i1) {
-// C_HECK:                 %[[VAL_37:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_34]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:                 %[[VAL_37:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_34]]] : memref<?xindex, strided<[?]>>
 // C_HECK:                 %[[VAL_38:.*]] = arith.cmpi eq, %[[VAL_37]], %[[VAL_32]] : index
 // C_HECK:                 scf.yield %[[VAL_38]] : i1
 // C_HECK:               } else {
@@ -201,11 +201,11 @@ func.func @matvec(%arga: tensor<32x64xf64, #SortedCOO>,
 // C_HECK:               %[[VAL_41:.*]] = arith.addi %[[VAL_40]], %[[VAL_6]] : index
 // C_HECK:               scf.yield %[[VAL_41]] : index
 // C_HECK:             }
-// C_HECK:             %[[VAL_42:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_27]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:             %[[VAL_42:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_27]]] : memref<?xindex, strided<[?]>>
 // C_HECK:             %[[VAL_43:.*]] = scf.while (%[[VAL_44:.*]] = %[[VAL_27]]) : (index) -> index {
 // C_HECK:               %[[VAL_45:.*]] = arith.cmpi ult, %[[VAL_44]], %[[VAL_19]] : index
 // C_HECK:               %[[VAL_46:.*]] = scf.if %[[VAL_45]] -> (i1) {
-// C_HECK:                 %[[VAL_47:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_44]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:                 %[[VAL_47:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_44]]] : memref<?xindex, strided<[?]>>
 // C_HECK:                 %[[VAL_48:.*]] = arith.cmpi eq, %[[VAL_47]], %[[VAL_42]] : index
 // C_HECK:                 scf.yield %[[VAL_48]] : i1
 // C_HECK:               } else {
@@ -230,8 +230,8 @@ func.func @matvec(%arga: tensor<32x64xf64, #SortedCOO>,
 // C_HECK:                 scf.condition(%[[VAL_62]]) %[[VAL_56]], %[[VAL_57]] : index, index
 // C_HECK:               } do {
 // C_HECK:               ^bb0(%[[VAL_63:.*]]: index, %[[VAL_64:.*]]: index):
-// C_HECK:                 %[[VAL_65:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_63]]] : memref<?xindex, strided<[?], offset: ?>>
-// C_HECK:                 %[[VAL_66:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_64]]] : memref<?xindex, strided<[?], offset: ?>>
+// C_HECK:                 %[[VAL_65:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_63]]] : memref<?xindex, strided<[?]>>
+// C_HECK:                 %[[VAL_66:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_64]]] : memref<?xindex, strided<[?]>>
 // C_HECK:                 %[[VAL_67:.*]] = arith.cmpi ult, %[[VAL_66]], %[[VAL_65]] : index
 // C_HECK:                 %[[VAL_68:.*]] = arith.select %[[VAL_67]], %[[VAL_66]], %[[VAL_65]] : index
 // C_HECK:                 %[[VAL_69:.*]] = arith.cmpi eq, %[[VAL_65]], %[[VAL_68]] : index

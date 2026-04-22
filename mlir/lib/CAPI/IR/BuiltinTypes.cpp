@@ -602,12 +602,10 @@ MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type) {
   return wrap(llvm::cast<MemRefType>(unwrap(type)).getMemorySpace());
 }
 
-MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(MlirType type,
-                                                    int64_t *strides,
-                                                    int64_t *offset) {
+MlirLogicalResult mlirMemRefTypeGetStrides(MlirType type, int64_t *strides) {
   MemRefType memrefType = llvm::cast<MemRefType>(unwrap(type));
   SmallVector<int64_t> strides_;
-  if (failed(memrefType.getStridesAndOffset(strides_, *offset)))
+  if (failed(memrefType.getStrides(strides_)))
     return mlirLogicalResultFailure();
 
   (void)llvm::copy(strides_, strides);

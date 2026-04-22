@@ -1291,30 +1291,13 @@ Attribute Parser::parseStridedLayoutAttr() {
     } while (consumeIf(Token::comma));
   }
 
-  if (failed(parseToken(Token::r_square, "expected ']'")))
+  if (failed(parseToken(Token::r_square, "expected ']'")) ||
+      failed(parseToken(Token::greater, "expected '>'")))
     return nullptr;
 
-  // Fast path in absence of offset.
-  if (consumeIf(Token::greater)) {
-    if (failed(StridedLayoutAttr::verify(errorEmitter,
-                                         /*offset=*/0, strides)))
-      return nullptr;
-    return StridedLayoutAttr::get(getContext(), /*offset=*/0, strides);
-  }
-
-  if (failed(parseToken(Token::comma, "expected ','")) ||
-      failed(parseToken(Token::kw_offset, "expected 'offset' after comma")) ||
-      failed(parseToken(Token::colon, "expected ':' after 'offset'")))
+  if (failed(StridedLayoutAttr::verify(errorEmitter, strides)))
     return nullptr;
-
-  std::optional<int64_t> offset = parseStrideOrOffset();
-  if (!offset || failed(parseToken(Token::greater, "expected '>'")))
-    return nullptr;
-
-  if (failed(StridedLayoutAttr::verify(errorEmitter, *offset, strides)))
-    return nullptr;
-  return StridedLayoutAttr::get(getContext(), *offset, strides);
-  // return getChecked<StridedLayoutAttr>(loc,getContext(), *offset, strides);
+  return StridedLayoutAttr::get(getContext(), strides);
 }
 
 /// Parse a distinct attribute.

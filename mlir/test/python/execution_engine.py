@@ -283,12 +283,12 @@ def testRankedMemRefWithOffsetCallback():
             r"""
 func.func @callback_memref(%arg0: memref<5xf32>) attributes {llvm.emit_c_interface} {
   %base_buffer, %offset, %sizes, %strides = memref.extract_strided_metadata %arg0 : memref<5xf32> -> memref<f32>, index, index, index
-  %reinterpret_cast = memref.reinterpret_cast %base_buffer to offset: [3], sizes: [2], strides: [1] : memref<f32> to memref<2xf32, strided<[1], offset: 3>>
-  %cast = memref.cast %reinterpret_cast : memref<2xf32, strided<[1], offset: 3>> to memref<?xf32, strided<[?], offset: ?>>
-  call @some_callback_into_python(%cast) : (memref<?xf32, strided<[?], offset: ?>>) -> ()
+  %reinterpret_cast = memref.reinterpret_cast %base_buffer to offset: [3], sizes: [2], strides: [1] : memref<f32> to memref<2xf32, strided<[1]>>
+  %cast = memref.cast %reinterpret_cast : memref<2xf32, strided<[1]>> to memref<?xf32, strided<[?]>>
+  call @some_callback_into_python(%cast) : (memref<?xf32, strided<[?]>>) -> ()
   return
 }
-func.func private @some_callback_into_python(memref<?xf32, strided<[?], offset: ?>>) attributes {llvm.emit_c_interface}
+func.func private @some_callback_into_python(memref<?xf32, strided<[?]>>) attributes {llvm.emit_c_interface}
 """
         )
         execution_engine = ExecutionEngine(lowerToLLVM(module))
@@ -322,8 +322,8 @@ def testUnrankedMemRefWithOffsetCallback():
             r"""
 func.func @callback_memref(%arg0: memref<5xf32>) attributes {llvm.emit_c_interface} {
     %base_buffer, %offset, %sizes, %strides = memref.extract_strided_metadata %arg0 : memref<5xf32> -> memref<f32>, index, index, index
-    %reinterpret_cast = memref.reinterpret_cast %base_buffer to offset: [3], sizes: [2], strides: [1] : memref<f32> to memref<2xf32, strided<[1], offset: 3>>
-    %cast = memref.cast %reinterpret_cast : memref<2xf32, strided<[1], offset: 3>> to memref<*xf32>
+    %reinterpret_cast = memref.reinterpret_cast %base_buffer to offset: [3], sizes: [2], strides: [1] : memref<f32> to memref<2xf32, strided<[1]>>
+    %cast = memref.cast %reinterpret_cast : memref<2xf32, strided<[1]>> to memref<*xf32>
     call @some_callback_into_python(%cast) : (memref<*xf32>) -> ()
     return
 }

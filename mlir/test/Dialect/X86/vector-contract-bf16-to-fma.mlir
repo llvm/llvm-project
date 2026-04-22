@@ -30,11 +30,11 @@ func.func @brgemm_to_fma(
 // CHECK: memref.subview %arg0[%c0, %c0, %c0, 1] {{.*}} : memref<1x4x1x2xbf16> to memref<1x1x1x1xbf16, {{.*}}>
 // CHECK: memref.subview %arg0[%c0, %c0, %c0, 0] {{.*}} : memref<1x4x1x2xbf16> to memref<1x1x1x1xbf16, {{.*}}>
 // CHECK: memref.subview %arg1[%c0, %c0, %c0, %c0] {{.*}} : memref<1x1x32x2xbf16> to memref<1x1x8x2xbf16, {{.*}}>
-// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1x1x1xbf16, strided<[8, 2, 2, 1], offset: ?>>
-// CHECK: x86.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<1x1x8x2xbf16, strided<[64, 64, 2, 1], offset: ?>>
+// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1x1x1xbf16, strided<[8, 2, 2, 1]>>
+// CHECK: x86.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<1x1x8x2xbf16, strided<[64, 64, 2, 1]>>
 // CHECK: vector.fma {{.*}} : vector<8xf32>
-// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1x1x1xbf16, strided<[8, 2, 2, 1], offset: ?>>
-// CHECK: x86.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<1x1x8x2xbf16, strided<[64, 64, 2, 1], offset: ?>>
+// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1x1x1xbf16, strided<[8, 2, 2, 1]>>
+// CHECK: x86.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<1x1x8x2xbf16, strided<[64, 64, 2, 1]>>
 // CHECK: vector.fma {{.*}} : vector<8xf32>
 
 module attributes {transform.with_named_sequence} {
@@ -285,10 +285,10 @@ func.func @matmul_to_fma_flat_layout(
 // CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
 // CHECK: memref.subview %arg0[%c0, %c0] {{.*}} : memref<4x1xbf16> to memref<1x1xbf16, {{.*}}>
 // CHECK: memref.subview %arg1[%c0, %c0] {{.*}} : memref<1x32xbf16> to memref<1x16xbf16, {{.*}}>
-// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1xbf16, strided<[1, 1], offset: ?>>
-// CHECK: x86.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1], offset: ?>>
+// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1xbf16, strided<[1, 1]>>
+// CHECK: x86.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1]>>
 // CHECK: vector.fma {{.*}} : vector<8xf32>
-// CHECK: x86.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1], offset: ?>>
+// CHECK: x86.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1]>>
 // CHECK: vector.fma {{.*}} : vector<8xf32>
 // CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
 // CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
@@ -357,10 +357,10 @@ func.func @matmul_to_fma_flat_layout_load(
 // CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
 // CHECK: memref.subview %arg0[%c0, %c0] {{.*}} : memref<4x1xbf16> to memref<1x1xbf16, {{.*}}>
 // CHECK: memref.subview %arg1[%c0, %c0] {{.*}} : memref<1x32xbf16> to memref<1x16xbf16, {{.*}}>
-// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1xbf16, strided<[1, 1], offset: ?>>
-// CHECK: x86.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1], offset: ?>>
+// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1xbf16, strided<[1, 1]>>
+// CHECK: x86.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1]>>
 // CHECK: vector.fma {{.*}} : vector<8xf32>
-// CHECK: x86.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1], offset: ?>>
+// CHECK: x86.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1]>>
 // CHECK: vector.fma {{.*}} : vector<8xf32>
 // CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
 // CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
@@ -380,9 +380,9 @@ module attributes {transform.with_named_sequence} {
 !vecA = vector<1x1x1xbf16>
 !vecB = vector<1x1x8xbf16>
 !vecC = vector<1x8xf32>
-!memrefA = memref<1x1x1xbf16, strided<[2048, 32, 1], offset: ?>>
-!memrefB = memref<1x1x16xbf16, strided<[2048, 64, 1], offset: ?>>
-!memrefC = memref<1x16xf32, strided<[64, 1], offset: ?>>
+!memrefA = memref<1x1x1xbf16, strided<[2048, 32, 1]>>
+!memrefB = memref<1x1x16xbf16, strided<[2048, 64, 1]>>
+!memrefC = memref<1x16xf32, strided<[64, 1]>>
 #map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
@@ -524,10 +524,10 @@ func.func @matmul_to_fma_flat_layout_bcstB(
 // CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
 // CHECK: memref.subview %arg1[%c0, %c0] {{.*}} : memref<1x4xbf16> to memref<1x1xbf16, {{.*}}>
 // CHECK: memref.subview %arg0[%c0, %c0] {{.*}} : memref<32x1xbf16> to memref<16x1xbf16, {{.*}}>
-// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1xbf16, strided<[4, 1], offset: ?>>
-// CHECK: x86.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<16x1xbf16, strided<[1, 1], offset: ?>>
+// CHECK: x86.avx.bcst_to_f32.packed {{.*}} : memref<1x1xbf16, strided<[4, 1]>>
+// CHECK: x86.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<16x1xbf16, strided<[1, 1]>>
 // CHECK: vector.fma {{.*}} : vector<8xf32>
-// CHECK: x86.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<16x1xbf16, strided<[1, 1], offset: ?>>
+// CHECK: x86.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<16x1xbf16, strided<[1, 1]>>
 // CHECK: vector.fma {{.*}} : vector<8xf32>
 // CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
 // CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
@@ -1198,12 +1198,12 @@ func.func @negative_non_unit_stride(
   %c0 = arith.constant 0 : index
   %0 = ub.poison : bf16
   %subview_1 = memref.subview %arg1[%c0, %c0, %c0] [1, 16, 2] [1, 1, 2] :
-               !memrefB to memref<1x16x2xbf16, strided<[64, 2, 2], offset: ?>>
+               !memrefB to memref<1x16x2xbf16, strided<[64, 2, 2]>>
 
   %1 = vector.transfer_read %arg0[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} :
         !memrefA, !vecA
   %2 = vector.transfer_read %subview_1[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} :
-        memref<1x16x2xbf16, strided<[64, 2, 2], offset: ?>>, !vecB
+        memref<1x16x2xbf16, strided<[64, 2, 2]>>, !vecB
   %3 = vector.contract {
     indexing_maps = [#map, #map1, #map2],
     iterator_types = ["reduction", "parallel", "parallel", "reduction"],

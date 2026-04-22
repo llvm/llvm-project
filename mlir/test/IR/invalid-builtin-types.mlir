@@ -79,23 +79,15 @@ func.func private @memref_unfinished_stride_list() -> memref<?x?xf32, strided<[>
 
 // -----
 
-// expected-error @below {{expected 'offset' after comma}}
-func.func private @memref_missing_offset() -> memref<?x?xf32, strided<[], >>
-
-// -----
-
-// expected-error @below {{expected ':' after 'offset'}}
-func.func private @memref_missing_offset_colon() -> memref<?x?xf32, strided<[], offset>>
-
-// -----
-
-// expected-error @below {{expected a 64-bit signed integer or '?'}}
-func.func private @memref_missing_offset_value() -> memref<?x?xf32, strided<[], offset: >>
-
-// -----
-
 // expected-error @below {{expected '>'}}
-func.func private @memref_incorrect_strided_ending() -> memref<?x?xf32, strided<[], offset: 32)>
+func.func private @memref_incorrect_strided_ending() -> memref<?x?xf32, strided<[]?>
+
+// -----
+
+// `offset:` is no longer accepted inside strided layouts; it is a bare-text
+// token after the stride list and so the parser bails on the closing '>'.
+// expected-error @below {{expected '>'}}
+func.func private @memref_no_offset_in_strided_layout() -> memref<?xf32, strided<[1], offset: 5>>
 
 // -----
 

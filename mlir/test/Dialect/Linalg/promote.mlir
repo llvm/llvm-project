@@ -19,13 +19,13 @@ func.func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   scf.for %arg4 = %c0 to %6 step %c2 {
     scf.for %arg5 = %c0 to %8 step %c3 {
       scf.for %arg6 = %c0 to %7 step %c4 {
-        %11 = memref.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-        %14 = memref.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-        %17 = memref.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
+        %11 = memref.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
+        %14 = memref.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
+        %17 = memref.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
         linalg.matmul
-          ins(%11, %14: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-                        memref<?x?xf32, strided<[?, 1], offset: ?>>)
-         outs(%17: memref<?x?xf32, strided<[?, 1], offset: ?>>)
+          ins(%11, %14: memref<?x?xf32, strided<[?, 1]>>,
+                        memref<?x?xf32, strided<[?, 1]>>)
+         outs(%17: memref<?x?xf32, strided<[?, 1]>>)
       }
     }
   }
@@ -52,13 +52,13 @@ func.func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         %[[fullC:.*]] = memref.view %[[tmpC]][{{.*}}][{{.*}}] : memref<24xi8> to memref<?x?xf32>
 //       CHECK:         %[[partialC:.*]] = memref.subview %[[fullC]]{{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
 
-//       CHECK:         linalg.copy ins(%[[vA]] : memref<?x?xf32, strided<[?, 1], offset: ?>>) outs(%[[partialA]] : memref<?x?xf32, strided<[?, 1]>>)
-//       CHECK:         linalg.copy ins(%[[vB]] : memref<?x?xf32, strided<[?, 1], offset: ?>>) outs(%[[partialB]] : memref<?x?xf32, strided<[?, 1]>>)
-//       CHECK:         linalg.copy ins(%[[vC]] : memref<?x?xf32, strided<[?, 1], offset: ?>>) outs(%[[partialC]] : memref<?x?xf32, strided<[?, 1]>>)
+//       CHECK:         linalg.copy ins(%[[vA]] : memref<?x?xf32, strided<[?, 1]>>) outs(%[[partialA]] : memref<?x?xf32, strided<[?, 1]>>)
+//       CHECK:         linalg.copy ins(%[[vB]] : memref<?x?xf32, strided<[?, 1]>>) outs(%[[partialB]] : memref<?x?xf32, strided<[?, 1]>>)
+//       CHECK:         linalg.copy ins(%[[vC]] : memref<?x?xf32, strided<[?, 1]>>) outs(%[[partialC]] : memref<?x?xf32, strided<[?, 1]>>)
 //
 //       CHECK:         linalg.matmul ins(%[[partialA]], %[[partialB]]{{.*}} outs(%[[partialC]]
 //
-//       CHECK:         linalg.copy ins(%[[partialC]] : memref<?x?xf32, strided<[?, 1]>>) outs(%[[vC]] : memref<?x?xf32, strided<[?, 1], offset: ?>>)
+//       CHECK:         linalg.copy ins(%[[partialC]] : memref<?x?xf32, strided<[?, 1]>>) outs(%[[vC]] : memref<?x?xf32, strided<[?, 1]>>)
 //
 //   CHECK-NOT:         memref.dealloc %[[tmpA]] : memref<32xi8>
 //   CHECK-NOT:         memref.dealloc %[[tmpB]] : memref<48xi8>
@@ -89,13 +89,13 @@ func.func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   scf.for %arg4 = %c0 to %6 step %c2 {
     scf.for %arg5 = %c0 to %8 step %c3 {
       scf.for %arg6 = %c0 to %7 step %c4 {
-        %11 = memref.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf64> to memref<?x?xf64, strided<[?, 1], offset: ?>>
-        %14 = memref.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, strided<[?, 1], offset: ?>>
-        %17 = memref.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, strided<[?, 1], offset: ?>>
+        %11 = memref.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf64> to memref<?x?xf64, strided<[?, 1]>>
+        %14 = memref.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, strided<[?, 1]>>
+        %17 = memref.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, strided<[?, 1]>>
         linalg.matmul
-          ins(%11, %14: memref<?x?xf64, strided<[?, 1], offset: ?>>,
-                        memref<?x?xf64, strided<[?, 1], offset: ?>>)
-         outs(%17: memref<?x?xf64, strided<[?, 1], offset: ?>>)
+          ins(%11, %14: memref<?x?xf64, strided<[?, 1]>>,
+                        memref<?x?xf64, strided<[?, 1]>>)
+         outs(%17: memref<?x?xf64, strided<[?, 1]>>)
       }
     }
   }
@@ -122,13 +122,13 @@ func.func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         %[[fullC_f64:.*]] = memref.view %[[tmpC_f64]][{{.*}}][{{.*}}] : memref<48xi8> to memref<?x?xf64>
 //       CHECK:         %[[partialC_f64:.*]] = memref.subview %[[fullC_f64]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf64> to memref<?x?xf64, strided<[?, 1]>>
 
-//       CHECK:         linalg.copy ins(%[[vA_f64]] : memref<?x?xf64, strided<[?, 1], offset: ?>>) outs(%[[partialA_f64]] : memref<?x?xf64, strided<[?, 1]>>)
-//       CHECK:         linalg.copy ins(%[[vB_f64]] : memref<?x?xf64, strided<[?, 1], offset: ?>>) outs(%[[partialB_f64]] : memref<?x?xf64, strided<[?, 1]>>)
-//       CHECK:         linalg.copy ins(%[[vC_f64]] : memref<?x?xf64, strided<[?, 1], offset: ?>>) outs(%[[partialC_f64]] : memref<?x?xf64, strided<[?, 1]>>)
+//       CHECK:         linalg.copy ins(%[[vA_f64]] : memref<?x?xf64, strided<[?, 1]>>) outs(%[[partialA_f64]] : memref<?x?xf64, strided<[?, 1]>>)
+//       CHECK:         linalg.copy ins(%[[vB_f64]] : memref<?x?xf64, strided<[?, 1]>>) outs(%[[partialB_f64]] : memref<?x?xf64, strided<[?, 1]>>)
+//       CHECK:         linalg.copy ins(%[[vC_f64]] : memref<?x?xf64, strided<[?, 1]>>) outs(%[[partialC_f64]] : memref<?x?xf64, strided<[?, 1]>>)
 //
 //       CHECK:         linalg.matmul ins(%[[partialA_f64]], %[[partialB_f64]]{{.*}} outs(%[[partialC_f64]]
 //
-//       CHECK:         linalg.copy ins(%[[partialC_f64]] : memref<?x?xf64, strided<[?, 1]>>) outs(%[[vC_f64]] : memref<?x?xf64, strided<[?, 1], offset: ?>>)
+//       CHECK:         linalg.copy ins(%[[partialC_f64]] : memref<?x?xf64, strided<[?, 1]>>) outs(%[[vC_f64]] : memref<?x?xf64, strided<[?, 1]>>)
 //
 //       CHECK:         memref.dealloc %[[tmpA_f64]] : memref<64xi8>
 //       CHECK:         memref.dealloc %[[tmpB_f64]] : memref<96xi8>
@@ -162,19 +162,19 @@ func.func @gemm_shared(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?
 // CHECK:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-// CHECK:         %[[subview_A:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-// CHECK:         %[[subview_B:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-// CHECK:         %[[subview_C:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
+// CHECK:         %[[subview_A:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
+// CHECK:         %[[subview_B:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
+// CHECK:         %[[subview_C:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
 
 // CHECK:         %[[shared_A:.*]] = memref.subview %[[alloc_B]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<16x16xf32, #gpu.address_space<workgroup>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<workgroup>>
 // CHECK:         %[[shared_B:.*]] = memref.subview %[[alloc_A]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<16x16xf32, #gpu.address_space<workgroup>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<workgroup>>
 
 // CHECK-NEXT:    gpu.barrier
-// CHECK-NEXT:    memref.copy %[[subview_A]], %[[shared_A]] :  memref<?x?xf32, strided<[?, 1], offset: ?>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<workgroup>>
+// CHECK-NEXT:    memref.copy %[[subview_A]], %[[shared_A]] :  memref<?x?xf32, strided<[?, 1]>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<workgroup>>
 // CHECK-NEXT:    gpu.barrier
 
 // CHECK-NEXT:    gpu.barrier
-// CHECK-NEXT:    memref.copy %[[subview_B]], %[[shared_B]] :  memref<?x?xf32, strided<[?, 1], offset: ?>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<workgroup>>
+// CHECK-NEXT:    memref.copy %[[subview_B]], %[[shared_B]] :  memref<?x?xf32, strided<[?, 1]>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<workgroup>>
 // CHECK-NEXT:    gpu.barrier
 
 // CHECK:         linalg.matmul ins(%[[shared_A]], %[[shared_B]]{{.*}} outs(%[[subview_C]]
@@ -211,15 +211,15 @@ func.func @gemm_private(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<
 // CHECK:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-// CHECK:         %[[subview_A:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-// CHECK:         %[[subview_B:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-// CHECK:         %[[subview_C:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
+// CHECK:         %[[subview_A:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
+// CHECK:         %[[subview_B:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
+// CHECK:         %[[subview_C:.*]] = memref.subview {{.*}} : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
 
 // CHECK:         %[[private_A:.*]] = memref.subview %[[alloc_B]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<16x16xf32, #gpu.address_space<private>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<private>>
 // CHECK:         %[[private_B:.*]] = memref.subview %[[alloc_A]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<16x16xf32, #gpu.address_space<private>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<private>>
 
-// CHECK-NEXT:    memref.copy %[[subview_A]], %[[private_A]] :  memref<?x?xf32, strided<[?, 1], offset: ?>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<private>>
-// CHECK-NEXT:    memref.copy %[[subview_B]], %[[private_B]] :  memref<?x?xf32, strided<[?, 1], offset: ?>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<private>>
+// CHECK-NEXT:    memref.copy %[[subview_A]], %[[private_A]] :  memref<?x?xf32, strided<[?, 1]>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<private>>
+// CHECK-NEXT:    memref.copy %[[subview_B]], %[[private_B]] :  memref<?x?xf32, strided<[?, 1]>> to memref<?x?xf32, strided<[16, 1]>, #gpu.address_space<private>>
 
 // CHECK:         linalg.matmul ins(%[[private_A]], %[[private_B]]{{.*}} outs(%[[subview_C]]
 
@@ -241,11 +241,11 @@ module attributes {transform.with_named_sequence} {
 #map8 = affine_map<(d0, d1, d2) -> (d0, d1)>
 
 // CHECK: promote_rank_reducing_subviews(%[[arg0:.+]]: memref<{{.*}}>, %[[arg1:.+]]: memref<{{.*}}>, %[[arg2:.+]]: memref<{{.*}}>, %[[lb1:.+]]: index, %[[lb2:.+]]: index, %[[lb3:.+]]: index, %[[lb4:.+]]: index, %[[lb5:.+]]: index, %[[lb6:.+]]: index, %[[ub1:.+]]: index, %[[ub2:.+]]: index
-func.func @promote_rank_reducing_subviews(%arg0:  memref<?x?x?x64xf32, strided<[?, ?, ?, ?], offset: ?>>, %arg1: memref<128x3x3x64xf32, strided<[?, ?, ?, ?], offset: ?>>, %arg2: memref<?x?x?x128xf32>,
+func.func @promote_rank_reducing_subviews(%arg0:  memref<?x?x?x64xf32, strided<[?, ?, ?, ?]>>, %arg1: memref<128x3x3x64xf32, strided<[?, ?, ?, ?]>>, %arg2: memref<?x?x?x128xf32>,
                                           %arg3: index, %arg4: index, %arg5: index, %arg6: index, %arg7: index, %arg8: index, %ub1: index, %ub2: index) {
-  %13 = memref.subview %arg0[%arg3, 0, %arg4, %arg8] [1, 1, %ub1, 32] [1, 1, 1, 1] : memref<?x?x?x64xf32, strided<[?, ?, ?, ?], offset: ?>> to memref<?x32xf32, strided<[?, ?], offset: ?>>
-  %14 = memref.subview %arg1[0, %arg6, %arg7, %arg8] [128, 1, 1, 32] [1, 1, 1, 1] : memref<128x3x3x64xf32, strided<[?, ?, ?, ?], offset: ?>> to memref<128x32xf32, strided<[?, ?], offset: ?>>
-  %9 = memref.subview %arg2[%arg3, %arg4, %arg5, 0] [1, 1, %ub2, 128] [1, 1, 1, 1] : memref<?x?x?x128xf32> to memref<?x128xf32, strided<[128, 1], offset: ?>>
+  %13 = memref.subview %arg0[%arg3, 0, %arg4, %arg8] [1, 1, %ub1, 32] [1, 1, 1, 1] : memref<?x?x?x64xf32, strided<[?, ?, ?, ?]>> to memref<?x32xf32, strided<[?, ?]>>
+  %14 = memref.subview %arg1[0, %arg6, %arg7, %arg8] [128, 1, 1, 32] [1, 1, 1, 1] : memref<128x3x3x64xf32, strided<[?, ?, ?, ?]>> to memref<128x32xf32, strided<[?, ?]>>
+  %9 = memref.subview %arg2[%arg3, %arg4, %arg5, 0] [1, 1, %ub2, 128] [1, 1, 1, 1] : memref<?x?x?x128xf32> to memref<?x128xf32, strided<[128, 1]>>
 
   // CHECK: %[[a_alloc:.+]] = memref.alloc
   // CHECK: %[[a_view:.+]] = memref.view %[[a_alloc]]{{.*}}
@@ -264,7 +264,7 @@ func.func @promote_rank_reducing_subviews(%arg0:  memref<?x?x?x64xf32, strided<[
   // CHECK-SAME: ins(%[[a_pro_subview]], %[[b_pro_subview]]
   // CHECK-SAME: outs(%[[c_pro_subview]]
 
-  linalg.generic {indexing_maps = [#map6, #map7, #map8], iterator_types = ["parallel", "parallel", "reduction"]} ins(%13, %14 : memref<?x32xf32, strided<[?, ?], offset: ?>>, memref<128x32xf32, strided<[?, ?], offset: ?>>) outs(%9 : memref<?x128xf32, strided<[128, 1], offset: ?>>) {
+  linalg.generic {indexing_maps = [#map6, #map7, #map8], iterator_types = ["parallel", "parallel", "reduction"]} ins(%13, %14 : memref<?x32xf32, strided<[?, ?]>>, memref<128x32xf32, strided<[?, ?]>>) outs(%9 : memref<?x128xf32, strided<[128, 1]>>) {
   ^bb0(%arg9: f32, %arg10: f32, %arg11: f32):
     %15 = arith.mulf %arg9, %arg10 : f32
     %16 = arith.addf %arg11, %15 : f32

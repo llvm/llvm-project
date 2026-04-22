@@ -605,7 +605,7 @@ Value mlir::LLVM::getStridedElementPtr(OpBuilder &builder, Location loc,
                                        MemRefType type, Value memRefDesc,
                                        ValueRange indices,
                                        LLVM::GEPNoWrapFlags noWrapFlags) {
-  auto [strides, offset] = type.getStridesAndOffset();
+  auto strides = type.getStrides();
 
   MemRefDescriptor memRefDescriptor(memRefDesc);
   // Use a canonical representation of the start address so that later

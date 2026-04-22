@@ -88,11 +88,10 @@ struct CastOpInterface
     // strides from unranked memrefs, so cast the source to a type with fully
     // dynamic layout, from which we can then extract the offset and strides.
     // (Rank was already verified.)
-    int64_t dynamicOffset = ShapedType::kDynamic;
     SmallVector<int64_t> dynamicShape(resultType.getRank(),
                                       ShapedType::kDynamic);
-    auto stridedLayout = StridedLayoutAttr::get(builder.getContext(),
-                                                dynamicOffset, dynamicShape);
+    auto stridedLayout =
+        StridedLayoutAttr::get(builder.getContext(), dynamicShape);
     auto dynStridesType =
         MemRefType::get(dynamicShape, resultType.getElementType(),
                         stridedLayout, resultType.getMemorySpace());
@@ -124,23 +123,10 @@ struct CastOpInterface
                                        std::to_string(it.index())));
     }
 
-    // Get result offset and strides.
-    int64_t resultOffset;
+    // Get result strides. Offset is no longer carried by the memref type.
     SmallVector<int64_t> resultStrides;
-    if (failed(resultType.getStridesAndOffset(resultStrides, resultOffset)))
+    if (failed(resultType.getStrides(resultStrides)))
       return;
-
-    // Check offset.
-    if (resultOffset != ShapedType::kDynamic) {
-      // Static/dynamic offset -> dynamic offset does not need verification.
-      Value srcOffset = metadataOp.getResult(1);
-      Value resultOffsetVal =
-          arith::ConstantIndexOp::create(builder, loc, resultOffset);
-      Value isSameOffset = arith::CmpIOp::create(
-          builder, loc, arith::CmpIPredicate::eq, srcOffset, resultOffsetVal);
-      cf::AssertOp::create(builder, loc, isSameOffset,
-                           generateErrorMessage(op, "offset mismatch"));
-    }
 
     // Check strides.
     for (const auto &it : llvm::enumerate(resultStrides)) {

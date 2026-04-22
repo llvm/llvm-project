@@ -39,16 +39,13 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
   // from dynamic to static offset or stride (the canonicalization cannot know
   // at this point that it is really cast compatible).
   auto isGuaranteedCastCompatible = [](MemRefType source, MemRefType target) {
-    int64_t sourceOffset, targetOffset;
     SmallVector<int64_t, 4> sourceStrides, targetStrides;
-    if (failed(source.getStridesAndOffset(sourceStrides, sourceOffset)) ||
-        failed(target.getStridesAndOffset(targetStrides, targetOffset)))
+    if (failed(source.getStrides(sourceStrides)) ||
+        failed(target.getStrides(targetStrides)))
       return false;
     auto dynamicToStatic = [](int64_t a, int64_t b) {
       return ShapedType::isDynamic(a) && ShapedType::isStatic(b);
     };
-    if (dynamicToStatic(sourceOffset, targetOffset))
-      return false;
     for (auto it : zip(sourceStrides, targetStrides))
       if (dynamicToStatic(std::get<0>(it), std::get<1>(it)))
         return false;

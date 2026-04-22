@@ -7,8 +7,13 @@ gpu.module @create_nd_tdesc {
   // CHECK-SAME: %[[DYN:.*]]: memref<?x?xf16>) kernel {
   gpu.func @create_nd_tdesc(%src: memref<16x32xf32, 1>, %ptr: ui64, %shape1: index, %shape2: index,
   %stride1: index, %stride2: index, %offset1: index, %offset2: index, %dyn: memref<?x?xf16>) kernel {
-        // CHECK: %[[INTPTR_5:.*]] = memref.extract_aligned_pointer_as_index %[[DYN]] : memref<?x?xf16> -> index
-        // CHECK: %[[DYN_ADDR:.*]] = arith.index_castui %[[INTPTR_5]] : index to i64
+        // CHECK: %[[DYN_BASE:.*]], %[[DYN_OFFSET:.*]], %{{.*}}:2, %{{.*}}:2 = memref.extract_strided_metadata %[[DYN]]
+        // CHECK: %[[INTPTR_5:.*]] = memref.extract_aligned_pointer_as_index %[[DYN_BASE]] : memref<f16> -> index
+        // CHECK: %[[DYN_PTR_I64:.*]] = arith.index_castui %[[INTPTR_5]] : index to i64
+        // CHECK: %[[DYN_OFF_I64:.*]] = arith.index_castui %[[DYN_OFFSET]] : index to i64
+        // CHECK: %[[DYN_ELEM_SIZE:.*]] = arith.constant 2 : i64
+        // CHECK: %[[DYN_OFF_BYTES:.*]] = arith.muli %[[DYN_OFF_I64]], %[[DYN_ELEM_SIZE]] : i64
+        // CHECK: %[[DYN_ADDR:.*]] = arith.addi %[[DYN_PTR_I64]], %[[DYN_OFF_BYTES]] : i64
         // CHECK: %[[VAR0:.*]] = index.castu %[[ARG1]] : ui64 to index
         // CHECK: %[[BASE_ADDR:.*]] = arith.index_castui %[[VAR0]] : index to i64
         // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<8xi32>
@@ -27,8 +32,13 @@ gpu.module @create_nd_tdesc {
         // CHECK: %[[MEMSPACECAST:.*]] = memref.memory_space_cast %[[ARG0]] : memref<16x32xf32, 1> to memref<16x32xf32>
         %srcce = memref.memory_space_cast %src : memref<16x32xf32, 1> to memref<16x32xf32>
 
-        // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[MEMSPACECAST]] : memref<16x32xf32> -> index
-        // CHECK: %[[BASE_ADDR2:.*]] = arith.index_castui %[[INTPTR]] : index to i64
+        // CHECK: %[[SRC_BASE:.*]], %[[SRC_OFFSET:.*]], %{{.*}}:2, %{{.*}}:2 = memref.extract_strided_metadata %[[MEMSPACECAST]]
+        // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[SRC_BASE]] : memref<f32> -> index
+        // CHECK: %[[SRC_PTR_I64:.*]] = arith.index_castui %[[INTPTR]] : index to i64
+        // CHECK: %[[SRC_OFF_I64:.*]] = arith.index_castui %[[SRC_OFFSET]] : index to i64
+        // CHECK: %[[SRC_ELEM_SIZE:.*]] = arith.constant 4 : i64
+        // CHECK: %[[SRC_OFF_BYTES:.*]] = arith.muli %[[SRC_OFF_I64]], %[[SRC_ELEM_SIZE]] : i64
+        // CHECK: %[[BASE_ADDR2:.*]] = arith.addi %[[SRC_PTR_I64]], %[[SRC_OFF_BYTES]] : i64
         // CHECK: %[[CST_1:.*]] = arith.constant dense<0> : vector<8xi32>
         // CHECK: %[[C32_I64:.*]] = arith.constant 32 : i64
         // CHECK: %[[SHAPE_W2:.*]] = arith.trunci %[[C32_I64]] : i64 to i32

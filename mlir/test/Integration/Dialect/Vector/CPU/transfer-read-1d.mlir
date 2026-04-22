@@ -40,9 +40,9 @@ func.func @transfer_read_1d_unit_stride(%A : memref<?x?xf32>) {
   scf.for %arg2 = %c1 to %c5 step %c2 {
     scf.for %arg3 = %c0 to %c6 step %c3 {
       %0 = memref.subview %A[%arg2, %arg3] [1, 2] [1, 1]
-          : memref<?x?xf32> to memref<1x2xf32, strided<[?, 1], offset: ?>>
+          : memref<?x?xf32> to memref<1x2xf32, strided<[?, 1]>>
       %1 = vector.transfer_read %0[%c0, %c0], %fm42 {in_bounds=[true]}
-          : memref<1x2xf32, strided<[?, 1], offset: ?>>, vector<2xf32>
+          : memref<1x2xf32, strided<[?, 1]>>, vector<2xf32>
       vector.print %1 : vector<2xf32>
     }
   }
@@ -58,9 +58,9 @@ func.func @transfer_read_1d_non_static_unit_stride(%A : memref<?x?xf32>) {
   %c6 = arith.constant 6 : index
   %fm42 = arith.constant -42.0: f32
   %1 = memref.reinterpret_cast %A to offset: [%c6], sizes: [%c4, %c6],  strides: [%c6, %c1]
-      : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+      : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?]>>
   %2 = vector.transfer_read %1[%c2, %c1], %fm42 {in_bounds=[true]}
-      : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
+      : memref<?x?xf32, strided<[?, ?]>>, vector<4xf32>
   vector.print %2 : vector<4xf32>
   return
 }

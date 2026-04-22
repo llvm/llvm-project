@@ -25,8 +25,7 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
     return false;
 
   SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(type.getStridesAndOffset(strides, offset)))
+  if (failed(type.getStrides(strides)))
     return false;
 
   // MemRef is contiguous if outer dimensions are size-1 and inner

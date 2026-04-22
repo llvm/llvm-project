@@ -325,8 +325,8 @@ func.func @do_not_fuse_loops_with_nonfull_alias_defined_in_loop_bodies() {
     scf.reduce
   }
   scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c1) step (%c1, %c1) {
-    %A = memref.subview %buffer[%i, %c0][2, 1][1, 1] : memref<2x2xf32> to memref<2x1xf32, strided<[2, 1], offset: ?>>
-    %A_elem = memref.load %A[%i, %j] : memref<2x1xf32, strided<[2, 1], offset: ?>>
+    %A = memref.subview %buffer[%i, %c0][2, 1][1, 1] : memref<2x2xf32> to memref<2x1xf32, strided<[2, 1]>>
+    %A_elem = memref.load %A[%i, %j] : memref<2x1xf32, strided<[2, 1]>>
     scf.reduce
   }
   return
@@ -648,10 +648,10 @@ func.func @do_not_fuse_nontrivial_subview_offset() {
     scf.reduce
   }
   %sub = memref.subview %buf[1, 0, 0][1, 2, 2][1, 1, 1]
-      : memref<2x2x2xf32> to memref<2x2xf32, strided<[2, 1], offset: 4>>
+      : memref<2x2x2xf32> to memref<2x2xf32, strided<[2, 1]>>
   scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %v = memref.load %sub[%i, %j]
-        : memref<2x2xf32, strided<[2, 1], offset: 4>>
+        : memref<2x2xf32, strided<[2, 1]>>
     memref.store %v, %buf[%c0, %i, %j] : memref<2x2x2xf32>
     scf.reduce
   }
@@ -802,10 +802,10 @@ func.func @do_not_fuse_vector_transfer_nontrivial_subview(%A: memref<2x4xf32>) {
     vector.transfer_write %v, %A[%c0, %i] {permutation_map = affine_map<(d0, d1) -> (d1)>, in_bounds = [true]} : vector<1xf32>, memref<2x4xf32>
     scf.reduce
   }
-    %sub = memref.subview %A[1, 0][1, 4][1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1], offset: 4>>
+    %sub = memref.subview %A[1, 0][1, 4][1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1]>>
   scf.parallel (%i) = (%c0) to (%c1) step (%c1) {
-    %v = vector.transfer_read %sub[%i], %zero {in_bounds = [true]} : memref<4xf32, strided<[1], offset: 4>>, vector<1xf32>
-    vector.transfer_write %v, %sub[%i] {in_bounds = [true]} : vector<1xf32>, memref<4xf32, strided<[1], offset: 4>>
+    %v = vector.transfer_read %sub[%i], %zero {in_bounds = [true]} : memref<4xf32, strided<[1]>>, vector<1xf32>
+    vector.transfer_write %v, %sub[%i] {in_bounds = [true]} : vector<1xf32>, memref<4xf32, strided<[1]>>
     scf.reduce
   }
   return
@@ -847,8 +847,8 @@ func.func @fuse_vector_transfer_subview_rank_reducing(%A: memref<1x4xf32>, %B: m
   %zero = arith.constant 0.0 : f32
   %vec = arith.constant dense<1.0> : vector<4xf32>
   scf.parallel (%i) = (%c0) to (%c1) step (%c1) {
-    %sub = memref.subview %A[%i, %c0][1, 4][1, 1] : memref<1x4xf32> to memref<4xf32, strided<[1], offset: ?>>
-    vector.transfer_write %vec, %sub[%c0] {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: ?>>
+    %sub = memref.subview %A[%i, %c0][1, 4][1, 1] : memref<1x4xf32> to memref<4xf32, strided<[1]>>
+    vector.transfer_write %vec, %sub[%c0] {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1]>>
     scf.reduce
   }
   scf.parallel (%i) = (%c0) to (%c1) step (%c1) {
@@ -877,8 +877,8 @@ func.func @do_not_fuse_vector_transfer_subview_offset(%A: memref<1x4xf32>, %B: m
   %zero = arith.constant 0.0 : f32
   %vec = arith.constant dense<1.0> : vector<4xf32>
   scf.parallel (%i) = (%c0) to (%c1) step (%c1) {
-    %sub = memref.subview %A[%i, %c0][1, 4][1, 1] : memref<1x4xf32> to memref<4xf32, strided<[1], offset: ?>>
-    vector.transfer_write %vec, %sub[%c0] {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: ?>>
+    %sub = memref.subview %A[%i, %c0][1, 4][1, 1] : memref<1x4xf32> to memref<4xf32, strided<[1]>>
+    vector.transfer_write %vec, %sub[%c0] {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1]>>
     scf.reduce
   }
   scf.parallel (%i) = (%c0) to (%c1) step (%c1) {
@@ -888,8 +888,8 @@ func.func @do_not_fuse_vector_transfer_subview_offset(%A: memref<1x4xf32>, %B: m
       scf.yield %n : f32
     }
     // Read from an offset alias to prevent fusion.
-    %off = memref.subview %A[%i, %c1][1, 3][1, 1] : memref<1x4xf32> to memref<3xf32, strided<[1], offset: ?>>
-    %v0 = memref.load %off[%c0] : memref<3xf32, strided<[1], offset: ?>>
+    %off = memref.subview %A[%i, %c1][1, 3][1, 1] : memref<1x4xf32> to memref<3xf32, strided<[1]>>
+    %v0 = memref.load %off[%c0] : memref<3xf32, strided<[1]>>
     %res = arith.addf %sum, %v0 : f32
     memref.store %res, %B[%i, %c0] : memref<1x4xf32>
     scf.reduce

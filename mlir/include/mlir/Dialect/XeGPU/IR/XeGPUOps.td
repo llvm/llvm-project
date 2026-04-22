@@ -208,7 +208,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       /// Get the static strides, the value passed to const_strides
       /// will overide the value in memref.
       if (auto memrefTy = llvm::dyn_cast<MemRefType>(getSourceType()))
-        statics = memrefTy.getStridesAndOffset().first;
+        statics = memrefTy.getStrides();
       if (auto attr = getConstStridesAttr())
         statics = llvm::to_vector(attr.asArrayRef());
 

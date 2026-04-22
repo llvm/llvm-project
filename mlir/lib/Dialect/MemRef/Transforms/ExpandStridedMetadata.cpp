@@ -68,9 +68,9 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   auto newExtractStridedMetadata =
       memref::ExtractStridedMetadataOp::create(rewriter, origLoc, source);
 
-  auto [sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
+  auto sourceStrides = sourceType.getStrides();
 #ifndef NDEBUG
-  auto [resultStrides, resultOffset] = subview.getType().getStridesAndOffset();
+  auto resultStrides = subview.getType().getStrides();
 #endif // NDEBUG
 
   // Compute the new strides and offset from the base strides and offset:
@@ -86,9 +86,9 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
 
   bindSymbolsList(rewriter.getContext(), MutableArrayRef{symbols});
   AffineExpr expr = symbols.front();
-  values[0] = ShapedType::isDynamic(sourceOffset)
-                  ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
-                  : rewriter.getIndexAttr(sourceOffset);
+  // The MemRef type no longer carries a static offset, so always read the
+  // runtime offset from extract_strided_metadata.
+  values[0] = getAsOpFoldResult(newExtractStridedMetadata.getOffset());
   SmallVector<OpFoldResult> subOffsets = subview.getMixedOffsets();
 
   AffineExpr s0 = rewriter.getAffineSymbolExpr(0);
@@ -114,14 +114,6 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   // Compute the offset.
   OpFoldResult finalOffset =
       makeComposedFoldedAffineApply(rewriter, origLoc, expr, values);
-#ifndef NDEBUG
-  // Assert that the computed offset matches the offset of the result type of
-  // the subview op (if both are static).
-  std::optional<int64_t> computedOffset = getConstantIntValue(finalOffset);
-  if (computedOffset && ShapedType::isStatic(resultOffset))
-    assert(*computedOffset == resultOffset &&
-           "mismatch between computed offset and result type offset");
-#endif // NDEBUG
 
   // The final result is  <baseBuffer, offset, sizes, strides>.
   // Thus we need 1 + 1 + subview.getRank() + subview.getRank(), to hold all
@@ -320,7 +312,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
   // Collect the statically known information about the original stride.
   Value source = expandShape.getSrc();
   auto sourceType = cast<MemRefType>(source.getType());
-  auto [strides, offset] = sourceType.getStridesAndOffset();
+  auto strides = sourceType.getStrides();
 
   OpFoldResult origStride = ShapedType::isDynamic(strides[groupId])
                                 ? origStrides[groupId]
@@ -436,7 +428,7 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
   Value source = collapseShape.getSrc();
   auto sourceType = cast<MemRefType>(source.getType());
 
-  auto [strides, offset] = sourceType.getStridesAndOffset();
+  auto strides = sourceType.getStrides();
 
   ArrayRef<int64_t> srcShape = sourceType.getShape();
 
@@ -459,8 +451,7 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
     // We're dealing with a 1x1x...x1 shape. The stride is meaningless,
     // but we still have to make the type system happy.
     MemRefType collapsedType = collapseShape.getResultType();
-    auto [collapsedStrides, collapsedOffset] =
-        collapsedType.getStridesAndOffset();
+    auto collapsedStrides = collapsedType.getStrides();
     int64_t finalStride = collapsedStrides[groupId];
     if (ShapedType::isDynamic(finalStride)) {
       // Look for a dynamic stride. At this point we don't know which one is
@@ -513,14 +504,14 @@ static FailureOr<StridedMetadata> resolveReshapeStridedMetadata(
       memref::ExtractStridedMetadataOp::create(rewriter, origLoc, source);
 
   // Collect statically known information.
-  auto [strides, offset] = sourceType.getStridesAndOffset();
+  auto strides = sourceType.getStrides();
   MemRefType reshapeType = reshape.getResultType();
   unsigned reshapeRank = reshapeType.getRank();
 
+  // The MemRef type no longer carries a static offset, so always read the
+  // runtime offset from extract_strided_metadata.
   OpFoldResult offsetOfr =
-      ShapedType::isDynamic(offset)
-          ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
-          : rewriter.getIndexAttr(offset);
+      getAsOpFoldResult(newExtractStridedMetadata.getOffset());
 
   // Get the special case of 0-D out of the way.
   if (sourceRank == 0) {

@@ -2371,10 +2371,10 @@ acc.private.recipe @privatization_memref_slice : memref<10x10xf32> init {
   //   * result[3][4] -> slice_alloc[1][1] (because 3*10+4 + (-23) = 11)
   %adjusted_view = memref.reinterpret_cast %slice_alloc to
     offset: [%neg_offset], sizes: [10, 10], strides: [%c10, %c1]
-    : memref<?x?xf32> to memref<10x10xf32, strided<[?, ?], offset: ?>>
+    : memref<?x?xf32> to memref<10x10xf32, strided<[?, ?]>>
 
   // Cast to the expected return type
-  %result = memref.cast %adjusted_view : memref<10x10xf32, strided<[?, ?], offset: ?>> to memref<10x10xf32>
+  %result = memref.cast %adjusted_view : memref<10x10xf32, strided<[?, ?]>> to memref<10x10xf32>
 
   acc.yield %result : memref<10x10xf32>
 }

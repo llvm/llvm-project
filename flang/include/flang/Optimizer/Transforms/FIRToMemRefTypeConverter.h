@@ -191,7 +191,7 @@ public:
       auto memRefTy = convertMemrefType(elTy);
       mlir::MemRefType dynTy = mlir::MemRefType::Builder(memRefTy).setLayout(
           mlir::StridedLayoutAttr::get(
-              memRefTy.getContext(), mlir::ShapedType::kDynamic,
+              memRefTy.getContext(),
               llvm::SmallVector<int64_t>(memRefTy.getRank(),
                                          mlir::ShapedType::kDynamic)));
       return dynTy;

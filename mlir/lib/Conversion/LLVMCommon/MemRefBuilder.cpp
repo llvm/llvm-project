@@ -51,9 +51,9 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
     MemRefType type, Value memory, Value alignedMemory) {
   assert(type.hasStaticShape() && "unexpected dynamic shape");
 
-  // Extract all strides and offsets and verify they are static.
-  auto [strides, offset] = type.getStridesAndOffset();
-  assert(ShapedType::isStatic(offset) && "expected static offset");
+  // Extract all strides and verify they are static. Offset is no longer carried
+  // by the type; static-shape memrefs have offset 0 in the descriptor.
+  SmallVector<int64_t> strides = type.getStrides();
   assert(!llvm::any_of(strides, ShapedType::isDynamic) &&
          "expected static strides");
 
@@ -63,7 +63,7 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
   auto descr = MemRefDescriptor::poison(builder, loc, convertedType);
   descr.setAllocatedPtr(builder, loc, memory);
   descr.setAlignedPtr(builder, loc, alignedMemory);
-  descr.setConstantOffset(builder, loc, offset);
+  descr.setConstantOffset(builder, loc, 0);
 
   // Fill in sizes and strides
   for (unsigned i = 0, e = type.getRank(); i != e; ++i) {
@@ -195,25 +195,14 @@ LLVM::LLVMPointerType MemRefDescriptor::getElementPtrType() {
 Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,
                                   const LLVMTypeConverter &converter,
                                   MemRefType type) {
-  // When we convert to LLVM, the input memref must have been normalized
-  // beforehand. Hence, this call is guaranteed to work.
-  auto [strides, offsetCst] = type.getStridesAndOffset();
-
+  // The MemRef type no longer carries a static offset, so we cannot tell from
+  // the type alone whether the runtime offset is zero. Always add it; LLVM's
+  // canonicalizer will fold a zero-offset GEP away.
   Value ptr = alignedPtr(builder, loc);
-  // For zero offsets, we already have the base pointer.
-  if (offsetCst == 0)
-    return ptr;
-
-  // Otherwise add the offset to the aligned base.
-  Type indexType = converter.getIndexType();
-  Value offsetVal =
-      ShapedType::isDynamic(offsetCst)
-          ? offset(builder, loc)
-          : createIndexAttrConstant(builder, loc, indexType, offsetCst);
+  Value offsetVal = offset(builder, loc);
   Type elementType = converter.convertType(type.getElementType());
-  ptr = LLVM::GEPOp::create(builder, loc, ptr.getType(), elementType, ptr,
-                            offsetVal);
-  return ptr;
+  return LLVM::GEPOp::create(builder, loc, ptr.getType(), elementType, ptr,
+                             offsetVal);
 }
 
 /// Creates a MemRef descriptor structure from a list of individual values

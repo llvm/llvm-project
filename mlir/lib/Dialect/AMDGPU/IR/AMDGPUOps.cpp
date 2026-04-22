@@ -82,7 +82,7 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
     if (!stridedLayout)
       return failure();
     MemRefLayoutAttrInterface newLayout =
-        StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides());
+        StridedLayoutAttr::get(ctx, stridedLayout.getStrides());
     // Special case: if resetting the offset causes the strided layout to become
     // the identity layout, then reset to the identity layout.
     // TODO: this'll get a lot simpler when we have the contiguous layout.
@@ -227,11 +227,11 @@ static bool staticallyOutOfBounds(OpType op) {
   MemRefType bufferType = op.getMemref().getType();
   if (!bufferType.hasStaticShape())
     return false;
-  int64_t offset;
+  // Offset is no longer carried by the MemRef type; treat as 0 here.
   SmallVector<int64_t> strides;
-  if (failed(bufferType.getStridesAndOffset(strides, offset)))
+  if (failed(bufferType.getStrides(strides)))
     return false;
-  int64_t result = offset + op.getIndexOffset().value_or(0);
+  int64_t result = op.getIndexOffset().value_or(0);
   if (op.getSgprOffset()) {
     std::optional<uint32_t> sgprOffset = getConstantUint32(op.getSgprOffset());
     if (!sgprOffset)

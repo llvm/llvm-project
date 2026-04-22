@@ -28,10 +28,10 @@ func.func @matvec(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>)
   %C = memref.alloc(%m, %n) : memref<?x?xf32>
   linalg.fill ins(%f0 : f32) outs(%C : memref<?x?xf32>)
   scf.for %i = %c0 to %n step %c1 {
-    %b = memref.subview %B[0, %i][%x, 1][1, 1] : memref<?x?xf32> to memref<?xf32, strided<[?], offset: ?>>
-    %c = memref.subview %C[0, %i][%m, 1][1, 1] : memref<?x?xf32> to memref<?xf32, strided<[?], offset: ?>>
-    linalg.matvec ins(%A, %b: memref<?x?xf32>, memref<?xf32, strided<[?], offset: ?>>)
-                  outs(%c: memref<?xf32, strided<[?], offset: ?>>)
+    %b = memref.subview %B[0, %i][%x, 1][1, 1] : memref<?x?xf32> to memref<?xf32, strided<[?]>>
+    %c = memref.subview %C[0, %i][%m, 1][1, 1] : memref<?x?xf32> to memref<?xf32, strided<[?]>>
+    linalg.matvec ins(%A, %b: memref<?x?xf32>, memref<?xf32, strided<[?]>>)
+                  outs(%c: memref<?xf32, strided<[?]>>)
   }
   return %C : memref<?x?xf32>
 }

@@ -26,7 +26,7 @@ using namespace mlir::linalg;
 
 static MemRefType makeStridedLayoutDynamic(MemRefType type) {
   return MemRefType::Builder(type).setLayout(StridedLayoutAttr::get(
-      type.getContext(), ShapedType::kDynamic,
+      type.getContext(),
       SmallVector<int64_t>(type.getRank(), ShapedType::kDynamic)));
 }
 

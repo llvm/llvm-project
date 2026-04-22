@@ -1,10 +1,10 @@
 // RUN: mlir-opt -amdgpu-resolve-strided-metadata -split-input-file %s | FileCheck %s
 
-!tSrc = memref<?x?xi32, strided<[?, ?], offset: ?>>
-!tDst = memref<?x?xi32, strided<[?, ?], offset: ?>, #amdgpu.address_space<fat_raw_buffer>>
+!tSrc = memref<?x?xi32, strided<[?, ?]>>
+!tDst = memref<?x?xi32, strided<[?, ?]>, #amdgpu.address_space<fat_raw_buffer>>
 !tRes = memref<i32, #amdgpu.address_space<fat_raw_buffer>>
 // CHECK-LABEL: @resolve_metadata_no_offset_reset
-// CHECK-SAME: (%[[arg0:.*]]: memref<?x?xi32, strided<[?, ?], offset: ?>>)
+// CHECK-SAME: (%[[arg0:.*]]: memref<?x?xi32, strided<[?, ?]>>)
 // CHECK-NEXT: %[[cast:.+]] = amdgpu.fat_raw_buffer_cast %[[arg0]]
 // CHECK-NEXT: %{{.+}}, %[[offset:.+]], %[[size:.+]]:2, %[[stride:.+]]:2 = memref.extract_strided_metadata %[[arg0]]
 // CHECK-NEXT: %[[reinterp:.+]] = memref.reinterpret_cast %[[cast]]
@@ -17,11 +17,11 @@ func.func @resolve_metadata_no_offset_reset(%arg0: !tSrc) -> (!tRes, index, inde
 
 // -----
 
-!tSrc = memref<?x?xi32, strided<[?, ?], offset: ?>>
+!tSrc = memref<?x?xi32, strided<[?, ?]>>
 !tDst = memref<?x?xi32, strided<[?, ?]>, #amdgpu.address_space<fat_raw_buffer>>
 !tRes = memref<i32, #amdgpu.address_space<fat_raw_buffer>>
 // CHECK-LABEL: @resolve_metadata_offset_reset
-// CHECK-SAME: (%[[arg0:.*]]: memref<?x?xi32, strided<[?, ?], offset: ?>>)
+// CHECK-SAME: (%[[arg0:.*]]: memref<?x?xi32, strided<[?, ?]>>)
 // CHECK-NEXT: %[[offset:.+]] = arith.constant 0 : index
 // CHECK-NEXT: %[[cast:.+]] = amdgpu.fat_raw_buffer_cast %[[arg0]]
 // CHECK-NEXT: %{{.+}}, %{{.+}}, %[[size:.+]]:2, %[[stride:.+]]:2 = memref.extract_strided_metadata %[[arg0]]
@@ -35,11 +35,11 @@ func.func @resolve_metadata_offset_reset(%arg0: !tSrc) -> (!tRes, index, index, 
 
 // -----
 
-!tSrc = memref<?x?xi32, strided<[?, ?], offset: ?>>
+!tSrc = memref<?x?xi32, strided<[?, ?]>>
 !tDst = memref<?x?xi32, strided<[?, ?]>, #amdgpu.address_space<fat_raw_buffer>>
 !tRes = memref<i32, #amdgpu.address_space<fat_raw_buffer>>
 // CHECK-LABEL: @resolve_metadata_no_base_ptr
-// CHECK-SAME: (%[[arg0:.*]]: memref<?x?xi32, strided<[?, ?], offset: ?>>)
+// CHECK-SAME: (%[[arg0:.*]]: memref<?x?xi32, strided<[?, ?]>>)
 // CHECK-NEXT: %[[offset:.+]] = arith.constant 0 : index
 // CHECK-NEXT: %[[cast:.+]] = amdgpu.fat_raw_buffer_cast %[[arg0]]
 // CHECK-NEXT: %{{.+}}, %{{.+}}, %[[size:.+]]:2, %[[stride:.+]]:2 = memref.extract_strided_metadata %[[arg0]]

@@ -1270,13 +1270,12 @@ int printBuiltinAttributes(MlirContext ctx) {
 
   int64_t layoutStrides[3] = {5, 7, 13};
   MlirAttribute stridedLayoutAttr =
-      mlirStridedLayoutAttrGet(ctx, 42, 3, &layoutStrides[0]);
+      mlirStridedLayoutAttrGet(ctx, 3, &layoutStrides[0]);
 
-  // CHECK: strided<[5, 7, 13], offset: 42>
+  // CHECK: strided<[5, 7, 13]>
   mlirAttributeDump(stridedLayoutAttr);
 
-  if (mlirStridedLayoutAttrGetOffset(stridedLayoutAttr) != 42 ||
-      mlirStridedLayoutAttrGetNumStrides(stridedLayoutAttr) != 3 ||
+  if (mlirStridedLayoutAttrGetNumStrides(stridedLayoutAttr) != 3 ||
       mlirStridedLayoutAttrGetStride(stridedLayoutAttr, 0) != 5 ||
       mlirStridedLayoutAttrGetStride(stridedLayoutAttr, 1) != 7 ||
       mlirStridedLayoutAttrGetStride(stridedLayoutAttr, 2) != 13)

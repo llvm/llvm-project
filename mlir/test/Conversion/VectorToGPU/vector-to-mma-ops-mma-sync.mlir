@@ -721,7 +721,7 @@ func.func @m16n8k32_int8_row_col_row(%arg0: memref<128x128xi8, #gpu.address_spac
 #map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
 #map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
-!smem_type = memref<20x20xf16, strided<[?, 1], offset: ?>, #gpu.address_space<workgroup>>
+!smem_type = memref<20x20xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>
 
 // This test case is identical to m16n8k16 test case, but it tests that having
 // n row dimension with unknown stride is handled correctly.
@@ -758,7 +758,7 @@ func.func @strided_memref_read_write(%arg0: !smem_type,
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d2, d0, d3)>
 #map3 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-!smem_type = memref<20x20x20xf16, strided<[?, ?, 1], offset: ?>, #gpu.address_space<workgroup>>
+!smem_type = memref<20x20x20xf16, strided<[?, ?, 1]>, #gpu.address_space<workgroup>>
 
 // CHECK-LABEL: func @unsupported_non_2d_load_store
 func.func @unsupported_non_2d_load_store(%arg0: !smem_type,
@@ -786,7 +786,7 @@ func.func @unsupported_non_2d_load_store(%arg0: !smem_type,
 #map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
 #map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
 
-!smem_type = memref<20x20xf16, strided<[?, ?], offset: ?>, #gpu.address_space<workgroup>>
+!smem_type = memref<20x20xf16, strided<[?, ?]>, #gpu.address_space<workgroup>>
 
 // CHECK-LABEL: func @unsupported_fully_dynamic_strides
 func.func @unsupported_fully_dynamic_strides(%arg0: !smem_type,
@@ -815,7 +815,7 @@ func.func @unsupported_fully_dynamic_strides(%arg0: !smem_type,
 #map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
 
 
-!smem_type = memref<20x20xf16, strided<[?, 1], offset: ?>, #gpu.address_space<workgroup>>
+!smem_type = memref<20x20xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>
 
 // CHECK-LABEL: func @unsupported_transposed_store
 func.func @unsupported_transposed_store(%arg0: !smem_type,

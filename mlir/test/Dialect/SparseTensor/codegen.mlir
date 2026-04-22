@@ -330,11 +330,11 @@ func.func @sparse_values_coo(%arg0: tensor<?x?x?xf64, #ccoo>) -> memref<?xf64> {
 //       CHECK: %[[S0:.*]] = sparse_tensor.storage_specifier.get %[[A5]] crd_mem_sz at 1
 //       CHECK: %[[S2:.*]] = arith.divui %[[S0]], %[[C2]] : index
 //       CHECK: %[[R1:.*]] = memref.subview %[[A3]][0] {{\[}}%[[S2]]] [2] : memref<?xindex> to memref<?xindex, strided<[2]>>
-//       CHECK: %[[R2:.*]] = memref.cast %[[R1]] : memref<?xindex, strided<[2]>> to memref<?xindex, strided<[?], offset: ?>>
-//       CHECK: return %[[R2]] : memref<?xindex, strided<[?], offset: ?>>
-func.func @sparse_indices_coo(%arg0: tensor<?x?x?xf64, #ccoo>) -> memref<?xindex, strided<[?], offset: ?>> {
-  %0 = sparse_tensor.coordinates  %arg0 { level = 1 : index } : tensor<?x?x?xf64, #ccoo> to memref<?xindex, strided<[?], offset: ?>>
-  return %0 : memref<?xindex, strided<[?], offset: ?>>
+//       CHECK: %[[R2:.*]] = memref.cast %[[R1]] : memref<?xindex, strided<[2]>> to memref<?xindex, strided<[?]>>
+//       CHECK: return %[[R2]] : memref<?xindex, strided<[?]>>
+func.func @sparse_indices_coo(%arg0: tensor<?x?x?xf64, #ccoo>) -> memref<?xindex, strided<[?]>> {
+  %0 = sparse_tensor.coordinates  %arg0 { level = 1 : index } : tensor<?x?x?xf64, #ccoo> to memref<?xindex, strided<[?]>>
+  return %0 : memref<?xindex, strided<[?]>>
 }
 
 // CHECK-LABEL: func.func @sparse_indices_buffer_coo(
