@@ -3428,7 +3428,7 @@ CIRGenModule::getOrCreateAnnotationArgs(const AnnotateAttr *attr) {
   if (lookup)
     return lookup;
 
-  llvm::SmallVector<mlir::Attribute, 4> args;
+  llvm::SmallVector<mlir::Attribute> args;
   args.reserve(exprs.size());
   for (Expr *e : exprs) {
     if (auto *strE = dyn_cast<clang::StringLiteral>(e->IgnoreParenCasts())) {
@@ -3456,7 +3456,7 @@ void CIRGenModule::addGlobalAnnotations(const ValueDecl *d,
   assert(d->hasAttr<AnnotateAttr>() && "no annotate attribute");
   assert((isa<cir::GlobalOp>(gv) || isa<cir::FuncOp>(gv)) &&
          "annotation only on globals");
-  llvm::SmallVector<mlir::Attribute, 4> annotations;
+  llvm::SmallVector<mlir::Attribute> annotations;
   for (const auto *i : d->specific_attrs<AnnotateAttr>())
     annotations.push_back(emitAnnotateAttr(i));
   if (auto global = dyn_cast<cir::GlobalOp>(gv))

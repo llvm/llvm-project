@@ -747,6 +747,9 @@ private:
     mlir::StringAttr symName;
     cir::AnnotationAttr annotation;
     mlir::Location loc;
+    CollectedAnnotation(mlir::StringAttr symName,
+                        cir::AnnotationAttr annotation, mlir::Location loc)
+        : symName(symName), annotation(annotation), loc(loc) {}
   };
   llvm::SmallVector<CollectedAnnotation> collectedAnnotations;
 };
@@ -3429,7 +3432,7 @@ getOrCreateAnnotationStringGlobal(mlir::OpBuilder &builder, mlir::Location loc,
   if (isArg)
     name += ".arg";
 
-  auto strGlobal = mlir::LLVM::GlobalOp::create(
+  mlir::LLVM::GlobalOp strGlobal = mlir::LLVM::GlobalOp::create(
       builder, loc, arrayTy, /*isConstant=*/true, mlir::LLVM::Linkage::Private,
       name, mlir::StringAttr::get(module.getContext(), std::string(str) + '\0'),
       /*alignment=*/isArg ? 1 : 0);
@@ -3471,7 +3474,7 @@ mlir::LLVM::GlobalOp getOrCreateAnnotationArgsVar(
     name += "." + std::to_string(argsCache.size());
   name += ".annotation";
 
-  auto argsGlobal = mlir::LLVM::GlobalOp::create(
+  mlir::LLVM::GlobalOp argsGlobal = mlir::LLVM::GlobalOp::create(
       builder, loc, structTy, /*isConstant=*/true, mlir::LLVM::Linkage::Private,
       name, mlir::Attribute());
   argsGlobal.setSection(llvmMetadataSectionName);
@@ -3487,15 +3490,15 @@ mlir::LLVM::GlobalOp getOrCreateAnnotationArgsVar(
       mlir::LLVM::UndefOp::create(initBuilder, loc, structTy);
   for (auto [idx, arg] : llvm::enumerate(argsAttr)) {
     if (auto strArg = mlir::dyn_cast<mlir::StringAttr>(arg)) {
-      auto strGlobal = getOrCreateAnnotationStringGlobal(
+      mlir::LLVM::GlobalOp strGlobal = getOrCreateAnnotationStringGlobal(
           builder, loc, module, strArg.getValue(), argStringCache,
           /*isArg=*/true);
-      auto strAddr = mlir::LLVM::AddressOfOp::create(initBuilder, loc, ptrTy,
-                                                     strGlobal.getSymName());
+      mlir::LLVM::AddressOfOp strAddr = mlir::LLVM::AddressOfOp::create(
+          initBuilder, loc, ptrTy, strGlobal.getSymName());
       structInit = mlir::LLVM::InsertValueOp::create(initBuilder, loc,
                                                      structInit, strAddr, idx);
     } else if (auto intArg = mlir::dyn_cast<mlir::IntegerAttr>(arg)) {
-      auto intConst = mlir::LLVM::ConstantOp::create(
+      mlir::LLVM::ConstantOp intConst = mlir::LLVM::ConstantOp::create(
           initBuilder, loc, intArg.getType(), intArg.getValue());
       structInit = mlir::LLVM::InsertValueOp::create(initBuilder, loc,
                                                      structInit, intConst, idx);
@@ -3528,12 +3531,9 @@ void ConvertCIRToLLVMPass::collectGlobalAnnotations(mlir::ModuleOp module) {
                          mlir::Location loc) {
     if (!arr)
       return;
-    for (mlir::Attribute a : arr) {
-      auto annot = mlir::dyn_cast<cir::AnnotationAttr>(a);
-      if (!annot)
-        continue;
-      collectedAnnotations.push_back({symName, annot, loc});
-    }
+    for (mlir::Attribute a : arr)
+      if (auto annot = mlir::dyn_cast<cir::AnnotationAttr>(a))
+        collectedAnnotations.emplace_back(symName, annot, loc);
   };
 
   // Walk in IR order: GlobalOps first (they appear before functions in the
@@ -3594,30 +3594,30 @@ void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar(mlir::ModuleOp module) {
     // Field 0: ptr to the annotated symbol. (Literal zero is ambiguous on
     // InsertValueOp::create, wrap in a SmallVector.)
     llvm::SmallVector<int64_t> zero{0};
-    auto symAddr = mlir::LLVM::AddressOfOp::create(
+    mlir::LLVM::AddressOfOp symAddr = mlir::LLVM::AddressOfOp::create(
         initBuilder, moduleLoc, ptrTy, entry.symName.getValue());
     entryVal = mlir::LLVM::InsertValueOp::create(initBuilder, moduleLoc,
                                                  entryVal, symAddr, zero);
 
     // Field 1: ptr to the annotation name string.
-    auto nameGlobal = getOrCreateAnnotationStringGlobal(
+    mlir::LLVM::GlobalOp nameGlobal = getOrCreateAnnotationStringGlobal(
         constsBuilder, moduleLoc, module, entry.annotation.getName().getValue(),
         stringCache, /*isArg=*/false);
-    auto nameAddr = mlir::LLVM::AddressOfOp::create(
+    mlir::LLVM::AddressOfOp nameAddr = mlir::LLVM::AddressOfOp::create(
         initBuilder, moduleLoc, ptrTy, nameGlobal.getSymName());
     entryVal = mlir::LLVM::InsertValueOp::create(initBuilder, moduleLoc,
                                                  entryVal, nameAddr, 1);
 
     // Fields 2 and 3: ptr to filename string and line number.
     auto [filename, line] = extractFileLine(entry.loc);
-    auto fileGlobal = getOrCreateAnnotationStringGlobal(
+    mlir::LLVM::GlobalOp fileGlobal = getOrCreateAnnotationStringGlobal(
         constsBuilder, moduleLoc, module, filename, stringCache,
         /*isArg=*/false);
-    auto fileAddr = mlir::LLVM::AddressOfOp::create(
+    mlir::LLVM::AddressOfOp fileAddr = mlir::LLVM::AddressOfOp::create(
         initBuilder, moduleLoc, ptrTy, fileGlobal.getSymName());
     entryVal = mlir::LLVM::InsertValueOp::create(initBuilder, moduleLoc,
                                                  entryVal, fileAddr, 2);
-    auto lineConst =
+    mlir::LLVM::ConstantOp lineConst =
         mlir::LLVM::ConstantOp::create(initBuilder, moduleLoc, i32Ty, line);
     entryVal = mlir::LLVM::InsertValueOp::create(initBuilder, moduleLoc,
                                                  entryVal, lineConst, 3);
@@ -3628,7 +3628,7 @@ void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar(mlir::ModuleOp module) {
     if (!args || args.empty()) {
       argsField = mlir::LLVM::ZeroOp::create(initBuilder, moduleLoc, ptrTy);
     } else {
-      auto argsGlobal = getOrCreateAnnotationArgsVar(
+      mlir::LLVM::GlobalOp argsGlobal = getOrCreateAnnotationArgsVar(
           constsBuilder, moduleLoc, module, args, argStringCache, argsCache);
       argsField = mlir::LLVM::AddressOfOp::create(initBuilder, moduleLoc, ptrTy,
                                                   argsGlobal.getSymName());
