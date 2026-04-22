@@ -645,10 +645,10 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
       DL->getIndexType(AI->getContext(), AI->getPointerAddressSpace());
 
   auto CreateRMWInstruction = [&](Value *HalfPtr, Value *HalfVal, Align A,
-                           bool Elementwise) -> AtomicRMWInst * {
-    auto *NewAI = Builder.CreateAtomicRMW(AI->getOperation(), HalfPtr, HalfVal,
-                                          A, AI->getOrdering(),
-                                          AI->getSyncScopeID());
+                                  bool Elementwise) -> AtomicRMWInst * {
+    auto *NewAI =
+        Builder.CreateAtomicRMW(AI->getOperation(), HalfPtr, HalfVal, A,
+                                AI->getOrdering(), AI->getSyncScopeID());
     NewAI->setVolatile(AI->isVolatile());
     NewAI->setElementwise(Elementwise);
     copyMetadataForAtomic(*NewAI, *AI);
@@ -662,9 +662,10 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   // into a <1 x T> vector.
   if (NumLanes == 1) {
     Value *LaneVal = Builder.CreateExtractElement(Val, IdxZero, "lane.val");
-    AtomicRMWInst *LaneRMW = CreateRMWInstruction(Ptr, LaneVal, AI->getAlign(), /*Elementwise=*/false);
-    Value *Result = Builder.CreateInsertElement(PoisonValue::get(VecTy), LaneRMW,
-                                                IdxZero, "lane.old");
+    AtomicRMWInst *LaneRMW = CreateRMWInstruction(Ptr, LaneVal, AI->getAlign(),
+                                                  /*Elementwise=*/false);
+    Value *Result = Builder.CreateInsertElement(PoisonValue::get(VecTy),
+                                                LaneRMW, IdxZero, "lane.old");
     AI->replaceAllUsesWith(Result);
     AI->eraseFromParent();
     processAtomicInstr(LaneRMW);
@@ -678,8 +679,7 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   if (NumLanes == 2) {
     Value *LoVal = Builder.CreateExtractElement(Val, IdxZero, "lo.val");
     Value *HiVal = Builder.CreateExtractElement(Val, IdxOne, "hi.val");
-    Value *HiPtr =
-        Builder.CreateInBoundsGEP(LaneTy, Ptr, IdxOne, "hi.ptr");
+    Value *HiPtr = Builder.CreateInBoundsGEP(LaneTy, Ptr, IdxOne, "hi.ptr");
     Align LoAlign = AI->getAlign();
     Align HiAlign = commonAlignment(LoAlign, LaneBytes);
 
