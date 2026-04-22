@@ -107,6 +107,7 @@ enum UniformityLLTOpPredicateID {
   DivV2S64,
   DivV3S32,
   DivV4S16,
+  DivV6S32,
 
   // B types
   B32,
@@ -255,6 +256,10 @@ enum RegBankLLTMappingApplyID {
   Vgpr32AExt,
   Vgpr32SExt,
   Vgpr32ZExt,
+
+  VgprV6S32,
+  VgprV32S16,
+  VgprV32S32,
 };
 
 // Instruction needs to be replaced with sequence of instructions. Lowering was
@@ -292,11 +297,14 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
+  ApplyBVH_INTERSECT_RAY,
   SplitBitCount64To32,
   ExtrVecEltToSel,
   ExtrVecEltTo32,
   InsVecEltToSel,
-  InsVecEltTo32
+  InsVecEltTo32,
+  AbsToNegMax,
+  AbsToS32
 };
 
 enum FastRulesTypes {

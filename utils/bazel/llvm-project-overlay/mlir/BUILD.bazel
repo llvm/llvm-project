@@ -1097,6 +1097,8 @@ cc_library(
 cc_library(
     name = "MLIRBindingsPythonNanobindHeaders",
     hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     includes = ["include"],
     deps = [
         ":CAPIDebugHeaders",
@@ -7755,6 +7757,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Transforms/CFGToSCF.h",
+        "include/mlir/Transforms/CSE.h",
         "include/mlir/Transforms/CommutativityUtils.h",
         "include/mlir/Transforms/ControlFlowSinkUtils.h",
         "include/mlir/Transforms/DialectConversion.h",
