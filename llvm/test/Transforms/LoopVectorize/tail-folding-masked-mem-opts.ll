@@ -54,7 +54,7 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-PREDICATE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
 ; CHECK-PREDICATE-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
 ; CHECK-PREDICATE-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-PREDICATE-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
+; CHECK-PREDICATE-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i64 0
 ; CHECK-PREDICATE-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK-PREDICATE:       [[PRED_STORE_IF]]:
 ; CHECK-PREDICATE-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
@@ -63,7 +63,7 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-PREDICATE-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
 ; CHECK-PREDICATE-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK-PREDICATE:       [[PRED_STORE_CONTINUE]]:
-; CHECK-PREDICATE-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
+; CHECK-PREDICATE-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP0]], i64 1
 ; CHECK-PREDICATE-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; CHECK-PREDICATE:       [[PRED_STORE_IF1]]:
 ; CHECK-PREDICATE-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
@@ -119,20 +119,20 @@ define void @non_consecutive_copy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE3]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP0]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3]]
 ; CHECK:       [[PRED_STORE_IF2]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP9]]

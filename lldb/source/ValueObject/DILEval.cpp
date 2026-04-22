@@ -376,17 +376,17 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
 
   const bool check_ptr_vs_member =
       (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & StackFrame::eExpressionPathOptionsNoFragileObjcIvar) != 0;
   const bool no_synth_child =
       (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
   const bool allow_var_updates =
       (options & StackFrame::eExpressionPathOptionsAllowVarUpdates) != 0;
+  const bool disallow_globals =
+      (options & StackFrame::eExpressionPathOptionsDisallowGlobals) != 0;
 
   m_use_synthetic = !no_synth_child;
-  m_fragile_ivar = !no_fragile_ivar;
   m_check_ptr_vs_member = check_ptr_vs_member;
   m_allow_var_updates = allow_var_updates;
+  m_allow_globals = !disallow_globals;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -424,7 +424,7 @@ Interpreter::Visit(const IdentifierNode &node) {
   lldb::ValueObjectSP identifier =
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
-  if (!identifier)
+  if (!identifier && m_allow_globals)
     identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
                                         m_target, use_dynamic);
   if (!identifier) {
@@ -848,19 +848,6 @@ Interpreter::Visit(const MemberOfNode &node) {
 
   // Perform some basic type & correctness checking.
   if (node.GetIsArrow()) {
-    if (!m_fragile_ivar) {
-      // Make sure we aren't trying to deref an objective
-      // C ivar if this is not allowed
-      const uint32_t pointer_type_flags =
-          base->GetCompilerType().GetTypeInfo(nullptr);
-      if ((pointer_type_flags & lldb::eTypeIsObjC) &&
-          (pointer_type_flags & lldb::eTypeIsPointer)) {
-        // This was an objective C object pointer and it was requested we
-        // skip any fragile ivars so return nothing here
-        return lldb::ValueObjectSP();
-      }
-    }
-
     // If we have a non-pointer type with a synthetic value then lets check
     // if we have a synthetic dereference specified.
     if (!base->IsPointerType() && base->HasSyntheticValue()) {

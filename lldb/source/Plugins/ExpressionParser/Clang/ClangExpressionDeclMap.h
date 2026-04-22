@@ -247,7 +247,8 @@ public:
   ///     The module to limit the search to. This can be NULL
   ///
   /// \return
-  ///     Valid load address for the symbol
+  ///     The load address of the symbol if it was resolved,
+  ///     LLDB_INVALID_ADDRESS otherwise.
   lldb::addr_t GetSymbolAddress(Target &target, Process *process,
                                 ConstString name, lldb::SymbolType symbol_type,
                                 Module *module = nullptr);

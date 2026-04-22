@@ -34,7 +34,7 @@ define i8 @test_negative_off(i16 %len, ptr %test_base) {
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[ALLOCA]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i8> poison, i8 [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i8> poison, i8 [[TMP10]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP11]], [[PRED_LOAD_IF]] ]
@@ -42,7 +42,7 @@ define i8 @test_negative_off(i16 %len, ptr %test_base) {
 ; CHECK:       pred.load.if1:
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[ALLOCA]], i16 [[TMP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP14]], align 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i8> [[TMP12]], i8 [[TMP15]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i8> [[TMP12]], i8 [[TMP15]], i64 1
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
 ; CHECK:       pred.load.continue2:
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi <2 x i8> [ [[TMP12]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP16]], [[PRED_LOAD_IF1]] ]

@@ -477,3 +477,65 @@ define i16 @load_i40_array_partial_padding() {
   %v = load i16, ptr getelementptr (i8, ptr @i40_array, i64 4)
   ret i16 %v
 }
+
+@g_double17 = private constant [17 x double] [double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0, double 9.0, double 10.0, double 11.0, double 12.0, double 13.0, double 14.0, double 15.0, double 16.0, double 17.0], align 128
+
+define double @load_large_vector() {
+; CHECK-LABEL: @load_large_vector(
+; CHECK-NEXT:    ret double 2.000000e+00
+;
+  %v = load <16 x double>, ptr @g_double17, align 128
+  %e = extractelement <16 x double> %v, i32 1
+  ret double %e
+}
+
+define double @load_over_limit_vector() {
+; CHECK-LABEL: @load_over_limit_vector(
+; CHECK-NEXT:    [[V:%.*]] = load <17 x double>, ptr @g_double17, align 16
+; CHECK-NEXT:    [[E:%.*]] = extractelement <17 x double> [[V]], i32 1
+; CHECK-NEXT:    ret double [[E]]
+;
+  %v = load <17 x double>, ptr @g_double17, align 16
+  %e = extractelement <17 x double> %v, i32 1
+  ret double %e
+}
+
+define i256 @load_large_integer() {
+; LE-LABEL: @load_large_integer(
+; LE-NEXT:    ret i256 28976291862365503006736120693800966795043933029805877287682190766152806825984
+;
+; BE-LABEL: @load_large_integer(
+; BE-NEXT:    ret i256 28919752756292594708188688926006760458108315909967150605051527249320239693824
+;
+  %v = load i256, ptr @g_double17, align 32
+  ret i256 %v
+}
+
+define i257 @load_over_limit_integer() {
+; CHECK-LABEL: @load_over_limit_integer(
+; CHECK-NEXT:    [[V:%.*]] = load i257, ptr @g_double17, align 64
+; CHECK-NEXT:    ret i257 [[V]]
+;
+  %v = load i257, ptr @g_double17, align 64
+  ret i257 %v
+}
+
+@g_str64 = private constant [64 x i8] c"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", align 1
+
+define i512 @load_large_integer_from_string() {
+; CHECK-LABEL: @load_large_integer_from_string(
+; CHECK-NEXT:    [[I:%.*]] = load i512, ptr @g_str64, align 1
+; CHECK-NEXT:    ret i512 [[I]]
+;
+  %i = load i512, ptr @g_str64, align 1
+  ret i512 %i
+}
+
+define i8 @load_vector_from_string() {
+; CHECK-LABEL: @load_vector_from_string(
+; CHECK-NEXT:    ret i8 49
+;
+  %v = load <64 x i8>, ptr @g_str64, align 1
+  %e = extractelement <64 x i8> %v, i32 1
+  ret i8 %e
+}

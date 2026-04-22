@@ -5010,15 +5010,14 @@ template SmallVector<int64_t>
     getPackedOuterShapeWithoutTransposition<UnPackOp>(UnPackOp);
 
 // Given the (potentially) updated packed type, `newPackedTy`, generates an
-// updated mixed-tile-sizes attribute. A tile size is updated only
-// when:
-//  * a dim from newPackedTy is static, and
-//  * the corresponding size from mixedTiles is still dynamic.
-// Otherwise, the original tile size is preserved.
+// updated mixed-tile-sizes list. For each inner packed dimension that is static
+// in `newPackedTy`, the tile is set to that static size (replacing SSA values
+// or mismatched constants). Dynamic packed dimensions preserve the original
+// tile. The folded tensor type is treated as authoritative for static extents.
 // Note - packed-type-dim and mixed-tile-size should always match!
 static SmallVector<OpFoldResult>
 getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
-                     SmallVector<OpFoldResult> mixedTiles) {
+                     ArrayRef<OpFoldResult> mixedTiles) {
   SmallVector<OpFoldResult> newMixedTileSizes;
   for (auto it : llvm::zip(cast<ShapedType>(newPackedTy)
                                .getShape()
@@ -5029,19 +5028,7 @@ getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
       newMixedTileSizes.push_back(std::get<1>(it));
       continue;
     }
-
-    // If the current result dim is static, update the dynamic mixed-size
-    // (provided the original value is dynamic).
-    OpFoldResult tile = std::get<1>(it);
-    if (Attribute attr = llvm::dyn_cast_if_present<Attribute>(tile)) {
-      // Already a constant
-      newMixedTileSizes.push_back(tile);
-    } else {
-      assert(getConstantIntValue(tile).value() == dimSize &&
-             "tile size and dim size don't match!");
-      newMixedTileSizes.push_back(
-          (rewriter.getIntegerAttr(rewriter.getIndexType(), dimSize)));
-    }
+    newMixedTileSizes.push_back(rewriter.getIndexAttr(dimSize));
   }
 
   return newMixedTileSizes;

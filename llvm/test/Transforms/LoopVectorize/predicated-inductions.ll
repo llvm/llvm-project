@@ -32,7 +32,7 @@ define i64 @predicated_iv_with_liveout(ptr %dst, i64 %n) {
 ; COMMON-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[VEC_IND2]], splat (i16 1)
 ; COMMON-NEXT:    [[TMP4]] = zext <4 x i16> [[TMP3]] to <4 x i64>
 ; COMMON-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; COMMON-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP5]], i32 0
+; COMMON-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP5]], i64 0
 ; COMMON-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP6]]
 ; COMMON-NEXT:    store <4 x i64> [[VEC_IND]], ptr [[TMP7]], align 8
 ; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -41,7 +41,7 @@ define i64 @predicated_iv_with_liveout(ptr %dst, i64 %n) {
 ; COMMON-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMMON-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; COMMON:       [[MIDDLE_BLOCK]]:
-; COMMON-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP4]], i32 3
+; COMMON-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP4]], i64 3
 ; COMMON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX1]], [[N_VEC]]
 ; COMMON-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; COMMON:       [[SCALAR_PH]]:

@@ -340,9 +340,8 @@ export namespace std {
     namespace views {
       using std::ranges::views::chunk_by;
     }
-#endif // _LIBCPP_STD_VER >= 23
 
-#if 0
+#  if 0
     // [range.stride], stride view
     using std::ranges::stride_view;
 
@@ -355,7 +354,15 @@ export namespace std {
     namespace views {
       using std::ranges::views::cartesian_product;
     }
-#endif
+#  endif
+
+    // [range.enumerate]
+    using std::ranges::enumerate_view;
+
+    namespace views {
+      using std::ranges::views::enumerate;
+    }
+#endif // _LIBCPP_STD_VER >= 23
   } // namespace ranges
 
   namespace views = ranges::views;

@@ -791,10 +791,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   // Absolute value
   case PPC::BI__builtin_vsx_xvabsdp:
   case PPC::BI__builtin_vsx_xvabssp: {
-    llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::fabs, ResultType);
-    return Builder.CreateCall(F, X);
+    return Builder.CreateFAbs(X);
   }
 
   // Fastmath by default

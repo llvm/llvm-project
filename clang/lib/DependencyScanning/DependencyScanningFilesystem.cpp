@@ -243,10 +243,6 @@ const CachedRealPath &DependencyScanningFilesystemSharedCache::CacheShard::
   return *StoredRealPath;
 }
 
-bool DependencyScanningWorkerFilesystem::shouldBypass(StringRef Path) const {
-  return BypassedPathPrefix && Path.starts_with(*BypassedPathPrefix);
-}
-
 DependencyScanningWorkerFilesystem::DependencyScanningWorkerFilesystem(
     DependencyScanningFilesystemSharedCache &SharedCache,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
@@ -328,9 +324,6 @@ DependencyScanningWorkerFilesystem::status(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
 
-  if (shouldBypass(Filename))
-    return getUnderlyingFS().status(Path);
-
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
@@ -400,9 +393,6 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
 
-  if (shouldBypass(Filename))
-    return getUnderlyingFS().openFileForRead(Path);
-
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
@@ -414,9 +404,6 @@ DependencyScanningWorkerFilesystem::getRealPath(const Twine &Path,
                                                 SmallVectorImpl<char> &Output) {
   SmallString<256> OwnedFilename;
   StringRef OriginalFilename = Path.toStringRef(OwnedFilename);
-
-  if (shouldBypass(OriginalFilename))
-    return getUnderlyingFS().getRealPath(Path, Output);
 
   SmallString<256> PathBuf;
   auto FilenameForLookup = tryGetFilenameForLookup(OriginalFilename, PathBuf);

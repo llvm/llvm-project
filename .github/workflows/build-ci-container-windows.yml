@@ -25,7 +25,7 @@ jobs:
       container-filename: ${{ steps.vars.outputs.container-filename }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           sparse-checkout: .github/workflows/containers/github-action-ci-windows
@@ -45,7 +45,7 @@ jobs:
         run: |
           docker save  ${{ steps.vars.outputs.container-name-tag }} >  ${{ steps.vars.outputs.container-filename }}
       - name: Upload container image
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: container
           path: ${{ steps.vars.outputs.container-filename }}

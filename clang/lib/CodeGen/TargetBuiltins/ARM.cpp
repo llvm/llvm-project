@@ -1140,9 +1140,16 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
     break;
   }
 
-  // Determine the type(s) of this overloaded AArch64 intrinsic.
+  // Use fptosi.sat/fptoui.sat unless under strict FP.
+  unsigned LLVMIntrinsic = SISDInfo.LLVMIntrinsic;
+  if (!CGF.Builder.getIsFPConstrained()) {
+    if (LLVMIntrinsic == Intrinsic::aarch64_neon_fcvtzs)
+      LLVMIntrinsic = Intrinsic::fptosi_sat;
+    else if (LLVMIntrinsic == Intrinsic::aarch64_neon_fcvtzu)
+      LLVMIntrinsic = Intrinsic::fptoui_sat;
+  }
   llvm::Type *ArgTy = CGF.ConvertType(E->getArg(0)->getType());
-  Function *F = CGF.LookupNeonLLVMIntrinsic(SISDInfo.LLVMIntrinsic,
+  Function *F = CGF.LookupNeonLLVMIntrinsic(LLVMIntrinsic,
                                             SISDInfo.TypeModifier, ArgTy, E);
 
   int j = 0;
@@ -1384,6 +1391,15 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vcvtq_s16_f16:
   case NEON::BI__builtin_neon_vcvtq_u16_f16: {
     Ops[0] = Builder.CreateBitCast(Ops[0], GetFloatNeonType(this, Type));
+    if (Int) {
+      // AArch64: use fptosi.sat/fptoui.sat unless under strict FP.
+      if (!Builder.getIsFPConstrained())
+        Int = Usgn ? Intrinsic::fptoui_sat : Intrinsic::fptosi_sat;
+      llvm::Type *Tys[2] = {Ty, Ops[0]->getType()};
+      return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vcvtz");
+    }
+    // FIXME: ARM uses plain fptoui/fptosi which have UB on out-of-range
+    // values. These should also use saturating intrinsics.
     return Usgn ? Builder.CreateFPToUI(Ops[0], Ty, "vcvt")
                 : Builder.CreateFPToSI(Ops[0], Ty, "vcvt");
   }
@@ -5387,12 +5403,10 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vcvtmh_u16_f16:
   case NEON::BI__builtin_neon_vcvtnh_u16_f16:
   case NEON::BI__builtin_neon_vcvtph_u16_f16:
-  case NEON::BI__builtin_neon_vcvth_u16_f16:
   case NEON::BI__builtin_neon_vcvtah_s16_f16:
   case NEON::BI__builtin_neon_vcvtmh_s16_f16:
   case NEON::BI__builtin_neon_vcvtnh_s16_f16:
-  case NEON::BI__builtin_neon_vcvtph_s16_f16:
-  case NEON::BI__builtin_neon_vcvth_s16_f16: {
+  case NEON::BI__builtin_neon_vcvtph_s16_f16: {
     llvm::Type *InTy = Int16Ty;
     llvm::Type* FTy  = HalfTy;
     llvm::Type *Tys[2] = {InTy, FTy};
@@ -5406,8 +5420,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       Int = Intrinsic::aarch64_neon_fcvtnu; break;
     case NEON::BI__builtin_neon_vcvtph_u16_f16:
       Int = Intrinsic::aarch64_neon_fcvtpu; break;
-    case NEON::BI__builtin_neon_vcvth_u16_f16:
-      Int = Intrinsic::aarch64_neon_fcvtzu; break;
     case NEON::BI__builtin_neon_vcvtah_s16_f16:
       Int = Intrinsic::aarch64_neon_fcvtas; break;
     case NEON::BI__builtin_neon_vcvtmh_s16_f16:
@@ -5416,8 +5428,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       Int = Intrinsic::aarch64_neon_fcvtns; break;
     case NEON::BI__builtin_neon_vcvtph_s16_f16:
       Int = Intrinsic::aarch64_neon_fcvtps; break;
-    case NEON::BI__builtin_neon_vcvth_s16_f16:
-      Int = Intrinsic::aarch64_neon_fcvtzs; break;
     }
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "fcvt");
   }
@@ -6368,23 +6378,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Ops[0] = Builder.CreateBitCast(Ops[0], GetNeonType(this, SrcFlag));
 
     return Builder.CreateFPTrunc(Ops[0], Ty, "vcvt");
-  }
-  case NEON::BI__builtin_neon_vcvt_s32_v:
-  case NEON::BI__builtin_neon_vcvt_u32_v:
-  case NEON::BI__builtin_neon_vcvt_s64_v:
-  case NEON::BI__builtin_neon_vcvt_u64_v:
-  case NEON::BI__builtin_neon_vcvt_s16_f16:
-  case NEON::BI__builtin_neon_vcvt_u16_f16:
-  case NEON::BI__builtin_neon_vcvtq_s32_v:
-  case NEON::BI__builtin_neon_vcvtq_u32_v:
-  case NEON::BI__builtin_neon_vcvtq_s64_v:
-  case NEON::BI__builtin_neon_vcvtq_u64_v:
-  case NEON::BI__builtin_neon_vcvtq_s16_f16:
-  case NEON::BI__builtin_neon_vcvtq_u16_f16: {
-    Int =
-        usgn ? Intrinsic::aarch64_neon_fcvtzu : Intrinsic::aarch64_neon_fcvtzs;
-    llvm::Type *Tys[2] = {Ty, GetFloatNeonType(this, Type)};
-    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vcvtz");
   }
   case NEON::BI__builtin_neon_vcvta_s16_f16:
   case NEON::BI__builtin_neon_vcvta_u16_f16:

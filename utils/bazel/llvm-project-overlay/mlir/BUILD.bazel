@@ -8184,6 +8184,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DataLayoutInterfaces",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
         ":Support",
@@ -12288,6 +12289,7 @@ cc_library(
         ":ConvertToLLVMInterface",
         ":FunctionInterfaces",
         ":IR",
+        ":InliningUtils",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LoopLikeInterface",

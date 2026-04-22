@@ -5850,6 +5850,9 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   // Bail on potential out-of-bounds accesses.
   if (read.hasOutOfBoundsDim() || write.hasOutOfBoundsDim())
     return failure();
+  // Masked transfers have padding/select semantics and are not identity folds.
+  if (read.getMask() || write.getMask())
+    return failure();
   // Tensor types must be the same.
   if (read.getBase().getType() != rankedTensorType)
     return failure();

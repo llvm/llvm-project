@@ -16,7 +16,7 @@ if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
 
   if(NOT WIN32)
     # We no longer vendor pexpect and it is not used on Windows.
-    list(APPEND pexpect)
+    list(APPEND useful_python_modules pexpect)
   endif()
 
   foreach(module ${useful_python_modules})

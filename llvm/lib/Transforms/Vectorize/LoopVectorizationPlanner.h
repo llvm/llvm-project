@@ -311,6 +311,12 @@ public:
     return tryInsertInstruction(new VPPhi(IncomingValues, Flags, DL, Name));
   }
 
+  VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
+                                   DebugLoc DL = DebugLoc::getUnknown(),
+                                   const Twine &Name = "") {
+    return tryInsertInstruction(new VPWidenPHIRecipe(IncomingValues, DL, Name));
+  }
+
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
     VPlan &Plan = *getInsertBlock()->getPlan();
     VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());

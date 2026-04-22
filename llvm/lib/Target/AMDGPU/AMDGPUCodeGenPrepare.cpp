@@ -1129,10 +1129,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
   // fr = fabs(fr);
-  FR = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FR, FQ);
+  FR = Builder.CreateFAbs(FR, FQ);
 
   // fb = fabs(fb);
-  FB = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FB, FQ);
+  FB = Builder.CreateFAbs(FB, FQ);
 
   // int cv = fr >= fb;
   Value *CV = Builder.CreateFCmpOGE(FR, FB);

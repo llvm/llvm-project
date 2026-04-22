@@ -32,6 +32,14 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
+# Expose the shared `runtimes-libc-*` targets to compiler-rt subcomponents
+# (same as libcxx / libcxxabi / libunwind).
+if(LLVM_RUNTIMES_BUILD)
+  list(APPEND CMAKE_MODULE_PATH
+       "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules")
+  include(HandleLibC)
+endif()
+
 if(CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_CFG_RESOLVED_INTDIR "${CMAKE_CFG_INTDIR}/")
 else()

@@ -44,6 +44,7 @@ Implemented Papers
 - P4052R0: Renaming saturation arithmetic functions (`Github <https://llvm.org/PR189589>`__)
 - P2781R9: ``std::constant_wrapper`` (`Github <https://llvm.org/PR148179>`__)
 - P3978R3: ``constant_wrapper`` should unwrap on call and subscript (`Github <https://llvm.org/PR189605>`__)
+- P2164R9: ``views::enumerate`` (`Github <https://llvm.org/PR105251>`__)
 
 Improvements and New Features
 -----------------------------

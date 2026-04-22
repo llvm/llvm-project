@@ -629,19 +629,7 @@ static OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
     return OptimizationLevel::O1;
 
   case 2:
-    switch (Opts.OptimizeSize) {
-    default:
-      llvm_unreachable("Invalid optimization level for size!");
-
-    case 0:
-      return OptimizationLevel::O2;
-
-    case 1:
-      return OptimizationLevel::Os;
-
-    case 2:
-      return OptimizationLevel::Oz;
-    }
+    return OptimizationLevel::O2;
 
   case 3:
     return OptimizationLevel::O3;

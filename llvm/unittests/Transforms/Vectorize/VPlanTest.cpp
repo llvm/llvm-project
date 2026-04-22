@@ -721,7 +721,7 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
     VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
     VPBlockUtils::connectBlocks(VPBB1, VPBB2);
 
-    auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
+    auto *WidenPhi = new VPWidenPHIRecipe({});
     IntegerType *Int32 = IntegerType::get(C, 32);
     VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     WidenPhi->addOperand(Val);
@@ -743,7 +743,7 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
                                               "R1", VPBB2, VPBB2);
     VPBlockUtils::connectBlocks(VPBB1, R1);
 
-    auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
+    auto *WidenPhi = new VPWidenPHIRecipe({});
     IntegerType *Int32 = IntegerType::get(C, 32);
     VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     WidenPhi->addOperand(Val);

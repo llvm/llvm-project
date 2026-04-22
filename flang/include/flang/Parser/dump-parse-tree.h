@@ -239,6 +239,7 @@ public:
   NODE(CompilerDirective, NoUnroll)
   NODE(CompilerDirective, NoUnrollAndJam)
   NODE(CompilerDirective, Prefetch)
+  NODE(CompilerDirective, Simd)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)

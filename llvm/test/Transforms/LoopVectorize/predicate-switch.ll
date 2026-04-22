@@ -26,37 +26,37 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC1-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], splat (i8 13)
 ; IC1-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP7]], [[TMP4]]
 ; IC1-NEXT:    [[TMP10:%.*]] = xor <2 x i1> [[TMP11]], splat (i1 true)
-; IC1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
+; IC1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; IC1-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; IC1:       [[PRED_STORE_IF]]:
 ; IC1-NEXT:    store i8 0, ptr [[NEXT_GEP]], align 1
 ; IC1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; IC1:       [[PRED_STORE_CONTINUE]]:
-; IC1-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
+; IC1-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; IC1-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
 ; IC1:       [[PRED_STORE_IF4]]:
 ; IC1-NEXT:    store i8 0, ptr [[NEXT_GEP3]], align 1
 ; IC1-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
 ; IC1:       [[PRED_STORE_CONTINUE5]]:
-; IC1-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i32 0
+; IC1-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
 ; IC1-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
 ; IC1:       [[PRED_STORE_IF6]]:
 ; IC1-NEXT:    store i8 42, ptr [[NEXT_GEP]], align 1
 ; IC1-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
 ; IC1:       [[PRED_STORE_CONTINUE7]]:
-; IC1-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1
+; IC1-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
 ; IC1-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF8:.*]], label %[[PRED_STORE_CONTINUE9:.*]]
 ; IC1:       [[PRED_STORE_IF8]]:
 ; IC1-NEXT:    store i8 42, ptr [[NEXT_GEP3]], align 1
 ; IC1-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
 ; IC1:       [[PRED_STORE_CONTINUE9]]:
-; IC1-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0
+; IC1-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP10]], i64 0
 ; IC1-NEXT:    br i1 [[TMP13]], label %[[PRED_STORE_IF10:.*]], label %[[PRED_STORE_CONTINUE11:.*]]
 ; IC1:       [[PRED_STORE_IF10]]:
 ; IC1-NEXT:    store i8 2, ptr [[NEXT_GEP]], align 1
 ; IC1-NEXT:    br label %[[PRED_STORE_CONTINUE11]]
 ; IC1:       [[PRED_STORE_CONTINUE11]]:
-; IC1-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP10]], i32 1
+; IC1-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP10]], i64 1
 ; IC1-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF12:.*]], label %[[PRED_STORE_CONTINUE13]]
 ; IC1:       [[PRED_STORE_IF12]]:
 ; IC1-NEXT:    store i8 2, ptr [[NEXT_GEP3]], align 1
@@ -128,73 +128,73 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC2-NEXT:    [[TMP22:%.*]] = or <2 x i1> [[TMP14]], [[TMP8]]
 ; IC2-NEXT:    [[TMP19:%.*]] = xor <2 x i1> [[TMP21]], splat (i1 true)
 ; IC2-NEXT:    [[TMP20:%.*]] = xor <2 x i1> [[TMP22]], splat (i1 true)
-; IC2-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP7]], i32 0
+; IC2-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
 ; IC2-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; IC2:       [[PRED_STORE_IF]]:
 ; IC2-NEXT:    store i8 0, ptr [[NEXT_GEP]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; IC2:       [[PRED_STORE_CONTINUE]]:
-; IC2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1
+; IC2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
 ; IC2-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
 ; IC2:       [[PRED_STORE_IF7]]:
 ; IC2-NEXT:    store i8 0, ptr [[NEXT_GEP3]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; IC2:       [[PRED_STORE_CONTINUE8]]:
-; IC2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
+; IC2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP8]], i64 0
 ; IC2-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
 ; IC2:       [[PRED_STORE_IF9]]:
 ; IC2-NEXT:    store i8 0, ptr [[NEXT_GEP4]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
 ; IC2:       [[PRED_STORE_CONTINUE10]]:
-; IC2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
+; IC2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP8]], i64 1
 ; IC2-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
 ; IC2:       [[PRED_STORE_IF11]]:
 ; IC2-NEXT:    store i8 0, ptr [[NEXT_GEP5]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; IC2:       [[PRED_STORE_CONTINUE12]]:
-; IC2-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP13]], i32 0
+; IC2-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP13]], i64 0
 ; IC2-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
 ; IC2:       [[PRED_STORE_IF13]]:
 ; IC2-NEXT:    store i8 42, ptr [[NEXT_GEP]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
 ; IC2:       [[PRED_STORE_CONTINUE14]]:
-; IC2-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP13]], i32 1
+; IC2-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP13]], i64 1
 ; IC2-NEXT:    br i1 [[TMP16]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
 ; IC2:       [[PRED_STORE_IF15]]:
 ; IC2-NEXT:    store i8 42, ptr [[NEXT_GEP3]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
 ; IC2:       [[PRED_STORE_CONTINUE16]]:
-; IC2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP14]], i32 0
+; IC2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP14]], i64 0
 ; IC2-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
 ; IC2:       [[PRED_STORE_IF17]]:
 ; IC2-NEXT:    store i8 42, ptr [[NEXT_GEP4]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
 ; IC2:       [[PRED_STORE_CONTINUE18]]:
-; IC2-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP14]], i32 1
+; IC2-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP14]], i64 1
 ; IC2-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
 ; IC2:       [[PRED_STORE_IF19]]:
 ; IC2-NEXT:    store i8 42, ptr [[NEXT_GEP5]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
 ; IC2:       [[PRED_STORE_CONTINUE20]]:
-; IC2-NEXT:    [[TMP25:%.*]] = extractelement <2 x i1> [[TMP19]], i32 0
+; IC2-NEXT:    [[TMP25:%.*]] = extractelement <2 x i1> [[TMP19]], i64 0
 ; IC2-NEXT:    br i1 [[TMP25]], label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
 ; IC2:       [[PRED_STORE_IF21]]:
 ; IC2-NEXT:    store i8 2, ptr [[NEXT_GEP]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
 ; IC2:       [[PRED_STORE_CONTINUE22]]:
-; IC2-NEXT:    [[TMP26:%.*]] = extractelement <2 x i1> [[TMP19]], i32 1
+; IC2-NEXT:    [[TMP26:%.*]] = extractelement <2 x i1> [[TMP19]], i64 1
 ; IC2-NEXT:    br i1 [[TMP26]], label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
 ; IC2:       [[PRED_STORE_IF23]]:
 ; IC2-NEXT:    store i8 2, ptr [[NEXT_GEP3]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
 ; IC2:       [[PRED_STORE_CONTINUE24]]:
-; IC2-NEXT:    [[TMP27:%.*]] = extractelement <2 x i1> [[TMP20]], i32 0
+; IC2-NEXT:    [[TMP27:%.*]] = extractelement <2 x i1> [[TMP20]], i64 0
 ; IC2-NEXT:    br i1 [[TMP27]], label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
 ; IC2:       [[PRED_STORE_IF25]]:
 ; IC2-NEXT:    store i8 2, ptr [[NEXT_GEP4]], align 1
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
 ; IC2:       [[PRED_STORE_CONTINUE26]]:
-; IC2-NEXT:    [[TMP28:%.*]] = extractelement <2 x i1> [[TMP20]], i32 1
+; IC2-NEXT:    [[TMP28:%.*]] = extractelement <2 x i1> [[TMP20]], i64 1
 ; IC2-NEXT:    br i1 [[TMP28]], label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28]]
 ; IC2:       [[PRED_STORE_IF27]]:
 ; IC2-NEXT:    store i8 2, ptr [[NEXT_GEP5]], align 1
@@ -542,13 +542,13 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[VEC_IND]]
-; IC1-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
+; IC1-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP0]], i64 0
 ; IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META6:![0-9]+]]
 ; IC1-NEXT:    [[TMP5:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD]], splat (i32 10)
 ; IC1-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
 ; IC1-NEXT:    [[PREDPHI2:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI]]
-; IC1-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i32 0
-; IC1-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i32 1
+; IC1-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 0
+; IC1-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 1
 ; IC1-NEXT:    store i32 0, ptr [[TMP1]], align 4
 ; IC1-NEXT:    store i32 0, ptr [[TMP2]], align 4
 ; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -598,7 +598,7 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; IC2-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[VEC_IND]]
-; IC2-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
+; IC2-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP0]], i64 0
 ; IC2-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[STEP_ADD]]
 ; IC2-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i64 2
 ; IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 4, !alias.scope [[META6:![0-9]+]]
@@ -607,12 +607,12 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC2-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD2]], splat (i32 10)
 ; IC2-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
 ; IC2-NEXT:    [[PREDPHI2:%.*]] = select <2 x i1> [[TMP9]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI]]
-; IC2-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i32 0
-; IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i32 1
+; IC2-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 0
+; IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 1
 ; IC2-NEXT:    [[PREDPHI5:%.*]] = select <2 x i1> [[TMP10]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP1]]
 ; IC2-NEXT:    [[PREDPHI4:%.*]] = select <2 x i1> [[TMP10]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI5]]
-; IC2-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i32 0
-; IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i32 1
+; IC2-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i64 0
+; IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i64 1
 ; IC2-NEXT:    store i32 0, ptr [[TMP2]], align 4
 ; IC2-NEXT:    store i32 0, ptr [[TMP3]], align 4
 ; IC2-NEXT:    store i32 0, ptr [[TMP4]], align 4

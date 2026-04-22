@@ -4797,8 +4797,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
 
   EVT VT = N->getValueType(0);
-  EVT PartResVT = Lo0.getValueType().changeElementType(*DAG.getContext(),
-                                                       VT.getScalarType());
+  EVT PartResVT = getSetCCResultType(Lo0.getValueType());
 
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
@@ -4823,7 +4822,15 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
                         N->getOperand(2), MaskHi, EVLHi);
   }
 
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoRes, HiRes);
+  EVT ConcatVT = PartResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  SDValue Con = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, LoRes, HiRes);
+  if (VT == ConcatVT)
+    return Con;
+
+  EVT OpVT = N->getOperand(0).getValueType();
+  ISD::NodeType ExtendCode =
+      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
+  return DAG.getExtOrTrunc(Con, DL, VT, ExtendCode);
 }
 
 
@@ -6798,7 +6805,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
       EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
                        WidenVT.getVectorElementCount());
 
-  if (ExtType == ISD::NON_EXTLOAD &&
+  if (ExtType == ISD::NON_EXTLOAD && !N->isExpandingLoad() &&
       TLI.isOperationLegalOrCustom(ISD::VP_LOAD, WidenVT) &&
       TLI.isTypeLegal(WideMaskVT) &&
       // If there is a passthru, we shouldn't use vp.load. However,
@@ -8107,7 +8114,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
   }
 
   if (TLI.isOperationLegalOrCustom(ISD::VP_STORE, WideVT) &&
-      TLI.isTypeLegal(WideMaskVT)) {
+      TLI.isTypeLegal(WideMaskVT) && !MST->isCompressingStore()) {
     Mask = DAG.getInsertSubvector(dl, DAG.getPOISON(WideMaskVT), Mask, 0);
     SDValue EVL = DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
                                       VT.getVectorElementCount());

@@ -37,7 +37,7 @@ define ptr @foo(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i64 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -97,7 +97,7 @@ define ptr @bar(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i64 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

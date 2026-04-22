@@ -54,7 +54,7 @@ jobs:
             cc: 'gcc-15'
             cxx: 'g++-15'
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
@@ -66,7 +66,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -105,7 +105,7 @@ jobs:
             cc: 'clang-21'
             cxx: 'clang++-21'
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}
@@ -117,7 +117,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -166,7 +166,7 @@ jobs:
           'bootstrapping-build'
         ]
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}
@@ -178,7 +178,7 @@ jobs:
         env:
           CC: clang-23
           CXX: clang++-23
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: ${{ matrix.config }}-results
@@ -220,10 +220,10 @@ jobs:
           os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
           xcode-version: '26.0'
@@ -237,7 +237,7 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: macos-${{ matrix.config }}-results
@@ -267,7 +267,7 @@ jobs:
         - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++, runner: windows-11-arm }
     runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: Install dependencies

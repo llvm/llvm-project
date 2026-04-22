@@ -226,6 +226,10 @@ if(COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
 endif()
 llvm_check_compiler_linker_flag(C "${VERS_OPTION}" COMPILER_RT_HAS_VERSION_SCRIPT)
 
+if(APPLE)
+  llvm_check_compiler_linker_flag(C "-Wl,-mac_public_arm64e" COMPILER_RT_HAS_MAC_PUBLIC_ARM64E)
+endif()
+
 if(ANDROID)
   llvm_check_compiler_linker_flag(C "-Wl,-z,global" COMPILER_RT_HAS_Z_GLOBAL)
   check_library_exists(log __android_log_write "" COMPILER_RT_HAS_LIBLOG)

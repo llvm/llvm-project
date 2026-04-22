@@ -37,7 +37,7 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[START]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP11]], true
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

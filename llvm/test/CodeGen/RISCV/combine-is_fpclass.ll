@@ -22,6 +22,170 @@ define i8 @iszero_constant_v4f32() nounwind {
   ret i8 %r
 }
 
+; elts 0,2 sign set, idx=0, ispos -> false
+define i1 @extract_bitcast_sign_set_not_pos(<4 x i32> %bits, ptr %p) nounwind {
+; CHECK-LABEL: extract_bitcast_sign_set_not_pos:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vsll.vi v9, v9, 31
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    vrsub.vx v9, v9, a1
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %masked = or <4 x i32> %bits, <i32 u0x80000000, i32 0, i32 u0x80000000, i32 0>
+  %fvec = bitcast <4 x i32> %masked to <4 x float>
+  store <4 x float> %fvec, ptr %p
+  %elt = extractelement <4 x float> %fvec, i32 0
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 960)  ; 0x3C0 = any positive
+  ret i1 %res
+}
+
+; elts 0,2 sign set, idx=1 unknown sign, ispos -> cannot fold
+define i1 @extract_bitcast_unknown_sign_ispos(<4 x i32> %bits, ptr %p) nounwind {
+; CHECK-LABEL: extract_bitcast_unknown_sign_ispos:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vsll.vi v9, v9, 31
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    vrsub.vx v9, v9, a1
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    fclass.s a1, fa5
+; CHECK-NEXT:    andi a1, a1, 240
+; CHECK-NEXT:    snez a1, a1
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %masked = or <4 x i32> %bits, <i32 u0x80000000, i32 0, i32 u0x80000000, i32 0>
+  %fvec = bitcast <4 x i32> %masked to <4 x float>
+  store <4 x float> %fvec, ptr %p
+  %elt = extractelement <4 x float> %fvec, i32 1
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 960)  ; 0x3C0 = any positive
+  ret i1 %res
+}
+
+; elts 0,2 exp bit cleared (not NaN), idx=0, isnan -> false
+define i1 @extract_bitcast_not_nan(<4 x i32> %bits, ptr %p) nounwind {
+; CHECK-LABEL: extract_bitcast_not_nan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 786432
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vand.vv v8, v8, v9
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %masked = and <4 x i32> %bits, <i32 u0xBFFFFFFF, i32 -1, i32 u0xBFFFFFFF, i32 -1>
+  %fvec = bitcast <4 x i32> %masked to <4 x float>
+  store <4 x float> %fvec, ptr %p
+  %elt = extractelement <4 x float> %fvec, i32 0
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
+  ret i1 %res
+}
+
+; elts 0,2 exp bit cleared, idx=1 unchanged, isnan -> cannot fold
+define i1 @extract_bitcast_maybe_nan(<4 x i32> %bits, ptr %p) nounwind {
+; CHECK-LABEL: extract_bitcast_maybe_nan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 786432
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vand.vv v8, v8, v9
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    fclass.s a1, fa5
+; CHECK-NEXT:    andi a1, a1, 768
+; CHECK-NEXT:    snez a1, a1
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %masked = and <4 x i32> %bits, <i32 u0xBFFFFFFF, i32 -1, i32 u0xBFFFFFFF, i32 -1>
+  %fvec = bitcast <4 x i32> %masked to <4 x float>
+  store <4 x float> %fvec, ptr %p
+  %elt = extractelement <4 x float> %fvec, i32 1
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
+  ret i1 %res
+}
+
+; mixed sign, unknown idx, ispos -> cannot fold
+define i1 @extract_bitcast_unknown_idx_not_pos(<4 x i32> %bits, ptr %p, i32 %idx) nounwind {
+; CHECK-LABEL: extract_bitcast_unknown_idx_not_pos:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    slli a1, a1, 32
+; CHECK-NEXT:    vsll.vi v9, v9, 31
+; CHECK-NEXT:    vrsub.vx v9, v9, a2
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    srli a1, a1, 32
+; CHECK-NEXT:    vslidedown.vx v9, v8, a1
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    fclass.s a1, fa5
+; CHECK-NEXT:    andi a1, a1, 240
+; CHECK-NEXT:    snez a1, a1
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %masked = or <4 x i32> %bits, <i32 u0x80000000, i32 0, i32 u0x80000000, i32 0>
+  %fvec = bitcast <4 x i32> %masked to <4 x float>
+  store <4 x float> %fvec, ptr %p
+  %elt = extractelement <4 x float> %fvec, i32 %idx
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 960)  ; 0x3C0 = any positive
+  ret i1 %res
+}
+
+; idx=6 (OOB) -> poison, isnan -> false
+define i1 @extract_bitcast_oob_idx(<4 x i32> %bits, ptr %p) nounwind {
+; CHECK-LABEL: extract_bitcast_oob_idx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vsll.vi v9, v9, 31
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    vrsub.vx v9, v9, a1
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %masked = or <4 x i32> %bits, <i32 u0x80000000, i32 0, i32 u0x80000000, i32 0>
+  %fvec = bitcast <4 x i32> %masked to <4 x float>
+  store <4 x float> %fvec, ptr %p
+  %elt = extractelement <4 x float> %fvec, i32 6
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
+  ret i1 %res
+}
+
+define i1 @extract_fabs_unknown_idx_isneg(<4 x float> %a0, i32 %idx) nounwind {
+; CHECK-LABEL: extract_fabs_unknown_idx_isneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %abs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a0)
+  %elt = extractelement <4 x float> %abs, i32 %idx
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 60)  ; 0x3C = negative
+  ret i1 %res
+}
+
+define i1 @extract_scalable_fabs_isneg(<vscale x 4 x float> %a0) nounwind {
+; CHECK-LABEL: extract_scalable_fabs_isneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %abs = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> %a0)
+  %elt = extractelement <vscale x 4 x float> %abs, i32 0
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 60)  ; 0x3C = negative
+  ret i1 %res
+}
+
 define <vscale x 4 x i1> @splat_constant_is_pos_normal() {
 ; CHECK-LABEL: splat_constant_is_pos_normal:
 ; CHECK:       # %bb.0:

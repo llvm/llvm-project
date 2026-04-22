@@ -2586,23 +2586,15 @@ class LLVM_ABI_FOR_TEST VPWidenPHIRecipe : public VPSingleDefRecipe,
   std::string Name;
 
 public:
-  /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
-  /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
+  /// Create a new VPWidenPHIRecipe with incoming values \p IncomingvValues,
+  /// debug location \p DL and \p Name.
+  VPWidenPHIRecipe(ArrayRef<VPValue *> IncomingValues,
                    DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPSingleDefRecipe(VPRecipeBase::VPWidenPHISC, {}, Phi, DL),
-        Name(Name.str()) {
-    if (Start)
-      addOperand(Start);
-  }
+      : VPSingleDefRecipe(VPRecipeBase::VPWidenPHISC, IncomingValues, DL),
+        Name(Name.str()) {}
 
   VPWidenPHIRecipe *clone() override {
-    auto *C =
-        new VPWidenPHIRecipe(cast_if_present<PHINode>(getUnderlyingValue()),
-                             getOperand(0), getDebugLoc(), Name);
-    for (VPValue *Op : llvm::drop_begin(operands()))
-      C->addOperand(Op);
-    return C;
+    return new VPWidenPHIRecipe(operands(), getDebugLoc(), Name);
   }
 
   ~VPWidenPHIRecipe() override = default;

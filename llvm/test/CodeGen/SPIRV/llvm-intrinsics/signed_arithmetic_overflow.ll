@@ -33,9 +33,9 @@ entry:
 ; CHECK: %[[#A2:]] = OpFunctionParameter %[[#Int]]
 ; CHECK: %[[#B2:]] = OpFunctionParameter %[[#Int]]
 ; CHECK: %[[#Res2:]] = OpISub %[[#Int]] %[[#A2]] %[[#B2]]
-; CHECK: %[[#ResLtA2:]] = OpSLessThan %[[#Bool]] %[[#Res2]] %[[#A2]]
-; CHECK: %[[#BGt0:]] = OpSGreaterThan %[[#Bool]] %[[#B2]] %[[#NullInt]]
-; CHECK: %[[#Overflow2:]] = OpLogicalNotEqual %[[#Bool]] %[[#BGt0]] %[[#ResLtA2]]
+; CHECK: %[[#CmpAB2:]] = OpSLessThan %[[#Bool]] %[[#A2]] %[[#B2]]
+; CHECK: %[[#ResLt02:]] = OpSLessThan %[[#Bool]] %[[#Res2]] %[[#NullInt]]
+; CHECK: %[[#Overflow2:]] = OpLogicalNotEqual %[[#Bool]] %[[#CmpAB2]] %[[#ResLt02]]
 ; CHECK: OpReturn
 define spir_func void @test_ssub_overflow(ptr %out_result, ptr %out_overflow, i32 %a, i32 %b) {
 entry:
@@ -71,9 +71,9 @@ entry:
 ; CHECK: %[[#A4:]] = OpFunctionParameter %[[#V2Int]]
 ; CHECK: %[[#B4:]] = OpFunctionParameter %[[#V2Int]]
 ; CHECK: %[[#Res4:]] = OpISub %[[#V2Int]] %[[#A4]] %[[#B4]]
-; CHECK: %[[#ResLtA4:]] = OpSLessThan %[[#V2Bool]] %[[#Res4]] %[[#A4]]
-; CHECK: %[[#BGt04:]] = OpSGreaterThan %[[#V2Bool]] %[[#B4]] %[[#NullV2Int]]
-; CHECK: %[[#Overflow4:]] = OpLogicalNotEqual %[[#V2Bool]] %[[#BGt04]] %[[#ResLtA4]]
+; CHECK: %[[#CmpAB4:]] = OpSLessThan %[[#V2Bool]] %[[#A4]] %[[#B4]]
+; CHECK: %[[#ResLt04:]] = OpSLessThan %[[#V2Bool]] %[[#Res4]] %[[#NullV2Int]]
+; CHECK: %[[#Overflow4:]] = OpLogicalNotEqual %[[#V2Bool]] %[[#CmpAB4]] %[[#ResLt04]]
 ; CHECK: OpReturn
 define spir_func void @test_ssub_overflow_v2i32(ptr %out_result, ptr %out_overflow, <2 x i32> %a, <2 x i32> %b) {
 entry:

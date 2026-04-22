@@ -4492,15 +4492,21 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   }
 
   KnownBits KnownLHS = DAG.computeKnownBits(LHS);
-  SDValue HiShift;
+  SDValue NewShift, HiShift;
   if (KnownLHS.isNegative()) {
     HiShift = DAG.getAllOnesConstant(SL, TargetType);
+    NewShift =
+        DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
+  } else if (CRHS &&
+             CRHS->getZExtValue() == (ElementType.getSizeInBits() - 1)) {
+    NewShift = HiShift =
+        DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
   } else {
     Hi = DAG.getFreeze(Hi);
     HiShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftFullAmt);
+    NewShift =
+        DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
   }
-  SDValue NewShift =
-      DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
 
   SDValue Vec;
   if (VT.isVector()) {

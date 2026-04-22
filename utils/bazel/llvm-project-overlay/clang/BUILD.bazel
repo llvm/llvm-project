@@ -2652,8 +2652,10 @@ cc_library(
     name = "scalable_static_analysis_analyses",
     srcs = glob([
         "lib/ScalableStaticAnalysisFramework/Analyses/**/*.cpp",
+        "lib/ScalableStaticAnalysisFramework/Analyses/**/*.h",
     ]),
     hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Analyses/**/*.h"]),
+    includes = ["lib/ScalableStaticAnalysisFramework/Analyses"],
     deps = [
         ":analysis",
         ":ast",

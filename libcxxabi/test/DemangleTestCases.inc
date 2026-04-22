@@ -30219,4 +30219,15 @@
 {"_Z3fooIPU9__ptrauthILj1ELb0ELj64EEPiEvT_", "void foo<int* __ptrauth<1u, false, 64u>*>(int* __ptrauth<1u, false, 64u>*)"},
 
 {"_ZN1CpmEi", "C::operator->*(int)"},
+
+// AllocToken instrumentation
+{"__alloc_token__Znwm", "operator new(unsigned long) (.alloc_token)"},
+{"__alloc_token__Znam", "operator new[](unsigned long) (.alloc_token)"},
+{"__alloc_token__ZnwmRKSt9nothrow_t", "operator new(unsigned long, std::nothrow_t const&) (.alloc_token)"},
+{"__alloc_token__ZnamRKSt9nothrow_t", "operator new[](unsigned long, std::nothrow_t const&) (.alloc_token)"},
+{"__alloc_token_0__Znwm", "operator new(unsigned long) (.alloc_token)"},
+{"__alloc_token_1__Znam", "operator new[](unsigned long) (.alloc_token)"},
+{"__alloc_token_123__ZnwmRKSt9nothrow_t", "operator new(unsigned long, std::nothrow_t const&) (.alloc_token)"},
+{"__alloc_token__Znwm.llvm.1234", "operator new(unsigned long) (.llvm.1234) (.alloc_token)"},
+{"__alloc_token_123__Z3foov", "foo() (.alloc_token)"},
     // clang-format on

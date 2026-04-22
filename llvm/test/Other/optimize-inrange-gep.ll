@@ -3,8 +3,6 @@
 ; RUN: opt -O1 -S < %s | FileCheck %s
 ; RUN: opt -O2 -S < %s | FileCheck %s
 ; RUN: opt -O3 -S < %s | FileCheck %s
-; RUN: opt -Os -S < %s | FileCheck %s
-; RUN: opt -Oz -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64"
 

@@ -6,6 +6,7 @@ macros:
     macro_header: sys-socket-macros.h
 types:
   - type_name: struct_sockaddr
+  - type_name: struct_sockaddr_storage
   - type_name: socklen_t
   - type_name: sa_family_t
   - type_name: struct_msghdr

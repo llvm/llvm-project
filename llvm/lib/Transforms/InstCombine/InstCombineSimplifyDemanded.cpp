@@ -2536,7 +2536,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         // Note: Dropping canonicalize.
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(I);
-        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FMF);
+        Value *Fabs = Builder.CreateFAbs(X, FMF);
         Fabs->takeName(I);
         return Fabs;
       }
@@ -2665,8 +2665,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Value *IsZeroOrNan = Builder.CreateFCmpFMF(
           FCmpInst::FCMP_UEQ, I->getOperand(0), ConstantFP::getZero(VTy), FMF);
 
-      Value *Fabs =
-          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, I->getOperand(0), FMF);
+      Value *Fabs = Builder.CreateFAbs(I->getOperand(0), FMF);
       Value *IsInfOrNan = Builder.CreateFCmpFMF(
           FCmpInst::FCMP_UEQ, Fabs, ConstantFP::getInfinity(VTy), FMF);
 

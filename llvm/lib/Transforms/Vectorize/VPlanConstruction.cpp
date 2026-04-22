@@ -1635,8 +1635,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // Add mask phi.
     VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
-    auto *MaskPHI = new VPWidenPHIRecipe(nullptr, /*Start=*/Plan.getFalse());
-    Builder.insert(MaskPHI);
+    auto *MaskPHI = Builder.createWidenPhi(Plan.getFalse());
 
     // Add select for mask.
     Builder.setInsertPoint(SelectR);

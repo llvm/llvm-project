@@ -2179,3 +2179,82 @@ func.func @negative_unpack_pack_memref_no_canonicalization(%packed: memref<16x8x
   linalg.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %dest : memref<128x256xf32> -> memref<16x8x8x32xf32>
   return
 }
+
+// -----
+// CHECK-LABEL: func.func @fold_unpack_cast_inner_tile_dynamic_arg
+// CHECK-SAME:  %[[SRC:.+]]: tensor<1x3x8x1xi32>, %[[TILE:.+]]: index
+// CHECK:   %[[EMPTY:.+]] = tensor.empty() : tensor<7x3xi32>
+// CHECK:       %[[UNPACK:.+]] = linalg.unpack %[[SRC]]
+// CHECK-SAME:    inner_dims_pos = [0, 1]
+// CHECK-SAME:    inner_tiles = [8, 1]
+// CHECK-SAME:    into %[[EMPTY]] : tensor<1x3x8x1xi32> -> tensor<7x3xi32>
+// CHECK:       return %[[UNPACK]] : tensor<7x3xi32>
+func.func @fold_unpack_cast_inner_tile_dynamic_arg(%arg0: tensor<1x3x8x1xi32>, %arg1: index) -> tensor<7x3xi32> {
+  %0 = tensor.empty() : tensor<7x3xi32>
+  %cast = tensor.cast %arg0 : tensor<1x3x8x1xi32> to tensor<?x3x?x1xi32>
+  %unpack = linalg.unpack %cast inner_dims_pos = [0, 1] inner_tiles = [%arg1, 1] into %0 : tensor<?x3x?x1xi32> -> tensor<7x3xi32>
+  return %unpack : tensor<7x3xi32>
+}
+
+
+// -----
+// Mismatched constant tile vs static packed shape: fold still drops the cast and
+// takes inner tile sizes from the refined packed type.
+// CHECK-LABEL: func.func @fold_unpack_cast_inner_tile_inlined_mismatch
+// CHECK:       %[[EMPTY:.+]] = tensor.empty() : tensor<7x3xi32>
+// CHECK-NOT:   tensor.cast
+// CHECK:       %[[UNPACK:.+]] = linalg.unpack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [8, 1]
+// CHECK-SAME:    into %[[EMPTY]] : tensor<1x3x8x1xi32> -> tensor<7x3xi32>
+// CHECK:       return %[[UNPACK]] : tensor<7x3xi32>
+func.func @fold_unpack_cast_inner_tile_inlined_mismatch(%arg0: tensor<1x3x8x1xi32>) -> tensor<7x3xi32> {
+  %c256 = arith.constant 256 : index
+  %1 = tensor.empty() : tensor<7x3xi32>
+  %cast = tensor.cast %arg0 : tensor<1x3x8x1xi32> to tensor<?x3x?x1xi32>
+  %unpack = linalg.unpack %cast inner_dims_pos = [0, 1] inner_tiles = [%c256, 1] into %1 : tensor<?x3x?x1xi32> -> tensor<7x3xi32>
+  return %unpack : tensor<7x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @no_fold_pack_cast_inner_tile_dynamic_arg
+// CHECK-SAME:  %[[SRC:.+]]: tensor<8x3xi32>, %[[TILE:.+]]: index, %[[DEST:.+]]: tensor<?x3x?x1xi32>
+// CHECK:       %[[PACK:.+]] = linalg.pack
+// CHECK:         padding_value
+// CHECK:         inner_dims_pos = [0, 1]
+// CHECK:         inner_tiles = [%[[TILE]], 1]
+// CHECK:         into %[[DEST]] : tensor
+// CHECK:       return %[[PACK]] : tensor<?x3x?x1xi32>
+func.func @no_fold_pack_cast_inner_tile_dynamic_arg(%arg0: tensor<8x3xi32>, %arg1: index,
+    %dest: tensor<?x3x?x1xi32>) -> tensor<?x3x?x1xi32> {
+  %c0 = arith.constant 0 : i32
+  %cast = tensor.cast %arg0 : tensor<8x3xi32> to tensor<?x?xi32>
+  %pack = linalg.pack %cast
+    padding_value(%c0 : i32)
+    inner_dims_pos = [0, 1]
+    inner_tiles = [%arg1, 1]
+    into %dest : tensor<?x?xi32> -> tensor<?x3x?x1xi32>
+  return %pack : tensor<?x3x?x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @no_fold_pack_cast_inner_tile_inlined_mismatch
+// CHECK-DAG:   %[[C256:.+]] = arith.constant 256 : index
+// CHECK:       %[[PACK:.+]] = linalg.pack
+// CHECK:         padding_value
+// CHECK:         inner_dims_pos = [0, 1]
+// CHECK:         inner_tiles = [%[[C256]], 1]
+// CHECK:         into %{{.+}} : tensor
+// CHECK:       return %[[PACK]] : tensor<?x3x?x1xi32>
+func.func @no_fold_pack_cast_inner_tile_inlined_mismatch(%arg0: tensor<8x3xi32>,
+    %dest: tensor<?x3x?x1xi32>) -> tensor<?x3x?x1xi32> {
+  %c0 = arith.constant 0 : i32
+  %c256 = arith.constant 256 : index
+  %cast = tensor.cast %arg0 : tensor<8x3xi32> to tensor<?x?xi32>
+  %pack = linalg.pack %cast
+    padding_value(%c0 : i32)
+    inner_dims_pos = [0, 1]
+    inner_tiles = [%c256, 1]
+    into %dest : tensor<?x?xi32> -> tensor<?x3x?x1xi32>
+  return %pack : tensor<?x3x?x1xi32>
+}

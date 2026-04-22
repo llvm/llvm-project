@@ -266,7 +266,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
                                   const MLIRToLLVMPassPipelineConfig &config) {
   llvm::OptimizationLevel optLevel = config.OptLevel;
-  if (optLevel.getSizeLevel() > 0 || optLevel.getSpeedupLevel() > 0) {
+  if (optLevel.getSpeedupLevel() > 0) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
   }

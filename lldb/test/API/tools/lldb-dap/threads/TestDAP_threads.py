@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 import lldbdap_testcase
 
 
+@skipIfTargetDoesNotSupportThreads()
 class TestDAP_threads(lldbdap_testcase.DAPTestCaseBase):
     def test_correct_thread(self):
         """

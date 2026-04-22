@@ -22,6 +22,15 @@ define float @test_float_fadd_ieee() #0 {
   ret float %result
 }
 
+define <4 x float> @test_float_fadd_ieee_vector() #0 {
+; CHECK-LABEL: @test_float_fadd_ieee_vector(
+; CHECK-NEXT:    ret <4 x float> splat (float 0xB800000000000000)
+;
+; default ieee mode leaves result as a denormal
+  %result = fadd <4 x float> splat(float 0xB810000000000000), splat(float 0x3800000000000000)
+  ret <4 x float> %result
+}
+
 define float @test_float_fadd_pzero_out() #1 {
 ; CHECK-LABEL: @test_float_fadd_pzero_out(
 ; CHECK-NEXT:    ret float 0.000000e+00
@@ -31,6 +40,15 @@ define float @test_float_fadd_pzero_out() #1 {
   ret float %result
 }
 
+define <4 x float> @test_float_fadd_pzero_out_vector() #1 {
+; CHECK-LABEL: @test_float_fadd_pzero_out_vector(
+; CHECK-NEXT:    ret <4 x float> zeroinitializer
+;
+; denormal result is flushed to positive zero
+  %result = fadd <4 x float> splat(float 0xB810000000000000), splat(float 0x3800000000000000)
+  ret <4 x float> %result
+}
+
 define float @test_float_fadd_psign_out() #2 {
 ; CHECK-LABEL: @test_float_fadd_psign_out(
 ; CHECK-NEXT:    ret float -0.000000e+00
@@ -38,6 +56,15 @@ define float @test_float_fadd_psign_out() #2 {
 ; denormal result is flushed to sign preserved zero
   %result = fadd float 0xB810000000000000, 0x3800000000000000
   ret float %result
+}
+
+define <4 x float> @test_float_fadd_psign_out_vector() #2 {
+; CHECK-LABEL: @test_float_fadd_psign_out_vector(
+; CHECK-NEXT:    ret <4 x float> splat (float -0.000000e+00)
+;
+; denormal result is flushed to sign preserved zero
+  %result = fadd <4 x float> splat(float 0xB810000000000000), splat(float 0x3800000000000000)
+  ret <4 x float> %result
 }
 
 define float @test_float_fadd_pzero_in() #3 {
@@ -79,6 +106,15 @@ define double @test_double_fadd_ieee() #0 {
   ret double %result
 }
 
+define <2 x double> @test_double_fadd_ieee_vector() #0 {
+; CHECK-LABEL: @test_double_fadd_ieee_vector(
+; CHECK-NEXT:    ret <2 x double> splat (double 0x8008000000000000)
+;
+; default ieee mode leaves result as a denormal
+  %result = fadd <2 x double> splat(double 0x8010000000000000), splat(double 0x0008000000000000)
+  ret <2 x double> %result
+}
+
 define double @test_double_fadd_pzero_out() #1 {
 ; CHECK-LABEL: @test_double_fadd_pzero_out(
 ; CHECK-NEXT:    ret double 0.000000e+00
@@ -88,6 +124,15 @@ define double @test_double_fadd_pzero_out() #1 {
   ret double %result
 }
 
+define <2 x double> @test_double_fadd_pzero_out_vector() #1 {
+; CHECK-LABEL: @test_double_fadd_pzero_out_vector(
+; CHECK-NEXT:    ret <2 x double> zeroinitializer
+;
+; denormal result is flushed to positive zero
+  %result = fadd <2 x double> splat(double 0x8010000000000000), splat(double 0x0008000000000000)
+  ret <2 x double> %result
+}
+
 define double @test_double_fadd_psign_out() #2 {
 ; CHECK-LABEL: @test_double_fadd_psign_out(
 ; CHECK-NEXT:    ret double -0.000000e+00
@@ -95,6 +140,15 @@ define double @test_double_fadd_psign_out() #2 {
 ; denormal result is flushed to sign preserved zero
   %result = fadd double 0x8010000000000000, 0x0008000000000000
   ret double %result
+}
+
+define <2 x double> @test_double_fadd_psign_out_vector() #2 {
+; CHECK-LABEL: @test_double_fadd_psign_out_vector(
+; CHECK-NEXT:    ret <2 x double> splat (double -0.000000e+00)
+;
+; denormal result is flushed to sign preserved zero
+  %result = fadd <2 x double> splat(double 0x8010000000000000), splat(double 0x0008000000000000)
+  ret <2 x double> %result
 }
 
 define double @test_double_fadd_pzero_in() #3 {

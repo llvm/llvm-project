@@ -46,3 +46,38 @@ subroutine test_cray_pointer_usage
     print *, var(1)
   !$omp end parallel
 end subroutine test_cray_pointer_usage
+
+subroutine test_nested_cray_pointer
+  implicit none
+  real :: X, B
+  pointer(P, B)
+
+  X = 1.0
+  P = loc(X)
+
+  !$omp parallel default(none) shared(P, X)
+    !$omp critical
+      B = B + 2.0
+    !$omp end critical
+  !$omp end parallel
+
+  !$omp parallel default(none) shared(P, X)
+    !$omp parallel default(none)
+      ! ERROR: The DEFAULT(NONE) clause requires that the Cray Pointer 'p' must be listed in a data-sharing attribute clause
+      B = B + 1.0
+    !$omp end parallel
+  !$omp end parallel
+
+  !$omp parallel default(none) shared(P, X)
+    !$omp parallel default(none) shared(P, X)
+      B = B + 1.0
+    !$omp end parallel
+  !$omp end parallel
+
+  !$omp parallel default(none)
+    ! ERROR: The DEFAULT(NONE) clause requires that the Cray Pointer 'p' must be listed in a data-sharing attribute clause
+    !$omp parallel default(none) shared(P)
+      B = B + 1.0
+    !$omp end parallel
+  !$omp end parallel
+end subroutine test_nested_cray_pointer

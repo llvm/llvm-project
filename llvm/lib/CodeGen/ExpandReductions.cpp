@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -26,7 +28,8 @@ using namespace llvm;
 
 namespace {
 
-bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
+bool expandReductions(Function &F, const TargetTransformInfo *TTI,
+                      DominatorTree *DT, LoopInfo *LI) {
   bool Changed = false;
   SmallVector<IntrinsicInst *, 4> Worklist;
   for (auto &I : instructions(F)) {
@@ -75,6 +78,10 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       Value *Acc = II->getArgOperand(0);
       Value *Vec = II->getArgOperand(1);
       unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      if (isa<ScalableVectorType>(Vec->getType())) {
+        Rdx = expandReductionViaLoop(Builder, Vec, RdxOpcode, Acc, DT, LI);
+        break;
+      }
       if (!FMF.allowReassoc())
         Rdx = getOrderedReduction(Builder, Acc, Vec, RdxOpcode, RK);
       else {
@@ -125,10 +132,16 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       Value *Vec = II->getArgOperand(0);
+      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      if (isa<ScalableVectorType>(Vec->getType())) {
+        Type *EltTy = Vec->getType()->getScalarType();
+        Value *Ident = getReductionIdentity(ID, EltTy, FMF);
+        Rdx = expandReductionViaLoop(Builder, Vec, RdxOpcode, Ident, DT, LI);
+        break;
+      }
       if (!isPowerOf2_32(
               cast<FixedVectorType>(Vec->getType())->getNumElements()))
         continue;
-      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
       Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
@@ -160,12 +173,17 @@ public:
 
   bool runOnFunction(Function &F) override {
     const auto *TTI =&getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return expandReductions(F, TTI);
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
+    auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+    auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
+    return expandReductions(F, TTI, DT, LI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.setPreservesCFG();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
   }
 };
 }
@@ -184,9 +202,12 @@ FunctionPass *llvm::createExpandReductionsPass() {
 PreservedAnalyses ExpandReductionsPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   const auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  if (!expandReductions(F, &TTI))
+  auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
+  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
+  if (!expandReductions(F, &TTI, DT, LI))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
   return PA;
 }

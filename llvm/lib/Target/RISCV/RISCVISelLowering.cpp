@@ -593,9 +593,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, VTs, Custom);
     setOperationAction(ISD::VSELECT, VTs, Legal);
     setOperationAction(ISD::SETCC, VTs, Legal);
-    setCondCodeAction({ISD::SETNE, ISD::SETGT, ISD::SETGE, ISD::SETUGT,
-                       ISD::SETUGE, ISD::SETULE, ISD::SETLE},
-                      VTs, Expand);
+    setCondCodeAction(
+        {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE}, VTs,
+        Expand);
+    setCondCodeAction({ISD::SETNE, ISD::SETGT}, VTs, Custom);
 
     if (!Subtarget.is64Bit())
       setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
@@ -884,7 +885,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FMA,         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
         ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,
         ISD::VP_SELECT,
-        ISD::VP_SETCC,       ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
+        ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
         ISD::VP_IS_FPCLASS,  ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM};
 
@@ -1202,7 +1203,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FMA,
         ISD::VP_REDUCE_FMIN,
         ISD::VP_REDUCE_FMAX,
-        ISD::VP_SETCC,
         ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM};
 
@@ -8736,6 +8736,39 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       // SETLT/SETULT.
       CCVal = ISD::getSetCCSwappedOperands(CCVal);
       return DAG.getSetCC(DL, VT, RHS, LHS, CCVal);
+    }
+
+    MVT VT = Op.getSimpleValueType();
+    if (Subtarget.hasStdExtP() && VT.isFixedLengthVector()) {
+      ISD::CondCode CCVal = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+      SDValue LHS = Op.getOperand(0);
+      SDValue RHS = Op.getOperand(1);
+      SDLoc DL(Op);
+      if (CCVal == ISD::SETNE) {
+        // Convert setne X, 0 to setult 0, X.
+        if (ISD::isConstantSplatVectorAllZeros(RHS.getNode())) {
+          return DAG.getSetCC(DL, VT, RHS, LHS, ISD::SETULT);
+        }
+
+        // Not a constant we could handle, convert to SETEQ+Invert
+        SDValue SetCC = DAG.getSetCC(DL, VT, LHS, RHS, ISD::SETEQ);
+        return DAG.getLogicalNOT(DL, SetCC, VT);
+      }
+
+      if (CCVal == ISD::SETGT) {
+        if (ISD::isConstantSplatVectorAllOnes(RHS.getNode())) {
+          SDValue SetCC =
+              DAG.getSetCC(DL, VT, LHS, DAG.getConstant(0, DL, VT), ISD::SETLT);
+          return DAG.getLogicalNOT(DL, SetCC, VT);
+        }
+
+        // Not a constant we could handle, swap the operands and condition code
+        // to SETLT.
+        CCVal = ISD::getSetCCSwappedOperands(CCVal);
+        return DAG.getSetCC(DL, VT, RHS, LHS, CCVal);
+      }
+
+      return SDValue();
     }
 
     if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget))

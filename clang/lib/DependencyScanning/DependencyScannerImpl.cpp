@@ -426,19 +426,10 @@ void dependencies::initializeScanCompilerInstance(
   ScanInstance.createSourceManager();
 
   // Use DepFS for getting the dependency directives if requested to do so.
-  if (Service.getOpts().Mode == ScanningMode::DependencyDirectivesScan) {
-    DepFS->resetBypassedPathPrefix();
-    SmallString<256> ModulesCachePath;
-    normalizeModuleCachePath(ScanInstance.getFileManager(),
-                             ScanInstance.getHeaderSearchOpts().ModuleCachePath,
-                             ModulesCachePath);
-    if (!ModulesCachePath.empty())
-      DepFS->setBypassedPathPrefix(ModulesCachePath);
-
+  if (Service.getOpts().Mode == ScanningMode::DependencyDirectivesScan)
     ScanInstance.setDependencyDirectivesGetter(
         std::make_unique<ScanningDependencyDirectivesGetter>(
             ScanInstance.getFileManager()));
-  }
 }
 
 std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(

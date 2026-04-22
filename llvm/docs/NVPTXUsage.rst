@@ -1134,6 +1134,14 @@ The following table describes the rounding modes used across these intrinsics:
    |                       | the input.                                        |
    +-----------------------+---------------------------------------------------+
 
+.. _scale-factor:
+
+Some conversions involve a scale factor which is provided as a packed 16-bit 
+integer containing two scaling factors of type ``ue8m0``, one for each input.
+For down conversion, inputs are divided by ``scale_factor`` and then the 
+conversion is performed. For up-conversion, inputs are converted to destination 
+type and then multiplied by ``scale_factor``.
+
 ``fp8`` Conversion Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1148,6 +1156,7 @@ Syntax:
     declare i16 @llvm.bf16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
     declare i16 @llvm.bf16x2.to.ue8m0x2{.rz, .rp}{.satfinite}(<2 x bfloat> %a)
     declare <2 x half> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
     declare <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 %a)
     declare <4 x i8> @llvm.nvvm.f32x4.to{.e4m3x4, .e5m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
 
@@ -1171,6 +1180,8 @@ Also, if the input value is ``NaN``, then the result is ``NaN`` in the
 specified destination format. The ``satfinite`` modifier is assumed to be 
 present for conversions involving ``e4m3`` and ``e5m2`` types as the 
 destination.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
 
 For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
@@ -1204,11 +1215,7 @@ result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the
 input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
 destination format.
 
-The operand ``%scale_factor`` stores two packed scaling factors of type 
-``ue8m0``, one for each input. For down conversion, inputs are divided by 
-``scale_factor`` and then the conversion is performed. For up-conversion, 
-inputs are converted to destination type and then multiplied by 
-``scale_factor``.
+For scale factor, see :ref:`scale-factor <scale-factor>`.
 
 For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
@@ -1224,6 +1231,7 @@ Syntax:
     declare i16 @llvm.nvvm.f16x2.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(<2 x half> %a)
     declare i16 @llvm.nvvm.bf16x2.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
     declare <2 x half> @llvm.nvvm{.e2m3x2, .e3m2x2}.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm{.e2m3x2, .e3m2x2}.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
     declare <4 x i8> @llvm.nvvm.f32x4.to{.e2m3x4, .e3m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
     
 Overview:
@@ -1245,6 +1253,8 @@ result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the
 input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
 destination format.
 
+For scale factor, see :ref:`scale-factor <scale-factor>`.
+
 For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
 ``fp4`` Conversion Intrinsics
@@ -1259,6 +1269,7 @@ Syntax:
     declare i16 @llvm.nvvm.f16x2.to.e2m1x2.rn{.relu}.satfinite(<2 x half> %a)
     declare i16 @llvm.nvvm.bf16x2.to.e2m1x2.rn{.relu}.satfinite(<2 x bfloat> %a)
     declare <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm.e2m1x2.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
     declare i16 @llvm.nvvm.f32x4.to.e2m1x4.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
 
 Overview:
@@ -1280,6 +1291,8 @@ is greater than ``MAX_NORM`` of the specified destination format, then the
 result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
 input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
 destination format.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
 
 For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 

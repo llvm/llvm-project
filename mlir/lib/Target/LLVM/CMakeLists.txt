@@ -235,19 +235,22 @@ add_mlir_dialect_library(MLIRXeVMTarget
   MLIRXeVMToLLVMIRTranslation
 )
 
-find_package(ocloc)
-if (OCLOC_FOUND)
-  target_include_directories(MLIRXeVMTarget PRIVATE "${OCLOC_INCLUDE_DIR}")
-  target_link_libraries(MLIRXeVMTarget PRIVATE "${OCLOC_LIBRARY}")
-  target_compile_definitions(obj.MLIRXeVMTarget
-    PRIVATE
-    MLIR_XEVM_OCLOC_LIB_AVAILABLE=1
-  )
+if (NOT LLVM_BUILD_LLVM_DYLIB)
+  find_package(ocloc)
+  if (OCLOC_FOUND)
+    target_include_directories(MLIRXeVMTarget PRIVATE "${OCLOC_INCLUDE_DIR}")
+    target_link_libraries(MLIRXeVMTarget PRIVATE "${OCLOC_LIBRARY}")
+    set(MLIR_XEVM_OCLOC_LIB_AVAILABLE 1)
+  else()
+    set(MLIR_XEVM_OCLOC_LIB_AVAILABLE 0)
+    message(WARNING "ocloc not found, MLIRXeVMTarget will not be able to use ocloc for native binary compilation.")
+  endif()
 else()
-  target_compile_definitions(obj.MLIRXeVMTarget
-    PRIVATE
-    MLIR_XEVM_OCLOC_LIB_AVAILABLE=0
-  )
-  message(WARNING "ocloc not found, MLIRXeVMTarget will not be able to use ocloc for native binary compilation.")
+  set(MLIR_XEVM_OCLOC_LIB_AVAILABLE 0)
+  message(WARNING "Dynamic linking with ocloc is not currently supported.")
 endif()
 
+target_compile_definitions(obj.MLIRXeVMTarget
+  PRIVATE
+  MLIR_XEVM_OCLOC_LIB_AVAILABLE=${MLIR_XEVM_OCLOC_LIB_AVAILABLE}
+)

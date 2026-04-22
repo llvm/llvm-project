@@ -306,10 +306,10 @@ define i64 @findlast_load_scaled_iv(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP6]]
@@ -537,10 +537,10 @@ define i64 @findlast_load_data_dependent_idx(ptr noalias %a, ptr noalias %b, ptr
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[IDX]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[WIDE_LOAD1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[WIDE_LOAD1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[WIDE_LOAD1]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[WIDE_LOAD1]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[WIDE_LOAD1]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[WIDE_LOAD1]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[WIDE_LOAD1]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[WIDE_LOAD1]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP6]]
@@ -632,13 +632,13 @@ define i64 @findlast_load_cond_store_other_block(ptr noalias %a, ptr %b, i64 %n)
 ; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i64> [[WIDE_LOAD1]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <4 x i64> [[WIDE_LOAD]], splat (i64 100)
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    store i64 0, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP8]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
 ; CHECK:       [[PRED_STORE_IF2]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 1
@@ -646,7 +646,7 @@ define i64 @findlast_load_cond_store_other_block(ptr noalias %a, ptr %b, i64 %n)
 ; CHECK-NEXT:    store i64 0, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
 ; CHECK:       [[PRED_STORE_CONTINUE3]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP8]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
 ; CHECK:       [[PRED_STORE_IF4]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 2
@@ -654,7 +654,7 @@ define i64 @findlast_load_cond_store_other_block(ptr noalias %a, ptr %b, i64 %n)
 ; CHECK-NEXT:    store i64 0, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
 ; CHECK:       [[PRED_STORE_CONTINUE5]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP8]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP8]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7]]
 ; CHECK:       [[PRED_STORE_IF6]]:
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 3

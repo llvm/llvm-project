@@ -63,7 +63,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPostLegalizerPass(PR);
   initializeSPIRVMergeRegionExitTargetsPass(PR);
   initializeSPIRVEmitIntrinsicsPass(PR);
-  initializeSPIRVEmitNonSemanticDIPass(PR);
   initializeSPIRVPrepareFunctionsPass(PR);
   initializeSPIRVPrepareGlobalsPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
@@ -126,7 +125,6 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
-  void addPreEmitPass() override;
 
 private:
   const SPIRVTargetMachine &TM;
@@ -262,18 +260,16 @@ bool SPIRVPassConfig::addRegBankSelect() {
   return false;
 }
 
+// Deprecated flag kept for backward compatibility. NSDI emission is now handled
+// by SPIRVNonSemanticDebugHandler, registered in SPIRVAsmPrinter::
+// doInitialization() when the module contains debug info (llvm.dbg.cu).
+// TODO: Remove this option after a deprecation period. Callers that used
+// -spv-emit-nonsemantic-debug-info should switch to -g.
 static cl::opt<bool> SPVEnableNonSemanticDI(
     "spv-emit-nonsemantic-debug-info",
     cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
              "instructions"),
     cl::Optional, cl::init(false));
-
-void SPIRVPassConfig::addPreEmitPass() {
-  // The SPIRVEmitNonSemanticDI pass self-activates when the module contains
-  // debug info (llvm.dbg.cu). --spv-emit-nonsemantic-debug-info is a
-  // deprecated synonym for -g.
-  addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
-}
 
 namespace {
 // A custom subclass of InstructionSelect, which is mostly the same except from

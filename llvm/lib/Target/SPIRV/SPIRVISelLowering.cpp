@@ -546,12 +546,13 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
           SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, MIB);
           SPIRVTypeInst RetType = MRI->getVRegDef(MI.getOperand(1).getReg());
           assert(RetType && "Expected return type");
-          validatePtrTypes(STI, MRI, GR, MI, MI.getNumOperands() - 1,
-                           RetType->getOpcode() != SPIRV::OpTypeVector
-                               ? Int32Type
-                               : GR.getOrCreateSPIRVVectorType(
-                                     Int32Type, RetType->getOperand(2).getImm(),
-                                     MIB, false));
+          validatePtrTypes(
+              STI, MRI, GR, MI, MI.getNumOperands() - 1,
+              RetType->getOpcode() != SPIRV::OpTypeVector
+                  ? Int32Type
+                  : GR.getOrCreateSPIRVVectorType(
+                        Int32Type, GR.getScalarOrVectorComponentCount(RetType),
+                        MIB, false));
         } break;
         case SPIRV::OpenCLExtInst::fract:
         case SPIRV::OpenCLExtInst::modf:

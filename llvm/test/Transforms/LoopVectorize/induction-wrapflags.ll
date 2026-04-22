@@ -13,10 +13,10 @@ define void @induction_with_multiple_instructions_in_chain(ptr %p, ptr noalias %
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 3, i32 6, i32 9, i32 12>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i32> [ <i32 0, i32 3, i32 6, i32 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext <4 x i32> [[VEC_IND]] to <4 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP0]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP3]]
@@ -26,10 +26,10 @@ define void @induction_with_multiple_instructions_in_chain(ptr %p, ptr noalias %
 ; CHECK-NEXT:    store i8 0, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i32> [[VEC_IND1]] to <4 x i64>
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i64 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP12]]

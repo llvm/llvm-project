@@ -408,9 +408,9 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ;
 ; AVX512VL-LABEL: var_rotate_v32i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpsrlw $4, %ymm0, %ymm2
-; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm3
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm2 ^ (m32bcst & (ymm3 ^ ymm2))
+; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm2
+; AVX512VL-NEXT:    vpsrlw $4, %ymm0, %ymm3
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 ^ (m32bcst & (ymm3 ^ ymm2))
 ; AVX512VL-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsrlw $6, %ymm0, %ymm2

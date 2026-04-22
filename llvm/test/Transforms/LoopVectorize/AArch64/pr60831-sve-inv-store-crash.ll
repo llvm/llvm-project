@@ -22,10 +22,10 @@ define void @test_invar_gep(ptr %dst) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <vscale x 4 x i64> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i32 [[TMP15]], 4
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i32 [[TMP16]], 1
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <vscale x 4 x i64> [[TMP9]], i32 [[TMP17]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP6]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <vscale x 4 x i64> [[TMP9]], i32 [[TMP7]]
 ; CHECK-NEXT:    store i64 [[TMP18]], ptr [[TMP14:%.*]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[TMP9]], [[DOTSPLAT]]
@@ -130,10 +130,10 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i32 [[TMP8]], 4
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 4 x i64> [[TMP7]], i32 [[TMP10]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i32 [[TMP10]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 4 x i64> [[TMP7]], i32 [[TMP9]]
 ; CHECK-NEXT:    store i64 [[TMP11]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[TMP7]], [[BROADCAST_SPLAT2]]
@@ -180,10 +180,10 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[DOTSPLAT:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[TMP10:%.*]] = add nsw <vscale x 4 x i64> [[DOTSPLAT]], [[TMP9]]
-; IC2-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
-; IC2-NEXT:    [[TMP13:%.*]] = mul nuw i32 [[TMP12]], 4
-; IC2-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], 1
-; IC2-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i64> [[TMP10]], i32 [[TMP14]]
+; IC2-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vscale.i32()
+; IC2-NEXT:    [[TMP11:%.*]] = mul nuw i32 [[TMP8]], 4
+; IC2-NEXT:    [[TMP12:%.*]] = sub i32 [[TMP11]], 1
+; IC2-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i64> [[TMP10]], i32 [[TMP12]]
 ; IC2-NEXT:    store i64 [[TMP15]], ptr [[DST:%.*]], align 1
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; IC2-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[TMP10]], [[TMP9]]
@@ -249,10 +249,10 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw i32 [[TMP13]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = sub i32 [[TMP14]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i64> [[TMP12]], i32 [[TMP15]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i32 [[TMP15]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i64> [[TMP12]], i32 [[TMP14]]
 ; CHECK-NEXT:    store i64 [[TMP16]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[TMP12]], [[BROADCAST_SPLAT2]]
@@ -304,10 +304,10 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[DOTSPLAT:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[TMP14:%.*]] = add nsw <vscale x 4 x i64> [[DOTSPLAT]], [[TMP13]]
-; IC2-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vscale.i32()
-; IC2-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 4
-; IC2-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP18]], 1
-; IC2-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 4 x i64> [[TMP14]], i32 [[TMP19]]
+; IC2-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vscale.i32()
+; IC2-NEXT:    [[TMP17:%.*]] = mul nuw i32 [[TMP16]], 4
+; IC2-NEXT:    [[TMP15:%.*]] = sub i32 [[TMP17]], 1
+; IC2-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 4 x i64> [[TMP14]], i32 [[TMP15]]
 ; IC2-NEXT:    store i64 [[TMP20]], ptr [[DST:%.*]], align 1
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
 ; IC2-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[TMP14]], [[TMP13]]
@@ -404,7 +404,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[TMP48:%.*]] = trunc <16 x i64> [[TMP47]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP49:%.*]] = add i64 [[INDEX]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP49]]
-; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <16 x i8> [[TMP48]], i32 15
+; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <16 x i8> [[TMP48]], i64 15
 ; CHECK-NEXT:    store i8 [[TMP51]], ptr [[TMP50]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP52:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
@@ -444,7 +444,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[TMP77:%.*]] = trunc <8 x i64> [[TMP76]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP78:%.*]] = add i64 [[INDEX2]], [[TMP61]]
 ; CHECK-NEXT:    [[TMP79:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP78]]
-; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <8 x i8> [[TMP77]], i32 7
+; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <8 x i8> [[TMP77]], i64 7
 ; CHECK-NEXT:    store i8 [[TMP80]], ptr [[TMP79]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX2]], 8
 ; CHECK-NEXT:    [[TMP81:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 1000
@@ -577,8 +577,8 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; IC2-NEXT:    [[TMP99:%.*]] = add i64 [[TMP16]], [[TMP64]]
 ; IC2-NEXT:    [[TMP100:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP98]]
 ; IC2-NEXT:    [[TMP101:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP99]]
-; IC2-NEXT:    [[TMP102:%.*]] = extractelement <16 x i8> [[TMP96]], i32 15
-; IC2-NEXT:    [[TMP103:%.*]] = extractelement <16 x i8> [[TMP97]], i32 15
+; IC2-NEXT:    [[TMP102:%.*]] = extractelement <16 x i8> [[TMP96]], i64 15
+; IC2-NEXT:    [[TMP103:%.*]] = extractelement <16 x i8> [[TMP97]], i64 15
 ; IC2-NEXT:    store i8 [[TMP102]], ptr [[TMP100]], align 1
 ; IC2-NEXT:    store i8 [[TMP103]], ptr [[TMP101]], align 1
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
@@ -619,7 +619,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; IC2-NEXT:    [[TMP129:%.*]] = trunc <8 x i64> [[TMP128]] to <8 x i8>
 ; IC2-NEXT:    [[TMP130:%.*]] = add i64 [[INDEX1]], [[TMP113]]
 ; IC2-NEXT:    [[TMP131:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP130]]
-; IC2-NEXT:    [[TMP132:%.*]] = extractelement <8 x i8> [[TMP129]], i32 7
+; IC2-NEXT:    [[TMP132:%.*]] = extractelement <8 x i8> [[TMP129]], i64 7
 ; IC2-NEXT:    store i8 [[TMP132]], ptr [[TMP131]], align 1
 ; IC2-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 8
 ; IC2-NEXT:    [[TMP133:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1000

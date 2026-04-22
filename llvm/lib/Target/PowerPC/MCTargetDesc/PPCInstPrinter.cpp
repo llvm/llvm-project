@@ -330,7 +330,7 @@ void PPCInstPrinter::printUImmOperand(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
   unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= ((1U << Width) - 1) && "Invalid uimm argument!");
+  assert(Value <= ((1ULL << Width) - 1) && "Invalid uimm argument!");
   O << (unsigned int)Value;
 }
 

@@ -8769,6 +8769,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
   auto [DstFrac, DstInt, Src] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Src);
   auto Flags = MI.getFlags();
+  const LLT CondTy = Ty.changeElementType(LLT::integer(1));
 
   auto IntPart = MIRBuilder.buildIntrinsicTrunc(Ty, Src, Flags);
   auto FracPart = MIRBuilder.buildFSub(Ty, Src, IntPart, Flags);
@@ -8780,8 +8781,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
     auto Abs = MIRBuilder.buildFAbs(Ty, Src, Flags);
     const fltSemantics &Semantics = getFltSemanticForLLT(Ty.getScalarType());
     auto Inf = MIRBuilder.buildFConstant(Ty, APFloat::getInf(Semantics));
-    auto IsInf = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ,
-                                      Ty.changeElementSize(1), Abs, Inf);
+    auto IsInf = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, CondTy, Abs, Inf);
     auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
     auto Select = MIRBuilder.buildSelect(Ty, IsInf, Zero, FracPart);
     FracToUse = Select.getReg(0);
@@ -8987,7 +8987,7 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   auto [Dst, Src0, Src1] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
-  LLT CmpTy = Ty.changeElementSize(1);
+  const LLT CmpTy = Ty.changeElementType(LLT::integer(1));
 
   bool IsMax = (Opc == TargetOpcode::G_FMAXIMUM);
   unsigned OpcIeee =
@@ -9071,7 +9071,7 @@ LegalizerHelper::lowerIntrinsicRound(MachineInstr &MI) {
   auto [DstReg, X] = MI.getFirst2Regs();
   const unsigned Flags = MI.getFlags();
   const LLT Ty = MRI.getType(DstReg);
-  const LLT CondTy = Ty.changeElementSize(1);
+  const LLT CondTy = Ty.changeElementType(LLT::integer(1));
 
   // round(x) =>
   //  t = trunc(x);
@@ -9104,7 +9104,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFFloor(MachineInstr &MI) {
   auto [DstReg, SrcReg] = MI.getFirst2Regs();
   unsigned Flags = MI.getFlags();
   LLT Ty = MRI.getType(DstReg);
-  const LLT CondTy = Ty.changeElementSize(1);
+  const LLT CondTy = Ty.changeElementType(LLT::integer(1));
 
   // result = trunc(src);
   // if (src < 0.0 && src != result)
@@ -9665,18 +9665,24 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
 
   auto Zero = MIRBuilder.buildConstant(Ty, 0);
 
-  // For an addition, the result should be less than one of the operands (LHS)
-  // if and only if the other operand (RHS) is negative, otherwise there will
-  // be overflow.
-  // For a subtraction, the result should be less than one of the operands
-  // (LHS) if and only if the other operand (RHS) is (non-zero) positive,
-  // otherwise there will be overflow.
-  auto ResultLowerThanLHS =
-      MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, LHS);
-  auto ConditionRHS = MIRBuilder.buildICmp(
-      IsAdd ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGT, BoolTy, RHS, Zero);
-
-  MIRBuilder.buildXor(Dst1, ConditionRHS, ResultLowerThanLHS);
+  if (IsAdd) {
+    // For an addition, the result should be less than one of the operands (LHS)
+    // if and only if the other operand (RHS) is negative, otherwise there will
+    // be overflow.
+    auto ResultLowerThanLHS =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, LHS);
+    auto RHSNegative =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, RHS, Zero);
+    MIRBuilder.buildXor(Dst1, RHSNegative, ResultLowerThanLHS);
+  } else {
+    // For subtraction, overflow occurs when the signed comparison of operands
+    // doesn't match the sign of the result.
+    auto LHSLessThanRHS =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, LHS, RHS);
+    auto ResultNegative =
+        MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, Zero);
+    MIRBuilder.buildXor(Dst1, LHSLessThanRHS, ResultNegative);
+  }
 
   MIRBuilder.buildCopy(Dst0, NewDst0);
   MI.eraseFromParent();

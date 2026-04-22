@@ -5406,11 +5406,13 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       return true;
     }
     if (auto *CInt = dyn_cast<ConstantInt>(Cst)) {
-      Mask = CInt->getValue();
+      Mask = APInt::getSplat(CInt->getType()->getPrimitiveSizeInBits(),
+                             CInt->getValue());
       return true;
     }
     if (auto *CFP = dyn_cast<ConstantFP>(Cst)) {
-      Mask = CFP->getValueAPF().bitcastToAPInt();
+      Mask = APInt::getSplat(CFP->getType()->getPrimitiveSizeInBits(),
+                             CFP->getValueAPF().bitcastToAPInt());
       return true;
     }
     if (auto *CDS = dyn_cast<ConstantDataSequential>(Cst)) {
@@ -39398,6 +39400,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::MOVQ2DQ: {
     // Move from MMX to XMM. Upper half of XMM should be 0.
     if (DemandedElts.countr_zero() >= (NumElts / 2))
+      Known.setAllZero();
+    break;
+  }
+  case X86ISD::VZEXT_LOAD: {
+    // Upper elements are known zero.
+    auto *LN = cast<MemIntrinsicSDNode>(Op);
+    if (!DemandedElts[0] &&
+        LN->getMemoryVT().getSizeInBits() == VT.getScalarSizeInBits())
       Known.setAllZero();
     break;
   }

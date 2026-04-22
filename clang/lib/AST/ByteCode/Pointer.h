@@ -888,6 +888,9 @@ private:
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   P.print(OS);
   OS << ' ';
+  if (P.isZero())
+    return OS;
+
   if (const Descriptor *D = P.getFieldDesc())
     D->dump(OS);
   if (P.isArrayElement()) {
@@ -895,7 +898,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
       OS << " one-past-the-end";
     else
       OS << " index " << P.getIndex();
-  }
+  } else if (P.isArrayRoot())
+    OS << " arrayroot";
+
   if (P.isBlockPointer() && P.block() && P.block()->isDummy())
     OS << " dummy";
   if (!P.isLive())

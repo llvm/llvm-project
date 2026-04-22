@@ -4922,8 +4922,8 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
     //   Overflow -> ((LHS ^ RHS) & (LHS ^ Sum)) < 0
     //
     // NOTE: This is different than the expansion we do in expandSADDSUBO
-    // because it is more costly to determine the RHS is > 0 for SSUBO with the
-    // integers split.
+    // because it is more costly to implement the same overflow predicate with
+    // SETCC nodes when the integers are split.
     EVT VT = LHS.getValueType();
     SDValue SignsMatch = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
     if (IsAdd)

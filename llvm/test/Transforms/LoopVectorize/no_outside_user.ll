@@ -42,7 +42,7 @@ define i32 @test1()  {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[PREDPHI]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
 ; CHECK:       [[_LR_PH_I]]:
@@ -115,7 +115,7 @@ define i32 @test2()  {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> splat (i32 1), <2 x i32> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[PREDPHI]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
 ; CHECK:       [[_LR_PH_I]]:
@@ -193,7 +193,7 @@ define i32 @test3(i32 %N)  {
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP5]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 2)
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[PREDPHI]], <2 x i32> splat (i32 1)
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[PREDPHI1]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[PREDPHI1]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I1]]
 ; CHECK:       [[_LR_PH_I1]]:
@@ -214,7 +214,7 @@ define i32 @test3(i32 %N)  {
 ; CHECK-NEXT:    [[UNNAMEDTMP19:%.*]] = icmp slt i32 [[UNNAMEDTMP18]], 4
 ; CHECK-NEXT:    br i1 [[UNNAMEDTMP19]], label %[[DOTLR_PH_I]], label %[[F1_EXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[F1_EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[UNNAMEDTMP17]], %[[BB16]] ], [ [[TMP8]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[UNNAMEDTMP17]], %[[BB16]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[DOTLCSSA]]
 ;
 bb:
@@ -276,7 +276,7 @@ define i32 @test4(i32 %N)  {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[PREDPHI]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
 ; CHECK:       [[_LR_PH_I]]:
@@ -539,7 +539,7 @@ define i8 @outside_user_non_phi()  {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[PREDPHI]] to <2 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
 ; CHECK:       [[_LR_PH_I]]:
@@ -678,7 +678,7 @@ define i32 @sum_arrays_outside_use(ptr %B, ptr %A, ptr %C, i32 %N)  {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP11]], i64 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
 ; CHECK:       [[_LR_PH_I]]:
@@ -698,7 +698,7 @@ define i32 @sum_arrays_outside_use(ptr %B, ptr %A, ptr %C, i32 %N)  {
 ; CHECK-NEXT:    [[UNNAMEDTMP19:%.*]] = icmp slt i32 [[IVNEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[UNNAMEDTMP19]], label %[[DOTLR_PH_I]], label %[[F1_EXIT_LOOPEXIT]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[F1_EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[SUM]], %[[DOTLR_PH_I]] ], [ [[TMP15]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[SUM]], %[[DOTLR_PH_I]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[DOTLCSSA]]
 ;
 bb:
@@ -736,7 +736,7 @@ define i32 @non_uniform_live_out() {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 7)
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i8> [[WIDE_LOAD]], splat (i8 1)

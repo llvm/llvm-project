@@ -11,6 +11,7 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 import sys
 
 
+@skipIfTargetDoesNotSupportThreads()
 class TestGuiSpawnThreadsTest(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..

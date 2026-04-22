@@ -170,6 +170,6 @@ LIBC_INLINE constexpr float cosf(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSF_H
-
 #endif // LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSF_H

@@ -18,16 +18,6 @@ float4 ToFourFloats(float V){
   return V.rrrr;
 }
 
-// CHECK-LABEL: ToFourBools
-// CHECK: {{%.*}} = zext i1 {{.*}} to i32
-// CHECK: [[splat:%.*]] = insertelement <1 x i32> poison, i32 {{.*}}, i64 0
-// CHECK-NEXT: [[vec4:%.*]] = shufflevector <1 x i32> [[splat]], <1 x i32> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT: [[vec2Ret:%.*]] = trunc <4 x i32> [[vec4]] to <4 x i1>
-// CHECK-NEXT: ret <4 x i1> [[vec2Ret]]
-bool4 ToFourBools(bool V) {
-  return V.rrrr;
-}
-
 // CHECK-LABEL: FillOne
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x i32>, align 4
 // CHECK: store <1 x i32> splat (i32 1), ptr [[vec1Ptr]], align 4
@@ -101,17 +91,6 @@ float4 FillTwoPointFiveFloat(){
 // CHECK: ret <1 x float> [[vec1Ret]]
 vector<float, 1> FillOneHalfFloat(){
   return .5f.r;
-}
-
-// CHECK-LABEL: FillTrue
-// CHECK: [[Tmp:%.*]] = alloca <1 x i32>, align 4
-// CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[Tmp]], align 4
-// CHECK-NEXT: [[Vec1:%.*]] = load <1 x i32>, ptr [[Tmp]], align 4
-// CHECK-NEXT: [[Vec2:%.*]] = shufflevector <1 x i32> [[Vec1]], <1 x i32> poison, <2 x i32> zeroinitializer
-// CHECK-NEXT: [[Vec2Ret:%.*]] = trunc <2 x i32> [[Vec2]] to <2 x i1>
-// CHECK-NEXT: ret <2 x i1> [[Vec2Ret]]
-bool2 FillTrue() {
-  return true.xx;
 }
 
 // The initial codegen for this case is correct but a bit odd. The IR optimizer

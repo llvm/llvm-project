@@ -9,21 +9,51 @@
 #include <vecintrin.h>
 
 volatile vector signed char vsc;
+volatile vector signed char vsc1;
+volatile vector signed char vsc2;
 volatile vector signed short vss;
+volatile vector signed short vss1;
+volatile vector signed short vss2;
 volatile vector signed int vsi;
+volatile vector signed int vsi1;
+volatile vector signed int vsi2;
 volatile vector signed long long vsl;
+volatile vector signed long long vsl1;
 volatile vector signed __int128 vslll;
+volatile vector signed __int128 vslll1;
 volatile vector unsigned char vuc;
+volatile vector unsigned char vuc1;
+volatile vector unsigned char vuc2;
 volatile vector unsigned short vus;
+volatile vector unsigned short vus1;
+volatile vector unsigned short vus2;
 volatile vector unsigned int vui;
+volatile vector unsigned int vui1;
+volatile vector unsigned int vui2;
 volatile vector unsigned long long vul;
+volatile vector unsigned long long vul1;
+volatile vector unsigned long long vul2;
 volatile vector unsigned __int128 vulll;
+volatile vector unsigned __int128 vulll1;
+volatile vector unsigned __int128 vulll2;
 volatile vector bool char vbc;
+volatile vector bool char vbc1;
+volatile vector bool char vbc2;
 volatile vector bool short vbs;
+volatile vector bool short vbs1;
+volatile vector bool short vbs2;
 volatile vector bool int vbi;
+volatile vector bool int vbi1;
+volatile vector bool int vbi2;
 volatile vector bool long long vbl;
+volatile vector bool long long vbl1;
+volatile vector bool long long vbl2;
 volatile vector bool __int128 vblll;
+volatile vector bool __int128 vblll1;
+volatile vector bool __int128 vblll2;
 volatile vector double vd;
+volatile vector double vd1;
+volatile vector double vd2;
 
 volatile signed char sc;
 volatile signed short ss;
@@ -230,101 +260,101 @@ void test_core(void) {
   // CHECK: insertelement <2 x double> <double poison, double 0.000000e+00>, double %{{.*}}, i64 0
   // CHECK-ASM: vllezg
 
-  vsc = vec_perm(vsc, vsc, vuc);
+  vsc = vec_perm(vsc, vsc1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vuc = vec_perm(vuc, vuc, vuc);
+  vuc = vec_perm(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vbc = vec_perm(vbc, vbc, vuc);
+  vbc = vec_perm(vbc, vbc1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vss = vec_perm(vss, vss, vuc);
+  vss = vec_perm(vss, vss1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vus = vec_perm(vus, vus, vuc);
+  vus = vec_perm(vus, vus1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vbs = vec_perm(vbs, vbs, vuc);
+  vbs = vec_perm(vbs, vbs1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vsi = vec_perm(vsi, vsi, vuc);
+  vsi = vec_perm(vsi, vsi1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vui = vec_perm(vui, vui, vuc);
+  vui = vec_perm(vui, vui1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vbi = vec_perm(vbi, vbi, vuc);
+  vbi = vec_perm(vbi, vbi1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vsl = vec_perm(vsl, vsl, vuc);
+  vsl = vec_perm(vsl, vsl1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vul = vec_perm(vul, vul, vuc);
+  vul = vec_perm(vul, vul1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vbl = vec_perm(vbl, vbl, vuc);
+  vbl = vec_perm(vbl, vbl1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vslll = vec_perm(vslll, vslll, vuc);
+  vslll = vec_perm(vslll, vslll1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vulll = vec_perm(vulll, vulll, vuc);
+  vulll = vec_perm(vulll, vulll1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vblll = vec_perm(vblll, vblll, vuc);
+  vblll = vec_perm(vblll, vblll1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
-  vd = vec_perm(vd, vd, vuc);
+  vd = vec_perm(vd, vd1, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vperm
 
-  vsl = vec_permi(vsl, vsl, 0);
+  vsl = vec_permi(vsl, vsl1, 0);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 0)
   // CHECK-ASM: vpdi
-  vsl = vec_permi(vsl, vsl, 1);
+  vsl = vec_permi(vsl, vsl1, 1);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 1)
   // CHECK-ASM: vpdi
-  vsl = vec_permi(vsl, vsl, 2);
+  vsl = vec_permi(vsl, vsl1, 2);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 4)
   // CHECK-ASM: vpdi
-  vsl = vec_permi(vsl, vsl, 3);
+  vsl = vec_permi(vsl, vsl1, 3);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 5)
   // CHECK-ASM: vpdi
-  vul = vec_permi(vul, vul, 0);
+  vul = vec_permi(vul, vul1, 0);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 0)
   // CHECK-ASM: vpdi
-  vul = vec_permi(vul, vul, 1);
+  vul = vec_permi(vul, vul1, 1);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 1)
   // CHECK-ASM: vpdi
-  vul = vec_permi(vul, vul, 2);
+  vul = vec_permi(vul, vul1, 2);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 4)
   // CHECK-ASM: vpdi
-  vul = vec_permi(vul, vul, 3);
+  vul = vec_permi(vul, vul1, 3);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 5)
   // CHECK-ASM: vpdi
-  vbl = vec_permi(vbl, vbl, 0);
+  vbl = vec_permi(vbl, vbl1, 0);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 0)
   // CHECK-ASM: vpdi
-  vbl = vec_permi(vbl, vbl, 1);
+  vbl = vec_permi(vbl, vbl1, 1);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 1)
   // CHECK-ASM: vpdi
-  vbl = vec_permi(vbl, vbl, 2);
+  vbl = vec_permi(vbl, vbl1, 2);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 4)
   // CHECK-ASM: vpdi
-  vbl = vec_permi(vbl, vbl, 3);
+  vbl = vec_permi(vbl, vbl1, 3);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 5)
   // CHECK-ASM: vpdi
-  vd = vec_permi(vd, vd, 0);
+  vd = vec_permi(vd, vd1, 0);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 0)
   // CHECK-ASM: vpdi
-  vd = vec_permi(vd, vd, 1);
+  vd = vec_permi(vd, vd1, 1);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 1)
   // CHECK-ASM: vpdi
-  vd = vec_permi(vd, vd, 2);
+  vd = vec_permi(vd, vd1, 2);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 4)
   // CHECK-ASM: vpdi
-  vd = vec_permi(vd, vd, 3);
+  vd = vec_permi(vd, vd1, 3);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 5)
   // CHECK-ASM: vpdi
 
@@ -374,69 +404,69 @@ void test_core(void) {
   vd = vec_reve(vd);
   // CHECK-ASM: {{vperm|vpdi}}
 
-  vsc = vec_sel(vsc, vsc, vuc);
+  vsc = vec_sel(vsc, vsc1, vuc);
   // CHECK-ASM: vsel
-  vsc = vec_sel(vsc, vsc, vbc);
+  vsc = vec_sel(vsc, vsc1, vbc);
   // CHECK-ASM: vsel
-  vuc = vec_sel(vuc, vuc, vuc);
+  vuc = vec_sel(vuc, vuc1, vuc2);
   // CHECK-ASM: vsel
-  vuc = vec_sel(vuc, vuc, vbc);
+  vuc = vec_sel(vuc, vuc1, vbc);
   // CHECK-ASM: vsel
-  vbc = vec_sel(vbc, vbc, vuc);
+  vbc = vec_sel(vbc, vbc1, vuc);
   // CHECK-ASM: vsel
-  vbc = vec_sel(vbc, vbc, vbc);
+  vbc = vec_sel(vbc, vbc1, vbc2);
   // CHECK-ASM: vsel
-  vss = vec_sel(vss, vss, vus);
+  vss = vec_sel(vss, vss1, vus);
   // CHECK-ASM: vsel
-  vss = vec_sel(vss, vss, vbs);
+  vss = vec_sel(vss, vss1, vbs);
   // CHECK-ASM: vsel
-  vus = vec_sel(vus, vus, vus);
+  vus = vec_sel(vus, vus1, vus2);
   // CHECK-ASM: vsel
-  vus = vec_sel(vus, vus, vbs);
+  vus = vec_sel(vus, vus1, vbs);
   // CHECK-ASM: vsel
-  vbs = vec_sel(vbs, vbs, vus);
+  vbs = vec_sel(vbs, vbs1, vus);
   // CHECK-ASM: vsel
-  vbs = vec_sel(vbs, vbs, vbs);
+  vbs = vec_sel(vbs, vbs1, vbs2);
   // CHECK-ASM: vsel
-  vsi = vec_sel(vsi, vsi, vui);
+  vsi = vec_sel(vsi, vsi1, vui);
   // CHECK-ASM: vsel
-  vsi = vec_sel(vsi, vsi, vbi);
+  vsi = vec_sel(vsi, vsi1, vbi);
   // CHECK-ASM: vsel
-  vui = vec_sel(vui, vui, vui);
+  vui = vec_sel(vui, vui1, vui2);
   // CHECK-ASM: vsel
-  vui = vec_sel(vui, vui, vbi);
+  vui = vec_sel(vui, vui1, vbi);
   // CHECK-ASM: vsel
-  vbi = vec_sel(vbi, vbi, vui);
+  vbi = vec_sel(vbi, vbi1, vui);
   // CHECK-ASM: vsel
-  vbi = vec_sel(vbi, vbi, vbi);
+  vbi = vec_sel(vbi, vbi1, vbi2);
   // CHECK-ASM: vsel
-  vsl = vec_sel(vsl, vsl, vul);
+  vsl = vec_sel(vsl, vsl1, vul);
   // CHECK-ASM: vsel
-  vsl = vec_sel(vsl, vsl, vbl);
+  vsl = vec_sel(vsl, vsl1, vbl);
   // CHECK-ASM: vsel
-  vul = vec_sel(vul, vul, vul);
+  vul = vec_sel(vul, vul1, vul2);
   // CHECK-ASM: vsel
-  vul = vec_sel(vul, vul, vbl);
+  vul = vec_sel(vul, vul1, vbl);
   // CHECK-ASM: vsel
-  vbl = vec_sel(vbl, vbl, vul);
+  vbl = vec_sel(vbl, vbl1, vul);
   // CHECK-ASM: vsel
-  vbl = vec_sel(vbl, vbl, vbl);
+  vbl = vec_sel(vbl, vbl1, vbl2);
   // CHECK-ASM: vsel
-  vslll = vec_sel(vslll, vslll, vulll);
+  vslll = vec_sel(vslll, vslll1, vulll);
   // CHECK-ASM: vsel
-  vslll = vec_sel(vslll, vslll, vblll);
+  vslll = vec_sel(vslll, vslll1, vblll);
   // CHECK-ASM: vsel
-  vulll = vec_sel(vulll, vulll, vulll);
+  vulll = vec_sel(vulll, vulll1, vulll2);
   // CHECK-ASM: vsel
-  vulll = vec_sel(vulll, vulll, vblll);
+  vulll = vec_sel(vulll, vulll1, vblll);
   // CHECK-ASM: vsel
-  vblll = vec_sel(vblll, vblll, vulll);
+  vblll = vec_sel(vblll, vblll1, vulll);
   // CHECK-ASM: vsel
-  vblll = vec_sel(vblll, vblll, vblll);
+  vblll = vec_sel(vblll, vblll1, vblll2);
   // CHECK-ASM: vsel
-  vd = vec_sel(vd, vd, vul);
+  vd = vec_sel(vd, vd1, vul);
   // CHECK-ASM: vsel
-  vd = vec_sel(vd, vd, vbl);
+  vd = vec_sel(vd, vd1, vbl);
   // CHECK-ASM: vsel
 
   vsi = vec_gather_element(vsi, vui, cptrsi, 0);
@@ -447,13 +477,13 @@ void test_core(void) {
   // CHECK-ASM: vgef %{{.*}}, 0(%{{.*}},%{{.*}}), 2
   vsi = vec_gather_element(vsi, vui, cptrsi, 3);
   // CHECK-ASM: vgef %{{.*}}, 0(%{{.*}},%{{.*}}), 3
-  vui = vec_gather_element(vui, vui, cptrui, 0);
+  vui = vec_gather_element(vui, vui1, cptrui, 0);
   // CHECK-ASM: vgef %{{.*}}, 0(%{{.*}},%{{.*}}), 0
-  vui = vec_gather_element(vui, vui, cptrui, 1);
+  vui = vec_gather_element(vui, vui1, cptrui, 1);
   // CHECK-ASM: vgef %{{.*}}, 0(%{{.*}},%{{.*}}), 1
-  vui = vec_gather_element(vui, vui, cptrui, 2);
+  vui = vec_gather_element(vui, vui1, cptrui, 2);
   // CHECK-ASM: vgef %{{.*}}, 0(%{{.*}},%{{.*}}), 2
-  vui = vec_gather_element(vui, vui, cptrui, 3);
+  vui = vec_gather_element(vui, vui1, cptrui, 3);
   // CHECK-ASM: vgef %{{.*}}, 0(%{{.*}},%{{.*}}), 3
   vbi = vec_gather_element(vbi, vui, cptrui, 0);
   // CHECK-ASM: vgef %{{.*}}, 0(%{{.*}},%{{.*}}), 0
@@ -467,9 +497,9 @@ void test_core(void) {
   // CHECK-ASM: vgeg %{{.*}}, 0(%{{.*}},%{{.*}}), 0
   vsl = vec_gather_element(vsl, vul, cptrsl, 1);
   // CHECK-ASM: vgeg %{{.*}}, 0(%{{.*}},%{{.*}}), 1
-  vul = vec_gather_element(vul, vul, cptrul, 0);
+  vul = vec_gather_element(vul, vul1, cptrul, 0);
   // CHECK-ASM: vgeg %{{.*}}, 0(%{{.*}},%{{.*}}), 0
-  vul = vec_gather_element(vul, vul, cptrul, 1);
+  vul = vec_gather_element(vul, vul1, cptrul, 1);
   // CHECK-ASM: vgeg %{{.*}}, 0(%{{.*}},%{{.*}}), 1
   vbl = vec_gather_element(vbl, vul, cptrul, 0);
   // CHECK-ASM: vgeg %{{.*}}, 0(%{{.*}},%{{.*}}), 0
@@ -488,13 +518,13 @@ void test_core(void) {
   // CHECK-ASM: vscef %{{.*}}, 0(%{{.*}},%{{.*}}), 2
   vec_scatter_element(vsi, vui, ptrsi, 3);
   // CHECK-ASM: vscef %{{.*}}, 0(%{{.*}},%{{.*}}), 3
-  vec_scatter_element(vui, vui, ptrui, 0);
+  vec_scatter_element(vui, vui1, ptrui, 0);
   // CHECK-ASM: vscef %{{.*}}, 0(%{{.*}},%{{.*}}), 0
-  vec_scatter_element(vui, vui, ptrui, 1);
+  vec_scatter_element(vui, vui1, ptrui, 1);
   // CHECK-ASM: vscef %{{.*}}, 0(%{{.*}},%{{.*}}), 1
-  vec_scatter_element(vui, vui, ptrui, 2);
+  vec_scatter_element(vui, vui1, ptrui, 2);
   // CHECK-ASM: vscef %{{.*}}, 0(%{{.*}},%{{.*}}), 2
-  vec_scatter_element(vui, vui, ptrui, 3);
+  vec_scatter_element(vui, vui1, ptrui, 3);
   // CHECK-ASM: vscef %{{.*}}, 0(%{{.*}},%{{.*}}), 3
   vec_scatter_element(vbi, vui, ptrui, 0);
   // CHECK-ASM: vscef %{{.*}}, 0(%{{.*}},%{{.*}}), 0
@@ -508,9 +538,9 @@ void test_core(void) {
   // CHECK-ASM: vsceg %{{.*}}, 0(%{{.*}},%{{.*}}), 0
   vec_scatter_element(vsl, vul, ptrsl, 1);
   // CHECK-ASM: vsceg %{{.*}}, 0(%{{.*}},%{{.*}}), 1
-  vec_scatter_element(vul, vul, ptrul, 0);
+  vec_scatter_element(vul, vul1, ptrul, 0);
   // CHECK-ASM: vsceg %{{.*}}, 0(%{{.*}},%{{.*}}), 0
-  vec_scatter_element(vul, vul, ptrul, 1);
+  vec_scatter_element(vul, vul1, ptrul, 1);
   // CHECK-ASM: vsceg %{{.*}}, 0(%{{.*}},%{{.*}}), 1
   vec_scatter_element(vbl, vul, ptrul, 0);
   // CHECK-ASM: vsceg %{{.*}}, 0(%{{.*}},%{{.*}}), 0
@@ -927,187 +957,187 @@ void test_core(void) {
   vsl = vec_extend_s64(vsi);
   // CHECK-ASM: vsegf
 
-  vsc = vec_mergeh(vsc, vsc);
+  vsc = vec_mergeh(vsc, vsc1);
   // shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
   // CHECK-ASM: vmrhb
-  vuc = vec_mergeh(vuc, vuc);
+  vuc = vec_mergeh(vuc, vuc1);
   // shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
   // CHECK-ASM: vmrhb
-  vbc = vec_mergeh(vbc, vbc);
+  vbc = vec_mergeh(vbc, vbc1);
   // shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
   // CHECK-ASM: vmrhb
-  vss = vec_mergeh(vss, vss);
+  vss = vec_mergeh(vss, vss1);
   // shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   // CHECK-ASM: vmrhh
-  vus = vec_mergeh(vus, vus);
+  vus = vec_mergeh(vus, vus1);
   // shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   // CHECK-ASM: vmrhh
-  vbs = vec_mergeh(vbs, vbs);
+  vbs = vec_mergeh(vbs, vbs1);
   // shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   // CHECK-ASM: vmrhh
-  vsi = vec_mergeh(vsi, vsi);
+  vsi = vec_mergeh(vsi, vsi1);
   // shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   // CHECK-ASM: vmrhf
-  vui = vec_mergeh(vui, vui);
+  vui = vec_mergeh(vui, vui1);
   // shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   // CHECK-ASM: vmrhf
-  vbi = vec_mergeh(vbi, vbi);
+  vbi = vec_mergeh(vbi, vbi1);
   // shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   // CHECK-ASM: vmrhf
-  vsl = vec_mergeh(vsl, vsl);
+  vsl = vec_mergeh(vsl, vsl1);
   // shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 0, i32 2>
   // CHECK-ASM: vmrhg
-  vul = vec_mergeh(vul, vul);
+  vul = vec_mergeh(vul, vul1);
   // shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 0, i32 2>
   // CHECK-ASM: vmrhg
-  vbl = vec_mergeh(vbl, vbl);
+  vbl = vec_mergeh(vbl, vbl1);
   // shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 0, i32 2>
   // CHECK-ASM: vmrhg
-  vd = vec_mergeh(vd, vd);
+  vd = vec_mergeh(vd, vd1);
   // shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 0, i32 2>
   // CHECK-ASM: vmrhg
 
-  vsc = vec_mergel(vsc, vsc);
+  vsc = vec_mergel(vsc, vsc1);
   // shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
   // CHECK-ASM: vmrlb
-  vuc = vec_mergel(vuc, vuc);
+  vuc = vec_mergel(vuc, vuc1);
   // shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
   // CHECK-ASM: vmrlb
-  vbc = vec_mergel(vbc, vbc);
+  vbc = vec_mergel(vbc, vbc1);
   // shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
   // CHECK-ASM: vmrlb
-  vss = vec_mergel(vss, vss);
+  vss = vec_mergel(vss, vss1);
   // shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   // CHECK-ASM: vmrlh
-  vus = vec_mergel(vus, vus);
+  vus = vec_mergel(vus, vus1);
   // shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   // CHECK-ASM: vmrlh
-  vbs = vec_mergel(vbs, vbs);
+  vbs = vec_mergel(vbs, vbs1);
   // shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   // CHECK-ASM: vmrlh
-  vsi = vec_mergel(vsi, vsi);
+  vsi = vec_mergel(vsi, vsi1);
   // shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <i32 2, i32 6, i32 3, i32 7>
   // CHECK-ASM: vmrlf
-  vui = vec_mergel(vui, vui);
+  vui = vec_mergel(vui, vui1);
   // shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <i32 2, i32 6, i32 3, i32 7>
   // CHECK-ASM: vmrlf
-  vbi = vec_mergel(vbi, vbi);
+  vbi = vec_mergel(vbi, vbi1);
   // shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <i32 2, i32 6, i32 3, i32 7>
   // CHECK-ASM: vmrlf
-  vsl = vec_mergel(vsl, vsl);
+  vsl = vec_mergel(vsl, vsl1);
   // shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <i32 1, i32 3>
   // CHECK-ASM: vmrlg
-  vul = vec_mergel(vul, vul);
+  vul = vec_mergel(vul, vul1);
   // shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <i32 1, i32 3>
   // CHECK-ASM: vmrlg
-  vbl = vec_mergel(vbl, vbl);
+  vbl = vec_mergel(vbl, vbl1);
   // shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <i32 1, i32 3>
   // CHECK-ASM: vmrlg
-  vd = vec_mergel(vd, vd);
+  vd = vec_mergel(vd, vd1);
   // shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <i32 1, i32 3>
   // CHECK-ASM: vmrlg
 
-  vsc = vec_pack(vss, vss);
+  vsc = vec_pack(vss, vss1);
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
   // CHECK-ASM: vpkh
-  vuc = vec_pack(vus, vus);
+  vuc = vec_pack(vus, vus1);
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
   // CHECK-ASM: vpkh
-  vbc = vec_pack(vbs, vbs);
+  vbc = vec_pack(vbs, vbs1);
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
   // CHECK-ASM: vpkh
-  vss = vec_pack(vsi, vsi);
+  vss = vec_pack(vsi, vsi1);
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   // CHECK-ASM: vpkf
-  vus = vec_pack(vui, vui);
+  vus = vec_pack(vui, vui1);
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   // CHECK-ASM: vpkf
-  vbs = vec_pack(vbi, vbi);
+  vbs = vec_pack(vbi, vbi1);
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   // CHECK-ASM: vpkf
-  vsi = vec_pack(vsl, vsl);
+  vsi = vec_pack(vsl, vsl1);
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   // CHECK-ASM: vpkg
-  vui = vec_pack(vul, vul);
+  vui = vec_pack(vul, vul1);
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   // CHECK-ASM: vpkg
-  vbi = vec_pack(vbl, vbl);
+  vbi = vec_pack(vbl, vbl1);
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   // CHECK-ASM: vpkg
-  vsl = vec_pack(vslll, vslll);
+  vsl = vec_pack(vslll, vslll1);
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 1, i32 3>
   // CHECK-ASM: vmrlg
-  vul = vec_pack(vulll, vulll);
+  vul = vec_pack(vulll, vulll1);
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 1, i32 3>
   // CHECK-ASM: vmrlg
-  vbl = vec_pack(vblll, vblll);
+  vbl = vec_pack(vblll, vblll1);
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 1, i32 3>
   // CHECK-ASM: vmrlg
 
-  vsc = vec_packs(vss, vss);
+  vsc = vec_packs(vss, vss1);
   // CHECK: call <16 x i8> @llvm.s390.vpksh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vpksh
-  vuc = vec_packs(vus, vus);
+  vuc = vec_packs(vus, vus1);
   // CHECK: call <16 x i8> @llvm.s390.vpklsh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vpklsh
-  vss = vec_packs(vsi, vsi);
+  vss = vec_packs(vsi, vsi1);
   // CHECK: call <8 x i16> @llvm.s390.vpksf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vpksf
-  vus = vec_packs(vui, vui);
+  vus = vec_packs(vui, vui1);
   // CHECK: call <8 x i16> @llvm.s390.vpklsf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vpklsf
-  vsi = vec_packs(vsl, vsl);
+  vsi = vec_packs(vsl, vsl1);
   // CHECK: call <4 x i32> @llvm.s390.vpksg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vpksg
-  vui = vec_packs(vul, vul);
+  vui = vec_packs(vul, vul1);
   // CHECK: call <4 x i32> @llvm.s390.vpklsg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vpklsg
 
-  vsc = vec_packs_cc(vss, vss, &cc);
+  vsc = vec_packs_cc(vss, vss1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vpkshs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vpkshs
-  vuc = vec_packs_cc(vus, vus, &cc);
+  vuc = vec_packs_cc(vus, vus1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vpklshs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vpklshs
-  vss = vec_packs_cc(vsi, vsi, &cc);
+  vss = vec_packs_cc(vsi, vsi1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vpksfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vpksfs
-  vus = vec_packs_cc(vui, vui, &cc);
+  vus = vec_packs_cc(vui, vui1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vpklsfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vpklsfs
-  vsi = vec_packs_cc(vsl, vsl, &cc);
+  vsi = vec_packs_cc(vsl, vsl1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vpksgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vpksgs
-  vui = vec_packs_cc(vul, vul, &cc);
+  vui = vec_packs_cc(vul, vul1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vpklsgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vpklsgs
 
-  vuc = vec_packsu(vss, vss);
+  vuc = vec_packsu(vss, vss1);
   // CHECK: call <16 x i8> @llvm.s390.vpklsh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vpklsh
-  vuc = vec_packsu(vus, vus);
+  vuc = vec_packsu(vus, vus1);
   // CHECK: call <16 x i8> @llvm.s390.vpklsh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vpklsh
-  vus = vec_packsu(vsi, vsi);
+  vus = vec_packsu(vsi, vsi1);
   // CHECK: call <8 x i16> @llvm.s390.vpklsf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vpklsf
-  vus = vec_packsu(vui, vui);
+  vus = vec_packsu(vui, vui1);
   // CHECK: call <8 x i16> @llvm.s390.vpklsf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vpklsf
-  vui = vec_packsu(vsl, vsl);
+  vui = vec_packsu(vsl, vsl1);
   // CHECK: call <4 x i32> @llvm.s390.vpklsg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vpklsg
-  vui = vec_packsu(vul, vul);
+  vui = vec_packsu(vul, vul1);
   // CHECK: call <4 x i32> @llvm.s390.vpklsg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vpklsg
 
-  vuc = vec_packsu_cc(vus, vus, &cc);
+  vuc = vec_packsu_cc(vus, vus1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vpklshs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vpklshs
-  vus = vec_packsu_cc(vui, vui, &cc);
+  vus = vec_packsu_cc(vui, vui1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vpklsfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vpklsfs
-  vui = vec_packsu_cc(vul, vul, &cc);
+  vui = vec_packsu_cc(vul, vul1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vpklsgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vpklsgs
 
@@ -1171,159 +1201,159 @@ void test_core(void) {
 void test_compare(void) {
   // CHECK-ASM-LABEL: test_compare
 
-  vbc = vec_cmpeq(vsc, vsc);
+  vbc = vec_cmpeq(vsc, vsc1);
   // CHECK: icmp eq <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqb
-  vbc = vec_cmpeq(vuc, vuc);
+  vbc = vec_cmpeq(vuc, vuc1);
   // CHECK: icmp eq <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqb
-  vbc = vec_cmpeq(vbc, vbc);
+  vbc = vec_cmpeq(vbc, vbc1);
   // CHECK: icmp eq <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqb
-  vbs = vec_cmpeq(vss, vss);
+  vbs = vec_cmpeq(vss, vss1);
   // CHECK: icmp eq <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqh
-  vbs = vec_cmpeq(vus, vus);
+  vbs = vec_cmpeq(vus, vus1);
   // CHECK: icmp eq <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqh
-  vbs = vec_cmpeq(vbs, vbs);
+  vbs = vec_cmpeq(vbs, vbs1);
   // CHECK: icmp eq <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqh
-  vbi = vec_cmpeq(vsi, vsi);
+  vbi = vec_cmpeq(vsi, vsi1);
   // CHECK: icmp eq <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqf
-  vbi = vec_cmpeq(vui, vui);
+  vbi = vec_cmpeq(vui, vui1);
   // CHECK: icmp eq <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqf
-  vbi = vec_cmpeq(vbi, vbi);
+  vbi = vec_cmpeq(vbi, vbi1);
   // CHECK: icmp eq <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqf
-  vbl = vec_cmpeq(vsl, vsl);
+  vbl = vec_cmpeq(vsl, vsl1);
   // CHECK: icmp eq <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqg
-  vbl = vec_cmpeq(vul, vul);
+  vbl = vec_cmpeq(vul, vul1);
   // CHECK: icmp eq <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqg
-  vbl = vec_cmpeq(vbl, vbl);
+  vbl = vec_cmpeq(vbl, vbl1);
   // CHECK: icmp eq <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vceqg
-  vbl = vec_cmpeq(vd, vd);
+  vbl = vec_cmpeq(vd, vd1);
   // CHECK: fcmp oeq <2 x double> %{{.*}}, %{{.*}}
   // CHECK-ASM: vfcedb
 
-  vbc = vec_cmpge(vsc, vsc);
+  vbc = vec_cmpge(vsc, vsc1);
   // CHECK: icmp sge <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchb
-  vbc = vec_cmpge(vuc, vuc);
+  vbc = vec_cmpge(vuc, vuc1);
   // CHECK: icmp uge <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlb
-  vbs = vec_cmpge(vss, vss);
+  vbs = vec_cmpge(vss, vss1);
   // CHECK: icmp sge <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchh
-  vbs = vec_cmpge(vus, vus);
+  vbs = vec_cmpge(vus, vus1);
   // CHECK: icmp uge <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlh
-  vbi = vec_cmpge(vsi, vsi);
+  vbi = vec_cmpge(vsi, vsi1);
   // CHECK: icmp sge <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchf
-  vbi = vec_cmpge(vui, vui);
+  vbi = vec_cmpge(vui, vui1);
   // CHECK: icmp uge <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlf
-  vbl = vec_cmpge(vsl, vsl);
+  vbl = vec_cmpge(vsl, vsl1);
   // CHECK: icmp sge <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchg
-  vbl = vec_cmpge(vul, vul);
+  vbl = vec_cmpge(vul, vul1);
   // CHECK: icmp uge <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlg
-  vbl = vec_cmpge(vd, vd);
+  vbl = vec_cmpge(vd, vd1);
   // CHECK: fcmp oge <2 x double> %{{.*}}, %{{.*}}
   // CHECK-ASM: vfchedb
 
-  vbc = vec_cmpgt(vsc, vsc);
+  vbc = vec_cmpgt(vsc, vsc1);
   // CHECK: icmp sgt <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchb
-  vbc = vec_cmpgt(vuc, vuc);
+  vbc = vec_cmpgt(vuc, vuc1);
   // CHECK: icmp ugt <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlb
-  vbs = vec_cmpgt(vss, vss);
+  vbs = vec_cmpgt(vss, vss1);
   // CHECK: icmp sgt <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchh
-  vbs = vec_cmpgt(vus, vus);
+  vbs = vec_cmpgt(vus, vus1);
   // CHECK: icmp ugt <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlh
-  vbi = vec_cmpgt(vsi, vsi);
+  vbi = vec_cmpgt(vsi, vsi1);
   // CHECK: icmp sgt <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchf
-  vbi = vec_cmpgt(vui, vui);
+  vbi = vec_cmpgt(vui, vui1);
   // CHECK: icmp ugt <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlf
-  vbl = vec_cmpgt(vsl, vsl);
+  vbl = vec_cmpgt(vsl, vsl1);
   // CHECK: icmp sgt <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchg
-  vbl = vec_cmpgt(vul, vul);
+  vbl = vec_cmpgt(vul, vul1);
   // CHECK: icmp ugt <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlg
-  vbl = vec_cmpgt(vd, vd);
+  vbl = vec_cmpgt(vd, vd1);
   // CHECK: fcmp ogt <2 x double> %{{.*}}, %{{.*}}
   // CHECK-ASM: vfchdb
 
-  vbc = vec_cmple(vsc, vsc);
+  vbc = vec_cmple(vsc, vsc1);
   // CHECK: icmp sle <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchb
-  vbc = vec_cmple(vuc, vuc);
+  vbc = vec_cmple(vuc, vuc1);
   // CHECK: icmp ule <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlb
-  vbs = vec_cmple(vss, vss);
+  vbs = vec_cmple(vss, vss1);
   // CHECK: icmp sle <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchh
-  vbs = vec_cmple(vus, vus);
+  vbs = vec_cmple(vus, vus1);
   // CHECK: icmp ule <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlh
-  vbi = vec_cmple(vsi, vsi);
+  vbi = vec_cmple(vsi, vsi1);
   // CHECK: icmp sle <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchf
-  vbi = vec_cmple(vui, vui);
+  vbi = vec_cmple(vui, vui1);
   // CHECK: icmp ule <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlf
-  vbl = vec_cmple(vsl, vsl);
+  vbl = vec_cmple(vsl, vsl1);
   // CHECK: icmp sle <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchg
-  vbl = vec_cmple(vul, vul);
+  vbl = vec_cmple(vul, vul1);
   // CHECK: icmp ule <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlg
-  vbl = vec_cmple(vd, vd);
+  vbl = vec_cmple(vd, vd1);
   // CHECK: fcmp ole <2 x double> %{{.*}}, %{{.*}}
   // CHECK-ASM: vfchedb
 
-  vbc = vec_cmplt(vsc, vsc);
+  vbc = vec_cmplt(vsc, vsc1);
   // CHECK: icmp slt <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchb
-  vbc = vec_cmplt(vuc, vuc);
+  vbc = vec_cmplt(vuc, vuc1);
   // CHECK: icmp ult <16 x i8> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlb
-  vbs = vec_cmplt(vss, vss);
+  vbs = vec_cmplt(vss, vss1);
   // CHECK: icmp slt <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchh
-  vbs = vec_cmplt(vus, vus);
+  vbs = vec_cmplt(vus, vus1);
   // CHECK: icmp ult <8 x i16> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlh
-  vbi = vec_cmplt(vsi, vsi);
+  vbi = vec_cmplt(vsi, vsi1);
   // CHECK: icmp slt <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchf
-  vbi = vec_cmplt(vui, vui);
+  vbi = vec_cmplt(vui, vui1);
   // CHECK: icmp ult <4 x i32> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlf
-  vbl = vec_cmplt(vsl, vsl);
+  vbl = vec_cmplt(vsl, vsl1);
   // CHECK: icmp slt <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchg
-  vbl = vec_cmplt(vul, vul);
+  vbl = vec_cmplt(vul, vul1);
   // CHECK: icmp ult <2 x i64> %{{.*}}, %{{.*}}
   // CHECK-ASM: vchlg
-  vbl = vec_cmplt(vd, vd);
+  vbl = vec_cmplt(vd, vd1);
   // CHECK: fcmp olt <2 x double> %{{.*}}, %{{.*}}
   // CHECK-ASM: vfchdb
 
-  idx = vec_all_eq(vsc, vsc);
+  idx = vec_all_eq(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
   idx = vec_all_eq(vsc, vbc);
@@ -1332,7 +1362,7 @@ void test_compare(void) {
   idx = vec_all_eq(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_all_eq(vuc, vuc);
+  idx = vec_all_eq(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
   idx = vec_all_eq(vuc, vbc);
@@ -1341,10 +1371,10 @@ void test_compare(void) {
   idx = vec_all_eq(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_all_eq(vbc, vbc);
+  idx = vec_all_eq(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_all_eq(vss, vss);
+  idx = vec_all_eq(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
   idx = vec_all_eq(vss, vbs);
@@ -1353,7 +1383,7 @@ void test_compare(void) {
   idx = vec_all_eq(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_all_eq(vus, vus);
+  idx = vec_all_eq(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
   idx = vec_all_eq(vus, vbs);
@@ -1362,10 +1392,10 @@ void test_compare(void) {
   idx = vec_all_eq(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_all_eq(vbs, vbs);
+  idx = vec_all_eq(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_all_eq(vsi, vsi);
+  idx = vec_all_eq(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
   idx = vec_all_eq(vsi, vbi);
@@ -1374,7 +1404,7 @@ void test_compare(void) {
   idx = vec_all_eq(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_all_eq(vui, vui);
+  idx = vec_all_eq(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
   idx = vec_all_eq(vui, vbi);
@@ -1383,10 +1413,10 @@ void test_compare(void) {
   idx = vec_all_eq(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_all_eq(vbi, vbi);
+  idx = vec_all_eq(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_all_eq(vsl, vsl);
+  idx = vec_all_eq(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
   idx = vec_all_eq(vsl, vbl);
@@ -1395,7 +1425,7 @@ void test_compare(void) {
   idx = vec_all_eq(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_all_eq(vul, vul);
+  idx = vec_all_eq(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
   idx = vec_all_eq(vul, vbl);
@@ -1404,14 +1434,14 @@ void test_compare(void) {
   idx = vec_all_eq(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_all_eq(vbl, vbl);
+  idx = vec_all_eq(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_all_eq(vd, vd);
+  idx = vec_all_eq(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfcedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfcedbs
 
-  idx = vec_all_ne(vsc, vsc);
+  idx = vec_all_ne(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
   idx = vec_all_ne(vsc, vbc);
@@ -1420,7 +1450,7 @@ void test_compare(void) {
   idx = vec_all_ne(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_all_ne(vuc, vuc);
+  idx = vec_all_ne(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
   idx = vec_all_ne(vuc, vbc);
@@ -1429,10 +1459,10 @@ void test_compare(void) {
   idx = vec_all_ne(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_all_ne(vbc, vbc);
+  idx = vec_all_ne(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_all_ne(vss, vss);
+  idx = vec_all_ne(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
   idx = vec_all_ne(vss, vbs);
@@ -1441,7 +1471,7 @@ void test_compare(void) {
   idx = vec_all_ne(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_all_ne(vus, vus);
+  idx = vec_all_ne(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
   idx = vec_all_ne(vus, vbs);
@@ -1450,10 +1480,10 @@ void test_compare(void) {
   idx = vec_all_ne(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_all_ne(vbs, vbs);
+  idx = vec_all_ne(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_all_ne(vsi, vsi);
+  idx = vec_all_ne(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
   idx = vec_all_ne(vsi, vbi);
@@ -1462,7 +1492,7 @@ void test_compare(void) {
   idx = vec_all_ne(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_all_ne(vui, vui);
+  idx = vec_all_ne(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
   idx = vec_all_ne(vui, vbi);
@@ -1471,10 +1501,10 @@ void test_compare(void) {
   idx = vec_all_ne(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_all_ne(vbi, vbi);
+  idx = vec_all_ne(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_all_ne(vsl, vsl);
+  idx = vec_all_ne(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
   idx = vec_all_ne(vsl, vbl);
@@ -1483,7 +1513,7 @@ void test_compare(void) {
   idx = vec_all_ne(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_all_ne(vul, vul);
+  idx = vec_all_ne(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
   idx = vec_all_ne(vul, vbl);
@@ -1492,14 +1522,14 @@ void test_compare(void) {
   idx = vec_all_ne(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_all_ne(vbl, vbl);
+  idx = vec_all_ne(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_all_ne(vd, vd);
+  idx = vec_all_ne(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfcedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfcedbs
 
-  idx = vec_all_ge(vsc, vsc);
+  idx = vec_all_ge(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
   idx = vec_all_ge(vsc, vbc);
@@ -1508,7 +1538,7 @@ void test_compare(void) {
   idx = vec_all_ge(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
-  idx = vec_all_ge(vuc, vuc);
+  idx = vec_all_ge(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
   idx = vec_all_ge(vuc, vbc);
@@ -1517,10 +1547,10 @@ void test_compare(void) {
   idx = vec_all_ge(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_all_ge(vbc, vbc);
+  idx = vec_all_ge(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_all_ge(vss, vss);
+  idx = vec_all_ge(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
   idx = vec_all_ge(vss, vbs);
@@ -1529,7 +1559,7 @@ void test_compare(void) {
   idx = vec_all_ge(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
-  idx = vec_all_ge(vus, vus);
+  idx = vec_all_ge(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
   idx = vec_all_ge(vus, vbs);
@@ -1538,10 +1568,10 @@ void test_compare(void) {
   idx = vec_all_ge(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_all_ge(vbs, vbs);
+  idx = vec_all_ge(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_all_ge(vsi, vsi);
+  idx = vec_all_ge(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
   idx = vec_all_ge(vsi, vbi);
@@ -1550,7 +1580,7 @@ void test_compare(void) {
   idx = vec_all_ge(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
-  idx = vec_all_ge(vui, vui);
+  idx = vec_all_ge(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
   idx = vec_all_ge(vui, vbi);
@@ -1559,10 +1589,10 @@ void test_compare(void) {
   idx = vec_all_ge(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_all_ge(vbi, vbi);
+  idx = vec_all_ge(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_all_ge(vsl, vsl);
+  idx = vec_all_ge(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
   idx = vec_all_ge(vsl, vbl);
@@ -1571,7 +1601,7 @@ void test_compare(void) {
   idx = vec_all_ge(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
-  idx = vec_all_ge(vul, vul);
+  idx = vec_all_ge(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
   idx = vec_all_ge(vul, vbl);
@@ -1580,14 +1610,14 @@ void test_compare(void) {
   idx = vec_all_ge(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_all_ge(vbl, vbl);
+  idx = vec_all_ge(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_all_ge(vd, vd);
+  idx = vec_all_ge(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
 
-  idx = vec_all_gt(vsc, vsc);
+  idx = vec_all_gt(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
   idx = vec_all_gt(vsc, vbc);
@@ -1596,7 +1626,7 @@ void test_compare(void) {
   idx = vec_all_gt(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
-  idx = vec_all_gt(vuc, vuc);
+  idx = vec_all_gt(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
   idx = vec_all_gt(vuc, vbc);
@@ -1605,10 +1635,10 @@ void test_compare(void) {
   idx = vec_all_gt(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_all_gt(vbc, vbc);
+  idx = vec_all_gt(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_all_gt(vss, vss);
+  idx = vec_all_gt(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
   idx = vec_all_gt(vss, vbs);
@@ -1617,7 +1647,7 @@ void test_compare(void) {
   idx = vec_all_gt(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
-  idx = vec_all_gt(vus, vus);
+  idx = vec_all_gt(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
   idx = vec_all_gt(vus, vbs);
@@ -1626,10 +1656,10 @@ void test_compare(void) {
   idx = vec_all_gt(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_all_gt(vbs, vbs);
+  idx = vec_all_gt(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_all_gt(vsi, vsi);
+  idx = vec_all_gt(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
   idx = vec_all_gt(vsi, vbi);
@@ -1638,7 +1668,7 @@ void test_compare(void) {
   idx = vec_all_gt(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
-  idx = vec_all_gt(vui, vui);
+  idx = vec_all_gt(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
   idx = vec_all_gt(vui, vbi);
@@ -1647,10 +1677,10 @@ void test_compare(void) {
   idx = vec_all_gt(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_all_gt(vbi, vbi);
+  idx = vec_all_gt(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_all_gt(vsl, vsl);
+  idx = vec_all_gt(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
   idx = vec_all_gt(vsl, vbl);
@@ -1659,7 +1689,7 @@ void test_compare(void) {
   idx = vec_all_gt(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
-  idx = vec_all_gt(vul, vul);
+  idx = vec_all_gt(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
   idx = vec_all_gt(vul, vbl);
@@ -1668,14 +1698,14 @@ void test_compare(void) {
   idx = vec_all_gt(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_all_gt(vbl, vbl);
+  idx = vec_all_gt(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_all_gt(vd, vd);
+  idx = vec_all_gt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
-  idx = vec_all_le(vsc, vsc);
+  idx = vec_all_le(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
   idx = vec_all_le(vsc, vbc);
@@ -1684,7 +1714,7 @@ void test_compare(void) {
   idx = vec_all_le(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
-  idx = vec_all_le(vuc, vuc);
+  idx = vec_all_le(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
   idx = vec_all_le(vuc, vbc);
@@ -1693,10 +1723,10 @@ void test_compare(void) {
   idx = vec_all_le(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_all_le(vbc, vbc);
+  idx = vec_all_le(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_all_le(vss, vss);
+  idx = vec_all_le(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
   idx = vec_all_le(vss, vbs);
@@ -1705,7 +1735,7 @@ void test_compare(void) {
   idx = vec_all_le(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
-  idx = vec_all_le(vus, vus);
+  idx = vec_all_le(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
   idx = vec_all_le(vus, vbs);
@@ -1714,10 +1744,10 @@ void test_compare(void) {
   idx = vec_all_le(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_all_le(vbs, vbs);
+  idx = vec_all_le(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_all_le(vsi, vsi);
+  idx = vec_all_le(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
   idx = vec_all_le(vsi, vbi);
@@ -1726,7 +1756,7 @@ void test_compare(void) {
   idx = vec_all_le(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
-  idx = vec_all_le(vui, vui);
+  idx = vec_all_le(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
   idx = vec_all_le(vui, vbi);
@@ -1735,10 +1765,10 @@ void test_compare(void) {
   idx = vec_all_le(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_all_le(vbi, vbi);
+  idx = vec_all_le(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_all_le(vsl, vsl);
+  idx = vec_all_le(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
   idx = vec_all_le(vsl, vbl);
@@ -1747,7 +1777,7 @@ void test_compare(void) {
   idx = vec_all_le(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
-  idx = vec_all_le(vul, vul);
+  idx = vec_all_le(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
   idx = vec_all_le(vul, vbl);
@@ -1756,14 +1786,14 @@ void test_compare(void) {
   idx = vec_all_le(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_all_le(vbl, vbl);
+  idx = vec_all_le(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_all_le(vd, vd);
+  idx = vec_all_le(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
 
-  idx = vec_all_lt(vsc, vsc);
+  idx = vec_all_lt(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
   idx = vec_all_lt(vsc, vbc);
@@ -1772,7 +1802,7 @@ void test_compare(void) {
   idx = vec_all_lt(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
-  idx = vec_all_lt(vuc, vuc);
+  idx = vec_all_lt(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
   idx = vec_all_lt(vuc, vbc);
@@ -1781,10 +1811,10 @@ void test_compare(void) {
   idx = vec_all_lt(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_all_lt(vbc, vbc);
+  idx = vec_all_lt(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_all_lt(vss, vss);
+  idx = vec_all_lt(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
   idx = vec_all_lt(vss, vbs);
@@ -1793,7 +1823,7 @@ void test_compare(void) {
   idx = vec_all_lt(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
-  idx = vec_all_lt(vus, vus);
+  idx = vec_all_lt(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
   idx = vec_all_lt(vus, vbs);
@@ -1802,10 +1832,10 @@ void test_compare(void) {
   idx = vec_all_lt(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_all_lt(vbs, vbs);
+  idx = vec_all_lt(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_all_lt(vsi, vsi);
+  idx = vec_all_lt(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
   idx = vec_all_lt(vsi, vbi);
@@ -1814,7 +1844,7 @@ void test_compare(void) {
   idx = vec_all_lt(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
-  idx = vec_all_lt(vui, vui);
+  idx = vec_all_lt(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
   idx = vec_all_lt(vui, vbi);
@@ -1823,10 +1853,10 @@ void test_compare(void) {
   idx = vec_all_lt(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_all_lt(vbi, vbi);
+  idx = vec_all_lt(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_all_lt(vsl, vsl);
+  idx = vec_all_lt(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
   idx = vec_all_lt(vsl, vbl);
@@ -1835,7 +1865,7 @@ void test_compare(void) {
   idx = vec_all_lt(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
-  idx = vec_all_lt(vul, vul);
+  idx = vec_all_lt(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
   idx = vec_all_lt(vul, vbl);
@@ -1844,23 +1874,23 @@ void test_compare(void) {
   idx = vec_all_lt(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_all_lt(vbl, vbl);
+  idx = vec_all_lt(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_all_lt(vd, vd);
+  idx = vec_all_lt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
-  idx = vec_all_nge(vd, vd);
+  idx = vec_all_nge(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
-  idx = vec_all_ngt(vd, vd);
+  idx = vec_all_ngt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
-  idx = vec_all_nle(vd, vd);
+  idx = vec_all_nle(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
-  idx = vec_all_nlt(vd, vd);
+  idx = vec_all_nlt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
@@ -1871,7 +1901,7 @@ void test_compare(void) {
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 15)
   // CHECK-ASM: vftcidb
 
-  idx = vec_any_eq(vsc, vsc);
+  idx = vec_any_eq(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
   idx = vec_any_eq(vsc, vbc);
@@ -1880,7 +1910,7 @@ void test_compare(void) {
   idx = vec_any_eq(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_any_eq(vuc, vuc);
+  idx = vec_any_eq(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
   idx = vec_any_eq(vuc, vbc);
@@ -1889,10 +1919,10 @@ void test_compare(void) {
   idx = vec_any_eq(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_any_eq(vbc, vbc);
+  idx = vec_any_eq(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_any_eq(vss, vss);
+  idx = vec_any_eq(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
   idx = vec_any_eq(vss, vbs);
@@ -1901,7 +1931,7 @@ void test_compare(void) {
   idx = vec_any_eq(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_any_eq(vus, vus);
+  idx = vec_any_eq(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
   idx = vec_any_eq(vus, vbs);
@@ -1910,10 +1940,10 @@ void test_compare(void) {
   idx = vec_any_eq(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_any_eq(vbs, vbs);
+  idx = vec_any_eq(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_any_eq(vsi, vsi);
+  idx = vec_any_eq(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
   idx = vec_any_eq(vsi, vbi);
@@ -1922,7 +1952,7 @@ void test_compare(void) {
   idx = vec_any_eq(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_any_eq(vui, vui);
+  idx = vec_any_eq(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
   idx = vec_any_eq(vui, vbi);
@@ -1931,10 +1961,10 @@ void test_compare(void) {
   idx = vec_any_eq(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_any_eq(vbi, vbi);
+  idx = vec_any_eq(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_any_eq(vsl, vsl);
+  idx = vec_any_eq(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
   idx = vec_any_eq(vsl, vbl);
@@ -1943,7 +1973,7 @@ void test_compare(void) {
   idx = vec_any_eq(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_any_eq(vul, vul);
+  idx = vec_any_eq(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
   idx = vec_any_eq(vul, vbl);
@@ -1952,14 +1982,14 @@ void test_compare(void) {
   idx = vec_any_eq(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_any_eq(vbl, vbl);
+  idx = vec_any_eq(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_any_eq(vd, vd);
+  idx = vec_any_eq(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfcedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfcedbs
 
-  idx = vec_any_ne(vsc, vsc);
+  idx = vec_any_ne(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
   idx = vec_any_ne(vsc, vbc);
@@ -1968,7 +1998,7 @@ void test_compare(void) {
   idx = vec_any_ne(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_any_ne(vuc, vuc);
+  idx = vec_any_ne(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
   idx = vec_any_ne(vuc, vbc);
@@ -1977,10 +2007,10 @@ void test_compare(void) {
   idx = vec_any_ne(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_any_ne(vbc, vbc);
+  idx = vec_any_ne(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vceqbs
-  idx = vec_any_ne(vss, vss);
+  idx = vec_any_ne(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
   idx = vec_any_ne(vss, vbs);
@@ -1989,7 +2019,7 @@ void test_compare(void) {
   idx = vec_any_ne(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_any_ne(vus, vus);
+  idx = vec_any_ne(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
   idx = vec_any_ne(vus, vbs);
@@ -1998,10 +2028,10 @@ void test_compare(void) {
   idx = vec_any_ne(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_any_ne(vbs, vbs);
+  idx = vec_any_ne(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vceqhs
-  idx = vec_any_ne(vsi, vsi);
+  idx = vec_any_ne(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
   idx = vec_any_ne(vsi, vbi);
@@ -2010,7 +2040,7 @@ void test_compare(void) {
   idx = vec_any_ne(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_any_ne(vui, vui);
+  idx = vec_any_ne(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
   idx = vec_any_ne(vui, vbi);
@@ -2019,10 +2049,10 @@ void test_compare(void) {
   idx = vec_any_ne(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_any_ne(vbi, vbi);
+  idx = vec_any_ne(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vceqfs
-  idx = vec_any_ne(vsl, vsl);
+  idx = vec_any_ne(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
   idx = vec_any_ne(vsl, vbl);
@@ -2031,7 +2061,7 @@ void test_compare(void) {
   idx = vec_any_ne(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_any_ne(vul, vul);
+  idx = vec_any_ne(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
   idx = vec_any_ne(vul, vbl);
@@ -2040,14 +2070,14 @@ void test_compare(void) {
   idx = vec_any_ne(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_any_ne(vbl, vbl);
+  idx = vec_any_ne(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vceqgs
-  idx = vec_any_ne(vd, vd);
+  idx = vec_any_ne(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfcedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfcedbs
 
-  idx = vec_any_ge(vsc, vsc);
+  idx = vec_any_ge(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
   idx = vec_any_ge(vsc, vbc);
@@ -2056,7 +2086,7 @@ void test_compare(void) {
   idx = vec_any_ge(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
-  idx = vec_any_ge(vuc, vuc);
+  idx = vec_any_ge(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
   idx = vec_any_ge(vuc, vbc);
@@ -2065,10 +2095,10 @@ void test_compare(void) {
   idx = vec_any_ge(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_any_ge(vbc, vbc);
+  idx = vec_any_ge(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_any_ge(vss, vss);
+  idx = vec_any_ge(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
   idx = vec_any_ge(vss, vbs);
@@ -2077,7 +2107,7 @@ void test_compare(void) {
   idx = vec_any_ge(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
-  idx = vec_any_ge(vus, vus);
+  idx = vec_any_ge(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
   idx = vec_any_ge(vus, vbs);
@@ -2086,10 +2116,10 @@ void test_compare(void) {
   idx = vec_any_ge(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_any_ge(vbs, vbs);
+  idx = vec_any_ge(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_any_ge(vsi, vsi);
+  idx = vec_any_ge(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
   idx = vec_any_ge(vsi, vbi);
@@ -2098,7 +2128,7 @@ void test_compare(void) {
   idx = vec_any_ge(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
-  idx = vec_any_ge(vui, vui);
+  idx = vec_any_ge(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
   idx = vec_any_ge(vui, vbi);
@@ -2107,10 +2137,10 @@ void test_compare(void) {
   idx = vec_any_ge(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_any_ge(vbi, vbi);
+  idx = vec_any_ge(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_any_ge(vsl, vsl);
+  idx = vec_any_ge(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
   idx = vec_any_ge(vsl, vbl);
@@ -2119,7 +2149,7 @@ void test_compare(void) {
   idx = vec_any_ge(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
-  idx = vec_any_ge(vul, vul);
+  idx = vec_any_ge(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
   idx = vec_any_ge(vul, vbl);
@@ -2128,14 +2158,14 @@ void test_compare(void) {
   idx = vec_any_ge(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_any_ge(vbl, vbl);
+  idx = vec_any_ge(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_any_ge(vd, vd);
+  idx = vec_any_ge(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
 
-  idx = vec_any_gt(vsc, vsc);
+  idx = vec_any_gt(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
   idx = vec_any_gt(vsc, vbc);
@@ -2144,7 +2174,7 @@ void test_compare(void) {
   idx = vec_any_gt(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
-  idx = vec_any_gt(vuc, vuc);
+  idx = vec_any_gt(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
   idx = vec_any_gt(vuc, vbc);
@@ -2153,10 +2183,10 @@ void test_compare(void) {
   idx = vec_any_gt(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_any_gt(vbc, vbc);
+  idx = vec_any_gt(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_any_gt(vss, vss);
+  idx = vec_any_gt(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
   idx = vec_any_gt(vss, vbs);
@@ -2165,7 +2195,7 @@ void test_compare(void) {
   idx = vec_any_gt(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
-  idx = vec_any_gt(vus, vus);
+  idx = vec_any_gt(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
   idx = vec_any_gt(vus, vbs);
@@ -2174,10 +2204,10 @@ void test_compare(void) {
   idx = vec_any_gt(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_any_gt(vbs, vbs);
+  idx = vec_any_gt(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_any_gt(vsi, vsi);
+  idx = vec_any_gt(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
   idx = vec_any_gt(vsi, vbi);
@@ -2186,7 +2216,7 @@ void test_compare(void) {
   idx = vec_any_gt(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
-  idx = vec_any_gt(vui, vui);
+  idx = vec_any_gt(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
   idx = vec_any_gt(vui, vbi);
@@ -2195,10 +2225,10 @@ void test_compare(void) {
   idx = vec_any_gt(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_any_gt(vbi, vbi);
+  idx = vec_any_gt(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_any_gt(vsl, vsl);
+  idx = vec_any_gt(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
   idx = vec_any_gt(vsl, vbl);
@@ -2207,7 +2237,7 @@ void test_compare(void) {
   idx = vec_any_gt(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
-  idx = vec_any_gt(vul, vul);
+  idx = vec_any_gt(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
   idx = vec_any_gt(vul, vbl);
@@ -2216,14 +2246,14 @@ void test_compare(void) {
   idx = vec_any_gt(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_any_gt(vbl, vbl);
+  idx = vec_any_gt(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_any_gt(vd, vd);
+  idx = vec_any_gt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
-  idx = vec_any_le(vsc, vsc);
+  idx = vec_any_le(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
   idx = vec_any_le(vsc, vbc);
@@ -2232,7 +2262,7 @@ void test_compare(void) {
   idx = vec_any_le(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
-  idx = vec_any_le(vuc, vuc);
+  idx = vec_any_le(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
   idx = vec_any_le(vuc, vbc);
@@ -2241,10 +2271,10 @@ void test_compare(void) {
   idx = vec_any_le(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_any_le(vbc, vbc);
+  idx = vec_any_le(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_any_le(vss, vss);
+  idx = vec_any_le(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
   idx = vec_any_le(vss, vbs);
@@ -2253,7 +2283,7 @@ void test_compare(void) {
   idx = vec_any_le(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
-  idx = vec_any_le(vus, vus);
+  idx = vec_any_le(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
   idx = vec_any_le(vus, vbs);
@@ -2262,10 +2292,10 @@ void test_compare(void) {
   idx = vec_any_le(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_any_le(vbs, vbs);
+  idx = vec_any_le(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_any_le(vsi, vsi);
+  idx = vec_any_le(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
   idx = vec_any_le(vsi, vbi);
@@ -2274,7 +2304,7 @@ void test_compare(void) {
   idx = vec_any_le(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
-  idx = vec_any_le(vui, vui);
+  idx = vec_any_le(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
   idx = vec_any_le(vui, vbi);
@@ -2283,10 +2313,10 @@ void test_compare(void) {
   idx = vec_any_le(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_any_le(vbi, vbi);
+  idx = vec_any_le(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_any_le(vsl, vsl);
+  idx = vec_any_le(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
   idx = vec_any_le(vsl, vbl);
@@ -2295,7 +2325,7 @@ void test_compare(void) {
   idx = vec_any_le(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
-  idx = vec_any_le(vul, vul);
+  idx = vec_any_le(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
   idx = vec_any_le(vul, vbl);
@@ -2304,14 +2334,14 @@ void test_compare(void) {
   idx = vec_any_le(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_any_le(vbl, vbl);
+  idx = vec_any_le(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_any_le(vd, vd);
+  idx = vec_any_le(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
 
-  idx = vec_any_lt(vsc, vsc);
+  idx = vec_any_lt(vsc, vsc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
   idx = vec_any_lt(vsc, vbc);
@@ -2320,7 +2350,7 @@ void test_compare(void) {
   idx = vec_any_lt(vbc, vsc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchbs
-  idx = vec_any_lt(vuc, vuc);
+  idx = vec_any_lt(vuc, vuc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
   idx = vec_any_lt(vuc, vbc);
@@ -2329,10 +2359,10 @@ void test_compare(void) {
   idx = vec_any_lt(vbc, vuc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_any_lt(vbc, vbc);
+  idx = vec_any_lt(vbc, vbc1);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vchlbs
-  idx = vec_any_lt(vss, vss);
+  idx = vec_any_lt(vss, vss1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
   idx = vec_any_lt(vss, vbs);
@@ -2341,7 +2371,7 @@ void test_compare(void) {
   idx = vec_any_lt(vbs, vss);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchhs
-  idx = vec_any_lt(vus, vus);
+  idx = vec_any_lt(vus, vus1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
   idx = vec_any_lt(vus, vbs);
@@ -2350,10 +2380,10 @@ void test_compare(void) {
   idx = vec_any_lt(vbs, vus);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_any_lt(vbs, vbs);
+  idx = vec_any_lt(vbs, vbs1);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vchlhs
-  idx = vec_any_lt(vsi, vsi);
+  idx = vec_any_lt(vsi, vsi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
   idx = vec_any_lt(vsi, vbi);
@@ -2362,7 +2392,7 @@ void test_compare(void) {
   idx = vec_any_lt(vbi, vsi);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchfs
-  idx = vec_any_lt(vui, vui);
+  idx = vec_any_lt(vui, vui1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
   idx = vec_any_lt(vui, vbi);
@@ -2371,10 +2401,10 @@ void test_compare(void) {
   idx = vec_any_lt(vbi, vui);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_any_lt(vbi, vbi);
+  idx = vec_any_lt(vbi, vbi1);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vchlfs
-  idx = vec_any_lt(vsl, vsl);
+  idx = vec_any_lt(vsl, vsl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
   idx = vec_any_lt(vsl, vbl);
@@ -2383,7 +2413,7 @@ void test_compare(void) {
   idx = vec_any_lt(vbl, vsl);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchgs
-  idx = vec_any_lt(vul, vul);
+  idx = vec_any_lt(vul, vul1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
   idx = vec_any_lt(vul, vbl);
@@ -2392,23 +2422,23 @@ void test_compare(void) {
   idx = vec_any_lt(vbl, vul);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_any_lt(vbl, vbl);
+  idx = vec_any_lt(vbl, vbl1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vchlgs
-  idx = vec_any_lt(vd, vd);
+  idx = vec_any_lt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
-  idx = vec_any_nge(vd, vd);
+  idx = vec_any_nge(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
-  idx = vec_any_ngt(vd, vd);
+  idx = vec_any_ngt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
-  idx = vec_any_nle(vd, vd);
+  idx = vec_any_nle(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchedbs
-  idx = vec_any_nlt(vd, vd);
+  idx = vec_any_nlt(vd, vd1);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfchdbs
 
@@ -2423,237 +2453,237 @@ void test_compare(void) {
 void test_integer(void) {
   // CHECK-ASM-LABEL: test_integer
 
-  vsc = vec_and(vsc, vsc);
+  vsc = vec_and(vsc, vsc1);
   // CHECK-ASM: vn
-  vuc = vec_and(vuc, vuc);
+  vuc = vec_and(vuc, vuc1);
   // CHECK-ASM: vn
-  vbc = vec_and(vbc, vbc);
+  vbc = vec_and(vbc, vbc1);
   // CHECK-ASM: vn
-  vss = vec_and(vss, vss);
+  vss = vec_and(vss, vss1);
   // CHECK-ASM: vn
-  vus = vec_and(vus, vus);
+  vus = vec_and(vus, vus1);
   // CHECK-ASM: vn
-  vbs = vec_and(vbs, vbs);
+  vbs = vec_and(vbs, vbs1);
   // CHECK-ASM: vn
-  vsi = vec_and(vsi, vsi);
+  vsi = vec_and(vsi, vsi1);
   // CHECK-ASM: vn
-  vui = vec_and(vui, vui);
+  vui = vec_and(vui, vui1);
   // CHECK-ASM: vn
-  vbi = vec_and(vbi, vbi);
+  vbi = vec_and(vbi, vbi1);
   // CHECK-ASM: vn
-  vsl = vec_and(vsl, vsl);
+  vsl = vec_and(vsl, vsl1);
   // CHECK-ASM: vn
-  vul = vec_and(vul, vul);
+  vul = vec_and(vul, vul1);
   // CHECK-ASM: vn
-  vbl = vec_and(vbl, vbl);
+  vbl = vec_and(vbl, vbl1);
   // CHECK-ASM: vn
-  vslll = vec_and(vslll, vslll);
+  vslll = vec_and(vslll, vslll1);
   // CHECK-ASM: vn
-  vulll = vec_and(vulll, vulll);
+  vulll = vec_and(vulll, vulll1);
   // CHECK-ASM: vn
-  vblll = vec_and(vblll, vblll);
+  vblll = vec_and(vblll, vblll1);
   // CHECK-ASM: vn
-  vd = vec_and(vd, vd);
+  vd = vec_and(vd, vd1);
   // CHECK-ASM: vn
 
-  vsc = vec_or(vsc, vsc);
+  vsc = vec_or(vsc, vsc1);
   // CHECK-ASM: vo
-  vuc = vec_or(vuc, vuc);
+  vuc = vec_or(vuc, vuc1);
   // CHECK-ASM: vo
-  vbc = vec_or(vbc, vbc);
+  vbc = vec_or(vbc, vbc1);
   // CHECK-ASM: vo
-  vss = vec_or(vss, vss);
+  vss = vec_or(vss, vss1);
   // CHECK-ASM: vo
-  vus = vec_or(vus, vus);
+  vus = vec_or(vus, vus1);
   // CHECK-ASM: vo
-  vbs = vec_or(vbs, vbs);
+  vbs = vec_or(vbs, vbs1);
   // CHECK-ASM: vo
-  vsi = vec_or(vsi, vsi);
+  vsi = vec_or(vsi, vsi1);
   // CHECK-ASM: vo
-  vui = vec_or(vui, vui);
+  vui = vec_or(vui, vui1);
   // CHECK-ASM: vo
-  vbi = vec_or(vbi, vbi);
+  vbi = vec_or(vbi, vbi1);
   // CHECK-ASM: vo
-  vsl = vec_or(vsl, vsl);
+  vsl = vec_or(vsl, vsl1);
   // CHECK-ASM: vo
-  vul = vec_or(vul, vul);
+  vul = vec_or(vul, vul1);
   // CHECK-ASM: vo
-  vbl = vec_or(vbl, vbl);
+  vbl = vec_or(vbl, vbl1);
   // CHECK-ASM: vo
-  vslll = vec_or(vslll, vslll);
+  vslll = vec_or(vslll, vslll1);
   // CHECK-ASM: vo
-  vulll = vec_or(vulll, vulll);
+  vulll = vec_or(vulll, vulll1);
   // CHECK-ASM: vo
-  vblll = vec_or(vblll, vblll);
+  vblll = vec_or(vblll, vblll1);
   // CHECK-ASM: vo
-  vd = vec_or(vd, vd);
+  vd = vec_or(vd, vd1);
   // CHECK-ASM: vo
 
-  vsc = vec_xor(vsc, vsc);
+  vsc = vec_xor(vsc, vsc1);
   // CHECK-ASM: vx
-  vuc = vec_xor(vuc, vuc);
+  vuc = vec_xor(vuc, vuc1);
   // CHECK-ASM: vx
-  vbc = vec_xor(vbc, vbc);
+  vbc = vec_xor(vbc, vbc1);
   // CHECK-ASM: vx
-  vss = vec_xor(vss, vss);
+  vss = vec_xor(vss, vss1);
   // CHECK-ASM: vx
-  vus = vec_xor(vus, vus);
+  vus = vec_xor(vus, vus1);
   // CHECK-ASM: vx
-  vbs = vec_xor(vbs, vbs);
+  vbs = vec_xor(vbs, vbs1);
   // CHECK-ASM: vx
-  vsi = vec_xor(vsi, vsi);
+  vsi = vec_xor(vsi, vsi1);
   // CHECK-ASM: vx
-  vui = vec_xor(vui, vui);
+  vui = vec_xor(vui, vui1);
   // CHECK-ASM: vx
-  vbi = vec_xor(vbi, vbi);
+  vbi = vec_xor(vbi, vbi1);
   // CHECK-ASM: vx
-  vsl = vec_xor(vsl, vsl);
+  vsl = vec_xor(vsl, vsl1);
   // CHECK-ASM: vx
-  vul = vec_xor(vul, vul);
+  vul = vec_xor(vul, vul1);
   // CHECK-ASM: vx
-  vbl = vec_xor(vbl, vbl);
+  vbl = vec_xor(vbl, vbl1);
   // CHECK-ASM: vx
-  vslll = vec_xor(vslll, vslll);
+  vslll = vec_xor(vslll, vslll1);
   // CHECK-ASM: vx
-  vulll = vec_xor(vulll, vulll);
+  vulll = vec_xor(vulll, vulll1);
   // CHECK-ASM: vx
-  vblll = vec_xor(vblll, vblll);
+  vblll = vec_xor(vblll, vblll1);
   // CHECK-ASM: vx
-  vd = vec_xor(vd, vd);
+  vd = vec_xor(vd, vd1);
   // CHECK-ASM: vx
 
-  vsc = vec_andc(vsc, vsc);
+  vsc = vec_andc(vsc, vsc1);
   // CHECK-ASM: vnc
   vsc = vec_andc(vsc, vbc);
   // CHECK-ASM: vnc
   vsc = vec_andc(vbc, vsc);
   // CHECK-ASM: vnc
-  vuc = vec_andc(vuc, vuc);
+  vuc = vec_andc(vuc, vuc1);
   // CHECK-ASM: vnc
   vuc = vec_andc(vuc, vbc);
   // CHECK-ASM: vnc
   vuc = vec_andc(vbc, vuc);
   // CHECK-ASM: vnc
-  vbc = vec_andc(vbc, vbc);
+  vbc = vec_andc(vbc, vbc1);
   // CHECK-ASM: vnc
-  vss = vec_andc(vss, vss);
+  vss = vec_andc(vss, vss1);
   // CHECK-ASM: vnc
   vss = vec_andc(vss, vbs);
   // CHECK-ASM: vnc
   vss = vec_andc(vbs, vss);
   // CHECK-ASM: vnc
-  vus = vec_andc(vus, vus);
+  vus = vec_andc(vus, vus1);
   // CHECK-ASM: vnc
   vus = vec_andc(vus, vbs);
   // CHECK-ASM: vnc
   vus = vec_andc(vbs, vus);
   // CHECK-ASM: vnc
-  vbs = vec_andc(vbs, vbs);
+  vbs = vec_andc(vbs, vbs1);
   // CHECK-ASM: vnc
-  vsi = vec_andc(vsi, vsi);
+  vsi = vec_andc(vsi, vsi1);
   // CHECK-ASM: vnc
   vsi = vec_andc(vsi, vbi);
   // CHECK-ASM: vnc
   vsi = vec_andc(vbi, vsi);
   // CHECK-ASM: vnc
-  vui = vec_andc(vui, vui);
+  vui = vec_andc(vui, vui1);
   // CHECK-ASM: vnc
   vui = vec_andc(vui, vbi);
   // CHECK-ASM: vnc
   vui = vec_andc(vbi, vui);
   // CHECK-ASM: vnc
-  vbi = vec_andc(vbi, vbi);
+  vbi = vec_andc(vbi, vbi1);
   // CHECK-ASM: vnc
-  vsl = vec_andc(vsl, vsl);
+  vsl = vec_andc(vsl, vsl1);
   // CHECK-ASM: vnc
   vsl = vec_andc(vsl, vbl);
   // CHECK-ASM: vnc
   vsl = vec_andc(vbl, vsl);
   // CHECK-ASM: vnc
-  vul = vec_andc(vul, vul);
+  vul = vec_andc(vul, vul1);
   // CHECK-ASM: vnc
   vul = vec_andc(vul, vbl);
   // CHECK-ASM: vnc
   vul = vec_andc(vbl, vul);
   // CHECK-ASM: vnc
-  vbl = vec_andc(vbl, vbl);
+  vbl = vec_andc(vbl, vbl1);
   // CHECK-ASM: vnc
-  vslll = vec_andc(vslll, vslll);
+  vslll = vec_andc(vslll, vslll1);
   // CHECK-ASM: vnc
-  vulll = vec_andc(vulll, vulll);
+  vulll = vec_andc(vulll, vulll1);
   // CHECK-ASM: vnc
-  vblll = vec_andc(vblll, vblll);
+  vblll = vec_andc(vblll, vblll1);
   // CHECK-ASM: vnc
-  vd = vec_andc(vd, vd);
+  vd = vec_andc(vd, vd1);
   // CHECK-ASM: vnc
   vd = vec_andc(vd, vbl);
   // CHECK-ASM: vnc
   vd = vec_andc(vbl, vd);
   // CHECK-ASM: vnc
 
-  vsc = vec_nor(vsc, vsc);
+  vsc = vec_nor(vsc, vsc1);
   // CHECK-ASM: vno
   vsc = vec_nor(vsc, vbc);
   // CHECK-ASM: vno
   vsc = vec_nor(vbc, vsc);
   // CHECK-ASM: vno
-  vuc = vec_nor(vuc, vuc);
+  vuc = vec_nor(vuc, vuc1);
   // CHECK-ASM: vno
   vuc = vec_nor(vuc, vbc);
   // CHECK-ASM: vno
   vuc = vec_nor(vbc, vuc);
   // CHECK-ASM: vno
-  vbc = vec_nor(vbc, vbc);
+  vbc = vec_nor(vbc, vbc1);
   // CHECK-ASM: vno
-  vss = vec_nor(vss, vss);
+  vss = vec_nor(vss, vss1);
   // CHECK-ASM: vno
   vss = vec_nor(vss, vbs);
   // CHECK-ASM: vno
   vss = vec_nor(vbs, vss);
   // CHECK-ASM: vno
-  vus = vec_nor(vus, vus);
+  vus = vec_nor(vus, vus1);
   // CHECK-ASM: vno
   vus = vec_nor(vus, vbs);
   // CHECK-ASM: vno
   vus = vec_nor(vbs, vus);
   // CHECK-ASM: vno
-  vbs = vec_nor(vbs, vbs);
+  vbs = vec_nor(vbs, vbs1);
   // CHECK-ASM: vno
-  vsi = vec_nor(vsi, vsi);
+  vsi = vec_nor(vsi, vsi1);
   // CHECK-ASM: vno
   vsi = vec_nor(vsi, vbi);
   // CHECK-ASM: vno
   vsi = vec_nor(vbi, vsi);
   // CHECK-ASM: vno
-  vui = vec_nor(vui, vui);
+  vui = vec_nor(vui, vui1);
   // CHECK-ASM: vno
   vui = vec_nor(vui, vbi);
   // CHECK-ASM: vno
   vui = vec_nor(vbi, vui);
   // CHECK-ASM: vno
-  vbi = vec_nor(vbi, vbi);
+  vbi = vec_nor(vbi, vbi1);
   // CHECK-ASM: vno
-  vsl = vec_nor(vsl, vsl);
+  vsl = vec_nor(vsl, vsl1);
   // CHECK-ASM: vno
   vsl = vec_nor(vsl, vbl);
   // CHECK-ASM: vno
   vsl = vec_nor(vbl, vsl);
   // CHECK-ASM: vno
-  vul = vec_nor(vul, vul);
+  vul = vec_nor(vul, vul1);
   // CHECK-ASM: vno
   vul = vec_nor(vul, vbl);
   // CHECK-ASM: vno
   vul = vec_nor(vbl, vul);
   // CHECK-ASM: vno
-  vbl = vec_nor(vbl, vbl);
+  vbl = vec_nor(vbl, vbl1);
   // CHECK-ASM: vno
-  vslll = vec_nor(vslll, vslll);
+  vslll = vec_nor(vslll, vslll1);
   // CHECK-ASM: vno
-  vulll = vec_nor(vulll, vulll);
+  vulll = vec_nor(vulll, vulll1);
   // CHECK-ASM: vno
-  vblll = vec_nor(vblll, vblll);
+  vblll = vec_nor(vblll, vblll1);
   // CHECK-ASM: vno
-  vd = vec_nor(vd, vd);
+  vd = vec_nor(vd, vd1);
   // CHECK-ASM: vno
   vd = vec_nor(vd, vbl);
   // CHECK-ASM: vno
@@ -2738,25 +2768,25 @@ void test_integer(void) {
   vsc = vec_rl(vsc, vuc);
   // CHECK: call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: verllvb
-  vuc = vec_rl(vuc, vuc);
+  vuc = vec_rl(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: verllvb
   vss = vec_rl(vss, vus);
   // CHECK: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: verllvh
-  vus = vec_rl(vus, vus);
+  vus = vec_rl(vus, vus1);
   // CHECK: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: verllvh
   vsi = vec_rl(vsi, vui);
   // CHECK: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: verllvf
-  vui = vec_rl(vui, vui);
+  vui = vec_rl(vui, vui1);
   // CHECK: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: verllvf
   vsl = vec_rl(vsl, vul);
   // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: verllvg
-  vul = vec_rl(vul, vul);
+  vul = vec_rl(vul, vul1);
   // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: verllvg
 
@@ -2791,10 +2821,10 @@ void test_integer(void) {
   vsc = vec_rl_mask(vsc, vuc, 255);
   // CHECK: call <16 x i8> @llvm.s390.verimb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 255)
   // CHECK-ASM: verimb
-  vuc = vec_rl_mask(vuc, vuc, 0);
+  vuc = vec_rl_mask(vuc, vuc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.verimb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: verimb
-  vuc = vec_rl_mask(vuc, vuc, 255);
+  vuc = vec_rl_mask(vuc, vuc1, 255);
   // CHECK: call <16 x i8> @llvm.s390.verimb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 255)
   // CHECK-ASM: verimb
   vss = vec_rl_mask(vss, vus, 0);
@@ -2803,10 +2833,10 @@ void test_integer(void) {
   vss = vec_rl_mask(vss, vus, 255);
   // CHECK: call <8 x i16> @llvm.s390.verimh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 255)
   // CHECK-ASM: verimh
-  vus = vec_rl_mask(vus, vus, 0);
+  vus = vec_rl_mask(vus, vus1, 0);
   // CHECK: call <8 x i16> @llvm.s390.verimh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: verimh
-  vus = vec_rl_mask(vus, vus, 255);
+  vus = vec_rl_mask(vus, vus1, 255);
   // CHECK: call <8 x i16> @llvm.s390.verimh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 255)
   // CHECK-ASM: verimh
   vsi = vec_rl_mask(vsi, vui, 0);
@@ -2815,10 +2845,10 @@ void test_integer(void) {
   vsi = vec_rl_mask(vsi, vui, 255);
   // CHECK: call <4 x i32> @llvm.s390.verimf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 255)
   // CHECK-ASM: verimf
-  vui = vec_rl_mask(vui, vui, 0);
+  vui = vec_rl_mask(vui, vui1, 0);
   // CHECK: call <4 x i32> @llvm.s390.verimf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: verimf
-  vui = vec_rl_mask(vui, vui, 255);
+  vui = vec_rl_mask(vui, vui1, 255);
   // CHECK: call <4 x i32> @llvm.s390.verimf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 255)
   // CHECK-ASM: verimf
   vsl = vec_rl_mask(vsl, vul, 0);
@@ -2827,10 +2857,10 @@ void test_integer(void) {
   vsl = vec_rl_mask(vsl, vul, 255);
   // CHECK: call <2 x i64> @llvm.s390.verimg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 255)
   // CHECK-ASM: verimg
-  vul = vec_rl_mask(vul, vul, 0);
+  vul = vec_rl_mask(vul, vul1, 0);
   // CHECK: call <2 x i64> @llvm.s390.verimg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 0)
   // CHECK-ASM: verimg
-  vul = vec_rl_mask(vul, vul, 255);
+  vul = vec_rl_mask(vul, vul1, 255);
   // CHECK: call <2 x i64> @llvm.s390.verimg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 255)
   // CHECK-ASM: verimg
 
@@ -2843,7 +2873,7 @@ void test_integer(void) {
   vsc = vec_sll(vsc, vui);
   // CHECK: call <16 x i8> @llvm.s390.vsl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsl
-  vuc = vec_sll(vuc, vuc);
+  vuc = vec_sll(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsl
   vuc = vec_sll(vuc, vus);
@@ -2873,7 +2903,7 @@ void test_integer(void) {
   vus = vec_sll(vus, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vsl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsl
-  vus = vec_sll(vus, vus);
+  vus = vec_sll(vus, vus1);
   // CHECK: call <16 x i8> @llvm.s390.vsl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsl
   vus = vec_sll(vus, vui);
@@ -2903,7 +2933,7 @@ void test_integer(void) {
   vui = vec_sll(vui, vus);
   // CHECK: call <16 x i8> @llvm.s390.vsl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsl
-  vui = vec_sll(vui, vui);
+  vui = vec_sll(vui, vui1);
   // CHECK: call <16 x i8> @llvm.s390.vsl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsl
   vbi = vec_sll(vbi, vuc);
@@ -2949,7 +2979,7 @@ void test_integer(void) {
   // CHECK: call <16 x i8> @llvm.s390.vsl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsl
 
-  vsc = vec_slb(vsc, vsc);
+  vsc = vec_slb(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
   vsc = vec_slb(vsc, vuc);
@@ -2958,10 +2988,10 @@ void test_integer(void) {
   vuc = vec_slb(vuc, vsc);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
-  vuc = vec_slb(vuc, vuc);
+  vuc = vec_slb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
-  vss = vec_slb(vss, vss);
+  vss = vec_slb(vss, vss1);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
   vss = vec_slb(vss, vus);
@@ -2973,13 +3003,13 @@ void test_integer(void) {
   vus = vec_slb(vus, vss);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
-  vus = vec_slb(vus, vus);
+  vus = vec_slb(vus, vus1);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
   vus = vec_slb(vus, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
-  vsi = vec_slb(vsi, vsi);
+  vsi = vec_slb(vsi, vsi1);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
   vsi = vec_slb(vsi, vui);
@@ -2991,13 +3021,13 @@ void test_integer(void) {
   vui = vec_slb(vui, vsi);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
-  vui = vec_slb(vui, vui);
+  vui = vec_slb(vui, vui1);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
   vui = vec_slb(vui, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
-  vsl = vec_slb(vsl, vsl);
+  vsl = vec_slb(vsl, vsl1);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
   vsl = vec_slb(vsl, vul);
@@ -3009,7 +3039,7 @@ void test_integer(void) {
   vul = vec_slb(vul, vsl);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
-  vul = vec_slb(vul, vul);
+  vul = vec_slb(vul, vul1);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
   vul = vec_slb(vul, vuc);
@@ -3031,161 +3061,161 @@ void test_integer(void) {
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vslb
 
-  vsc = vec_sld(vsc, vsc, 0);
+  vsc = vec_sld(vsc, vsc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vsc = vec_sld(vsc, vsc, 15);
+  vsc = vec_sld(vsc, vsc1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vuc = vec_sld(vuc, vuc, 0);
+  vuc = vec_sld(vuc, vuc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vuc = vec_sld(vuc, vuc, 15);
+  vuc = vec_sld(vuc, vuc1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vbc = vec_sld(vbc, vbc, 0);
+  vbc = vec_sld(vbc, vbc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vbc = vec_sld(vbc, vbc, 15);
+  vbc = vec_sld(vbc, vbc1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vss = vec_sld(vss, vss, 0);
+  vss = vec_sld(vss, vss1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vss = vec_sld(vss, vss, 15);
+  vss = vec_sld(vss, vss1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vus = vec_sld(vus, vus, 0);
+  vus = vec_sld(vus, vus1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vus = vec_sld(vus, vus, 15);
+  vus = vec_sld(vus, vus1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vbs = vec_sld(vbs, vbs, 0);
+  vbs = vec_sld(vbs, vbs1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vbs = vec_sld(vbs, vbs, 15);
+  vbs = vec_sld(vbs, vbs1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vsi = vec_sld(vsi, vsi, 0);
+  vsi = vec_sld(vsi, vsi1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vsi = vec_sld(vsi, vsi, 15);
+  vsi = vec_sld(vsi, vsi1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vui = vec_sld(vui, vui, 0);
+  vui = vec_sld(vui, vui1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vui = vec_sld(vui, vui, 15);
+  vui = vec_sld(vui, vui1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vbi = vec_sld(vbi, vbi, 0);
+  vbi = vec_sld(vbi, vbi1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vbi = vec_sld(vbi, vbi, 15);
+  vbi = vec_sld(vbi, vbi1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vsl = vec_sld(vsl, vsl, 0);
+  vsl = vec_sld(vsl, vsl1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vsl = vec_sld(vsl, vsl, 15);
+  vsl = vec_sld(vsl, vsl1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vul = vec_sld(vul, vul, 0);
+  vul = vec_sld(vul, vul1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vul = vec_sld(vul, vul, 15);
+  vul = vec_sld(vul, vul1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vbl = vec_sld(vbl, vbl, 0);
+  vbl = vec_sld(vbl, vbl1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vbl = vec_sld(vbl, vbl, 15);
+  vbl = vec_sld(vbl, vbl1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vslll = vec_sld(vslll, vslll, 0);
+  vslll = vec_sld(vslll, vslll1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vslll = vec_sld(vslll, vslll, 15);
+  vslll = vec_sld(vslll, vslll1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vulll = vec_sld(vulll, vulll, 0);
+  vulll = vec_sld(vulll, vulll1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vulll = vec_sld(vulll, vulll, 15);
+  vulll = vec_sld(vulll, vulll1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
-  vd = vec_sld(vd, vd, 0);
+  vd = vec_sld(vd, vd1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vd = vec_sld(vd, vd, 15);
+  vd = vec_sld(vd, vd1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   // CHECK-ASM: vsldb
 
-  vsc = vec_sldw(vsc, vsc, 0);
+  vsc = vec_sldw(vsc, vsc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vsc = vec_sldw(vsc, vsc, 3);
+  vsc = vec_sldw(vsc, vsc1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vuc = vec_sldw(vuc, vuc, 0);
+  vuc = vec_sldw(vuc, vuc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vuc = vec_sldw(vuc, vuc, 3);
+  vuc = vec_sldw(vuc, vuc1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vss = vec_sldw(vss, vss, 0);
+  vss = vec_sldw(vss, vss1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vss = vec_sldw(vss, vss, 3);
+  vss = vec_sldw(vss, vss1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vus = vec_sldw(vus, vus, 0);
+  vus = vec_sldw(vus, vus1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vus = vec_sldw(vus, vus, 3);
+  vus = vec_sldw(vus, vus1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vsi = vec_sldw(vsi, vsi, 0);
+  vsi = vec_sldw(vsi, vsi1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vsi = vec_sldw(vsi, vsi, 3);
+  vsi = vec_sldw(vsi, vsi1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vui = vec_sldw(vui, vui, 0);
+  vui = vec_sldw(vui, vui1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vui = vec_sldw(vui, vui, 3);
+  vui = vec_sldw(vui, vui1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vsl = vec_sldw(vsl, vsl, 0);
+  vsl = vec_sldw(vsl, vsl1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vsl = vec_sldw(vsl, vsl, 3);
+  vsl = vec_sldw(vsl, vsl1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vul = vec_sldw(vul, vul, 0);
+  vul = vec_sldw(vul, vul1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vul = vec_sldw(vul, vul, 3);
+  vul = vec_sldw(vul, vul1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vslll = vec_sldw(vslll, vslll, 0);
+  vslll = vec_sldw(vslll, vslll1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vslll = vec_sldw(vslll, vslll, 3);
+  vslll = vec_sldw(vslll, vslll1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vulll = vec_sldw(vulll, vulll, 0);
+  vulll = vec_sldw(vulll, vulll1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vulll = vec_sldw(vulll, vulll, 3);
+  vulll = vec_sldw(vulll, vulll1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
-  vd = vec_sldw(vd, vd, 0);
+  vd = vec_sldw(vd, vd1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsldb
-  vd = vec_sldw(vd, vd, 3);
+  vd = vec_sldw(vd, vd1, 3);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vsldb
 
@@ -3198,7 +3228,7 @@ void test_integer(void) {
   vsc = vec_sral(vsc, vui);
   // CHECK: call <16 x i8> @llvm.s390.vsra(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsra
-  vuc = vec_sral(vuc, vuc);
+  vuc = vec_sral(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsra(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsra
   vuc = vec_sral(vuc, vus);
@@ -3228,7 +3258,7 @@ void test_integer(void) {
   vus = vec_sral(vus, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vsra(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsra
-  vus = vec_sral(vus, vus);
+  vus = vec_sral(vus, vus1);
   // CHECK: call <16 x i8> @llvm.s390.vsra(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsra
   vus = vec_sral(vus, vui);
@@ -3258,7 +3288,7 @@ void test_integer(void) {
   vui = vec_sral(vui, vus);
   // CHECK: call <16 x i8> @llvm.s390.vsra(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsra
-  vui = vec_sral(vui, vui);
+  vui = vec_sral(vui, vui1);
   // CHECK: call <16 x i8> @llvm.s390.vsra(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsra
   vbi = vec_sral(vbi, vuc);
@@ -3304,7 +3334,7 @@ void test_integer(void) {
   // CHECK: call <16 x i8> @llvm.s390.vsra(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsra
 
-  vsc = vec_srab(vsc, vsc);
+  vsc = vec_srab(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
   vsc = vec_srab(vsc, vuc);
@@ -3313,10 +3343,10 @@ void test_integer(void) {
   vuc = vec_srab(vuc, vsc);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
-  vuc = vec_srab(vuc, vuc);
+  vuc = vec_srab(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
-  vss = vec_srab(vss, vss);
+  vss = vec_srab(vss, vss1);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
   vss = vec_srab(vss, vus);
@@ -3328,13 +3358,13 @@ void test_integer(void) {
   vus = vec_srab(vus, vss);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
-  vus = vec_srab(vus, vus);
+  vus = vec_srab(vus, vus1);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
   vus = vec_srab(vus, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
-  vsi = vec_srab(vsi, vsi);
+  vsi = vec_srab(vsi, vsi1);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
   vsi = vec_srab(vsi, vui);
@@ -3346,13 +3376,13 @@ void test_integer(void) {
   vui = vec_srab(vui, vsi);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
-  vui = vec_srab(vui, vui);
+  vui = vec_srab(vui, vui1);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
   vui = vec_srab(vui, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
-  vsl = vec_srab(vsl, vsl);
+  vsl = vec_srab(vsl, vsl1);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
   vsl = vec_srab(vsl, vul);
@@ -3364,7 +3394,7 @@ void test_integer(void) {
   vul = vec_srab(vul, vsl);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
-  vul = vec_srab(vul, vul);
+  vul = vec_srab(vul, vul1);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrab
   vul = vec_srab(vul, vuc);
@@ -3395,7 +3425,7 @@ void test_integer(void) {
   vsc = vec_srl(vsc, vui);
   // CHECK: call <16 x i8> @llvm.s390.vsrl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrl
-  vuc = vec_srl(vuc, vuc);
+  vuc = vec_srl(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsrl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrl
   vuc = vec_srl(vuc, vus);
@@ -3425,7 +3455,7 @@ void test_integer(void) {
   vus = vec_srl(vus, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vsrl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrl
-  vus = vec_srl(vus, vus);
+  vus = vec_srl(vus, vus1);
   // CHECK: call <16 x i8> @llvm.s390.vsrl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrl
   vus = vec_srl(vus, vui);
@@ -3455,7 +3485,7 @@ void test_integer(void) {
   vui = vec_srl(vui, vus);
   // CHECK: call <16 x i8> @llvm.s390.vsrl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrl
-  vui = vec_srl(vui, vui);
+  vui = vec_srl(vui, vui1);
   // CHECK: call <16 x i8> @llvm.s390.vsrl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrl
   vbi = vec_srl(vbi, vuc);
@@ -3501,7 +3531,7 @@ void test_integer(void) {
   // CHECK: call <16 x i8> @llvm.s390.vsrl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrl
 
-  vsc = vec_srb(vsc, vsc);
+  vsc = vec_srb(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
   vsc = vec_srb(vsc, vuc);
@@ -3510,10 +3540,10 @@ void test_integer(void) {
   vuc = vec_srb(vuc, vsc);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
-  vuc = vec_srb(vuc, vuc);
+  vuc = vec_srb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
-  vss = vec_srb(vss, vss);
+  vss = vec_srb(vss, vss1);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
   vss = vec_srb(vss, vus);
@@ -3525,13 +3555,13 @@ void test_integer(void) {
   vus = vec_srb(vus, vss);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
-  vus = vec_srb(vus, vus);
+  vus = vec_srb(vus, vus1);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
   vus = vec_srb(vus, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
-  vsi = vec_srb(vsi, vsi);
+  vsi = vec_srb(vsi, vsi1);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
   vsi = vec_srb(vsi, vui);
@@ -3543,13 +3573,13 @@ void test_integer(void) {
   vui = vec_srb(vui, vsi);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
-  vui = vec_srb(vui, vui);
+  vui = vec_srb(vui, vui1);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
   vui = vec_srb(vui, vuc);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
-  vsl = vec_srb(vsl, vsl);
+  vsl = vec_srb(vsl, vsl1);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
   vsl = vec_srb(vsl, vul);
@@ -3561,7 +3591,7 @@ void test_integer(void) {
   vul = vec_srb(vul, vsl);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
-  vul = vec_srb(vul, vul);
+  vul = vec_srb(vul, vul1);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsrlb
   vul = vec_srb(vul, vuc);
@@ -3592,439 +3622,439 @@ void test_integer(void) {
   vsl = vec_abs(vsl);
   // CHECK-ASM: vlpg
 
-  vsc = vec_max(vsc, vsc);
+  vsc = vec_max(vsc, vsc1);
   // CHECK-ASM: vmxb
   vsc = vec_max(vsc, vbc);
   // CHECK-ASM: vmxb
   vsc = vec_max(vbc, vsc);
   // CHECK-ASM: vmxb
-  vuc = vec_max(vuc, vuc);
+  vuc = vec_max(vuc, vuc1);
   // CHECK-ASM: vmxlb
   vuc = vec_max(vuc, vbc);
   // CHECK-ASM: vmxlb
   vuc = vec_max(vbc, vuc);
   // CHECK-ASM: vmxlb
-  vss = vec_max(vss, vss);
+  vss = vec_max(vss, vss1);
   // CHECK-ASM: vmxh
   vss = vec_max(vss, vbs);
   // CHECK-ASM: vmxh
   vss = vec_max(vbs, vss);
   // CHECK-ASM: vmxh
-  vus = vec_max(vus, vus);
+  vus = vec_max(vus, vus1);
   // CHECK-ASM: vmxlh
   vus = vec_max(vus, vbs);
   // CHECK-ASM: vmxlh
   vus = vec_max(vbs, vus);
   // CHECK-ASM: vmxlh
-  vsi = vec_max(vsi, vsi);
+  vsi = vec_max(vsi, vsi1);
   // CHECK-ASM: vmxf
   vsi = vec_max(vsi, vbi);
   // CHECK-ASM: vmxf
   vsi = vec_max(vbi, vsi);
   // CHECK-ASM: vmxf
-  vui = vec_max(vui, vui);
+  vui = vec_max(vui, vui1);
   // CHECK-ASM: vmxlf
   vui = vec_max(vui, vbi);
   // CHECK-ASM: vmxlf
   vui = vec_max(vbi, vui);
   // CHECK-ASM: vmxlf
-  vsl = vec_max(vsl, vsl);
+  vsl = vec_max(vsl, vsl1);
   // CHECK-ASM: vmxg
   vsl = vec_max(vsl, vbl);
   // CHECK-ASM: vmxg
   vsl = vec_max(vbl, vsl);
   // CHECK-ASM: vmxg
-  vul = vec_max(vul, vul);
+  vul = vec_max(vul, vul1);
   // CHECK-ASM: vmxlg
   vul = vec_max(vul, vbl);
   // CHECK-ASM: vmxlg
   vul = vec_max(vbl, vul);
   // CHECK-ASM: vmxlg
-  vslll = vec_max(vslll, vslll);
+  vslll = vec_max(vslll, vslll1);
   // (emulated)
-  vulll = vec_max(vulll, vulll);
+  vulll = vec_max(vulll, vulll1);
   // (emulated)
-  vd = vec_max(vd, vd);
+  vd = vec_max(vd, vd1);
   // (emulated)
 
-  vsc = vec_min(vsc, vsc);
+  vsc = vec_min(vsc, vsc1);
   // CHECK-ASM: vmnb
   vsc = vec_min(vsc, vbc);
   // CHECK-ASM: vmnb
   vsc = vec_min(vbc, vsc);
   // CHECK-ASM: vmnb
-  vuc = vec_min(vuc, vuc);
+  vuc = vec_min(vuc, vuc1);
   // CHECK-ASM: vmnlb
   vuc = vec_min(vuc, vbc);
   // CHECK-ASM: vmnlb
   vuc = vec_min(vbc, vuc);
   // CHECK-ASM: vmnlb
-  vss = vec_min(vss, vss);
+  vss = vec_min(vss, vss1);
   // CHECK-ASM: vmnh
   vss = vec_min(vss, vbs);
   // CHECK-ASM: vmnh
   vss = vec_min(vbs, vss);
   // CHECK-ASM: vmnh
-  vus = vec_min(vus, vus);
+  vus = vec_min(vus, vus1);
   // CHECK-ASM: vmnlh
   vus = vec_min(vus, vbs);
   // CHECK-ASM: vmnlh
   vus = vec_min(vbs, vus);
   // CHECK-ASM: vmnlh
-  vsi = vec_min(vsi, vsi);
+  vsi = vec_min(vsi, vsi1);
   // CHECK-ASM: vmnf
   vsi = vec_min(vsi, vbi);
   // CHECK-ASM: vmnf
   vsi = vec_min(vbi, vsi);
   // CHECK-ASM: vmnf
-  vui = vec_min(vui, vui);
+  vui = vec_min(vui, vui1);
   // CHECK-ASM: vmnlf
   vui = vec_min(vui, vbi);
   // CHECK-ASM: vmnlf
   vui = vec_min(vbi, vui);
   // CHECK-ASM: vmnlf
-  vsl = vec_min(vsl, vsl);
+  vsl = vec_min(vsl, vsl1);
   // CHECK-ASM: vmng
   vsl = vec_min(vsl, vbl);
   // CHECK-ASM: vmng
   vsl = vec_min(vbl, vsl);
   // CHECK-ASM: vmng
-  vul = vec_min(vul, vul);
+  vul = vec_min(vul, vul1);
   // CHECK-ASM: vmnlg
   vul = vec_min(vul, vbl);
   // CHECK-ASM: vmnlg
   vul = vec_min(vbl, vul);
   // CHECK-ASM: vmnlg
-  vslll = vec_min(vslll, vslll);
+  vslll = vec_min(vslll, vslll1);
   // (emulated)
-  vulll = vec_min(vulll, vulll);
+  vulll = vec_min(vulll, vulll1);
   // (emulated)
-  vd = vec_min(vd, vd);
+  vd = vec_min(vd, vd1);
   // (emulated)
 
-  vuc = vec_addc(vuc, vuc);
+  vuc = vec_addc(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vaccb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vaccb
-  vus = vec_addc(vus, vus);
+  vus = vec_addc(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vacch(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vacch
-  vui = vec_addc(vui, vui);
+  vui = vec_addc(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vaccf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vaccf
-  vul = vec_addc(vul, vul);
+  vul = vec_addc(vul, vul1);
   // CHECK: call <2 x i64> @llvm.s390.vaccg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vaccg
-  vulll = vec_addc(vulll, vulll);
+  vulll = vec_addc(vulll, vulll1);
   // CHECK: call i128 @llvm.s390.vaccq(i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vaccq
 
-  vulll = vec_adde(vulll, vulll, vulll);
+  vulll = vec_adde(vulll, vulll1, vulll2);
   // CHECK: call i128 @llvm.s390.vacq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vacq
-  vulll = vec_addec(vulll, vulll, vulll);
+  vulll = vec_addec(vulll, vulll1, vulll2);
   // CHECK: call i128 @llvm.s390.vacccq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vacccq
 
-  vuc = vec_add_u128(vuc, vuc);
+  vuc = vec_add_u128(vuc, vuc1);
   // CHECK-ASM: vaq
-  vuc = vec_addc_u128(vuc, vuc);
+  vuc = vec_addc_u128(vuc, vuc1);
   // CHECK: call i128 @llvm.s390.vaccq(i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vaccq
-  vuc = vec_adde_u128(vuc, vuc, vuc);
+  vuc = vec_adde_u128(vuc, vuc1, vuc2);
   // CHECK: call i128 @llvm.s390.vacq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vacq
-  vuc = vec_addec_u128(vuc, vuc, vuc);
+  vuc = vec_addec_u128(vuc, vuc1, vuc2);
   // CHECK: call i128 @llvm.s390.vacccq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vacccq
 
-  vsc = vec_avg(vsc, vsc);
+  vsc = vec_avg(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vavgb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vavgb
-  vuc = vec_avg(vuc, vuc);
+  vuc = vec_avg(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vavglb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vavglb
-  vss = vec_avg(vss, vss);
+  vss = vec_avg(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vavgh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vavgh
-  vus = vec_avg(vus, vus);
+  vus = vec_avg(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vavglh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vavglh
-  vsi = vec_avg(vsi, vsi);
+  vsi = vec_avg(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vavgf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vavgf
-  vui = vec_avg(vui, vui);
+  vui = vec_avg(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vavglf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vavglf
-  vsl = vec_avg(vsl, vsl);
+  vsl = vec_avg(vsl, vsl1);
   // CHECK: call <2 x i64> @llvm.s390.vavgg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vavgg
-  vul = vec_avg(vul, vul);
+  vul = vec_avg(vul, vul1);
   // CHECK: call <2 x i64> @llvm.s390.vavglg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vavglg
 
-  vui = vec_checksum(vui, vui);
+  vui = vec_checksum(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vcksm(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vcksm
 
-  vus = vec_gfmsum(vuc, vuc);
+  vus = vec_gfmsum(vuc, vuc1);
   // CHECK: call <8 x i16> @llvm.s390.vgfmb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vgfmb
-  vui = vec_gfmsum(vus, vus);
+  vui = vec_gfmsum(vus, vus1);
   // CHECK: call <4 x i32> @llvm.s390.vgfmh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vgfmh
-  vul = vec_gfmsum(vui, vui);
+  vul = vec_gfmsum(vui, vui1);
   // CHECK: call <2 x i64> @llvm.s390.vgfmf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vgfmf
-  vulll = vec_gfmsum(vul, vul);
+  vulll = vec_gfmsum(vul, vul1);
   // CHECK: call i128 @llvm.s390.vgfmg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vgfmg
-  vuc = vec_gfmsum_128(vul, vul);
+  vuc = vec_gfmsum_128(vul, vul1);
   // CHECK: call i128 @llvm.s390.vgfmg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vgfmg
 
-  vus = vec_gfmsum_accum(vuc, vuc, vus);
+  vus = vec_gfmsum_accum(vuc, vuc1, vus);
   // CHECK: call <8 x i16> @llvm.s390.vgfmab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vgfmab
-  vui = vec_gfmsum_accum(vus, vus, vui);
+  vui = vec_gfmsum_accum(vus, vus1, vui);
   // CHECK: call <4 x i32> @llvm.s390.vgfmah(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vgfmah
-  vul = vec_gfmsum_accum(vui, vui, vul);
+  vul = vec_gfmsum_accum(vui, vui1, vul);
   // CHECK: call <2 x i64> @llvm.s390.vgfmaf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vgfmaf
-  vulll = vec_gfmsum_accum(vul, vul, vulll);
+  vulll = vec_gfmsum_accum(vul, vul1, vulll);
   // CHECK: call i128 @llvm.s390.vgfmag(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vgfmag
-  vuc = vec_gfmsum_accum_128(vul, vul, vuc);
+  vuc = vec_gfmsum_accum_128(vul, vul1, vuc);
   // CHECK: call i128 @llvm.s390.vgfmag(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vgfmag
 
-  vsc = vec_mladd(vsc, vsc, vsc);
+  vsc = vec_mladd(vsc, vsc1, vsc2);
   // CHECK-ASM: vmalb
-  vsc = vec_mladd(vuc, vsc, vsc);
+  vsc = vec_mladd(vuc, vsc, vsc1);
   // CHECK-ASM: vmalb
-  vsc = vec_mladd(vsc, vuc, vuc);
+  vsc = vec_mladd(vsc, vuc, vuc1);
   // CHECK-ASM: vmalb
-  vuc = vec_mladd(vuc, vuc, vuc);
+  vuc = vec_mladd(vuc, vuc1, vuc2);
   // CHECK-ASM: vmalb
-  vss = vec_mladd(vss, vss, vss);
+  vss = vec_mladd(vss, vss1, vss2);
   // CHECK-ASM: vmalhw
-  vss = vec_mladd(vus, vss, vss);
+  vss = vec_mladd(vus, vss, vss1);
   // CHECK-ASM: vmalhw
-  vss = vec_mladd(vss, vus, vus);
+  vss = vec_mladd(vss, vus, vus1);
   // CHECK-ASM: vmalhw
-  vus = vec_mladd(vus, vus, vus);
+  vus = vec_mladd(vus, vus1, vus2);
   // CHECK-ASM: vmalhw
-  vsi = vec_mladd(vsi, vsi, vsi);
+  vsi = vec_mladd(vsi, vsi1, vsi2);
   // CHECK-ASM: vmalf
-  vsi = vec_mladd(vui, vsi, vsi);
+  vsi = vec_mladd(vui, vsi, vsi1);
   // CHECK-ASM: vmalf
-  vsi = vec_mladd(vsi, vui, vui);
+  vsi = vec_mladd(vsi, vui, vui1);
   // CHECK-ASM: vmalf
-  vui = vec_mladd(vui, vui, vui);
+  vui = vec_mladd(vui, vui1, vui2);
   // CHECK-ASM: vmalf
 
-  vsc = vec_mhadd(vsc, vsc, vsc);
+  vsc = vec_mhadd(vsc, vsc1, vsc2);
   // CHECK: call <16 x i8> @llvm.s390.vmahb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vmahb
-  vuc = vec_mhadd(vuc, vuc, vuc);
+  vuc = vec_mhadd(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vmalhb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vmalhb
-  vss = vec_mhadd(vss, vss, vss);
+  vss = vec_mhadd(vss, vss1, vss2);
   // CHECK: call <8 x i16> @llvm.s390.vmahh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmahh
-  vus = vec_mhadd(vus, vus, vus);
+  vus = vec_mhadd(vus, vus1, vus2);
   // CHECK: call <8 x i16> @llvm.s390.vmalhh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmalhh
-  vsi = vec_mhadd(vsi, vsi, vsi);
+  vsi = vec_mhadd(vsi, vsi1, vsi2);
   // CHECK: call <4 x i32> @llvm.s390.vmahf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmahf
-  vui = vec_mhadd(vui, vui, vui);
+  vui = vec_mhadd(vui, vui1, vui2);
   // CHECK: call <4 x i32> @llvm.s390.vmalhf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmalhf
 
-  vss = vec_meadd(vsc, vsc, vss);
+  vss = vec_meadd(vsc, vsc1, vss);
   // CHECK: call <8 x i16> @llvm.s390.vmaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmaeb
-  vus = vec_meadd(vuc, vuc, vus);
+  vus = vec_meadd(vuc, vuc1, vus);
   // CHECK: call <8 x i16> @llvm.s390.vmaleb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmaleb
-  vsi = vec_meadd(vss, vss, vsi);
+  vsi = vec_meadd(vss, vss1, vsi);
   // CHECK: call <4 x i32> @llvm.s390.vmaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmaeh
-  vui = vec_meadd(vus, vus, vui);
+  vui = vec_meadd(vus, vus1, vui);
   // CHECK: call <4 x i32> @llvm.s390.vmaleh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmaleh
-  vsl = vec_meadd(vsi, vsi, vsl);
+  vsl = vec_meadd(vsi, vsi1, vsl);
   // CHECK: call <2 x i64> @llvm.s390.vmaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vmaef
-  vul = vec_meadd(vui, vui, vul);
+  vul = vec_meadd(vui, vui1, vul);
   // CHECK: call <2 x i64> @llvm.s390.vmalef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vmalef
 
-  vss = vec_moadd(vsc, vsc, vss);
+  vss = vec_moadd(vsc, vsc1, vss);
   // CHECK: call <8 x i16> @llvm.s390.vmaob(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmaob
-  vus = vec_moadd(vuc, vuc, vus);
+  vus = vec_moadd(vuc, vuc1, vus);
   // CHECK: call <8 x i16> @llvm.s390.vmalob(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmalob
-  vsi = vec_moadd(vss, vss, vsi);
+  vsi = vec_moadd(vss, vss1, vsi);
   // CHECK: call <4 x i32> @llvm.s390.vmaoh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmaoh
-  vui = vec_moadd(vus, vus, vui);
+  vui = vec_moadd(vus, vus1, vui);
   // CHECK: call <4 x i32> @llvm.s390.vmaloh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmaloh
-  vsl = vec_moadd(vsi, vsi, vsl);
+  vsl = vec_moadd(vsi, vsi1, vsl);
   // CHECK: call <2 x i64> @llvm.s390.vmaof(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vmaof
-  vul = vec_moadd(vui, vui, vul);
+  vul = vec_moadd(vui, vui1, vul);
   // CHECK: call <2 x i64> @llvm.s390.vmalof(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vmalof
 
-  vsc = vec_mulh(vsc, vsc);
+  vsc = vec_mulh(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vmhb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vmhb
-  vuc = vec_mulh(vuc, vuc);
+  vuc = vec_mulh(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vmlhb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vmlhb
-  vss = vec_mulh(vss, vss);
+  vss = vec_mulh(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vmhh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmhh
-  vus = vec_mulh(vus, vus);
+  vus = vec_mulh(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vmlhh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmlhh
-  vsi = vec_mulh(vsi, vsi);
+  vsi = vec_mulh(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vmhf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmhf
-  vui = vec_mulh(vui, vui);
+  vui = vec_mulh(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vmlhf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmlhf
 
-  vss = vec_mule(vsc, vsc);
+  vss = vec_mule(vsc, vsc1);
   // CHECK: call <8 x i16> @llvm.s390.vmeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vmeb
-  vus = vec_mule(vuc, vuc);
+  vus = vec_mule(vuc, vuc1);
   // CHECK: call <8 x i16> @llvm.s390.vmleb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vmleb
-  vsi = vec_mule(vss, vss);
+  vsi = vec_mule(vss, vss1);
   // CHECK: call <4 x i32> @llvm.s390.vmeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmeh
-  vui = vec_mule(vus, vus);
+  vui = vec_mule(vus, vus1);
   // CHECK: call <4 x i32> @llvm.s390.vmleh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmleh
-  vsl = vec_mule(vsi, vsi);
+  vsl = vec_mule(vsi, vsi1);
   // CHECK: call <2 x i64> @llvm.s390.vmef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmef
-  vul = vec_mule(vui, vui);
+  vul = vec_mule(vui, vui1);
   // CHECK: call <2 x i64> @llvm.s390.vmlef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmlef
 
-  vss = vec_mulo(vsc, vsc);
+  vss = vec_mulo(vsc, vsc1);
   // CHECK: call <8 x i16> @llvm.s390.vmob(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vmob
-  vus = vec_mulo(vuc, vuc);
+  vus = vec_mulo(vuc, vuc1);
   // CHECK: call <8 x i16> @llvm.s390.vmlob(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vmlob
-  vsi = vec_mulo(vss, vss);
+  vsi = vec_mulo(vss, vss1);
   // CHECK: call <4 x i32> @llvm.s390.vmoh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmoh
-  vui = vec_mulo(vus, vus);
+  vui = vec_mulo(vus, vus1);
   // CHECK: call <4 x i32> @llvm.s390.vmloh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vmloh
-  vsl = vec_mulo(vsi, vsi);
+  vsl = vec_mulo(vsi, vsi1);
   // CHECK: call <2 x i64> @llvm.s390.vmof(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmof
-  vul = vec_mulo(vui, vui);
+  vul = vec_mulo(vui, vui1);
   // CHECK: call <2 x i64> @llvm.s390.vmlof(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vmlof
 
-  vuc = vec_subc(vuc, vuc);
+  vuc = vec_subc(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vscbib(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vscbib
-  vus = vec_subc(vus, vus);
+  vus = vec_subc(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vscbih(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vscbih
-  vui = vec_subc(vui, vui);
+  vui = vec_subc(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vscbif(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vscbif
-  vul = vec_subc(vul, vul);
+  vul = vec_subc(vul, vul1);
   // CHECK: call <2 x i64> @llvm.s390.vscbig(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vscbig
-  vulll = vec_subc(vulll, vulll);
+  vulll = vec_subc(vulll, vulll1);
   // CHECK: call i128 @llvm.s390.vscbiq(i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vscbiq
 
-  vulll = vec_sube(vulll, vulll, vulll);
+  vulll = vec_sube(vulll, vulll1, vulll2);
   // CHECK: call i128 @llvm.s390.vsbiq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vsbiq
-  vulll = vec_subec(vulll, vulll, vulll);
+  vulll = vec_subec(vulll, vulll1, vulll2);
   // CHECK: call i128 @llvm.s390.vsbcbiq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vsbcbiq
 
-  vuc = vec_sub_u128(vuc, vuc);
+  vuc = vec_sub_u128(vuc, vuc1);
   // CHECK-ASM: vsq
-  vuc = vec_subc_u128(vuc, vuc);
+  vuc = vec_subc_u128(vuc, vuc1);
   // CHECK: call i128 @llvm.s390.vscbiq(i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vscbiq
-  vuc = vec_sube_u128(vuc, vuc, vuc);
+  vuc = vec_sube_u128(vuc, vuc1, vuc2);
   // CHECK: call i128 @llvm.s390.vsbiq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vsbiq
-  vuc = vec_subec_u128(vuc, vuc, vuc);
+  vuc = vec_subec_u128(vuc, vuc1, vuc2);
   // CHECK: call i128 @llvm.s390.vsbcbiq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
   // CHECK-ASM: vsbcbiq
 
-  vui = vec_sum4(vuc, vuc);
+  vui = vec_sum4(vuc, vuc1);
   // CHECK: call <4 x i32> @llvm.s390.vsumb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vsumb
-  vui = vec_sum4(vus, vus);
+  vui = vec_sum4(vus, vus1);
   // CHECK: call <4 x i32> @llvm.s390.vsumh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vsumh
-  vul = vec_sum2(vus, vus);
+  vul = vec_sum2(vus, vus1);
   // CHECK: call <2 x i64> @llvm.s390.vsumgh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vsumgh
-  vul = vec_sum2(vui, vui);
+  vul = vec_sum2(vui, vui1);
   // CHECK: call <2 x i64> @llvm.s390.vsumgf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vsumgf
-  vulll = vec_sum(vui, vui);
+  vulll = vec_sum(vui, vui1);
   // CHECK: call i128 @llvm.s390.vsumqf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vsumqf
-  vulll = vec_sum(vul, vul);
+  vulll = vec_sum(vul, vul1);
   // CHECK: call i128 @llvm.s390.vsumqg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vsumqg
-  vuc = vec_sum_u128(vui, vui);
+  vuc = vec_sum_u128(vui, vui1);
   // CHECK: call i128 @llvm.s390.vsumqf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vsumqf
-  vuc = vec_sum_u128(vul, vul);
+  vuc = vec_sum_u128(vul, vul1);
   // CHECK: call i128 @llvm.s390.vsumqg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK-ASM: vsumqg
 
   idx = vec_test_mask(vsc, vuc);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
-  idx = vec_test_mask(vuc, vuc);
+  idx = vec_test_mask(vuc, vuc1);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vss, vus);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
-  idx = vec_test_mask(vus, vus);
+  idx = vec_test_mask(vus, vus1);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vsi, vui);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
-  idx = vec_test_mask(vui, vui);
+  idx = vec_test_mask(vui, vui1);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vsl, vul);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
-  idx = vec_test_mask(vul, vul);
+  idx = vec_test_mask(vul, vul1);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vslll, vulll);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
-  idx = vec_test_mask(vulll, vulll);
+  idx = vec_test_mask(vulll, vulll1);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vtm
   idx = vec_test_mask(vd, vul);
@@ -4091,683 +4121,683 @@ void test_string(void) {
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vistrfs(<4 x i32> %{{.*}})
   // CHECK-ASM: vistrfs
 
-  vsc = vec_cmpeq_idx(vsc, vsc);
+  vsc = vec_cmpeq_idx(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeeb
-  vuc = vec_cmpeq_idx(vuc, vuc);
+  vuc = vec_cmpeq_idx(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeeb
-  vuc = vec_cmpeq_idx(vbc, vbc);
+  vuc = vec_cmpeq_idx(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeeb
-  vss = vec_cmpeq_idx(vss, vss);
+  vss = vec_cmpeq_idx(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfeeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeeh
-  vus = vec_cmpeq_idx(vus, vus);
+  vus = vec_cmpeq_idx(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfeeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeeh
-  vus = vec_cmpeq_idx(vbs, vbs);
+  vus = vec_cmpeq_idx(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfeeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeeh
-  vsi = vec_cmpeq_idx(vsi, vsi);
+  vsi = vec_cmpeq_idx(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfeef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeef
-  vui = vec_cmpeq_idx(vui, vui);
+  vui = vec_cmpeq_idx(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfeef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeef
-  vui = vec_cmpeq_idx(vbi, vbi);
+  vui = vec_cmpeq_idx(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfeef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeef
 
-  vsc = vec_cmpeq_idx_cc(vsc, vsc, &cc);
+  vsc = vec_cmpeq_idx_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfeebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeebs
-  vuc = vec_cmpeq_idx_cc(vuc, vuc, &cc);
+  vuc = vec_cmpeq_idx_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfeebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeebs
-  vuc = vec_cmpeq_idx_cc(vbc, vbc, &cc);
+  vuc = vec_cmpeq_idx_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfeebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeebs
-  vss = vec_cmpeq_idx_cc(vss, vss, &cc);
+  vss = vec_cmpeq_idx_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfeehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeehs
-  vus = vec_cmpeq_idx_cc(vus, vus, &cc);
+  vus = vec_cmpeq_idx_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfeehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeehs
-  vus = vec_cmpeq_idx_cc(vbs, vbs, &cc);
+  vus = vec_cmpeq_idx_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfeehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeehs
-  vsi = vec_cmpeq_idx_cc(vsi, vsi, &cc);
+  vsi = vec_cmpeq_idx_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfeefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeefs
-  vui = vec_cmpeq_idx_cc(vui, vui, &cc);
+  vui = vec_cmpeq_idx_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfeefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeefs
-  vui = vec_cmpeq_idx_cc(vbi, vbi, &cc);
+  vui = vec_cmpeq_idx_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfeefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeefs
 
-  vsc = vec_cmpeq_or_0_idx(vsc, vsc);
+  vsc = vec_cmpeq_or_0_idx(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeezb
-  vuc = vec_cmpeq_or_0_idx(vuc, vuc);
+  vuc = vec_cmpeq_or_0_idx(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeezb
-  vuc = vec_cmpeq_or_0_idx(vbc, vbc);
+  vuc = vec_cmpeq_or_0_idx(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeezb
-  vss = vec_cmpeq_or_0_idx(vss, vss);
+  vss = vec_cmpeq_or_0_idx(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfeezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeezh
-  vus = vec_cmpeq_or_0_idx(vus, vus);
+  vus = vec_cmpeq_or_0_idx(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfeezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeezh
-  vus = vec_cmpeq_or_0_idx(vbs, vbs);
+  vus = vec_cmpeq_or_0_idx(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfeezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeezh
-  vsi = vec_cmpeq_or_0_idx(vsi, vsi);
+  vsi = vec_cmpeq_or_0_idx(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfeezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeezf
-  vui = vec_cmpeq_or_0_idx(vui, vui);
+  vui = vec_cmpeq_or_0_idx(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfeezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeezf
-  vui = vec_cmpeq_or_0_idx(vbi, vbi);
+  vui = vec_cmpeq_or_0_idx(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfeezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeezf
 
-  vsc = vec_cmpeq_or_0_idx_cc(vsc, vsc, &cc);
+  vsc = vec_cmpeq_or_0_idx_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfeezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeezbs
-  vuc = vec_cmpeq_or_0_idx_cc(vuc, vuc, &cc);
+  vuc = vec_cmpeq_or_0_idx_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfeezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeezbs
-  vuc = vec_cmpeq_or_0_idx_cc(vbc, vbc, &cc);
+  vuc = vec_cmpeq_or_0_idx_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfeezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeezbs
-  vss = vec_cmpeq_or_0_idx_cc(vss, vss, &cc);
+  vss = vec_cmpeq_or_0_idx_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfeezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeezhs
-  vus = vec_cmpeq_or_0_idx_cc(vus, vus, &cc);
+  vus = vec_cmpeq_or_0_idx_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfeezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeezhs
-  vus = vec_cmpeq_or_0_idx_cc(vbs, vbs, &cc);
+  vus = vec_cmpeq_or_0_idx_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfeezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeezhs
-  vsi = vec_cmpeq_or_0_idx_cc(vsi, vsi, &cc);
+  vsi = vec_cmpeq_or_0_idx_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfeezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeezfs
-  vui = vec_cmpeq_or_0_idx_cc(vui, vui, &cc);
+  vui = vec_cmpeq_or_0_idx_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfeezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeezfs
-  vui = vec_cmpeq_or_0_idx_cc(vbi, vbi, &cc);
+  vui = vec_cmpeq_or_0_idx_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfeezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfeezfs
 
-  vsc = vec_cmpne_idx(vsc, vsc);
+  vsc = vec_cmpne_idx(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeneb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeneb
-  vuc = vec_cmpne_idx(vuc, vuc);
+  vuc = vec_cmpne_idx(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeneb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeneb
-  vuc = vec_cmpne_idx(vbc, vbc);
+  vuc = vec_cmpne_idx(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeneb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfeneb
-  vss = vec_cmpne_idx(vss, vss);
+  vss = vec_cmpne_idx(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfeneh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeneh
-  vus = vec_cmpne_idx(vus, vus);
+  vus = vec_cmpne_idx(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfeneh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeneh
-  vus = vec_cmpne_idx(vbs, vbs);
+  vus = vec_cmpne_idx(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfeneh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfeneh
-  vsi = vec_cmpne_idx(vsi, vsi);
+  vsi = vec_cmpne_idx(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfenef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenef
-  vui = vec_cmpne_idx(vui, vui);
+  vui = vec_cmpne_idx(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfenef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenef
-  vui = vec_cmpne_idx(vbi, vbi);
+  vui = vec_cmpne_idx(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfenef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenef
 
-  vsc = vec_cmpne_idx_cc(vsc, vsc, &cc);
+  vsc = vec_cmpne_idx_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfenebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfenebs
-  vuc = vec_cmpne_idx_cc(vuc, vuc, &cc);
+  vuc = vec_cmpne_idx_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfenebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfenebs
-  vuc = vec_cmpne_idx_cc(vbc, vbc, &cc);
+  vuc = vec_cmpne_idx_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfenebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfenebs
-  vss = vec_cmpne_idx_cc(vss, vss, &cc);
+  vss = vec_cmpne_idx_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfenehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfenehs
-  vus = vec_cmpne_idx_cc(vus, vus, &cc);
+  vus = vec_cmpne_idx_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfenehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfenehs
-  vus = vec_cmpne_idx_cc(vbs, vbs, &cc);
+  vus = vec_cmpne_idx_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfenehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfenehs
-  vsi = vec_cmpne_idx_cc(vsi, vsi, &cc);
+  vsi = vec_cmpne_idx_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfenefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenefs
-  vui = vec_cmpne_idx_cc(vui, vui, &cc);
+  vui = vec_cmpne_idx_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfenefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenefs
-  vui = vec_cmpne_idx_cc(vbi, vbi, &cc);
+  vui = vec_cmpne_idx_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfenefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenefs
 
-  vsc = vec_cmpne_or_0_idx(vsc, vsc);
+  vsc = vec_cmpne_or_0_idx(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfenezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfenezb
-  vuc = vec_cmpne_or_0_idx(vuc, vuc);
+  vuc = vec_cmpne_or_0_idx(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfenezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfenezb
-  vuc = vec_cmpne_or_0_idx(vbc, vbc);
+  vuc = vec_cmpne_or_0_idx(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfenezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfenezb
-  vss = vec_cmpne_or_0_idx(vss, vss);
+  vss = vec_cmpne_or_0_idx(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfenezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfenezh
-  vus = vec_cmpne_or_0_idx(vus, vus);
+  vus = vec_cmpne_or_0_idx(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfenezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfenezh
-  vus = vec_cmpne_or_0_idx(vbs, vbs);
+  vus = vec_cmpne_or_0_idx(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfenezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfenezh
-  vsi = vec_cmpne_or_0_idx(vsi, vsi);
+  vsi = vec_cmpne_or_0_idx(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfenezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenezf
-  vui = vec_cmpne_or_0_idx(vui, vui);
+  vui = vec_cmpne_or_0_idx(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfenezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenezf
-  vui = vec_cmpne_or_0_idx(vbi, vbi);
+  vui = vec_cmpne_or_0_idx(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfenezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenezf
 
-  vsc = vec_cmpne_or_0_idx_cc(vsc, vsc, &cc);
+  vsc = vec_cmpne_or_0_idx_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfenezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfenezbs
-  vuc = vec_cmpne_or_0_idx_cc(vuc, vuc, &cc);
+  vuc = vec_cmpne_or_0_idx_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfenezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfenezbs
-  vuc = vec_cmpne_or_0_idx_cc(vbc, vbc, &cc);
+  vuc = vec_cmpne_or_0_idx_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfenezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vfenezbs
-  vss = vec_cmpne_or_0_idx_cc(vss, vss, &cc);
+  vss = vec_cmpne_or_0_idx_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfenezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfenezhs
-  vus = vec_cmpne_or_0_idx_cc(vus, vus, &cc);
+  vus = vec_cmpne_or_0_idx_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfenezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfenezhs
-  vus = vec_cmpne_or_0_idx_cc(vbs, vbs, &cc);
+  vus = vec_cmpne_or_0_idx_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfenezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   // CHECK-ASM: vfenezhs
-  vsi = vec_cmpne_or_0_idx_cc(vsi, vsi, &cc);
+  vsi = vec_cmpne_or_0_idx_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfenezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenezfs
-  vui = vec_cmpne_or_0_idx_cc(vui, vui, &cc);
+  vui = vec_cmpne_or_0_idx_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfenezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenezfs
-  vui = vec_cmpne_or_0_idx_cc(vbi, vbi, &cc);
+  vui = vec_cmpne_or_0_idx_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfenezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK-ASM: vfenezfs
 
-  vbc = vec_cmprg(vuc, vuc, vuc);
+  vbc = vec_cmprg(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vstrcb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 4)
   // CHECK-ASM: vstrcb
-  vbs = vec_cmprg(vus, vus, vus);
+  vbs = vec_cmprg(vus, vus1, vus2);
   // CHECK: call <8 x i16> @llvm.s390.vstrch(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 4)
   // CHECK-ASM: vstrch
-  vbi = vec_cmprg(vui, vui, vui);
+  vbi = vec_cmprg(vui, vui1, vui2);
   // CHECK: call <4 x i32> @llvm.s390.vstrcf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 4)
   // CHECK-ASM: vstrcf
 
-  vbc = vec_cmprg_cc(vuc, vuc, vuc, &cc);
+  vbc = vec_cmprg_cc(vuc, vuc1, vuc2, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrcbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 4)
   // CHECK-ASM: vstrcbs
-  vbs = vec_cmprg_cc(vus, vus, vus, &cc);
+  vbs = vec_cmprg_cc(vus, vus1, vus2, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrchs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 4)
   // CHECK-ASM: vstrchs
-  vbi = vec_cmprg_cc(vui, vui, vui, &cc);
+  vbi = vec_cmprg_cc(vui, vui1, vui2, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrcfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 4)
   // CHECK-ASM: vstrcfs
 
-  vuc = vec_cmprg_idx(vuc, vuc, vuc);
+  vuc = vec_cmprg_idx(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vstrcb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vstrcb
-  vus = vec_cmprg_idx(vus, vus, vus);
+  vus = vec_cmprg_idx(vus, vus1, vus2);
   // CHECK: call <8 x i16> @llvm.s390.vstrch(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vstrch
-  vui = vec_cmprg_idx(vui, vui, vui);
+  vui = vec_cmprg_idx(vui, vui1, vui2);
   // CHECK: call <4 x i32> @llvm.s390.vstrcf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vstrcf
 
-  vuc = vec_cmprg_idx_cc(vuc, vuc, vuc, &cc);
+  vuc = vec_cmprg_idx_cc(vuc, vuc1, vuc2, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrcbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vstrcbs
-  vus = vec_cmprg_idx_cc(vus, vus, vus, &cc);
+  vus = vec_cmprg_idx_cc(vus, vus1, vus2, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrchs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vstrchs
-  vui = vec_cmprg_idx_cc(vui, vui, vui, &cc);
+  vui = vec_cmprg_idx_cc(vui, vui1, vui2, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrcfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vstrcfs
 
-  vuc = vec_cmprg_or_0_idx(vuc, vuc, vuc);
+  vuc = vec_cmprg_or_0_idx(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vstrczb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vstrczb
-  vus = vec_cmprg_or_0_idx(vus, vus, vus);
+  vus = vec_cmprg_or_0_idx(vus, vus1, vus2);
   // CHECK: call <8 x i16> @llvm.s390.vstrczh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vstrczh
-  vui = vec_cmprg_or_0_idx(vui, vui, vui);
+  vui = vec_cmprg_or_0_idx(vui, vui1, vui2);
   // CHECK: call <4 x i32> @llvm.s390.vstrczf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vstrczf
 
-  vuc = vec_cmprg_or_0_idx_cc(vuc, vuc, vuc, &cc);
+  vuc = vec_cmprg_or_0_idx_cc(vuc, vuc1, vuc2, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrczbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vstrczbs
-  vus = vec_cmprg_or_0_idx_cc(vus, vus, vus, &cc);
+  vus = vec_cmprg_or_0_idx_cc(vus, vus1, vus2, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrczhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vstrczhs
-  vui = vec_cmprg_or_0_idx_cc(vui, vui, vui, &cc);
+  vui = vec_cmprg_or_0_idx_cc(vui, vui1, vui2, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrczfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vstrczfs
 
-  vbc = vec_cmpnrg(vuc, vuc, vuc);
+  vbc = vec_cmpnrg(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vstrcb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vstrcb
-  vbs = vec_cmpnrg(vus, vus, vus);
+  vbs = vec_cmpnrg(vus, vus1, vus2);
   // CHECK: call <8 x i16> @llvm.s390.vstrch(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 12)
   // CHECK-ASM: vstrch
-  vbi = vec_cmpnrg(vui, vui, vui);
+  vbi = vec_cmpnrg(vui, vui1, vui2);
   // CHECK: call <4 x i32> @llvm.s390.vstrcf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 12)
   // CHECK-ASM: vstrcf
 
-  vbc = vec_cmpnrg_cc(vuc, vuc, vuc, &cc);
+  vbc = vec_cmpnrg_cc(vuc, vuc1, vuc2, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrcbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vstrcbs
-  vbs = vec_cmpnrg_cc(vus, vus, vus, &cc);
+  vbs = vec_cmpnrg_cc(vus, vus1, vus2, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrchs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 12)
   // CHECK-ASM: vstrchs
-  vbi = vec_cmpnrg_cc(vui, vui, vui, &cc);
+  vbi = vec_cmpnrg_cc(vui, vui1, vui2, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrcfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 12)
   // CHECK-ASM: vstrcfs
 
-  vuc = vec_cmpnrg_idx(vuc, vuc, vuc);
+  vuc = vec_cmpnrg_idx(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vstrcb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vstrcb
-  vus = vec_cmpnrg_idx(vus, vus, vus);
+  vus = vec_cmpnrg_idx(vus, vus1, vus2);
   // CHECK: call <8 x i16> @llvm.s390.vstrch(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vstrch
-  vui = vec_cmpnrg_idx(vui, vui, vui);
+  vui = vec_cmpnrg_idx(vui, vui1, vui2);
   // CHECK: call <4 x i32> @llvm.s390.vstrcf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vstrcf
 
-  vuc = vec_cmpnrg_idx_cc(vuc, vuc, vuc, &cc);
+  vuc = vec_cmpnrg_idx_cc(vuc, vuc1, vuc2, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrcbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vstrcbs
-  vus = vec_cmpnrg_idx_cc(vus, vus, vus, &cc);
+  vus = vec_cmpnrg_idx_cc(vus, vus1, vus2, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrchs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vstrchs
-  vui = vec_cmpnrg_idx_cc(vui, vui, vui, &cc);
+  vui = vec_cmpnrg_idx_cc(vui, vui1, vui2, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrcfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vstrcfs
 
-  vuc = vec_cmpnrg_or_0_idx(vuc, vuc, vuc);
+  vuc = vec_cmpnrg_or_0_idx(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vstrczb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vstrczb
-  vus = vec_cmpnrg_or_0_idx(vus, vus, vus);
+  vus = vec_cmpnrg_or_0_idx(vus, vus1, vus2);
   // CHECK: call <8 x i16> @llvm.s390.vstrczh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vstrczh
-  vui = vec_cmpnrg_or_0_idx(vui, vui, vui);
+  vui = vec_cmpnrg_or_0_idx(vui, vui1, vui2);
   // CHECK: call <4 x i32> @llvm.s390.vstrczf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vstrczf
 
-  vuc = vec_cmpnrg_or_0_idx_cc(vuc, vuc, vuc, &cc);
+  vuc = vec_cmpnrg_or_0_idx_cc(vuc, vuc1, vuc2, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrczbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vstrczbs
-  vus = vec_cmpnrg_or_0_idx_cc(vus, vus, vus, &cc);
+  vus = vec_cmpnrg_or_0_idx_cc(vus, vus1, vus2, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrczhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vstrczhs
-  vui = vec_cmpnrg_or_0_idx_cc(vui, vui, vui, &cc);
+  vui = vec_cmpnrg_or_0_idx_cc(vui, vui1, vui2, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrczfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vstrczfs
 
-  vbc = vec_find_any_eq(vsc, vsc);
+  vbc = vec_find_any_eq(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 4)
   // CHECK-ASM: vfaeb
-  vbc = vec_find_any_eq(vuc, vuc);
+  vbc = vec_find_any_eq(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 4)
   // CHECK-ASM: vfaeb
-  vbc = vec_find_any_eq(vbc, vbc);
+  vbc = vec_find_any_eq(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 4)
   // CHECK-ASM: vfaeb
-  vbs = vec_find_any_eq(vss, vss);
+  vbs = vec_find_any_eq(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 4)
   // CHECK-ASM: vfaeh
-  vbs = vec_find_any_eq(vus, vus);
+  vbs = vec_find_any_eq(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 4)
   // CHECK-ASM: vfaeh
-  vbs = vec_find_any_eq(vbs, vbs);
+  vbs = vec_find_any_eq(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 4)
   // CHECK-ASM: vfaeh
-  vbi = vec_find_any_eq(vsi, vsi);
+  vbi = vec_find_any_eq(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 4)
   // CHECK-ASM: vfaef
-  vbi = vec_find_any_eq(vui, vui);
+  vbi = vec_find_any_eq(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 4)
   // CHECK-ASM: vfaef
-  vbi = vec_find_any_eq(vbi, vbi);
+  vbi = vec_find_any_eq(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 4)
   // CHECK-ASM: vfaef
 
-  vbc = vec_find_any_eq_cc(vsc, vsc, &cc);
+  vbc = vec_find_any_eq_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 4)
   // CHECK-ASM: vfaebs
-  vbc = vec_find_any_eq_cc(vuc, vuc, &cc);
+  vbc = vec_find_any_eq_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 4)
   // CHECK-ASM: vfaebs
-  vbc = vec_find_any_eq_cc(vbc, vbc, &cc);
+  vbc = vec_find_any_eq_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 4)
   // CHECK-ASM: vfaebs
-  vbs = vec_find_any_eq_cc(vss, vss, &cc);
+  vbs = vec_find_any_eq_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 4)
   // CHECK-ASM: vfaehs
-  vbs = vec_find_any_eq_cc(vus, vus, &cc);
+  vbs = vec_find_any_eq_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 4)
   // CHECK-ASM: vfaehs
-  vbs = vec_find_any_eq_cc(vbs, vbs, &cc);
+  vbs = vec_find_any_eq_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 4)
   // CHECK-ASM: vfaehs
-  vbi = vec_find_any_eq_cc(vsi, vsi, &cc);
+  vbi = vec_find_any_eq_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 4)
   // CHECK-ASM: vfaefs
-  vbi = vec_find_any_eq_cc(vui, vui, &cc);
+  vbi = vec_find_any_eq_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 4)
   // CHECK-ASM: vfaefs
-  vbi = vec_find_any_eq_cc(vbi, vbi, &cc);
+  vbi = vec_find_any_eq_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 4)
   // CHECK-ASM: vfaefs
 
-  vsc = vec_find_any_eq_idx(vsc, vsc);
+  vsc = vec_find_any_eq_idx(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaeb
-  vuc = vec_find_any_eq_idx(vuc, vuc);
+  vuc = vec_find_any_eq_idx(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaeb
-  vuc = vec_find_any_eq_idx(vbc, vbc);
+  vuc = vec_find_any_eq_idx(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaeb
-  vss = vec_find_any_eq_idx(vss, vss);
+  vss = vec_find_any_eq_idx(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaeh
-  vus = vec_find_any_eq_idx(vus, vus);
+  vus = vec_find_any_eq_idx(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaeh
-  vus = vec_find_any_eq_idx(vbs, vbs);
+  vus = vec_find_any_eq_idx(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaeh
-  vsi = vec_find_any_eq_idx(vsi, vsi);
+  vsi = vec_find_any_eq_idx(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaef
-  vui = vec_find_any_eq_idx(vui, vui);
+  vui = vec_find_any_eq_idx(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaef
-  vui = vec_find_any_eq_idx(vbi, vbi);
+  vui = vec_find_any_eq_idx(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaef
 
-  vsc = vec_find_any_eq_idx_cc(vsc, vsc, &cc);
+  vsc = vec_find_any_eq_idx_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaebs
-  vuc = vec_find_any_eq_idx_cc(vuc, vuc, &cc);
+  vuc = vec_find_any_eq_idx_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaebs
-  vuc = vec_find_any_eq_idx_cc(vbc, vbc, &cc);
+  vuc = vec_find_any_eq_idx_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaebs
-  vss = vec_find_any_eq_idx_cc(vss, vss, &cc);
+  vss = vec_find_any_eq_idx_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaehs
-  vus = vec_find_any_eq_idx_cc(vus, vus, &cc);
+  vus = vec_find_any_eq_idx_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaehs
-  vus = vec_find_any_eq_idx_cc(vbs, vbs, &cc);
+  vus = vec_find_any_eq_idx_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaehs
-  vsi = vec_find_any_eq_idx_cc(vsi, vsi, &cc);
+  vsi = vec_find_any_eq_idx_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaefs
-  vui = vec_find_any_eq_idx_cc(vui, vui, &cc);
+  vui = vec_find_any_eq_idx_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaefs
-  vui = vec_find_any_eq_idx_cc(vbi, vbi, &cc);
+  vui = vec_find_any_eq_idx_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaefs
 
-  vsc = vec_find_any_eq_or_0_idx(vsc, vsc);
+  vsc = vec_find_any_eq_or_0_idx(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezb
-  vuc = vec_find_any_eq_or_0_idx(vuc, vuc);
+  vuc = vec_find_any_eq_or_0_idx(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezb
-  vuc = vec_find_any_eq_or_0_idx(vbc, vbc);
+  vuc = vec_find_any_eq_or_0_idx(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezb
-  vss = vec_find_any_eq_or_0_idx(vss, vss);
+  vss = vec_find_any_eq_or_0_idx(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezh
-  vus = vec_find_any_eq_or_0_idx(vus, vus);
+  vus = vec_find_any_eq_or_0_idx(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezh
-  vus = vec_find_any_eq_or_0_idx(vbs, vbs);
+  vus = vec_find_any_eq_or_0_idx(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezh
-  vsi = vec_find_any_eq_or_0_idx(vsi, vsi);
+  vsi = vec_find_any_eq_or_0_idx(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezf
-  vui = vec_find_any_eq_or_0_idx(vui, vui);
+  vui = vec_find_any_eq_or_0_idx(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezf
-  vui = vec_find_any_eq_or_0_idx(vbi, vbi);
+  vui = vec_find_any_eq_or_0_idx(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezf
 
-  vsc = vec_find_any_eq_or_0_idx_cc(vsc, vsc, &cc);
+  vsc = vec_find_any_eq_or_0_idx_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezbs
-  vuc = vec_find_any_eq_or_0_idx_cc(vuc, vuc, &cc);
+  vuc = vec_find_any_eq_or_0_idx_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezbs
-  vuc = vec_find_any_eq_or_0_idx_cc(vbc, vbc, &cc);
+  vuc = vec_find_any_eq_or_0_idx_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezbs
-  vss = vec_find_any_eq_or_0_idx_cc(vss, vss, &cc);
+  vss = vec_find_any_eq_or_0_idx_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezhs
-  vus = vec_find_any_eq_or_0_idx_cc(vus, vus, &cc);
+  vus = vec_find_any_eq_or_0_idx_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezhs
-  vus = vec_find_any_eq_or_0_idx_cc(vbs, vbs, &cc);
+  vus = vec_find_any_eq_or_0_idx_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezhs
-  vsi = vec_find_any_eq_or_0_idx_cc(vsi, vsi, &cc);
+  vsi = vec_find_any_eq_or_0_idx_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezfs
-  vui = vec_find_any_eq_or_0_idx_cc(vui, vui, &cc);
+  vui = vec_find_any_eq_or_0_idx_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezfs
-  vui = vec_find_any_eq_or_0_idx_cc(vbi, vbi, &cc);
+  vui = vec_find_any_eq_or_0_idx_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   // CHECK-ASM: vfaezfs
 
-  vbc = vec_find_any_ne(vsc, vsc);
+  vbc = vec_find_any_ne(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vfaeb
-  vbc = vec_find_any_ne(vuc, vuc);
+  vbc = vec_find_any_ne(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vfaeb
-  vbc = vec_find_any_ne(vbc, vbc);
+  vbc = vec_find_any_ne(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vfaeb
-  vbs = vec_find_any_ne(vss, vss);
+  vbs = vec_find_any_ne(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 12)
   // CHECK-ASM: vfaeh
-  vbs = vec_find_any_ne(vus, vus);
+  vbs = vec_find_any_ne(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 12)
   // CHECK-ASM: vfaeh
-  vbs = vec_find_any_ne(vbs, vbs);
+  vbs = vec_find_any_ne(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 12)
   // CHECK-ASM: vfaeh
-  vbi = vec_find_any_ne(vsi, vsi);
+  vbi = vec_find_any_ne(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 12)
   // CHECK-ASM: vfaef
-  vbi = vec_find_any_ne(vui, vui);
+  vbi = vec_find_any_ne(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 12)
   // CHECK-ASM: vfaef
-  vbi = vec_find_any_ne(vbi, vbi);
+  vbi = vec_find_any_ne(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 12)
   // CHECK-ASM: vfaef
 
-  vbc = vec_find_any_ne_cc(vsc, vsc, &cc);
+  vbc = vec_find_any_ne_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vfaebs
-  vbc = vec_find_any_ne_cc(vuc, vuc, &cc);
+  vbc = vec_find_any_ne_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vfaebs
-  vbc = vec_find_any_ne_cc(vbc, vbc, &cc);
+  vbc = vec_find_any_ne_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 12)
   // CHECK-ASM: vfaebs
-  vbs = vec_find_any_ne_cc(vss, vss, &cc);
+  vbs = vec_find_any_ne_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 12)
   // CHECK-ASM: vfaehs
-  vbs = vec_find_any_ne_cc(vus, vus, &cc);
+  vbs = vec_find_any_ne_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 12)
   // CHECK-ASM: vfaehs
-  vbs = vec_find_any_ne_cc(vbs, vbs, &cc);
+  vbs = vec_find_any_ne_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 12)
   // CHECK-ASM: vfaehs
-  vbi = vec_find_any_ne_cc(vsi, vsi, &cc);
+  vbi = vec_find_any_ne_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 12)
   // CHECK-ASM: vfaefs
-  vbi = vec_find_any_ne_cc(vui, vui, &cc);
+  vbi = vec_find_any_ne_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 12)
   // CHECK-ASM: vfaefs
-  vbi = vec_find_any_ne_cc(vbi, vbi, &cc);
+  vbi = vec_find_any_ne_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 12)
   // CHECK-ASM: vfaefs
 
-  vsc = vec_find_any_ne_idx(vsc, vsc);
+  vsc = vec_find_any_ne_idx(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaeb
-  vuc = vec_find_any_ne_idx(vuc, vuc);
+  vuc = vec_find_any_ne_idx(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaeb
-  vuc = vec_find_any_ne_idx(vbc, vbc);
+  vuc = vec_find_any_ne_idx(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaeb
-  vss = vec_find_any_ne_idx(vss, vss);
+  vss = vec_find_any_ne_idx(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaeh
-  vus = vec_find_any_ne_idx(vus, vus);
+  vus = vec_find_any_ne_idx(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaeh
-  vus = vec_find_any_ne_idx(vbs, vbs);
+  vus = vec_find_any_ne_idx(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaeh
-  vsi = vec_find_any_ne_idx(vsi, vsi);
+  vsi = vec_find_any_ne_idx(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaef
-  vui = vec_find_any_ne_idx(vui, vui);
+  vui = vec_find_any_ne_idx(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaef
-  vui = vec_find_any_ne_idx(vbi, vbi);
+  vui = vec_find_any_ne_idx(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaef
 
-  vsc = vec_find_any_ne_idx_cc(vsc, vsc, &cc);
+  vsc = vec_find_any_ne_idx_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaebs
-  vuc = vec_find_any_ne_idx_cc(vuc, vuc, &cc);
+  vuc = vec_find_any_ne_idx_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaebs
-  vuc = vec_find_any_ne_idx_cc(vbc, vbc, &cc);
+  vuc = vec_find_any_ne_idx_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaebs
-  vss = vec_find_any_ne_idx_cc(vss, vss, &cc);
+  vss = vec_find_any_ne_idx_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaehs
-  vus = vec_find_any_ne_idx_cc(vus, vus, &cc);
+  vus = vec_find_any_ne_idx_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaehs
-  vus = vec_find_any_ne_idx_cc(vbs, vbs, &cc);
+  vus = vec_find_any_ne_idx_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaehs
-  vsi = vec_find_any_ne_idx_cc(vsi, vsi, &cc);
+  vsi = vec_find_any_ne_idx_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaefs
-  vui = vec_find_any_ne_idx_cc(vui, vui, &cc);
+  vui = vec_find_any_ne_idx_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaefs
-  vui = vec_find_any_ne_idx_cc(vbi, vbi, &cc);
+  vui = vec_find_any_ne_idx_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaefs
 
-  vsc = vec_find_any_ne_or_0_idx(vsc, vsc);
+  vsc = vec_find_any_ne_or_0_idx(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezb
-  vuc = vec_find_any_ne_or_0_idx(vuc, vuc);
+  vuc = vec_find_any_ne_or_0_idx(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezb
-  vuc = vec_find_any_ne_or_0_idx(vbc, vbc);
+  vuc = vec_find_any_ne_or_0_idx(vbc, vbc1);
   // CHECK: call <16 x i8> @llvm.s390.vfaezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezb
-  vss = vec_find_any_ne_or_0_idx(vss, vss);
+  vss = vec_find_any_ne_or_0_idx(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezh
-  vus = vec_find_any_ne_or_0_idx(vus, vus);
+  vus = vec_find_any_ne_or_0_idx(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezh
-  vus = vec_find_any_ne_or_0_idx(vbs, vbs);
+  vus = vec_find_any_ne_or_0_idx(vbs, vbs1);
   // CHECK: call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezh
-  vsi = vec_find_any_ne_or_0_idx(vsi, vsi);
+  vsi = vec_find_any_ne_or_0_idx(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezf
-  vui = vec_find_any_ne_or_0_idx(vui, vui);
+  vui = vec_find_any_ne_or_0_idx(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezf
-  vui = vec_find_any_ne_or_0_idx(vbi, vbi);
+  vui = vec_find_any_ne_or_0_idx(vbi, vbi1);
   // CHECK: call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezf
 
-  vsc = vec_find_any_ne_or_0_idx_cc(vsc, vsc, &cc);
+  vsc = vec_find_any_ne_or_0_idx_cc(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezbs
-  vuc = vec_find_any_ne_or_0_idx_cc(vuc, vuc, &cc);
+  vuc = vec_find_any_ne_or_0_idx_cc(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezbs
-  vuc = vec_find_any_ne_or_0_idx_cc(vbc, vbc, &cc);
+  vuc = vec_find_any_ne_or_0_idx_cc(vbc, vbc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezbs
-  vss = vec_find_any_ne_or_0_idx_cc(vss, vss, &cc);
+  vss = vec_find_any_ne_or_0_idx_cc(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezhs
-  vus = vec_find_any_ne_or_0_idx_cc(vus, vus, &cc);
+  vus = vec_find_any_ne_or_0_idx_cc(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezhs
-  vus = vec_find_any_ne_or_0_idx_cc(vbs, vbs, &cc);
+  vus = vec_find_any_ne_or_0_idx_cc(vbs, vbs1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezhs
-  vsi = vec_find_any_ne_or_0_idx_cc(vsi, vsi, &cc);
+  vsi = vec_find_any_ne_or_0_idx_cc(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezfs
-  vui = vec_find_any_ne_or_0_idx_cc(vui, vui, &cc);
+  vui = vec_find_any_ne_or_0_idx_cc(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezfs
-  vui = vec_find_any_ne_or_0_idx_cc(vbi, vbi, &cc);
+  vui = vec_find_any_ne_or_0_idx_cc(vbi, vbi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 8)
   // CHECK-ASM: vfaezfs
 }
@@ -4784,10 +4814,10 @@ void test_float(void) {
   // CHECK-NEXT: fneg <2 x double> [[ABS]]
   // CHECK-ASM: vflndb
 
-  vd = vec_madd(vd, vd, vd);
+  vd = vec_madd(vd, vd1, vd2);
   // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-ASM: vfmadb
-  vd = vec_msub(vd, vd, vd);
+  vd = vec_msub(vd, vd1, vd2);
   // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> %{{.*}}
   // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]])
   // CHECK-ASM: vfmsdb

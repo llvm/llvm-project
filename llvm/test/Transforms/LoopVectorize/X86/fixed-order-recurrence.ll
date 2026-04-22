@@ -41,7 +41,7 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i8> [[WIDE_LOAD1]], i32 15
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i8> [[WIDE_LOAD1]], i64 15
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -142,9 +142,9 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i8> [[WIDE_LOAD5]], i32 15
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT6:%.*]] = extractelement <16 x i8> [[TMP8]], i32 15
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <16 x i8> [[TMP10]], i32 15
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i8> [[WIDE_LOAD5]], i64 15
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT6:%.*]] = extractelement <16 x i8> [[TMP8]], i64 15
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <16 x i8> [[TMP10]], i64 15
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -219,7 +219,7 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <2 x i64> zeroinitializer, [[STEP_ADD]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[STEP_ADD]], splat (i64 4)
@@ -297,15 +297,15 @@ define void @for_iv_trunc_optimized(ptr %dst) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP0]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP1]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP5]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 336
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STEP_ADD]], i32 3
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STEP_ADD]], i64 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i32> [[TMP3]], i64 3
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -380,9 +380,9 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <4 x ptr> [[TMP20]], <4 x ptr> [[TMP28]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x float>, ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x float> [[WIDE_VEC]], <12 x float> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x float> [[STRIDED_VEC]], i32 3
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x float> [[STRIDED_VEC]], i64 3
 ; CHECK-NEXT:    store float [[TMP30]], ptr [[C:%.*]], align 4
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x ptr> [[TMP29]], i32 3
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x ptr> [[TMP29]], i64 3
 ; CHECK-NEXT:    [[TMP36:%.*]] = load float, ptr [[TMP37]], align 4
 ; CHECK-NEXT:    store float [[TMP36]], ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

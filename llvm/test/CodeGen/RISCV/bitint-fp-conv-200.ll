@@ -502,8 +502,7 @@ define void @test_bitint_200_to_float(ptr %in, ptr %out) nounwind {
 ; RV32-NEXT:    sub t3, s3, s0
 ; RV32-NEXT:    sltu t6, t5, t4
 ; RV32-NEXT:    sub s2, t3, a5
-; RV32-NEXT:    snez t3, s2
-; RV32-NEXT:    addi t3, t3, -1
+; RV32-NEXT:    seqz t3, s2
 ; RV32-NEXT:    and t3, t3, t6
 ; RV32-NEXT:    beqz a3, .LBB1_9
 ; RV32-NEXT:  # %bb.8: # %itofp-if-end

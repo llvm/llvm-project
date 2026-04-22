@@ -72,9 +72,20 @@ function (check_fortran_builtins_available)
 endfunction ()
 
 
-# Workarounds for older versions of CMake not recognizing FLang. Hence, we
-# cannot use CMAKE_Fortran_COMPILER_ID.
+set(RUNTIMES_ENABLE_FORTRAN OFF)
+
+# Insert at least one element for
+#
+#    add_dependencies(target ${RUNTIMES_FORTRAN_BUILD_DEPS})
+#
+# to not fail
+add_custom_target(fortran-dummy-dep)
+set(RUNTIMES_FORTRAN_BUILD_DEPS fortran-dummy-dep)
+
+
 if (CMAKE_Fortran_COMPILER)
+  # Workarounds for older versions of CMake not recognizing FLang. Hence, we
+  # cannot use CMAKE_Fortran_COMPILER_ID.
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
   if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
     # CMake 3.24 is the first version of CMake that directly recognizes Flang.
@@ -124,18 +135,18 @@ if (CMAKE_Fortran_COMPILER)
       set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
     endif ()
   endif ()
+else ()
+  # Do not enable Fortran support unless a Fortran compiler is passed, i.e.
+  # compilation of Fortran is explicitly intended.
+  # The automatically detected C/C++ and Fortran compiler may not play together.
+  # An issue encountered is that CMake adds CMAKE_EXE_LINKER_FLAGS to the linker
+  # line of C/C++ as well as Fortran programs, but the compiler drivers may not
+  # use accept the same flags. Specifically, LLVM adds -Wl,--color-diagnostics
+  # which is supported by lld, but the flag is not accepted by ld.bfd used by
+  # gfortran's driver.
+  return ()
 endif ()
 
-
-set(RUNTIMES_ENABLE_FORTRAN OFF)
-
-# Insert at least one element for
-#
-#    add_dependencies(target ${RUNTIMES_FORTRAN_BUILD_DEPS})
-#
-# to not fail
-add_custom_target(fortran-dummy-dep)
-set(RUNTIMES_FORTRAN_BUILD_DEPS fortran-dummy-dep)
 
 include(CheckLanguage)
 check_language(Fortran)

@@ -13,19 +13,19 @@ define void @multiple_vppredinstphi_with_same_predicate(ptr %A, i32 %d) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 -10, [[D]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP4]], %[[PRED_SDIV_IF]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_IF1]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = sdiv i32 -10, [[D]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP7]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ [[TMP5]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP8]], %[[PRED_SDIV_IF1]] ]
@@ -79,40 +79,40 @@ define void @multiple_vppredinstphi_with_different_predicate(ptr %A, i32 %d) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 -10, [[D]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP4]], %[[PRED_SDIV_IF]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2:.*]]
 ; CHECK:       [[PRED_SDIV_IF1]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = sdiv i32 -10, [[D]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP7]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ [[TMP5]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP8]], %[[PRED_SDIV_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[TMP9]], <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], splat (i32 20)
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP12]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_SDIV_IF3:.*]], label %[[PRED_SDIV_CONTINUE4:.*]]
 ; CHECK:       [[PRED_SDIV_IF3]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = sdiv i32 -10, [[D]]
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i32> poison, i32 [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> poison, i32 [[TMP15]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE4]]
 ; CHECK:       [[PRED_SDIV_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = phi <2 x i32> [ poison, %[[PRED_SDIV_CONTINUE2]] ], [ [[TMP16]], %[[PRED_SDIV_IF3]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x i32> [ poison, %[[PRED_SDIV_CONTINUE2]] ], [ [[TMP13]], %[[PRED_SDIV_IF3]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP12]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_SDIV_IF5:.*]], label %[[PRED_SDIV_CONTINUE6]]
 ; CHECK:       [[PRED_SDIV_IF5]]:
 ; CHECK-NEXT:    [[TMP19:%.*]] = sdiv i32 -10, [[D]]
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i32> [[TMP17]], i32 [[TMP19]], i32 1
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x i32> [[TMP16]], i32 [[TMP19]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE6]]
 ; CHECK:       [[PRED_SDIV_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = phi <2 x i32> [ [[TMP17]], %[[PRED_SDIV_CONTINUE4]] ], [ [[TMP20]], %[[PRED_SDIV_IF5]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = phi <2 x i32> [ [[TMP16]], %[[PRED_SDIV_CONTINUE4]] ], [ [[TMP17]], %[[PRED_SDIV_IF5]] ]
 ; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <2 x i1> [[TMP12]], <2 x i32> [[TMP21]], <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = add <2 x i32> [[PREDPHI]], [[PREDPHI7]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP22]], ptr [[TMP0]], align 4

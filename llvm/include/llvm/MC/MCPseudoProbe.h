@@ -437,6 +437,7 @@ public:
   MCPseudoProbeDecoder(MCPseudoProbeDecoder &&) = delete;
   MCPseudoProbeDecoder &operator=(const MCPseudoProbeDecoder &) = delete;
   MCPseudoProbeDecoder &operator=(MCPseudoProbeDecoder &&) = delete;
+  ~MCPseudoProbeDecoder() = default;
 
   using Uint64Set = DenseSet<uint64_t>;
   using Uint64Map = DenseMap<uint64_t, uint64_t>;

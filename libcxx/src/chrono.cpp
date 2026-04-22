@@ -20,7 +20,6 @@
 #  include <__support/ibm/gettod_zos.h> // gettimeofdayMonotonic
 #endif
 
-#include "include/apple_availability.h"
 #include <time.h> // clock_gettime and CLOCK_{MONOTONIC,REALTIME,MONOTONIC_RAW}
 
 #if __has_include(<unistd.h>)

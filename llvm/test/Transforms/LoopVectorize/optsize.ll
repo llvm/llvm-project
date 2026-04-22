@@ -262,8 +262,8 @@ define void @pr43371(i16 %val) optsize {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP3]]
 ; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 1
@@ -290,8 +290,8 @@ define void @pr43371(i16 %val) optsize {
 ; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; PGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; PGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; PGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; PGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; PGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; PGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; PGSO-NEXT:    [[TMP7:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP3]]
 ; PGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
@@ -318,8 +318,8 @@ define void @pr43371(i16 %val) optsize {
 ; NPGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; NPGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; NPGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; NPGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; NPGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; NPGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; NPGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; NPGSO-NEXT:    [[TMP7:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP3]]
 ; NPGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
@@ -369,8 +369,8 @@ define void @pr43371_pgso(i16 %val) !prof !14 {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP3]]
 ; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 1
@@ -397,8 +397,8 @@ define void @pr43371_pgso(i16 %val) !prof !14 {
 ; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; PGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; PGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; PGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; PGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; PGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; PGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; PGSO-NEXT:    [[TMP7:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP3]]
 ; PGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
@@ -482,7 +482,7 @@ define i32 @pr45526() optsize {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
@@ -494,7 +494,7 @@ define i32 @pr45526() optsize {
 ; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -510,7 +510,7 @@ define i32 @pr45526() optsize {
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; PGSO-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
 ; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; PGSO-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
@@ -522,7 +522,7 @@ define i32 @pr45526() optsize {
 ; PGSO-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
 ; PGSO-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
 ; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
+; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
 ; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; PGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; PGSO-NEXT:    br label %[[EXIT:.*]]
@@ -538,7 +538,7 @@ define i32 @pr45526() optsize {
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; NPGSO-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; NPGSO-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
@@ -550,7 +550,7 @@ define i32 @pr45526() optsize {
 ; NPGSO-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
 ; NPGSO-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
 ; NPGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; NPGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
+; NPGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
 ; NPGSO-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; NPGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; NPGSO-NEXT:    br label %[[EXIT:.*]]
@@ -582,7 +582,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
@@ -594,7 +594,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -610,7 +610,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; PGSO-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
 ; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; PGSO-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
@@ -622,7 +622,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; PGSO-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
 ; PGSO-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
 ; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
+; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
 ; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; PGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; PGSO-NEXT:    br label %[[EXIT:.*]]
@@ -686,18 +686,18 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IND]], splat (i32 1024)
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP3]]
 ; CHECK-NEXT:    store i16 42, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP6]]
 ; CHECK-NEXT:    store i16 42, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
@@ -724,18 +724,18 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
 ; PGSO-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i32> [[VEC_IND]], splat (i32 1024)
 ; PGSO-NEXT:    [[TMP1:%.*]] = mul nsw <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; PGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
+; PGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i64 0
 ; PGSO-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; PGSO:       [[PRED_STORE_IF]]:
-; PGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; PGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
 ; PGSO-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP3]]
 ; PGSO-NEXT:    store i16 42, ptr [[TMP4]], align 4
 ; PGSO-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; PGSO:       [[PRED_STORE_CONTINUE]]:
-; PGSO-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
+; PGSO-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP0]], i64 1
 ; PGSO-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; PGSO:       [[PRED_STORE_IF1]]:
-; PGSO-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; PGSO-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; PGSO-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP6]]
 ; PGSO-NEXT:    store i16 42, ptr [[TMP7]], align 4
 ; PGSO-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
@@ -762,18 +762,18 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; NPGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
 ; NPGSO-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i32> [[VEC_IND]], splat (i32 1024)
 ; NPGSO-NEXT:    [[TMP1:%.*]] = mul nsw <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; NPGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
+; NPGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i64 0
 ; NPGSO-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; NPGSO:       [[PRED_STORE_IF]]:
-; NPGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; NPGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
 ; NPGSO-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP3]]
 ; NPGSO-NEXT:    store i16 42, ptr [[TMP4]], align 4
 ; NPGSO-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; NPGSO:       [[PRED_STORE_CONTINUE]]:
-; NPGSO-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
+; NPGSO-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP0]], i64 1
 ; NPGSO-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; NPGSO:       [[PRED_STORE_IF1]]:
-; NPGSO-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; NPGSO-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; NPGSO-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP6]]
 ; NPGSO-NEXT:    store i16 42, ptr [[TMP7]], align 4
 ; NPGSO-NEXT:    br label %[[PRED_STORE_CONTINUE2]]

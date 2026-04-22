@@ -12,7 +12,7 @@ config.libc_crosscompiling_emulator = path(r"@CMAKE_CROSSCOMPILING_EMULATOR@")
 
 # If no explicit test command is set, use the cross-compiling emulator.
 if not config.libc_test_cmd and config.libc_crosscompiling_emulator:
-    config.libc_test_cmd = config.libc_crosscompiling_emulator + " @BINARY@"
+    config.libc_test_cmd = config.libc_crosscompiling_emulator
 
 # Add libc's utils directory to the path so we can import the test format.
 site.addsitedir(os.path.join(config.libc_src_root, "utils"))
@@ -26,7 +26,7 @@ config.name = "libc"
 config.test_format = libctest.LibcTest()
 
 # excludes: A list of directories to exclude from the testsuite.
-config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt", "UnitTest"]
+config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 
 # test_source_root: The root path where tests are located.
 # test_exec_root: The root path where test executables are built.

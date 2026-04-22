@@ -1,0 +1,2 @@
+// RUN: %python %S/../../../clang-tidy/tool/check_update_docs.py -o %t.clang-tidy-checks-list.rst
+// RUN: diff --strip-trailing-cr %S/../../../docs/clang-tidy/checks/list.rst %t.clang-tidy-checks-list.rst

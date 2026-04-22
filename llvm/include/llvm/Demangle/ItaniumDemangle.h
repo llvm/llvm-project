@@ -6157,8 +6157,17 @@ AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
 // extension      ::= ___Z <encoding> _block_invoke
 // extension      ::= ___Z <encoding> _block_invoke<decimal-digit>+
 // extension      ::= ___Z <encoding> _block_invoke_<decimal-digit>+
+// extension      ::= __alloc_token__Z <encoding>
+// extension      ::= __alloc_token_<decimal-digit>+__Z <encoding>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parse(bool ParseParams) {
+  bool AllocToken = consumeIf("__alloc_token_");
+  if (AllocToken) {
+    const char *Saved = First;
+    if (parseNumber().empty() || !consumeIf('_'))
+      First = Saved;
+  }
+
   if (consumeIf("_Z") || consumeIf("__Z")) {
     Node *Encoding = getDerived().parseEncoding(ParseParams);
     if (Encoding == nullptr)
@@ -6168,6 +6177,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parse(bool ParseParams) {
           make<DotSuffix>(Encoding, std::string_view(First, Last - First));
       First = Last;
     }
+    if (AllocToken)
+      Encoding = make<DotSuffix>(Encoding, ".alloc_token");
     if (numLeft() != 0)
       return nullptr;
     return Encoding;

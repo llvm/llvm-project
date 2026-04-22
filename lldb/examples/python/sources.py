@@ -12,10 +12,10 @@ def dump_module_sources(module, result):
                 print("  %s" % (compile_unit.file), file=result)
 
 
-def info_sources(debugger, command, result, dict):
-    description = """This command will dump all compile units in any modules that are listed as arguments, or for all modules if no arguments are supplied."""
+def info_sources(debugger, command, exe_ctx, result, internal_dict):
+    """This command will dump all compile units in any modules that are listed as arguments, or for all modules if no arguments are supplied."""
     module_names = shlex.split(command)
-    target = debugger.GetSelectedTarget()
+    target = exe_ctx.target
     if module_names:
         for module_name in module_names:
             dump_module_sources(target.module[module_name], result)
@@ -24,7 +24,7 @@ def info_sources(debugger, command, result, dict):
             dump_module_sources(module, result)
 
 
-def __lldb_init_module(debugger, dict):
+def __lldb_init_module(debugger, internal_dict):
     # Add any commands contained in this module to LLDB
     debugger.HandleCommand("command script add -o -f sources.info_sources info_sources")
     print(

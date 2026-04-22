@@ -337,6 +337,17 @@ namespace std::ranges {
 
   namespace views { template<class T> inline constexpr unspecified istream = unspecified; }
 
+  // [range.enumerate], enumerate view
+  template<view View>
+    requires see below
+  class enumerate_view;                                                             // since C++23
+
+  template<class View>
+    constexpr bool enable_borrowed_range<enumerate_view<View>> =                    // since C++23
+      enable_borrowed_range<View>;
+
+  namespace views { inline constexpr unspecified enumerate = unspecified; }         // since C++23
+
   // [range.zip], zip view
   template<input_range... Views>
     requires (view<Views> && ...) && (sizeof...(Views) > 0)
@@ -482,6 +493,7 @@ namespace std {
 #    include <__ranges/adjacent_view.h>
 #    include <__ranges/as_rvalue_view.h>
 #    include <__ranges/chunk_by_view.h>
+#    include <__ranges/enumerate_view.h>
 #    include <__ranges/from_range.h>
 #    include <__ranges/join_with_view.h>
 #    include <__ranges/repeat_view.h>

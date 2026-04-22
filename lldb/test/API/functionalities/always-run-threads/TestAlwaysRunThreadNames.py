@@ -19,17 +19,21 @@ class AlwaysRunThreadNamesTestCase(TestBase):
         # Configure the setting to keep our helper thread running.
         self.runCmd("settings set target.process.always-run-thread-names always-run")
 
+        # Tell step_over_me() to block until the helper thread advances.
+        self.runCmd("expression g_sync_with_helper = true")
+
         # Record the helper thread's counter before stepping.
         counter_before = target.FindFirstGlobalVariable("g_helper_count")
         self.assertTrue(counter_before.IsValid())
         val_before = counter_before.GetValueAsUnsigned()
 
-        # Step over -- this normally suspends all other threads.
+        # The step over normally suspends all other threads, but the
+        # always-run-thread-names setting keeps the helper thread running.
+        # Because g_sync_with_helper is true, step_over_me() will spin until
+        # the helper thread increments the counter.
         thread.StepOver(lldb.eOnlyThisThread)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
-        # The helper thread should have been allowed to run, so its counter
-        # should have advanced.
         counter_after = target.FindFirstGlobalVariable("g_helper_count")
         val_after = counter_after.GetValueAsUnsigned()
         self.assertGreater(

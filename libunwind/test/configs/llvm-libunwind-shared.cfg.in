@@ -7,6 +7,12 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 compile_flags = []
 link_flags = []
 
+if @HAVE_GETAUXVAL@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_GETAUXVAL')
+
+if @HAVE_ELF_AUX_INFO@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_ELF_AUX_INFO')
+
 if @LIBUNWIND_ENABLE_CET@:
     compile_flags.append('-fcf-protection=full')
 
