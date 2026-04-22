@@ -1524,7 +1524,12 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
   return ArmCount > ThumbCount ? Triple::arm : Triple::thumb;
 }
 
-static llvm::DILocation *createDebugInfo(Function *F) {
+// Create location for each function entry which should look like this:
+// frame #0: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
+// frame #1: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
+// frame #2: .cfi.jumptable.81 at sanitizer/ubsan_interface.h:0:0
+static SmallVector<llvm::DILocation *>
+createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
   Module &M = *F->getParent();
   DICompileUnit *CU = nullptr;
   auto CUs = M.debug_compile_units();
@@ -1534,6 +1539,7 @@ static llvm::DILocation *createDebugInfo(Function *F) {
   DIBuilder DIB(M, /*AllowUnresolved=*/true, CU);
   llvm::DIFile *File = DIB.createFile("ubsan_interface.h", "sanitizer");
   if (!CU) {
+    // Even with debug info enabled it can be missing if not info yet.
     CU = DIB.createCompileUnit(
         DISourceLanguageName(dwarf::DW_LANG_C), File, "llvm", true, "", 0, "",
         DICompileUnit::DebugEmissionKind::LineTablesOnly);
@@ -1541,20 +1547,36 @@ static llvm::DILocation *createDebugInfo(Function *F) {
 
   DISubroutineType *DIFnTy = DIB.createSubroutineType(nullptr);
 
-  llvm::DISubprogram *NormalSP = DIB.createFunction(
+  llvm::DISubprogram *JTSP = DIB.createFunction(
       File, F->getName(), StringRef(), File, 0, DIFnTy, 0,
       DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
-  F->setSubprogram(NormalSP);
+  F->setSubprogram(JTSP);
 
-  llvm::DISubprogram *InlineSP = DIB.createFunction(
+  llvm::DILocation *JTLoc = llvm::DILocation::get(M.getContext(), 0, 0, JTSP);
+
+  llvm::DISubprogram *UbsanSP = DIB.createFunction(
       File, "__ubsan_check_cfi_icall_jt", StringRef(), File, 0, DIFnTy, 0,
       DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
+  SmallVector<llvm::DILocation *> Locations;
+  Locations.reserve(Functions.size());
+
+  for (auto *Func : Functions) {
+    StringRef FuncName = Func->getGlobal()->getName();
+    FuncName.consume_back(".cfi");
+    llvm::DISubprogram *JumpSP = DIB.createFunction(
+        File, (FuncName + ".cfi_jt").str(), StringRef(), File, 0, DIFnTy, 0,
+        DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+
+    llvm::DILocation *EntryLoc = JTLoc;
+    EntryLoc = llvm::DILocation::get(M.getContext(), 0, 0, JumpSP, EntryLoc);
+    EntryLoc = llvm::DILocation::get(M.getContext(), 0, 0, UbsanSP, EntryLoc);
+    Locations.push_back(EntryLoc);
+  }
+
   DIB.finalize();
 
-  return llvm::DILocation::get(
-      M.getContext(), 0, 0, InlineSP,
-      llvm::DILocation::get(M.getContext(), 0, 0, NormalSP));
+  return Locations;
 }
 
 void LowerTypeTestsModule::createJumpTable(
@@ -1562,8 +1584,10 @@ void LowerTypeTestsModule::createJumpTable(
     Triple::ArchType JumpTableArch) {
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
+
+  SmallVector<llvm::DILocation *> Locations;
   if (M.getDwarfVersion() != 0)
-    IRB.SetCurrentDebugLocation(createDebugInfo(F));
+    Locations = createJumpTableDebugInfo(F, Functions);
 
   InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
 
@@ -1572,12 +1596,15 @@ void LowerTypeTestsModule::createJumpTable(
   // cfi.jumptable as NoUnwind, otherwise, direct calls
   // to the jump table will not handle exceptions properly
   bool areAllEntriesNounwind = true;
-  for (GlobalTypeMember *GTM : Functions) {
-    if (!llvm::cast<llvm::Function>(GTM->getGlobal())
+  assert(Locations.empty() || Functions.size() == Locations.size());
+  for (auto [GTM, Loc] : llvm::zip_longest(Functions, Locations)) {
+    if (Loc.has_value())
+      IRB.SetCurrentDebugLocation(*Loc);
+    if (!llvm::cast<llvm::Function>((*GTM)->getGlobal())
              ->hasFnAttribute(llvm::Attribute::NoUnwind)) {
       areAllEntriesNounwind = false;
     }
-    IRB.CreateCall(JumpTableAsm, GTM->getGlobal());
+    IRB.CreateCall(JumpTableAsm, (*GTM)->getGlobal());
   }
   IRB.CreateUnreachable();
 

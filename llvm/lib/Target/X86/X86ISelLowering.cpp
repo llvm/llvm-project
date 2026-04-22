@@ -13305,6 +13305,12 @@ static bool isSoftF16(T VT, const X86Subtarget &Subtarget) {
          (EltVT == MVT::f16 && !Subtarget.hasFP16());
 }
 
+template<typename T>
+static bool isBF16orSoftF16(T VT, const X86Subtarget &Subtarget) {
+  T EltVT = VT.getScalarType();
+  return EltVT == MVT::bf16 || (EltVT == MVT::f16 && !Subtarget.hasFP16());
+}
+
 /// Try to lower insertion of a single element into a zero vector.
 ///
 /// This is a common pattern that we have especially efficient patterns to lower
@@ -20786,7 +20792,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (isSoftF16(VT, Subtarget))
+  if (isBF16orSoftF16(VT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, VT, true, Subtarget))
     return Op;
@@ -21296,7 +21302,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (DstVT == MVT::f128)
     return SDValue();
 
-  if (isSoftF16(DstVT, Subtarget))
+  if (isBF16orSoftF16(DstVT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
@@ -22315,7 +22321,7 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
   SDValue Res;
-  if (isSoftF16(SrcVT, Subtarget)) {
+  if (isBF16orSoftF16(SrcVT, Subtarget)) {
     MVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
     if (IsStrict)
       return DAG.getNode(Op.getOpcode(), dl, {VT, MVT::Other},
@@ -22762,7 +22768,7 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
 
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
-  if (!isScalarFPTypeInSSEReg(SrcVT) || isSoftF16(SrcVT, Subtarget))
+  if (!isScalarFPTypeInSSEReg(SrcVT) || isBF16orSoftF16(SrcVT, Subtarget))
     return SDValue();
 
   EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
@@ -35138,7 +35144,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT SrcVT = Src.getValueType();
 
     SDValue Res;
-    if (isSoftF16(SrcVT, Subtarget)) {
+    if (isBF16orSoftF16(SrcVT, Subtarget)) {
       EVT NVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
       if (IsStrict) {
         Res =

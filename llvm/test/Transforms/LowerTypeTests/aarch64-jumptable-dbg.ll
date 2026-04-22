@@ -57,8 +57,8 @@ define i1 @foo(ptr %p) {
 ; AARCH64-LABEL: @.cfi.jumptable(
 ; AARCH64-NEXT:  entry:
 ; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @f.cfi), !dbg [[DBG8:![0-9]+]]
-; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @g.cfi), !dbg [[DBG8]]
-; AARCH64-NEXT:    unreachable, !dbg [[DBG8]]
+; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @g.cfi), !dbg [[DBG13:![0-9]+]]
+; AARCH64-NEXT:    unreachable, !dbg [[DBG13]]
 ;
 ;.
 ; AARCH64: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
@@ -75,5 +75,10 @@ define i1 @foo(ptr %p) {
 ; AARCH64: [[META7]] = !DISubroutineType(types: null)
 ; AARCH64: [[DBG8]] = !DILocation(line: 0, scope: [[META9:![0-9]+]], inlinedAt: [[META10:![0-9]+]])
 ; AARCH64: [[META9]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall_jt", scope: [[META4]], file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
-; AARCH64: [[META10]] = !DILocation(line: 0, scope: [[META6]])
+; AARCH64: [[META10]] = !DILocation(line: 0, scope: [[META11:![0-9]+]], inlinedAt: [[META12:![0-9]+]])
+; AARCH64: [[META11]] = distinct !DISubprogram(name: "f.cfi_jt", scope: [[META4]], file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+; AARCH64: [[META12]] = !DILocation(line: 0, scope: [[META6]])
+; AARCH64: [[DBG13]] = !DILocation(line: 0, scope: [[META9]], inlinedAt: [[META14:![0-9]+]])
+; AARCH64: [[META14]] = !DILocation(line: 0, scope: [[META15:![0-9]+]], inlinedAt: [[META12]])
+; AARCH64: [[META15]] = distinct !DISubprogram(name: "g.cfi_jt", scope: [[META4]], file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
 ;.

@@ -57,8 +57,8 @@ define i1 @foo(ptr %p) {
 ; X86_32-LABEL: @.cfi.jumptable(
 ; X86_32-NEXT:  entry:
 ; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi), !dbg [[DBG8:![0-9]+]]
-; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi), !dbg [[DBG8]]
-; X86_32-NEXT:    unreachable, !dbg [[DBG8]]
+; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi), !dbg [[DBG13:![0-9]+]]
+; X86_32-NEXT:    unreachable, !dbg [[DBG13]]
 ;
 ;
 ; X86_64-LABEL: @f.cfi(
@@ -80,8 +80,8 @@ define i1 @foo(ptr %p) {
 ; X86_64-LABEL: @.cfi.jumptable(
 ; X86_64-NEXT:  entry:
 ; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi), !dbg [[DBG8:![0-9]+]]
-; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi), !dbg [[DBG8]]
-; X86_64-NEXT:    unreachable, !dbg [[DBG8]]
+; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi), !dbg [[DBG13:![0-9]+]]
+; X86_64-NEXT:    unreachable, !dbg [[DBG13]]
 ;
 ;.
 ; X86_32: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
@@ -102,7 +102,12 @@ define i1 @foo(ptr %p) {
 ; X86_32: [[META7]] = !DISubroutineType(types: null)
 ; X86_32: [[DBG8]] = !DILocation(line: 0, scope: [[META9:![0-9]+]], inlinedAt: [[META10:![0-9]+]])
 ; X86_32: [[META9]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall_jt", scope: [[META4]], file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
-; X86_32: [[META10]] = !DILocation(line: 0, scope: [[META6]])
+; X86_32: [[META10]] = !DILocation(line: 0, scope: [[META11:![0-9]+]], inlinedAt: [[META12:![0-9]+]])
+; X86_32: [[META11]] = distinct !DISubprogram(name: "f.cfi_jt", scope: [[META4]], file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+; X86_32: [[META12]] = !DILocation(line: 0, scope: [[META6]])
+; X86_32: [[DBG13]] = !DILocation(line: 0, scope: [[META9]], inlinedAt: [[META14:![0-9]+]])
+; X86_32: [[META14]] = !DILocation(line: 0, scope: [[META15:![0-9]+]], inlinedAt: [[META12]])
+; X86_32: [[META15]] = distinct !DISubprogram(name: "g.cfi_jt", scope: [[META4]], file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
 ;.
 ; X86_64: [[META0:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
 ; X86_64: [[META1:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
@@ -114,5 +119,10 @@ define i1 @foo(ptr %p) {
 ; X86_64: [[META7]] = !DISubroutineType(types: null)
 ; X86_64: [[DBG8]] = !DILocation(line: 0, scope: [[META9:![0-9]+]], inlinedAt: [[META10:![0-9]+]])
 ; X86_64: [[META9]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall_jt", scope: [[META4]], file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
-; X86_64: [[META10]] = !DILocation(line: 0, scope: [[META6]])
+; X86_64: [[META10]] = !DILocation(line: 0, scope: [[META11:![0-9]+]], inlinedAt: [[META12:![0-9]+]])
+; X86_64: [[META11]] = distinct !DISubprogram(name: "f.cfi_jt", scope: [[META4]], file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+; X86_64: [[META12]] = !DILocation(line: 0, scope: [[META6]])
+; X86_64: [[DBG13]] = !DILocation(line: 0, scope: [[META9]], inlinedAt: [[META14:![0-9]+]])
+; X86_64: [[META14]] = !DILocation(line: 0, scope: [[META15:![0-9]+]], inlinedAt: [[META12]])
+; X86_64: [[META15]] = distinct !DISubprogram(name: "g.cfi_jt", scope: [[META4]], file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
 ;.

@@ -4802,6 +4802,25 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       return New->setInvalidDecl();
     }
   }
+
+  // C2y 6.7.1p7:
+  //   Within a translation unit, the same identifier shall not appear with
+  //   both internal and external linkage.
+  //
+  // In C11 through C23, this was undefined behavior (C11 6.2.2p7).
+  //
+  // This can occur when an extern declaration in block scope finds a file-scope
+  // static declaration, but a no-linkage local variable shadowed the static,
+  // preventing linkage inheritance per C2y 6.2.2p4.
+  if (!getLangOpts().CPlusPlus && New->isLocalVarDecl() &&
+      New->hasExternalStorage() && Old->isFileVarDecl() && Old->hasLinkage() &&
+      Previous.isShadowed() && Old->getFormalLinkage() == Linkage::Internal) {
+    Diag(New->getLocation(), diag::err_internal_extern_mismatch)
+        << New->getDeclName() << getLangOpts().C2y;
+    Diag(OldLocation, PrevDiag);
+    return New->setInvalidDecl();
+  }
+
   // C99 6.2.2p4:
   //   For an identifier declared with the storage-class specifier
   //   extern in a scope in which a prior declaration of that

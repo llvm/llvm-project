@@ -70,6 +70,8 @@ AST Dumping Potentially Breaking Changes
   ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
   ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
   fields were missing from the JSON output.
+- Colons that appear at the end of a ParamCommentCommand name are not serialized
+  as part of the name.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -153,6 +155,12 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Clang now diagnoses the use of the same identifier with both internal and
+  external linkage within a translation unit, as made ill-formed by
+  `N3410 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf>`_.
+  This is also diagnosed in older C language modes as the behavior was
+  undefined prior to C2y. (#GH54215)
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
@@ -188,6 +196,23 @@ Non-comprehensive list of changes in this release
   ``__builtin_stdc_count_zeros``, ``__builtin_stdc_count_ones``,
   ``__builtin_stdc_has_single_bit``, ``__builtin_stdc_bit_width``,
   ``__builtin_stdc_bit_floor``, and ``__builtin_stdc_bit_ceil``.
+
+- Implemented the type-specific C23 ``<stdbit.h>`` functions with constexpr
+  evaluation support:
+  ``stdc_leading_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_leading_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_trailing_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_trailing_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_first_leading_zero_{uc,us,ui,ul,ull}``,
+  ``stdc_first_leading_one_{uc,us,ui,ul,ull}``,
+  ``stdc_first_trailing_zero_{uc,us,ui,ul,ull}``,
+  ``stdc_first_trailing_one_{uc,us,ui,ul,ull}``,
+  ``stdc_count_zeros_{uc,us,ui,ul,ull}``,
+  ``stdc_count_ones_{uc,us,ui,ul,ull}``,
+  ``stdc_has_single_bit_{uc,us,ui,ul,ull}``,
+  ``stdc_bit_width_{uc,us,ui,ul,ull}``,
+  ``stdc_bit_floor_{uc,us,ui,ul,ull}``, and
+  ``stdc_bit_ceil_{uc,us,ui,ul,ull}``.
 
 - A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
   extends bit-reversal support to all standard integers type, including
@@ -276,6 +301,15 @@ Attribute Changes in Clang
   exclusively, while *reading* requires at least one to be held.  This is
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
+
+- The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
+  notes. For example:
+  
+  .. code-block:: yaml
+
+    Functions:
+      - Name: myUnsafeFunction
+        UnsafeBufferUsage: true
 
 - Added support for ``[[msvc::forceinline]]`` for functions and
   ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to
