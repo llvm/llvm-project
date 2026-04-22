@@ -295,14 +295,20 @@ transform::detail::mergeSymbolsInto(Operation *target,
   WalkResult inlineCheck = target->walk([&](CallOpInterface call) {
     Operation *callable = nullptr;
     CallInterfaceCallable callee = call.getCallableForCallee();
-    if (auto symRef = dyn_cast<SymbolRefAttr>(callee))
-      callable = targetSymbolTable.lookup(symRef.getLeafReference());
-    else if (auto value = dyn_cast<Value>(callee))
+    if (auto symRef = dyn_cast<SymbolRefAttr>(callee)) {
+      // Fall back to full resolution for nested symbols, the table is
+      // one-level only.
+      if (isa<FlatSymbolRefAttr>(symRef))
+        callable = targetSymbolTable.lookup(symRef.getLeafReference());
+      else
+        callable = SymbolTable::lookupNearestSymbolFrom(call, symRef);
+    } else if (auto value = dyn_cast<Value>(callee)) {
       callable = value.getDefiningOp();
+    }
 
     if (!callable)
       return WalkResult::advance();
-    if (!inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/true)) {
+    if (!inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/false)) {
       InFlightDiagnostic diag =
           call->emitError()
           << "merged call is not legal to inline into its caller";
