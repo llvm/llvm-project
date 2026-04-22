@@ -26,7 +26,7 @@ define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr no
 ; CHECK-NEXT:    [[TMP3]] = fadd <4 x double> [[TMP2]], [[VEC_PHI3]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i32> [[VEC_PHI]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[TMP4]], splat (i32 10000)
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[FOR2_HEADER2]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[C_OUT]], <4 x i64> [[VEC_IND]]

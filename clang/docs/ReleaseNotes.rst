@@ -70,6 +70,8 @@ AST Dumping Potentially Breaking Changes
   ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
   ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
   fields were missing from the JSON output.
+- Colons that appear at the end of a ParamCommentCommand name are not serialized
+  as part of the name.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -253,6 +255,10 @@ New Compiler Flags
 - New ``-cl`` option ``/d2guardcfgdispatch-`` added to match MSVC. This acts as a
   shorthand for ``-fwin-cfg-mechanism=check``.
 
+- New option ``-f[no-]strict-bool`` added to control whether Clang can assume
+  that ``bool`` values loaded from memory cannot have a bit pattern other
+  than 0 or 1.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -293,6 +299,15 @@ Attribute Changes in Clang
   exclusively, while *reading* requires at least one to be held.  This is
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
+
+- The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
+  notes. For example:
+  
+  .. code-block:: yaml
+
+    Functions:
+      - Name: myUnsafeFunction
+        UnsafeBufferUsage: true
 
 - Added support for ``[[msvc::forceinline]]`` for functions and
   ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to

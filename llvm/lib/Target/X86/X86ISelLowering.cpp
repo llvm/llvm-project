@@ -39401,6 +39401,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Known.setAllZero();
     break;
   }
+  case X86ISD::VZEXT_LOAD: {
+    // Upper elements are known zero.
+    auto *LN = cast<MemIntrinsicSDNode>(Op);
+    if (!DemandedElts[0] &&
+        LN->getMemoryVT().getSizeInBits() == VT.getScalarSizeInBits())
+      Known.setAllZero();
+    break;
+  }
   case X86ISD::VBROADCAST_LOAD: {
     APInt UndefElts;
     SmallVector<APInt, 16> EltBits;
