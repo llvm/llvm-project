@@ -30,6 +30,25 @@ else()
   endif()
 endif()
 
+# LLVM is built with -fno-rtti by default; matching that here avoids
+# undefined references to LLVM type_info symbols when linking against
+# libLLVM*.a / .so. gtest itself does not require user-side RTTI
+# (-DGTEST_HAS_RTTI=0 is set when gtest is built).
+function(comgr_match_llvm_rtti target)
+  if(NOT LLVM_ENABLE_RTTI)
+    if(MSVC)
+      target_compile_options(${target} PRIVATE /GR-)
+    else()
+      target_compile_options(${target} PRIVATE -fno-rtti)
+    endif()
+  endif()
+endfunction()
+
+# -- HotswapElfTests ----------------------------------------------------------
+#
+# Lightweight tests for the ELF layer in comgr-hotswap-elf.cpp. Needs only
+# llvm::object for ELF parsing; no MC state constructed.
+
 add_executable(HotswapElfTests
   HotswapElfTest.cpp
   ../src/comgr-hotswap-elf.cpp
@@ -38,12 +57,12 @@ add_executable(HotswapElfTests
   # definition so non-inlined builds (e.g. -O0 / ASan) resolve.
   ../src/comgr-env.cpp)
 
-llvm_map_components_to_libnames(COMGR_TEST_UNIT_LLVM_LIBS
+llvm_map_components_to_libnames(COMGR_TEST_UNIT_ELF_LIBS
   Object Support TargetParser)
 
 target_link_libraries(HotswapElfTests PRIVATE
   ${COMGR_GTEST_LIBS}
-  ${COMGR_TEST_UNIT_LLVM_LIBS}
+  ${COMGR_TEST_UNIT_ELF_LIBS}
   ${LLVM_PTHREAD_LIB})
 
 target_include_directories(HotswapElfTests PRIVATE
@@ -51,18 +70,49 @@ target_include_directories(HotswapElfTests PRIVATE
   ${COMGR_GTEST_INCLUDE_DIRS}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>)
 
-# LLVM is built with -fno-rtti by default; matching that here avoids
-# undefined references to LLVM type_info symbols when linking against
-# libLLVM*.a / .so. gtest itself does not require user-side RTTI
-# (-DGTEST_HAS_RTTI=0 is set when gtest is built).
-if(NOT LLVM_ENABLE_RTTI)
-  if(MSVC)
-    target_compile_options(HotswapElfTests PRIVATE /GR-)
-  else()
-    target_compile_options(HotswapElfTests PRIVATE -fno-rtti)
-  endif()
-endif()
+comgr_match_llvm_rtti(HotswapElfTests)
 
-add_custom_target(test-unit COMMAND $<TARGET_FILE:HotswapElfTests>)
-add_dependencies(test-unit HotswapElfTests)
+# -- HotswapMCTests -----------------------------------------------------------
+#
+# MC-layer tests need the AMDGPU backend (TargetRegistry, instruction
+# definitions, disassembler, asm parser, and code emitter) so the test
+# binary can stand up a real LLVMState for gfx1250 and exercise the
+# assemble / decode / encode primitives.
+
+add_executable(HotswapMCTests
+  HotswapMCTest.cpp
+  ../src/comgr-hotswap-elf.cpp
+  ../src/comgr-hotswap-llvm.cpp
+  ../src/comgr-env.cpp)
+
+llvm_map_components_to_libnames(COMGR_TEST_UNIT_MC_LIBS
+  MC
+  MCDisassembler
+  MCParser
+  Object
+  Support
+  TargetParser
+  AMDGPUAsmParser
+  AMDGPUCodeGen
+  AMDGPUDesc
+  AMDGPUDisassembler
+  AMDGPUInfo)
+
+target_link_libraries(HotswapMCTests PRIVATE
+  ${COMGR_GTEST_LIBS}
+  ${COMGR_TEST_UNIT_MC_LIBS}
+  ${LLVM_PTHREAD_LIB})
+
+target_include_directories(HotswapMCTests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src
+  ${COMGR_GTEST_INCLUDE_DIRS}
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>)
+
+comgr_match_llvm_rtti(HotswapMCTests)
+
+# Register both test binaries with the test-unit / check-comgr plumbing.
+add_custom_target(test-unit
+  COMMAND $<TARGET_FILE:HotswapElfTests>
+  COMMAND $<TARGET_FILE:HotswapMCTests>)
+add_dependencies(test-unit HotswapElfTests HotswapMCTests)
 add_dependencies(check-comgr test-unit)

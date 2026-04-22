@@ -78,6 +78,7 @@ set(SOURCES
   src/comgr-env.cpp
   src/comgr-hotswap.cpp
   src/comgr-hotswap-elf.cpp
+  src/comgr-hotswap-llvm.cpp
   src/comgr-libcxx-headers.cpp
   src/comgr-metadata.cpp
   src/comgr-signal.cpp

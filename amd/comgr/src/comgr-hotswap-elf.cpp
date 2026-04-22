@@ -28,38 +28,23 @@ using Phdr = ELF::Elf64_Phdr;
 using ELFT = ElfView::ELFT;
 using ELFFileT = ElfView::ELFFileT;
 
-// -- s_branch encoding --------------------------------------------------------
-
-bool encodeSBranch(uint64_t FromOffset, uint64_t ToOffset,
-                   uint8_t OutBytes[MinInstSize], uint32_t SBranchOpcode) {
-  int64_t ByteDelta = static_cast<int64_t>(ToOffset) -
-                      static_cast<int64_t>(FromOffset) - MinInstSize;
-  if (ByteDelta % MinInstSize != 0)
-    return false;
-  int64_t DwordOffset = ByteDelta / MinInstSize;
-  if (DwordOffset < BranchOffsetMin || DwordOffset > BranchOffsetMax)
-    return false;
-  uint32_t Encoded =
-      SBranchOpcode | (static_cast<uint16_t>(DwordOffset) & BranchOffsetMask);
-  std::memcpy(OutBytes, &Encoded, sizeof(Encoded));
-  return true;
-}
-
 // -- applyByteReplace ---------------------------------------------------------
 
 bool applyByteReplace(const RewriteRule &Rule, uint64_t InstOffset,
                       uint32_t InstSize, uint8_t *Text, uint64_t TextSize,
-                      uint32_t SNopOpcode) {
+                      const LLVMState &S) {
   if (InstOffset + InstSize > TextSize)
     return false;
   const size_t ReplaceSize = Rule.ReplaceBytes.size();
   if (ReplaceSize > InstSize)
     return false;
+  if (S.SNopBytes.size() != MinInstSize)
+    return false;
   std::memcpy(Text + InstOffset, Rule.ReplaceBytes.data(), ReplaceSize);
   uint64_t PadOffset = InstOffset + ReplaceSize;
   uint64_t Remaining = InstSize - ReplaceSize;
   while (Remaining >= MinInstSize) {
-    std::memcpy(Text + PadOffset, &SNopOpcode, sizeof(SNopOpcode));
+    std::memcpy(Text + PadOffset, S.SNopBytes.data(), MinInstSize);
     PadOffset += MinInstSize;
     Remaining -= MinInstSize;
   }
@@ -93,8 +78,8 @@ Expected<ElfView> ElfView::create(uint8_t *Data, size_t Size) {
   // resulting ElfView). Once ELFFile is constructed, it owns the structural
   // view over these same bytes and we do not need to store Data/Size
   // separately -- ELFFile::base() / ELFFile::getBufSize() alias them.
-  Expected<ELFFileT> FileOrErr = ELFFileT::create(
-      StringRef(reinterpret_cast<const char *>(Data), Size));
+  Expected<ELFFileT> FileOrErr =
+      ELFFileT::create(StringRef(reinterpret_cast<const char *>(Data), Size));
   if (!FileOrErr)
     return FileOrErr.takeError();
 
@@ -148,20 +133,18 @@ std::string ElfView::findKernelAtOffset(uint64_t TextOffset) const {
     }
 
     for (const ELFT::Sym &Sym : *SymsOrErr) {
-      if (Sym.getType() != ELF::STT_FUNC &&
-          Sym.getType() != ELF::STT_GNU_IFUNC)
+      if (Sym.getType() != ELF::STT_FUNC && Sym.getType() != ELF::STT_GNU_IFUNC)
         continue;
       if (Sym.st_shndx != TextSectionIndex)
         continue;
-      if (TextOffset < Sym.st_value ||
-          TextOffset >= Sym.st_value + Sym.st_size)
+      if (TextOffset < Sym.st_value || TextOffset >= Sym.st_value + Sym.st_size)
         continue;
       Expected<StringRef> NameOrErr = Sym.getName(*StrTabOrErr);
       if (!NameOrErr) {
         log() << "hotswap: error: findKernelAtOffset: function symbol "
               << "covering offset 0x" << utohexstr(TextOffset)
-              << " has unreadable name: "
-              << toString(NameOrErr.takeError()) << "\n";
+              << " has unreadable name: " << toString(NameOrErr.takeError())
+              << "\n";
         return "";
       }
       return NameOrErr->str();
@@ -235,8 +218,7 @@ ElfView::getKernelVgprCount(StringRef KernelName,
   // call path but is shared (non-const) with updateKernelDescriptor. The
   // const_cast on `this` keeps the read-only accessor const-correct without
   // duplicating the lookup helper.
-  uint8_t *Kd =
-      const_cast<ElfView *>(this)->findKernelDescriptor(KernelName);
+  uint8_t *Kd = const_cast<ElfView *>(this)->findKernelDescriptor(KernelName);
   if (!Kd) {
     log() << "hotswap: error: getKernelVgprCount: kernel descriptor symbol '"
           << KernelName << ".kd' not found.\n";
@@ -440,10 +422,10 @@ ElfView::growWithTrampolines(ArrayRef<Trampoline> Trampolines) const {
 
   adjustSectionHeaders(Out, NewSize, textOffset(), textSize(), TrampTotal);
   adjustProgramHeaders(Out, NewSize, textOffset(), textSize(), TrampTotal);
-  log() << "hotswap: growWithTrampolines: grew ELF from " << InputSize
-        << " to " << NewSize << " bytes (" << Trampolines.size()
-        << " trampoline" << (Trampolines.size() == 1 ? "" : "s") << ", "
-        << TrampTotal << " bytes appended).\n";
+  log() << "hotswap: growWithTrampolines: grew ELF from " << InputSize << " to "
+        << NewSize << " bytes (" << Trampolines.size() << " trampoline"
+        << (Trampolines.size() == 1 ? "" : "s") << ", " << TrampTotal
+        << " bytes appended).\n";
   return Buf;
 }
 
