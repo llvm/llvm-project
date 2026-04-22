@@ -34,11 +34,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<-1>, vp<%evl>
 ; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[VP7]]>, ir<-1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%idxprom> = zext ir<%i.0> to i64
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer i32, ir<%arrayidx>, vp<%evl>
 ; CHECK-NEXT:      WIDEN ir<%0> = vp.load vp<[[VP8]]>, vp<%evl>
 ; CHECK-NEXT:      WIDEN ir<%add9> = add ir<%0>, ir<1>
-; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx3> = getelementptr inbounds i32, ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-end-pointer i32, ir<%arrayidx3>, vp<%evl>
 ; CHECK-NEXT:      WIDEN vp.store vp<[[VP9]]>, ir<%add9>, vp<%evl>
 ; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<%evl>, vp<[[VP5]]>

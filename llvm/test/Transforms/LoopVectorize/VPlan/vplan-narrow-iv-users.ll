@@ -23,10 +23,10 @@ define void @narrow_iv_user_chain(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP3]]> * ir<1>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%and> = and vp<[[VP5]]>, ir<-4>
-; CHECK-NEXT:      CLONE ir<%gep.ld> = getelementptr inbounds ir<%A>, ir<%and>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr inbounds i64, ir<%A>, ir<%and>
 ; CHECK-NEXT:      CLONE ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      CLONE ir<%calc> = add nsw ir<%ld>, ir<42>
-; CHECK-NEXT:      CLONE ir<%gep.st> = getelementptr inbounds ir<%B>, ir<%and>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr inbounds i64, ir<%B>, ir<%and>
 ; CHECK-NEXT:      REPLICATE store ir<%calc>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -78,11 +78,11 @@ define void @narrow_iv_user_chain_multiple_levels(ptr noalias %A, ptr noalias %B
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP3]]> * ir<1>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%and> = and vp<[[VP5]]>, ir<-4>
-; CHECK-NEXT:      CLONE ir<%gep.ld> = getelementptr inbounds ir<%A>, ir<%and>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr inbounds i64, ir<%A>, ir<%and>
 ; CHECK-NEXT:      CLONE ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      CLONE ir<%calc> = add nsw ir<%ld>, ir<42>
 ; CHECK-NEXT:      CLONE ir<%calc2> = mul nsw ir<%calc>, ir<3>
-; CHECK-NEXT:      CLONE ir<%gep.st> = getelementptr inbounds ir<%B>, ir<%and>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr inbounds i64, ir<%B>, ir<%and>
 ; CHECK-NEXT:      REPLICATE store ir<%calc2>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -133,11 +133,11 @@ define void @no_narrowing_if_all_lanes_used(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP3]]> * ir<1>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.ld> = getelementptr inbounds ir<%A>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ld> = getelementptr inbounds i64, ir<%A>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      WIDEN ir<%calc> = add nsw ir<%ld>, ir<42>
-; CHECK-NEXT:      CLONE ir<%gep.st> = getelementptr inbounds ir<%B>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.st> = getelementptr inbounds i64, ir<%B>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.st>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%calc>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>

@@ -21,10 +21,10 @@ define void @bitcast_noop(ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP4]]>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -85,9 +85,9 @@ define void @ashr_zero(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%idx> = ashr ir<%iv>, ir<0>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -150,9 +150,9 @@ define void @ashr_of_add_of_shl(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      EMIT ir<%s> = shl nsw ir<%iv>, ir<3>
 ; CHECK-NEXT:      EMIT ir<%a> = add ir<%s>, ir<8>
 ; CHECK-NEXT:      EMIT ir<%idx> = ashr ir<%a>, ir<3>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -215,9 +215,9 @@ define void @ashr_variable(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%idx> = ashr ir<%iv>, ir<%n>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -280,9 +280,9 @@ define void @ashr_bitwidth(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%s> = shl nsw ir<%iv>, ir<64>
 ; CHECK-NEXT:      EMIT ir<%idx> = ashr ir<%s>, ir<64>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -344,9 +344,9 @@ define void @usub_sat(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%idx> = call ir<%iv>, ir<0>, ir<@llvm.usub.sat.i64>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -407,9 +407,9 @@ define void @uadd_sat(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%idx> = call ir<%iv>, ir<0>, ir<@llvm.uadd.sat.i64>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -471,9 +471,9 @@ define void @usub_sat_clamped(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%idx> = call ir<4>, ir<%iv>, ir<@llvm.usub.sat.i64>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -533,11 +533,11 @@ define void @ptrtoaddr_gep(ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%p> = getelementptr inbounds ir<null>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%p> = getelementptr inbounds i8, ir<null>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%idx> = ptrtoaddr ir<%p> to i64
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -599,11 +599,11 @@ define void @ptrtoint_gep(ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%p> = getelementptr inbounds ir<null>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%p> = getelementptr inbounds i8, ir<null>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%idx> = ptrtoint ir<%p> to i64
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -667,9 +667,9 @@ define void @xor_signmask(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%x> = xor ir<%iv>, ir<-9223372036854775808>
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%x>, ir<-9223372036854775808>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -731,9 +731,9 @@ define void @xor_not_signmask(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%idx> = xor ir<%iv>, ir<12>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -794,9 +794,9 @@ define void @select_constant_cond(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%idx> = select ir<true>, ir<%iv>, ir<0>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -860,9 +860,9 @@ define void @select_equal_arms(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; CHECK-NEXT:      EMIT ir<%b> = or disjoint ir<%iv>, ir<4>
 ; CHECK-NEXT:      EMIT ir<%c> = icmp ult ir<%iv>, ir<%n>
 ; CHECK-NEXT:      EMIT ir<%idx> = select ir<%c>, ir<%a>, ir<%b>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
@@ -929,9 +929,9 @@ define void @select_different_arms(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; CHECK-NEXT:      EMIT ir<%b> = add ir<%iv>, ir<8>
 ; CHECK-NEXT:      EMIT ir<%c> = icmp ult ir<%iv>, ir<%n>
 ; CHECK-NEXT:      EMIT ir<%idx> = select ir<%c>, ir<%a>, ir<%b>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i32, ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
-; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr inbounds i32, ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>

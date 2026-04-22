@@ -21,10 +21,10 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%gep.indices> = getelementptr inbounds ir<%indices>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.indices> = getelementptr inbounds i32, ir<%indices>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l.idx> = load ir<%gep.indices>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%idxprom1> = zext ir<%l.idx> to i64
-; CHECK-NEXT:      EMIT ir<%gep.bucket> = getelementptr inbounds ir<%buckets>, ir<%idxprom1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.bucket> = getelementptr inbounds i32, ir<%buckets>, ir<%idxprom1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l.bucket> = load ir<%gep.bucket>
 ; CHECK-NEXT:      EMIT ir<%inc> = add nsw ir<%l.bucket>, ir<1>
 ; CHECK-NEXT:      WIDEN-HISTOGRAM buckets: ir<%gep.bucket>, inc: ir<1>
@@ -104,11 +104,11 @@ define void @reduc_store_inside_unrolled(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<2>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum> = phi (add) ir<0>, ir<%sum.2>
-; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr inbounds ir<%src>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.src> = getelementptr inbounds i32, ir<%src>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%0> = load ir<%gep.src>
 ; CHECK-NEXT:      EMIT ir<%sum.1> = add nsw ir<%0>, ir<%sum>
 ; CHECK-NEXT:      EMIT ir<%1> = or disjoint ir<%iv>, ir<1>
-; CHECK-NEXT:      EMIT ir<%gep.src.1> = getelementptr inbounds ir<%src>, ir<%1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.src.1> = getelementptr inbounds i32, ir<%src>, ir<%1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%2> = load ir<%gep.src.1>
 ; CHECK-NEXT:      EMIT ir<%sum.2> = add nsw ir<%2>, ir<%sum.1>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<2>

@@ -494,8 +494,24 @@ public:
       return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
                                        Metadata, DL, UV->getName(), UV);
     }
+    if (Opcode == Instruction::GetElementPtr) {
+      assert(!Mask && "GetElementPtr cannot be predicated");
+      Type *SourceElementTy =
+          cast<GetElementPtrInst>(UV)->getSourceElementType();
+      return new VPGEPInstruction(SourceElementTy, Operands, Flags, Metadata,
+                                  DL, UV->getName(), UV);
+    }
     return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
                                  Flags, Metadata, DL);
+  }
+
+  VPSingleDefRecipe *createScalarGEP(Type *SourceElementTy,
+                                     ArrayRef<VPValue *> Ops,
+                                     const VPIRFlags &Flags,
+                                     const VPIRMetadata &Metadata, DebugLoc DL,
+                                     Instruction *UV) {
+    return tryInsertInstruction(createSingleScalarOp(
+        Instruction::GetElementPtr, Ops, {}, Flags, Metadata, DL, UV));
   }
 
   VPScalarIVStepsRecipe *

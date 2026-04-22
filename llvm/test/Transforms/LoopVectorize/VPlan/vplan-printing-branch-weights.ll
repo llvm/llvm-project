@@ -33,7 +33,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; PREDICATE-EMPTY:
 ; PREDICATE-NEXT:    vector.body:
 ; PREDICATE-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; PREDICATE-NEXT:      EMIT ir<%gep.idx> = getelementptr inbounds ir<%idx>, ir<%iv>
+; PREDICATE-NEXT:      EMIT-SCALAR ir<%gep.idx> = getelementptr inbounds i32, ir<%idx>, ir<%iv>
 ; PREDICATE-NEXT:      EMIT-SCALAR ir<%i> = load ir<%gep.idx>
 ; PREDICATE-NEXT:      EMIT ir<%cmp> = icmp sgt ir<%i>, ir<0>
 ; PREDICATE-NEXT:    Successor(s): if.then
@@ -42,7 +42,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; PREDICATE-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp>
 ; PREDICATE-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
 ; PREDICATE-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
-; PREDICATE-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
+; PREDICATE-NEXT:      EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i32, ir<%a>, ir<%ext>
 ; PREDICATE-NEXT:      EMIT store ir<%add>, ir<%gep.a>, ir<%cmp>
 ; PREDICATE-NEXT:    Successor(s): latch
 ; PREDICATE-EMPTY:
@@ -75,7 +75,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    vector.body:
 ; CONSTRUCT-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CONSTRUCT-NEXT:      CLONE ir<%gep.idx> = getelementptr inbounds ir<%idx>, ir<%iv>
+; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%gep.idx> = getelementptr inbounds i32, ir<%idx>, ir<%iv>
 ; CONSTRUCT-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.idx>, ir<1>
 ; CONSTRUCT-NEXT:      WIDEN ir<%i> = load vp<[[VP4]]>
 ; CONSTRUCT-NEXT:      EMIT ir<%cmp> = icmp sgt ir<%i>, ir<0>
@@ -85,7 +85,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; CONSTRUCT-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp>
 ; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
 ; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
-; CONSTRUCT-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
+; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i32, ir<%a>, ir<%ext>
 ; CONSTRUCT-NEXT:      REPLICATE store ir<%add>, ir<%gep.a>, ir<%cmp>
 ; CONSTRUCT-NEXT:    Successor(s): latch
 ; CONSTRUCT-EMPTY:
@@ -118,7 +118,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; REGION-EMPTY:
 ; REGION-NEXT:    vector.body:
 ; REGION-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; REGION-NEXT:      CLONE ir<%gep.idx> = getelementptr inbounds ir<%idx>, vp<[[VP4]]>
+; REGION-NEXT:      EMIT-SCALAR ir<%gep.idx> = getelementptr inbounds i32, ir<%idx>, vp<[[VP4]]>
 ; REGION-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.idx>, ir<1>
 ; REGION-NEXT:      WIDEN ir<%i> = load vp<[[VP5]]>
 ; REGION-NEXT:      WIDEN ir<%cmp> = icmp sgt ir<%i>, ir<0>
@@ -164,7 +164,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; DISSOLVE-EMPTY:
 ; DISSOLVE-NEXT:  vector.body:
 ; DISSOLVE-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, pred.store.continue ]
-; DISSOLVE-NEXT:    CLONE ir<%gep.idx> = getelementptr inbounds ir<%idx>, vp<%index>
+; DISSOLVE-NEXT:    EMIT-SCALAR ir<%gep.idx> = getelementptr inbounds i32, ir<%idx>, vp<%index>
 ; DISSOLVE-NEXT:    WIDEN ir<%i> = load ir<%gep.idx>
 ; DISSOLVE-NEXT:    WIDEN ir<%cmp> = icmp sgt ir<%i>, ir<0>
 ; DISSOLVE-NEXT:    WIDEN ir<%add> = add ir<%i>, ir<1>
@@ -176,7 +176,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; DISSOLVE-EMPTY:
 ; DISSOLVE-NEXT:  pred.store.if:
 ; DISSOLVE-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = extractelement ir<%ext>, ir<0>
-; DISSOLVE-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<[[VP3]]>
+; DISSOLVE-NEXT:    EMIT-SCALAR ir<%gep.a> = getelementptr inbounds i32, ir<%a>, vp<[[VP3]]>
 ; DISSOLVE-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = extractelement ir<%add>, ir<0>
 ; DISSOLVE-NEXT:    CLONE store vp<[[VP4]]>, ir<%gep.a>
 ; DISSOLVE-NEXT:  Successor(s): pred.store.continue
@@ -188,7 +188,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; DISSOLVE-EMPTY:
 ; DISSOLVE-NEXT:  pred.store.if:
 ; DISSOLVE-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = extractelement ir<%ext>, ir<1>
-; DISSOLVE-NEXT:    CLONE ir<%gep.a>.1 = getelementptr inbounds ir<%a>, vp<[[VP7]]>
+; DISSOLVE-NEXT:    EMIT-SCALAR ir<%gep.a>.1 = getelementptr inbounds i32, ir<%a>, vp<[[VP7]]>
 ; DISSOLVE-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extractelement ir<%add>, ir<1>
 ; DISSOLVE-NEXT:    CLONE store vp<[[VP8]]>, ir<%gep.a>.1
 ; DISSOLVE-NEXT:  Successor(s): pred.store.continue

@@ -401,7 +401,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]], !custom_md [[META2:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 0
 ; CHECK-NEXT:    store <2 x i32> [[VEC_IND1]], ptr [[TMP2]], align 4
@@ -419,7 +419,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[IV]], !custom_md [[META2]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[IV]], !custom_md [[META2:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]], !custom_md [[META2]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[IV]] to i32, !custom_md [[META3]]
 ; CHECK-NEXT:    store i32 [[T]], ptr [[ARRAYIDX_2]], align 4, !custom_md [[META2]]
@@ -445,7 +445,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[VEC_IND1:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT4:%.*]], %[[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; INTERLEAVE-NEXT:    [[STEP_ADD2:%.*]] = add <2 x i32> [[VEC_IND1]], splat (i32 2)
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]], !custom_md [[META2:![0-9]+]]
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[VEC_IND]]
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 0
 ; INTERLEAVE-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[STEP_ADD]]
@@ -468,7 +468,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; INTERLEAVE-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[IV]], !custom_md [[META2]]
+; INTERLEAVE-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[IV]], !custom_md [[META2:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]], !custom_md [[META2]]
 ; INTERLEAVE-NEXT:    [[T:%.*]] = trunc i64 [[IV]] to i32, !custom_md [[META3]]
 ; INTERLEAVE-NEXT:    store i32 [[T]], ptr [[ARRAYIDX_2]], align 4, !custom_md [[META2]]

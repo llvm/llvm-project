@@ -8,7 +8,7 @@ define void @diamond_phi(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i64, ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
@@ -73,7 +73,7 @@ define void @mask_reuse(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i64, ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
@@ -158,7 +158,7 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i64, ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): bb6
 ; CHECK-EMPTY:
@@ -283,7 +283,7 @@ define void @switch(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i64, ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
@@ -417,7 +417,7 @@ define void @diamond_phi2(ptr %a, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = or vp<[[VP5]]>, vp<[[VP6]]>
 ; CHECK-NEXT:      BLEND ir<%phi> = ir<%add2>/vp<[[VP5]]> ir<%add1>/vp<[[VP6]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i64, ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP7]]>
 ; CHECK-NEXT:    Successor(s): bb5
 ; CHECK-EMPTY:
@@ -518,7 +518,7 @@ define void @blend_masks(ptr noalias %p, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4)
 ; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = logical-and vp<[[VP9]]>, ir<%c4>
 ; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = or vp<[[VP15]]>, vp<[[VP14]]>
 ; CHECK-NEXT:      BLEND ir<%phi> = ir<1>/vp<[[VP15]]> ir<0>/vp<[[VP14]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i32, ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP16]]>
 ; CHECK-NEXT:    Successor(s): bb8
 ; CHECK-EMPTY:
@@ -604,7 +604,7 @@ define void @blend_masks_triangle_phi(ptr noalias %p, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    bb3:
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
 ; CHECK-NEXT:      BLEND ir<%phi> = ir<1>/vp<[[VP7]]> ir<0>/vp<[[VP8]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i32, ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
@@ -649,7 +649,7 @@ define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:      EMIT-SCALAR ir<%lb> = load ir<%b>
 ; CHECK-NEXT:      EMIT ir<%v1> = add ir<%iv>, ir<%lb>
 ; CHECK-NEXT:      EMIT ir<%v2> = mul ir<%iv>, ir<3>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i64, ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): if.a
 ; CHECK-EMPTY:
@@ -786,7 +786,7 @@ define void @simplifiable_blend(i1 %c1, i1 %c2, i1 %c3, i32 %x, i32 %y, ptr %p) 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
 ; CHECK-NEXT:      BLEND ir<%phi> = ir<%y>/vp<[[VP4]]> ir<%x>/ir<%c1>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i32, ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
@@ -860,7 +860,7 @@ define void @phi_doesnt_postdom_incoming(i1 %c1, i1 %c2, i32 %x, i32 %y, ptr %p)
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and ir<%c1>, ir<%c2>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP5]]>
 ; CHECK-NEXT:      BLEND ir<%phi> = ir<%y>/vp<[[VP4]]> ir<%x>/vp<[[VP5]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i32, ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
@@ -922,7 +922,7 @@ define void @phi_switch_same_edge(ptr %p) {
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = icmp eq ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not vp<[[VP6]]>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr i32, ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<0>, ir<%gep>, vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:

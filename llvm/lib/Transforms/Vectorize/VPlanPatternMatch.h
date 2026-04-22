@@ -816,8 +816,8 @@ template <typename Op0_t, typename Op1_t>
 inline auto m_GetElementPtr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_CombineOr(
       Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
-                   /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe>(
-          Op0, Op1),
+                   /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe,
+                   VPGEPInstruction>(Op0, Op1),
       VPInstruction_match<VPInstruction::PtrAdd, Op0_t, Op1_t>(Op0, Op1),
       VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>(Op0, Op1));
 }
@@ -1113,6 +1113,8 @@ private:
       return false;
 
     if constexpr (std::is_same_v<RecipeTy, VPWidenGEPRecipe>) {
+      SourceElementType = DefR->getSourceElementType();
+    } else if constexpr (std::is_same_v<RecipeTy, VPGEPInstruction>) {
       SourceElementType = DefR->getSourceElementType();
     } else if (DefR->getOpcode() == Instruction::GetElementPtr) {
       SourceElementType = cast<GetElementPtrInst>(DefR->getUnderlyingInstr())

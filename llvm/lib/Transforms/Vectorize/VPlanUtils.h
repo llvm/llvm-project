@@ -172,6 +172,10 @@ VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
 /// mirroring Value::stripPointerCasts.
 GEPNoWrapFlags getGEPFlagsForPtr(VPValue *Ptr);
 
+/// If recipe \p R will lower to a GEP with a non-i8 source element type,
+/// return that source element type.
+Type *getGEPSourceElementType(const VPSingleDefRecipe *R);
+
 /// Returns true if \p V is used as part of the address of another load or
 /// store.
 bool isUsedByLoadStoreAddress(const VPValue *V);
