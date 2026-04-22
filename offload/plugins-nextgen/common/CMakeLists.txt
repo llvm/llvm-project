@@ -38,7 +38,11 @@ include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 
 if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
-  add_library(PluginOmpt STATIC OMPT/OmptTracing.cpp OMPT/OmptProfiler.cpp)
+  # OmptTracing.cpp calls plugin-specific symbols (HSA profiling etc.) and
+  # is linked per-plugin. OmptProfiler.cpp is added directly to omptarget
+  # in offload/libomptarget/CMakeLists.txt to ensure its strong
+  # getProfilerToAttach() override is unconditionally included.
+  add_library(PluginOmpt STATIC OMPT/OmptTracing.cpp)
   target_include_directories(PluginOmpt PUBLIC
     OMPT
     ${CMAKE_CURRENT_SOURCE_DIR}/include

@@ -153,7 +153,8 @@ static double TicksToTime = 1.0;
 static void setHSATicksToTimeConstant() { TicksToTime = setTicksToTime(); }
 
 /// Get the current HSA-based system timestamp in nanoseconds.
-static uint64_t getSystemTimestampInNs() {
+/// Called by OmptTracing.cpp (from PluginOmpt) for device time queries.
+uint64_t getSystemTimestampInNs() {
   uint64_t TimeStamp = 0;
   hsa_status_t Status =
       hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &TimeStamp);
@@ -161,6 +162,17 @@ static uint64_t getSystemTimestampInNs() {
     return 0;
   return TimeStamp;
 }
+
+/// Enable or disable HSA async copy profiling for OMPT device tracing.
+/// Called by OmptTracing.cpp when a tool activates/deactivates device tracing.
+/// Full HSA profiling integration (enabling per-copy timing signals) will be
+/// wired up in a follow-on commit.
+void setOmptAsyncCopyProfile(bool Enable) {}
+
+/// Enable or disable HSA queue kernel profiling for OMPT device tracing.
+/// Called by OmptTracing.cpp when a tool activates/deactivates device tracing.
+/// Full HSA queue profiling integration will be wired up in a follow-on commit.
+void setGlobalOmptKernelProfile(void *Device, int Enable) {}
 
 namespace llvm {
 namespace omp {
