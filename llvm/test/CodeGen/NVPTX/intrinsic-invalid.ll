@@ -8,7 +8,7 @@
 
 ; Non-overloaded intrinsic: wrong return type — canonical signature shown.
 ; CHECK: Intrinsic has incorrect return type!
-; CHECK-SAME: declared return type is 'i16', expected 'i32' in canonical signature 'i32 (i32, i32, i32)'
+; CHECK-SAME: declared return type is 'i16', canonical signature is 'i32 (i32, i32, i32)'
 ; CHECK-NEXT: @llvm.nvvm.sad.i
 
 ; Non-overloaded intrinsic: wrong call-site argument type.
@@ -41,9 +41,10 @@
 ; PARSER-COUNT: invalid intrinsic signature
 ; PARSER-COUNT-NEXT: for 'llvm.nvvm.sad.ull': got i64 (i64, i64, i64, i64), expected i64 (i64, i64, i64)
 
-; Overloaded intrinsic: parser error — no expected signature shown.
+; Overloaded intrinsic: parser error — no detail shown until overloaded
+; diagnostics are extended.
 ; PARSER-FMA-ARG: invalid intrinsic signature
-; PARSER-FMA-ARG-NEXT: for 'llvm.fma.f32': got float (float, float, double)
+; PARSER-FMA-ARG-NOT: for 'llvm.fma.f32'
 
 ;--- main.ll
 

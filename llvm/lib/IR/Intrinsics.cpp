@@ -1156,44 +1156,42 @@ bool Intrinsic::isSignatureValid(Function *F,
                           OverloadTys, OS);
 }
 
-std::string Intrinsic::getIntrinsicSignatureMismatch(Intrinsic::ID ID,
-                                                     FunctionType *FT) {
+void Intrinsic::printIntrinsicSignatureMismatch(raw_ostream &OS,
+                                                Intrinsic::ID ID,
+                                                FunctionType *FT) {
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
   getIntrinsicInfoTableEntries(ID, Table);
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
-  SmallVector<Type *, 4> ArgTys;
-  MatchIntrinsicTypesResult Res =
-      Intrinsic::matchIntrinsicSignature(FT, TableRef, ArgTys);
-
-  std::string Msg;
-  raw_string_ostream OS(Msg);
+  SmallVector<Type *, 4> OverloadTys;
   FunctionType *CanonFT =
       isOverloaded(ID) ? nullptr : getType(FT->getContext(), ID);
-  if (Res == MatchIntrinsicTypes_NoMatchRet) {
-    OS << "Intrinsic has incorrect return type! declared return type is '";
-    FT->getReturnType()->print(OS);
-    OS << "'";
-    if (CanonFT) {
-      OS << ", expected '";
-      CanonFT->getReturnType()->print(OS);
-      OS << "' in canonical signature '";
-      CanonFT->print(OS);
-      OS << "'";
-    }
-  } else if (Res == MatchIntrinsicTypes_NoMatchArg) {
-    OS << "Intrinsic has incorrect argument type! declared signature is '";
-    FT->print(OS);
+  auto FormatMismatch = [&](StringRef Prefix, auto PrintType) {
+    OS << Prefix;
+    PrintType();
     OS << "'";
     if (CanonFT) {
       OS << ", canonical signature is '";
       CanonFT->print(OS);
       OS << "'";
     }
-  } else {
-    llvm_unreachable("unexpected MatchIntrinsicTypesResult");
+  };
+  MatchIntrinsicTypesResult Res =
+      Intrinsic::matchIntrinsicSignature(FT, TableRef, OverloadTys);
+  switch (Res) {
+  case MatchIntrinsicTypes_NoMatchRet:
+    FormatMismatch(
+        "Intrinsic has incorrect return type! declared return type is '",
+        [&] { FT->getReturnType()->print(OS); });
+    break;
+  case MatchIntrinsicTypes_NoMatchArg:
+    FormatMismatch(
+        "Intrinsic has incorrect argument type! declared signature is '",
+        [&] { FT->print(OS); });
+    break;
+  case MatchIntrinsicTypes_Match:
+    llvm_unreachable("unexpected MatchIntrinsicTypes_Match");
   }
-  return Msg;
 }
 
 std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
