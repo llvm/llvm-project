@@ -2253,20 +2253,29 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  // OpAbortKHR is itself a SPIR-V block terminator. If the previous instruction
-  // is a call to llvm.spv.abort, do not emit an additional OpUnreachable, which
-  // would leave the block with two terminators and produce invalid SPIR-V.
-  for (Instruction *Prev = I.getPrevNode(); Prev; Prev = Prev->getPrevNode()) {
-    if (Prev->isDebugOrPseudoInst())
-      continue;
-    auto *CI = dyn_cast<CallInst>(Prev);
-    if (!CI)
-      break;
-    Intrinsic::ID IID = CI->getIntrinsicID();
-    if (IID == Intrinsic::spv_abort)
+  // OpAbortKHR is itself a SPIR-V block terminator. If the immediately
+  // preceding instruction is a call to llvm.spv.abort, do not emit an
+  // additional OpUnreachable, which would leave the SPIR-V block with two
+  // terminators and produce invalid SPIR-V. The check is intentionally limited
+  // to the directly-preceding non-debug instruction: any real instruction
+  // sitting between `llvm.spv.abort` and `unreachable` would also be invalid
+  // SPIR-V (nothing can follow OpAbortKHR in the same block), so assert that
+  // shape if we see an `spv_abort` anywhere earlier in the block.
+  Instruction *Prev = I.getPrevNode();
+  while (Prev && Prev->isDebugOrPseudoInst())
+    Prev = Prev->getPrevNode();
+  if (auto *CI = dyn_cast_or_null<CallInst>(Prev);
+      CI && CI->getIntrinsicID() == Intrinsic::spv_abort)
       return &I;
-    break;
+#ifndef NDEBUG
+  for (Instruction *P = I.getPrevNode(); P; P = P->getPrevNode()) {
+    auto *CI = dyn_cast<CallInst>(P);
+    if (CI && CI->getIntrinsicID() == Intrinsic::spv_abort)
+      llvm_unreachable("llvm.spv.abort must be the last non-debug instruction "
+                       "before its block's `unreachable`; OpAbortKHR is itself "
+                       "a SPIR-V block terminator");
   }
+#endif
   B.CreateIntrinsic(Intrinsic::spv_unreachable, {});
   return &I;
 }

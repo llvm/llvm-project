@@ -6270,18 +6270,18 @@ bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
   assert(MsgType && "Message argument of llvm.spv.abort has no SPIR-V type");
   // SPV_KHR_abort requires Message Type to be a concrete type. Per the
   // SPIR-V "Concrete Type" definition, that means a numerical scalar
-  // (int/float), a vector, matrix, or any aggregate (array/struct)
-  // recursively containing only such types. OpTypeBool, OpTypeVoid,
-  // pointers, opaque handles and similar abstract/non-concrete types are
+  // (int/float), a (physical) pointer, a vector, matrix, or any aggregate
+  // (array/struct) recursively containing only such types. OpTypeBool,
+  // OpTypeVoid, opaque handles and similar abstract/non-concrete types are
   // rejected up front rather than emitting invalid SPIR-V. Validate
-  // recursively so that e.g. a struct containing a bool or pointer is also
-  // rejected.
+  // recursively so that e.g. a struct containing a bool is also rejected.
   SmallVector<SPIRVTypeInst, 4> Worklist{MsgType};
   while (!Worklist.empty()) {
     SPIRVTypeInst Ty = Worklist.pop_back_val();
     switch (Ty->getOpcode()) {
     case SPIRV::OpTypeInt:
     case SPIRV::OpTypeFloat:
+    case SPIRV::OpTypePointer:
       break;
     case SPIRV::OpTypeVector:
     case SPIRV::OpTypeMatrix:
@@ -6297,8 +6297,8 @@ bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
       break;
     default:
       report_fatal_error("llvm.spv.abort message type must be a concrete "
-                         "SPIR-V type (numerical scalar, vector, matrix, "
-                         "or aggregate of such types)",
+                         "SPIR-V type (numerical scalar, pointer, vector, "
+                         "matrix, or aggregate of such types)",
                          false);
     }
   }
