@@ -742,6 +742,56 @@ LogicalResult SparseWMMAOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// DotOp
+//===----------------------------------------------------------------------===//
+LogicalResult DotOp::verify() {
+  Type aElem = cast<VectorType>(getSourceA().getType()).getElementType();
+  Type bElem = cast<VectorType>(getSourceB().getType()).getElementType();
+  Type dest = getDestC().getType();
+
+  bool aIsFloat8 = aElem.isFloat(8);
+  bool bIsFloat8 = bElem.isFloat(8);
+  bool aIsInteger = isa<IntegerType>(aElem);
+
+  bool bothFloat8 = aIsFloat8 && bIsFloat8;
+  if (!bothFloat8 && aElem != bElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  if (aElem.isF16()) {
+    if (!dest.isF32() && !dest.isF16())
+      return emitOpError("expected f32 or f16 accumulator for f16 sources");
+  } else if (aElem.isBF16()) {
+    if (!dest.isF32() && !dest.isBF16())
+      return emitOpError("expected f32 or bf16 accumulator for bf16 sources");
+  } else if (aIsInteger) {
+    if (!dest.isInteger(32))
+      return emitOpError("expected i32 accumulator for integer sources");
+  } else if (aIsFloat8) {
+    if (!dest.isF32())
+      return emitOpError("expected f32 accumulator for fp8 sources");
+  }
+
+  if ((getUnsignedA() || getUnsignedB()) && !aIsInteger)
+    return emitOpError(
+        "unsignedA/unsignedB are only valid for integer source types");
+
+  if (aElem.isInteger(16) && getUnsignedA() != getUnsignedB())
+    return emitOpError(
+        "mixed-sign dot is not supported for 16-bit integer sources");
+
+  if (getClamp()) {
+    bool noClamp = (aElem.isF16() && dest.isF16()) ||
+                   (aElem.isBF16() && dest.isBF16()) || aIsFloat8;
+    if (noClamp)
+      return emitOpError(
+          "clamp is not supported for this (source, accumulator) combination");
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DPPOp
 //===----------------------------------------------------------------------===//
 LogicalResult DPPOp::verify() {
