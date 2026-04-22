@@ -80,7 +80,7 @@ Derived &ref_cast(Base &b) {
 // CIR-AFTER-NEXT:   %[[OFFSET_HINT:.*]] = cir.const #cir.int<0> : !s64i
 // CIR-AFTER-NEXT:   %[[CASTED_PTR:.*]] = cir.call @__dynamic_cast(%[[SRC_VOID_PTR]], %[[SRC_RTTI]], %[[DEST_RTTI]], %[[OFFSET_HINT]]) : (!cir.ptr<!void>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!void>
 // CIR-AFTER-NEXT:   %[[NULL_PTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
-// CIR-AFTER-NEXT:   %[[CASTED_PTR_IS_NULL:.*]] = cir.cmp(eq, %[[CASTED_PTR]], %[[NULL_PTR]]) : !cir.ptr<!void>, !cir.bool
+// CIR-AFTER-NEXT:   %[[CASTED_PTR_IS_NULL:.*]] = cir.cmp eq %[[CASTED_PTR]], %[[NULL_PTR]] : !cir.ptr<!void>
 // CIR-AFTER-NEXT:   cir.if %[[CASTED_PTR_IS_NULL]] {
 // CIR-AFTER-NEXT:     cir.call @__cxa_bad_cast() : () -> ()
 // CIR-AFTER-NEXT:     cir.unreachable
@@ -157,3 +157,41 @@ void *ptr_cast_to_complete(Base *ptr) {
 // OGCG:   br label %[[DONE]]
 // OGCG: [[DONE]]:
 // OGCG:   %[[RET:.*]] = phi ptr [ %[[RESULT]], %[[NOT_NULL]] ], [ null, %[[NULL]] ]
+
+// Dynamic cast to a const pointer/reference must reference the typeinfo of
+// the unqualified class type (e.g. `_ZTI7Derived`), not a const-qualified
+// typeinfo symbol (`_ZTIK7Derived`), which is never emitted. Regression test
+// for a bug where CIR emitted `_ZTIK...` references that caused link-time
+// undefined-reference errors.
+
+const Derived *const_ptr_cast(const Base *b) {
+  return dynamic_cast<const Derived *>(b);
+}
+
+// CIR-BEFORE: cir.func {{.*}} @_Z14const_ptr_castPK4Base
+// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ptr %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+// CIR-BEFORE: }
+
+// LLVM: define {{.*}} @_Z14const_ptr_castPK4Base
+// LLVM:   call ptr @__dynamic_cast(ptr %{{.*}}, ptr @_ZTI4Base, ptr @_ZTI7Derived, i64 0)
+// LLVM-NOT: _ZTIK4Base
+// LLVM-NOT: _ZTIK7Derived
+
+// OGCG: define {{.*}} @_Z14const_ptr_castPK4Base
+// OGCG:   call ptr @__dynamic_cast(ptr %{{.*}}, ptr @_ZTI4Base, ptr @_ZTI7Derived, i64 0)
+
+const Derived &const_ref_cast(const Base &b) {
+  return dynamic_cast<const Derived &>(b);
+}
+
+// CIR-BEFORE: cir.func {{.*}} @_Z14const_ref_castRK4Base
+// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ref %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+// CIR-BEFORE: }
+
+// LLVM: define {{.*}} ptr @_Z14const_ref_castRK4Base
+// LLVM:   call ptr @__dynamic_cast(ptr %{{.*}}, ptr @_ZTI4Base, ptr @_ZTI7Derived, i64 0)
+// LLVM-NOT: _ZTIK4Base
+// LLVM-NOT: _ZTIK7Derived
+
+// OGCG: define {{.*}} ptr @_Z14const_ref_castRK4Base
+// OGCG:   call ptr @__dynamic_cast(ptr %{{.*}}, ptr @_ZTI4Base, ptr @_ZTI7Derived, i64 0)

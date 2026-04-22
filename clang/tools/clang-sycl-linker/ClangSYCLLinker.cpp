@@ -52,9 +52,6 @@ using namespace llvm::opt;
 using namespace llvm::object;
 using namespace clang;
 
-/// Save intermediary results.
-static bool SaveTemps = false;
-
 /// Print commands/steps with arguments without executing.
 static bool DryRun = false;
 
@@ -453,21 +450,13 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  OffloadArch OffloadArch = StringToOffloadArch(Arch);
-  if (IsIntelGPUOffloadArch(OffloadArch))
+  OffloadArch OA = StringToOffloadArch(Arch);
+  if (IsIntelGPUOffloadArch(OA))
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
-  if (IsIntelCPUOffloadArch(OffloadArch))
+  if (IsIntelCPUOffloadArch(OA))
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
 
   return createStringError(inconvertibleErrorCode(), "Unsupported arch");
-}
-
-// TODO: Consider using LLVM-IR metadata to identify globals of interest
-bool isKernel(const Function &F) {
-  const llvm::CallingConv::ID CC = F.getCallingConv();
-  return CC == llvm::CallingConv::SPIR_KERNEL ||
-         CC == llvm::CallingConv::AMDGPU_KERNEL ||
-         CC == llvm::CallingConv::PTX_Kernel;
 }
 
 /// Performs the following steps:
@@ -500,7 +489,8 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
 
     SmallString<0> SymbolData;
     for (Function &F : **ModOrErr) {
-      if (isKernel(F)) {
+      // TODO: Consider using LLVM-IR metadata to identify globals of interest
+      if (F.hasKernelCallingConv()) {
         SymbolData.append(F.getName());
         SymbolData.push_back('\0');
       }
@@ -511,18 +501,20 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
       StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
 
+  StringRef OutputFileNameExt = ".spv";
+
   // Code generation step.
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
     StringRef Stem = OutputFile.rsplit('.').first;
-    std::string SPVFile = (Stem + "_" + Twine(I) + ".spv").str();
-    if (Error Err = runCodeGen(SplitModules[I], Args, SPVFile, C))
+    std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
+
+    if (Error Err = runCodeGen(SplitModules[I], Args, CodeGenFile, C))
       return Err;
-    if (!IsAOTCompileNeeded) {
-      SplitModules[I] = SPVFile;
-    } else {
-      // AOT compilation step.
+
+    SplitModules[I] = CodeGenFile;
+    if (IsAOTCompileNeeded) {
       std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
-      if (Error Err = runAOTCompile(SPVFile, AOTFile, Args))
+      if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
         return Err;
       SplitModules[I] = AOTFile;
     }
@@ -598,7 +590,6 @@ int main(int argc, char **argv) {
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
-  SaveTemps = Args.hasArg(OPT_save_temps);
 
   if (!Args.hasArg(OPT_o))
     reportError(createStringError("Output file must be specified"));

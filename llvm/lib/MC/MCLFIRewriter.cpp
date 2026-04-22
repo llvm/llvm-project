@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCLFIRewriter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 
-namespace llvm {
+using namespace llvm;
 
 void MCLFIRewriter::error(const MCInst &Inst, const char Msg[]) {
   Ctx.reportError(Inst.getLoc(), Msg);
@@ -51,4 +51,3 @@ bool MCLFIRewriter::mayModifyRegister(const MCInst &Inst,
                                       MCRegister Reg) const {
   return InstInfo->get(Inst.getOpcode()).hasDefOfPhysReg(Inst, Reg, *RegInfo);
 }
-} // namespace llvm

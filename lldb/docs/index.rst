@@ -74,7 +74,7 @@ are welcome:
 * iOS, tvOS, and watchOS device debugging on ARM and AArch64
 * Linux user-space debugging for i386, x86_64, ARM, AArch64, PPC64le, s390x
 * FreeBSD user-space debugging for i386, x86_64, ARM, AArch64, PPC
-* FreeBSD kernel debugging for i386, x86_64, AArch64
+* FreeBSD kernel debugging for i386, x86_64, ARM, AArch64, PPC64le, RISCV64
 * NetBSD user-space debugging for i386 and x86_64
 * Windows user-space debugging for i386, x86_64, ARM and AArch64 (*)
 
@@ -124,24 +124,41 @@ interesting areas to contribute to lldb.
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Using LLDB
+   :caption: Getting Started
 
    use/tutorial
    use/map
-   use/formatting
+   use/settings
+   use/troubleshooting
+   Man Page <man/lldb>
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Using LLDB
+
    use/variable
+   use/formatting
    use/symbolication
    use/symbols
-   use/remote
-   use/intel_pt
    use/ondemand
-   use/aarch64-linux
-   use/symbolfilejson
+   use/remote
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: IDE & Tool Integration
+
    use/lldbdap
    use/mcp
-   use/troubleshooting
-   use/links
-   Man Page <man/lldb>
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Platform-Specific Topics
+
+   use/aarch64-linux
+   use/intel_pt
 
 .. toctree::
    :hidden:
@@ -152,40 +169,52 @@ interesting areas to contribute to lldb.
    Python API <python_api>
    Python Extensions <python_extensions>
 
-
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Developing LLDB
+   :caption: Contributing to LLDB
 
    resources/overview
    resources/contributing
+   resources/lldbdap-contributing
    resources/build
    resources/test
    resources/qemu-testing
    resources/debugging
    resources/fuzzing
-   resources/sbapi
-   resources/dataformatters
-   resources/formatterbytecode
-   resources/extensions
-   resources/lldbgdbremote
-   resources/lldbplatformpackets
-   resources/caveats
-   resources/projects
-   resources/lldbdap-contributing
-   resources/addinglanguagesupport
-   Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
-   Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
 
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: External Links
+   :caption: Architecture & Internals
 
+   Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
+   Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
+   resources/sbapi
+   resources/dataformatters
+   resources/formatterbytecode
+   resources/addinglanguagesupport
+   resources/caveats
+   resources/projects
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Protocol & Format Specifications
+
+   resources/lldbgdbremote
+   resources/lldbplatformpackets
+   resources/extensions
+   use/symbolfilejson
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Resources
+
+   use/links
    Source Code <https://github.com/llvm/llvm-project>
    Releases <https://github.com/llvm/llvm-project/releases>
-   Join the Discord <https://discord.gg/xS7Z362>
    Discord Channel <https://discord.com/channels/636084430946959380/636732809708306432>
    Discussion Forums <https://discourse.llvm.org/c/subprojects/lldb/8>
    Developer Policy <https://llvm.org/docs/DeveloperPolicy.html>

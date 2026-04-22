@@ -751,8 +751,10 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
           builder.getI32IntegerAttr(addressPoint.VTableIndex),
           builder.getI32IntegerAttr(addressPoint.AddressPointIndex),
       });
+      auto vptrTy = cir::VPtrType::get(cgm.getBuilder().getContext());
+      auto symbol = mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr());
       cir::GlobalViewAttr vtableInit =
-          cgm.getBuilder().getGlobalViewAttr(vtable, indices);
+          cir::GlobalViewAttr::get(vptrTy, symbol, indices);
       if (!appendBytes(offset, vtableInit))
         return false;
     }
@@ -1167,8 +1169,8 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
       // (the nonzero data and the zeroinitializer).
       SmallVector<mlir::Attribute> eles;
       eles.reserve(nonzeroLength);
-      for (const auto &element : elements)
-        eles.push_back(element);
+      for (unsigned i = 0; i < nonzeroLength; ++i)
+        eles.push_back(elements[i]);
       auto initial = cir::ConstArrayAttr::get(
           cir::ArrayType::get(commonElementType, nonzeroLength),
           mlir::ArrayAttr::get(builder.getContext(), eles));
@@ -1383,8 +1385,15 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       cir::FuncOp fop = cgm.getAddrOfFunction(fd);
       CIRGenBuilderTy &builder = cgm.getBuilder();
       mlir::MLIRContext *mlirContext = builder.getContext();
+      // Use the destination pointer type (e.g. struct field type), not
+      // fop.getFunctionType(), so initializers stay valid when a no-prototype
+      // FuncOp is later replaced by a prototyped definition with the same
+      // symbol. CIR allows the view type to differ from the symbol's type.
+      mlir::Type ptrTy = cgm.getTypes().convertTypeForMem(destType);
+      assert(mlir::isa<cir::PointerType>(ptrTy) &&
+             "function address in constant must be a pointer");
       return cir::GlobalViewAttr::get(
-          builder.getPointerTo(fop.getFunctionType()),
+          ptrTy,
           mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
     }
 
@@ -1395,9 +1404,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
           return cgm.getAddrOfGlobalVarAttr(vd);
 
         if (vd->isLocalVarDecl()) {
-          cgm.errorNYI(vd->getSourceRange(),
-                       "ConstantLValueEmitter: local var decl");
-          return {};
+          cir::GlobalLinkageKind linkage = cgm.getCIRLinkageVarDefinition(vd);
+          return cgm.getBuilder().getGlobalViewAttr(
+              cgm.getOrCreateStaticVarDecl(*vd, linkage));
         }
       }
     }
@@ -1412,10 +1421,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
   }
 
   // Handle typeid(T).
-  if (base.dyn_cast<TypeInfoLValue>()) {
-    cgm.errorNYI("ConstantLValueEmitter: typeid");
-    return {};
-  }
+  if (TypeInfoLValue typeInfo = base.dyn_cast<TypeInfoLValue>())
+    return cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(
+        cgm.getBuilder().getUnknownLoc(), QualType(typeInfo.getType(), 0)));
 
   // Otherwise, it must be an expression.
   return Visit(base.get<const Expr *>());
@@ -1479,15 +1487,21 @@ ConstantLValue ConstantLValueEmitter::VisitBlockExpr(const BlockExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: cxx typeid expr");
-  return {};
+  if (e->isTypeOperand())
+    return cast<cir::GlobalViewAttr>(
+        cgm.getAddrOfRTTIDescriptor(cgm.getLoc(e->getSourceRange()),
+                                    e->getTypeOperand(cgm.getASTContext())));
+  return cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(
+      cgm.getLoc(e->getSourceRange()), e->getExprOperand()->getType()));
 }
 
 ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *e) {
-  cgm.errorNYI(e->getSourceRange(),
-               "ConstantLValueEmitter: materialize temporary expr");
-  return {};
+  assert(e->getStorageDuration() == SD_Static);
+  const Expr *inner = e->getSubExpr()->skipRValueSubobjectAdjustments();
+  mlir::Operation *global = cgm.getAddrOfGlobalTemporary(e, inner);
+  return ConstantLValue(
+      cgm.getBuilder().getGlobalViewAttr(mlir::cast<cir::GlobalOp>(global)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1497,6 +1511,14 @@ ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
 mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &d) {
   initializeNonAbstract();
   return markIfFailed(tryEmitPrivateForVarInit(d));
+}
+
+mlir::Attribute ConstantEmitter::emitForInitializer(const APValue &value,
+                                                    QualType destType) {
+  initializeNonAbstract();
+  auto c = tryEmitPrivateForMemory(value, destType);
+  assert(c && "couldn't emit constant value non-abstractly?");
+  return c;
 }
 
 void ConstantEmitter::finalize(cir::GlobalOp gv) {
@@ -1590,10 +1612,9 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
 
   // Now go through all other fields and zero them out.
   for (unsigned i = 0; i != numElements; ++i) {
-    if (!elements[i]) {
-      cgm.errorNYI(rd->getSourceRange(), "emitNullConstant: field not zeroed");
-      return {};
-    }
+    if (!elements[i])
+      elements[i] =
+          cgm.getBuilder().getZeroInitAttr(recordTy.getElementType(i));
   }
 
   mlir::MLIRContext *mlirContext = recordTy.getContext();
@@ -1625,27 +1646,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
     if (ty->isRecordType()) {
       if (const auto *e = dyn_cast_or_null<CXXConstructExpr>(d.getInit())) {
         const CXXConstructorDecl *cd = e->getConstructor();
-        // FIXME: we should probably model this more closely to C++ than
-        // just emitting a global with zero init (mimic what we do for trivial
-        // assignments and whatnots). Since this is for globals shouldn't
-        // be a problem for the near future.
-        if (cd->isTrivial() && cd->isDefaultConstructor()) {
-          const auto *cxxrd = ty->castAsCXXRecordDecl();
-          if (cxxrd->getNumBases() != 0) {
-            // There may not be anything additional to do here, but this will
-            // force us to pause and test this path when it is supported.
-            cgm.errorNYI("tryEmitPrivateForVarInit: cxx record with bases");
-            return {};
-          }
-          if (!cgm.getTypes().isZeroInitializable(cxxrd)) {
-            // To handle this case, we really need to go through
-            // emitNullConstant, but we need an attribute, not a value
-            cgm.errorNYI(
-                "tryEmitPrivateForVarInit: non-zero-initializable cxx record");
-            return {};
-          }
-          return cir::ZeroAttr::get(cgm.convertType(d.getType()));
-        }
+        if (cd->isTrivial() && cd->isDefaultConstructor())
+          return cgm.emitNullConstantAttr(d.getType());
       }
     }
   }
@@ -1884,6 +1886,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     assert(!cir::MissingFeatures::cxxABI());
 
     const ValueDecl *memberDecl = value.getMemberPointerDecl();
+    if (!memberDecl)
+      return builder.getZeroInitAttr(cgm.convertType(destType));
+
     if (value.isMemberPointerToDerivedMember()) {
       cgm.errorNYI(
           "ConstExprEmitter::tryEmitPrivate member pointer to derived member");
@@ -1937,6 +1942,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     cgm.errorNYI(
         "ConstExprEmitter::tryEmitPrivate fixed point, addr label diff");
     return {};
+  case APValue::Matrix:
+    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate matrix");
+    return {};
   }
   llvm_unreachable("Unknown APValue kind");
 }
@@ -1963,8 +1971,7 @@ mlir::TypedAttr CIRGenModule::emitNullConstantAttr(QualType t) {
   assert(t->isMemberDataPointerType() &&
          "Should only see pointers to data members here!");
 
-  errorNYI("CIRGenModule::emitNullConstantAttr unsupported type");
-  return {};
+  return emitNullMemberAttr(t, t->castAs<MemberPointerType>());
 }
 
 mlir::TypedAttr

@@ -347,7 +347,7 @@ const char *SBPlatform::GetName() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    return ConstString(platform_sp->GetName()).AsCString();
+    return ConstString(platform_sp->GetName()).AsCString(nullptr);
   return nullptr;
 }
 
@@ -362,7 +362,8 @@ const char *SBPlatform::GetWorkingDirectory() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    return platform_sp->GetWorkingDirectory().GetPathAsConstString().AsCString();
+    return platform_sp->GetWorkingDirectory().GetPathAsConstString().AsCString(
+        nullptr);
   return nullptr;
 }
 
@@ -564,7 +565,7 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
             FileSpec(shell_command.GetWorkingDirectory()),
             &shell_command.m_opaque_ptr->m_status,
             &shell_command.m_opaque_ptr->m_signo,
-            &shell_command.m_opaque_ptr->m_output,
+            &shell_command.m_opaque_ptr->m_output, nullptr,
             shell_command.m_opaque_ptr->m_timeout);
       });
 }

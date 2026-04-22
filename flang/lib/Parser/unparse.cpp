@@ -900,6 +900,17 @@ public:
   void Unparse(const Expr::OR &x) { Walk(x.t, ".OR."); }
   void Unparse(const Expr::EQV &x) { Walk(x.t, ".EQV."); }
   void Unparse(const Expr::NEQV &x) { Walk(x.t, ".NEQV."); }
+  void Unparse(const ConditionalExpr &x) { // F2023 R1002
+    // Note: chained conditionals produce extra parentheses due to recursive
+    // else-expr unparsing; the result is still valid.
+    Put("( ");
+    Walk(std::get<0>(x.t)); // scalar-logical-expr
+    Put(" ? ");
+    Walk(std::get<1>(x.t)); // then-expr
+    Put(" : ");
+    Walk(std::get<2>(x.t)); // else-expr
+    Put(" )");
+  }
   void Unparse(const Expr::ComplexConstructor &x) {
     Put('('), Walk(x.t, ","), Put(')');
   }
@@ -1514,9 +1525,7 @@ public:
       Walk(x.count);
       break;
     case format::ControlEditDesc::Kind::X:
-      if (x.count != 1) {
-        Walk(x.count);
-      }
+      Walk(x.count);
       Word("X");
       break;
     case format::ControlEditDesc::Kind::Slash:
@@ -1549,6 +1558,9 @@ public:
       FMT(RP);
       FMT(DC);
       FMT(DP);
+      FMT(LZ);
+      FMT(LZS);
+      FMT(LZP);
 #undef FMT
     case format::ControlEditDesc::Kind::Dollar:
       Put('$');

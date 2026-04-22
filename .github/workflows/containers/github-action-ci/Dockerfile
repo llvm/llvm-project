@@ -2,7 +2,7 @@ FROM docker.io/library/ubuntu:24.04 AS base
 ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base AS stage1-toolchain
-ENV LLVM_VERSION=21.1.8
+ENV LLVM_VERSION=22.1.0
 
 RUN apt-get update && \
     apt-get install -y \
@@ -45,9 +45,10 @@ COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 # Need nodejs for some of the GitHub actions.
 # Need perl-modules for clang analyzer tests.
 # Need git for SPIRV-Tools tests.
+# Need binutils-dev instead of binutils to build the linker LTO plugin.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    binutils \
+    binutils-dev \
     cmake \
     curl \
     git \
@@ -99,7 +100,7 @@ WORKDIR /home/gha
 
 FROM ci-container AS ci-container-agent
 
-ENV GITHUB_RUNNER_VERSION=2.331.0
+ENV GITHUB_RUNNER_VERSION=2.334.0
 
 RUN mkdir actions-runner && \
     cd actions-runner && \

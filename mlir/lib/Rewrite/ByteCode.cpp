@@ -2081,7 +2081,7 @@ void ByteCodeExecutor::executeSwitchAttribute() {
 void ByteCodeExecutor::executeSwitchOperandCount() {
   LDBG() << "Executing SwitchOperandCount:";
   Operation *op = read<Operation *>();
-  auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
+  auto cases = read<DenseTypedElementsAttr>().getValues<uint32_t>();
 
   LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumOperands(), cases);
@@ -2118,7 +2118,7 @@ void ByteCodeExecutor::executeSwitchOperationName() {
 void ByteCodeExecutor::executeSwitchResultCount() {
   LDBG() << "Executing SwitchResultCount:";
   Operation *op = read<Operation *>();
-  auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
+  auto cases = read<DenseTypedElementsAttr>().getValues<uint32_t>();
 
   LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumResults(), cases);

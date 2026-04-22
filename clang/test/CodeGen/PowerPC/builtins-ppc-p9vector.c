@@ -1,15 +1,15 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
+// RUN: %clang_cc1 -target-feature +power9-vector -target-feature +isa-v207-instructions \
 // RUN:   -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:   -flax-vector-conversions=integer \
 // RUN:   -o - | FileCheck %s -check-prefix=CHECK-BE
 
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
+// RUN: %clang_cc1 -target-feature +power9-vector -target-feature +isa-v207-instructions \
 // RUN:   -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:   -flax-vector-conversions=integer \
 // RUN:   -o - | FileCheck %s
 
-// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +power9-vector \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +power9-vector -target-feature +isa-v207-instructions \
 // RUN:   -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s -check-prefix=CHECK-BE
 

@@ -264,12 +264,14 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              bool AllowVarArgs, bool AllowAlloca,
                              BasicBlock *AllocationBlock, std::string Suffix,
-                             bool ArgsInZeroAddressSpace)
+                             bool ArgsInZeroAddressSpace,
+                             bool VoidReturnWithSingleOutput)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
       AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
-      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
+      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace),
+      VoidReturnWithSingleOutput(VoidReturnWithSingleOutput) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -316,7 +318,7 @@ static BasicBlock *getCommonExitBlock(const SetVector<BasicBlock *> &Blocks) {
 
 CodeExtractorAnalysisCache::CodeExtractorAnalysisCache(Function &F) {
   for (BasicBlock &BB : F) {
-    for (Instruction &II : BB.instructionsWithoutDebug())
+    for (Instruction &II : BB)
       if (auto *AI = dyn_cast<AllocaInst>(&II))
         Allocas.push_back(AI);
 
@@ -325,7 +327,7 @@ CodeExtractorAnalysisCache::CodeExtractorAnalysisCache(Function &F) {
 }
 
 void CodeExtractorAnalysisCache::findSideEffectInfoForBlock(BasicBlock &BB) {
-  for (Instruction &II : BB.instructionsWithoutDebug()) {
+  for (Instruction &II : BB) {
     unsigned Opcode = II.getOpcode();
     Value *MemAddr = nullptr;
     switch (Opcode) {
@@ -352,7 +354,7 @@ void CodeExtractorAnalysisCache::findSideEffectInfoForBlock(BasicBlock &BB) {
     default: {
       IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(&II);
       if (IntrInst) {
-        if (IntrInst->isLifetimeStartOrEnd())
+        if (IntrInst->isLifetimeStartOrEnd() || isa<PseudoProbeInst>(IntrInst))
           break;
         SideEffectingBlocks.insert(&BB);
         return;
@@ -662,7 +664,7 @@ bool CodeExtractor::isEligible() const {
 
 void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
                                       const ValueSet &SinkCands,
-                                      bool CollectGlobalInputs) const {
+                                      bool CollectGlobalInputs) {
   for (BasicBlock *BB : Blocks) {
     // If a used value is defined outside the region, it's an input.  If an
     // instruction is used outside the region, it's an output.
@@ -681,6 +683,12 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
           break;
         }
     }
+  }
+
+  if (!VoidReturnWithSingleOutput && !AggregateArgs && Outputs.size() == 1 &&
+      getCommonExitBlock(Blocks)) {
+    FuncRetVal = Outputs[0];
+    Outputs.clear();
   }
 }
 
@@ -791,7 +799,7 @@ void CodeExtractor::severSplitPHINodesOfExits() {
         for (BasicBlock *PredBB : Preds)
           if (Blocks.count(PredBB))
             PredBB->getTerminator()->replaceUsesOfWith(ExitBB, NewBB);
-        BranchInst::Create(ExitBB, NewBB);
+        UncondBrInst::Create(ExitBB, NewBB);
         Blocks.insert(NewBB);
       }
 
@@ -877,7 +885,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
         M->getContext(), ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
   }
 
-  Type *RetTy = getSwitchType();
+  Type *RetTy = FuncRetVal ? FuncRetVal->getType() : getSwitchType();
   LLVM_DEBUG({
     dbgs() << "Function type: " << *RetTy << " f(";
     for (Type *i : ParamTy)
@@ -938,6 +946,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::AlwaysInline:
       case Attribute::Cold:
       case Attribute::DisableSanitizerInstrumentation:
+      case Attribute::Flatten:
       case Attribute::FnRetThunkExtern:
       case Attribute::Hot:
       case Attribute::HybridPatchable:
@@ -1518,8 +1527,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       inputs, outputs, StructValues, newFunction, StructTy, oldFunction, ReplIP,
       EntryFreq, LifetimesStart.getArrayRef(), Reloads);
 
-  insertReplacerCall(oldFunction, header, TheCall->getParent(), outputs,
-                     Reloads, ExitWeights);
+  insertReplacerCall(oldFunction, header, TheCall, outputs, Reloads,
+                     ExitWeights);
 
   fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall, inputs,
                                NewValues);
@@ -1698,13 +1707,16 @@ void CodeExtractor::emitFunctionBody(
     ExitBlockMap[OldTarget] = NewTarget;
 
     Value *brVal = nullptr;
-    Type *RetTy = getSwitchType();
+    Type *RetTy = FuncRetVal ? FuncRetVal->getType() : getSwitchType();
     assert(ExtractedFuncRetVals.size() < 0xffff &&
            "too many exit blocks for switch");
     switch (ExtractedFuncRetVals.size()) {
     case 0:
-    case 1:
       // No value needed.
+      break;
+    case 1:
+      if (FuncRetVal)
+        brVal = FuncRetVal;
       break;
     case 2: // Conditional branch, return a bool
       brVal = ConstantInt::get(RetTy, !SuccNum);
@@ -1742,7 +1754,7 @@ void CodeExtractor::emitFunctionBody(
   }
 
   // Connect newFunction entry block to new header.
-  BranchInst *BranchI = BranchInst::Create(header, newFuncRoot);
+  UncondBrInst *BranchI = UncondBrInst::Create(header, newFuncRoot);
   applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
 
   // Store the arguments right after the definition of output value.
@@ -1982,15 +1994,15 @@ CallInst *CodeExtractor::emitReplacerCall(
   case 1:
     // Only a single destination, change the switch into an unconditional
     // branch.
-    BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getIterator());
+    UncondBrInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getIterator());
     TheSwitch->eraseFromParent();
     break;
   case 2:
     // Only two destinations, convert to a condition branch.
     // Remark: This also swaps the target branches:
     // 0 -> false -> getSuccessor(2); 1 -> true -> getSuccessor(1)
-    BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getSuccessor(2),
-                       call, TheSwitch->getIterator());
+    CondBrInst::Create(call, TheSwitch->getSuccessor(1),
+                       TheSwitch->getSuccessor(2), TheSwitch->getIterator());
     TheSwitch->eraseFromParent();
     break;
   default:
@@ -2018,13 +2030,14 @@ CallInst *CodeExtractor::emitReplacerCall(
 }
 
 void CodeExtractor::insertReplacerCall(
-    Function *oldFunction, BasicBlock *header, BasicBlock *codeReplacer,
+    Function *oldFunction, BasicBlock *header, CallInst *ReplacerCall,
     const ValueSet &outputs, ArrayRef<Value *> Reloads,
     const DenseMap<BasicBlock *, BlockFrequency> &ExitWeights) {
 
   // Rewrite branches to basic blocks outside of the loop to new dummy blocks
   // within the new function. This must be done before we lose track of which
   // blocks were originally in the code region.
+  BasicBlock *codeReplacer = ReplacerCall->getParent();
   std::vector<User *> Users(header->user_begin(), header->user_end());
   for (auto &U : Users)
     // The BasicBlock which contains the branch is not in the region
@@ -2065,6 +2078,13 @@ void CodeExtractor::insertReplacerCall(
         inst->replaceUsesOfWith(outputs[i], load);
     }
   }
+
+  if (FuncRetVal)
+    for (User *U : FuncRetVal->users()) {
+      Instruction *inst = cast<Instruction>(U);
+      if (inst->getParent()->getParent() == oldFunction)
+        inst->replaceUsesOfWith(FuncRetVal, ReplacerCall);
+    }
 
   // Update the branch weights for the exit block.
   if (BFI && ExtractedFuncRetVals.size() > 1)

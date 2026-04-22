@@ -58,7 +58,6 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 using namespace lldb;
@@ -621,7 +620,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(ConstString name,
   assert(m_parser_vars.get());
 
   if (!m_parser_vars->m_exe_ctx.GetTargetPtr())
-    return false;
+    return LLDB_INVALID_ADDRESS;
 
   return GetSymbolAddress(m_parser_vars->m_exe_ctx.GetTargetRef(),
                           m_parser_vars->m_exe_ctx.GetProcessPtr(), name,
@@ -706,8 +705,9 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     if (!namespace_map)
       return;
 
-    LLDB_LOGV(log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
+    LLDB_LOG_VERBOSE(
+        log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
+        namespace_map.get(), namespace_map->size());
 
     for (ClangASTImporter::NamespaceMapItem &n : *namespace_map) {
       LLDB_LOG(log, "  CEDM::FEVD Searching namespace {0} in module {1}",
@@ -876,8 +876,11 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
   // creates decls for function templates by attaching them to the TU instead
   // of a class context. So we can actually have template methods scoped
   // outside of a class. Once we fix that, we can remove this code-path.
-
-  VariableList *vars = frame->GetVariableList(false, nullptr);
+  // Additionally, we exclude synthetic variables from here. Clang-based
+  // languages are unlikely candidates for synthetic variables anyway, and
+  // especially in this case, we're looking for something specific to C++.
+  VariableList *vars = frame->GetVariableList(
+      /*get_file_globals=*/false, /*include_synthetic_vars=*/false, nullptr);
 
   lldb::VariableSP this_var = vars->FindVariable(ConstString("this"));
 
@@ -963,7 +966,11 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
   // In that case, just look up the "self" variable in the current scope
   // and use its type.
 
-  VariableList *vars = frame->GetVariableList(false, nullptr);
+  // We exclude synthetic variables from here. Like above, it's highly unlikely
+  // we care about synthetic variables here, and indeed this code is looking for
+  // an obj-C specific construct.
+  VariableList *vars = frame->GetVariableList(
+      /*get_file_globals=*/false, /*include_synthetic_vars=*/false, nullptr);
 
   lldb::VariableSP self_var = vars->FindVariable(ConstString("self"));
 
@@ -1472,7 +1479,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
     if (data_symbol) {
       std::string warning("got name from symbols: ");
-      warning.append(name.AsCString());
+      warning.append(name.GetStringRef());
       const unsigned diag_id =
           m_ast_context->getDiagnostics().getCustomDiagID(
               clang::DiagnosticsEngine::Level::Warning, "%0");
@@ -1825,7 +1832,8 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
     Type *function_type = function->GetType();
 
     const auto lang = function->GetCompileUnit()->GetLanguage();
-    const auto name = function->GetMangled().GetMangledName().AsCString();
+    const llvm::StringRef name =
+        function->GetMangled().GetMangledName().GetStringRef();
     const bool extern_c =
         (Language::LanguageIsC(lang) && !Mangled::IsMangledName(name)) ||
         (Language::LanguageIsObjC(lang) &&
@@ -2011,8 +2019,8 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
 
     CXXMethodDecl *method_decl = m_clang_ast_context->AddMethodToCXXRecordType(
         copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", /*asm_label=*/{},
-        method_type, lldb::eAccessPublic, is_virtual, is_static, is_inline,
-        is_explicit, is_attr_used, is_artificial);
+        method_type, is_virtual, is_static, is_inline, is_explicit,
+        is_attr_used, is_artificial);
 
     LLDB_LOG(log,
              "  CEDM::AddThisType Added function $__lldb_expr "

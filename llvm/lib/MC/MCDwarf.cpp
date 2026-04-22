@@ -860,7 +860,12 @@ static void EmitGenDwarfAbbrev(MCStreamer *MCOS) {
   if (!DwarfDebugFlags.empty())
     EmitAbbrev(MCOS, dwarf::DW_AT_APPLE_flags, dwarf::DW_FORM_string);
   EmitAbbrev(MCOS, dwarf::DW_AT_producer, dwarf::DW_FORM_string);
-  EmitAbbrev(MCOS, dwarf::DW_AT_language, dwarf::DW_FORM_data2);
+
+  if (context.getDwarfVersion() >= 6)
+    EmitAbbrev(MCOS, dwarf::DW_AT_language_name, dwarf::DW_FORM_data2);
+  else
+    EmitAbbrev(MCOS, dwarf::DW_AT_language, dwarf::DW_FORM_data2);
+
   EmitAbbrev(MCOS, 0, 0);
 
   // DW_TAG_label DIE abbrev (2).
@@ -1092,9 +1097,15 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     MCOS->emitBytes(StringRef("llvm-mc (based on LLVM " PACKAGE_VERSION ")"));
   MCOS->emitInt8(0); // NULL byte to terminate the string.
 
-  // AT_language, a 4 byte value.  We use DW_LANG_Mips_Assembler as the dwarf2
-  // draft has no standard code for assembler.
-  MCOS->emitInt16(dwarf::DW_LANG_Mips_Assembler);
+  if (context.getDwarfVersion() >= 6) {
+    // AT_language_name, a 4 byte value.
+    MCOS->emitInt16(dwarf::DW_LNAME_Assembly);
+  } else {
+    // AT_language, a 4 byte value.  We use DW_LANG_Mips_Assembler as the dwarf2
+    // draft has no standard code for assembler.
+    // FIXME: dwarf4 has DW_LANG_Assembly which we could use instead.
+    MCOS->emitInt16(dwarf::DW_LANG_Mips_Assembler);
+  }
 
   // Third part: the list of label DIEs.
 
@@ -1856,13 +1867,13 @@ namespace {
 struct CIEKey {
   CIEKey() = default;
 
-  explicit CIEKey(const MCDwarfFrameInfo &Frame)
+  explicit CIEKey(const MCDwarfFrameInfo &Frame, bool IsEH)
       : Personality(Frame.Personality),
         PersonalityEncoding(Frame.PersonalityEncoding),
         LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
         IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
         IsBKeyFrame(Frame.IsBKeyFrame),
-        IsMTETaggedFrame(Frame.IsMTETaggedFrame) {}
+        IsMTETaggedFrame(Frame.IsMTETaggedFrame), IsEH(IsEH) {}
 
   StringRef PersonalityName() const {
     if (!Personality)
@@ -1871,6 +1882,11 @@ struct CIEKey {
   }
 
   bool operator<(const CIEKey &Other) const {
+    assert(IsEH == Other.IsEH);
+    if (!IsEH)
+      return std::make_tuple(RAReg, IsSimple) <
+             std::make_tuple(Other.RAReg, Other.IsSimple);
+
     return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
                            IsSignalFrame, IsSimple, RAReg, IsBKeyFrame,
                            IsMTETaggedFrame) <
@@ -1881,6 +1897,10 @@ struct CIEKey {
   }
 
   bool operator==(const CIEKey &Other) const {
+    assert(IsEH == Other.IsEH);
+    if (!IsEH)
+      return RAReg == Other.RAReg && IsSimple == Other.IsSimple;
+
     return Personality == Other.Personality &&
            PersonalityEncoding == Other.PersonalityEncoding &&
            LsdaEncoding == Other.LsdaEncoding &&
@@ -1898,6 +1918,7 @@ struct CIEKey {
   unsigned RAReg = UINT_MAX;
   bool IsBKeyFrame = false;
   bool IsMTETaggedFrame = false;
+  bool IsEH = false;
 };
 
 } // end anonymous namespace
@@ -1948,10 +1969,10 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   // but the Android libunwindstack rejects eh_frame sections where
   // an FDE refers to a CIE other than the closest previous CIE.
   std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
-  llvm::stable_sort(FrameArrayX,
-                    [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
-                      return CIEKey(X) < CIEKey(Y);
-                    });
+  llvm::stable_sort(FrameArrayX, [IsEH](const MCDwarfFrameInfo &X,
+                                        const MCDwarfFrameInfo &Y) {
+    return CIEKey(X, IsEH) < CIEKey(Y, IsEH);
+  });
   CIEKey LastKey;
   const MCSymbol *LastCIEStart = nullptr;
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
@@ -1967,8 +1988,8 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
       // section, do not emit anything.
       continue;
 
-    CIEKey Key(Frame);
-    if (!LastCIEStart || (IsEH && Key != LastKey)) {
+    CIEKey Key(Frame, IsEH);
+    if (!LastCIEStart || Key != LastKey) {
       LastKey = Key;
       LastCIEStart = &Emitter.EmitCIE(Frame);
     }

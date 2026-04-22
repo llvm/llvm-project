@@ -160,7 +160,6 @@ ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 3, CMK_None, Benign,
              "compiling a module interface")
 LANGOPT(CompilingPCH, 1, 0, Benign, "building a pch")
 LANGOPT(BuildingPCHWithObjectFile, 1, 0, Benign, "building a pch which has a corresponding object file")
-LANGOPT(CacheGeneratedPCH, 1, 0, Benign, "cache generated PCH files in memory")
 LANGOPT(PCHInstantiateTemplates, 1, 0, Benign, "instantiate templates while building a PCH")
 LANGOPT(ModulesDeclUse    , 1, 0, Compatible, "require declaration of module uses")
 LANGOPT(ModulesSearchAll  , 1, 1, Benign, "searching even non-imported modules to find unresolved references")
@@ -249,7 +248,7 @@ LANGOPT(HLSLStrictAvailability, 1, 0, NotCompatible,
         "Strict availability diagnostic mode for HLSL built-in functions.")
 LANGOPT(HLSLSpvUseUnknownImageFormat, 1, 0, NotCompatible, "For storage images and texel buffers, sets the default format to 'Unknown' when not specified via the `vk::image_format` attribute. If this option is not used, the format is inferred from the resource's data type.")
 LANGOPT(HLSLSpvEnableMaximalReconvergence, 1, 0, NotCompatible, "Enables the MaximallyReconvergesKHR execution mode for this module. This ensures that control flow reconverges at well-defined merge points as defined by the Vulkan spec.")
-LANGOPT(EmitStructuredGEP, 1, 0, NotCompatible, "Emit structured GEP intrinsics instead of GEP instructions")
+LANGOPT(EmitLogicalPointer, 1, 0, NotCompatible, "Allow emitting structured GEP/alloca intrinsics instead of normal GEP/alloca instructions.")
 
 LANGOPT(CUDAIsDevice      , 1, 0, NotCompatible, "compiling for CUDA device")
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, NotCompatible, "treating unattributed constexpr functions as __host__ __device__")
@@ -288,6 +287,10 @@ LANGOPT(DumpRecordLayoutsCanonical , 1, 0, Benign, "dumping the AST layout of re
 LANGOPT(DumpRecordLayoutsComplete , 1, 0, Benign, "dumping the AST layout of all complete records")
 LANGOPT(DumpVTableLayouts , 1, 0, Benign, "dumping the layouts of emitted vtables")
 LANGOPT(NoConstantCFStrings , 1, 0, NotCompatible, "no constant CoreFoundation strings")
+LANGOPT(ObjCConstantLiterals , 1, 0, NotCompatible, "constant Objective-C literals")
+LANGOPT(ConstantNSNumberLiterals , 1, 0, NotCompatible, "constant number literals")
+LANGOPT(ConstantNSArrayLiterals , 1, 0, NotCompatible, "constant array literals")
+LANGOPT(ConstantNSDictionaryLiterals , 1, 0, NotCompatible, "constant dictionary literals")
 LANGOPT(InlineVisibilityHidden , 1, 0, Benign, "hidden visibility for inline C++ methods")
 ENUM_LANGOPT(DefaultVisibilityExportMapping, DefaultVisiblityExportMapping, 2, DefaultVisiblityExportMapping::None, Benign, "controls mapping of default visibility to dllexport")
 LANGOPT(IgnoreXCOFFVisibility, 1, 0, Benign, "All the visibility attributes that are specified in the source code are ignored in aix XCOFF.")
@@ -426,6 +429,7 @@ ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest, NotCompatible,
              "with")
 
 VALUE_LANGOPT(FunctionAlignment, 5, 0, Compatible, "Default alignment for functions")
+VALUE_LANGOPT(PreferredFunctionAlignment, 5, 0, Compatible, "Preferred alignment for functions")
 VALUE_LANGOPT(LoopAlignment, 32, 0, Compatible, "Default alignment for loops")
 
 LANGOPT(FixedPoint, 1, 0, NotCompatible, "fixed point types")
@@ -447,6 +451,8 @@ VALUE_LANGOPT(MaxMatrixDimension, 32, (1 << 20) - 1, NotCompatible, "maximum all
 LANGOPT(CXXAssumptions, 1, 1, NotCompatible, "Enable or disable codegen and compile-time checks for C++23's [[assume]] attribute")
 
 LANGOPT(RawStringLiterals, 1, 1, NotCompatible, "Enable or disable raw string literals")
+
+LANGOPT(AllowLiteralDigitSeparator, 1, 0, NotCompatible, "Allow literal digit seperator in source")
 
 ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
              StrictFlexArraysLevelKind::Default, NotCompatible,

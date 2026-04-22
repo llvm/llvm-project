@@ -329,11 +329,10 @@ define void @reduc_store_inside_unrolled(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP34:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP3]]
@@ -535,11 +534,10 @@ define void @reduc_store_middle_store_predicated(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP34:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP3]]
@@ -584,7 +582,7 @@ entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
   br label %for.body
 
-for.body:                                         ; preds = %latch, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
   %sum = phi i32 [ 0, %entry ], [ %sum.2, %latch ]
   %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
@@ -593,11 +591,11 @@ for.body:                                         ; preds = %latch, %entry
   %cmp = icmp sgt i32 %0, 0
   br i1 %cmp, label %predicated, label %latch
 
-predicated:                                       ; preds = %for.body
+predicated:
   store i32 %sum.1, ptr %gep.dst, align 4
   br label %latch
 
-latch:                                            ; preds = %predicated, %for.body
+latch:
   %1 = or disjoint i64 %iv, 1
   %gep.src.1 = getelementptr inbounds i32, ptr %src, i64 %1
   %2 = load i32, ptr %gep.src.1, align 4
@@ -607,7 +605,7 @@ latch:                                            ; preds = %predicated, %for.bo
   %cmp.1 = icmp slt i64 %iv.next, 1000
   br i1 %cmp.1, label %for.body, label %exit
 
-exit:                                 ; preds = %latch
+exit:
   ret void
 }
 
@@ -652,7 +650,7 @@ entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
   br label %for.body
 
-for.body:                                         ; preds = %latch, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
   %sum = phi i32 [ 0, %entry ], [ %sum.1, %latch ]
   %arrayidx = getelementptr inbounds i32, ptr %src, i64 %iv
@@ -666,16 +664,16 @@ for.body:                                         ; preds = %latch, %entry
   %cmp1 = icmp sgt i32 %2, 0
   br i1 %cmp1, label %predicated, label %latch
 
-predicated:                                       ; preds = %for.body
+predicated:
   store i32 %sum.2, ptr %gep.dst, align 4
   br label %latch
 
-latch:                                            ; preds = %predicated, %for.body
+latch:
   %iv.next = add nuw nsw i64 %iv, 2
   %cmp = icmp slt i64 %iv.next, 1000
   br i1 %cmp, label %for.body, label %exit
 
-exit:                                 ; preds = %latch
+exit:
   ret void
 }
 
@@ -899,7 +897,7 @@ define i32 @non_reduc_store_invariant_addr_not_hoisted(ptr %dst, ptr readonly %s
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
@@ -911,7 +909,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %iv.next, 1000
   br i1 %exitcond, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 }
@@ -1239,6 +1237,61 @@ loop:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv, 100
   br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Make sure we don't crash when checking for min/max recurrences with
+; intermediate stores in different basic blocks.
+define void @smax_intermediate_stores_different_bbs(ptr %p, i1 %c) {
+; CHECK-LABEL: define void @smax_intermediate_stores_different_bbs(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[BE:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[RED]], i32 1)
+; CHECK-NEXT:    store i32 [[SMAX1]], ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i32 @llvm.smax.i32(i32 [[RED]], i32 1)
+; CHECK-NEXT:    store i32 [[SMAX2]], ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[BE]] = phi i32 [ [[SMAX1]], %[[IF_ELSE]] ], [ [[RED]], %[[IF_THEN]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %red = phi i32 [ 0, %entry ], [ %be, %loop.latch ]
+  br i1 %c, label %if.then, label %if.else
+
+if.else:
+  %smax1 = call i32 @llvm.smax.i32(i32 %red, i32 1)
+  store i32 %smax1, ptr %p, align 4
+  br label %loop.latch
+
+if.then:
+  %smax2 = call i32 @llvm.smax.i32(i32 %red, i32 1)
+  store i32 %smax2, ptr %p, align 4
+  br label %loop.latch
+
+loop.latch:
+  %be = phi i32 [ %smax1, %if.else ], [ %red, %if.then ]
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop.header
 
 exit:
   ret void

@@ -208,7 +208,7 @@ public:
 
   void addDirectiveHandler(StringRef Directive,
                            ExtensionDirectiveHandler Handler) override {
-    ExtensionDirectiveMap[Directive] = Handler;
+    ExtensionDirectiveMap[Directive] = std::move(Handler);
   }
 
   void addAliasForDirective(StringRef Directive, StringRef Alias) override {
@@ -545,7 +545,8 @@ private:
     CVDR_DEFRANGE_REGISTER,
     CVDR_DEFRANGE_FRAMEPOINTER_REL,
     CVDR_DEFRANGE_SUBFIELD_REGISTER,
-    CVDR_DEFRANGE_REGISTER_REL
+    CVDR_DEFRANGE_REGISTER_REL,
+    CVDR_DEFRANGE_REGISTER_REL_INDIR
   };
 
   /// Maps Codeview def_range types --> CVDefRangeType enum, for
@@ -855,6 +856,10 @@ bool AsmParser::enterIncludeFile(const std::string &Filename) {
 /// returns true on failure.
 bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
                                   const MCExpr *Count, SMLoc Loc) {
+  // The .incbin file cannot introduce new symbols.
+  if (SymbolScanningMode)
+    return false;
+
   std::string IncludedFile;
   unsigned NewBuf =
       SrcMgr.AddIncludeFile(Filename, Lexer.getLoc(), IncludedFile);
@@ -938,7 +943,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
 
   // Prime the lexer.
   Lex();
@@ -1052,7 +1057,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
 bool AsmParser::checkForValidSection() {
   if (!ParsingMSInlineAsm && !getStreamer().getCurrentFragment()) {
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
   }
@@ -3465,16 +3470,54 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
 
 bool AsmParser::parseDirectivePrefAlign() {
   SMLoc AlignmentLoc = getLexer().getLoc();
-  int64_t Alignment;
-  if (checkForValidSection() || parseAbsoluteExpression(Alignment))
+  int64_t Log2Alignment;
+  if (checkForValidSection() || parseAbsoluteExpression(Log2Alignment))
     return true;
+
+  if (Log2Alignment < 0 || Log2Alignment > 63)
+    return Error(AlignmentLoc, "log2 alignment must be in the range [0, 63]");
+
+  // Parse end symbol: .prefalign N, sym
+  SMLoc SymLoc = getLexer().getLoc();
+  if (parseComma())
+    return true;
+  StringRef Name;
+  SymLoc = getLexer().getLoc();
+  if (parseIdentifier(Name))
+    return Error(SymLoc, "expected symbol name");
+  MCSymbol *End = getContext().getOrCreateSymbol(Name);
+
+  // Parse fill operand: integer byte [0, 255] or "nop".
+  SMLoc FillLoc = getLexer().getLoc();
+  if (parseComma())
+    return true;
+
+  bool EmitNops = false;
+  uint8_t Fill = 0;
+  SMLoc FillLoc2 = getLexer().getLoc();
+  if (getLexer().is(AsmToken::Identifier) &&
+      getLexer().getTok().getIdentifier() == "nop") {
+    EmitNops = true;
+    Lex();
+  } else {
+    int64_t FillVal;
+    if (parseAbsoluteExpression(FillVal))
+      return true;
+    if (FillVal < 0 || FillVal > 255)
+      return Error(FillLoc2, "fill value must be in range [0, 255]");
+    Fill = static_cast<uint8_t>(FillVal);
+  }
+
   if (parseEOL())
     return true;
+  if ((EmitNops || Fill != 0) &&
+      getStreamer().getCurrentSectionOnly()->isBssSection())
+    return Error(FillLoc, "non-zero fill in BSS section '" +
+                              getStreamer().getCurrentSectionOnly()->getName() +
+                              "'");
 
-  if (!isPowerOf2_64(Alignment))
-    return Error(AlignmentLoc, "alignment must be a power of 2");
-  getStreamer().emitPrefAlign(Align(Alignment));
-
+  getStreamer().emitPrefAlign(Align(1ULL << Log2Alignment), *End, EmitNops,
+                              Fill, getTargetParser().getSTI());
   return false;
 }
 
@@ -3973,6 +4016,7 @@ void AsmParser::initializeCVDefRangeTypeMap() {
   CVDefRangeTypeMap["frame_ptr_rel"] = CVDR_DEFRANGE_FRAMEPOINTER_REL;
   CVDefRangeTypeMap["subfield_reg"] = CVDR_DEFRANGE_SUBFIELD_REGISTER;
   CVDefRangeTypeMap["reg_rel"] = CVDR_DEFRANGE_REGISTER_REL;
+  CVDefRangeTypeMap["reg_rel_indir"] = CVDR_DEFRANGE_REGISTER_REL_INDIR;
 }
 
 /// parseDirectiveCVDefRange
@@ -4073,6 +4117,37 @@ bool AsmParser::parseDirectiveCVDefRange() {
     DRHdr.Register = DRRegister;
     DRHdr.Flags = DRFlags;
     DRHdr.BasePointerOffset = DRBasePointerOffset;
+    getStreamer().emitCVDefRangeDirective(Ranges, DRHdr);
+    break;
+  }
+  case CVDR_DEFRANGE_REGISTER_REL_INDIR: {
+    int64_t DRRegister;
+    int64_t DRFlags;
+    int64_t DRBasePointerOffset;
+    int64_t DROffsetInUdt;
+    if (parseToken(AsmToken::Comma, "expected comma before register number in "
+                                    ".cv_def_range directive") ||
+        parseAbsoluteExpression(DRRegister))
+      return Error(Loc, "expected register value");
+    if (parseToken(
+            AsmToken::Comma,
+            "expected comma before flag value in .cv_def_range directive") ||
+        parseAbsoluteExpression(DRFlags))
+      return Error(Loc, "expected flag value");
+    if (parseToken(AsmToken::Comma, "expected comma before base pointer offset "
+                                    "in .cv_def_range directive") ||
+        parseAbsoluteExpression(DRBasePointerOffset))
+      return Error(Loc, "expected base pointer offset value");
+    if (parseToken(AsmToken::Comma, "expected comma before offset in UDT "
+                                    "in .cv_def_range directive") ||
+        parseAbsoluteExpression(DROffsetInUdt))
+      return Error(Loc, "expected offset in UDT value");
+
+    codeview::DefRangeRegisterRelIndirHeader DRHdr;
+    DRHdr.Register = DRRegister;
+    DRHdr.Flags = DRFlags;
+    DRHdr.BasePointerOffset = DRBasePointerOffset;
+    DRHdr.OffsetInUdt = DROffsetInUdt;
     getStreamer().emitCVDefRangeDirective(Ranges, DRHdr);
     break;
   }

@@ -1,5 +1,5 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 -filetype=null %s 2>&1 | FileCheck %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 -filetype=null %s 2>&1 | FileCheck %s
 
 ; CHECK: error: <unknown>:0:0: in function ds_ordered_add_dword_count_too_low void (ptr addrspace(2), ptr addrspace(1)): ds_ordered_count: dword count must be between 1 and 4
 define amdgpu_kernel void @ds_ordered_add_dword_count_too_low(ptr addrspace(2) inreg %gds, ptr addrspace(1) %out) {

@@ -269,13 +269,19 @@ getSection(const object::MachOObjectFile &Obj,
 //
 // When the eh_frame section is transferred, its offset and size are set resp.
 // to \a EHFrameOffset and \a EHFrameSize.
+//
+// When the __PSEUDO_PROBE segment is transferred, its offset and size are set
+// resp. to \a PseudoProbeOffset and \a PseudoProbeSize, and its sections'
+// offsets are updated using \a PseudoProbeProbesOffset for __probes and
+// \a PseudoProbeDescsOffset for __probe_descs.
 template <typename SegmentTy>
 static void transferSegmentAndSections(
     const object::MachOObjectFile::LoadCommandInfo &LCI, SegmentTy Segment,
     const object::MachOObjectFile &Obj, MachObjectWriter &Writer,
     uint64_t LinkeditOffset, uint64_t LinkeditSize, uint64_t EHFrameOffset,
-    uint64_t EHFrameSize, uint64_t DwarfSegmentSize, uint64_t &GapForDwarf,
-    uint64_t &EndAddress) {
+    uint64_t EHFrameSize, uint64_t PseudoProbeOffset, uint64_t PseudoProbeSize,
+    uint64_t PseudoProbeProbesOffset, uint64_t PseudoProbeDescsOffset,
+    uint64_t DwarfSegmentSize, uint64_t &GapForDwarf, uint64_t &EndAddress) {
   if (StringRef("__DWARF") == Segment.segname)
     return;
 
@@ -287,6 +293,10 @@ static void transferSegmentAndSections(
     Segment.filesize = LinkeditSize;
     // Resize vmsize by rounding to the page size.
     Segment.vmsize = alignTo(LinkeditSize, 0x1000);
+  } else if (StringRef("__PSEUDO_PROBE") == Segment.segname &&
+             PseudoProbeSize > 0) {
+    Segment.fileoff = PseudoProbeOffset;
+    Segment.filesize = PseudoProbeSize;
   } else {
     Segment.fileoff = Segment.filesize = 0;
   }
@@ -311,6 +321,14 @@ static void transferSegmentAndSections(
     auto Sect = getSection(Obj, Segment, LCI, i);
     if (StringRef("__eh_frame") == Sect.sectname) {
       Sect.offset = EHFrameOffset;
+      Sect.reloff = Sect.nreloc = 0;
+    } else if (StringRef("__probes") == Sect.sectname &&
+               PseudoProbeProbesOffset > 0) {
+      Sect.offset = PseudoProbeProbesOffset;
+      Sect.reloff = Sect.nreloc = 0;
+    } else if (StringRef("__probe_descs") == Sect.sectname &&
+               PseudoProbeDescsOffset > 0) {
+      Sect.offset = PseudoProbeDescsOffset;
       Sect.reloff = Sect.nreloc = 0;
     } else {
       Sect.offset = Sect.reloff = Sect.nreloc = 0;
@@ -463,6 +481,10 @@ bool generateDsymCompanion(
   // If we have a valid eh_frame to copy, do it.
   uint64_t EHFrameSize = 0;
   StringRef EHFrameData;
+  StringRef PseudoProbeProbesData;
+  uint64_t PseudoProbeProbesSize = 0;
+  StringRef PseudoProbeDescsData;
+  uint64_t PseudoProbeDescsSize = 0;
   for (const object::SectionRef &Section : InputBinary.sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
     if (!NameOrErr) {
@@ -478,8 +500,23 @@ bool generateDsymCompanion(
       } else {
         consumeError(ContentsOrErr.takeError());
       }
+    } else if (SectionName == "probes") {
+      if (Expected<StringRef> ContentsOrErr = Section.getContents()) {
+        PseudoProbeProbesData = *ContentsOrErr;
+        PseudoProbeProbesSize = Section.getSize();
+      } else {
+        consumeError(ContentsOrErr.takeError());
+      }
+    } else if (SectionName == "probe_descs") {
+      if (Expected<StringRef> ContentsOrErr = Section.getContents()) {
+        PseudoProbeDescsData = *ContentsOrErr;
+        PseudoProbeDescsSize = Section.getSize();
+      } else {
+        consumeError(ContentsOrErr.takeError());
+      }
     }
   }
+  uint64_t PseudoProbeSize = PseudoProbeProbesSize + PseudoProbeDescsSize;
 
   unsigned HeaderSize =
       Is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
@@ -561,8 +598,16 @@ bool generateDsymCompanion(
   uint64_t EHFrameStart = StringStart + NewStringsSize;
   EHFrameStart = alignTo(EHFrameStart, 0x1000);
 
-  uint64_t DwarfSegmentStart = EHFrameStart + EHFrameSize;
-  DwarfSegmentStart = alignTo(DwarfSegmentStart, 0x1000);
+  // Place pseudo probe data after the EH frame.
+  uint64_t PseudoProbeStart = PseudoProbeSize > 0
+                                  ? alignTo(EHFrameStart + EHFrameSize, 0x1000)
+                                  : EHFrameStart + EHFrameSize;
+
+  uint64_t PseudoProbeProbesStart = PseudoProbeStart;
+  uint64_t PseudoProbeDescsStart = PseudoProbeStart + PseudoProbeProbesSize;
+
+  uint64_t DwarfSegmentStart =
+      alignTo(PseudoProbeStart + PseudoProbeSize, 0x1000);
 
   // Write the load commands for the segments and sections we 'import' from
   // the original binary.
@@ -573,12 +618,16 @@ bool generateDsymCompanion(
       transferSegmentAndSections(
           LCI, InputBinary.getSegmentLoadCommand(LCI), InputBinary, Writer,
           SymtabStart, StringStart + NewStringsSize - SymtabStart, EHFrameStart,
-          EHFrameSize, DwarfSegmentSize, GapForDwarf, EndAddress);
+          EHFrameSize, PseudoProbeStart, PseudoProbeSize,
+          PseudoProbeProbesStart, PseudoProbeDescsStart, DwarfSegmentSize,
+          GapForDwarf, EndAddress);
     else if (LCI.C.cmd == MachO::LC_SEGMENT_64)
       transferSegmentAndSections(
           LCI, InputBinary.getSegment64LoadCommand(LCI), InputBinary, Writer,
           SymtabStart, StringStart + NewStringsSize - SymtabStart, EHFrameStart,
-          EHFrameSize, DwarfSegmentSize, GapForDwarf, EndAddress);
+          EHFrameSize, PseudoProbeStart, PseudoProbeSize,
+          PseudoProbeProbesStart, PseudoProbeDescsStart, DwarfSegmentSize,
+          GapForDwarf, EndAddress);
   }
 
   uint64_t DwarfVMAddr = alignTo(EndAddress, 0x1000);
@@ -632,8 +681,17 @@ bool generateDsymCompanion(
     OutFile << EHFrameData;
   assert(OutFile.tell() == EHFrameStart + EHFrameSize);
 
+  // Transfer pseudo probe.
+  if (PseudoProbeSize > 0) {
+    OutFile.write_zeros(PseudoProbeStart - (EHFrameStart + EHFrameSize));
+    assert(OutFile.tell() == PseudoProbeStart);
+    OutFile << PseudoProbeProbesData;
+    OutFile << PseudoProbeDescsData;
+    assert(OutFile.tell() == PseudoProbeStart + PseudoProbeSize);
+  }
+
   // Pad till the Dwarf segment start.
-  OutFile.write_zeros(DwarfSegmentStart - (EHFrameStart + EHFrameSize));
+  OutFile.write_zeros(DwarfSegmentStart - OutFile.tell());
   assert(OutFile.tell() == DwarfSegmentStart);
 
   // Emit the Dwarf sections contents.

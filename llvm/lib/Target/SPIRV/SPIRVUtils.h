@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
 #include <queue>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -347,7 +348,11 @@ bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
 Type *reconstitutePeeledArrayType(Type *Ty);
 
 inline bool hasInitializer(const GlobalVariable *GV) {
-  return GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer());
+  if (!GV->hasInitializer())
+    return false;
+  if (const auto *Init = GV->getInitializer(); isa<UndefValue>(Init))
+    return GV->isConstant() && Init->getType()->isAggregateType();
+  return true;
 }
 
 // True if this is an instance of TypedPointerType.
@@ -587,5 +592,6 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
+Function *getOrCreateBackendServiceFunction(Module &M);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

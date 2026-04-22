@@ -990,9 +990,8 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
 
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.
-LogicalResult ModuleTranslation::convertOperation(Operation &op,
-                                                  llvm::IRBuilderBase &builder,
-                                                  bool recordInsertions) {
+LogicalResult ModuleTranslation::convertOperationImpl(
+    Operation &op, llvm::IRBuilderBase &builder, bool recordInsertions) {
   const LLVMTranslationDialectInterface *opIface = iface.getInterfaceFor(&op);
   if (!opIface)
     return op.emitError("cannot be converted to LLVM IR: missing "
@@ -1052,7 +1051,7 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
     builder.SetCurrentDebugLocation(
         debugTranslation->translateLoc(op.getLoc(), subprogram));
 
-    if (failed(convertOperation(op, builder, recordInsertions)))
+    if (failed(convertOperationImpl(op, builder, recordInsertions)))
       return failure();
 
     // Set the branch weight metadata on the translated instruction.
@@ -1564,13 +1563,13 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto preferVectorWidth = func.getPreferVectorWidth())
     llvmFunc->addFnAttr("prefer-vector-width", *preferVectorWidth);
 
+  if (func.getUseSampleProfile())
+    llvmFunc->addFnAttr("use-sample-profile");
+
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
-
-  if (auto noNansFpMath = func.getNoNansFpMath())
-    llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
 
   if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",

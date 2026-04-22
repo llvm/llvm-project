@@ -27,6 +27,8 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -245,23 +247,34 @@ static Value genParametersIn(OpBuilder &builder, Location loc,
 /// Finalizes the outlined arguments. The output buffer is copied depending
 /// on the kernel token and then deallocated. All other buffers are simply
 /// deallocated. Then we wait for all operations to complete.
+///
+/// `copyBack` maps 1:1 to the `buffers` array. It tracks which buffers were
+/// mutated by the kernel and require a device-to-host copy. An empty
+/// `copyBack` array implies no buffers are "copied back".
 static void genParametersOut(OpBuilder &builder, Location loc, Value out,
                              Value kernelToken, SmallVectorImpl<Value> &scalars,
                              SmallVectorImpl<Value> &buffers,
                              SmallVectorImpl<Value> &args,
-                             SmallVectorImpl<Value> &tokens) {
+                             SmallVectorImpl<Value> &tokens,
+                             ArrayRef<bool> copyBack) {
   unsigned base = scalars.size();
+
+  // `args` stores scalars followed by buffers. `base` is the index of the first
+  // buffer. `bufIdx` maps the current buffer to its exact 1:1 counterpart in
+  // the `copyBack` mask.
   for (unsigned i = base, e = args.size(); i < e; i++) {
+    unsigned bufIdx = i - base;
     Value firstToken;
-    if (i == base) {
-      // Assumed output parameter: unregister or copy-out.
-      if (out) {
+
+    // Checks if the current buffer needs a device-to-host copy.
+    if (copyBack[bufIdx]) {
+      if (out && bufIdx == 0) {
         genHostUnregisterMemref(builder, loc, out);
         out = Value();
         continue;
       }
       firstToken =
-          genCopyMemRef(builder, loc, buffers[0], args[i], kernelToken);
+          genCopyMemRef(builder, loc, buffers[bufIdx], args[i], kernelToken);
     } else {
       firstToken = genFirstWait(builder, loc);
     }
@@ -1202,15 +1215,36 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
     SmallVector<Value> constants;
     SmallVector<Value> scalars;
     SmallVector<Value> buffers;
+    // A boolean mask aligned 1:1 with the `buffers` array, tracking which
+    // of those buffers were mutated by the loop. If true, the corresponding
+    // buffer needs to be "copied back" using a device-to-host copy.
+    SmallVector<bool> copyBack;
     for (Value val : invariants) {
       Type tp = val.getType();
       if (val.getDefiningOp<arith::ConstantOp>())
         constants.push_back(val);
       else if (isa<FloatType>(tp) || tp.isIntOrIndex())
         scalars.push_back(val);
-      else if (isa<MemRefType>(tp))
+      else if (isa<MemRefType>(tp)) {
         buffers.push_back(val);
-      else
+
+        // Determine if the buffer needs to be "copied back" from device
+        // to host by checking for `memref.store` and the write memory effect.
+        bool isWrite = false;
+        for (Operation *user : val.getUsers()) {
+          if (isa<memref::StoreOp>(user)) {
+            isWrite = true;
+            break;
+          }
+          if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(user)) {
+            if (memInterface.getEffectOnValue<MemoryEffects::Write>(val)) {
+              isWrite = true;
+              break;
+            }
+          }
+        }
+        copyBack.push_back(isWrite);
+      } else
         return failure(); // don't know how to share
     }
     // Pass outlined non-constant values.
@@ -1239,7 +1273,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
         genLaunchGPUFunc(rewriter, gpuFunc, args, tokens, numThreads);
     // Finalize the outlined arguments.
     genParametersOut(rewriter, loc, out, kernelToken, scalars, buffers, args,
-                     tokens);
+                     tokens, copyBack);
     genBlockingWait(rewriter, loc, tokens);
     rewriter.eraseOp(forallOp);
     return success();

@@ -507,9 +507,9 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       if (FindSoftwareBreakpoint(exception_addr)) {
         LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
                  exception_addr);
+        StopThread(thread_id, StopReason::eStopReasonBreakpoint);
         // The current PC is AFTER the BP opcode, on all architectures.
         reg_ctx.SetPC(reg_ctx.GetPC() - GetSoftwareBreakpointPCOffset());
-        StopThread(thread_id, StopReason::eStopReasonBreakpoint);
         SetState(eStateStopped, true);
         return ExceptionResult::MaskException;
       } else {

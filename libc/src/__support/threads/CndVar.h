@@ -11,7 +11,7 @@
 
 #include "hdr/stdint_proxy.h" // uint32_t
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/linux/futex_utils.h" // Futex
+#include "src/__support/threads/futex_utils.h"       // Futex
 #include "src/__support/threads/mutex.h"             // Mutex
 #include "src/__support/threads/raw_mutex.h"         // RawMutex
 
@@ -51,4 +51,4 @@ public:
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_CNDVAR_H
+#endif // LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_CNDVAR_H

@@ -245,15 +245,17 @@ func.func @vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>) -> 
 //       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R5]], %[[V1]] {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
 //       CHECK:   return %[[V2]] : vector<4xf32>
 
-// This is a negative test case to ensure that further unrolling is not performed. Since the vector.multi_reduction
-// operation has already been unrolled, attempting additional unrolling should not be allowed.
-func.func @negative_vector_multi_reduction(%v: vector<4x2xf32>, %acc: f32) -> f32 {
+func.func @vector_multi_reduction_scalar(%v: vector<4x2xf32>, %acc: f32) -> f32 {
   %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [0, 1] : vector<4x2xf32> to f32
   return %0 : f32
 }
-// CHECK-LABEL: func @negative_vector_multi_reduction
-//  CHECK-NEXT:   %[[R0:.*]] = vector.multi_reduction <add>, %{{.*}}, %{{.*}} [0, 1] : vector<4x2xf32> to f32
-//  CHECK-NEXT:   return %[[R0]] : f32
+// CHECK-LABEL: func @vector_multi_reduction_scalar
+//  CHECK-SAME:   %[[V:.*]]: vector<4x2xf32>, %[[ACC:.*]]: f32
+//       CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
+//       CHECK:   %[[R0:.*]] = vector.multi_reduction <add>, %[[S0]], %[[ACC]] [0, 1] : vector<2x2xf32> to f32
+//       CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
+//       CHECK:   %[[R1:.*]] = vector.multi_reduction <add>, %[[S1]], %[[R0]] [0, 1] : vector<2x2xf32> to f32
+//       CHECK:   return %[[R1]] : f32
 
 func.func @vector_reduction(%v : vector<8xf32>) -> f32 {
   %0 = vector.reduction <add>, %v : vector<8xf32> into f32
@@ -647,3 +649,21 @@ func.func @shape_cast_leading_unit_dim(%v: vector<32xf32>) -> vector<1x32xf32> {
 // CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<16xf32> to vector<1x16xf32>
 // CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [0, 16], strides = [1, 1]} : vector<1x16xf32> into vector<1x32xf32>
 // CHECK:   return %[[I1]] : vector<1x32xf32>
+
+
+// TargetShape is [1x1]
+func.func @shape_cast_with_all_unit_target_shape(%v: vector<2xf32>) -> vector<2x1xf32> {
+  %0 = vector.shape_cast %v : vector<2xf32> to vector<2x1xf32>
+  return %0 : vector<2x1xf32>
+}
+
+// CHECK-LABEL: func @shape_cast_with_all_unit_target_shape
+// CHECK-SAME: (%[[V:.*]]: vector<2xf32>) -> vector<2x1xf32> {
+// CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<2x1xf32>
+// CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0], sizes = [1], strides = [1]} : vector<2xf32> to vector<1xf32>
+// CHECK:   %[[SC0:.*]] = vector.shape_cast %[[S0]] : vector<1xf32> to vector<1x1xf32>
+// CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[SC0]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<1x1xf32> into vector<2x1xf32>
+// CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [1], sizes = [1], strides = [1]} : vector<2xf32> to vector<1xf32>
+// CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<1xf32> to vector<1x1xf32>
+// CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [1, 0], strides = [1, 1]} : vector<1x1xf32> into vector<2x1xf32>
+// CHECK:   return %[[I1]] : vector<2x1xf32>

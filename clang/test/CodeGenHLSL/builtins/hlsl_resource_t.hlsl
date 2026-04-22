@@ -9,7 +9,7 @@ struct CustomResource {
 // CHECK: %struct.CustomResource = type { target("dx.TypedBuffer", float, 1, 0, 0) }
 // CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", %struct.MyStruct, 0, 0)
-// CHECK: %struct.MyStruct = type <{ <4 x float>, <2 x i32> }>
+// CHECK: %struct.MyStruct = type { <4 x float>, <2 x i32> }
 
 // CHECK: define hidden void @_Z2fa14CustomResource(ptr noundef byval(%struct.CustomResource) align 1 %a)
 // CHECK: call void @_Z4foo114CustomResource(ptr noundef byval(%struct.CustomResource) align 1 %agg.tmp)

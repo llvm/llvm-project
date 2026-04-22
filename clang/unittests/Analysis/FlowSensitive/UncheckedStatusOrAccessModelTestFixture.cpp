@@ -4516,6 +4516,62 @@ TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInOptional) {
       )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, CoroutineCoAwait) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+#include "task.h"
+
+  Task<STATUSOR_INT> call(STATUSOR_INT sor) {
+    if (sor.ok()) {
+      sor.value();
+    } else {
+      sor.value();  // [[unsafe]]
+    }
+    co_return sor;
+  }
+  Task<int> target() {
+    auto x = co_await call(Make<STATUSOR_INT>());
+    if (x.ok()) {
+      co_return x.value();
+    } else {
+      x.value();  // [[unsafe]]
+      co_return 0;
+    }
+  }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, CoroutineCoReturn) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+#include "task.h"
+
+  Task<STATUSOR_INT> target(STATUSOR_INT sor) {
+    if (sor.ok()) {
+      sor.value();
+    } else {
+      sor.value();  // [[unsafe]]
+    }
+    co_return sor;
+  }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, CoroutineCoReturnEnds) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+#include "task.h"
+
+  Task<int> target(STATUSOR_INT sor) {
+    if (!sor.ok()) {
+      co_return 0;
+    }
+    *sor;
+    co_return 1;
+  }
+  )cc");
+}
+
 } // namespace
 
 std::string

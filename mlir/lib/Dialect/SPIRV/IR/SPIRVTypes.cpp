@@ -57,6 +57,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
+        .Case<SamplerType>([](auto) { /* no extensions */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -107,6 +108,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
+        .Case<SamplerType>([](auto) { /* no capabilities */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -188,7 +190,8 @@ bool CompositeType::classof(Type type) {
 bool CompositeType::isValid(VectorType type) {
   return type.getRank() == 1 &&
          llvm::is_contained({2, 3, 4, 8, 16}, type.getNumElements()) &&
-         isa<ScalarType>(type.getElementType());
+         (isa<ScalarType>(type.getElementType()) ||
+          isa<PointerType>(type.getElementType()));
 }
 
 Type CompositeType::getElementType(unsigned index) const {
@@ -538,6 +541,8 @@ bool ScalarType::classof(Type type) {
 }
 
 bool ScalarType::isValid(FloatType type) {
+  if (type.isF8E4M3FN() || type.isF8E5M2())
+    return true;
   return llvm::is_contained({16u, 32u, 64u}, type.getWidth());
 }
 
@@ -546,12 +551,12 @@ bool ScalarType::isValid(IntegerType type) {
 }
 
 void TypeExtensionVisitor::addConcrete(ScalarType type) {
-  if (isa<BFloat16Type>(type)) {
+  if (type.isBF16()) {
     static constexpr auto ext = Extension::SPV_KHR_bfloat16;
     extensions.push_back(ext);
   }
 
-  if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+  if (type.isF8E4M3FN() || type.isF8E5M2()) {
     static constexpr auto ext = Extension::SPV_EXT_float8;
     extensions.push_back(ext);
   }
@@ -654,7 +659,7 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
     case 8: {
-      if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+      if (type.isF8E4M3FN() || type.isF8E5M2()) {
         static constexpr auto cap = Capability::Float8EXT;
         capabilities.push_back(cap);
       } else {
@@ -663,7 +668,7 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
       break;
     }
     case 16: {
-      if (isa<BFloat16Type>(type)) {
+      if (type.isBF16()) {
         static constexpr auto cap = Capability::BFloat16TypeKHR;
         capabilities.push_back(cap);
       } else {
@@ -792,6 +797,14 @@ SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "Dim must not be SubpassData or Buffer";
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SamplerType
+//===----------------------------------------------------------------------===//
+
+SamplerType SamplerType::get(MLIRContext *context) {
+  return Base::get(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1162,25 +1175,30 @@ llvm::hash_code spirv::hash_value(
 //===----------------------------------------------------------------------===//
 
 struct spirv::detail::MatrixTypeStorage : public TypeStorage {
-  MatrixTypeStorage(Type columnType, uint32_t columnCount)
-      : columnType(columnType), columnCount(columnCount) {}
+  // Use a 64-bit integer as a column count internally to better support a
+  // `ShapedType` interface. See comment in `CooperativeMatrixType` for more
+  // context.
+  using KeyTy = std::tuple<Type, int64_t>;
 
-  using KeyTy = std::tuple<Type, uint32_t>;
+  MatrixTypeStorage(const KeyTy &key)
+      : columnType(std::get<0>(key)),
+        shape({cast<VectorType>(std::get<0>(key)).getShape()[0],
+               std::get<1>(key)}) {}
 
   static MatrixTypeStorage *construct(TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
 
     // Initialize the memory using placement new.
-    return new (allocator.allocate<MatrixTypeStorage>())
-        MatrixTypeStorage(std::get<0>(key), std::get<1>(key));
+    return new (allocator.allocate<MatrixTypeStorage>()) MatrixTypeStorage(key);
   }
 
   bool operator==(const KeyTy &key) const {
-    return key == KeyTy(columnType, columnCount);
+    return key == KeyTy(columnType, shape[1]);
   }
 
   Type columnType;
-  const uint32_t columnCount;
+  // [#rows, #columns]
+  std::array<int64_t, 2> shape;
 };
 
 MatrixType MatrixType::get(Type columnType, uint32_t columnCount) {
@@ -1228,15 +1246,23 @@ Type MatrixType::getElementType() const {
   return cast<VectorType>(getImpl()->columnType).getElementType();
 }
 
-unsigned MatrixType::getNumColumns() const { return getImpl()->columnCount; }
+unsigned MatrixType::getNumColumns() const {
+  assert(getImpl()->shape[1] >= 0); // Also includes ShapedType::kDynamic.
+  assert(getImpl()->shape[1] <= std::numeric_limits<unsigned>::max());
+  return static_cast<uint32_t>(getImpl()->shape[1]);
+}
 
 unsigned MatrixType::getNumRows() const {
-  return cast<VectorType>(getImpl()->columnType).getShape()[0];
+  assert(getImpl()->shape[0] >= 0); // Also includes ShapedType::kDynamic.
+  assert(getImpl()->shape[0] <= std::numeric_limits<unsigned>::max());
+  return static_cast<uint32_t>(getImpl()->shape[0]);
 }
 
 unsigned MatrixType::getNumElements() const {
-  return (getImpl()->columnCount) * getNumRows();
+  return getNumColumns() * getNumRows();
 }
+
+ArrayRef<int64_t> MatrixType::getShape() const { return getImpl()->shape; }
 
 void TypeCapabilityVisitor::addConcrete(MatrixType type) {
   add(type.getColumnType());
@@ -1318,5 +1344,6 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 
 void SPIRVDialect::registerTypes() {
   addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, StructType, TensorArmType>();
+           RuntimeArrayType, SampledImageType, SamplerType, StructType,
+           TensorArmType>();
 }

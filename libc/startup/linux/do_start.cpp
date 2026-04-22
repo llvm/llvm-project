@@ -18,6 +18,7 @@
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
 #include "startup/linux/gnu_property_section.h"
+#include "startup/linux/irelative.h"
 
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -86,6 +87,8 @@ static TLSDescriptor tls;
   // denoted by an AT_NULL entry.
   ElfW(Phdr) *program_hdr_table = nullptr;
   uintptr_t program_hdr_count = 0;
+  unsigned long hwcap = 0;
+  unsigned long hwcap2 = 0;
   auxv::Vector::initialize_unsafe(
       reinterpret_cast<const auxv::Entry *>(env_end_marker + 1));
   auxv::Vector auxvec;
@@ -100,12 +103,18 @@ static TLSDescriptor tls;
     case AT_PAGESZ:
       app.page_size = aux_entry.val;
       break;
+    case AT_HWCAP:
+      hwcap = aux_entry.val;
+      break;
+    case AT_HWCAP2:
+      hwcap2 = aux_entry.val;
+      break;
     default:
       break; // TODO: Read other useful entries from the aux vector.
     }
   }
 
-  ptrdiff_t base = 0;
+  intptr_t base = 0;
   app.tls.size = 0;
   ElfW(Phdr) *tls_phdr = nullptr;
   [[maybe_unused]] ElfW(Phdr) *gnu_property_phdr = nullptr;
@@ -113,15 +122,21 @@ static TLSDescriptor tls;
   for (uintptr_t i = 0; i < program_hdr_count; ++i) {
     ElfW(Phdr) &phdr = program_hdr_table[i];
     if (phdr.p_type == PT_PHDR)
-      base = reinterpret_cast<ptrdiff_t>(program_hdr_table) - phdr.p_vaddr;
+      base = reinterpret_cast<intptr_t>(program_hdr_table) - phdr.p_vaddr;
     if (phdr.p_type == PT_DYNAMIC && _DYNAMIC)
-      base = reinterpret_cast<ptrdiff_t>(_DYNAMIC) - phdr.p_vaddr;
+      base = reinterpret_cast<intptr_t>(_DYNAMIC) - phdr.p_vaddr;
     if (phdr.p_type == PT_TLS)
       tls_phdr = &phdr;
     if (phdr.p_type == PT_GNU_PROPERTY)
       gnu_property_phdr = &phdr;
     // TODO: adjust PT_GNU_STACK
   }
+
+  // Process IRELATIVE relocations (ifunc resolvers).
+  // Skips when no ifuncs are present in the binary.
+  if (reinterpret_cast<uintptr_t>(__rela_iplt_start) !=
+      reinterpret_cast<uintptr_t>(__rela_iplt_end))
+    apply_irelative_relocs(base, hwcap, hwcap2);
 
   app.tls.address = tls_phdr->p_vaddr + base;
   app.tls.size = tls_phdr->p_memsz;

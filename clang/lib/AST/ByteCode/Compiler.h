@@ -230,6 +230,8 @@ public:
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
   bool VisitBlockExpr(const BlockExpr *E);
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
+  bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
+  bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -307,10 +309,8 @@ protected:
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
   VarCreationState visitVarDecl(const VarDecl *VD, const Expr *Init,
-                                bool Toplevel = false,
-                                bool IsConstexprUnknown = false);
-  VarCreationState visitDecl(const VarDecl *VD,
-                             bool IsConstexprUnknown = false);
+                                bool Toplevel = false);
+  VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E, QualType T);
@@ -330,13 +330,11 @@ protected:
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
                                   bool IsVolatile = false,
-                                  ScopeKind SC = ScopeKind::Block,
-                                  bool IsConstexprUnknown = false);
+                                  ScopeKind SC = ScopeKind::Block);
 
   /// Allocates a space storing a local given its type.
   UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
-                               ScopeKind = ScopeKind::Block,
-                               bool IsConstexprUnknown = false);
+                               ScopeKind = ScopeKind::Block);
   UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
@@ -406,6 +404,11 @@ private:
     return *this->classify(T->getAs<VectorType>()->getElementType());
   }
 
+  PrimType classifyMatrixElementType(QualType T) const {
+    assert(T->isMatrixType());
+    return *this->classify(T->getAs<MatrixType>()->getElementType());
+  }
+
   bool emitComplexReal(const Expr *SubExpr);
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
@@ -418,6 +421,29 @@ private:
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
   bool emitBuiltinBitCast(const CastExpr *E);
+
+  bool emitHLSLAggregateSplat(PrimType SrcT, unsigned SrcOffset,
+                              QualType DestType, const Expr *E);
+
+  /// A scalar element extracted during HLSL aggregate flattening.
+  struct HLSLFlatElement {
+    unsigned LocalOffset;
+    PrimType Type;
+  };
+  unsigned countHLSLFlatElements(QualType Ty);
+  bool emitHLSLFlattenAggregate(QualType SrcType, unsigned SrcPtrOffset,
+                                SmallVectorImpl<HLSLFlatElement> &Elements,
+                                unsigned MaxElements, const Expr *E);
+  bool emitHLSLConstructAggregate(QualType DestType,
+                                  ArrayRef<HLSLFlatElement> Elements,
+                                  unsigned &ElemIdx, const Expr *E);
+  bool emitHLSLConstructAggregate(QualType DestType,
+                                  ArrayRef<HLSLFlatElement> Elements,
+                                  const Expr *E) {
+    unsigned ElemIdx = 0;
+    return emitHLSLConstructAggregate(DestType, Elements, ElemIdx, E);
+  }
+
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
   bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
@@ -448,6 +474,8 @@ protected:
 
   bool InStmtExpr = false;
   bool ToLValue = false;
+
+  bool VariablesAreConstexprUnknown = false;
 
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
@@ -490,7 +518,14 @@ public:
   void addForScopeKind(const Scope::Local &Local, ScopeKind Kind) {
     VariableScope *P = this;
     while (P) {
+      // We found the right scope kind.
       if (P->Kind == Kind) {
+        P->addLocal(Local);
+        return;
+      }
+      // If we reached the root scope and we're looking for a Block scope,
+      // attach it to the root instead of the current scope.
+      if (!P->Parent && Kind == ScopeKind::Block) {
         P->addLocal(Local);
         return;
       }
@@ -585,7 +620,7 @@ public:
         typename Emitter::LabelTy EndLabel = this->Ctx->getLabel();
         if (!this->Ctx->emitGetLocalEnabled(Local.Offset, E))
           return false;
-        if (!this->Ctx->jumpFalse(EndLabel))
+        if (!this->Ctx->jumpFalse(EndLabel, E))
           return false;
 
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))

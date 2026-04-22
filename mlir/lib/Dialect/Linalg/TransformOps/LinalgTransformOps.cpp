@@ -27,7 +27,7 @@
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -177,7 +177,8 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
       reified.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
     }
-    if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
+    if (isa<TransformParamTypeInterface>(
+            cast<Value>(paramOrHandle).getType())) {
       ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
@@ -269,6 +270,26 @@ void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
 void transform::ApplyFoldPackUnpackIntoEmptyPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populateFoldPackUnpackIntoTensorEmptyPatterns(patterns);
+}
+
+void transform::ApplyDataLayoutPropagationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::ControlPropagationFn defaultControlFn = [](OpOperand *operand) {
+    return true;
+  };
+  linalg::populateDataLayoutPropagationPatterns(patterns, defaultControlFn,
+                                                getPoisonPadding());
+}
+
+void transform::ApplyExtractSliceSinkingPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::ControlPropagationFn defaultControlFn =
+      [](OpOperand *opOperand) -> bool {
+    Operation *producer = opOperand->get().getDefiningOp();
+    Operation *consumer = opOperand->getOwner();
+    return consumer->getBlock() == producer->getBlock();
+  };
+  linalg::populateExtractSliceSinkingPatterns(patterns, defaultControlFn);
 }
 
 //===----------------------------------------------------------------------===//
@@ -484,32 +505,12 @@ transform::DecomposeOp::applyToOne(transform::TransformRewriter &rewriter,
                                    LinalgOp target,
                                    transform::ApplyToEachResultList &results,
                                    transform::TransformState &state) {
-#define DOWNSCALE(trans)                                                       \
-  {                                                                            \
-    FailureOr<LinalgOp> res = tryApply<trans>(target);                         \
-    if (succeeded(res)) {                                                      \
-      results.push_back(*res);                                                 \
-      return DiagnosedSilenceableFailure::success();                           \
-    }                                                                          \
+  FailureOr<linalg::LinalgOp> res =
+      downscaleSizeOneWindowedConvolution(rewriter, target);
+  if (succeeded(res)) {
+    results.push_back(*res);
+    return DiagnosedSilenceableFailure::success();
   }
-
-#define DOWNSCALE_CALL(a, b) DownscaleSizeOneWindowed2DConvolution<a, b>
-#define DOWNSCALE_NORMAL(a, b) DOWNSCALE(DOWNSCALE_CALL(a, b))
-
-  DOWNSCALE_NORMAL(Conv2DNhwcHwcfOp, Conv1DNwcWcfOp)
-  DOWNSCALE_NORMAL(Conv2DNchwFchwOp, Conv1DNcwFcwOp)
-  DOWNSCALE_NORMAL(PoolingNhwcSumOp, PoolingNwcSumOp)
-  DOWNSCALE_NORMAL(PoolingNchwSumOp, PoolingNcwSumOp)
-  DOWNSCALE_NORMAL(PoolingNhwcMaxOp, PoolingNwcMaxOp)
-  DOWNSCALE_NORMAL(PoolingNhwcMaxUnsignedOp, PoolingNwcMaxUnsignedOp)
-  DOWNSCALE_NORMAL(PoolingNhwcMinOp, PoolingNwcMinOp)
-  DOWNSCALE_NORMAL(PoolingNhwcMinUnsignedOp, PoolingNwcMinUnsignedOp)
-  DOWNSCALE_NORMAL(PoolingNchwMaxOp, PoolingNcwMaxOp)
-  DOWNSCALE(DownscaleDepthwiseConv2DNhwcHwcOp)
-  DOWNSCALE(DownscaleConv2DOp)
-#undef DOWNSCALE_NORMAL
-#undef DOWNSCALE_CALL
-#undef DOWNSCALE
   return emitDefaultSilenceableFailure(target);
 }
 
@@ -1392,8 +1393,10 @@ transform::SpecializeOp::applyToOne(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
   rewriter.setInsertionPoint(target);
+  GenericOpSpecializationOptions opts;
+  opts.emitCategoryOps = getEmitCategory();
   FailureOr<LinalgOp> named =
-      specializeGenericOp(rewriter, cast<GenericOp>(target));
+      specializeGenericOp(rewriter, cast<GenericOp>(target), opts);
   if (succeeded(named)) {
     results.push_back(named->getOperation());
     return DiagnosedSilenceableFailure::success();
@@ -1555,6 +1558,7 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
   transformResults.push_back(res->transposeOp);
   transformResults.push_back(res->collapseShapeOp);
   transformResults.push_back(res->extractSliceOp);
+  transformResults.push_back(res->copyOp);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2177,7 +2181,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     for (auto const &[untypedAttr, elementOrTensorType] :
          llvm::zip(getPaddingValues(), linalgTarget->getOperandTypes())) {
 
-      if (isa<ub::PoisonAttr>(untypedAttr)) {
+      if (matchPattern(untypedAttr, ub::m_Poison())) {
         paddingValues.push_back(untypedAttr);
         continue;
       }
@@ -2430,7 +2434,7 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
       auto attr = dyn_cast<TypedAttr>(untypedAttr);
       Type elementType = getElementTypeOrSelf(elementOrTensorType);
 
-      if (isa<ub::PoisonAttr>(untypedAttr)) {
+      if (matchPattern(untypedAttr, ub::m_Poison())) {
         paddingValues.push_back(untypedAttr);
         continue;
       }
@@ -3526,7 +3530,7 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
   dynamicSizeProducers.reserve(getDynamicSizes().size());
   paramSizes.reserve(getDynamicSizes().size());
   for (Value transformValue : getDynamicSizes()) {
-    if (isa<ParamType>(transformValue.getType())) {
+    if (isa<TransformParamTypeInterface>(transformValue.getType())) {
       dynamicSizeProducers.push_back({});
       ArrayRef<Attribute> params = state.getParams(transformValue);
       paramSizes.push_back(llvm::map_to_vector(params, [](Attribute attr) {
@@ -3886,7 +3890,9 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
 
   tilingResult = *maybeTilingResult;
 
-  if (mixedNumThreads.empty()) {
+  // Rank-0 ops produce no loops; skip normalization when there is nothing
+  // to normalize.
+  if (mixedNumThreads.empty() && !tilingResult.loops.empty()) {
     auto generatedForallOp = cast<scf::ForallOp>(tilingResult.loops.front());
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(generatedForallOp);
@@ -3934,7 +3940,8 @@ DiagnosedSilenceableFailure transform::TileUsingForallOp::apply(
         getMapping(), tilingResult);
     if (!diag.succeeded())
       return diag;
-    tileOps.push_back(tilingResult.loops.front());
+    if (!tilingResult.loops.empty())
+      tileOps.push_back(tilingResult.loops.front());
     tiledOps.append(tilingResult.tiledOps);
   }
 

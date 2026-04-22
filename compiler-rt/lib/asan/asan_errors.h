@@ -96,6 +96,25 @@ struct ErrorNewDeleteTypeMismatch : ErrorBase {
   void Print();
 };
 
+struct ErrorFreeSizeMismatch : ErrorBase {
+  const BufferedStackTrace* free_stack;
+  HeapAddressDescription addr_description;
+  uptr delete_size;
+  uptr delete_alignment;
+
+  ErrorFreeSizeMismatch() = default;  // (*)
+  ErrorFreeSizeMismatch(u32 tid, BufferedStackTrace* stack, uptr addr,
+                        uptr delete_size, uptr delete_alignment)
+      : ErrorBase(tid, 10, "free-size-mismatch"),
+        free_stack(stack),
+        delete_size(delete_size),
+        delete_alignment(delete_alignment) {
+    GetHeapAddressInformation(addr, 1, &addr_description);
+  }
+  void Print();
+  bool isFreeAlignedSized() const { return delete_alignment != 0; }
+};
+
 struct ErrorFreeNotMalloced : ErrorBase {
   const BufferedStackTrace *free_stack;
   AddressDescription addr_description;
@@ -404,16 +423,22 @@ struct ErrorInvalidPointerPair : ErrorBase {
 };
 
 struct ErrorGeneric : ErrorBase {
+  enum class AccessType : u8 {
+    Read = 0,
+    Write = 1,
+    Assumption = 2,
+  };
+
   AddressDescription addr_description;
   uptr pc, bp, sp;
   uptr access_size;
   const char *bug_descr;
-  bool is_write;
+  AccessType access_type;
   u8 shadow_val;
 
   ErrorGeneric() = default;  // (*)
-  ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr, bool is_write_,
-               uptr access_size_);
+  ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
+               AccessType access_type_, uptr access_size_);
   void Print();
 };
 
@@ -422,6 +447,7 @@ struct ErrorGeneric : ErrorBase {
   macro(DeadlySignal)                                      \
   macro(DoubleFree)                                        \
   macro(NewDeleteTypeMismatch)                             \
+  macro(FreeSizeMismatch)                                  \
   macro(FreeNotMalloced)                                   \
   macro(AllocTypeMismatch)                                 \
   macro(MallocUsableSizeNotOwned)                          \

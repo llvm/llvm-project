@@ -86,6 +86,16 @@ void foo1(int A)
   [[clang::code_align(9223372036854775808)]]
   for(int I=0; I<256; ++I) { bar(I); }
 
+  // expected-error@+3{{conflicting loop attribute 'clang::code_align}}
+  // expected-note@+1{{previous attribute is here}}
+  [[clang::code_align(64)]]
+  [[clang::code_align(1024ULL)]]
+  for(int I=0; I<128; ++I) { bar(I); }
+
+  [[clang::code_align(64)]]
+  [[clang::code_align(64u)]]
+  for(int I=0; I<128; ++I) { bar(I); }
+
 #ifdef __SIZEOF_INT128__
   // expected-error@+1{{'clang::code_align' attribute requires an integer argument which is a constant power of two between 1 and 4096 inclusive; provided argument was '(__int128_t)1311768467294899680ULL << 64'}}
   [[clang::code_align((__int128_t)0x1234567890abcde0ULL << 64)]]

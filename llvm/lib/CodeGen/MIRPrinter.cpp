@@ -42,6 +42,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -170,6 +171,8 @@ static void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
 static void convertCalledGlobals(yaml::MachineFunction &YMF,
                                  const MachineFunction &MF,
                                  MachineModuleSlotTracker &MST);
+static void convertPrefetchTargets(yaml::MachineFunction &YMF,
+                                   const MachineFunction &MF);
 
 static void printMF(raw_ostream &OS, MFGetterFnT Fn,
                     const MachineFunction &MF) {
@@ -241,6 +244,8 @@ static void printMF(raw_ostream &OS, MFGetterFnT Fn,
   convertMachineMetadataNodes(YamlMF, MF, MST);
 
   convertCalledGlobals(YamlMF, MF, MST);
+
+  convertPrefetchTargets(YamlMF, MF);
 
   yaml::Output Out(OS);
   if (!SimplifyMIR)
@@ -353,6 +358,7 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.MaxAlignment = MFI.getMaxAlign().value();
   YamlMFI.AdjustsStack = MFI.adjustsStack();
   YamlMFI.HasCalls = MFI.hasCalls();
+  YamlMFI.FramePointerPolicy = MFI.getFramePointerPolicy();
   YamlMFI.MaxCallFrameSize = MFI.isMaxCallFrameSizeComputed()
     ? MFI.getMaxCallFrameSize() : ~0u;
   YamlMFI.CVBytesOfCalleeSavedRegisters =
@@ -541,7 +547,7 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
         std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
 
-    auto [ArgRegPairs, CalleeTypeIds] = CallSiteInfo;
+    auto [ArgRegPairs, CalleeTypeIds, _] = CallSiteInfo;
     // Construct call arguments and theirs forwarding register info.
     for (auto ArgReg : ArgRegPairs) {
       yaml::CallSiteInfo::ArgRegPair YmlArgReg;
@@ -597,6 +603,19 @@ static void convertCalledGlobals(yaml::MachineFunction &YMF,
                return std::tie(A.CallSite.BlockNum, A.CallSite.Offset) <
                       std::tie(B.CallSite.BlockNum, B.CallSite.Offset);
              });
+}
+
+static void convertPrefetchTargets(yaml::MachineFunction &YMF,
+                                   const MachineFunction &MF) {
+  for (const auto &[BBID, CallsiteIndexes] : MF.getPrefetchTargets()) {
+    for (auto CallsiteIndex : CallsiteIndexes) {
+      std::string Str;
+      raw_string_ostream StrOS(Str);
+      StrOS << "bb_id " << BBID.BaseID << ", " << BBID.CloneID << ", "
+            << CallsiteIndex;
+      YMF.PrefetchTargets.push_back(yaml::FlowStringValue(Str));
+    }
+  }
 }
 
 static void convertMCP(yaml::MachineFunction &MF,
@@ -949,6 +968,35 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
       MachineOperand::printTargetFlags(OS, Op);
       MachineOperand::printSubRegIdx(OS, Op.getImm(), TRI);
       break;
+    }
+    if (MI.isInlineAsm()) {
+      if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
+        unsigned ExtraInfo = Op.getImm();
+        interleave(InlineAsm::getExtraInfoNames(ExtraInfo), OS, " ");
+        break;
+      }
+
+      int FlagIdx = MI.findInlineAsmFlagIdx(OpIdx);
+      if (FlagIdx >= 0 && (unsigned)FlagIdx == OpIdx) {
+        InlineAsm::Flag F(Op.getImm());
+        OS << F.getKindName();
+
+        unsigned RCID;
+        if ((F.isRegDefKind() || F.isRegUseKind() ||
+             F.isRegDefEarlyClobberKind()) &&
+            F.hasRegClassConstraint(RCID))
+          OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
+
+        if (F.isMemKind()) {
+          InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
+          OS << ':' << InlineAsm::getMemConstraintName(MCID);
+        }
+
+        unsigned TiedTo;
+        if (F.isUseOperandTiedToDef(TiedTo))
+          OS << " tiedto:$" << TiedTo;
+        break;
+      }
     }
     [[fallthrough]];
   case MachineOperand::MO_Register:

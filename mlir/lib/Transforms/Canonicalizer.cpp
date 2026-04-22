@@ -17,7 +17,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CANONICALIZER
+#define GEN_PASS_DEF_CANONICALIZERPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -25,8 +25,8 @@ using namespace mlir;
 
 namespace {
 /// Canonicalize operations in nested regions.
-struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
-  Canonicalizer() = default;
+struct Canonicalizer : public impl::CanonicalizerPassBase<Canonicalizer> {
+  using impl::CanonicalizerPassBase<Canonicalizer>::CanonicalizerPassBase;
   Canonicalizer(const GreedyRewriteConfig &config,
                 ArrayRef<std::string> disabledPatterns,
                 ArrayRef<std::string> enabledPatterns)
@@ -35,6 +35,7 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
     this->regionSimplifyLevel = config.getRegionSimplificationLevel();
     this->maxIterations = config.getMaxIterations();
     this->maxNumRewrites = config.getMaxNumRewrites();
+    this->cseBetweenIterations = config.isCSEBetweenIterationsEnabled();
     this->disabledPatterns = disabledPatterns;
     this->enabledPatterns = enabledPatterns;
   }
@@ -47,6 +48,7 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
     config.setRegionSimplificationLevel(regionSimplifyLevel);
     config.setMaxIterations(maxIterations);
     config.setMaxNumRewrites(maxNumRewrites);
+    config.enableCSEBetweenIterations(cseBetweenIterations);
 
     RewritePatternSet owningPatterns(context);
     for (auto *dialect : context->getLoadedDialects())
@@ -69,11 +71,6 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
   std::shared_ptr<const FrozenRewritePatternSet> patterns;
 };
 } // namespace
-
-/// Create a Canonicalizer pass.
-std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
-  return std::make_unique<Canonicalizer>();
-}
 
 /// Creates an instance of the Canonicalizer pass with the specified config.
 std::unique_ptr<Pass>

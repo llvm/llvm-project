@@ -1678,6 +1678,17 @@ struct ImageSelector {
   std::tuple<std::list<Cosubscript>, std::list<ImageSelectorSpec>> t;
 };
 
+// F2023 R1002 conditional-expr ->
+//   ( scalar-logical-expr ? expr
+//     [ : scalar-logical-expr ? expr ]...
+//     : expr )
+struct ConditionalExpr {
+  TUPLE_CLASS_BOILERPLATE(ConditionalExpr);
+  std::tuple<ScalarLogicalExpr, common::Indirection<Expr>,
+      common::Indirection<Expr>>
+      t;
+};
+
 // R1001 - R1022 expressions
 struct Expr {
   UNION_CLASS_BOILERPLATE(Expr);
@@ -1776,11 +1787,12 @@ struct Expr {
   CharBlock source;
 
   std::variant<common::Indirection<CharLiteralConstantSubstring>,
-      LiteralConstant, common::Indirection<Designator>, ArrayConstructor,
-      StructureConstructor, common::Indirection<FunctionReference>, Parentheses,
-      UnaryPlus, Negate, NOT, PercentLoc, DefinedUnary, Power, Multiply, Divide,
-      Add, Subtract, Concat, LT, LE, EQ, NE, GE, GT, AND, OR, EQV, NEQV,
-      DefinedBinary, ComplexConstructor, common::Indirection<SubstringInquiry>>
+      LiteralConstant, ConditionalExpr, common::Indirection<Designator>,
+      ArrayConstructor, StructureConstructor,
+      common::Indirection<FunctionReference>, Parentheses, UnaryPlus, Negate,
+      NOT, PercentLoc, DefinedUnary, Power, Multiply, Divide, Add, Subtract,
+      Concat, LT, LE, EQ, NE, GE, GT, AND, OR, EQV, NEQV, DefinedBinary,
+      ComplexConstructor, common::Indirection<SubstringInquiry>>
       u;
 };
 
@@ -2630,6 +2642,7 @@ using FileNameExpr = ScalarDefaultCharExpr;
 //         ENCODING = scalar-default-char-expr | ERR = label |
 //         FILE = file-name-expr | FORM = scalar-default-char-expr |
 //         IOMSG = iomsg-variable | IOSTAT = scalar-int-variable |
+//         LEADING_ZERO = scalar-default-char-expr |
 //         NEWUNIT = scalar-int-variable | PAD = scalar-default-char-expr |
 //         POSITION = scalar-default-char-expr | RECL = scalar-int-expr |
 //         ROUND = scalar-default-char-expr | SIGN = scalar-default-char-expr |
@@ -2644,7 +2657,7 @@ struct ConnectSpec {
   UNION_CLASS_BOILERPLATE(ConnectSpec);
   struct CharExpr {
     ENUM_CLASS(Kind, Access, Action, Asynchronous, Blank, Decimal, Delim,
-        Encoding, Form, Pad, Position, Round, Sign,
+        Encoding, Form, Leading_Zero, Pad, Position, Round, Sign,
         /* extensions: */ Carriagecontrol, Convert, Dispose)
     TUPLE_CLASS_BOILERPLATE(CharExpr);
     std::tuple<Kind, ScalarDefaultCharExpr> t;
@@ -2692,7 +2705,9 @@ WRAPPER_CLASS(IdVariable, ScalarIntVariable);
 //         DECIMAL = scalar-default-char-expr |
 //         DELIM = scalar-default-char-expr | END = label | EOR = label |
 //         ERR = label | ID = id-variable | IOMSG = iomsg-variable |
-//         IOSTAT = scalar-int-variable | PAD = scalar-default-char-expr |
+//         IOSTAT = scalar-int-variable |
+//         LEADING_ZERO = scalar-default-char-expr |
+//         PAD = scalar-default-char-expr |
 //         POS = scalar-int-expr | REC = scalar-int-expr |
 //         ROUND = scalar-default-char-expr | SIGN = scalar-default-char-expr |
 //         SIZE = scalar-int-variable
@@ -2701,7 +2716,8 @@ WRAPPER_CLASS(EorLabel, Label);
 struct IoControlSpec {
   UNION_CLASS_BOILERPLATE(IoControlSpec);
   struct CharExpr {
-    ENUM_CLASS(Kind, Advance, Blank, Decimal, Delim, Pad, Round, Sign)
+    ENUM_CLASS(
+        Kind, Advance, Blank, Decimal, Delim, Leading_Zero, Pad, Round, Sign)
     TUPLE_CLASS_BOILERPLATE(CharExpr);
     std::tuple<Kind, ScalarDefaultCharExpr> t;
   };
@@ -2837,6 +2853,7 @@ WRAPPER_CLASS(FlushStmt, std::list<PositionOrFlushSpec>);
 //         FORMATTED = scalar-default-char-variable |
 //         ID = scalar-int-expr | IOMSG = iomsg-variable |
 //         IOSTAT = scalar-int-variable |
+//         LEADING_ZERO = scalar-default-char-variable |
 //         NAME = scalar-default-char-variable |
 //         NAMED = scalar-logical-variable |
 //         NEXTREC = scalar-int-variable | NUMBER = scalar-int-variable |
@@ -2861,8 +2878,9 @@ struct InquireSpec {
   UNION_CLASS_BOILERPLATE(InquireSpec);
   struct CharVar {
     ENUM_CLASS(Kind, Access, Action, Asynchronous, Blank, Decimal, Delim,
-        Direct, Encoding, Form, Formatted, Iomsg, Name, Pad, Position, Read,
-        Readwrite, Round, Sequential, Sign, Stream, Status, Unformatted, Write,
+        Direct, Encoding, Form, Formatted, Iomsg, Leading_Zero, Name, Pad,
+        Position, Read, Readwrite, Round, Sequential, Sign, Stream, Status,
+        Unformatted, Write,
         /* extensions: */ Carriagecontrol, Convert, Dispose)
     TUPLE_CLASS_BOILERPLATE(CharVar);
     std::tuple<Kind, ScalarDefaultCharVariable> t;

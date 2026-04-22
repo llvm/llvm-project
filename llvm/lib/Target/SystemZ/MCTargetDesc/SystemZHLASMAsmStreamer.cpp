@@ -193,17 +193,31 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   EmitEOL();
 }
 
-static void emitXATTR(raw_ostream &OS, StringRef Name,
-                      GOFF::ESDLinkageType Linkage,
+static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
+                      bool IsIndirectReference, GOFF::ESDLinkageType Linkage,
                       GOFF::ESDExecutable Executable,
                       GOFF::ESDBindingScope BindingScope) {
   llvm::ListSeparator Sep(",");
   OS << Name << " XATTR ";
   OS << Sep << "LINKAGE(" << (Linkage == GOFF::ESD_LT_OS ? "OS" : "XPLINK")
      << ")";
-  if (Executable != GOFF::ESD_EXE_Unspecified)
-    OS << Sep << "REFERENCE("
-       << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA") << ")";
+
+  const bool NotUnspecified = (Executable != GOFF::ESD_EXE_Unspecified);
+  if (NotUnspecified || IsIndirectReference) {
+    OS << Sep << "REFERENCE(";
+    llvm::ListSeparator SepRef(",");
+
+    if (NotUnspecified)
+      OS << SepRef << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA");
+
+    if (IsIndirectReference)
+      OS << SepRef << "INDIRECT";
+
+    OS << ")";
+  }
+  // Emit PSECT only for code symbols.
+  if (ADA && Executable != GOFF::ESD_EXE_DATA)
+    OS << Sep << "PSECT(" << ADA->getName() << ")";
   if (BindingScope != GOFF::ESD_BSC_Unspecified) {
     OS << Sep << "SCOPE(";
     switch (BindingScope) {
@@ -224,7 +238,6 @@ static void emitXATTR(raw_ostream &OS, StringRef Name,
     }
     OS << ')';
   }
-  OS << '\n';
 }
 
 void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -245,9 +258,11 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
       EmitEOL();
     }
 
-    emitXATTR(OS, Sym->getName(), Sym->getLinkage(), Sym->getCodeData(),
-              Sym->getBindingScope());
+    emitXATTR(OS, Sym->getName(), Sym->getADA(), Sym->isIndirect(),
+              Sym->getLinkage(), Sym->getCodeData(), Sym->getBindingScope());
     EmitEOL();
+    if (Sym->hasExternalName())
+      OS << Sym->getName() << " ALIAS C'" << Sym->getExternalName() << "'\n";
   }
 
   if (EmitLabelAndEntry) {
@@ -353,11 +368,19 @@ void SystemZHLASMAsmStreamer::finishImpl() {
     if (Symbol.isTemporary() || !Symbol.isRegistered() || Symbol.isDefined())
       continue;
     auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-    OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+    if (Sym.getCodeData() == GOFF::ESD_EXE_DATA) {
+      OS << Sym.getADA()->getParent()->getExternalName() << " CATTR PART("
+         << Sym.getName() << ")";
+      EmitEOL();
+    } else {
+      OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+      EmitEOL();
+    }
+    emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(),
+              Sym.getLinkage(), Sym.getCodeData(), Sym.getBindingScope());
     EmitEOL();
-    emitXATTR(OS, Sym.getName(), Sym.getLinkage(), Sym.getCodeData(),
-              Sym.getBindingScope());
-    EmitEOL();
+    if (Sym.hasExternalName())
+      OS << Sym.getName() << " ALIAS C'" << Sym.getExternalName() << "'\n";
   }
 
   // Finish the assembly output.
