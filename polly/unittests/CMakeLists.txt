@@ -6,7 +6,10 @@ set_target_properties(PollyUnitTests PROPERTIES FOLDER "Polly/Tests")
 # Will compile the list of files together and link against Polly and its dependences.
 function(add_polly_unittest test_name)
   if(COMMAND add_unittest)
-    add_unittest(PollyUnitTests ${test_name} ${ARGN})
+    # Match Polly library targets: Polly unit tests inherit Polly's
+    # unconditional -fno-rtti -fno-exceptions policy. Reusing LLVM PCHs
+    # built with RTTI or exceptions enabled is incompatible with Clang.
+    add_unittest(PollyUnitTests ${test_name} DISABLE_PCH_REUSE ${ARGN})
   else()
     add_executable(${test_name} EXCLUDE_FROM_ALL ${ARGN})
     set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

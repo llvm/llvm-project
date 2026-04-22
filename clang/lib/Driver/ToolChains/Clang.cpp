@@ -8611,8 +8611,15 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     }
   } else {
     StringRef Arch = Args.getLastArgValue(options::OPT__SLASH_arch);
-    if (Arch == "AVX10.1" || Arch == "AVX10.2")
+    if (Arch == "AVX10.1" || Arch == "AVX10.2") {
       CmdArgs.push_back("-mprefer-vector-width=256");
+      CmdArgs.push_back("-target-feature");
+      CmdArgs.push_back("-amx-tile");
+    }
+    if (Arch == "AVX10.2") {
+      CmdArgs.push_back("-target-feature");
+      CmdArgs.push_back("+avx10.2");
+    }
   }
 
   Arg *MostGeneralArg = Args.getLastArg(options::OPT__SLASH_vmg);
