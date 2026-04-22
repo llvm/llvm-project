@@ -214,3 +214,112 @@ define i64 @fptosu_sat_i64_f64(double %x) {
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %x)
   ret i64 %i
 }
+
+define <4 x i32> @fptosi_sat_v4i32_v4f32(<4 x float> %x) {
+; CHECK-LABEL: fptosi_sat_v4i32_v4f32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, lr}
+; CHECK-NEXT:    mov r10, r3
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r4, r1
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    bl __aeabi_f2iz
+; CHECK-NEXT:    ldr.w r8, .LCPI4_0
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    mov r1, r8
+; CHECK-NEXT:    bl __aeabi_fcmpge
+; CHECK-NEXT:    ldr.w r9, .LCPI4_1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    moveq.w r5, #-2147483648
+; CHECK-NEXT:    mov r1, r9
+; CHECK-NEXT:    bl __aeabi_fcmpgt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    mov r1, r7
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    mvnne r5, #-2147483648
+; CHECK-NEXT:    bl __aeabi_fcmpun
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    movne r5, #0
+; CHECK-NEXT:    bl __aeabi_f2iz
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    mov r1, r8
+; CHECK-NEXT:    bl __aeabi_fcmpge
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    mov r1, r9
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    moveq.w r7, #-2147483648
+; CHECK-NEXT:    bl __aeabi_fcmpgt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    mvnne r7, #-2147483648
+; CHECK-NEXT:    bl __aeabi_fcmpun
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    movne r7, #0
+; CHECK-NEXT:    bl __aeabi_f2iz
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r1, r8
+; CHECK-NEXT:    bl __aeabi_fcmpge
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r1, r9
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    moveq.w r4, #-2147483648
+; CHECK-NEXT:    bl __aeabi_fcmpgt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    mvnne r4, #-2147483648
+; CHECK-NEXT:    bl __aeabi_fcmpun
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r10
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    movne r4, #0
+; CHECK-NEXT:    bl __aeabi_f2iz
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r0, r10
+; CHECK-NEXT:    mov r1, r8
+; CHECK-NEXT:    bl __aeabi_fcmpge
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r10
+; CHECK-NEXT:    mov r1, r9
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    moveq.w r6, #-2147483648
+; CHECK-NEXT:    bl __aeabi_fcmpgt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r10
+; CHECK-NEXT:    mov r1, r10
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    mvnne r6, #-2147483648
+; CHECK-NEXT:    bl __aeabi_fcmpun
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    movne r6, #0
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r1, r7
+; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r3, r6
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI4_0:
+; CHECK-NEXT:    .long 0xcf000000 @ float -2.14748365E+9
+; CHECK-NEXT:  .LCPI4_1:
+; CHECK-NEXT:    .long 0x4effffff @ float 2.14748352E+9
+  %i = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> %x)
+  ret <4 x i32> %i
+}
