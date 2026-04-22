@@ -613,10 +613,10 @@ static std::string fixMultiOutputConstraintString(StringRef Constraints) {
   return SafeConstraints;
 }
 
-// Mutates indirect and inline ASM callsites iff if aggregate argument/return
-// types are present with the types replaced by i32 types. The change in types
-// is noted in 'spv.mutated_callsites' metadata for later restoration. For ASM
-// we also have to mutate the constraint string as IRTranslator tries to handle
+// Mutates indirect and inline ASM callsites iff aggregate argument/return types
+// are present with the types replaced by i32 types. The change in types is
+// noted in 'spv.mutated_callsites' metadata for later restoration. For ASM we
+// also have to mutate the constraint string as IRTranslator tries to handle
 // multiple outputs and expects an aggregate return type in their presence.
 bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
   if (F->isDeclaration() || F->isIntrinsic())
