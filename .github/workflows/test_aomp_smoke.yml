@@ -55,6 +55,7 @@ jobs:
       # --user 0:0 - Running as root, by recommendation of GitHub: https://docs.github.com/en/actions/reference/workflows-and-actions/dockerfile-support#user
       options: --ipc host
         --group-add video
+        --group-add render
         --device /dev/kfd
         --device /dev/dri
         --group-add 993
