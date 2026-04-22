@@ -3116,28 +3116,36 @@ Error OpenMPIRBuilder::emitReductionListCopy(
         // pointer to the descriptor of the by-ref reduction element.
         ShuffleType = RI.ByRefElementType;
 
-        InsertPointOrErrorTy GenResult =
-            RI.DataPtrPtrGen(Builder.saveIP(), ShuffleSrcAddr, ShuffleSrcAddr);
+        if (RI.DataPtrPtrGen) {
+          // Descriptor-based by-ref: extract data pointer from descriptor.
+          InsertPointOrErrorTy GenResult = RI.DataPtrPtrGen(
+              Builder.saveIP(), ShuffleSrcAddr, ShuffleSrcAddr);
 
-        if (!GenResult)
-          return GenResult.takeError();
+          if (!GenResult)
+            return GenResult.takeError();
 
-        ShuffleSrcAddr = Builder.CreateLoad(Builder.getPtrTy(), ShuffleSrcAddr);
+          ShuffleSrcAddr =
+              Builder.CreateLoad(Builder.getPtrTy(), ShuffleSrcAddr);
 
-        {
-          InsertPointTy OldIP = Builder.saveIP();
-          Builder.restoreIP(AllocaIP);
+          {
+            InsertPointTy OldIP = Builder.saveIP();
+            Builder.restoreIP(AllocaIP);
 
-          LocalStorage = Builder.CreateAlloca(ShuffleType);
-          Builder.restoreIP(OldIP);
-          ShuffleDestAddr = LocalStorage;
+            LocalStorage = Builder.CreateAlloca(ShuffleType);
+            Builder.restoreIP(OldIP);
+            ShuffleDestAddr = LocalStorage;
+          }
+        } else {
+          // Non-descriptor by-ref: the pointer already references data
+          // directly. Shuffle into the destination alloca.
+          ShuffleDestAddr = DestElementAddr;
         }
       }
 
       shuffleAndStore(AllocaIP, ShuffleSrcAddr, ShuffleDestAddr, ShuffleType,
                       RemoteLaneOffset, ReductionArrayTy, IsByRefElem);
 
-      if (IsByRefElem) {
+      if (IsByRefElem && RI.DataPtrPtrGen) {
         // Copy descriptor from source and update base_ptr to shuffled data
         Value *DestDescriptorAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
             DestAlloca, Builder.getPtrTy(), ".ascast");
@@ -3352,7 +3360,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
       // elemptr = ((CopyType*)(elemptrptr)) + I
       Value *ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtrPtr);
 
-      if (IsByRefElem) {
+      if (IsByRefElem && RI.DataPtrPtrGen) {
         InsertPointOrErrorTy GenRes =
             RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
 
@@ -3418,7 +3426,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
           Builder.CreateLoad(Builder.getPtrTy(), TargetElemPtrPtr);
       Value *TargetElemPtr = TargetElemPtrVal;
 
-      if (IsByRefElem) {
+      if (IsByRefElem && RI.DataPtrPtrGen) {
         InsertPointOrErrorTy GenRes =
             RI.DataPtrPtrGen(Builder.saveIP(), TargetElemPtr, TargetElemPtr);
 
@@ -3745,13 +3753,15 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
       if (IsByRef.empty() || !IsByRef[En.index()]) {
         TargetElement = Builder.CreateLoad(RI.ElementType, ElemPtr);
       } else {
-        InsertPointOrErrorTy GenResult =
-            RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
+        if (RI.DataPtrPtrGen) {
+          InsertPointOrErrorTy GenResult =
+              RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
 
-        if (!GenResult)
-          return GenResult.takeError();
+          if (!GenResult)
+            return GenResult.takeError();
 
-        ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+          ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+        }
         TargetElement = Builder.CreateLoad(RI.ByRefElementType, ElemPtr);
       }
 
@@ -3857,18 +3867,6 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
-    Value *ByRefAlloc;
-
-    if (!IsByRef.empty() && IsByRef[En.index()]) {
-      InsertPointTy OldIP = Builder.saveIP();
-      Builder.restoreIP(AllocaIP);
-
-      ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
-      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
-
-      Builder.restoreIP(OldIP);
-    }
 
     Value *TargetElementPtrPtr = Builder.CreateInBoundsGEP(
         RedListArrayTy, LocalReduceListAddrCast,
@@ -3879,7 +3877,16 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
     Value *GlobValPtr = Builder.CreateConstInBoundsGEP2_32(
         ReductionsBufferTy, BufferVD, 0, En.index());
 
-    if (!IsByRef.empty() && IsByRef[En.index()]) {
+    if (!IsByRef.empty() && IsByRef[En.index()] && RI.DataPtrPtrGen) {
+      InsertPointTy OldIP = Builder.saveIP();
+      Builder.restoreIP(AllocaIP);
+
+      Value *ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
+      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
+
+      Builder.restoreIP(OldIP);
+
       // Get source descriptor from the reduce list argument
       Value *ReduceList =
           Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
@@ -3987,13 +3994,15 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListCopyFunction(
 
       if (!IsByRef.empty() && IsByRef[En.index()]) {
         ElemType = RI.ByRefElementType;
-        InsertPointOrErrorTy GenResult =
-            RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
+        if (RI.DataPtrPtrGen) {
+          InsertPointOrErrorTy GenResult =
+              RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
 
-        if (!GenResult)
-          return GenResult.takeError();
+          if (!GenResult)
+            return GenResult.takeError();
 
-        ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+          ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+        }
       }
 
       Value *TargetElement = Builder.CreateLoad(ElemType, GlobValPtr);
@@ -4100,18 +4109,6 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
-    Value *ByRefAlloc;
-
-    if (!IsByRef.empty() && IsByRef[En.index()]) {
-      InsertPointTy OldIP = Builder.saveIP();
-      Builder.restoreIP(AllocaIP);
-
-      ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
-      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
-
-      Builder.restoreIP(OldIP);
-    }
 
     Value *TargetElementPtrPtr = Builder.CreateInBoundsGEP(
         RedListArrayTy, ReductionList,
@@ -4122,7 +4119,16 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
     Value *GlobValPtr = Builder.CreateConstInBoundsGEP2_32(
         ReductionsBufferTy, BufferVD, 0, En.index());
 
-    if (!IsByRef.empty() && IsByRef[En.index()]) {
+    if (!IsByRef.empty() && IsByRef[En.index()] && RI.DataPtrPtrGen) {
+      InsertPointTy OldIP = Builder.saveIP();
+      Builder.restoreIP(AllocaIP);
+
+      Value *ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
+      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
+
+      Builder.restoreIP(OldIP);
+
       // Get source descriptor from the reduce list
       Value *ReduceListVal =
           Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
