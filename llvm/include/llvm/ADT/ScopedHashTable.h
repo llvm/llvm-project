@@ -46,6 +46,7 @@ template <typename K, typename V>
 class ScopedHashTableVal {
   ScopedHashTableVal *NextInScope;
   ScopedHashTableVal *NextForKey;
+  ScopedHashTableVal *PreInScope;
   K Key;
   V Val;
 
@@ -59,6 +60,7 @@ public:
   ScopedHashTableVal *getNextForKey() { return NextForKey; }
   const ScopedHashTableVal *getNextForKey() const { return NextForKey; }
   ScopedHashTableVal *getNextInScope() { return NextInScope; }
+  ScopedHashTableVal *getPreInScope() { return PreInScope; }
 
   template <typename AllocatorTy>
   static ScopedHashTableVal *Create(ScopedHashTableVal *nextInScope,
@@ -70,6 +72,9 @@ public:
     new (New) ScopedHashTableVal(key, val);
     New->NextInScope = nextInScope;
     New->NextForKey = nextForKey;
+    New->PreInScope = nullptr;
+    if (nextInScope)
+      nextInScope->PreInScope = New;
     return New;
   }
 
@@ -77,6 +82,20 @@ public:
     // Free memory referenced by the item.
     this->~ScopedHashTableVal();
     Allocator.Deallocate(this);
+  }
+
+  template <typename AllocatorTy>
+  static void invalidate(ScopedHashTableVal<K, V> *&ThisEntry,
+                         AllocatorTy &Allocator) {
+    ScopedHashTableVal<K, V> *ToDestroy = ThisEntry;
+    ScopedHashTableVal<K, V> *NextInScope = ThisEntry->NextInScope;
+    ScopedHashTableVal<K, V> *PrevInScope = ThisEntry->PreInScope;
+    if (PrevInScope)
+      PrevInScope->NextInScope = NextInScope;
+    if (NextInScope)
+      NextInScope->PreInScope = PrevInScope;
+    ThisEntry = ThisEntry->NextForKey;
+    ToDestroy->Destroy(Allocator);
   }
 };
 
@@ -101,6 +120,7 @@ public:
 
   ScopedHashTableScope *getParentScope() { return PrevScope; }
   const ScopedHashTableScope *getParentScope() const { return PrevScope; }
+  void invalidate(const K &key);
 
 private:
   friend class ScopedHashTable<K, V, KInfo, AllocatorTy>;
@@ -219,6 +239,8 @@ public:
                              getAllocator());
     S->setLastValInScope(KeyEntry);
   }
+
+  void invalidate(const K &key) { CurScope->invalidate(key); }
 };
 
 /// ScopedHashTableScope ctor - Install this as the current scope for the hash
@@ -257,6 +279,24 @@ ScopedHashTableScope<K, V, KInfo, Allocator>::~ScopedHashTableScope() {
   }
 }
 
+template <typename K, typename V, typename KInfo, typename Allocator>
+void ScopedHashTableScope<K, V, KInfo, Allocator>::invalidate(const K &key) {
+  if (!HT.TopLevelMap.contains(key))
+    return;
+  ScopedHashTableVal<K, V> *&ThisEntry = HT.TopLevelMap[key];
+
+  auto S = this;
+  while (S) {
+    if (ThisEntry == S->LastValInScope) {
+      S->LastValInScope = ThisEntry->getNextInScope();
+      break;
+    }
+    S = S->PrevScope;
+  }
+  if (ThisEntry->getNextForKey() == nullptr)
+    HT.TopLevelMap.erase(key);
+  ScopedHashTableVal<K, V>::invalidate(ThisEntry, HT.getAllocator());
+}
 } // end namespace llvm
 
 #endif // LLVM_ADT_SCOPEDHASHTABLE_H
