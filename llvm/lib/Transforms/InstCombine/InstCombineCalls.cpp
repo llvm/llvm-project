@@ -3117,8 +3117,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     // fabs (-X) --> fabs (X)
     if (match(Arg, m_FNeg(m_Value(X)))) {
-        CallInst *Fabs = Builder.CreateFAbs(X, II);
-        return replaceInstUsesWith(CI, Fabs);
+      CallInst *Fabs = Builder.CreateFAbs(X, II);
+      return replaceInstUsesWith(CI, Fabs);
     }
 
     if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
