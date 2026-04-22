@@ -8,7 +8,7 @@
 // REQUIRES: glibc
 
 // Does not intercept dlopen
-// UNSUPPORTED: hwasan, lsan, tysan, ubsan
+// UNSUPPORTED: hwasan, lsan, ubsan
 
 // Flag has no effect with dynamic runtime
 // UNSUPPORTED: asan-dynamic-runtime

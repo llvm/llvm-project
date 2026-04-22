@@ -296,24 +296,29 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
   }
 }
 
-MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
-  MachineFunction *MF = I.getParent()->getParent();
-  MachineBasicBlock *MBB = &MF->front();
-  MachineBasicBlock::iterator It = MBB->SkipPHIsAndLabels(MBB->begin()),
-                              E = MBB->end();
-  bool IsHeader = false;
-  unsigned Opcode;
-  for (; It != E && It != I; ++It) {
-    Opcode = It->getOpcode();
-    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
-      IsHeader = true;
-    } else if (IsHeader &&
-               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
-      ++It;
-      break;
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineFunction &MF) {
+  MachineBasicBlock &MBB = MF.front();
+  // Find the position to insert the OpVariable instruction.
+  // We will insert it after the last OpFunctionParameter, if any, or
+  // after OpFunction otherwise.
+  auto IsPreamble = [](const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case SPIRV::OpFunction:
+    case SPIRV::OpFunctionParameter:
+    case SPIRV::OpLabel:
+    case SPIRV::ASSIGN_TYPE:
+      return true;
+    default:
+      return false;
     }
-  }
-  return It;
+  };
+  MachineBasicBlock::iterator VarPos = MBB.SkipPHIsAndLabels(MBB.begin());
+  while (VarPos != MBB.end() && VarPos->getOpcode() != SPIRV::OpFunction)
+    ++VarPos;
+  // Advance past the preamble.
+  while (VarPos != MBB.end() && IsPreamble(*VarPos))
+    ++VarPos;
+  return VarPos;
 }
 
 MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB) {
@@ -1105,29 +1110,6 @@ unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
   return foldImm(ResType->getOperand(2), MRI);
 }
 
-MachineBasicBlock::iterator
-getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
-  // Find the position to insert the OpVariable instruction.
-  // We will insert it after the last OpFunctionParameter, if any, or
-  // after OpFunction otherwise.
-  MachineBasicBlock::iterator VarPos = BB.begin();
-  while (VarPos != BB.end() && VarPos->getOpcode() != SPIRV::OpFunction) {
-    ++VarPos;
-  }
-  // Advance VarPos to the next instruction after OpFunction, it will either
-  // be an OpFunctionParameter, so that we can start the next loop, or the
-  // position to insert the OpVariable instruction.
-  ++VarPos;
-  while (VarPos != BB.end() &&
-         VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
-    ++VarPos;
-  }
-  // VarPos is now pointing at after the last OpFunctionParameter, if any,
-  // or after OpFunction, if no parameters.
-  return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
-                                                                     : VarPos;
-}
-
 bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
                              uint64_t &TotalSize) {
   // An array of N padded structs is represented as {[N-1 x <{T, pad}>], T}.
@@ -1220,6 +1202,10 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
   if (GV.hasLinkOnceODRLinkage() &&
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
     return SPIRV::LinkageType::LinkOnceODR;
+
+  if (GV.hasWeakLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_AMD_weak_linkage))
+    return SPIRV::LinkageType::Weak;
 
   return SPIRV::LinkageType::Export;
 }

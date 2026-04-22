@@ -453,7 +453,6 @@ public:
     VPPredInstPHISC,
     // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
     // VPHeaderPHIRecipe need to be kept together.
-    VPCanonicalIVPHISC,
     VPCurrentIterationPHISC,
     VPActiveLaneMaskPHISC,
     VPFirstOrderRecurrencePHISC,
@@ -463,7 +462,7 @@ public:
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
     VPFirstPHISC = VPWidenPHISC,
-    VPFirstHeaderPHISC = VPCanonicalIVPHISC,
+    VPFirstHeaderPHISC = VPCurrentIterationPHISC,
     VPLastHeaderPHISC = VPReductionPHISC,
     VPLastPHISC = VPReductionPHISC,
   };
@@ -634,7 +633,6 @@ public:
     case VPRecipeBase::VPWidenSC:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
-    case VPRecipeBase::VPCanonicalIVPHISC:
     case VPRecipeBase::VPCurrentIterationPHISC:
     case VPRecipeBase::VPActiveLaneMaskPHISC:
     case VPRecipeBase::VPFirstOrderRecurrencePHISC:
@@ -1267,9 +1265,8 @@ public:
     /// scalars extracted from a vector, to be replaced by VF ExtractElement
     /// VPInstructions.
     Unpack,
-    /// Compute the final result of a AnyOf reduction with select(cmp(),x,y),
-    /// where one of (x,y) is loop invariant, and both x and y are integer type.
-    ComputeAnyOfResult,
+    /// Reduce the operands to the final reduction result using the operation
+    /// specified via the operation's VPIRFlags.
     ComputeReductionResult,
     // Extracts the last part of its operand. Removed during unrolling.
     ExtractLastPart,
@@ -2286,12 +2283,6 @@ protected:
 /// the backedge is the second operand.
 ///
 /// Inductions are modeled using the following sub-classes:
-///  * VPCanonicalIVPHIRecipe: Canonical scalar induction of the vector loop,
-///    starting at a specified value (zero for the main vector loop, the resume
-///    value for the epilogue vector loop) and stepping by 1. The induction
-///    controls exiting of the vector loop by comparing against the vector trip
-///    count. Produces a single scalar PHI for the induction value per
-///    iteration.
 ///  * VPWidenIntOrFpInductionRecipe: Generates vector values for integer and
 ///    floating point inductions with arbitrary start and step values. Produces
 ///    a vector PHI per-part.
@@ -2302,6 +2293,9 @@ protected:
 ///  * VPReductionPHIRecipe
 ///  * VPActiveLaneMaskPHIRecipe
 ///  * VPEVLBasedIVPHIRecipe
+///
+/// Note that the canonical IV is modeled as a VPRegionValue associated with
+/// its loop region.
 class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
@@ -2592,23 +2586,15 @@ class LLVM_ABI_FOR_TEST VPWidenPHIRecipe : public VPSingleDefRecipe,
   std::string Name;
 
 public:
-  /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
-  /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
+  /// Create a new VPWidenPHIRecipe with incoming values \p IncomingvValues,
+  /// debug location \p DL and \p Name.
+  VPWidenPHIRecipe(ArrayRef<VPValue *> IncomingValues,
                    DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPSingleDefRecipe(VPRecipeBase::VPWidenPHISC, {}, Phi, DL),
-        Name(Name.str()) {
-    if (Start)
-      addOperand(Start);
-  }
+      : VPSingleDefRecipe(VPRecipeBase::VPWidenPHISC, IncomingValues, DL),
+        Name(Name.str()) {}
 
   VPWidenPHIRecipe *clone() override {
-    auto *C =
-        new VPWidenPHIRecipe(cast_if_present<PHINode>(getUnderlyingValue()),
-                             getOperand(0), getDebugLoc(), Name);
-    for (VPValue *Op : llvm::drop_begin(operands()))
-      C->addOperand(Op);
-    return C;
+    return new VPWidenPHIRecipe(operands(), getDebugLoc(), Name);
   }
 
   ~VPWidenPHIRecipe() override = default;
@@ -2847,14 +2833,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool usesFirstLaneOnly(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    // Recursing through Blend recipes only, must terminate at header phi's the
-    // latest.
-    return all_of(users(),
-                  [this](VPUser *U) { return U->usesFirstLaneOnly(this); });
-  }
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3535,9 +3514,6 @@ protected:
   /// Whether the accessed addresses are consecutive.
   bool Consecutive;
 
-  /// Whether the consecutive accessed addresses are in reverse order.
-  bool Reverse;
-
   /// Whether the memory access is masked.
   bool IsMasked = false;
 
@@ -3551,15 +3527,10 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, bool Reverse,
-                      const VPIRMetadata &Metadata, DebugLoc DL)
+                      bool Consecutive, const VPIRMetadata &Metadata,
+                      DebugLoc DL)
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
-        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive),
-        Reverse(Reverse) {
-    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
-    assert((isa<VPVectorEndPointerRecipe>(getAddr()) || !Reverse) &&
-           "Reversed acccess without VPVectorEndPointerRecipe address?");
-  }
+        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive) {}
 
 public:
   VPWidenMemoryRecipe *clone() override {
@@ -3580,10 +3551,6 @@ public:
 
   /// Return whether the loaded-from / stored-to addresses are consecutive.
   bool isConsecutive() const { return Consecutive; }
-
-  /// Return whether the consecutive loaded/stored addresses are in reverse
-  /// order.
-  bool isReverse() const { return Reverse; }
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const { return getOperand(0); }
@@ -3618,18 +3585,16 @@ public:
 struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
                                                    public VPRecipeValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, bool Reverse,
-                    const VPIRMetadata &Metadata, DebugLoc DL)
+                    bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadSC, Load, {Addr},
-                            Consecutive, Reverse, Metadata, DL),
+                            Consecutive, Metadata, DL),
         VPRecipeValue(this, &Load) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, Reverse, *this,
-                                 getDebugLoc());
+                                 getMask(), Consecutive, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
@@ -3662,7 +3627,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe,
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadEVLSC, L.getIngredient(),
-                            {Addr, &EVL}, L.isConsecutive(), L.isReverse(), L,
+                            {Addr, &EVL}, L.isConsecutive(), L,
                             L.getDebugLoc()),
         VPRecipeValue(this, &getIngredient()) {
     setMask(Mask);
@@ -3701,18 +3666,17 @@ protected:
 /// to store to and an optional mask.
 struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
-                     VPValue *Mask, bool Consecutive, bool Reverse,
+                     VPValue *Mask, bool Consecutive,
                      const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenStoreSC, Store,
-                            {Addr, StoredVal}, Consecutive, Reverse, Metadata,
-                            DL) {
+                            {Addr, StoredVal}, Consecutive, Metadata, DL) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
                                   getStoredValue(), getMask(), Consecutive,
-                                  Reverse, *this, getDebugLoc());
+                                  *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenStoreSC);
@@ -3747,8 +3711,8 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
                         VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenStoreEVLSC, S.getIngredient(),
-                            {Addr, StoredVal, &EVL}, S.isConsecutive(),
-                            S.isReverse(), S, S.getDebugLoc()) {
+                            {Addr, StoredVal, &EVL}, S.isConsecutive(), S,
+                            S.getDebugLoc()) {
     setMask(Mask);
   }
 
@@ -3821,66 +3785,6 @@ protected:
   /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
-/// Canonical scalar induction phi of the vector loop. Starting at the specified
-/// start value (either 0 or the resume value when vectorizing the epilogue
-/// loop). VPWidenCanonicalIVRecipe represents the vector version of the
-/// canonical induction variable.
-class VPCanonicalIVPHIRecipe : public VPHeaderPHIRecipe {
-public:
-  VPCanonicalIVPHIRecipe(VPIRValue *StartV, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPCanonicalIVPHISC, nullptr, StartV,
-                          DL) {}
-
-  ~VPCanonicalIVPHIRecipe() override = default;
-
-  VPCanonicalIVPHIRecipe *clone() override {
-    auto *R = new VPCanonicalIVPHIRecipe(getStartValue(), getDebugLoc());
-    R->addOperand(getBackedgeValue());
-    return R;
-  }
-
-  VP_CLASSOF_IMPL(VPRecipeBase::VPCanonicalIVPHISC)
-
-  void execute(VPTransformState &State) override {
-    llvm_unreachable("cannot execute this recipe, should be replaced by a "
-                     "scalar phi recipe");
-  }
-
-  /// Returns the start value of the canonical induction.
-  VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
-
-  /// Returns the scalar type of the induction.
-  Type *getScalarType() const { return getStartValue()->getType(); }
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool usesFirstLaneOnly(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
-
-  /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool usesFirstPartOnly(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
-
-  /// Return the cost of this VPCanonicalIVPHIRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // For now, match the behavior of the legacy cost model.
-    return 0;
-  }
-
-protected:
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3963,14 +3867,13 @@ protected:
 class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe,
                                  public VPUnrollPartAccessor<1> {
 public:
-  VPWidenCanonicalIVRecipe(VPCanonicalIVPHIRecipe *CanonicalIV)
+  VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV)
       : VPSingleDefRecipe(VPRecipeBase::VPWidenCanonicalIVSC, {CanonicalIV}) {}
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
   VPWidenCanonicalIVRecipe *clone() override {
-    return new VPWidenCanonicalIVRecipe(
-        cast<VPCanonicalIVPHIRecipe>(getOperand(0)));
+    return new VPWidenCanonicalIVRecipe(getCanonicalIV());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCanonicalIVSC)
@@ -3985,6 +3888,11 @@ public:
                               VPCostContext &Ctx) const override {
     // TODO: Compute accurate cost after retiring the legacy cost model.
     return 0;
+  }
+
+  /// Return the canonical IV being widened.
+  VPRegionValue *getCanonicalIV() const {
+    return cast<VPRegionValue>(getOperand(0));
   }
 
 protected:
@@ -4010,8 +3918,7 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPIRValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
-                    const Twine &Name = "")
+                    VPValue *CanonicalIV, VPValue *Step, const Twine &Name = "")
       : VPDerivedIVRecipe(
             IndDesc.getKind(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp()),
@@ -4430,6 +4337,28 @@ public:
   BasicBlock *getIRBasicBlock() const { return IRBB; }
 };
 
+/// Track information about the canonical IV value of a region.
+/// TODO: Have it also track the canonical IV increment, subject of NUW flag.
+class VPCanonicalIVInfo {
+  /// VPRegionValue for the canonical IV, whose allocation is managed by
+  /// VPCanonicalIVInfo.
+  std::unique_ptr<VPRegionValue> CanIV;
+
+  /// Whether the increment of the canonical IV may unsigned wrap or not.
+  bool HasNUW = true;
+
+public:
+  VPCanonicalIVInfo(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
+      : CanIV(std::make_unique<VPRegionValue>(Ty, DL, Region)) {}
+
+  VPRegionValue *getRegionValue() { return CanIV.get(); }
+  const VPRegionValue *getRegionValue() const { return CanIV.get(); }
+
+  bool hasNUW() const { return HasNUW; }
+
+  void clearNUW() { HasNUW = false; }
+};
+
 /// VPRegionBlock represents a collection of VPBasicBlocks and VPRegionBlocks
 /// which form a Single-Entry-Single-Exiting subgraph of the output IR CFG.
 /// A VPRegionBlock may indicate that its contents are to be replicated several
@@ -4448,15 +4377,17 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
   /// VPRegionBlock.
   VPBlockBase *Exiting;
 
-  /// An indicator whether this region is to generate multiple replicated
-  /// instances of output IR corresponding to its VPBlockBases.
-  bool IsReplicator;
+  /// Holds the Canonical IV of the loop region along with additional
+  /// information. If CanIVInfo is nullptr, the region is a replicating region.
+  /// Loop regions retain their canonical IVs until they are dissolved, even if
+  /// the canonical IV has no users.
+  std::unique_ptr<VPCanonicalIVInfo> CanIVInfo;
 
-  /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
+  /// Use VPlan::createLoopRegion() and VPlan::createReplicateRegion() to create
+  /// VPRegionBlocks.
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
-                const std::string &Name = "", bool IsReplicator = false)
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
-        IsReplicator(IsReplicator) {
+                const std::string &Name = "")
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting) {
     if (Entry) {
       assert(!Entry->hasPredecessors() && "Entry block has predecessors.");
       assert(Exiting && "Must also pass Exiting if Entry is passed.");
@@ -4464,6 +4395,12 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
       Entry->setParent(this);
       Exiting->setParent(this);
     }
+  }
+
+  VPRegionBlock(Type *CanIVTy, DebugLoc DL, VPBlockBase *Entry,
+                VPBlockBase *Exiting, const std::string &Name = "")
+      : VPRegionBlock(Entry, Exiting, Name) {
+    CanIVInfo = std::make_unique<VPCanonicalIVInfo>(CanIVTy, DL, this);
   }
 
 public:
@@ -4506,7 +4443,7 @@ public:
 
   /// An indicator whether this region is to generate multiple replicated
   /// instances of output IR corresponding to its VPBlockBases.
-  bool isReplicator() const { return IsReplicator; }
+  bool isReplicator() const { return !CanIVInfo; }
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPRegionBlock, thereby "executing" the VPlan.
@@ -4535,23 +4472,33 @@ public:
   /// its entry, and its exiting block to its successor.
   void dissolveToCFGLoop();
 
-  /// Returns the canonical induction recipe of the region.
-  VPCanonicalIVPHIRecipe *getCanonicalIV() {
-    VPBasicBlock *EntryVPBB = getEntryBasicBlock();
-    if (EntryVPBB->empty()) {
-      // VPlan native path. TODO: Unify both code paths.
-      EntryVPBB = cast<VPBasicBlock>(EntryVPBB->getSingleSuccessor());
-    }
-    return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
+  /// Get the canonical IV increment instruction if it exists. Otherwise, create
+  /// a new increment before the terminator and return it. The canonical IV
+  /// increment is subject to DCE if unused, unlike the canonical IV itself.
+  VPInstruction *getOrCreateCanonicalIVIncrement();
+
+  /// Return the canonical induction variable of the region, null for
+  /// replicating regions.
+  VPRegionValue *getCanonicalIV() {
+    return CanIVInfo ? CanIVInfo->getRegionValue() : nullptr;
   }
-  const VPCanonicalIVPHIRecipe *getCanonicalIV() const {
-    return const_cast<VPRegionBlock *>(this)->getCanonicalIV();
+  const VPRegionValue *getCanonicalIV() const {
+    return CanIVInfo ? CanIVInfo->getRegionValue() : nullptr;
   }
 
   /// Return the type of the canonical IV for loop regions.
-  Type *getCanonicalIVType() { return getCanonicalIV()->getScalarType(); }
-  const Type *getCanonicalIVType() const {
-    return getCanonicalIV()->getScalarType();
+  Type *getCanonicalIVType() const {
+    return CanIVInfo->getRegionValue()->getType();
+  }
+
+  /// Indicates if NUW is set for the canonical IV increment, for loop regions.
+  bool hasCanonicalIVNUW() const { return CanIVInfo->hasNUW(); }
+
+  /// Unsets NUW for the canonical IV increment \p Increment, for loop regions.
+  void clearCanonicalIVNUW(VPInstruction *Increment) {
+    assert(Increment && "Must provide increment to clear");
+    Increment->dropPoisonGeneratingFlags();
+    CanIVInfo->clearNUW();
   }
 };
 
@@ -4700,7 +4647,8 @@ public:
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
   VPBasicBlock *getScalarPreheader() const {
-    return cast<VPBasicBlock>(getScalarHeader()->getSinglePredecessor());
+    return dyn_cast_or_null<VPBasicBlock>(
+        getScalarHeader()->getSinglePredecessor());
   }
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
@@ -4916,13 +4864,15 @@ public:
     return VPB;
   }
 
-  /// Create a new loop region with \p Name and entry and exiting blocks set
-  /// to \p Entry and \p Exiting respectively, if set. The returned block is
-  /// owned by the VPlan and deleted once the VPlan is destroyed.
-  VPRegionBlock *createLoopRegion(const std::string &Name = "",
+  /// Create a new loop region with a canonical IV using \p CanIVTy and
+  /// \p DL. Use \p Name as the region's name and set entry and exiting blocks
+  /// to \p Entry and \p Exiting respectively, if provided. The returned block
+  /// is owned by the VPlan and deleted once the VPlan is destroyed.
+  VPRegionBlock *createLoopRegion(Type *CanIVTy, DebugLoc DL,
+                                  const std::string &Name = "",
                                   VPBlockBase *Entry = nullptr,
                                   VPBlockBase *Exiting = nullptr) {
-    auto *VPB = new VPRegionBlock(Entry, Exiting, Name);
+    auto *VPB = new VPRegionBlock(CanIVTy, DL, Entry, Exiting, Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
@@ -4932,7 +4882,7 @@ public:
   /// destroyed.
   VPRegionBlock *createReplicateRegion(VPBlockBase *Entry, VPBlockBase *Exiting,
                                        const std::string &Name = "") {
-    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, true);
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
@@ -4963,8 +4913,9 @@ public:
   /// if the middle block is a predecessor of the scalar preheader. Note that
   /// this relies on unneeded branches to the scalar tail loop being removed.
   bool hasScalarTail() const {
-    return is_contained(getScalarPreheader()->getPredecessors(),
-                        getMiddleBlock());
+    auto *ScalarPH = getScalarPreheader();
+    return ScalarPH &&
+           is_contained(ScalarPH->getPredecessors(), getMiddleBlock());
   }
 };
 

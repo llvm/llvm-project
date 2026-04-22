@@ -240,14 +240,18 @@
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spirv64-amd-amdhsa \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIRV64-AMDGCN
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spirv64-amd-amdhsa -fatomic-ignore-denormal-mode \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIRV64-AMDGCN-UNSAFE-FP-ATOMICS
 // CHECK-SPIRV64-AMDGCN-DAG: #define __IMAGE_SUPPORT__ 1
 // CHECK-SPIRV64-AMDGCN-DAG: #define __SPIRV__ 1
 // CHECK-SPIRV64-AMDGCN-DAG: #define __SPIRV64__ 1
 // CHECK-SPIRV64-AMDGCN-DAG: #define __AMD__ 1
 // CHECK-SPIRV64-AMDGCN-DAG: #define __AMDGCN__ 1
 // CHECK-SPIRV64-AMDGCN-DAG: #define __AMDGPU__ 1
+// CHECK-SPIRV64-AMDGCN-NOT: #define __AMDGCN_UNSAFE_FP_ATOMICS__
 // CHECK-SPIRV64-AMDGCN-NOT: #define __SPIRV32__ 1
 // CHECK-SPIRV64-AMDGCN-NOT: #define __spirv__ 1
+// CHECK-SPIRV64-AMDGCN-UNSAFE-FP-ATOMICS: #define __AMDGCN_UNSAFE_FP_ATOMICS__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP
