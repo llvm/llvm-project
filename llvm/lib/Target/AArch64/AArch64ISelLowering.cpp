@@ -32415,8 +32415,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
       Ops.push_back(V);
     Ops.push_back(StackPtr);
 
+    EVT TripleOpVT =
+        EVT::getVectorVT(*DAG.getContext(), OpVT.getVectorElementType(),
+                         OpVT.getVectorNumElements() * 3);
     SDValue Chain = DAG.getMemIntrinsicNode(
-        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, OpVT,
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, TripleOpVT,
         MachinePointerInfo(), Alignment, MachineMemOperand::MOStore);
 
     SmallVector<SDValue, 3> Results;
