@@ -87,14 +87,14 @@ public:
                                          lldb::ePluginDomainKindDebugger |
                                          lldb::ePluginDomainKindTarget;
 
-  /// Plugin that is enabled/disabled globally.
+  /// Plugin that only supports enable/disable in the global domain
   PluginNamespace(llvm::StringRef name, GetPluginInfo get_info,
                   SetPluginEnabledGlobalDomain set_enabled)
       : name(name), get_info(get_info),
         supported_domains(lldb::ePluginDomainKindGlobal),
         set_enabled_fn(set_enabled) {}
 
-  /// Plugin that is enabled/disabled on all domains.
+  /// Plugin that supports enable/disable in all domains.
   PluginNamespace(llvm::StringRef name, GetPluginInfo get_info,
                   SetPluginEnabledAllDomains set_enabled)
       : name(name), get_info(get_info), supported_domains(kAllDomains),

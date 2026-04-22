@@ -6,20 +6,20 @@
 # RUN: %lldb -s %s -o exit 2>&1 | FileCheck %s
 
 # Test plugin list --domain global works with a non-instrumentation runtime
-# plugin (GLOBAL domain).
+# plugin.
 plugin list --domain global language.cplusplus
 # CHECK-LABEL: plugin list --domain global language.cplusplus
 # CHECK: language
 # CHECK:  [+] cplusplus
 
 # Test plugin list --domain global works with an instrumentation runtime
-# plugin (USER_SPECIFIED domain).
+# plugin.
 plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
 # CHECK-LABEL: plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
 # CHECK: instrumentation-runtime
 # CHECK:  [+] UndefinedBehaviorSanitizer
 
-# Error cases with on a plugin that's not an instrumentation-runtime
+# Error cases with on a plugin that only supports the global domain.
 
 # Test plugin list --domain debugger returns an error (text format).
 # RUN: %lldb -o "plugin list --domain debugger language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_DEBUGGER
@@ -37,7 +37,7 @@ plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
 # RUN: %lldb -o "plugin list --domain target --json language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_JSON_TARGET
 # ERROR_LIST_JSON_TARGET: error: target domain is not supported
 
-# Error cases with on a plugin that's an instrumentation-runtime
+# Error cases with on a plugin that supports all domains.
 
 # Test plugin list --domain debugger returns an error for instrumentation-runtime plugin (text format).
 # RUN: %lldb -o "plugin list --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_DEBUGGER_IR
