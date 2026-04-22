@@ -16189,6 +16189,10 @@ SDValue DAGCombiner::visitIS_FPCLASS(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
+  // is.fpclass(poison, mask) -> poison
+  if (Src.getOpcode() == ISD::POISON)
+    return DAG.getPOISON(VT);
+
   KnownFPClass Known = DAG.computeKnownFPClass(Src, Mask);
 
   // Clear test bits we know must be false from the source value.
