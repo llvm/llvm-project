@@ -67,6 +67,9 @@ A list of non-standard directives supported by Flang
 * `!dir$ vector always` forces vectorization on the following loop regardless
   of cost model decisions. The loop must still be vectorizable.
   [This directive currently only works on plain do loops without labels].
+* `!dir$ simd` works the same as `vector always` above, but provides an alternative
+  spelling and support for projects which would have used the classic-flang frontend
+  previously.
 * `!dir$ vector vectorlength({fixed|scalable|<num>|<num>,fixed|<num>,scalable})`
   specifies a hint to the compiler about the desired vectorization factor. If
   `fixed` is used, the compiler should prefer fixed-width vectorization.
