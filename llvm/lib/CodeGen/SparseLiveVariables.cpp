@@ -118,7 +118,7 @@ void SparseLiveVariables::updateKillFlags(MachineFunction &MF) const {
 
     LivenessTracker Tracker(It->second.LiveOut, MRI);
     for (MachineInstr &MI : llvm::reverse(MBB)) {
-      if (MI.isDebugInstr() || MI.isMetaInstruction())
+      if (MI.isDebugInstr())
         continue;
 
       // Check uses and update their kill flags based on whether they are live

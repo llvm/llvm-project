@@ -90,26 +90,24 @@ public:
         : LiveRegs(LiveOut), MRI(MRI) {}
 
     void stepBackward(const MachineInstr &MI) {
-      if (MI.isDebugInstr() || MI.isMetaInstruction())
+      if (MI.isDebugInstr())
         return;
 
+      SmallVector<Register, 4> Uses;
       for (const MachineOperand &MO : MI.operands()) {
-        if (MO.isReg() && MO.isDef()) {
-          Register Reg = MO.getReg();
-          if (Reg.isValid() && isTrackableRegister(Reg))
-            LiveRegs.reset(Reg.id());
-        }
-      }
+        if (!MO.isReg())
+          continue;
+        Register Reg = MO.getReg();
+        if (!Reg.isValid() || !isTrackableRegister(Reg))
+          continue;
 
-      if (!MI.isPHI()) {
-        for (const MachineOperand &MO : MI.operands()) {
-          if (MO.isReg() && MO.isUse()) {
-            Register Reg = MO.getReg();
-            if (Reg.isValid() && isTrackableRegister(Reg))
-              LiveRegs.set(Reg.id());
-          }
-        }
+        if (MO.isDef())
+          LiveRegs.reset(Reg.id());
+        if (!MI.isPHI() && MO.isUse())
+          Uses.push_back(Reg);
       }
+      for (Register Reg : Uses)
+        LiveRegs.set(Reg.id());
     }
 
     bool isLive(Register Reg) const {
@@ -128,16 +126,12 @@ public:
 
   /// Returns the computed Live-In set for the given MachineBasicBlock.
   const SparseBitVector<> &getLiveInSet(const MachineBasicBlock *MBB) const {
-    auto It = BlockLiveness.find(MBB);
-    assert(It != BlockLiveness.end() && "Block not analyzed");
-    return It->second.LiveIn;
+    return BlockLiveness.at(MBB).LiveIn;
   }
 
   /// Returns the computed Live-Out set for the given MachineBasicBlock.
   const SparseBitVector<> &getLiveOutSet(const MachineBasicBlock *MBB) const {
-    auto It = BlockLiveness.find(MBB);
-    assert(It != BlockLiveness.end() && "Block not analyzed");
-    return It->second.LiveOut;
+    return BlockLiveness.at(MBB).LiveOut;
   }
 
   /// Validates the computed block liveness against existing MachineBasicBlock
