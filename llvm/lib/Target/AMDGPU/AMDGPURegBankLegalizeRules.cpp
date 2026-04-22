@@ -731,6 +731,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivBRC, BRC, B64, DivS32},
             {{VgprBRC}, {VgprBRC, VgprB64, Vgpr32}, InsVecEltToSel}});
 
+  // INTERSECT_RAY {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  // INTERSECT_RAY {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  addRulesForGOpcs({G_AMDGPU_BVH_INTERSECT_RAY, G_AMDGPU_BVH_DUAL_INTERSECT_RAY,
+                    G_AMDGPU_BVH8_INTERSECT_RAY})
+      .Any({{}, {{}, {}, ApplyBVH_INTERSECT_RAY}});
+
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD_NORET {}, {{}, {Imm, VgprSrc, ..., Sgpr_WF_RsrcIdx}}
@@ -1862,6 +1868,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_wqm_demote}).Any({{}, {{}, {IntrId, Vcc}}});
 
+  addRulesForIOpcs({amdgcn_ballot}, Standard)
+      .Uni(S64, {{Sgpr64}, {IntrId, Vcc}})
+      .Uni(S32, {{Sgpr32}, {IntrId, Vcc}});
+
   addRulesForIOpcs({amdgcn_inverse_ballot})
       .Any({{DivS1, _, S32}, {{Vcc}, {IntrId, SgprB32_ReadFirstLane}}})
       .Any({{DivS1, _, S64}, {{Vcc}, {IntrId, SgprB64_ReadFirstLane}}});
@@ -1894,6 +1904,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST);
+
+  addRulesForIOpcs({amdgcn_ds_atomic_async_barrier_arrive_b64})
+      .Any({{}, {{}, {IntrId, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_ds_atomic_barrier_arrive_rtn_b64}, Standard)
+      .Div(S64, {{Vgpr64}, {IntrId, VgprP3, Vgpr64}});
 
   addRulesForIOpcs({amdgcn_ds_add_gs_reg_rtn, amdgcn_ds_sub_gs_reg_rtn},
                    Standard)
