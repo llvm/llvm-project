@@ -1120,6 +1120,7 @@ void TargetLoweringBase::initActions() {
     // Most backends expect to see the node which just returns the value loaded.
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Expand);
 
+    // clang-format off
     // These operations default to expand.
     setOperationAction({ISD::FGETSIGN,       ISD::CONCAT_VECTORS,
                         ISD::FMINNUM,        ISD::FMAXNUM,
@@ -1152,6 +1153,7 @@ void TargetLoweringBase::initActions() {
                         ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP,
                         ISD::CONVERT_TO_ARBITRARY_FP},
                        VT, Expand);
+    // clang-format on
 
     // Overflow operations default to expand
     setOperationAction({ISD::SADDO, ISD::SSUBO, ISD::UADDO, ISD::USUBO,

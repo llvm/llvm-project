@@ -3817,6 +3817,24 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (!Results.empty())
       break;
 
+    // Supported rounding modes.
+    switch (RoundMode) {
+    case RoundingMode::NearestTiesToEven:
+    case RoundingMode::TowardZero:
+    case RoundingMode::TowardPositive:
+    case RoundingMode::TowardNegative:
+    case RoundingMode::NearestTiesToAway:
+      break;
+    default:
+      DAG.getContext()->emitError(
+          "CONVERT_TO_ARBITRARY_FP: unsupported rounding mode (enum " +
+          Twine(static_cast<int>(RoundMode)) + ")");
+      Results.push_back(DAG.getPOISON(ResVT));
+      break;
+    }
+    if (!Results.empty())
+      break;
+
     // Destination format parameters.
     const fltSemantics &DstSem = APFloatBase::EnumToSemantics(Sem);
     const unsigned DstBits = APFloat::getSizeInBits(DstSem);
@@ -3971,9 +3989,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
             DAG.getNode(ISD::AND, dl, SetCCVT, HasTruncBits, IsNegative);
         return DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, DoRound);
       }
-      if (RoundMode == RoundingMode::NearestTiesToAway)
-        return RoundBit;
-      llvm_unreachable("Unsupported rounding mode");
+      assert(RoundMode == RoundingMode::NearestTiesToAway &&
+             "Unsupported rounding mode; should have been rejected above");
+      return RoundBit;
     };
 
     // Round mantissa from SrcMant bits to DstMant bits.
