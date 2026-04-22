@@ -222,7 +222,7 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
 
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.
-MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineFunction &MF);
 
 // Return a valid position for the instruction at the end of the block before
 // terminators and debug instructions.
@@ -587,8 +587,6 @@ MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType);
-MachineBasicBlock::iterator
-getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);

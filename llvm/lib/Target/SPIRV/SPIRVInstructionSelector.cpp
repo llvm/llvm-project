@@ -1493,7 +1493,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
     Register PointerVReg =
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
-    auto It = getOpVariableMBBIt(I);
+    auto It = getOpVariableMBBIt(*I.getMF());
     BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
         .addDef(PointerVReg)
         .addUse(GR.getSPIRVTypeID(PointerType))
@@ -1534,7 +1534,7 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
     Register PointerVReg =
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
-    auto It = getOpVariableMBBIt(I);
+    auto It = getOpVariableMBBIt(*I.getMF());
     BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
         .addDef(PointerVReg)
         .addUse(GR.getSPIRVTypeID(PointerType))
@@ -6238,7 +6238,7 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
                                                 MachineInstr &I) const {
   // Change order of instructions if needed: all OpVariable instructions in a
   // function must be the first instructions in the first block
-  auto It = getOpVariableMBBIt(I);
+  auto It = getOpVariableMBBIt(*I.getMF());
   BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
@@ -6533,9 +6533,8 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     // Assign SPIR-V type of the pointer type of the alloca variable to the
     // new register.
     GR.assignSPIRVTypeToVReg(PtrType, PtrTyReg, MIRBuilder.getMF());
+    MachineBasicBlock::iterator VarPos = getOpVariableMBBIt(*I.getMF());
     MachineBasicBlock &EntryBB = I.getMF()->front();
-    MachineBasicBlock::iterator VarPos =
-        getFirstValidInstructionInsertPoint(EntryBB);
     auto AllocaMIB =
         BuildMI(EntryBB, VarPos, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
             .addDef(PtrTyReg)
