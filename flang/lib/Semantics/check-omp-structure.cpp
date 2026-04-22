@@ -571,6 +571,34 @@ void OmpStructureChecker::CheckDirectiveSpelling(
   }
 }
 
+void OmpStructureChecker::CheckDirectiveDeprecation(
+    const parser::OpenMPConstruct &x) {
+  parser::OmpDirectiveName dirName{GetOmpDirectiveName(x)};
+  unsigned version{context_.langOptions().OpenMPVersion};
+  // We only want to emit the warning when the version being used has the
+  // directive deprecated
+  if (version >= 52) {
+    // Check MASTER.
+    llvm::SmallVector<llvm::omp::Directive> leafs{
+        llvm::omp::getLeafConstructsOrSelf(dirName.v)};
+    if (llvm::is_contained(leafs, llvm::omp::Directive::OMPD_master)) {
+      for (auto &id : leafs) {
+        if (id == llvm::omp::Directive::OMPD_master) {
+          id = llvm::omp::Directive::OMPD_masked;
+        }
+      }
+
+      auto preferredId{llvm::omp::getCompoundConstruct(leafs)};
+      context_.Warn(common::UsageWarning::OpenMPUsage, dirName.source,
+          "OpenMP directive %s has been deprecated, please use %s instead"_warn_en_US,
+          GetUpperName(dirName.v, version), GetUpperName(preferredId, version));
+    }
+  }
+
+  // Executable allocate is checked separately because these can be nested in
+  // one another, but only the top-level directive should cause a warning.
+}
+
 void OmpStructureChecker::CheckMultipleOccurrence(
     semantics::UnorderedSymbolSet &listVars,
     const std::list<parser::Name> &nameList, const parser::CharBlock &item,
@@ -782,6 +810,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
         return CheckDirectiveSpelling(source, id);
       });
   parser::Walk(x, visitor);
+  if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
+    dirStack_.push_back(&GetOmpDirectiveSpecification(x));
+  }
+
+  CheckDirectiveDeprecation(x);
+
   if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
     dirStack_.push_back(&GetOmpDirectiveSpecification(x));
   }
