@@ -582,9 +582,9 @@ public:
       Type *OldTy = CI->getType();
       Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
 
-      std::array<Value *, 3> CoordArgs = {UndefValue::get(Int32Ty),
-                                          UndefValue::get(Int32Ty),
-                                          UndefValue::get(Int32Ty)};
+      Value *Undef = UndefValue::get(Int32Ty);
+      std::array<Value *, 8> Args{Handle, MipLevel, Undef, Undef,
+                                  Undef,  Undef,    Undef, Undef};
 
       Type *CoordTy = Coords->getType();
       if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy)) {
@@ -592,35 +592,27 @@ public:
         assert(NumCoords < 3 &&
                "Expected at most 3 elements in coordinate vector");
         for (unsigned I = 0; I < NumCoords; ++I)
-          CoordArgs[I] = IRB.CreateExtractElement(Coords, uint64_t(I));
+          Args[2 + I] = IRB.CreateExtractElement(Coords, uint64_t(I));
       } else {
-        CoordArgs[0] = Coords;
+        Args[2] = Coords;
       }
 
-      std::array<Value *, 3> OffsetArgs = {UndefValue::get(Int32Ty),
-                                           UndefValue::get(Int32Ty),
-                                           UndefValue::get(Int32Ty)};
-
-      Type *OffsetTy = Offsets->getType();
       bool IsZeroOffset = false;
       if (auto *C = dyn_cast<Constant>(Offsets))
         IsZeroOffset = C->isNullValue();
 
       if (!IsZeroOffset) {
+        Type *OffsetTy = Offsets->getType();
         if (auto *VecTy = dyn_cast<FixedVectorType>(OffsetTy)) {
           unsigned NumOffsets = VecTy->getNumElements();
           assert(NumOffsets < 3 &&
                  "Expected at most 3 elements in offsets vector");
           for (unsigned I = 0; I < NumOffsets; ++I)
-            OffsetArgs[I] = IRB.CreateExtractElement(Offsets, uint64_t(I));
+            Args[5 + I] = IRB.CreateExtractElement(Offsets, uint64_t(I));
         } else {
-          OffsetArgs[0] = Offsets;
+          Args[5] = Offsets;
         }
       }
-
-      std::array<Value *, 8> Args{Handle,        MipLevel,     CoordArgs[0],
-                                  CoordArgs[1],  CoordArgs[2], OffsetArgs[0],
-                                  OffsetArgs[1], OffsetArgs[2]};
 
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
           OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
