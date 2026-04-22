@@ -18,6 +18,7 @@
 #include "src/__support/threads/mutex.h"       // Mutex
 #include "src/__support/threads/raw_mutex.h"   // RawMutex
 #include "src/__support/threads/sleep.h"
+#include "src/__support/time/abs_timeout.h"
 
 #ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #include "src/__support/time/monotonicity.h"
@@ -85,57 +86,53 @@ private:
     Requeued = 3,
   };
 
-  struct QueueNode {
-    QueueNode *prev;
-    QueueNode *next;
+  template <typename T> struct QueueNode {
+    T *prev;
+    T *next;
+
+    LIBC_INLINE T *self() { return static_cast<T *>(this); }
 
     // We use cyclic dummy node to avoid handing corner cases.
     LIBC_INLINE void ensure_queue_initialization() {
       if (LIBC_UNLIKELY(prev == nullptr))
-        prev = next = this;
+        prev = next = self();
     }
 
     // Assume `this` the dummy node of queue. Push back `waiter` to the queue.
-    LIBC_INLINE void push_back(QueueNode *waiter) {
+    LIBC_INLINE void push_back(T *waiter) {
       ensure_queue_initialization();
-      waiter->next = this;
+      waiter->next = self();
       waiter->prev = prev;
       waiter->next->prev = waiter;
       waiter->prev->next = waiter;
     }
 
     // Remove `waiter` from the queue.
-    LIBC_INLINE static void remove(QueueNode *waiter) {
+    LIBC_INLINE static void remove(T *waiter) {
       waiter->next->prev = waiter->prev;
       waiter->prev->next = waiter->next;
       waiter->prev = waiter->next = waiter;
     }
 
-    // Assume `this` the dummy node of queue. Pop the first waiter from the
-    // queue.
-    LIBC_INLINE QueueNode *pop_front() {
+    LIBC_INLINE bool is_empty() {
       ensure_queue_initialization();
-      if (next == this)
-        return nullptr;
-      QueueNode *first = next;
-      remove(first);
-      return first;
+      return self() == next;
     }
 
     // Assume `this` is the dummy node of the queue. Separate nodes before
     // cursor into a separate queue.
-    LIBC_INLINE void separate(QueueNode *cursor) {
-      QueueNode *removed_head = this->next;
-      QueueNode *removed_tail = cursor->prev;
+    LIBC_INLINE void separate(T *cursor) {
+      T *removed_head = this->next;
+      T *removed_tail = cursor->prev;
       this->next = cursor;
-      cursor->prev = this;
+      cursor->prev = self();
       removed_tail->next = removed_head;
       removed_head->prev = removed_tail;
     }
   };
 
   // This node will be on the per-thread stack.
-  struct CndWaiter : QueueNode {
+  struct CndWaiter : QueueNode<CndWaiter> {
     cpp::Atomic<CancellationBarrier *> cancellation_barrier;
     RawMutex barrier;
     cpp::Atomic<uint8_t> state;
@@ -158,7 +155,7 @@ private:
   // save trailing padding bytes, such that is_shared
   // can be introduced without extra space.
   union {
-    QueueNode waiter_queue;
+    QueueNode<CndWaiter> waiter_queue;
     cpp::Atomic<size_t> shared_waiters;
   };
 
@@ -196,14 +193,10 @@ private:
     // acquire the lock and dequeue themselves.
     {
       cpp::lock_guard lock(queue_lock);
-      // Still need to check the queue validity. CndVar maybe
-      // intialized by an empty intializer.
-      waiter_queue.ensure_queue_initialization();
-      if (waiter_queue.next == &waiter_queue)
+      if (waiter_queue.is_empty())
         return;
-      for (cursor = static_cast<CndWaiter *>(waiter_queue.next);
-           cursor != &waiter_queue;
-           cursor = static_cast<CndWaiter *>(cursor->next)) {
+      for (cursor = waiter_queue.next; cursor != waiter_queue.self();
+           cursor = cursor->next) {
         if (limit == 0)
           break;
         uint8_t expected = Waiting;
@@ -294,7 +287,7 @@ public:
       // we haven't consumed the signal before timeout reaches.
       {
         cpp::lock_guard lock(queue_lock);
-        QueueNode::remove(&waiter);
+        CndWaiter::remove(&waiter);
       }
       waiter.confirm_cancellation();
     } else if (!locked) {
@@ -307,7 +300,7 @@ public:
 
     // Reacquire the mutex lock. If error ever happens, we still wake up
     // our successor so that remaining waiters can continue. However, we treat
-    // outselves as not owning the mute and we don't touch the contention
+    // outselves as not owning the mutex and we don't touch the contention
     // bit.
     MutexError mutex_result = mutex->lock();
     // If we are requeued, we need to establish contention after lock, otherwise
@@ -319,8 +312,8 @@ public:
     // If there is other in the queue after us, we need to wake the next waiter.
     // If we cancelled, we should naturally have waiter.next == &waiter
     if (waiter.next != &waiter) {
-      auto *next_waiter = static_cast<CndWaiter *>(waiter.next);
-      QueueNode::remove(&waiter);
+      auto *next_waiter = waiter.next;
+      CndWaiter::remove(&waiter);
       auto &next_barrier_futex = next_waiter->barrier.get_raw_futex();
       auto &mutex_futex = mutex->get_raw_futex();
       // the following is basically an inlined version of mutex::unlock
