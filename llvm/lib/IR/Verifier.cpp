@@ -4471,6 +4471,11 @@ void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
 }
 
 void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          GEP.getModule()->getModuleFlag("require-logical-pointer")))
+    Check(!MD->getZExtValue(),
+          "Non-logical getelementptr disallowed for this module.");
+
   Type *TargetTy = GEP.getPointerOperandType()->getScalarType();
 
   Check(isa<PointerType>(TargetTy),
@@ -4732,6 +4737,11 @@ void Verifier::verifySwiftErrorValue(const Value *SwiftErrorVal) {
 }
 
 void Verifier::visitAllocaInst(AllocaInst &AI) {
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          AI.getModule()->getModuleFlag("require-logical-pointer")))
+    Check(!MD->getZExtValue(),
+          "Non-logical alloca disallowed for this module.");
+
   Type *Ty = AI.getAllocatedType();
   SmallPtrSet<Type*, 4> Visited;
   Check(Ty->isSized(&Visited), "Cannot allocate unsized type", &AI);
