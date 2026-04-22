@@ -3137,12 +3137,13 @@ void AArch64AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 #endif
 }
 
-// The codegen-only CAS* "_cg" instructions are emitted by the MSVC __cas*
-// intrinsics regardless of the active -march, so they carry no LSE predicate.
-// When we emit textual assembly (-S/-save-temps) the assembler would otherwise
-// reject them, so bracket each with a .arch_extension directive enabling the
-// required feature. Returns the extension name ("lse") and the feature
-// controlling it, or an empty name for any other opcode.
+// The codegen-only CAS*/SWP*/LDAPR* "_cg" instructions are emitted by the MSVC
+// __cas*/__swp*/__ldapr* intrinsics regardless of the active -march, so they
+// carry no LSE/RCPC predicate. When we emit textual assembly (-S/-save-temps)
+// the assembler would otherwise reject them, so bracket each with a
+// .arch_extension directive enabling the required feature. Returns the
+// extension name ("lse"/"rcpc") and the feature controlling it, or an empty
+// name for any other opcode.
 static std::pair<StringRef, unsigned>
 getCodeGenOnlyAtomicArchExtension(unsigned Opc) {
   switch (Opc) {
@@ -3181,6 +3182,11 @@ getCodeGenOnlyAtomicArchExtension(unsigned Opc) {
   case AArch64::SWPALW_cg:
   case AArch64::SWPALX_cg:
     return {"lse", AArch64::FeatureLSE};
+  case AArch64::LDAPRB_cg:
+  case AArch64::LDAPRH_cg:
+  case AArch64::LDAPRW_cg:
+  case AArch64::LDAPRX_cg:
+    return {"rcpc", AArch64::FeatureRCPC};
   }
 }
 
