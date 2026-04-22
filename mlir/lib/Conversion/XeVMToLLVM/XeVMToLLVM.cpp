@@ -1129,6 +1129,18 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     // Supported source and result types are resticted for now.
     auto srcEtype = op.getSrcEtype().getEtype();
     auto dstEtype = op.getDstEtype().getEtype();
+    // TODO: support power of 2 number of elements
+    // batch_size =
+    //   16 if dst type == fp8
+    //   8  if dst type == fp4
+    // For num_elem > batch_size
+    //   convert batch of batch_size
+    //   cast batch to i32 elem type vector
+    //   concat batches by shufflevector
+    // For num_elem = batch_size
+    //   use API for conversion
+    // For num_elem < batch_size
+    //   not supported for now
     if (auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType())) {
       if (vecSrcTy.getNumElements() != 16)
         return rewriter.notifyMatchFailure(
