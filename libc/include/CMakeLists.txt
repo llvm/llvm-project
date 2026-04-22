@@ -741,6 +741,7 @@ add_header_macro(
     .llvm-libc-types.struct_linger
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
+    .llvm-libc-types.struct_sockaddr_storage
 )
 
 add_header_macro(
