@@ -289,6 +289,3 @@ public:
 };
 
 }
-
-void *operator new(std::size_t, void *) noexcept;
-void *operator new[](std::size_t, void *) noexcept;
