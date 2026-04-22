@@ -2280,4 +2280,6 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       op->erase();
     return WalkResult::advance();
   });
+
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
 }

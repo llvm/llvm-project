@@ -223,77 +223,111 @@ static mlir::FlatSymbolRefAttr gatherComponentInit(
   return mlir::FlatSymbolRefAttr::get(mlirContext, name);
 }
 
-/// Emit fir.use_stmt operations for USE statements in the given function unit
+/// Emit a single fir.use_stmt from preserved frontend USE metadata.
+static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
+                          mlir::OpBuilder &builder, mlir::Location loc,
+                          const Fortran::semantics::PreservedUseStmt &stmt,
+                          const Fortran::semantics::Scope &lookupScope) {
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::StringAttr moduleNameAttr =
+      mlir::StringAttr::get(context, stmt.moduleName);
+
+  // Helper function to get mangled name for a symbol
+  auto getMangledName = [&](const std::string &localName) -> std::string {
+    Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
+    const auto *sym = lookupScope.FindSymbol(charBlock);
+    if (!sym)
+      return "";
+
+    const auto &ultimateSym = sym->GetUltimate();
+
+    // Skip cases which can cause mangleName to fail.
+    if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
+      return "";
+
+    if (ultimateSym.has<Fortran::semantics::UseErrorDetails>())
+      return "";
+
+    if (const auto *generic =
+            ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
+      if (!generic->specific())
+        return "";
+    }
+
+    return converter.mangleName(ultimateSym);
+  };
+
+  llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
+  llvm::SmallVector<mlir::Attribute> renameAttrs;
+
+  for (const auto &name : stmt.onlyNames) {
+    std::string mangledName = getMangledName(name);
+    if (!mangledName.empty())
+      onlySymbolAttrs.push_back(
+          mlir::FlatSymbolRefAttr::get(context, mangledName));
+  }
+
+  for (const auto &local : stmt.renames) {
+    std::string mangledName = getMangledName(local);
+    if (!mangledName.empty()) {
+      auto localAttr = mlir::StringAttr::get(context, local);
+      auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
+      renameAttrs.push_back(
+          fir::UseRenameAttr::get(context, localAttr, symbolRef));
+    }
+  }
+
+  mlir::ArrayAttr onlySymbolsAttr =
+      onlySymbolAttrs.empty() ? mlir::ArrayAttr()
+                              : mlir::ArrayAttr::get(context, onlySymbolAttrs);
+  mlir::ArrayAttr renamesAttr =
+      renameAttrs.empty() ? mlir::ArrayAttr()
+                          : mlir::ArrayAttr::get(context, renameAttrs);
+
+  fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
+                         renamesAttr);
+}
+
+/// Emit fir.module_debug_imports for USE statements in a module.
+static void
+emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
+                       mlir::OpBuilder &builder, mlir::Location loc,
+                       const Fortran::lower::pft::ModuleLikeUnit &mod) {
+  if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
+    return;
+  if (mod.preservedUseStmts.empty())
+    return;
+
+  const Fortran::semantics::Scope &modScope = mod.getScope();
+  const Fortran::semantics::Symbol *modSym = modScope.symbol();
+  if (!modSym)
+    return;
+
+  mlir::ModuleOp mlirModule = converter.getModuleOp();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
+
+  auto op = fir::ModuleDebugImportsOp::create(
+      builder, loc,
+      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()));
+  mlir::Region &region = op.getUses();
+  mlir::Block *block = new mlir::Block();
+  region.push_back(block);
+  builder.setInsertionPointToStart(block);
+  for (const auto &stmt : mod.preservedUseStmts)
+    emitUseStmtOp(converter, builder, loc, stmt, modScope);
+  fir::FirEndOp::create(builder, loc);
+}
+
+/// Emit `fir.use_stmt` operations for USE statements that appear in the given
+/// function unit.
 static void
 emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
                            mlir::OpBuilder &builder, mlir::Location loc,
                            const Fortran::lower::pft::FunctionLikeUnit &funit) {
-  mlir::MLIRContext *context = builder.getContext();
   const Fortran::semantics::Scope &scope = funit.getScope();
-
-  for (const auto &preservedStmt : funit.preservedUseStmts) {
-
-    auto getMangledName = [&](const std::string &localName) -> std::string {
-      Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
-      const auto *sym = scope.FindSymbol(charBlock);
-      if (!sym)
-        return "";
-
-      const auto &ultimateSym = sym->GetUltimate();
-
-      // Skip cases which can cause mangleName to fail.
-      if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
-        return "";
-
-      if (ultimateSym.has<Fortran::semantics::UseErrorDetails>())
-        return "";
-
-      if (const auto *generic =
-              ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
-        if (!generic->specific())
-          return "";
-      }
-
-      return converter.mangleName(ultimateSym);
-    };
-
-    mlir::StringAttr moduleNameAttr =
-        mlir::StringAttr::get(context, preservedStmt.moduleName);
-
-    llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
-    llvm::SmallVector<mlir::Attribute> renameAttrs;
-
-    // Handle only
-    for (const auto &name : preservedStmt.onlyNames) {
-      std::string mangledName = getMangledName(name);
-      if (!mangledName.empty())
-        onlySymbolAttrs.push_back(
-            mlir::FlatSymbolRefAttr::get(context, mangledName));
-    }
-
-    // Handle renames
-    for (const auto &local : preservedStmt.renames) {
-      std::string mangledName = getMangledName(local);
-      if (!mangledName.empty()) {
-        auto localAttr = mlir::StringAttr::get(context, local);
-        auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
-        renameAttrs.push_back(
-            fir::UseRenameAttr::get(context, localAttr, symbolRef));
-      }
-    }
-
-    // Create optional array attributes
-    mlir::ArrayAttr onlySymbolsAttr =
-        onlySymbolAttrs.empty()
-            ? mlir::ArrayAttr()
-            : mlir::ArrayAttr::get(context, onlySymbolAttrs);
-    mlir::ArrayAttr renamesAttr =
-        renameAttrs.empty() ? mlir::ArrayAttr()
-                            : mlir::ArrayAttr::get(context, renameAttrs);
-
-    fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
-                           renamesAttr);
-  }
+  for (const auto &preservedStmt : funit.preservedUseStmts)
+    emitUseStmtOp(converter, builder, loc, preservedStmt, scope);
 }
 
 /// Helper class to generate the runtime type info global data and the
@@ -6897,6 +6931,7 @@ private:
   /// declarative construct.
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
     setCurrentPosition(mod.getStartingSourceLoc());
+    emitModuleDebugImports(*this, *builder, toLocation(), mod);
     auto &scopeVariableListMap =
         Fortran::lower::pft::getScopeVariableListMap(mod);
     for (const auto &var : Fortran::lower::pft::getScopeVariableList(

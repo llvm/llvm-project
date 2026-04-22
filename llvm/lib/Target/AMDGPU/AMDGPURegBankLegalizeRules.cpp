@@ -656,11 +656,23 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackMinMax})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  // Note: we only write S1 rules for G_IMPLICIT_DEF, G_CONSTANT and G_FCONSTANT
-  // here, rest is trivially regbankselected earlier
-  addRulesForGOpcs({G_IMPLICIT_DEF}).Any({{UniS1}, {{Sgpr32Trunc}, {}}});
-  addRulesForGOpcs({G_CONSTANT})
-      .Any({{UniS1, _}, {{Sgpr32Trunc}, {None}, UniCstExt}});
+  addRulesForGOpcs({G_IMPLICIT_DEF})
+      .Any({{UniS1}, {{Sgpr32Trunc}, {}}})
+      .Any({{UniS16}, {{Sgpr16}, {}}})
+      .Any({{UniBRC}, {{SgprBRC}, {}}});
+
+  addRulesForGOpcs({G_CONSTANT}, Standard)
+      .Any({{UniS1, _}, {{Sgpr32Trunc}, {}, UniCstExt}})
+      .Uni(S16, {{Sgpr16}, {}})
+      .Uni(S32, {{Sgpr32}, {}})
+      .Uni(S64, {{Sgpr64}, {}})
+      .Any({{UniPtr32, _}, {{SgprPtr32}, {}}})
+      .Any({{UniPtr64, _}, {{SgprPtr64}, {}}});
+
+  addRulesForGOpcs({G_FCONSTANT}, Standard)
+      .Uni(S16, {{Sgpr16}, {}})
+      .Uni(S32, {{Sgpr32}, {}})
+      .Uni(S64, {{Sgpr64}, {}});
 
   addRulesForGOpcs({G_FREEZE})
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt}}})
@@ -669,10 +681,24 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{SgprBRC}, {SgprBRC}}})
       .Any({{DivBRC}, {{VgprBRC}, {VgprBRC}}});
 
+  addRulesForGOpcs({G_BITCAST})
+      .Any({{UniBRC}, {{SgprBRC}, {SgprBRC}}})
+      .Any({{DivBRC}, {{VgprBRC}, {VgprBRC}}});
+
   addRulesForGOpcs({G_UNMERGE_VALUES})
       .Any({{UniS16}, {{}, {}, UnmergeToShiftTrunc}})
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
+
+  addRulesForGOpcs({G_BUILD_VECTOR})
+      .Any({{UniBRC, S16}, {{}, {}, VerifyAllSgpr}})
+      .Any({{UniBRC, BRC}, {{}, {}, VerifyAllSgpr}})
+      .Any({{DivBRC, S16}, {{}, {}, ApplyAllVgpr}})
+      .Any({{DivBRC, BRC}, {{}, {}, ApplyAllVgpr}});
+
+  addRulesForGOpcs({G_MERGE_VALUES, G_CONCAT_VECTORS})
+      .Any({{UniBRC, BRC}, {{}, {}, VerifyAllSgpr}})
+      .Any({{DivBRC, BRC}, {{}, {}, ApplyAllVgpr}});
 
   addRulesForGOpcs({G_PHI})
       .Any({{UniS1}, {{}, {}, AextToS32InIncomingBlockGPHI}})
@@ -704,6 +730,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
             {{VgprBRC}, {VgprBRC, VgprB64, Sgpr32}, InsVecEltTo32}})
       .Any({{DivBRC, BRC, B64, DivS32},
             {{VgprBRC}, {VgprBRC, VgprB64, Vgpr32}, InsVecEltToSel}});
+
+  // INTERSECT_RAY {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  // INTERSECT_RAY {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  addRulesForGOpcs({G_AMDGPU_BVH_INTERSECT_RAY, G_AMDGPU_BVH_DUAL_INTERSECT_RAY,
+                    G_AMDGPU_BVH8_INTERSECT_RAY})
+      .Any({{}, {{}, {}, ApplyBVH_INTERSECT_RAY}});
 
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
@@ -1441,7 +1473,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  addRulesForGOpcs({G_FMINNUM_IEEE, G_FMAXNUM_IEEE, G_FMINNUM, G_FMAXNUM},
+  addRulesForGOpcs({G_FMINNUM_IEEE, G_FMAXNUM_IEEE, G_FMINNUM, G_FMAXNUM,
+                    G_FMINIMUMNUM, G_FMAXIMUMNUM},
                    Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
@@ -1835,6 +1868,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_wqm_demote}).Any({{}, {{}, {IntrId, Vcc}}});
 
+  addRulesForIOpcs({amdgcn_ballot}, Standard)
+      .Uni(S64, {{Sgpr64}, {IntrId, Vcc}})
+      .Uni(S32, {{Sgpr32}, {IntrId, Vcc}});
+
   addRulesForIOpcs({amdgcn_inverse_ballot})
       .Any({{DivS1, _, S32}, {{Vcc}, {IntrId, SgprB32_ReadFirstLane}}})
       .Any({{DivS1, _, S64}, {{Vcc}, {IntrId, SgprB64_ReadFirstLane}}});
@@ -1867,6 +1904,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST);
+
+  addRulesForIOpcs({amdgcn_ds_atomic_async_barrier_arrive_b64})
+      .Any({{}, {{}, {IntrId, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_ds_atomic_barrier_arrive_rtn_b64}, Standard)
+      .Div(S64, {{Vgpr64}, {IntrId, VgprP3, Vgpr64}});
 
   addRulesForIOpcs({amdgcn_ds_add_gs_reg_rtn, amdgcn_ds_sub_gs_reg_rtn},
                    Standard)

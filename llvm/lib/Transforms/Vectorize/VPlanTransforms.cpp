@@ -71,9 +71,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *PhiR = dyn_cast<VPPhi>(&Ingredient)) {
         auto *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
-        NewRecipe = new VPWidenPHIRecipe(Phi, nullptr, PhiR->getDebugLoc());
-        for (VPValue *Op : PhiR->operands())
-          NewRecipe->addOperand(Op);
+        NewRecipe = new VPWidenPHIRecipe(PhiR->operands(), PhiR->getDebugLoc(),
+                                         Phi->getName());
       } else if (auto *VPI = dyn_cast<VPInstruction>(&Ingredient)) {
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryRecipe for loads and stores.
@@ -1476,6 +1475,19 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Builder.createSub(Plan->getZero(TypeInfo.inferScalarType(A)), A,
                           Def->getDebugLoc(), "", NW));
+  }
+
+  if (CanCreateNewRecipe &&
+      match(Def, m_c_Add(m_VPValue(X), m_Sub(m_ZeroInt(), m_VPValue(Y))))) {
+    // Preserve nsw from the Add and the Sub, if it's present on both, on the
+    // new Sub.
+    VPIRFlags::WrapFlagsTy NW = {
+        false,
+        cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap() &&
+            cast<VPRecipeWithIRFlags>(Def->getOperand(Def->getOperand(0) == X))
+                ->hasNoSignedWrap()};
+    return Def->replaceAllUsesWith(
+        Builder.createSub(X, Y, Def->getDebugLoc(), "", NW));
   }
 
   const APInt *APC;
@@ -3886,9 +3898,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
                               DebugLoc::getUnknown(), "induction");
 
   // Create the widened phi of the vector IV.
-  auto *WidePHI = new VPWidenPHIRecipe(WidenIVR->getPHINode(), Init,
-                                       WidenIVR->getDebugLoc(), "vec.ind");
-  WidePHI->insertBefore(WidenIVR);
+  auto *WidePHI = VPBuilder(WidenIVR).createWidenPhi(
+      Init, WidenIVR->getDebugLoc(), "vec.ind");
 
   // Create the backedge value for the vector IV.
   VPValue *Inc;
@@ -4620,8 +4631,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   // Try to match reduce.add(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
-    auto *RecipeA = dyn_cast_if_present<VPWidenCastRecipe>(A);
-    auto *RecipeB = dyn_cast_if_present<VPWidenCastRecipe>(B);
+    auto *RecipeA = dyn_cast<VPWidenCastRecipe>(A);
+    auto *RecipeB = dyn_cast<VPWidenCastRecipe>(B);
     auto *Mul = cast<VPWidenRecipe>(VecOp);
 
     // Convert reduce.add(mul(ext, const)) to reduce.add(mul(ext, ext(const)))
@@ -4650,8 +4661,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
       match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp);
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
-    auto *Ext0 = dyn_cast_if_present<VPWidenCastRecipe>(A);
-    auto *Ext1 = dyn_cast_if_present<VPWidenCastRecipe>(B);
+    auto *Ext0 = dyn_cast<VPWidenCastRecipe>(A);
+    auto *Ext1 = dyn_cast<VPWidenCastRecipe>(B);
 
     // reduce.add(ext(mul(ext, const)))
     // -> reduce.add(ext(mul(ext, ext(const))))
@@ -6333,11 +6344,6 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op,
 
   if (!Op->hasOneUse())
     return std::nullopt;
-
-  // Handle neg(...) pattern (aka sub(0, ...)).
-  VPValue *NegatedOp = nullptr;
-  if (match(Op, m_Sub(m_ZeroInt(), m_VPValue(NegatedOp))))
-    Op = NegatedOp;
 
   VPWidenRecipe *BinOp = dyn_cast<VPWidenRecipe>(Op);
   if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
