@@ -10,7 +10,7 @@
 // RUN:   -fmodules -Rmodule-import \
 // RUN:   -fmodule-map-file=%t/module.modulemap \
 // RUN:   -fmodules-cache-path=%t/modules-cache \
-// RUN:   %t/main.cpp %t/A.cppm %t/A-part1.cppm %t/A-part1-impl.cpp 2>&1 \
+// RUN:   %t/main.cpp %t/A.cppm %t/A-part1.cppm %t/A-part1-impl.cppm 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck -DPREFIX=%/t --check-prefix=CHECK-REMARKS %s
 
@@ -20,7 +20,7 @@
 // CHECK-REMARKS-NEXT:  digraph "Module Dependency Graph" {
 // CHECK-REMARKS:       }
 
-// CHECK-REMARKS: [[PREFIX]]/A-part1-impl.cpp:2:2: remark: importing module 'root' from
+// CHECK-REMARKS: [[PREFIX]]/A-part1-impl.cppm:2:2: remark: importing module 'root' from
 // CHECK-REMARKS: [[PREFIX]]/A-part1.cppm:2:2: remark: importing module 'root' from
 // CHECK-REMARKS: [[PREFIX]]/A.cppm:2:2: remark: importing module 'root' from
 // CHECK-REMARKS: [[PREFIX]]/A.cppm:4:8: remark: importing module 'A:part1' from
@@ -35,7 +35,7 @@
 // RUN:   -fmodules -Rmodule-import \
 // RUN:   -fmodule-map-file=%t/module.modulemap \
 // RUN:   -fmodules-cache-path=%t/modules-cache \
-// RUN:   %t/main.cpp %t/A.cppm %t/A-part1.cppm %t/A-part1-impl.cpp \
+// RUN:   %t/main.cpp %t/A.cppm %t/A-part1.cppm %t/A-part1-impl.cppm \
 // RUN:   -### 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck -DPREFIX=%/t --check-prefix=CHECK-CC1 %s
@@ -48,7 +48,7 @@
 // CHECK-CC1-SAME: "-fno-implicit-modules"
 
 // CHECK-CC1: "-cc1"
-// CHECK-CC1-SAME: "[[PREFIX]]/A-part1-impl.cpp"
+// CHECK-CC1-SAME: "[[PREFIX]]/A-part1-impl.cppm"
 // CHECK-CC1-SAME: "-fmodule-file=root=[[ROOTPCM]]"
 // CHECK-CC1-SAME: "-fno-implicit-modules"
 // CHECK-CC1-SAME: "-fmodule-output=[[A_PART1_IMPL_PCM:[^"]+]]"
@@ -95,7 +95,7 @@ module;
 export module A:part1;
 export int part1();
 
-//--- A-part1-impl.cpp
+//--- A-part1-impl.cppm
 module;
 #include "root.h"
 module A:part1_impl;

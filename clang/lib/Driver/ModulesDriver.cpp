@@ -1662,6 +1662,5 @@ void driver::modules::runModulesDriver(
     llvm::WriteGraph<const CompilationGraph *>(llvm::errs(), &Graph);
 
   fixupNamedModuleCommandLines(C, Graph);
-
   feedJobsBackIntoCompilation(C, std::move(Graph));
 }

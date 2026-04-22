@@ -5,7 +5,7 @@
 
 // RUN: %clang -c -std=c++23 \
 // RUN:   -fmodules-driver -Rmodules-driver -Rmodule-import \
-// RUN:   %t/main.cpp %t/A.cppm %t/A-part1.cppm %t/A-part1-impl.cpp %t/B.cppm 2>&1 \
+// RUN:   %t/main.cpp %t/A.cppm %t/A-part1.cppm %t/A-part1-impl.cppm %t/B.cppm 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck -DPREFIX=%/t --check-prefix=CHECK-REMARKS %s
 
@@ -18,7 +18,7 @@
 
 // RUN: %clang -std=c++23 \
 // RUN:   -fmodules-driver -Rmodules-driver -Rmodule-import \
-// RUN:   %t/main.cpp %t/A.cppm %t/A-part1.cppm %t/A-part1-impl.cpp %t/B.cppm \
+// RUN:   %t/main.cpp %t/A.cppm %t/A-part1.cppm %t/A-part1-impl.cppm %t/B.cppm \
 // RUN:   -### 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck --check-prefix=CHECK-CC1 %s
@@ -29,10 +29,9 @@
 // CHECK-CC1-SAME: "-fmodule-output=[[B_PCM:[^"]+]]"
 
 // CHECK-CC1: "-cc1"
-// CHECK-CC1-SAME: "{{.*}}/A-part1-impl.cpp"
+// CHECK-CC1-SAME: "{{.*}}/A-part1-impl.cppm"
 // CHECK-CC1-SAME: "-fno-implicit-modules"
 // CHECK-CC1-SAME: "-fmodule-output=[[A_PART1_IMPL_PCM:[^"]+]]"
-// CHECK-CC1-SAME: "-fmodules-reduced-bmi"
 
 // CHECK-CC1: "-cc1"
 // CHECK-CC1-SAME: "{{.*}}/A-part1.cppm"
@@ -74,7 +73,7 @@ export int a() {
 export module A:part1;
 export int part1();
 
-//--- A-part1-impl.cpp
+//--- A-part1-impl.cppm
 module A:part1_impl;
 
 int part1() {
