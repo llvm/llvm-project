@@ -12145,8 +12145,7 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
     unsigned SrcByte = Lo / 8;
     unsigned DstByte = BW / 8 - 1 - SrcByte;
     unsigned Opc = DstByte > SrcByte ? ISD::SHL : ISD::SRL;
-    unsigned Amt =
-        (DstByte > SrcByte ? DstByte - SrcByte : SrcByte - DstByte) * 8;
+    unsigned Amt = AbsoluteDifference(DstByte, SrcByte) * 8;
     SDNodeFlags Flags =
         Opc == ISD::SHL ? SDNodeFlags::NoUnsignedWrap : SDNodeFlags::Exact;
     return DAG.getNode(Opc, DL, VT, N0, DAG.getShiftAmountConstant(Amt, VT, DL),
