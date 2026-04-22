@@ -1446,16 +1446,15 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   if (auto *ScalarInst = dyn_cast<Instruction>(Scalar)) {
     bool IsFoldOp = false;
     for (auto Op : ScalarOps) {
-      if (Op == Scalar) {
+      if (Op == ScalarInst) {
         IsFoldOp = true;
         break;
       }
     }
 
-    // If the scalar operand is not the result of folding the original vector
-    // operation, then it must be an original operand of the vector operation.
-    // In that case, we can safely copy IR flags from the original vector
-    // operation to the new scalar.
+    // If ScalarInst is not one of the existing operands, it must be newly
+    // created. In that case, it is safe to propagate the IR flags from the
+    // original instruction to ScalarInst.
     if (!IsFoldOp)
       ScalarInst->copyIRFlags(&I);
   }
