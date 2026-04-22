@@ -1558,7 +1558,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    MachineInstr *&CopyMI, LiveIntervals *LIS) const {
+    MachineInstr *&CopyMI, LiveIntervals *LIS, VirtRegMap *VRM) const {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   MachineBasicBlock *MBB = MI.getParent();
 

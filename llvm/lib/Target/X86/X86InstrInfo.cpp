@@ -8176,7 +8176,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    MachineInstr *&CopyMI, LiveIntervals *LIS) const {
+    MachineInstr *&CopyMI, LiveIntervals *LIS, VirtRegMap *VRM) const {
 
   // If LoadMI is a masked load, check MI having the same mask.
   const MCInstrDesc &MCID = get(LoadMI.getOpcode());
@@ -8228,8 +8228,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (isLoadFromStackSlot(LoadMI, FrameIndex)) {
     if (isNonFoldablePartialRegisterLoad(LoadMI, MI, MF))
       return nullptr;
-    return foldMemoryOperandImpl(MF, MI, Ops, InsertPt, FrameIndex, CopyMI,
-                                 LIS);
+    return foldMemoryOperandImpl(MF, MI, Ops, InsertPt, FrameIndex, CopyMI, LIS,
+                                 VRM);
   }
 
   // Check switch flag
