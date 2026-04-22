@@ -50,8 +50,6 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
   find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
   include(AddLLVM)
 
-  message( STATUS "libclc LLVM version: ${LLVM_PACKAGE_VERSION}" )
-
   foreach( tool IN ITEMS llvm-link opt )
     find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
     set( ${tool}_exe ${LLVM_TOOL_${tool}} )
@@ -63,11 +61,6 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
   set( LIBCLC_INSTALL_DIR ${CMAKE_INSTALL_DATADIR}/clc )
 else()
   set( LIBCLC_STANDALONE_BUILD FALSE )
-
-  if( NOT LLVM_PACKAGE_VERSION )
-    set( LLVM_PACKAGE_VERSION ${LLVM_VERSION} )
-  endif()
-  set( PACKAGE_VERSION ${LLVM_PACKAGE_VERSION} )
 
   # Note that we check this later (for both build types) but we can provide a
   # more useful error message when built in-tree. We assume that LLVM tools are
@@ -272,4 +265,6 @@ add_libclc_library(libclc-${LIBCLC_TARGET}
   PARENT_TARGET libclc-opencl-builtins
 )
 
-add_subdirectory(test)
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(test)
+endif()

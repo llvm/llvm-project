@@ -20,7 +20,9 @@
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Compiler.h"
 
+#include <array>
 #include <future>
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -87,6 +89,9 @@ public:
     std::vector<std::string> RPaths;
     /// List of LC_BUILD_VERSIONs.
     std::vector<BuildVersionOpts> BuildVersions;
+
+    /// Optional UUID. If set, this will be used to add an LC_UUID command.
+    std::optional<std::array<uint8_t, 16>> UUID;
 
     HeaderOptions() = default;
     HeaderOptions(Dylib D) : IDDylib(std::move(D)) {}
