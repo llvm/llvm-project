@@ -209,7 +209,7 @@ public:
   typedef typename traits_type::off_type off_type;
 
   // 27.7.1.1.1 Constructor/destructor:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 explicit basic_istream(basic_streambuf<char_type, traits_type>* __sb)
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 explicit basic_istream(basic_streambuf<char_type, traits_type>* __sb)
       : __gc_(0) {
     this->init(__sb);
   }
@@ -221,7 +221,7 @@ protected:
   // 27.7.1.1.2 Assign/swap:
   inline _LIBCPP_HIDE_FROM_ABI basic_istream& operator=(basic_istream&& __rhs);
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void swap(basic_istream& __rhs) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 void swap(basic_istream& __rhs) {
     std::swap(__gc_, __rhs.__gc_);
     basic_ios<char_type, traits_type>::swap(__rhs);
   }
@@ -234,17 +234,17 @@ public:
   class sentry;
 
   // 27.7.1.2 Formatted input:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream& operator>>(basic_istream& (*__pf)(basic_istream&)) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_istream& operator>>(basic_istream& (*__pf)(basic_istream&)) {
     return __pf(*this);
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream&
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_istream&
   operator>>(basic_ios<char_type, traits_type>& (*__pf)(basic_ios<char_type, traits_type>&)) {
     __pf(*this);
     return *this;
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream& operator>>(ios_base& (*__pf)(ios_base&)) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_istream& operator>>(ios_base& (*__pf)(ios_base&)) {
     __pf(*this);
     return *this;
   }
@@ -268,26 +268,26 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI streamsize gcount() const { return __gc_; }
   int_type get();
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream& get(char_type& __c) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_istream& get(char_type& __c) {
     int_type __ch = get();
     if (__ch != traits_type::eof())
       __c = traits_type::to_char_type(__ch);
     return *this;
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream& get(char_type* __s, streamsize __n) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_istream& get(char_type* __s, streamsize __n) {
     return get(__s, __n, this->widen('\n'));
   }
 
   basic_istream& get(char_type* __s, streamsize __n, char_type __dlm);
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream& get(basic_streambuf<char_type, traits_type>& __sb) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_istream& get(basic_streambuf<char_type, traits_type>& __sb) {
     return get(__sb, this->widen('\n'));
   }
 
   basic_istream& get(basic_streambuf<char_type, traits_type>& __sb, char_type __dlm);
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream& getline(char_type* __s, streamsize __n) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_istream& getline(char_type* __s, streamsize __n) {
     return getline(__s, __n, this->widen('\n'));
   }
 
@@ -298,7 +298,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim) {
     return ignore(__n, traits_type::to_int_type(__delim));
   }
-  [[__nodiscard__]] int_type peek();
+  int_type peek();
   basic_istream& read(char_type* __s, streamsize __n);
   streamsize readsome(char_type* __s, streamsize __n);
 
@@ -1184,7 +1184,7 @@ public:
   typedef typename traits_type::off_type off_type;
 
   // constructor/destructor
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 explicit basic_iostream(basic_streambuf<char_type, traits_type>* __sb)
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 explicit basic_iostream(basic_streambuf<char_type, traits_type>* __sb)
       : basic_istream<_CharT, _Traits>(__sb) {}
 
   ~basic_iostream() override;
@@ -1195,7 +1195,7 @@ protected:
   // assign/swap
   inline _LIBCPP_HIDE_FROM_ABI basic_iostream& operator=(basic_iostream&& __rhs);
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void swap(basic_iostream& __rhs) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 void swap(basic_iostream& __rhs) {
     basic_istream<char_type, traits_type>::swap(__rhs);
   }
 };

@@ -140,19 +140,32 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
   // they are referencing.
+  //
+  // DIDerivedTypes referring to incomplete Clang types, or
+  // LLVM enumeration types representing complete enums with no definition
+  // may be still unresolved. As they can't be cloned, keep references
+  // to the types from the base subprogram.
+  // FIXME: As a result, variables of cloned subprogram may refer to local types
+  // from base subprogram. In such case, type locality information is damaged.
+  // Find a way to enable cloning of all local types.
+  auto PrepareVariableMapping = [&VMap](llvm::DILocalVariable *DILocal) {
+    if (DILocal->isResolved())
+      return;
+
+    if (llvm::DIType *Ty = DILocal->getType(); Ty && !Ty->isResolved())
+      VMap.MD()[Ty].reset(Ty);
+
+    DILocal->resolve();
+  };
+
   for (auto &BB : *Fn) {
     for (auto &I : BB) {
       for (llvm::DbgVariableRecord &DVR :
-           llvm::filterDbgVars(I.getDbgRecordRange())) {
-        auto *DILocal = DVR.getVariable();
-        if (!DILocal->isResolved())
-          DILocal->resolve();
-      }
-      if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I)) {
-        auto *DILocal = DII->getVariable();
-        if (!DILocal->isResolved())
-          DILocal->resolve();
-      }
+           llvm::filterDbgVars(I.getDbgRecordRange()))
+        PrepareVariableMapping(DVR.getVariable());
+
+      if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
+        PrepareVariableMapping(DII->getVariable());
     }
   }
 }
@@ -715,17 +728,8 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
                                       /*position=*/vtableAddressPoint);
 }
 
-static bool UseRelativeLayout(const CodeGenModule &CGM) {
-  return CGM.getTarget().getCXXABI().isItaniumFamily() &&
-         CGM.getItaniumVTableContext().isRelativeLayout();
-}
-
-bool CodeGenVTables::useRelativeLayout() const {
-  return UseRelativeLayout(CGM);
-}
-
 llvm::Type *CodeGenModule::getVTableComponentType() const {
-  if (UseRelativeLayout(*this))
+  if (getLangOpts().RelativeCXXABIVTables)
     return Int32Ty;
   return GlobalsInt8PtrTy;
 }
@@ -757,8 +761,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
                                         bool vtableHasLocalLinkage) {
   auto &component = layout.vtable_components()[componentIndex];
 
+  bool RelativeCXXABIVTables = CGM.getLangOpts().RelativeCXXABIVTables;
   auto addOffsetConstant =
-      useRelativeLayout() ? AddRelativeLayoutOffset : AddPointerLayoutOffset;
+      RelativeCXXABIVTables ? AddRelativeLayoutOffset : AddPointerLayoutOffset;
 
   switch (component.getKind()) {
   case VTableComponent::CK_VCallOffset:
@@ -771,7 +776,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
     return addOffsetConstant(CGM, builder, component.getOffsetToTop());
 
   case VTableComponent::CK_RTTI:
-    if (useRelativeLayout())
+    if (RelativeCXXABIVTables)
       return addRelativeComponent(builder, rtti, vtableAddressPoint,
                                   vtableHasLocalLinkage,
                                   /*isCompleteDtor=*/false);
@@ -817,7 +822,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       // depending on link order, the comdat groups could resolve to the one
       // with the local symbol. As a temporary solution, fill these components
       // with zero. We shouldn't be calling these in the first place anyway.
-      if (useRelativeLayout())
+      if (RelativeCXXABIVTables)
         return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
 
       // For NVPTX devices in OpenMP emit special functon as null pointers,
@@ -869,7 +874,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
         GD = getItaniumVTableContext().findOriginalMethod(GD);
     }
 
-    if (useRelativeLayout()) {
+    if (RelativeCXXABIVTables) {
       return addRelativeComponent(
           builder, fnPtr, vtableAddressPoint, vtableHasLocalLinkage,
           component.getKind() == VTableComponent::CK_CompleteDtorPointer);
@@ -892,7 +897,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   }
 
   case VTableComponent::CK_UnusedFunctionPointer:
-    if (useRelativeLayout())
+    if (RelativeCXXABIVTables)
       return builder.add(llvm::ConstantExpr::getNullValue(CGM.Int32Ty));
     else
       return builder.addNullPointer(CGM.GlobalsInt8PtrTy);
@@ -956,7 +961,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
                            Base.getBase(), Out);
   SmallString<256> Name(OutName);
 
-  bool UsingRelativeLayout = getItaniumVTableContext().isRelativeLayout();
+  bool UsingRelativeLayout = CGM.getLangOpts().RelativeCXXABIVTables;
   bool VTableAliasExists =
       UsingRelativeLayout && CGM.getModule().getNamedAlias(Name);
   if (VTableAliasExists) {
@@ -1035,7 +1040,7 @@ void CodeGenVTables::RemoveHwasanMetadata(llvm::GlobalValue *GV) const {
 // the original vtable type.
 void CodeGenVTables::GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
                                                  llvm::StringRef AliasNameRef) {
-  assert(getItaniumVTableContext().isRelativeLayout() &&
+  assert(CGM.getLangOpts().RelativeCXXABIVTables &&
          "Can only use this if the relative vtable ABI is used");
   assert(!VTable->isDSOLocal() && "This should be called only if the vtable is "
                                   "not guaranteed to be dso_local");

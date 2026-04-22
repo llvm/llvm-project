@@ -1437,7 +1437,7 @@ define <2 x i16> @rhadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    shl.2s v1, v1, #24
 ; CHECK-GI-NEXT:    shl.2s v0, v0, #24
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    dup.2s v2, w8
+; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    sshr.2s v1, v1, #24
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
 ; CHECK-GI-NEXT:    fmov s0, w8
@@ -1472,7 +1472,7 @@ define <2 x i16> @rhadd8x2_zext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    and.8b v1, v1, v2
-; CHECK-GI-NEXT:    dup.2s v2, w8
+; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    add.2s v0, v0, v2
@@ -1510,7 +1510,7 @@ define <2 x i16> @rhadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    shl.2s v1, v1, #24
 ; CHECK-GI-NEXT:    shl.2s v0, v0, #24
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    dup.2s v2, w8
+; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    sshr.2s v1, v1, #24
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
 ; CHECK-GI-NEXT:    fmov s0, w8
@@ -1545,7 +1545,7 @@ define <2 x i16> @rhadd8x2_zext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    and.8b v1, v1, v2
-; CHECK-GI-NEXT:    dup.2s v2, w8
+; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    add.2s v0, v0, v2
@@ -2214,16 +2214,3 @@ define <2 x i32> @urhadd_v2i32_trunc(<2 x i32> %s0, <2 x i32> %s1) {
   %s2 = trunc <2 x i64> %s to <2 x i32>
   ret <2 x i32> %s2
 }
-
-declare <8 x i8> @llvm.aarch64.neon.srhadd.v8i8(<8 x i8>, <8 x i8>)
-declare <4 x i16> @llvm.aarch64.neon.srhadd.v4i16(<4 x i16>, <4 x i16>)
-declare <2 x i32> @llvm.aarch64.neon.srhadd.v2i32(<2 x i32>, <2 x i32>)
-declare <8 x i8> @llvm.aarch64.neon.urhadd.v8i8(<8 x i8>, <8 x i8>)
-declare <4 x i16> @llvm.aarch64.neon.urhadd.v4i16(<4 x i16>, <4 x i16>)
-declare <2 x i32> @llvm.aarch64.neon.urhadd.v2i32(<2 x i32>, <2 x i32>)
-declare <16 x i8> @llvm.aarch64.neon.srhadd.v16i8(<16 x i8>, <16 x i8>)
-declare <8 x i16> @llvm.aarch64.neon.srhadd.v8i16(<8 x i16>, <8 x i16>)
-declare <4 x i32> @llvm.aarch64.neon.srhadd.v4i32(<4 x i32>, <4 x i32>)
-declare <16 x i8> @llvm.aarch64.neon.urhadd.v16i8(<16 x i8>, <16 x i8>)
-declare <8 x i16> @llvm.aarch64.neon.urhadd.v8i16(<8 x i16>, <8 x i16>)
-declare <4 x i32> @llvm.aarch64.neon.urhadd.v4i32(<4 x i32>, <4 x i32>)

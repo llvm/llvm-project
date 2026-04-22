@@ -2961,7 +2961,7 @@ public:
     if (!module_sp->IsExecutable())
       return "";
 
-    return module_sp->GetFileSpec().GetFilename().AsCString();
+    return module_sp->GetFileSpec().GetFilename().GetString();
   }
 
   bool StopRunningProcess() {
@@ -5397,7 +5397,8 @@ public:
       Address resolved_address;
       resolved_address.SetLoadAddress(breakpoint_site->GetLoadAddress(),
                                       &breakpoint_location->GetTarget());
-      Symbol *resolved_symbol = resolved_address.CalculateSymbolContextSymbol();
+      const Symbol *resolved_symbol =
+          resolved_address.CalculateSymbolContextSymbol();
       if (resolved_symbol) {
         StreamString indirect_target_stream;
         indirect_target_stream.PutCString("indirect target = ");
@@ -5933,7 +5934,9 @@ public:
       if (m_frame_block != frame_block) {
         m_frame_block = frame_block;
 
-        VariableList *locals = frame->GetVariableList(true, nullptr);
+        VariableList *locals = frame->GetVariableList(
+            /*get_file_globals=*/true, /*include_synthetic_vars=*/true,
+            nullptr);
         if (locals) {
           const DynamicValueType use_dynamic = eDynamicDontRunTarget;
           for (const VariableSP &local_sp : *locals) {

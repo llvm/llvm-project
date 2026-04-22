@@ -430,7 +430,7 @@ RUN: ld.lld -### foo.o -m i386pe --thinlto-prefix-replace=_foo 2>&1 | FileCheck 
 THINLTO_PREFIX_REPLACE: -thinlto-prefix-replace:_foo
 
 RUN: ld.lld -### foo.o -m i386pep -plugin-opt=mcpu=x86-64 -plugin-opt=-emulated-tls -plugin-opt=thinlto -plugin-opt=O2 -plugin-opt=dwo_dir=foo -plugin-opt=cs-profile-generate -plugin-opt=cs-profile-path=bar 2>&1 | FileCheck -check-prefix=LTO_OPTS %s
-LTO_OPTS: -mllvm:-mcpu=x86-64 -opt:lldlto=2 -dwodir:foo -lto-cs-profile-generate -lto-cs-profile-file:bar -mllvm:-emulated-tls
+LTO_OPTS: -mllvm:-mcpu=x86-64 -opt:lldlto=2 -dwodir:foo -lto-cs-profile-generate -lto-cs-profile-file:bar -fat-lto-objects:no -mllvm:-emulated-tls
 
 RUN: ld.lld -### foo.o -m i386pep --lto-O2 --lto-CGO1 --lto-cs-profile-generate --lto-cs-profile-file=foo 2>&1 | FileCheck -check-prefix=LTO_OPTS2 %s
 LTO_OPTS2:-opt:lldlto=2 -opt:lldltocgo=1 -lto-cs-profile-generate -lto-cs-profile-file:foo
@@ -478,3 +478,10 @@ WARN_RPATH: warning: parameter -{{-?}}rpath has no effect on PE/COFF targets
 
 RUN: ld.lld -### foo.o -m i386pe --dependent-load-flag=0x800 2>&1 | FileCheck -check-prefix=DEPENDENT_LOAD_FLAG %s
 DEPENDENT_LOAD_FLAG: -dependentloadflag:0x800
+
+RUN: ld.lld -### -m i386pep foo.o 2>&1 | FileCheck -check-prefix NO-FAT-LTO %s
+RUN: ld.lld -### -m i386pep foo.o --fat-lto-objects --no-fat-lto-objects 2>&1 | FileCheck -check-prefix NO-FAT-LTO %s
+NO-FAT-LTO: -fat-lto-objects:no
+
+RUN: ld.lld -### -m i386pep foo.o --no-fat-lto-objects --fat-lto-objects 2>&1 | FileCheck -check-prefix FAT-LTO %s
+FAT-LTO: -fat-lto-objects{{ }}

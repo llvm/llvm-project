@@ -4,9 +4,7 @@
 ! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 ! UNSUPPORTED: x86_64-unknown-linux-gnu
-! UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 ! XFAIL: intelgpu
@@ -27,7 +25,7 @@ program map_dump_example
 ! clang-format off
 ! CHECK: omptarget device 0 info: OpenMP Host-Device pointer mappings after block
 ! CHECK-NEXT: omptarget device 0 info: Host Ptr Target Ptr Size (B) DynRefCount HoldRefCount Declaration
-! CHECK-NEXT: omptarget device 0 info: {{(0x[0-9a-f]{16})}} {{(0x[0-9a-f]{16})}}  20000000 1 0 {{.*}} at a(:n):22:11
+! CHECK-NEXT: omptarget device 0 info: {{(0x[0-9a-f]{16})}} {{(0x[0-9a-f]{16})}}  20000000 1 0 {{.*}} at a(:n):[[@LINE-8]]:11
 ! clang-format on
 !$omp target enter data map(to:A(:N))
   call ompx_dump_mapping_tables()

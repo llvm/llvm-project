@@ -12,6 +12,7 @@
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/VectorIterator.h"
@@ -22,6 +23,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 
 using namespace lldb;
@@ -156,8 +158,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     return 0;
   if (name == "second")
     return 1;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *
@@ -233,8 +234,7 @@ llvm::Expected<size_t>
 VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "item")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
@@ -393,8 +393,7 @@ LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "object" || name == "$$dereference$$")
     return 1;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *
@@ -492,5 +491,84 @@ bool formatters::LibStdcppVariantSummaryProvider(
 
   auto active_type = variant_type.GetTypeTemplateArgument(index, true);
   stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
+  return true;
+}
+
+static std::optional<int64_t>
+LibStdcppExtractOrderingValue(ValueObject &valobj) {
+  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("_M_value");
+  if (!value_sp)
+    return std::nullopt;
+  bool success;
+  int64_t value = value_sp->GetValueAsSigned(0, &success);
+  if (!success)
+    return std::nullopt;
+  return value;
+}
+
+bool lldb_private::formatters::LibStdcppPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  case -128:
+  case 2:
+    stream << "unordered";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equal";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
   return true;
 }

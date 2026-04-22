@@ -22,6 +22,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -88,9 +89,9 @@ void InlineFunctionInfo::DumpStopContext(Stream *s) const {
   //    s->Indent("[inlined] ");
   s->Indent();
   if (m_mangled)
-    s->PutCString(m_mangled.GetName().AsCString());
+    s->PutCString(m_mangled.GetName());
   else
-    s->PutCString(m_name.AsCString());
+    s->PutCString(m_name);
 }
 
 ConstString InlineFunctionInfo::GetName() const {
@@ -307,8 +308,8 @@ Function::GetSourceInfo() {
   GetStartLineSourceInfo(source_file_sp, start_line);
   LineTable *line_table = m_comp_unit->GetLineTable();
   if (start_line == 0 || !line_table) {
-    return llvm::createStringError(llvm::formatv(
-        "Could not find line information for function \"{0}\".", GetName()));
+    return llvm::createStringErrorV(
+        "Could not find line information for function \"{0}\".", GetName());
   }
 
   uint32_t end_line = start_line;

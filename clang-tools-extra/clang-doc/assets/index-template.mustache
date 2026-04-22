@@ -2,7 +2,9 @@
 <html>
 {{>HeadPartial}}
 <body>
-    {{>NavbarPartial}}
+    <header>
+        {{>NavbarPartial}}
+    </header>
     <main>
         <div class="container">
             <div class="sidebar">
@@ -11,12 +13,12 @@
                     <li>
                         <details open>
                             <summary class="sidebar-section">
-                                <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+                                <a class="sidebar-item" href="#Index">Index</a>
                             </summary>
                             <ul>
                                 {{#Index}}
                                 <li class="sidebar-item-container">
-                                    <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
                                 </li>
                                 {{/Index}}
                             </ul>
@@ -31,7 +33,7 @@
                     {{#Index}}
                     <div>
                         <a href="{{#Path}}{{Path}}/{{/Path}}{{Name}}/index.html">
-                            <pre><code class="language-cpp code-clang-doc">namespace {{Name}}</code></pre>
+                            <pre><code id="{{USR}}" class="language-cpp code-clang-doc">namespace {{Name}}</code></pre>
                         </a>
                     </div>
                     {{/Index}}

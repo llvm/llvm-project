@@ -157,6 +157,10 @@ public:
   /// perform WidenScalar action on the target.
   bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
 
+  /// \return true if \p Query is legal on the target, or if \p Query will
+  /// perform a FewerElements action on the target.
+  bool isLegalOrHasFewerElements(const LegalityQuery &Query) const;
+
   /// \return true if the combine is running prior to legalization, or if \p Ty
   /// is a legal integer constant type on the target.
   bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
@@ -518,9 +522,6 @@ public:
   /// Optimize (x op x) -> x
   bool matchBinOpSameVal(MachineInstr &MI) const;
 
-  /// Check if operand \p OpIdx is zero.
-  bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) const;
-
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
@@ -536,6 +537,9 @@ public:
                              std::tuple<Register, Register> &MatchInfo) const;
   void applySimplifyAddToSub(MachineInstr &MI,
                              std::tuple<Register, Register> &MatchInfo) const;
+
+  /// Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+  bool matchBinopWithNeg(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Match (logic_op (op x...), (op y...)) -> (op (logic_op x, y))
   bool matchHoistLogicOpWithSameOpcodeHands(
@@ -1046,9 +1050,18 @@ public:
   bool matchRedundantSextInReg(MachineInstr &Root, MachineInstr &Other,
                                BuildFnTy &MatchInfo) const;
 
+  // (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1) or
+  // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+  bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
+
+  /// Helper function for matchBinopWithNeg: tries to match one commuted form
+  /// of `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`.
+  bool matchBinopWithNegInner(Register MInner, Register Other, unsigned RootOpc,
+                              Register Dst, LLT Ty, BuildFnTy &MatchInfo) const;
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
   ///

@@ -31,6 +31,9 @@
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_80 -target-feature +ptx81 -DPTX=81 \
 // RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX81_SM80 %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_90 -target-feature +ptx81 -DPTX=81\
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX81_SM90 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_90 -target-feature +ptx78 -DPTX=78 \
 // RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX78_SM90 %s
@@ -43,10 +46,10 @@
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_101a -target-feature +ptx86 -DPTX=86 \
 // RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM101a %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_120a -target-feature +ptx86 -DPTX=86 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_120a -target-feature +ptx87 -DPTX=87 \
 // RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM120a %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_103a -target-feature +ptx87 -DPTX=87 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_103a -target-feature +ptx88 -DPTX=88 \
 // RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX87_SM103a %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_100a -target-feature +ptx87 -DPTX=87 \
@@ -306,91 +309,91 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
                           unsigned short *usp, unsigned short us, int *ip,
                           int i, unsigned int *uip, unsigned ui, long *lp,
                           long l, long long *llp, long long ll) {
-  // CHECK: atomicrmw add ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw add ptr {{.*}} monotonic, align 4
   __nvvm_atom_add_gen_i(ip, i);
-  // CHECK: atomicrmw add ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw add ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_add_gen_l(&dl, l);
-  // CHECK: atomicrmw add ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw add ptr {{.*}} monotonic, align 8
   __nvvm_atom_add_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw sub ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw sub ptr {{.*}} monotonic, align 4
   __nvvm_atom_sub_gen_i(ip, i);
-  // CHECK: atomicrmw sub ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw sub ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_sub_gen_l(&dl, l);
-  // CHECK: atomicrmw sub ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw sub ptr {{.*}} monotonic, align 8
   __nvvm_atom_sub_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw and ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw and ptr {{.*}} monotonic, align 4
   __nvvm_atom_and_gen_i(ip, i);
-  // CHECK: atomicrmw and ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw and ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_and_gen_l(&dl, l);
-  // CHECK: atomicrmw and ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw and ptr {{.*}} monotonic, align 8
   __nvvm_atom_and_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw or ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw or ptr {{.*}} monotonic, align 4
   __nvvm_atom_or_gen_i(ip, i);
-  // CHECK: atomicrmw or ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw or ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_or_gen_l(&dl, l);
-  // CHECK: atomicrmw or ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw or ptr {{.*}} monotonic, align 8
   __nvvm_atom_or_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw xor ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw xor ptr {{.*}} monotonic, align 4
   __nvvm_atom_xor_gen_i(ip, i);
-  // CHECK: atomicrmw xor ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw xor ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_xor_gen_l(&dl, l);
-  // CHECK: atomicrmw xor ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw xor ptr {{.*}} monotonic, align 8
   __nvvm_atom_xor_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw xchg ptr {{.*}} monotonic, align 4
   __nvvm_atom_xchg_gen_i(ip, i);
-  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw xchg ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_xchg_gen_l(&dl, l);
-  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw xchg ptr {{.*}} monotonic, align 8
   __nvvm_atom_xchg_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw max ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw max ptr {{.*}} monotonic, align 4
   __nvvm_atom_max_gen_i(ip, i);
-  // CHECK: atomicrmw umax ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw umax ptr {{.*}} monotonic, align 4
   __nvvm_atom_max_gen_ui((unsigned int *)ip, i);
-  // CHECK: atomicrmw max ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw max ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_max_gen_l(&dl, l);
-  // CHECK: atomicrmw umax ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw umax ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_max_gen_ul((unsigned long *)&dl, l);
-  // CHECK: atomicrmw max ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw max ptr {{.*}} monotonic, align 8
   __nvvm_atom_max_gen_ll(&sll, ll);
-  // CHECK: atomicrmw umax ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw umax ptr {{.*}} monotonic, align 8
   __nvvm_atom_max_gen_ull((unsigned long long *)&sll, ll);
 
-  // CHECK: atomicrmw min ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw min ptr {{.*}} monotonic, align 4
   __nvvm_atom_min_gen_i(ip, i);
-  // CHECK: atomicrmw umin ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw umin ptr {{.*}} monotonic, align 4
   __nvvm_atom_min_gen_ui((unsigned int *)ip, i);
-  // CHECK: atomicrmw min ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw min ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_min_gen_l(&dl, l);
-  // CHECK: atomicrmw umin ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw umin ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_min_gen_ul((unsigned long *)&dl, l);
-  // CHECK: atomicrmw min ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw min ptr {{.*}} monotonic, align 8
   __nvvm_atom_min_gen_ll(&sll, ll);
-  // CHECK: atomicrmw umin ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw umin ptr {{.*}} monotonic, align 8
   __nvvm_atom_min_gen_ull((unsigned long long *)&sll, ll);
 
-  // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align 4
+  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align 4
   // CHECK-NEXT: extractvalue { i32, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_i(ip, 0, i);
-  // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align {{4|8}}
+  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align {{4|8}}
   // CHECK-NEXT: extractvalue { {{i32|i64}}, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_l(&dl, 0, l);
-  // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align 8
+  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align 8
   // CHECK-NEXT: extractvalue { i64, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_ll(&sll, 0, ll);
 
-  // CHECK: atomicrmw fadd ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw fadd ptr {{.*}} monotonic, align 4
   __nvvm_atom_add_gen_f(fp, f);
 
-  // CHECK: atomicrmw uinc_wrap ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw uinc_wrap ptr {{.*}} monotonic, align 4
   __nvvm_atom_inc_gen_ui(uip, ui);
 
-  // CHECK: atomicrmw udec_wrap ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw udec_wrap ptr {{.*}} monotonic, align 4
   __nvvm_atom_dec_gen_ui(uip, ui);
 
 
@@ -643,7 +646,7 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
 #endif
 
 #if __CUDA_ARCH__ >= 700
-  // CHECK_PTX63_SM70: cmpxchg ptr {{.*}} seq_cst seq_cst, align 2
+  // CHECK_PTX63_SM70: cmpxchg ptr {{.*}} monotonic monotonic, align 2
   // CHECK_PTX63_SM70-NEXT: extractvalue { i16, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_us(usp, 0, us);
   // CHECK_PTX63_SM70: call i16 @llvm.nvvm.atomic.cas.gen.i.cta.i16.p0
@@ -1577,5 +1580,57 @@ __device__ void nvvm_add_fma_f32_sat() {
   // CHECK: call float @llvm.nvvm.fma.rp.ftz.sat.f
   __nvvm_fma_rp_ftz_sat_f(1.0f, 2.0f, 3.0f);
 
+  // CHECK: ret void
+}
+
+#define F16 (__fp16)0.1f
+#define F16_2 (__fp16)0.2f
+#define F16X2 {(__fp16)0.1f, (__fp16)0.1f}
+#define F16X2_2 {(__fp16)0.2f, (__fp16)0.2f}
+
+// CHECK-LABEL: nvvm_add_mul_f16_sat
+__device__ void nvvm_add_mul_f16_sat() {
+  // CHECK: call half @llvm.nvvm.add.rn.sat.f16
+  __nvvm_add_rn_sat_f16(F16, F16_2);
+  // CHECK: call half @llvm.nvvm.add.rn.ftz.sat.f16
+  __nvvm_add_rn_ftz_sat_f16(F16, F16_2);
+  // CHECK: call <2 x half> @llvm.nvvm.add.rn.sat.v2f16
+  __nvvm_add_rn_sat_v2f16(F16X2, F16X2_2);
+  // CHECK: call <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16
+  __nvvm_add_rn_ftz_sat_v2f16(F16X2, F16X2_2);
+
+  // CHECK: call half @llvm.nvvm.mul.rn.sat.f16
+  __nvvm_mul_rn_sat_f16(F16, F16_2);
+  // CHECK: call half @llvm.nvvm.mul.rn.ftz.sat.f16
+  __nvvm_mul_rn_ftz_sat_f16(F16, F16_2);
+  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.sat.v2f16
+  __nvvm_mul_rn_sat_v2f16(F16X2, F16X2_2);
+  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16
+  __nvvm_mul_rn_ftz_sat_v2f16(F16X2, F16X2_2);
+  
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_fma_oob
+__device__ void nvvm_fma_oob() {
+#if __CUDA_ARCH__ >= 900 && (PTX >= 81)
+  // CHECK_PTX81_SM90: call half @llvm.nvvm.fma.rn.oob.f16
+  __nvvm_fma_rn_oob_f16(F16, F16_2, F16_2);
+  // CHECK_PTX81_SM90: call half @llvm.nvvm.fma.rn.oob.relu.f16
+  __nvvm_fma_rn_oob_relu_f16(F16, F16_2, F16_2);
+  // CHECK_PTX81_SM90: call <2 x half> @llvm.nvvm.fma.rn.oob.v2f16
+  __nvvm_fma_rn_oob_f16x2(F16X2, F16X2_2, F16X2_2);
+  // CHECK_PTX81_SM90: call <2 x half> @llvm.nvvm.fma.rn.oob.relu.v2f16
+  __nvvm_fma_rn_oob_relu_f16x2(F16X2, F16X2_2, F16X2_2);
+
+  // CHECK_PTX81_SM90: call bfloat @llvm.nvvm.fma.rn.oob.bf16
+  __nvvm_fma_rn_oob_bf16(BF16, BF16_2, BF16_2);
+  // CHECK_PTX81_SM90: call bfloat @llvm.nvvm.fma.rn.oob.relu.bf16
+  __nvvm_fma_rn_oob_relu_bf16(BF16, BF16_2, BF16_2);
+  // CHECK_PTX81_SM90: call <2 x bfloat> @llvm.nvvm.fma.rn.oob.v2bf16
+  __nvvm_fma_rn_oob_bf16x2(BF16X2, BF16X2_2, BF16X2_2);
+  // CHECK_PTX81_SM90: call <2 x bfloat> @llvm.nvvm.fma.rn.oob.relu.v2bf16
+  __nvvm_fma_rn_oob_relu_bf16x2(BF16X2, BF16X2_2, BF16X2_2);
+#endif
   // CHECK: ret void
 }

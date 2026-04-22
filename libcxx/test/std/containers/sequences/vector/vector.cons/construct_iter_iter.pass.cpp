@@ -14,6 +14,7 @@
 #include <vector>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 
 #include "test_macros.h"
 #include "test_iterators.h"

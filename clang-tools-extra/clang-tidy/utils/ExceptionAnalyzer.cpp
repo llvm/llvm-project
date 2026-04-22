@@ -12,7 +12,6 @@ namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
     const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
-  assert(ExceptionType != nullptr && "Only valid types are accepted");
   Behaviour = State::Throwing;
   ThrownExceptions.insert({ExceptionType, ThrowInfo});
 }
@@ -39,6 +38,7 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
+  ThrowsUnknown = ThrowsUnknown || Other.ThrowsUnknown;
   ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
 }
@@ -330,6 +330,12 @@ static bool canThrow(const FunctionDecl *Func) {
   if (!FunProto)
     return true;
 
+  // Clang evaluates unresolved exception specs before generating any call to
+  // the function, so these functions cannot appear at a call site and cannot
+  // throw.
+  if (isUnresolvedExceptionSpec(FunProto->getExceptionSpecType()))
+    return false;
+
   switch (FunProto->canThrow()) {
   case CT_Cannot:
     return false;
@@ -356,7 +362,7 @@ static bool canThrow(const FunctionDecl *Func) {
 ExceptionAnalyzer::ExceptionInfo::Throwables
 ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
                                                 const ASTContext &Context) {
-  llvm::SmallVector<const Type *, 8> TypesToDelete;
+  SmallVector<const Type *, 8> TypesToDelete;
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *ExceptionTy = ThrownException.getFirst();
     const CanQualType ExceptionCanTy =
@@ -426,11 +432,13 @@ ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
 ExceptionAnalyzer::ExceptionInfo &
 ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
     const llvm::StringSet<> &IgnoredTypes, bool IgnoreBadAlloc) {
-  llvm::SmallVector<const Type *, 8> TypesToDelete;
+  SmallVector<const Type *, 8> TypesToDelete;
   // Note: Using a 'SmallSet' with 'llvm::remove_if()' is not possible.
   // Therefore this slightly hacky implementation is required.
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *T = ThrownException.getFirst();
+    if (!T)
+      continue;
     if (const auto *TD = T->getAsTagDecl()) {
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
@@ -450,11 +458,12 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
 void ExceptionAnalyzer::ExceptionInfo::clear() {
   Behaviour = State::NotThrowing;
   ContainsUnknown = false;
+  ThrowsUnknown = false;
   ThrownExceptions.clear();
 }
 
 void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
-  if (ThrownExceptions.empty())
+  if (ThrownExceptions.empty() && !ThrowsUnknown)
     if (ContainsUnknown)
       Behaviour = State::Unknown;
     else
@@ -482,12 +491,23 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       }
     }
 
+    // Optionally treat unannotated functions as potentially throwing if they
+    // are not explicitly non-throwing and no throw was discovered.
+    if (AssumeUnannotatedFunctionsAsThrowing &&
+        Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
+      Result.registerException(nullptr, {Func->getLocation(), CallStack});
+    }
+
     CallStack.erase(Func);
     return Result;
   }
 
   auto Result = ExceptionInfo::createUnknown();
+
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
+    if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
+      return ExceptionInfo::createNonThrowing();
+
     for (const QualType &Ex : FPT->exceptions()) {
       CallStack.insert({Func, CallLoc});
       Result.registerException(
@@ -496,6 +516,14 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       CallStack.erase(Func);
     }
   }
+
+  if (AssumeMissingDefinitionsFunctionsAsThrowing &&
+      Result.getBehaviour() == State::Unknown) {
+    CallStack.insert({Func, CallLoc});
+    Result.registerException(nullptr, {Func->getLocation(), CallStack});
+    CallStack.erase(Func);
+  }
+
   return Result;
 }
 
@@ -520,11 +548,12 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
       Results.registerException(
           ThrownExpr->getType()->getUnqualifiedDesugaredType(),
           {Throw->getBeginLoc(), CallStack});
-    } else
+    } else {
       // A rethrow of a caught exception happens which makes it possible
       // to throw all exception that are caught in the 'catch' clause of
       // the parent try-catch block.
       Results.registerExceptions(Caught);
+    }
   } else if (const auto *Try = dyn_cast<CXXTryStmt>(St)) {
     ExceptionInfo Uncaught =
         throwsException(Try->getTryBlock(), Caught, CallStack);
@@ -630,8 +659,9 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
     // The results here might be relevant to different analysis passes
     // with different needs as well.
     FunctionCache.try_emplace(Func, ExceptionList);
-  } else
+  } else {
     ExceptionList = CacheEntry->getSecond();
+  }
 
   return ExceptionList;
 }

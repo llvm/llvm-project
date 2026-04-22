@@ -30,6 +30,7 @@
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_object.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/rank.h>
@@ -66,6 +67,9 @@ class mdspan {
 private:
   static_assert(__mdspan_detail::__is_extents_v<_Extents>,
                 "mdspan: Extents template parameter must be a specialization of extents.");
+  static_assert(
+      is_object_v<_ElementType> && requires { sizeof(_ElementType); },
+      "mdspan: ElementType template parameter must be a complete object type");
   static_assert(!is_array_v<_ElementType>, "mdspan: ElementType template parameter may not be an array type");
   static_assert(!is_abstract_v<_ElementType>, "mdspan: ElementType template parameter may not be an abstract class");
   static_assert(is_same_v<_ElementType, typename _AccessorPolicy::element_type>,
@@ -78,14 +82,14 @@ public:
   using extents_type     = _Extents;
   using layout_type      = _LayoutPolicy;
   using accessor_type    = _AccessorPolicy;
-  using mapping_type     = typename layout_type::template mapping<extents_type>;
+  using mapping_type     = layout_type::template mapping<extents_type>;
   using element_type     = _ElementType;
   using value_type       = remove_cv_t<element_type>;
-  using index_type       = typename extents_type::index_type;
-  using size_type        = typename extents_type::size_type;
-  using rank_type        = typename extents_type::rank_type;
-  using data_handle_type = typename accessor_type::data_handle_type;
-  using reference        = typename accessor_type::reference;
+  using index_type       = extents_type::index_type;
+  using size_type        = extents_type::size_type;
+  using rank_type        = extents_type::rank_type;
+  using data_handle_type = accessor_type::data_handle_type;
+  using reference        = accessor_type::reference;
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank() noexcept { return extents_type::rank(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank_dynamic() noexcept {
@@ -96,9 +100,8 @@ public:
   }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type extent(rank_type __r) const noexcept {
     return __map_.extents().extent(__r);
-  };
+  }
 
-public:
   //--------------------------------------------------------------------------------
   // [mdspan.mdspan.cons], mdspan constructors, assignment, and destructor
 
@@ -242,26 +245,26 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const extents_type& extents() const noexcept {
     return __map_.extents();
-  };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const data_handle_type& data_handle() const noexcept { return __ptr_; };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const mapping_type& mapping() const noexcept { return __map_; };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const accessor_type& accessor() const noexcept { return __acc_; };
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const data_handle_type& data_handle() const noexcept { return __ptr_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const mapping_type& mapping() const noexcept { return __map_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const accessor_type& accessor() const noexcept { return __acc_; }
 
   // per LWG-4021 "mdspan::is_always_meow() should be noexcept"
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept {
     return mapping_type::is_always_unique();
-  };
+  }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept {
     return mapping_type::is_always_exhaustive();
-  };
+  }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_strided() noexcept {
     return mapping_type::is_always_strided();
-  };
+  }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_unique() const { return __map_.is_unique(); };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const { return __map_.is_exhaustive(); };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_strided() const { return __map_.is_strided(); };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const { return __map_.stride(__r); };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_unique() const { return __map_.is_unique(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const { return __map_.is_exhaustive(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_strided() const { return __map_.is_strided(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const { return __map_.stride(__r); }
 
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS data_handle_type __ptr_{};
@@ -310,7 +313,7 @@ mdspan(_ElementType*, const _MappingType&)
     -> mdspan<_ElementType, typename _MappingType::extents_type, typename _MappingType::layout_type>;
 
 template <class _MappingType, class _AccessorType>
-mdspan(const typename _AccessorType::data_handle_type, const _MappingType&, const _AccessorType&)
+mdspan(typename _AccessorType::data_handle_type, const _MappingType&, const _AccessorType&)
     -> mdspan<typename _AccessorType::element_type,
               typename _MappingType::extents_type,
               typename _MappingType::layout_type,

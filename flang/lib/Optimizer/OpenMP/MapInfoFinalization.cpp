@@ -1143,7 +1143,8 @@ class MapInfoFinalizationPass
           newMemberIndices.emplace_back(path);
 
         op.setMembersIndexAttr(builder.create2DI64ArrayAttr(newMemberIndices));
-        op.setPartialMap(true);
+        // Set to partial map only if there is no user-defined mapper.
+        op.setPartialMap(op.getMapperIdAttr() == nullptr);
 
         return mlir::WalkResult::advance();
       });
@@ -1181,6 +1182,41 @@ class MapInfoFinalizationPass
           mlir::Operation *targetUser = getFirstTargetUser(op);
           assert(targetUser && "expected user of map operation was not found");
           genDescriptorMemberMaps(op, builder, targetUser);
+        }
+      });
+
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        // If a record type is not mapped with the `close` modifier while some
+        // of its members are (e.g. descriptor maps), then in USM mode, the
+        // memory for the record will be allocated in unified memory while the
+        // the members might be allocated in device memory. This creates an
+        // inconsistent map for the record type where some of its members are
+        // allocated in different address spaces.
+        //
+        // This fixes this issue by taking a conservative approach and removing
+        // the `close` flag from members if it is not used for mapping the
+        // parent record.
+        if (op.getMembers().empty())
+          return;
+
+        mlir::Type varTy = fir::unwrapRefType(op.getVarPtr().getType());
+        if (!mlir::isa<fir::RecordType>(varTy))
+          return;
+
+        auto mapFlag = op.getMapType();
+        bool hasClose = (mapFlag & mlir::omp::ClauseMapFlags::close) ==
+                        mlir::omp::ClauseMapFlags::close;
+
+        if (hasClose)
+          return;
+
+        for (auto member : op.getMembers()) {
+          if (auto memberOp = llvm::dyn_cast_if_present<mlir::omp::MapInfoOp>(
+                  member.getDefiningOp())) {
+            auto memberMapFlag =
+                memberOp.getMapType() & ~mlir::omp::ClauseMapFlags::close;
+            memberOp.setMapType(memberMapFlag);
+          }
         }
       });
 

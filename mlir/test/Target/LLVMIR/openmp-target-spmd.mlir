@@ -30,7 +30,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // HOST:         %omp_loop.tripcount = {{.*}}
 // HOST-NEXT:    br label %[[ENTRY:.*]]
 // HOST:       [[ENTRY]]:
-// HOST-NEXT:    %[[TRIPCOUNT:.*]] = zext i32 %omp_loop.tripcount to i64
+// HOST:         %[[TRIPCOUNT:.*]] = zext i32 %omp_loop.tripcount to i64
 // HOST:         %[[TRIPCOUNT_KARG:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %[[KARGS:.*]], i32 0, i32 8
 // HOST-NEXT:    store i64 %[[TRIPCOUNT]], ptr %[[TRIPCOUNT_KARG]]
 // HOST:         %[[RESULT:.*]] = call i32 @__tgt_target_kernel({{.*}}, ptr %[[KARGS]])

@@ -12,6 +12,7 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_CIR
   CLANG_ENABLE_OBJC_REWRITER
   CLANG_LINK_CLANG_DYLIB
+  CLANG_USE_XCSELECT
   ENABLE_BACKTRACES
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
@@ -103,6 +104,8 @@ list(APPEND CLANG_TEST_DEPS
   clang-linker-wrapper
   clang-nvlink-wrapper
   clang-offload-bundler
+  clang-ssaf-format
+  clang-ssaf-linker
   clang-sycl-linker
   diagtool
   hmaptool
@@ -185,6 +188,10 @@ if( NOT CLANG_BUILT_STANDALONE )
     yaml2obj
     )
 
+  if(TARGET lld)
+    list(APPEND CLANG_TEST_DEPS lld)
+  endif()
+
   if(TARGET llvm-lto)
     list(APPEND CLANG_TEST_DEPS llvm-lto)
   endif()
@@ -198,6 +205,12 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
       CheckerOptionHandlingAnalyzerPlugin
       )
   endif()
+endif()
+
+if(CLANG_PLUGIN_SUPPORT AND LLVM_ENABLE_PLUGINS AND NOT WIN32)
+  list(APPEND CLANG_TEST_DEPS
+    SSAFExamplePlugin
+    )
 endif()
 
 if (HAVE_CLANG_REPL_SUPPORT)

@@ -382,13 +382,17 @@ public:
   // scoped_allocator_adaptor& operator=(scoped_allocator_adaptor&&) = default;
   // ~scoped_allocator_adaptor() = default;
 
-  _LIBCPP_HIDE_FROM_ABI inner_allocator_type& inner_allocator() _NOEXCEPT { return _Base::inner_allocator(); }
-  _LIBCPP_HIDE_FROM_ABI const inner_allocator_type& inner_allocator() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inner_allocator_type& inner_allocator() _NOEXCEPT {
+    return _Base::inner_allocator();
+  }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const inner_allocator_type& inner_allocator() const _NOEXCEPT {
     return _Base::inner_allocator();
   }
 
-  _LIBCPP_HIDE_FROM_ABI outer_allocator_type& outer_allocator() _NOEXCEPT { return _Base::outer_allocator(); }
-  _LIBCPP_HIDE_FROM_ABI const outer_allocator_type& outer_allocator() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI outer_allocator_type& outer_allocator() _NOEXCEPT {
+    return _Base::outer_allocator();
+  }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const outer_allocator_type& outer_allocator() const _NOEXCEPT {
     return _Base::outer_allocator();
   }
 
@@ -403,7 +407,7 @@ public:
     allocator_traits<outer_allocator_type>::deallocate(outer_allocator(), __p, __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI size_type max_size() const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type max_size() const {
     return allocator_traits<outer_allocator_type>::max_size(outer_allocator());
   }
 
@@ -473,7 +477,8 @@ public:
     allocator_traits<typename _OM::type>::destroy(_OM()(outer_allocator()), __p);
   }
 
-  _LIBCPP_HIDE_FROM_ABI scoped_allocator_adaptor select_on_container_copy_construction() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI scoped_allocator_adaptor
+  select_on_container_copy_construction() const _NOEXCEPT {
     return _Base::select_on_container_copy_construction();
   }
 

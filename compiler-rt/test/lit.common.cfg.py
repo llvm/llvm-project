@@ -90,6 +90,12 @@ def push_dynamic_library_lookup_path(config, new_path):
     new_ld_library_path = os.path.pathsep.join(
         (new_path, config.environment.get(dynamic_library_lookup_var, ""))
     )
+
+    if platform.system() == "Darwin":
+        # Workaround an issue in LD which does not use the correct libLTO
+        # if the DYLD_LIBRARY_PATH is not normalized.
+        new_ld_library_path = os.path.normpath(new_ld_library_path)
+
     config.environment[dynamic_library_lookup_var] = new_ld_library_path
 
     if platform.system() == "FreeBSD":
@@ -200,7 +206,10 @@ if test_cc_resource_dir is not None:
     test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
 lit_config.dbg(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
 local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
-if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
+if (
+    test_cc_resource_dir != local_build_resource_dir
+    and config.test_standalone_build_libs
+):
     if config.compiler_id == "Clang":
         lit_config.dbg(
             f"Overriding test compiler resource dir to use "
@@ -357,6 +366,7 @@ if config.target_os == "NetBSD":
 else:
     config.substitutions.append(("%run_nomprotect", "%run"))
 
+
 # Copied from libcxx's config.py
 def get_lit_conf(name, default=None):
     # Allow overriding on the command line using --param=<name>=<val>
@@ -419,14 +429,18 @@ elif config.target_os == "Darwin" and not config.apple_target_is_host:
     # =========================================================================
     # Target             | Feature set
     # =========================================================================
-    # macOS              | darwin
-    # iOS device         | darwin, ios
-    # iOS simulator      | darwin, ios, iossim
-    # tvOS device        | darwin, ios, tvos
-    # tvOS simulator     | darwin, ios, iossim, tvos, tvossim
-    # watchOS device     | darwin, ios, watchos
-    # watchOS simulator  | darwin, ios, iossim, watchos, watchossim
+    # macOS host         | darwin
+    # macOS device       | darwin, darwin-remote
+    # iOS device         | darwin, darwin-remote, ios
+    # iOS simulator      | darwin, darwin-remote, ios, iossim
+    # tvOS device        | darwin, darwin-remote, ios, tvos
+    # tvOS simulator     | darwin, darwin-remote, ios, iossim, tvos, tvossim
+    # watchOS device     | darwin, darwin-remote, ios, watchos
+    # watchOS simulator  | darwin, darwin-remote, ios, iossim, watchos, watchossim
     # =========================================================================
+
+    # All suites that aren't running on the host get the darwin-remote feature.
+    config.available_features.add("darwin-remote")
 
     # All non-OSX targets have the ios feature (see the above table)
     if config.apple_platform != "osx":
@@ -977,6 +991,8 @@ else:
 
 
 def target_page_size():
+    if config.target_arch in ("amdgcn", "nvptx64"):
+        return 4096
     try:
         proc = subprocess.Popen(
             f"{emulator or ''} python3",
@@ -1068,14 +1084,17 @@ if config.has_no_default_config_flag:
     config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 
 if config.has_compiler_rt_libatomic:
-  base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.atomic%s.so"
-                          % config.target_suffix)
-  if sys.platform in ['win32'] and execute_external:
-    # Don't pass dosish path separator to msys bash.exe.
-    base_lib = base_lib.replace('\\', '/')
-  config.substitutions.append(("%libatomic", base_lib + f" -Wl,-rpath,{config.compiler_rt_libdir}"))
+    base_lib = os.path.join(
+        config.compiler_rt_libdir, "libclang_rt.atomic%s.so" % config.target_suffix
+    )
+    if sys.platform in ["win32"] and execute_external:
+        # Don't pass dosish path separator to msys bash.exe.
+        base_lib = base_lib.replace("\\", "/")
+    config.substitutions.append(
+        ("%libatomic", base_lib + f" -Wl,-rpath,{config.compiler_rt_libdir}")
+    )
 else:
-  config.substitutions.append(("%libatomic", "-latomic"))
+    config.substitutions.append(("%libatomic", "-latomic"))
 
 # Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
 push_dynamic_library_lookup_path(config, config.compiler_rt_libdir)

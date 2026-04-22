@@ -180,6 +180,10 @@
 #    error "__cpp_lib_concepts should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_algorithms
 #    error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
 #  endif
@@ -1098,6 +1102,10 @@
 
 #  ifdef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_algorithms
@@ -2120,6 +2128,10 @@
 
 #  ifdef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_algorithms
@@ -3369,6 +3381,10 @@
 #    error "__cpp_lib_concepts should have the value 202207L in c++20"
 #  endif
 
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_algorithms
 #    error "__cpp_lib_constexpr_algorithms should be defined in c++20"
 #  endif
@@ -3520,7 +3536,7 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
-#  if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
+#  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #    ifndef __cpp_lib_destroying_delete
 #      error "__cpp_lib_destroying_delete should be defined in c++20"
 #    endif
@@ -3529,7 +3545,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_destroying_delete
-#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
+#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
 #    endif
 #  endif
 
@@ -4832,6 +4848,10 @@
 #    error "__cpp_lib_concepts should have the value 202207L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_algorithms
 #    error "__cpp_lib_constexpr_algorithms should be defined in c++23"
 #  endif
@@ -5004,7 +5024,7 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
-#  if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
+#  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #    ifndef __cpp_lib_destroying_delete
 #      error "__cpp_lib_destroying_delete should be defined in c++23"
 #    endif
@@ -5013,7 +5033,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_destroying_delete
-#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
+#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
 #    endif
 #  endif
 
@@ -5088,8 +5108,8 @@
 #  ifndef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should be defined in c++23"
 #  endif
-#  if __cpp_lib_flat_set != 202207L
-#    error "__cpp_lib_flat_set should have the value 202207L in c++23"
+#  if __cpp_lib_flat_set != 202511L
+#    error "__cpp_lib_flat_set should have the value 202511L in c++23"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
@@ -5772,17 +5792,11 @@
 #    error "__cpp_lib_ranges_to_container should have the value 202202L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
 #  endif
 
 #  ifdef __cpp_lib_ratio
@@ -5922,8 +5936,8 @@
 #  ifndef __cpp_lib_shift
 #    error "__cpp_lib_shift should be defined in c++23"
 #  endif
-#  if __cpp_lib_shift != 201806L
-#    error "__cpp_lib_shift should have the value 201806L in c++23"
+#  if __cpp_lib_shift != 202202L
+#    error "__cpp_lib_shift should have the value 202202L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_smart_ptr_for_overwrite
@@ -6347,8 +6361,8 @@
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++26"
 #  endif
-#  if __cpp_lib_atomic_ref != 202411L
-#    error "__cpp_lib_atomic_ref should have the value 202411L in c++26"
+#  if __cpp_lib_atomic_ref != 202603L
+#    error "__cpp_lib_atomic_ref should have the value 202603L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -6521,6 +6535,13 @@
 #  endif
 #  if __cpp_lib_concepts != 202207L
 #    error "__cpp_lib_concepts should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should be defined in c++26"
+#  endif
+#  if __cpp_lib_constant_wrapper != 202603L
+#    error "__cpp_lib_constant_wrapper should have the value 202603L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -6749,7 +6770,7 @@
 #    endif
 #  endif
 
-#  if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
+#  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #    ifndef __cpp_lib_destroying_delete
 #      error "__cpp_lib_destroying_delete should be defined in c++26"
 #    endif
@@ -6758,7 +6779,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_destroying_delete
-#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
+#      error "__cpp_lib_destroying_delete should not be defined when the requirement 'defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
 #    endif
 #  endif
 
@@ -6833,8 +6854,8 @@
 #  ifndef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should be defined in c++26"
 #  endif
-#  if __cpp_lib_flat_set != 202207L
-#    error "__cpp_lib_flat_set should have the value 202207L in c++26"
+#  if __cpp_lib_flat_set != 202511L
+#    error "__cpp_lib_flat_set should have the value 202511L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
@@ -7489,11 +7510,17 @@
 #    error "__cpp_lib_optional should have the value 202506L in c++26"
 #  endif
 
-#  ifndef __cpp_lib_optional_range_support
-#    error "__cpp_lib_optional_range_support should be defined in c++26"
-#  endif
-#  if __cpp_lib_optional_range_support != 202406L
-#    error "__cpp_lib_optional_range_support should have the value 202406L in c++26"
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#    ifndef __cpp_lib_optional_range_support
+#      error "__cpp_lib_optional_range_support should be defined in c++26"
+#    endif
+#    if __cpp_lib_optional_range_support != 202406L
+#      error "__cpp_lib_optional_range_support should have the value 202406L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_optional_range_support
+#      error "__cpp_lib_optional_range_support should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR' is not met!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_out_ptr
@@ -7697,17 +7724,11 @@
 #    error "__cpp_lib_ranges_to_container should have the value 202202L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ratio
@@ -7788,8 +7809,8 @@
 #  ifndef __cpp_lib_saturation_arithmetic
 #    error "__cpp_lib_saturation_arithmetic should be defined in c++26"
 #  endif
-#  if __cpp_lib_saturation_arithmetic != 202311L
-#    error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
+#  if __cpp_lib_saturation_arithmetic != 202603L
+#    error "__cpp_lib_saturation_arithmetic should have the value 202603L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
@@ -7874,8 +7895,8 @@
 #  ifndef __cpp_lib_shift
 #    error "__cpp_lib_shift should be defined in c++26"
 #  endif
-#  if __cpp_lib_shift != 201806L
-#    error "__cpp_lib_shift should have the value 201806L in c++26"
+#  if __cpp_lib_shift != 202202L
+#    error "__cpp_lib_shift should have the value 202202L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_smart_ptr_for_overwrite

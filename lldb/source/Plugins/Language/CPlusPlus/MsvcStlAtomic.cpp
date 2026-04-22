@@ -9,6 +9,7 @@
 #include "MsvcStl.h"
 
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
@@ -85,8 +86,7 @@ llvm::Expected<size_t> lldb_private::formatters::
     MsvcStlAtomicSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "Value")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::SyntheticChildrenFrontEnd *
@@ -99,11 +99,11 @@ lldb_private::formatters::MsvcStlAtomicSyntheticFrontEndCreator(
 
 bool lldb_private::formatters::MsvcStlAtomicSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  auto synth_sp = valobj.GetSyntheticValue();
+  ValueObjectSP synth_sp = valobj.GetSyntheticValue();
   if (!synth_sp)
     return false;
 
-  auto value_sp = synth_sp->GetChildAtIndex(0);
+  ValueObjectSP value_sp = synth_sp->GetChildAtIndex(0);
   std::string summary;
   if (value_sp->GetSummaryAsCString(summary, options) && !summary.empty()) {
     stream << summary;

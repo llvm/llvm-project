@@ -1,8 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV,CHECK-SPIRV1_4
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; TODO(#60133): Requires updates following opaque pointer migration.
-; XFAIL: *
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+;; FIXME: spirv-val fails with OpConstantComposite expects i8*
 
 ;; There are no blocks in SPIR-V. Therefore they are translated into regular
 ;; functions. An LLVM module which uses blocks, also contains some auxiliary
@@ -15,19 +13,22 @@
 ;;   *res = b1(5);
 ;; }
 
-; CHECK-SPIRV1_4:   OpEntryPoint Kernel %[[#]] "block_kernel" %[[#InterfaceId:]]
-; CHECK-SPIRV1_4:   OpName %[[#InterfaceId]] "__block_literal_global"
+; CHECK-SPIRV1_4-DAG: OpEntryPoint Kernel %[[#]] "block_kernel" %[[#InterfaceId1:]] %[[#InterfaceId2:]]
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId1]] "__block_literal_global"
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId2]] "block_kernel.b1"
 ; CHECK-SPIRV:      OpName %[[#block_invoke:]] "_block_invoke"
-; CHECK-SPIRV:      %[[#int:]] = OpTypeInt 32
 ; CHECK-SPIRV:      %[[#int8:]] = OpTypeInt 8
-; CHECK-SPIRV:      %[[#int8Ptr:]] = OpTypePointer Generic %[[#int8]]
-; CHECK-SPIRV:      %[[#block_invoke_type:]] = OpTypeFunction %[[#int]] %[[#int8Ptr]] %[[#int]]
+; CHECK-SPIRV:      %[[#int:]] = OpTypeInt 32
+; CHECK-SPIRV:      %[[#GenericInt8Ptr:]] = OpTypePointer Generic %[[#int8]]
+; CHECK-SPIRV:      %[[#BlockStruct:]] = OpTypeStruct %[[#int]] %[[#int]] %[[#GenericInt8Ptr]]
+; CHECK-SPIRV:      %[[#BlockStructPtr:]] = OpTypePointer Generic %[[#BlockStruct]]
 ; CHECK-SPIRV:      %[[#five:]] = OpConstant %[[#int]] 5
+; CHECK-SPIRV:      %[[#block_invoke_type:]] = OpTypeFunction %[[#int]] %[[#BlockStructPtr]] %[[#int]]
 
 ; CHECK-SPIRV:      %[[#]] = OpFunctionCall %[[#int]] %[[#block_invoke]] %[[#]] %[[#five]]
 
 ; CHECK-SPIRV:      %[[#block_invoke]] = OpFunction %[[#int]] DontInline %[[#block_invoke_type]]
-; CHECK-SPIRV-NEXT: %[[#]] = OpFunctionParameter %[[#int8Ptr]]
+; CHECK-SPIRV-NEXT: %[[#]] = OpFunctionParameter %[[#BlockStructPtr]]
 ; CHECK-SPIRV-NEXT: %[[#]] = OpFunctionParameter %[[#int]]
 
 %struct.__opencl_block_literal_generic = type { i32, i32, ptr addrspace(4) }

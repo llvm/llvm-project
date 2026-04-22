@@ -447,6 +447,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   Fn->setMustProgress();
   Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
 
   StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
 
@@ -642,6 +643,9 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     // No longer need old terminator.
     InsertPt->eraseFromParent();
     CGF.Builder.SetInsertPoint(AfterFreeBB);
+
+    auto *CoroDeadFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_dead);
+    CGF.Builder.CreateCall(CoroDeadFn, {CGF.CurCoro.Data->CoroBegin});
   }
   explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
 };

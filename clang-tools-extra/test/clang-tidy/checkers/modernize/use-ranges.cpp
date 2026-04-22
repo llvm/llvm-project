@@ -1,13 +1,12 @@
 // RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -I %S/Inputs/
-// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/
-// Example: ./check_clang_tidy.py -std=c++20 checkers/modernize/use-ranges.cpp modernize-use-ranges temp.txt -- -- -I ~/llvm-project/clang-tools-extra/test/clang-tidy/checkers/modernize/Inputs/
+// RUN: %check_clang_tidy -std=c++23-or-later %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/
 
 // CHECK-FIXES: #include <algorithm>
 // CHECK-FIXES-CPP23: #include <numeric>
 // CHECK-FIXES: #include <ranges>
 
 #include "use-ranges/fake_std.h"
-#include "smart-ptr/unique_ptr.h"
+#include <memory>
 
 void Positives() {
   std::vector<int> I, J;

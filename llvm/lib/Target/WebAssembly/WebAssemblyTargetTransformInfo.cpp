@@ -58,6 +58,26 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
+  if (ST->hasSIMD128()) {
+    static const CostTblEntry ArithCostTbl[]{
+        // extmul + (maybe awkward) shuffle
+        {ISD::MUL, MVT::v8i8, 4},
+        // 2x extmul + (okay) shuffle
+        {ISD::MUL, MVT::v16i8, 4},
+        // extmul
+        {ISD::MUL, MVT::v4i16, 1},
+        // extmul
+        {ISD::MUL, MVT::v2i32, 1},
+    };
+    EVT DstVT = TLI->getValueType(DL, Ty);
+    if (DstVT.isSimple()) {
+      int ISD = TLI->InstructionOpcodeToISD(Opcode);
+      if (const auto *Entry =
+              CostTableLookup(ArithCostTbl, ISD, DstVT.getSimpleVT()))
+        return Entry->Cost;
+    }
+  }
+
   InstructionCost Cost =
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
           Opcode, Ty, CostKind, Op1Info, Op2Info);
@@ -147,6 +167,9 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i32, 4},
       {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 4},
       {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 4},
+      // 6x extend_low, extend_high
+      {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8, 6},
+      {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8, 6},
       // shuffle
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i32, 2},
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i32, 4},
@@ -274,6 +297,25 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
   return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace, CostKind);
 }
 
+InstructionCost WebAssemblyTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) const {
+  // Canonicalize the ShuffleKind in case optimizations didn't.
+  //  Otherwise, we might end up with the wrong ShuffleKind to match against.
+
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+
+  // Wasm SIMD128 has native splat instructions for all lane types.
+  if (ST->hasSIMD128() && Kind == TTI::SK_Broadcast &&
+      isa<FixedVectorType>(SrcTy))
+    return 1;
+
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
+                               Args, CxtI);
+}
+
 InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *Ty, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -300,6 +342,9 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
     unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
     // Ensure the element type is legal.
     if (ElSize != 8 && ElSize != 16 && ElSize != 32 && ElSize != 64)
+      return InstructionCost::getInvalid();
+
+    if (Factor != 2 && Factor != 4)
       return InstructionCost::getInvalid();
 
     auto *SubVecTy =
@@ -360,9 +405,9 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
 
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    const Value *Op0, const Value *Op1) const {
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
-      Opcode, Val, CostKind, Index, Op0, Op1);
+      Opcode, Val, CostKind, Index, Op0, Op1, VIC);
 
   // SIMD128's insert/extract currently only take constant indices.
   if (Index == -1u)
@@ -375,7 +420,7 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
     TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
   if (!VF.isFixed() || !ST->hasSIMD128())
     return Invalid;

@@ -43,6 +43,9 @@ void doWrite<ol_platform_backend_t>(std::ostream &S,
   case OL_PLATFORM_BACKEND_AMDGPU:
     S << "AMDGPU";
     break;
+  case OL_PLATFORM_BACKEND_LEVEL_ZERO:
+    S << "LEVEL_ZERO";
+    break;
   case OL_PLATFORM_BACKEND_HOST:
     S << "HOST";
     break;
@@ -246,7 +249,7 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
 }
 
 ol_result_t printRoot(std::ostream &S) {
-  OFFLOAD_ERR(olInit());
+  OFFLOAD_ERR(olInit(nullptr));
   S << "Liboffload Version: " << OL_VERSION_MAJOR << "." << OL_VERSION_MINOR
     << "." << OL_VERSION_PATCH << "\n";
 

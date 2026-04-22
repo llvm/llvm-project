@@ -144,6 +144,13 @@ public:
   }
   InFlightDiagnostic emitError() const { return ::emitError(fileLoc); }
 
+  /// Emit a warning using the given arguments.
+  template <typename... Args>
+  InFlightDiagnostic emitWarning(Args &&...args) const {
+    return ::emitWarning(fileLoc).append(std::forward<Args>(args)...);
+  }
+  InFlightDiagnostic emitWarning() const { return ::emitWarning(fileLoc); }
+
   /// Parse a single byte from the stream.
   template <typename T>
   LogicalResult parseByte(T &value) {
@@ -949,8 +956,13 @@ public:
                             llvm::getTypeName<T>(), ", but got: ", baseResult);
   }
 
+  /// The kind of entry being parsed.
+  enum class EntryKind { Attribute, Type };
+
   /// Add an index to the deferred worklist for re-parsing.
-  void addDeferredParsing(uint64_t index) { deferredWorklist.push_back(index); }
+  void addDeferredParsing(uint64_t index, EntryKind kind) {
+    deferredWorklist.emplace_back(index, kind);
+  }
 
   /// Whether currently resolving.
   bool isResolving() const { return resolving; }
@@ -1007,7 +1019,9 @@ private:
 
   /// Worklist for deferred attribute/type parsing. This is used to handle
   /// deeply nested structures like CallSiteLoc iteratively.
-  std::vector<uint64_t> deferredWorklist;
+  /// - The first element is the index of the attribute/type to parse.
+  /// - The second element is the kind of entry being parsed.
+  std::vector<std::pair<uint64_t, EntryKind>> deferredWorklist;
 
   /// Flag indicating if we are currently resolving an attribute or type.
   bool resolving = false;
@@ -1027,6 +1041,10 @@ public:
 
   InFlightDiagnostic emitError(const Twine &msg) const override {
     return reader.emitError(msg);
+  }
+
+  InFlightDiagnostic emitWarning(const Twine &msg) const override {
+    return reader.emitWarning(msg);
   }
 
   FailureOr<const DialectVersion *>
@@ -1084,7 +1102,8 @@ public:
         result = attr;
         return success();
       }
-      attrTypeReader.addDeferredParsing(index);
+      attrTypeReader.addDeferredParsing(index,
+                                        AttrTypeReader::EntryKind::Attribute);
       return failure();
     }
     return attrTypeReader.readAttribute(index, result, depth + 1);
@@ -1113,7 +1132,7 @@ public:
         result = type;
         return success();
       }
-      attrTypeReader.addDeferredParsing(index);
+      attrTypeReader.addDeferredParsing(index, AttrTypeReader::EntryKind::Type);
       return failure();
     }
     return attrTypeReader.readType(index, result, depth + 1);
@@ -1380,28 +1399,46 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
   // - Pop from front to process
   // - Push new dependencies to front (depth-first)
   // - Move failed entries to back (retry after dependencies)
-  std::deque<size_t> worklist;
-  llvm::DenseSet<size_t> inWorklist;
+  std::deque<std::pair<uint64_t, EntryKind>> worklist;
+  llvm::DenseSet<std::pair<uint64_t, EntryKind>> inWorklist;
+
+  EntryKind entryKind =
+      std::is_same_v<T, Type> ? EntryKind::Type : EntryKind::Attribute;
+
+  static_assert((std::is_same_v<T, Type> || std::is_same_v<T, Attribute>) &&
+                "Only support resolving Attributes and Types");
+
+  auto addToWorklistFront = [&](std::pair<uint64_t, EntryKind> entry) {
+    if (inWorklist.insert(entry).second)
+      worklist.push_front(entry);
+  };
 
   // Add the original index and any dependencies from the fast path attempt.
-  worklist.push_back(index);
-  inWorklist.insert(index);
-  for (uint64_t idx : llvm::reverse(deferredWorklist)) {
-    if (inWorklist.insert(idx).second)
-      worklist.push_front(idx);
-  }
+  worklist.emplace_back(index, entryKind);
+  inWorklist.insert({index, entryKind});
+  for (auto entry : llvm::reverse(deferredWorklist))
+    addToWorklistFront(entry);
 
   while (!worklist.empty()) {
-    size_t currentIndex = worklist.front();
+    auto [currentIndex, entryKind] = worklist.front();
     worklist.pop_front();
 
     // Clear the deferred worklist before parsing to capture any new entries.
     deferredWorklist.clear();
 
-    T result;
-    if (succeeded(readEntry(entries, currentIndex, result, entryType, depth))) {
-      inWorklist.erase(currentIndex);
-      continue;
+    if (entryKind == EntryKind::Type) {
+      Type result;
+      if (succeeded(readType(currentIndex, result, depth))) {
+        inWorklist.erase({currentIndex, entryKind});
+        continue;
+      }
+    } else {
+      assert(entryKind == EntryKind::Attribute && "Unexpected entry kind");
+      Attribute result;
+      if (succeeded(readAttribute(currentIndex, result, depth))) {
+        inWorklist.erase({currentIndex, entryKind});
+        continue;
+      }
     }
 
     if (deferredWorklist.empty()) {
@@ -1410,13 +1447,12 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
     }
 
     // Move this entry to the back to retry after dependencies.
-    worklist.push_back(currentIndex);
+    worklist.emplace_back(currentIndex, entryKind);
 
     // Add dependencies to the front (in reverse so they maintain order).
-    for (uint64_t idx : llvm::reverse(deferredWorklist)) {
-      if (inWorklist.insert(idx).second)
-        worklist.push_front(idx);
-    }
+    for (auto entry : llvm::reverse(deferredWorklist))
+      addToWorklistFront(entry);
+
     deferredWorklist.clear();
   }
   return entries[index].entry;
@@ -1467,6 +1503,7 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
     // Try parsing with callbacks first if available.
     for (const auto &callback :
          parserConfig.getBytecodeReaderConfig().getTypeCallbacks()) {
+      size_t savedWorklistSize = deferredWorklist.size();
       if (failed(
               callback->read(dialectReader, entry.dialect->name, entry.entry)))
         return failure();
@@ -1474,14 +1511,17 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
       if (!!entry.entry)
         return success();
 
-      // Reset the reader if we failed to parse, so we can fall through the
-      // other parsing functions.
+      // The callback fell through without consuming the encoding. Reset the
+      // reader and restore the deferred worklist: any entries added during the
+      // callback's partial read are stale and must not persist.
+      deferredWorklist.resize(savedWorklistSize);
       reader = EncodingReader(entry.data, reader.getLoc());
     }
   } else {
     // Try parsing with callbacks first if available.
     for (const auto &callback :
          parserConfig.getBytecodeReaderConfig().getAttributeCallbacks()) {
+      size_t savedWorklistSize = deferredWorklist.size();
       if (failed(
               callback->read(dialectReader, entry.dialect->name, entry.entry)))
         return failure();
@@ -1489,8 +1529,10 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
       if (!!entry.entry)
         return success();
 
-      // Reset the reader if we failed to parse, so we can fall through the
-      // other parsing functions.
+      // The callback fell through without consuming the encoding. Reset the
+      // reader and restore the deferred worklist: any entries added during the
+      // callback's partial read are stale and must not persist.
+      deferredWorklist.resize(savedWorklistSize);
       reader = EncodingReader(entry.data, reader.getLoc());
     }
   }
@@ -2267,6 +2309,7 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   // If the encoding was a pair of indices `(src, dst)` for every permutation,
   // reconstruct the shuffle vector for every use. Initialize the shuffle vector
   // as identity, and then apply the mapping encoded in the indices.
+  // This produces shuffle[oldIdx] = newPos (i.e., old_index -> new_position).
   if (customOrder.isIndexPairEncoding) {
     // Return failure if the number of indices was not representing pairs.
     if (shuffle.size() & 1)
@@ -2295,10 +2338,32 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
       accumulator != (((numUses - 1) * numUses) >> 1))
     return failure();
 
-  // Apply the current ordering map onto the shuffle vector to get the final
-  // use-list sorting indices before shuffling.
-  shuffle = SmallVector<unsigned, 4>(llvm::map_range(
-      currentOrder, [&](auto item) { return shuffle[item.first]; }));
+  // Compose the shuffle with the current memory layout to produce the final
+  // indices for shuffleUseList. shuffleUseList(indices) places the use at
+  // current position i into position indices[i], so we need to compute
+  // finalShuffle[readerMemIdx] = writerMemIdx.
+  //
+  // The two encoding paths have different shuffle conventions:
+  //
+  // Index-pair encoding (already normalized above):
+  //   shuffle[writerMemIdx] = sortedPos  (old_index -> new_position)
+  //
+  // Full-shuffle encoding (writer's native format):
+  //   shuffle[sortedPos] = writerMemIdx  (new_position -> old_index)
+  //
+  // In both cases, currentOrder[sortedPos].first gives the readerMemIdx for
+  // a given sorted position. We fold the permutation inversion for the
+  // full-shuffle case directly into the composition to avoid an extra pass.
+  SmallVector<unsigned, 4> finalShuffle(numUses);
+  if (customOrder.isIndexPairEncoding) {
+    for (size_t writerMemIdx = 0; writerMemIdx < numUses; ++writerMemIdx)
+      finalShuffle[currentOrder[shuffle[writerMemIdx]].first] = writerMemIdx;
+  } else {
+    for (size_t sortedPos = 0; sortedPos < numUses; ++sortedPos)
+      finalShuffle[currentOrder[sortedPos].first] = shuffle[sortedPos];
+  }
+  shuffle = std::move(finalShuffle);
+
   value.shuffleUseList(shuffle);
   return success();
 }

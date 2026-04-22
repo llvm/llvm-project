@@ -233,6 +233,17 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   }
   CountZerosUndefActions.lower();
 
+  auto &CountSignActions = getActionDefinitionsBuilder(G_CTLS);
+  if (ST.hasStdExtP()) {
+    CountSignActions.legalFor({{sXLen, sXLen}})
+        .customFor({{s32, s32}})
+        .clampScalar(0, s32, sXLen)
+        .widenScalarToNextPow2(0)
+        .scalarSameSizeAs(1, 0);
+  } else {
+    CountSignActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+  }
+
   auto &CTPOPActions = getActionDefinitionsBuilder(G_CTPOP);
   if (ST.hasStdExtZbb()) {
     CTPOPActions.legalFor({{sXLen, sXLen}})
@@ -508,6 +519,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+
+  getActionDefinitionsBuilder(G_MEMCPY_INLINE).lower();
 
   getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
       .lower();
@@ -1385,6 +1398,8 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
     return RISCV::G_CLZW;
   case TargetOpcode::G_CTTZ:
     return RISCV::G_CTZW;
+  case TargetOpcode::G_CTLS:
+    return RISCV::G_CLSW;
   case TargetOpcode::G_FPTOSI:
     return RISCV::G_FCVT_W_RV64;
   case TargetOpcode::G_FPTOUI:
@@ -1497,7 +1512,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return true;
   }
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTTZ: {
+  case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTLS: {
     Helper.Observer.changingInstr(MI);
     Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
     Helper.widenScalarDst(MI, sXLen);

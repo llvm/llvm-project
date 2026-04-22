@@ -29,7 +29,9 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <memory>
 #include <optional>
@@ -337,9 +339,9 @@ protected:
           // The request went past the stack, so handle that case:
           const uint32_t num_frames = thread->GetStackFrameCount();
           if (static_cast<int32_t>(num_frames - frame_idx) >
-              *m_options.relative_frame_offset)
-          frame_idx += *m_options.relative_frame_offset;
-          else {
+              *m_options.relative_frame_offset) {
+            frame_idx += *m_options.relative_frame_offset;
+          } else {
             if (frame_idx == num_frames - 1) {
               // If we are already at the top of the stack, just warn and don't
               // reset the frame.
@@ -439,17 +441,23 @@ protected:
     if (!var_sp)
       return llvm::StringRef();
 
-    switch (var_sp->GetScope()) {
+    auto vt = var_sp->GetScope();
+    bool is_synthetic = IsSyntheticValueType(vt);
+    // Clear the bit so the rest works correctly.
+    if (is_synthetic)
+      vt = GetBaseValueType(vt);
+
+    switch (vt) {
     case eValueTypeVariableGlobal:
-      return "GLOBAL: ";
+      return is_synthetic ? "(synthetic) GLOBAL: " : "GLOBAL: ";
     case eValueTypeVariableStatic:
-      return "STATIC: ";
+      return is_synthetic ? "(synthetic) STATIC: " : "STATIC: ";
     case eValueTypeVariableArgument:
-      return "ARG: ";
+      return is_synthetic ? "(synthetic) ARG: " : "ARG: ";
     case eValueTypeVariableLocal:
-      return "LOCAL: ";
+      return is_synthetic ? "(synthetic) LOCAL: " : "LOCAL: ";
     case eValueTypeVariableThreadLocal:
-      return "THREAD: ";
+      return is_synthetic ? "(synthetic) THREAD: " : "THREAD: ";
     default:
       break;
     }
@@ -459,6 +467,14 @@ protected:
 
   /// Returns true if `scope` matches any of the options in `m_option_variable`.
   bool ScopeRequested(lldb::ValueType scope) {
+    // If it's a synthetic variable, check if we want to show those first.
+    bool is_synthetic = IsSyntheticValueType(scope);
+    if (is_synthetic) {
+      if (!m_option_variable.show_synthetic)
+        return false;
+
+      scope = GetBaseValueType(scope);
+    }
     switch (scope) {
     case eValueTypeVariableGlobal:
     case eValueTypeVariableStatic:
@@ -474,7 +490,10 @@ protected:
     case eValueTypeVariableThreadLocal:
     case eValueTypeVTable:
     case eValueTypeVTableEntry:
-      return false;
+      // The default for all other value types is is_synthetic. Aside from the
+      // modifiers above that should apply equally to synthetic and normal
+      // variables, any other synthetic variable we should default to showing.
+      return is_synthetic;
     }
     llvm_unreachable("Unexpected scope value");
   }
@@ -521,7 +540,8 @@ protected:
 
     Status error;
     VariableList *variable_list =
-        frame->GetVariableList(m_option_variable.show_globals, &error);
+        frame->GetVariableList(m_option_variable.show_globals,
+                               m_option_variable.show_synthetic, &error);
 
     if (error.Fail() && (!variable_list || variable_list->GetSize() == 0)) {
       result.AppendError(error.AsCString());
@@ -610,7 +630,8 @@ protected:
             uint32_t expr_path_options =
                 StackFrame::eExpressionPathOptionCheckPtrVsMember |
                 StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
-                StackFrame::eExpressionPathOptionsInspectAnonymousUnions;
+                StackFrame::eExpressionPathOptionsInspectAnonymousUnions |
+                StackFrame::eExpressionPathOptionsAllowVarUpdates;
             lldb::VariableSP var_sp;
             valobj_sp = frame->GetValueForVariableExpressionPath(
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
@@ -637,8 +658,21 @@ protected:
               Stream &output_stream = result.GetOutputStream();
               options.SetRootValueObjectName(
                   valobj_sp->GetParent() ? entry.c_str() : nullptr);
-              if (llvm::Error error = valobj_sp->Dump(output_stream, options))
-                result.AppendError(toString(std::move(error)));
+              // Check only the `error` argument, because doing
+              // `valobj_sp->GetError()` will update the value and potentially
+              // return a new error that happens during the update, even if
+              // `GetValueForVariableExpressionPath` reported no errors.
+              if (error.Fail()) {
+                result.SetStatus(eReturnStatusFailed);
+                result.SetError(error.takeError());
+              } else {
+                // If there is an error while updating the value, it will be
+                // printed here as the contents of the value, e.g.
+                // `(int) *((int*)0) = <parent is NULL>`
+                if (llvm::Error error = valobj_sp->Dump(output_stream, options))
+                  result.AppendError(toString(std::move(error)));
+              }
+
             } else {
               if (auto error_cstr = error.AsCString(nullptr))
                 result.AppendError(error_cstr);
@@ -690,7 +724,7 @@ protected:
                 options.SetVariableFormatDisplayLanguage(
                     valobj_sp->GetPreferredDisplayLanguage());
                 options.SetRootValueObjectName(
-                    var_sp ? var_sp->GetName().AsCString() : nullptr);
+                    var_sp ? var_sp->GetName().AsCString(nullptr) : nullptr);
                 if (llvm::Error error =
                         valobj_sp->Dump(result.GetOutputStream(), options))
                   result.AppendError(toString(std::move(error)));
@@ -714,7 +748,8 @@ protected:
             options.SetFormat(m_option_format.GetFormat());
             options.SetVariableFormatDisplayLanguage(
                 rec_value_sp->GetPreferredDisplayLanguage());
-            options.SetRootValueObjectName(rec_value_sp->GetName().AsCString());
+            options.SetRootValueObjectName(
+                rec_value_sp->GetName().AsCString(nullptr));
             if (llvm::Error error =
                     rec_value_sp->Dump(result.GetOutputStream(), options))
               result.AppendError(toString(std::move(error)));
@@ -902,7 +937,7 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
 
   if (interpreter &&
       !interpreter->CheckObjectExists(m_options.m_class_name.c_str())) {
-    result.AppendWarning("The provided class does not exist - please define it "
+    result.AppendWarning("the provided class does not exist - please define it "
                          "before attempting to use this frame recognizer");
   }
 

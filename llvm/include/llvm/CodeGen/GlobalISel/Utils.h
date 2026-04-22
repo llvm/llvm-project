@@ -132,12 +132,10 @@ LLVM_ABI Register constrainOperandRegClass(
 /// generic) virtual register operands to the instruction's register class.
 /// This could involve inserting COPYs before (for uses) or after (for defs).
 /// This requires the number of operands to match the instruction description.
-/// \returns whether operand regclass constraining succeeded.
-///
 // FIXME: Not all instructions have the same number of operands. We should
 // probably expose a constrain helper per operand and let the target selector
 // constrain individual registers, like fast-isel.
-LLVM_ABI bool constrainSelectedInstRegOperands(MachineInstr &I,
+LLVM_ABI void constrainSelectedInstRegOperands(MachineInstr &I,
                                                const TargetInstrInfo &TII,
                                                const TargetRegisterInfo &TRI,
                                                const RegisterBankInfo &RBI);
@@ -339,16 +337,6 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 LLVM_ABI bool
 isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
                        GISelValueTracking *ValueTracking = nullptr);
-
-/// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
-/// this returns if \p Val can be assumed to never be a signaling NaN.
-LLVM_ABI bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
-                              bool SNaN = false);
-
-/// Returns true if \p Val can be assumed to never be a signaling NaN.
-inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
-  return isKnownNeverNaN(Val, MRI, true);
-}
 
 LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
                                      const MachinePointerInfo &MPO);
