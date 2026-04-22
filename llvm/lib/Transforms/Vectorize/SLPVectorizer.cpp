@@ -23886,15 +23886,24 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         EI.UserTE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
         EI.UserTE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
     if (IsNonSchedulableWithParentPhiNode) {
-      SmallSet<std::pair<Value *, Value *>, 4> Values;
-      for (const auto [Idx, V] :
-           enumerate(EI.UserTE->UserTreeIndex.UserTE->Scalars)) {
+      ArrayRef<Value *> PhiScalars = EI.UserTE->UserTreeIndex.UserTE->Scalars;
+      for (const auto [Idx, V] : enumerate(PhiScalars)) {
         Value *Op = EI.UserTE->UserTreeIndex.UserTE->getOperand(
             EI.UserTE->UserTreeIndex.EdgeIdx)[Idx];
         auto *I = dyn_cast<Instruction>(Op);
         if (!I || !isCommutative(I))
           continue;
-        if (!Values.insert(std::make_pair(V, Op)).second)
+        // Bail out only when I has a user that is an instruction outside the
+        // grandparent PHI's Scalars. Multiple uses that all land in the same
+        // vectorized PHI are tracked by the existing dependency machinery;
+        // uses outside it (e.g. a scalar PHI in a different block) break the
+        // scheduler's dep accounting for non-schedulable copyable bundles.
+        if (I->hasOneUse())
+          continue;
+        if (any_of(I->users(), [&](User *U) {
+              auto *UI = dyn_cast<Instruction>(U);
+              return UI && !is_contained(PhiScalars, UI);
+            }))
           return std::nullopt;
       }
     } else {
