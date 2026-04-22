@@ -1469,8 +1469,9 @@ unsigned SPIRVGlobalRegistry::getNumScalarOrVectorTotalBitWidth(
     Type = getSPIRVTypeForVReg(Type->getOperand(1).getReg());
   }
   return Type->getOpcode() == SPIRV::OpTypeInt ||
-                 Type->getOpcode() == SPIRV::OpTypeFloat
-             ? NumElements * Type->getOperand(1).getImm()
+                 Type->getOpcode() == SPIRV::OpTypeFloat ||
+                 Type->getOpcode() == SPIRV::OpTypeBool
+             ? NumElements * getScalarOrVectorBitWidth(Type)
              : 0;
 }
 
