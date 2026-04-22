@@ -29,6 +29,23 @@ llvm::cl::opt<bool> DebugModulesBuilder(
                    "Remember to remove them later after debugging."),
     llvm::cl::init(false));
 
+// Disable reusing prebuilt module files on windows by default.
+// As clangd may lock these module files on windows to prevent
+// these module files to be updated by buiild system on windows.
+//
+// See https://github.com/clangd/clangd/issues/2497 for details.
+#ifdef _WIN32
+constexpr bool DisablePrebuiltModuleFileReuseDefault = true;
+#else
+constexpr bool DisablePrebuiltModuleFileReuseDefault = false;
+#endif
+
+llvm::cl::opt<bool> DisablePrebuiltModuleFileReuse(
+    "disable-prebuilt-module-file-reuse",
+    llvm::cl::desc("Do not reuse prebuilt module files from existing build "
+                   "artifacts."),
+    llvm::cl::init(DisablePrebuiltModuleFileReuseDefault));
+
 // Create a path to store module files. Generally it should be:
 //
 //   {TEMP_DIRS}/clangd/module_files/{hashed-file-name}-%%-%%-%%-%%-%%-%%/.
@@ -92,8 +109,7 @@ public:
 
   // We shouldn't adjust the compilation commands based on
   // FailedPrerequisiteModules.
-  void adjustHeaderSearchOptions(HeaderSearchOptions &Options) const override {
-  }
+  void adjustHeaderSearchOptions(HeaderSearchOptions &Options) const override {}
 
   // FailedPrerequisiteModules can never be reused.
   bool
@@ -561,6 +577,9 @@ private:
 void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
     StringRef ModuleName, PathRef ModuleUnitFileName, const ThreadsafeFS &TFS,
     ReusablePrerequisiteModules &BuiltModuleFiles) {
+  if (DisablePrebuiltModuleFileReuse)
+    return;
+
   auto Cmd = getCDB().getCompileCommand(ModuleUnitFileName);
   if (!Cmd)
     return;
