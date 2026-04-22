@@ -32304,7 +32304,9 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
     Ops.push_back(StackPtr);
 
     SDVTList VTs = DAG.getVTList(OpVT, OpVT, OpVT, MVT::Other);
-    SDValue LD3 = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, OpVT, MachinePointerInfo(), Alignment, MachineMemOperand::MOLoad);
+    SDValue LD3 = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
+                                          OpVT, MachinePointerInfo(), Alignment,
+                                          MachineMemOperand::MOLoad);
 
     return DAG.getMergeValues(
         {LD3.getValue(0), LD3.getValue(1), LD3.getValue(2)}, DL);
