@@ -20,7 +20,7 @@ define void @func(ptr %p) #1 {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call { <2 x i64>, <2 x i1> } @llvm.sadd.with.overflow.v2i64(<2 x i64> [[VEC_IND]], <2 x i64> splat (i64 1))
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP0]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i{{32|64}} 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
