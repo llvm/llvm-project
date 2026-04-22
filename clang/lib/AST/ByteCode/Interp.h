@@ -82,7 +82,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK);
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
-                           const Descriptor *Desc, AccessKinds AK);
+                           const Block *B, AccessKinds AK);
 
 /// Checks a direct load of a primitive value from a global or local variable.
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
@@ -1544,6 +1544,7 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 bool EndLifetime(InterpState &S, CodePtr OpPC);
 bool EndLifetimePop(InterpState &S, CodePtr OpPC);
 bool StartLifetime(InterpState &S, CodePtr OpPC);
+bool MarkDestroyed(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
@@ -1663,8 +1664,7 @@ bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
   const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (Desc.InitState != GlobalInitState::Initialized)
-    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B->getDescriptor(),
-                                 AK_Read);
+    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B, AK_Read);
 
   S.Stk.push<T>(B->deref<T>());
   return true;
@@ -2070,7 +2070,7 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
 }
 
 inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  if (S.checkingPotentialConstantExpression())
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -2428,8 +2428,10 @@ inline bool Memcpy(InterpState &S, CodePtr OpPC) {
   const Pointer &Src = S.Stk.pop<Pointer>();
   Pointer &Dest = S.Stk.peek<Pointer>();
 
-  if (!CheckLoad(S, OpPC, Src))
-    return false;
+  if (!Src.getRecord() || !Src.getRecord()->isAnonymousUnion()) {
+    if (!CheckLoad(S, OpPC, Src))
+      return false;
+  }
 
   return DoMemcpy(S, OpPC, Src, Dest);
 }

@@ -1491,30 +1491,56 @@ bool Thread::IsAnyProviderActive() {
 StackFrameListSP Thread::GetStackFrameList() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
-  // If a provider is currently fetching frames, return the provider's input
-  // frames instead of m_curr_frames_sp. m_curr_frames_sp IS the
-  // SyntheticStackFrameList, and accessing it would trigger provider code on
-  // THIS thread too. That is dangerous because:
-  //  - On the provider's own host thread: circular dependency / deadlock.
-  //  - On the private state thread: the provider may call EvaluateExpression
-  //    which needs the private state thread to process events -> deadlock.
-  //  - On any other thread: would run the provider concurrently.
-  // Returning the input (parent) frames is always safe.
+  // Determine if we must return the parent frames instead of the
+  // provider-augmented frames on this call.
+  //
+  // Frame providers are a public illusion layered on top of the private
+  // reality (the unwinder stack, or a scripted process playing that
+  // role). The private state thread (PST) manages the stop of that private
+  // reality, so the correct view for its logic IS the private reality
+  // -- the public illusion is only applied once the process has settled
+  // and clients query the stopped state.
+  //
+  // When RunThreadPlan spawns an override PST, the original PST changes
+  // role: it becomes the public event listener for the override, but it is
+  // still working to manage the private side of the process.  So it also should
+  // see the private reality and not the public illusion. Feeding it the public
+  // illusion instead of the private reality is incorrect and can lead to
+  // deadlocks as a side effect, since provider code may try to acquire locks
+  // already held further up the call stack.
+  //
+  // We return parent frames in two situations:
+  //
+  //  1. Re-entrancy: a provider is already active on some host thread.
+  //     - Same thread: the provider's get_frame_at_index() calls
+  //       HandleCommand("bt") or accesses input_frames, which re-enters
+  //       GetStackFrameList() -> infinite recursion.
+  //     - Private state thread: the provider called EvaluateExpression()
+  //       which resumed the process via RunThreadPlan; the private state
+  //       thread must process the resulting stop event, but if it tries to
+  //       build the synthetic frame list it will re-enter the provider ->
+  //       deadlock.
+  //     - Any other thread: would run the provider concurrently with the
+  //       thread that is already mid-construction.
+  //
+  //  2. Current thread is a private state thread that should see the
+  //     private reality (PrivateStateThreadGuard::IsPrivateStateThread).
+  //
+  // For case 1, if a provider is active we return its input (parent)
+  // frames. For case (2), we return/create the unwinder frame list
+  // without caching it in m_curr_frames_sp so that non-private-state
+  // callers still get the public illusion once the process settles.
+  ProcessSP process_sp = GetProcess();
   {
     std::lock_guard<std::mutex> pguard(m_provider_frames_mutex);
     if (!m_active_frame_providers_by_thread.empty()) {
-      // Check if the current host thread is inside a provider call.
+      // Case 1a: current host thread is inside a provider call.
       HostThread current(Host::GetCurrentThread());
       auto it = m_active_frame_providers_by_thread.find(current);
       if (it != m_active_frame_providers_by_thread.end() && !it->second.empty())
         return it->second.back();
 
-      // If the private state thread calls GetStackFrameList while a provider
-      // is active on another thread, return parent frames too. The provider
-      // may call EvaluateExpression which needs the private state thread to
-      // process events — touching m_curr_frames_sp (the synthetic list) would
-      // trigger the provider and deadlock.
-      ProcessSP process_sp = GetProcess();
+      // Case 1b: private state thread while a provider is active elsewhere.
       if (process_sp && process_sp->CurrentThreadIsPrivateStateThread())
         return m_active_frame_providers_by_thread.begin()->second.back();
     }
@@ -1523,9 +1549,21 @@ StackFrameListSP Thread::GetStackFrameList() {
   if (m_curr_frames_sp)
     return m_curr_frames_sp;
 
+  // For case 2, PST must see the private reality, not the public illusion.
+  // PrivateStateThreadGuard is a thread_local flag set by RunThreadPlan
+  // (for the original PST) and RunPrivateStateThread (for override PSTs).
+  // We cannot use CurrentThreadIsPrivateStateThread() here because
+  // RunThreadPlan reassigns m_current_private_state_thread_sp to the
+  // override, so the original PST is no longer recognized.
+  if (PrivateStateThreadGuard::IsPrivateStateThread()) {
+    if (!m_unwinder_frames_sp)
+      m_unwinder_frames_sp = std::make_shared<StackFrameList>(
+          *this, m_prev_frames_sp, true, /*provider_id=*/0);
+    return m_unwinder_frames_sp;
+  }
+
   // First, try to load frame providers if we don't have any yet.
   if (m_frame_providers.empty()) {
-    ProcessSP process_sp = GetProcess();
     if (process_sp) {
       Target &target = process_sp->GetTarget();
       const auto &descriptors = target.GetScriptedFrameProviderDescriptors();
@@ -1898,7 +1936,7 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
         "first location:\n",
         file.GetFilename(), line);
     DumpAddressList(sstr, candidates, target);
-    *warnings = std::string(sstr.GetString());
+    *warnings = std::string(sstr.GetString().trim('\n'));
   }
 
   if (!reg_ctx->SetPC(dest))

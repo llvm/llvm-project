@@ -3530,12 +3530,6 @@ void ASTWriter::WriteComments(ASTContext &Context) {
   if (!PP->getPreprocessorOpts().WriteCommentListToPCH)
     return;
 
-  // Don't write comments to BMI to reduce the size of BMI.
-  // If language services (e.g., clangd) want such abilities,
-  // we can offer a special option then.
-  if (isWritingStdCXXNamedModules())
-    return;
-
   RecordData Record;
   for (const auto &FO : Context.Comments.OrderedComments) {
     for (const auto &OC : FO.second) {
@@ -8068,6 +8062,17 @@ void OMPClauseWriter::VisitOMPSizesClause(OMPSizesClause *C) {
   Record.push_back(C->getNumSizes());
   for (Expr *Size : C->getSizesRefs())
     Record.AddStmt(Size);
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPCountsClause(OMPCountsClause *C) {
+  Record.push_back(C->getNumCounts());
+  Record.push_back(C->hasOmpFill());
+  if (C->hasOmpFill())
+    Record.push_back(*C->getOmpFillIndex());
+  Record.AddSourceLocation(C->getOmpFillLoc());
+  for (Expr *Count : C->getCountsRefs())
+    Record.AddStmt(Count);
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
