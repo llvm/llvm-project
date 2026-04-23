@@ -983,6 +983,18 @@ def skipUnlessPlatform(oslist):
     )
 
 
+def skipIfTargetDoesNotSupportThreads():
+    """Skip tests that require thread support (e.g. pthreads)."""
+    platform = lldbplatformutil.getPlatform()
+    # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
+    # other WASI targets (e.g. wasip1, wasip2) do not.
+    no_threads = platform.startswith("wasi") and not platform.endswith("threads")
+    return unittest.skipIf(
+        no_threads,
+        "threads are not supported on %s" % platform,
+    )
+
+
 def skipUnlessArch(arch):
     """Decorate the item to skip tests unless running on the specified architecture."""
 

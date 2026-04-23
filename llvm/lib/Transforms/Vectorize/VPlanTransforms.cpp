@@ -306,7 +306,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
       return;
 
     if (Candidate->getParent() == SinkTo ||
-        vputils::cannotHoistOrSinkRecipe(*Candidate))
+        vputils::cannotHoistOrSinkRecipe(*Candidate, /*Sinking=*/true))
       return;
 
     if (auto *RepR = dyn_cast<VPReplicateRecipe>(Candidate))
@@ -1828,7 +1828,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       }
 
       auto *RepOrWidenR = dyn_cast<VPRecipeWithIRFlags>(&R);
-      if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+      if (RepR && RepR->getOpcode() == Instruction::Store &&
           vputils::isSingleScalar(RepR->getOperand(1))) {
         auto *Clone = new VPReplicateRecipe(
             RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
@@ -2477,7 +2477,7 @@ static void licm(VPlan &Plan) {
       LoopRegion->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (vputils::cannotHoistOrSinkRecipe(R))
+      if (vputils::cannotHoistOrSinkRecipe(R, /*Sinking=*/true))
         continue;
 
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
@@ -2495,35 +2495,27 @@ static void licm(VPlan &Plan) {
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads).
       auto *Def = cast<VPSingleDefRecipe>(&R);
-      // Skip recipes without users as we cannot determine a sink block.
-      // TODO: Clone sinkable recipes without users to all exit blocks to reduce
-      // their execution frequency.
-      if (Def->getNumUsers() == 0)
-        continue;
 
+      // Cannot sink the recipe if the user is defined in a loop region or a
+      // non-successor of the vector loop region. Cannot sink if user is a phi
+      // either.
       VPBasicBlock *SinkBB = nullptr;
-      // Cannot sink the recipe if any user
-      //  * is defined in any loop region, or
-      //  * is a phi, or
-      //  * multiple users in different blocks.
-      if (any_of(Def->users(), [&SinkBB](VPUser *U) {
+      if (any_of(Def->users(), [&SinkBB, &LoopRegion](VPUser *U) {
             auto *UserR = cast<VPRecipeBase>(U);
             VPBasicBlock *Parent = UserR->getParent();
-            // TODO: If the user is a PHI node, we should check the block of
-            // incoming value. Support PHI node users if needed.
-            if (UserR->isPhi() || Parent->getEnclosingLoopRegion())
-              return true;
             // TODO: Support sinking when users are in multiple blocks.
             if (SinkBB && SinkBB != Parent)
               return true;
             SinkBB = Parent;
-            return false;
+            // TODO: If the user is a PHI node, we should check the block of
+            // incoming value. Support PHI node users if needed.
+            return UserR->isPhi() || Parent->getEnclosingLoopRegion() ||
+                   Parent->getSinglePredecessor() != LoopRegion;
           }))
         continue;
 
-      // Only sink to dedicated exit blocks of the loop region.
-      if (SinkBB->getSinglePredecessor() != LoopRegion)
-        continue;
+      if (!SinkBB)
+        SinkBB = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());
 
       // TODO: This will need to be a check instead of a assert after
       // conditional branches in vectorized loops are supported.
@@ -4886,11 +4878,10 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
-                                                 VPBasicBlock *VectorPHVPBB,
-                                                 bool TailByMasking,
-                                                 bool RequiresScalarEpilogue,
-                                                 VPValue *Step) {
+void VPlanTransforms::materializeVectorTripCount(
+    VPlan &Plan, VPBasicBlock *VectorPHVPBB, bool TailByMasking,
+    bool RequiresScalarEpilogue, VPValue *Step,
+    std::optional<uint64_t> MaxRuntimeStep) {
   VPSymbolicValue &VectorTC = Plan.getVectorTripCount();
   // There's nothing to do if there are no users of the vector trip count or its
   // IR value has already been set.
@@ -4907,6 +4898,16 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
     InsertPt = std::next(StepR->getIterator());
   }
   VPBuilder Builder(VectorPHVPBB, InsertPt);
+
+  // For scalable steps, if TC is a constant and is divisible by the maximum
+  // possible runtime step, then TC % Step == 0 for all valid vscale values
+  // and the vector trip count equals TC directly.
+  const APInt *TCVal;
+  if (!RequiresScalarEpilogue && match(TC, m_APInt(TCVal)) && MaxRuntimeStep &&
+      TCVal->getZExtValue() % *MaxRuntimeStep == 0) {
+    VectorTC.replaceAllUsesWith(TC);
+    return;
+  }
 
   // If the tail is to be folded by masking, round the number of iterations N
   // up to a multiple of Step instead of rounding down. This is done by first
@@ -5174,8 +5175,7 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
   }
 
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
-    assert(RepR->isSingleScalar() &&
-           isa<LoadInst>(RepR->getUnderlyingInstr()) &&
+    assert(RepR->isSingleScalar() && RepR->getOpcode() == Instruction::Load &&
            "must be a single scalar load");
     NarrowedOps.insert(RepR);
     return RepR;
@@ -6313,7 +6313,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         if (auto *Extend = dyn_cast<VPWidenCastRecipe>(Op))
           RegularCost += Extend->computeCost(VF, CostCtx);
     }
-    return PartialCost.isValid() && PartialCost <= RegularCost;
+    return PartialCost.isValid() && PartialCost < RegularCost;
   };
 
   // Validate chains: check that extends are only used by partial reductions,
@@ -6347,7 +6347,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       if (auto *RdxResult = vputils::findComputeReductionResult(RedPhiR)) {
         if (any_of(RdxResult->users(), [](VPUser *U) {
               auto *RepR = dyn_cast<VPReplicateRecipe>(U);
-              return RepR && isa<StoreInst>(RepR->getUnderlyingInstr());
+              return RepR && RepR->getOpcode() == Instruction::Store;
             })) {
           Chains.clear();
           break;

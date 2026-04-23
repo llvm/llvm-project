@@ -718,7 +718,8 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
 }
 
 /// Try to sink users of \p FOR after \p Previous.  \returns true if sinking
-/// -/// succeeded or was not necessary, and false otherwise.
+/// succeeded or was not necessary, and false otherwise.
+static bool
 sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
                                  VPRecipeBase *Previous,
                                  VPDominatorTree &VPDT) {
@@ -737,7 +738,7 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
         VPDT.properlyDominates(Previous, SinkCandidate))
       return true;
 
-    if (vputils::cannotHoistOrSinkRecipe(*SinkCandidate))
+    if (vputils::cannotHoistOrSinkRecipe(*SinkCandidate, /*Sinking=*/true))
       return false;
 
     WorkList.push_back(SinkCandidate);
