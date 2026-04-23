@@ -6,6 +6,6 @@
         .amdhsa_next_free_vgpr 0
         .amdhsa_next_free_sgpr 0
 
-        .amdhsa_user_sgpr_count 65
+        .amdhsa_user_sgpr_count 64
 // GFX1250-ERR: too many user SGPRs enabled
 .end_amdhsa_kernel
