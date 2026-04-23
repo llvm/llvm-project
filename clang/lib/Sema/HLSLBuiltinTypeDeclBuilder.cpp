@@ -1408,9 +1408,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
-  addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
+  addHandleAccessFunction(Load, /*IsConst=*/true, /*IsRef=*/false,
                           AST.UnsignedIntTy);
-  addLoadWithStatusFunction(Load, /*IsConst=*/false);
+  addLoadWithStatusFunction(Load, /*IsConst=*/true);
 
   return *this;
 }
@@ -1562,9 +1562,9 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Load(&II);
 
-    addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
+    addHandleAccessFunction(Load, /*IsConst=*/true, /*IsRef=*/false,
                             AST.UnsignedIntTy, ReturnType);
-    addLoadWithStatusFunction(Load, /*IsConst=*/false, ReturnType);
+    addLoadWithStatusFunction(Load, /*IsConst=*/true, ReturnType);
   };
 
   AddLoads("Load", AST.UnsignedIntTy);
