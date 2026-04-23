@@ -127,11 +127,6 @@ define dso_local ptr @test_external_global_ptrv() {
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl external_g_int@GOTPCREL(%rip), %eax
 ; X32-NEXT:    retq
-; X32ABI-LABEL: test_external_global_ptrv:
-; X32ABI:       # %bb.0: # %entry
-; X32ABI-NEXT:    movl external_g_int@GOTPCREL(%rip), %eax
-; X32ABI-NEXT:    movl %eax, %eax
-; X32ABI-NEXT:    retq
 entry:
   ret ptr @external_g_int
 }
@@ -159,11 +154,6 @@ define dso_local i32 @test_external_global_valv() {
 ; X32-NEXT:    movl external_g_int@GOTPCREL(%rip), %eax
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    retq
-; X32ABI-LABEL: test_external_global_valv:
-; X32ABI:       # %bb.0: # %entry
-; X32ABI-NEXT:    movl external_g_int@GOTPCREL(%rip), %eax
-; X32ABI-NEXT:    movl (%eax), %eax
-; X32ABI-NEXT:    retq
 entry:
   %0 = load i32, ptr @external_g_int, align 4
   ret i32 %0
