@@ -129,13 +129,13 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SendAndReceiveFileDescriptor) {
   ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair),
               Succeeds(0));
 
-  iovec iov;
+  struct iovec iov;
   iov.iov_base = reinterpret_cast<void *>(const_cast<char *>("x"));
   iov.iov_len = 1;
 
   char control_buf[CMSG_SPACE(sizeof(int))] = {};
 
-  msghdr msg;
+  struct msghdr msg;
   msg.msg_name = nullptr;
   msg.msg_namelen = 0;
   msg.msg_iov = &iov;
@@ -144,7 +144,7 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SendAndReceiveFileDescriptor) {
   msg.msg_control = control_buf;
   msg.msg_controllen = CMSG_LEN(sizeof(int));
 
-  cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+  struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
   cmsg->cmsg_level = SOL_SOCKET;
   cmsg->cmsg_type = SCM_RIGHTS;
   cmsg->cmsg_len = CMSG_LEN(sizeof(int));
