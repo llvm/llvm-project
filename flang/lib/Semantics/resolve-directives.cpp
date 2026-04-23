@@ -1734,7 +1734,8 @@ void AccAttributeVisitor::CheckAssociatedLoop(
 
   if (level != 0) {
     context_.Say(GetContext().directiveSource,
-        "Not enough perfectly nested loops for COLLAPSE(%jd) clause, found %jd, expected %jd more"_err_en_US,
+        "Not enough %s for COLLAPSE(%jd) clause, found %jd, expected %jd more"_err_en_US,
+        forceCollapsed ? "nested loops" : "perfectly nested loops",
         GetContext().associatedLoopLevel,
         GetContext().associatedLoopLevel - level, level);
   }

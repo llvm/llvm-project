@@ -1408,13 +1408,6 @@ static void privatizeIv(
     builder.setInsertionPointToStart(builder.getAllocaBlock());
     ivValue = builder.createTemporaryAlloc(loc, ivTy, toStringRef(sym.name()));
     builder.restoreInsertionPoint(insPt);
-    // Register an hlfir.declare so that remapDataOperandSymbols can find this
-    // locally-scoped IV and remap it to the privatized copy inside the
-    // acc.loop region. Without this, the symbolMap lookup in
-    // remapDataOperandSymbols fails because the DO CONCURRENT body (which
-    // normally binds the IV) has not been lowered yet at this point.
-    Fortran::lower::genDeclareSymbol(converter, converter.getSymbolMap(), sym,
-                                     ivValue);
   }
 
   mlir::Operation *privateOp = nullptr;
@@ -1546,9 +1539,11 @@ static void visitLoopControl(
         break; // No deeper loop; stop collecting collapsed bounds.
 
       Fortran::lower::markDoConstructAsCollapsed(*innerDo);
-      loopControl = &*innerDo->GetLoopControl();
       mlir::Location loc =
-          converter.genLocation(Fortran::parser::FindSourceLocation(*innerDo));
+        converter.genLocation(Fortran::parser::FindSourceLocation(*innerDo));
+      if (innerDo->IsDoConcurrent())
+        TODO(loc, "OpenACC LOOP with nested DO CONCURRENT");
+      loopControl = &*innerDo->GetLoopControl();
       callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
                loc);
     }
@@ -1925,7 +1920,7 @@ static void privatizeInductionVariables(
   llvm::SmallVector<mlir::Type> ivTypes;
   llvm::SmallVector<mlir::Location> ivLocs;
   assert(!outerDoConstruct.IsDoConcurrent() &&
-         "do concurrent loops are not expected to contained earlty exits");
+         "do concurrent loops are not expected to contained early exits");
   visitLoopControl(converter, outerDoConstruct, loopsToProcess, eval,
                    [&](const Fortran::parser::LoopControl::Bounds &bounds,
                        mlir::Location loc) {
@@ -2248,7 +2243,7 @@ static mlir::acc::LoopOp createLoopOp(
 
   if (outerDoConstruct.IsDoConcurrent() &&
       Fortran::lower::getCollapseSizeAndForce(accClauseList).first > 1)
-    TODO(currentLocation, "collapse on acc loop with do concurrent");
+    TODO(currentLocation, "OpenACC LOOP COLLAPSE with DO CONCURRENT");
 
   auto loopOp = buildACCLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
