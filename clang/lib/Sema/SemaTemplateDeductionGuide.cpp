@@ -1598,8 +1598,13 @@ TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
 
   LocalInstantiationScope Scope(SemaRef);
 
-  auto &AST = SemaRef.getASTContext();
-  auto *Ctx = CurContext->getParent();
+  ASTContext &AST = getASTContext();
+  DeclContext *Ctx = CurContext;
+
+  while(Ctx->isRequiresExprBody())
+    Ctx = Ctx->getParent();
+
+  Ctx = Ctx->isFileContext() ? Ctx : Ctx->getLexicalParent();
 
   MultiLevelTemplateArgumentList MTAL;
   if (NamedDecl *Func = dyn_cast<NamedDecl>(CurContext))
@@ -1610,7 +1615,7 @@ TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
   for (NamedDecl *P : D->getTemplateParameters()->asArray()) {
     auto [Depth, Index] = getDepthAndIndex(P);
     NamedDecl *NewParam =
-        transformTemplateParameter(*this, Ctx, P, MTAL, Index, Depth - 1);
+        transformTemplateParameter(*this, Ctx, P, MLTAL, Index, Depth? Depth -1 : 0);
     if (!NewParam)
       return nullptr;
     Parameters.push_back(NewParam);
@@ -1619,12 +1624,15 @@ TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
 
   auto *ParamList =
       TemplateParameterList::Create(AST, SourceLocation(), SourceLocation(),
-                                    Parameters, SourceLocation(), nullptr);
+                                    Parameters, SourceLocation(),
+                                    /*RequiresClause=*/nullptr);
 
   QualType Type = AST.getCanonicalType(AST.getTemplateSpecializationType(
       ElaboratedTypeKeyword::Class, Replacement, Args, {}));
 
-  auto *Alias = TypeAliasDecl::Create(AST, Ctx, Loc, SourceLocation(), nullptr,
+  // FIXME: Have a flag to distinguish such special type alias declarations.
+  auto *Alias = TypeAliasDecl::Create(AST, Ctx, Loc, /*IdLoc=*/SourceLocation(),
+                                      /*Id=*/nullptr,
                                       AST.getTrivialTypeSourceInfo(Type));
   Alias->setImplicit(true);
 

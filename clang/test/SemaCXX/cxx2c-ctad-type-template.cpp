@@ -130,3 +130,28 @@ void test() {
     to<vector>(range);
 }
 }
+
+
+namespace Regression2 {
+template <template <class...> class _Container, typename _Range>
+struct _Deducer {
+  static auto __deduce_func() {
+    static_assert(requires { _Container(); },
+                    "ranges::to: unable to deduce the container type from "
+                    "the template template argument.");
+  }
+  using type = decltype(__deduce_func);
+};
+template <template <class...> class _Container, typename _Range>
+auto to(_Range) {
+  using _DeduceExpr = _Deducer<_Container, _Range>::type;
+}
+
+template <class = int> struct vector {};
+
+void test() {
+  vector<int> range;
+  to<vector>(range);
+}
+
+}
