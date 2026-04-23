@@ -96,6 +96,23 @@ def int_aarch64_casal64 : Intrinsic<[llvm_i64_ty],
                                     [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
                                     [IntrNoFree]>;
 
+// SWP intrinsics — emit SWP* (no acquire/release) directly, regardless of the
+// LSE target feature. swp{b,h} value uses i32; swp64 uses i64.
+// IntrWillReturn is intentionally omitted: on a target without LSE the encoding
+// is UNDEFINED and may trap, so these calls are not guaranteed to return.
+def int_aarch64_swp8  : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_swp16 : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_swp32 : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_swp64 : Intrinsic<[llvm_i64_ty],
+                                  [llvm_ptr_ty, llvm_i64_ty],
+                                  [IntrNoFree]>;
+
 def int_aarch64_sdiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
                                 LLVMMatchType<0>], [IntrNoMem]>;
 def int_aarch64_udiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,

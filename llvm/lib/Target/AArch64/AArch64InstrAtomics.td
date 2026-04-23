@@ -634,6 +634,22 @@ def : Pat<(i32 (int_aarch64_casal32 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
 def : Pat<(i64 (int_aarch64_casal64 GPR64sp:$Rn, GPR64:$Rs, GPR64:$Rt)),
           (CASALX_cg GPR64:$Rs, GPR64:$Rt, GPR64sp:$Rn)>;
 
+// Unconditional patterns for the __swp* MSVC builtins (no ordering).
+// As with swp{b,h}, the zero-extension mask may survive or be eliminated by the
+// DAG combiner, so both masked and plain forms are needed.
+def : Pat<(i32 (int_aarch64_swp8  GPR64sp:$Rn, (and GPR32:$Rs, (i32 255)))),
+          (SWPB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swp8  GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swp16 GPR64sp:$Rn, (and GPR32:$Rs, (i32 65535)))),
+          (SWPH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swp16 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swp32 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPW_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_swp64 GPR64sp:$Rn, GPR64:$Rs)),
+          (SWPX_cg GPR64:$Rs, GPR64sp:$Rn)>;
+
 // v8.9a/v9.4a FEAT_LRCPC patterns
 let Predicates = [HasRCPC3, HasNEON] in {
   // LDAP1 loads
