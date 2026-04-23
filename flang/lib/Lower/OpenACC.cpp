@@ -1540,7 +1540,7 @@ static void visitLoopControl(
 
       Fortran::lower::markDoConstructAsCollapsed(*innerDo);
       mlir::Location loc =
-        converter.genLocation(Fortran::parser::FindSourceLocation(*innerDo));
+          converter.genLocation(Fortran::parser::FindSourceLocation(*innerDo));
       if (innerDo->IsDoConcurrent())
         TODO(loc, "OpenACC LOOP with nested DO CONCURRENT");
       loopControl = &*innerDo->GetLoopControl();
