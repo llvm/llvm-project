@@ -43,7 +43,6 @@ public:
 
 protected:
   std::shared_ptr<PseudoConsole> m_pty;
-  bool m_pty_vt_sequence_was_stripped = false;
 };
 } // namespace lldb_private
 

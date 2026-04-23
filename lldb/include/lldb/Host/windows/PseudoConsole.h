@@ -42,8 +42,8 @@ public:
                                        bool inheritable);
 
   /// Creates and opens a new ConPTY instance with a default console size of
-  /// 80x25. Also sets up the associated STDIN/STDOUT pipes and drains any
-  /// initialization sequences emitted by Windows.
+  /// 80x25. Also sets up the associated STDIN/STDOUT pipes and responds to
+  /// the cursor-position query that ConPTY emits at startup.
   ///
   /// \return
   ///     An llvm::Error if the ConPTY could not be created, or if ConPTY is
@@ -107,16 +107,6 @@ public:
   HANDLE GetChildStdoutHandle() const { return m_pipe_child_stdout; };
 
   Mode GetMode() const { return m_mode; };
-
-  /// Drains initialization sequences from the ConPTY output pipe.
-  ///
-  /// When a process first attaches to a ConPTY, Windows emits VT100/ANSI escape
-  /// sequences (ESC[2J for clear screen, ESC[H for cursor home and more) as
-  /// part of the PseudoConsole initialization. To prevent these sequences from
-  /// appearing in the debugger output (and flushing lldb's shell for instance)
-  /// we launch a short-lived dummy process that triggers the initialization,
-  /// then drain all output before launching the actual debuggee.
-  llvm::Error DrainInitSequences();
 
   /// Returns a reference to the mutex used to synchronize access to the
   /// ConPTY state.

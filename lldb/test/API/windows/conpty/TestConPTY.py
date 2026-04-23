@@ -53,27 +53,20 @@ class ConPTYTestCase(TestBase):
     @skipUnlessWindowsConPTY2022
     def test_stdout_delivery(self):
         """ConPTY delivers the inferior's stdout to LLDB."""
-        output = self._run_to_exit("basic")
-        self.assertEqual("Hello from ConPTY\r\n", output)
-
-    @skipUnlessWindows
-    @skipUnlessWindowsConPTY2022
-    def test_vt_init_stripped(self):
-        """ConPTY VT initialization sequences are stripped from GetSTDOUT."""
-        # Sequences emitted by conhost.exe at attach time, defined in
-        # ConnectionConPTYWindows.cpp :: StripConPTYInitSequences.
-        VT_INIT = "\x1b[?9001l\x1b[?1004l"
+        import re
 
         output = self._run_to_exit("basic")
-
+        output = re.sub(r"\x1b(?:\[[0-9;?]*[A-Za-z]|\][^\x07]*\x07)", "", output)
         self.assertIn("Hello from ConPTY\r\n", output)
-        self.assertNotIn(VT_INIT, output)
 
     @skipUnlessWindows
     @skipUnlessWindowsConPTY2022
     def test_large_output(self):
         """ConPTY delivers all output lines when output spans multiple reads."""
+        import re
+
         output = self._run_to_exit("large")
+        output = re.sub(r"\x1b(?:\[[0-9;?]*[A-Za-z]|\][^\x07]*\x07)", "", output)
         output_lines = output.split("\r\n")[:-1]
 
         self.assertEqual(
@@ -88,10 +81,9 @@ class ConPTYTestCase(TestBase):
     def test_basic_output_without_vt_check(self):
         """ConPTY delivers the inferior's stdout on all supported Windows versions.
 
-        Unlike test_stdout_delivery and test_vt_init_stripped, this test strips
-        VT escape sequences before asserting, so it passes on older Windows
-        versions (e.g. Windows Server 2019) where ConPTY emits different init
-        sequences that LLDB does not strip.
+        Unlike test_stdout_delivery, this test strips VT escape sequences before
+        asserting, so it passes on older Windows versions (e.g. Windows Server
+        2019) where ConPTY emits different sequences.
         """
 
         import re
@@ -99,3 +91,21 @@ class ConPTYTestCase(TestBase):
         output = self._run_to_exit("basic")
         stripped = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", output)
         self.assertIn("Hello from ConPTY", stripped)
+
+    @skipUnlessWindows
+    @skipUnlessWindowsConPTY2022
+    def test_no_screen_clear_on_init(self):
+        """PSEUDOCONSOLE_INHERIT_CURSOR prevents ConPTY from emitting
+        screen-clearing sequences that would overwrite existing terminal output.
+
+        With PSEUDOCONSOLE_INHERIT_CURSOR, ConPTY queries the current cursor
+        position (ESC[6n) and skips the full-screen reset it would otherwise
+        emit.  Verify that none of those reset sequences appear in the process
+        output.
+        """
+        output = self._run_to_exit("basic")
+
+        # Emitted by ConPTY during a full-screen init (no cursor inheritance).
+        self.assertNotIn("\x1b[2J", output)  # clear screen
+        self.assertNotIn("\x1b[3J", output)  # erase scrollback
+        self.assertNotIn("\x1b[H", output)   # cursor home
