@@ -49,7 +49,7 @@ int main() {}
 
 // RUN: %clang -std=c++23 -c -fmodules-driver -Rmodules-driver -Rmodule-import \
 // RUN:   -stdlib=libc++ \
-// RUN:   -resource-dir=%t/Inputs/usr/lib/x86_64-linux-gnu \
+// RUN:   --sysroot=%t/Inputs \
 // RUN:   --target=x86_64-linux-gnu \
 // RUN:   %t/main.cpp 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
