@@ -1558,7 +1558,7 @@ ReoptimizeBlock:
         bool PredHasHotSuccessor = false;
         for (MachineBasicBlock *const PredSucc : Pred->successors()) {
           PredHasHotSuccessor |= MBPI.isEdgeHot(Pred, PredSucc);
-        }
+        bool PredHasHotSuccessor = llvm::any_of(Pred->successors(), [&](auto *PredSucc) { return MBPI.isEdgeHot(Pred, PredSucc); });
 
         MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
         SmallVector<MachineOperand, 4> PredCond;
@@ -1571,7 +1571,7 @@ ReoptimizeBlock:
             (MBB == PredFBB ||
              (PredFBB == nullptr && Pred->getFallThrough() == MBB));
         bool CanFoldTakenBlock =
-            (MBB == PredTBB && (PredHasHotSuccessor ? IsEdgeCold : true));
+            (MBB == PredTBB && (!PredHasHotSuccessor || IsEdgeCold));
 
         // When we have PGO (or equivalent) information, we want to fold the
         // fallthrough if it's cold.
