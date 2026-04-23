@@ -48,3 +48,43 @@ define i64 @test_cas64(ptr %p, i64 %rs, i64 %rt) {
   %r = call i64 @llvm.aarch64.cas64(ptr %p, i64 %rs, i64 %rt)
   ret i64 %r
 }
+
+define i32 @test_casa8(ptr %p, i32 %rs, i32 %rt) {
+; CHECK-LABEL: test_casa8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casab w1, w2, [x0]
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.casa8(ptr %p, i32 %rs, i32 %rt)
+  ret i32 %r
+}
+
+define i32 @test_casa16(ptr %p, i32 %rs, i32 %rt) {
+; CHECK-LABEL: test_casa16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casah w1, w2, [x0]
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.casa16(ptr %p, i32 %rs, i32 %rt)
+  ret i32 %r
+}
+
+define i32 @test_casa32(ptr %p, i32 %rs, i32 %rt) {
+; CHECK-LABEL: test_casa32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casa w1, w2, [x0]
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.casa32(ptr %p, i32 %rs, i32 %rt)
+  ret i32 %r
+}
+
+define i64 @test_casa64(ptr %p, i64 %rs, i64 %rt) {
+; CHECK-LABEL: test_casa64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casa x1, x2, [x0]
+; CHECK-NEXT:    mov x0, x1
+; CHECK-NEXT:    ret
+  %r = call i64 @llvm.aarch64.casa64(ptr %p, i64 %rs, i64 %rt)
+  ret i64 %r
+}
