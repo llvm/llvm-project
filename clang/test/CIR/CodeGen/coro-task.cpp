@@ -481,7 +481,6 @@ folly::coro::Task<void> yield1() {
 // CIR:   cir.coro.body {
 // CIR:     %[[YIELD_TASK:.*]] = cir.call @_Z5yieldv(){{.*}}
 // CIR:     cir.store{{.*}} %[[YIELD_TASK]], %[[T_ADDR]]
-// CIR:     cir.copy %[[T_ADDR]] to %[[AWAITER_COPY_ADDR]]
 // CIR:     %[[AWAITER:.*]] = cir.load{{.*}} %[[AWAITER_COPY_ADDR]]
 // CIR:     %[[YIELD_SUSP:.*]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type11yield_valueES2_(%[[PROMISE]], %[[AWAITER]]){{.*}}
 // CIR:     cir.store{{.*}} %[[YIELD_SUSP]], %[[SUSP1]]
@@ -549,12 +548,10 @@ folly::coro::Task<int> go1() {
 // CIR:   },)
 
 // CIR:   cir.coro.body {
-// CIR:     cir.scope {
-// CIR:       %[[One:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:       cir.store{{.*}} %[[One]], %[[OneAddr]] : !s32i, !cir.ptr<!s32i>
-// CIR:       %[[IntTaskTmp:.*]] = cir.call @_Z2goRKi(%[[OneAddr]]) : (!cir.ptr<!s32i>{{.*}}) -> ![[IntTask]]
-// CIR:       cir.store{{.*}} %[[IntTaskTmp]], %[[IntTaskAddr]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
-// CIR:     }
+// CIR:     %[[One:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:     cir.store{{.*}} %[[One]], %[[OneAddr]] : !s32i, !cir.ptr<!s32i>
+// CIR:     %[[IntTaskTmp:.*]] = cir.call @_Z2goRKi(%[[OneAddr]]) : (!cir.ptr<!s32i>{{.*}}) -> ![[IntTask]]
+// CIR:     cir.store{{.*}} %[[IntTaskTmp]], %[[IntTaskAddr]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
 
 // CIR:     cir.await(user, ready : {
 // CIR:     }, suspend : {
