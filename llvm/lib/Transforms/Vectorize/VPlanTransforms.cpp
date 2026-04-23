@@ -1217,13 +1217,14 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case([](const VPWidenIntrinsicRecipe *I) {
         return std::make_pair(true, I->getVectorIntrinsicID());
       })
-      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
-        // For recipes that do not directly map to LLVM IR instructions,
-        // assign opcodes after the last VPInstruction opcode (which is also
-        // after the last IR Instruction opcode), based on the VPRecipeID.
-        return std::make_pair(false,
-                              VPInstruction::OpsEnd + 1 + I->getVPRecipeID());
-      })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
+          [](auto *I) {
+            // For recipes that do not directly map to LLVM IR instructions,
+            // assign opcodes after the last VPInstruction opcode (which is also
+            // after the last IR Instruction opcode), based on the VPRecipeID.
+            return std::make_pair(false, VPInstruction::OpsEnd + 1 +
+                                             I->getVPRecipeID());
+          })
       .Default([](auto *) { return std::nullopt; });
 }
 
@@ -2611,6 +2612,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
       if (RFlags->hasPredicate())
         return hash_combine(Result, RFlags->getPredicate());
+    if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
+      return hash_combine(Result, SIVSteps->getInductionOpcode());
     return Result;
   }
 
@@ -2630,6 +2633,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LFlags->hasPredicate() &&
           LFlags->getPredicate() !=
               cast<VPRecipeWithIRFlags>(R)->getPredicate())
+        return false;
+    if (auto *LSIV = dyn_cast<VPScalarIVStepsRecipe>(L))
+      if (LSIV->getInductionOpcode() !=
+          cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
     // Recipes in replicate regions implicitly depend on predicate. If either
     // recipe is in a replicate region, only consider them equal if both have
