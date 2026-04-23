@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=aarch64-none-none-eabi -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-none-eabi -verify-machineinstrs -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for v8i4_to_v16i8
 
 define <2 x i8> @dup_v2i8(i8 %a) {
 ; CHECK-SD-LABEL: dup_v2i8:

@@ -95,9 +95,6 @@ public:
 
   bool findRuleAndApplyMapping(MachineInstr &MI);
 
-  // Manual apply helpers.
-  void applyMappingTrivial(MachineInstr &MI);
-
 private:
   bool executeInWaterfallLoop(MachineIRBuilder &B, const WaterfallInfo &WFI);
 
@@ -144,7 +141,9 @@ private:
   bool lowerExtrVecEltTo32(MachineInstr &MI);
   bool lowerInsVecEltToSel(MachineInstr &MI);
   bool lowerInsVecEltTo32(MachineInstr &MI);
-  bool applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI);
+  bool lowerAbsToNegMax(MachineInstr &MI);
+  bool lowerAbsToS32(MachineInstr &MI);
+  bool applyRegisterBanksVgprWithSgprRsrc(MachineInstr &MI, unsigned RsrcIdx);
 };
 
 } // end namespace AMDGPU

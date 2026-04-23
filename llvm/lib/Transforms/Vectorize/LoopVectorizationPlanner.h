@@ -146,8 +146,11 @@ public:
     InsertPt = IP->getIterator();
   }
 
-  /// Insert \p R at the current insertion point.
-  void insert(VPRecipeBase *R) { BB->insert(R, InsertPt); }
+  /// Insert \p R at the current insertion point. Returns \p R unchanged.
+  template <typename T> [[maybe_unused]] T *insert(T *R) {
+    BB->insert(R, InsertPt);
+    return R;
+  }
 
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
@@ -272,6 +275,12 @@ public:
                           VPIRFlags(Pred, FastMathFlags()), {}, DL, Name));
   }
 
+  /// Create an AnyOf reduction pattern: or-reduce \p ChainOp, freeze the
+  /// result, then select between \p TrueVal and \p FalseVal.
+  VPInstruction *createAnyOfReduction(VPValue *ChainOp, VPValue *TrueVal,
+                                      VPValue *FalseVal,
+                                      DebugLoc DL = DebugLoc::getUnknown());
+
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
@@ -300,6 +309,12 @@ public:
                          DebugLoc DL = DebugLoc::getUnknown(),
                          const Twine &Name = "", const VPIRFlags &Flags = {}) {
     return tryInsertInstruction(new VPPhi(IncomingValues, Flags, DL, Name));
+  }
+
+  VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
+                                   DebugLoc DL = DebugLoc::getUnknown(),
+                                   const Twine &Name = "") {
+    return tryInsertInstruction(new VPWidenPHIRecipe(IncomingValues, DL, Name));
   }
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
@@ -674,10 +689,10 @@ private:
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
   void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
-  /// Add recipes to compute the final reduction result (ComputeAnyOfResult,
-  /// ComputeReductionResult depending on the reduction) in
-  /// the middle block. Selects are introduced for reductions between the phi
-  /// and users outside the vector region when folding the tail.
+  /// Add ComputeReductionResult recipes to the middle block to compute the
+  /// final reduction results. Add Select recipes to the latch block when
+  /// folding tail, to feed ComputeReductionResult with the last or penultimate
+  /// iteration values according to the header mask.
   void addReductionResultComputation(VPlanPtr &Plan,
                                      VPRecipeBuilder &RecipeBuilder,
                                      ElementCount MinVF);

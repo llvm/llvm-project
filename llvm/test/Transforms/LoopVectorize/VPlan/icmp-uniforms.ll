@@ -26,8 +26,9 @@ define i32 @more_than_one_use(ptr %a, i64 %n) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%r> = phi vp<[[VP4]]>, ir<%tmp3>
 ; CHECK-NEXT:      WIDEN ir<%i.next> = add nuw nsw ir<%i>, ir<1>
@@ -109,8 +110,9 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = icmp ule ir<%iv>, vp<[[VP3]]>
 ; CHECK-NEXT:      WIDEN ir<%cond0> = icmp ult ir<%iv>, ir<13>
@@ -147,11 +149,10 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: ir<0> from scalar.ph)
 ; CHECK-NEXT:    IR   %cond0 = icmp ult i64 %iv, 13
 ; CHECK-NEXT:    IR   %s = select i1 %cond0, i32 10, i32 20
 ; CHECK-NEXT:    IR   %gep = getelementptr inbounds i32, ptr %ptr, i64 %iv
