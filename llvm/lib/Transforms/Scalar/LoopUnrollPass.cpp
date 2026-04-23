@@ -1392,6 +1392,16 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (!UP.Count) {
     LLVM_DEBUG(dbgs().indent(1)
                << "Not unrolling: no viable strategy found.\n");
+    ORE.emit([&]() {
+      auto Remark = OptimizationRemarkMissed(DEBUG_TYPE, "UnrollSkipped",
+                                             L->getStartLoc(), L->getHeader())
+                    << "loop not unrolled: ";
+      if (!UP.UnrollSkipReason.empty())
+        Remark << UP.UnrollSkipReason;
+      else
+        Remark << "no details available";
+      return Remark;
+    });
     return LoopUnrollResult::Unmodified;
   }
 

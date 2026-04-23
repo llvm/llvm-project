@@ -1949,6 +1949,9 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     } else {
       return false;
     }
+    // Do not proceed to further legality checks that assume valid loop
+    // structure (single backedge, preheader, latch, etc.).
+    return Result;
   }
 
   // We need to have a loop header.

@@ -5304,12 +5304,19 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // likely with complex control flow). Note that the heuristics here may be
   // overly conservative and we err on the side of avoiding runtime unrolling
   // rather than unroll excessively. They are all subject to further refinement.
-  if (!L->isInnermost() || L->getNumBlocks() > 8)
+  if (!L->isInnermost() || L->getNumBlocks() > 8) {
+    UP.UnrollSkipReason = !L->isInnermost()
+                              ? "runtime-Apple: not an innermost loop"
+                              : "runtime-Apple: loop has too many blocks (" +
+                                    std::to_string(L->getNumBlocks()) + " > 8)";
     return;
+  }
 
   // Loops with multiple exits are handled by common code.
-  if (!L->getExitBlock())
+  if (!L->getExitBlock()) {
+    UP.UnrollSkipReason = "runtime-Apple: loop has multiple exits";
     return;
+  }
 
   // Check if the loop contains any reductions that could be parallelized when
   // unrolling. If so, enable partial unrolling, if the trip count is know to be
@@ -5331,14 +5338,27 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
       (SE.getSmallConstantMaxTripCount(L) > 0 &&
-       SE.getSmallConstantMaxTripCount(L) <= 32))
+       SE.getSmallConstantMaxTripCount(L) <= 32)) {
+    UP.UnrollSkipReason =
+        isa<SCEVConstant>(BTC) ? "runtime-Apple: loop has constant trip count"
+        : isa<SCEVCouldNotCompute>(BTC)
+            ? "runtime-Apple: could not compute backedge-taken count"
+            : "runtime-Apple: loop has small max trip count (" +
+                  std::to_string(SE.getSmallConstantMaxTripCount(L)) +
+                  " <= 32)";
     return;
+  }
 
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized")) {
+    UP.UnrollSkipReason = "runtime-Apple: loop already vectorized";
     return;
+  }
 
-  if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
+  if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L)) {
+    UP.UnrollSkipReason = "runtime-Apple: symbolic max backedge-taken count "
+                          "differs from backedge-taken count";
     return;
+  }
 
   // Limit to loops with trip counts that are cheap to expand.
   UP.SCEVExpansionBudget = 1;
@@ -5358,8 +5378,11 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
     // Estimate the size of the loop.
     unsigned Size;
     unsigned Width = 10;
-    if (!isLoopSizeWithinBudget(L, TTI, Width, &Size))
+    if (!isLoopSizeWithinBudget(L, TTI, Width, &Size)) {
+      UP.UnrollSkipReason = "runtime-Apple: loop size exceeds budget (" +
+                            std::to_string(Width) + ")";
       return;
+    }
 
     // Try to find an unroll count that maximizes the use of the instruction
     // window, i.e. trying to fetch as many instructions per cycle as possible.
@@ -5379,8 +5402,11 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
       UC++;
     }
 
-    if (BestUC == 1)
+    if (BestUC == 1) {
+      UP.UnrollSkipReason =
+          "runtime-Apple: no beneficial unroll count found (BestUC=1)";
       return;
+    }
 
     SmallPtrSet<Value *, 8> LoadedValuesPlus;
     SmallVector<StoreInst *> Stores;
@@ -5405,8 +5431,11 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
     if (none_of(Stores, [&LoadedValuesPlus](StoreInst *SI) {
           return LoadedValuesPlus.contains(SI->getOperand(0));
-        }))
+        })) {
+      UP.UnrollSkipReason = "runtime-Apple: no load/store dependencies found "
+                            "that would benefit from unrolling";
       return;
+    }
 
     UP.Runtime = true;
     UP.DefaultUnrollRuntimeCount = BestUC;
@@ -5418,8 +5447,11 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   auto *Term = dyn_cast<CondBrInst>(Header->getTerminator());
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
   if (!Term || Preds.size() == 1 || !llvm::is_contained(Preds, Header) ||
-      none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); }))
+      none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); })) {
+    UP.UnrollSkipReason = "runtime-Apple: loop structure unsuitable for "
+                          "early-continue optimization";
     return;
+  }
 
   std::function<bool(Instruction *, unsigned)> DependsOnLoopLoad =
       [&](Instruction *I, unsigned Depth) -> bool {
@@ -5440,6 +5472,9 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
                        m_Value())) &&
       DependsOnLoopLoad(I, 0)) {
     UP.Runtime = true;
+  } else {
+    UP.UnrollSkipReason = "runtime-Apple: branch condition does not depend on "
+                          "a loop-varying load";
   }
 }
 
@@ -5470,13 +5505,16 @@ void AArch64TTIImpl::getUnrollingPreferences(
       // Both auto-vectorized loops and the scalar remainder have the
       // isvectorized attribute, so differentiate between them by the presence
       // of vector instructions.
-      if (IsVectorized && I.getType()->isVectorTy())
+      if (IsVectorized && I.getType()->isVectorTy()) {
+        UP.UnrollSkipReason = "AArch64: loop already vectorized";
         return;
+      }
       if (isa<CallBase>(I)) {
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
           if (const Function *F = cast<CallBase>(I).getCalledFunction())
             if (!isLoweredToCall(F))
               continue;
+        UP.UnrollSkipReason = "AArch64: loop contains a call";
         return;
       }
 
@@ -5496,6 +5534,7 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // If this is a small, multi-exit loop similar to something like std::find,
   // then there is typically a performance improvement achieved by unrolling.
   if (!L->getExitBlock() && shouldUnrollMultiExitLoop(L, SE, *this)) {
+    UP.UnrollSkipReason.clear();
     UP.RuntimeUnrollMultiExit = true;
     UP.Runtime = true;
     // Limit unroll count.
@@ -5512,6 +5551,7 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // unchanged
   if (ST->getProcFamily() != AArch64Subtarget::Generic &&
       !ST->getSchedModel().isOutOfOrder()) {
+    UP.UnrollSkipReason.clear();
     UP.Runtime = true;
     UP.Partial = true;
     UP.UnrollRemainder = true;
@@ -5523,8 +5563,13 @@ void AArch64TTIImpl::getUnrollingPreferences(
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
-  if (Cost < Aarch64ForceUnrollThreshold)
+  if (Cost < Aarch64ForceUnrollThreshold) {
+    UP.UnrollSkipReason.clear();
     UP.Force = true;
+  } else if (UP.UnrollSkipReason.empty()) {
+    UP.UnrollSkipReason =
+        "AArch64: no target-specific unrolling strategy matched";
+  }
 }
 
 void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
