@@ -60,6 +60,8 @@ def DestructiveUnaryPassthru      : DestructiveInstTypeEnum<10>;
 // from the governing predicate.
 def DestructivePredicate          : DestructiveInstTypeEnum<11>;
 
+def DestructiveBinaryImmUnpred    : DestructiveInstTypeEnum<12>;
+
 class FalseLanesEnum<bits<2> val> {
   bits<2> Value = val;
 }

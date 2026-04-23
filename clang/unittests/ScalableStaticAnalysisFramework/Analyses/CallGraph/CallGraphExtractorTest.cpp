@@ -123,8 +123,8 @@ template <typename... Matchers> auto hasSummaryThat(const Matchers &...Ms) {
 static const SummaryName CallGraphName{CallGraphSummary::Name.str()};
 
 struct CallGraphExtractorTest : ssaf::TestFixture {
-  TUSummary Summary =
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
+  TUSummary Summary{
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
   TUSummaryBuilder Builder = TUSummaryBuilder(Summary);
 
   /// Creates the AST and extractor, then extracts the summaries from the AST.

@@ -738,8 +738,10 @@ add_header_macro(
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
     .llvm-libc-types.struct_iovec
+    .llvm-libc-types.struct_linger
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
+    .llvm-libc-types.struct_sockaddr_storage
 )
 
 add_header_macro(
@@ -887,6 +889,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.wint_t
+    .llvm-libc-types.wctype_t
 )
 
 add_header_macro(

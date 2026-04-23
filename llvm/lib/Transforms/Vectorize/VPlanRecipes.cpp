@@ -74,7 +74,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPActiveLaneMaskPHISC:
-  case VPCanonicalIVPHISC:
   case VPCurrentIterationPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
@@ -126,7 +125,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
                 ->onlyWritesMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
-  case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPCurrentIterationPHISC:
@@ -4508,16 +4506,6 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                                            0);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPCanonicalIVPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
-                                         VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
-  printAsOperand(O, SlotTracker);
-  O << " = CANONICAL-INDUCTION ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return vputils::onlyScalarValuesUsed(this) &&
          (!IsScalable || vputils::onlyFirstLaneUsed(this));
@@ -4667,6 +4655,11 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     O << " (VF scaled by 1/" << getVFScaleFactor() << ")";
 }
 #endif
+
+bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  return vputils::onlyFirstLaneUsed(this);
+}
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   Value *Op0 = State.get(getOperand(0));
