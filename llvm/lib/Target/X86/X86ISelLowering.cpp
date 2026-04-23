@@ -62142,7 +62142,7 @@ static SDValue combineAndOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
                                                 SelectionDAG &DAG, EVT VT) {
   using namespace SDPatternMatch;
 
-  SDValue X, Y, SplatOp;
+  SDValue X, Y, AndOp, SplatOp;
   APInt Imm, SplatVal, ConstUndef;
   SmallVector<APInt> ConstEltBits;
 
@@ -62154,20 +62154,20 @@ static SDValue combineAndOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
       sd_match(AndOp, m_And(m_Value(X), m_Value(SplatOp))) &&
       getTargetConstantBitsFromNode(Y, Y.getScalarValueSizeInBits(), ConstUndef,
                                     ConstEltBits, /*AllowWholeUndefs=*/false)) {
-    bool splatIsConst =
+    bool SplatIsConst =
         X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false);
 
     // Can still shorten the chain when constant folded with the matrix
-    if (!AndOp->hasOneUse() && !splatIsConst)
+    if (!AndOp->hasOneUse() && !SplatIsConst)
       return SDValue();
 
-    if (!(splatIsConst || DAG.isSplatValue(SplatOp, /*AllowUndefs=*/false)) ||
+    if (!(SplatIsConst || DAG.isSplatValue(SplatOp, /*AllowUndefs=*/false)) ||
         SplatOp.getScalarValueSizeInBits() != 8)
       return SDValue();
 
     // ANDs with constants are not folded away this far into lowering
     SDValue NewMatrix;
-    if (!splatIsConst) {
+    if (!SplatIsConst) {
       NewMatrix = DAG.getNode(ISD::AND, DL, VT, SplatOp, Y);
     } else {
       SmallVector<SDValue> FoldedAnd;
@@ -62184,8 +62184,7 @@ static SDValue combineAndOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
-static SDValue combineGF2P8AFFINEQB(SDNode *N, SelectionDAG &DAG,
-                                    TargetLowering::DAGCombinerInfo &DCI) {
+static SDValue combineGF2P8AFFINEQB(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   // const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc dl(N);
@@ -62795,7 +62794,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VPMADD52H:    return combineVPMADD52LH(N, DAG, DCI);
   case X86ISD::KSHIFTL:
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
-  case X86ISD::GF2P8AFFINEQB:  return combineGF2P8AFFINEQB(N, DAG, DCI);
+  case X86ISD::GF2P8AFFINEQB:  return combineGF2P8AFFINEQB(N, DAG);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND:      return combineFP_EXTEND(N, DAG, DCI, Subtarget);
