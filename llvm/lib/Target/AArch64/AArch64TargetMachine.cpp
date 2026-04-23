@@ -229,6 +229,12 @@ static cl::opt<bool> EnableSRLTSubregToRegMitigation(
              "super-regs when using Subreg Liveness Tracking"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableSVETblOpt(
+    "aarch64-sve-tbl-opt",
+    cl::desc("Enable the use of SVE tbls instructions to replace other kinds"
+             "shuffles, particularly combining them into one operation."),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
   // Register the target.
@@ -677,6 +683,9 @@ void AArch64PassConfig::addIRPasses() {
 
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
+
+  if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSVETblOpt)
+    addPass(createSVEShuffleOptsPass());
 
   // Match complex arithmetic patterns
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
