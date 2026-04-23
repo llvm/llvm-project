@@ -174,9 +174,9 @@ private:
       // increase the sequence number
       shared_futex.fetch_add(1);
       if (is_broadcast)
-        shared_futex.notify_all();
+        shared_futex.notify_all(/*is_shared=*/true);
       else
-        shared_futex.notify_one();
+        shared_futex.notify_one(/*is_shared=*/true);
       return;
     }
 
