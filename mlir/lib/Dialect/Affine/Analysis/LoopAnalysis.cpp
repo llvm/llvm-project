@@ -557,6 +557,7 @@ bool mlir::affine::isTilingValid(ArrayRef<AffineForOp> loops) {
                               OpPrintingFlags().skipRegions());
         for (const DependenceComponent &depComp : depComps) {
           if (depComp.lb.has_value() && depComp.ub.has_value() &&
+              *depComp.lb <= *depComp.ub &&
               *depComp.ub < 0) {
             LDBG() << "Dependence component lb = " << Twine(*depComp.lb)
                    << " ub = " << Twine(*depComp.ub)
