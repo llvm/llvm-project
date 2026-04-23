@@ -2310,10 +2310,16 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   SmallVector<Value *> Args(I.operands());
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
+  // Per SPIR-V spec atomic ops must combine the ordering bits with the
+  // storage-class bit.
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
   Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering()))));
+      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())) | ScSem));
   Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering()))));
+      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())) | ScSem));
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_cmpxchg,
                                  {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
