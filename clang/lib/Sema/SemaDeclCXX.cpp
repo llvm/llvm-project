@@ -18495,6 +18495,11 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       Diag(Loc, diag::err_introducing_special_friend) << DiagArg;
       return nullptr;
     }
+  } else {
+    CXXRecordDecl *RC = dyn_cast<CXXRecordDecl>(DC);
+    if (RC->isLambda()) {
+      Diag(NameInfo.getBeginLoc(), diag::err_friend_lambda_decl);
+    }
   }
 
   // FIXME: This is an egregious hack to cope with cases where the scope stack
@@ -19269,7 +19274,10 @@ bool Sema::DefineUsedVTables() {
     // no key function or the key function is inlined. Don't warn in C++ ABIs
     // that lack key functions, since the user won't be able to make one.
     if (Context.getTargetInfo().getCXXABI().hasKeyFunctions() &&
-        Class->isExternallyVisible() && ClassTSK != TSK_ImplicitInstantiation &&
+        Class->isExternallyVisible() &&
+        !(Class->getOwningModule() &&
+          Class->getOwningModule()->isInterfaceOrPartition()) &&
+        ClassTSK != TSK_ImplicitInstantiation &&
         ClassTSK != TSK_ExplicitInstantiationDefinition) {
       const FunctionDecl *KeyFunctionDef = nullptr;
       if (!KeyFunction || (KeyFunction->hasBody(KeyFunctionDef) &&

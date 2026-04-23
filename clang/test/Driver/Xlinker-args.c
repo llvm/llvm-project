@@ -6,11 +6,7 @@
 // RUN:   -Wl,two,--no-demangle,three -Xlinker four -z five -r %s 2> %t
 // RUN: FileCheck -check-prefix=DARWIN < %t %s
 
-/// -T is reordered to the last to make sure -L takes precedence.
-// RUN: %clang -target x86_64-pc-linux-gnu -### \
-// RUN:   -e _start -T a.lds -t -Xlinker one -Xlinker --no-demangle \
-// RUN:   -Wl,two,--no-demangle,three -Xlinker four -z five -r %s 2> %t
-// RUN: FileCheck -check-prefix=LINUX < %t %s
+/// Linux/GNU forwarding lives in linux-ld-args.c.
 
 /// Check that --no-demangle gets forwarded to the mingw linker
 // RUN: %clang -target x86_64-w64-mingw32 -### \
@@ -23,7 +19,6 @@
 
 // DARWIN-NOT: --no-demangle
 // DARWIN: "one" "two" "three" "four" "-z" "five" "-r"
-// LINUX: "--no-demangle" "-e" "_start" "one" "two" "three" "four" "-z" "five" "-r" {{.*}} "-T" "a.lds" "-t"
 // MINGW: "--no-demangle"
 // AIX: "-b" "one" "-b" "two"
 
