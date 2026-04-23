@@ -125,8 +125,8 @@ static void pushInteger(InterpState &S, T Val, QualType QT) {
                 QT);
 }
 
-static void assignInteger(InterpState &S, const Pointer &Dest, PrimType ValueT,
-                          const APSInt &Value) {
+static void assignIntegral(InterpState &S, const Pointer &Dest, PrimType ValueT,
+                           const APSInt &Value) {
 
   if (ValueT == PT_IntAPS) {
     Dest.deref<IntegralAP<true>>() =
@@ -136,6 +136,8 @@ static void assignInteger(InterpState &S, const Pointer &Dest, PrimType ValueT,
     Dest.deref<IntegralAP<false>>() =
         S.allocAP<IntegralAP<false>>(Value.getBitWidth());
     Dest.deref<IntegralAP<false>>().copy(Value);
+  } else if (ValueT == PT_Bool) {
+    Dest.deref<Boolean>() = Boolean::from(!Value.isZero());
   } else {
     INT_TYPE_SWITCH_NO_BOOL(
         ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
@@ -850,7 +852,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
                      ResultType->isSignedIntegerOrEnumerationType();
     uint64_t LHSSize = LHS.getBitWidth();
     uint64_t RHSSize = RHS.getBitWidth();
-    uint64_t ResultSize = S.getASTContext().getTypeSize(ResultType);
+    uint64_t ResultSize = S.getASTContext().getIntWidth(ResultType);
     uint64_t MaxBits = std::max(std::max(LHSSize, RHSSize), ResultSize);
 
     // Add an additional bit if the signedness isn't uniformly agreed to. We
@@ -909,8 +911,9 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
     // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
     // since it will give us the behavior of a TruncOrSelf in the case where
     // its parameter <= its size.  We previously set Result to be at least the
-    // type-size of the result, so getTypeSize(ResultType) <= Resu
-    APSInt Temp = Result.extOrTrunc(S.getASTContext().getTypeSize(ResultType));
+    // integer width of the result, so getIntWidth(ResultType) <=
+    // Result.BitWidth
+    APSInt Temp = Result.extOrTrunc(S.getASTContext().getIntWidth(ResultType));
     Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
 
     if (!APSInt::isSameValue(Temp, Result))
@@ -919,7 +922,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
   }
 
   // Write Result to ResultPtr and put Overflow on the stack.
-  assignInteger(S, ResultPtr, ResultT, Result);
+  assignIntegral(S, ResultPtr, ResultT, Result);
   if (ResultPtr.canBeInitialized())
     ResultPtr.initialize();
 
@@ -977,7 +980,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
 
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
-  assignInteger(S, CarryOutPtr, CarryOutT, CarryOut);
+  assignIntegral(S, CarryOutPtr, CarryOutT, CarryOut);
   CarryOutPtr.initialize();
 
   assert(Call->getType() == Call->getArg(0)->getType());
@@ -1371,7 +1374,7 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
 
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
-  assignInteger(S, CarryOutPtr, CarryOutT, APSInt(std::move(Result), true));
+  assignIntegral(S, CarryOutPtr, CarryOutT, APSInt(std::move(Result), true));
 
   pushInteger(S, CarryOut, Call->getType());
 
@@ -2694,10 +2697,10 @@ interp__builtin_x86_pack(InterpState &S, CodePtr, const CallExpr *E,
         APSInt A = LHS.elem<T>(BaseSrc + I).toAPSInt();
         APSInt B = RHS.elem<T>(BaseSrc + I).toAPSInt();
 
-        assignInteger(S, Dst.atIndex(BaseDst + I), DstT,
-                      APSInt(PackFn(A), IsUnsigend));
-        assignInteger(S, Dst.atIndex(BaseDst + SrcPerLane + I), DstT,
-                      APSInt(PackFn(B), IsUnsigend));
+        assignIntegral(S, Dst.atIndex(BaseDst + I), DstT,
+                       APSInt(PackFn(A), IsUnsigend));
+        assignIntegral(S, Dst.atIndex(BaseDst + SrcPerLane + I), DstT,
+                       APSInt(PackFn(B), IsUnsigend));
       });
     }
   }
