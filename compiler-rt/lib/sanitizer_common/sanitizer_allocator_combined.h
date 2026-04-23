@@ -160,6 +160,21 @@ class CombinedAllocator {
     return nullptr;
   }
 
+  // Same as GetMetaData, but must be called with the allocator locked
+  // (via ForceLock). Uses GetBlockBeginFastLocked for secondary/device checks
+  // to avoid re-acquiring the mutex already held by the caller.
+  void* GetMetaDataFastLocked(const void* p) {
+    if (primary_.PointerIsMine(p))
+      return primary_.GetMetaData(p);
+    if (secondary_.GetBlockBeginFastLocked(p))
+      return secondary_.GetMetaData(p);
+#if SANITIZER_AMDGPU
+    if (device_.GetBlockBeginFastLocked(p))
+      return device_.GetMetaData(p);
+#endif
+    return nullptr;
+  }
+
   void *GetBlockBegin(const void *p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetBlockBegin(p);

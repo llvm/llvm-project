@@ -60,6 +60,12 @@ static ChunkMetadata *Metadata(const void *p) {
   return reinterpret_cast<ChunkMetadata *>(allocator.GetMetaData(p));
 }
 
+// Same as Metadata, but must be called with the allocator locked (via
+// ForceLock). Avoids re-acquiring the secondary allocator mutex.
+static ChunkMetadata* MetadataFastLocked(const void* p) {
+  return reinterpret_cast<ChunkMetadata*>(allocator.GetMetaDataFastLocked(p));
+}
+
 static void RegisterAllocation(const StackTrace &stack, void *p, uptr size) {
   if (!p) return;
   ChunkMetadata *m = Metadata(p);
@@ -287,7 +293,7 @@ uptr PointsIntoChunk(void* p) {
   // LargeMmapAllocator considers pointers to the meta-region of a chunk to be
   // valid, but we don't want that.
   if (addr < chunk) return 0;
-  ChunkMetadata *m = Metadata(reinterpret_cast<void *>(chunk));
+  ChunkMetadata* m = MetadataFastLocked(reinterpret_cast<void*>(chunk));
   CHECK(m);
   if (!m->allocated)
     return 0;
@@ -307,7 +313,7 @@ uptr GetUserAddr(uptr chunk) {
 }
 
 LsanMetadata::LsanMetadata(uptr chunk) {
-  metadata_ = Metadata(reinterpret_cast<void *>(chunk));
+  metadata_ = MetadataFastLocked(reinterpret_cast<void*>(chunk));
   CHECK(metadata_);
 }
 
