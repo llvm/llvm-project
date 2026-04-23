@@ -91,6 +91,64 @@ constexpr bool test() {
     int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     test_operator_decrement(arr, arr + 11, 3);
   }
+  {
+    // Decrement from end when size % stride != 0.
+    // 10 elements, stride 3: strided elements at indices 0,3,6,9.
+    int arr[]  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    using Base = BasicTestView<int*, int*>;
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 10), 3);
+    auto it    = sv.end();
+    --it;
+    assert(*it == 10); // index 9
+    --it;
+    assert(*it == 7); // index 6
+    --it;
+    assert(*it == 4); // index 3
+    --it;
+    assert(*it == 1); // index 0
+    assert(it == sv.begin());
+  }
+  {
+    // Decrement when stride evenly divides range size.
+    // 9 elements, stride 3: strided elements at 0,3,6.
+    int arr[]  = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    using Base = BasicTestView<int*, int*>;
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 9), 3);
+    auto it    = sv.end();
+    --it;
+    assert(*it == 7); // index 6
+    --it;
+    assert(*it == 4); // index 3
+    --it;
+    assert(*it == 1); // index 0
+  }
+  {
+    // Decrement from mid-range position (not end).
+    int arr[]  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    using Base = BasicTestView<int*, int*>;
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 10), 3);
+    auto it    = sv.begin();
+    ++it; // index 3
+    ++it; // index 6
+    assert(*it == 7);
+    --it; // back to index 3
+    assert(*it == 4);
+    --it; // back to index 0
+    assert(*it == 1);
+  }
+  {
+    // Round-trip: decrement from end, increment, decrement again.
+    int arr[]  = {1, 2, 3, 4, 5, 6, 7};
+    using Base = BasicTestView<int*, int*>;
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 7), 3);
+    auto it    = sv.end();
+    --it;
+    assert(*it == 7); // index 6
+    ++it;
+    assert(it == sv.end());
+    --it;
+    assert(*it == 7); // back to index 6 again
+  }
   return true;
 }
 

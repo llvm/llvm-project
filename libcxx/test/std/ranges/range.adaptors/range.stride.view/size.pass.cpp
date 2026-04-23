@@ -46,6 +46,26 @@ constexpr bool test() {
     static_assert(std::ranges::sized_range<decltype(strided)>);
     assert(strided.size() == 8);
   }
+  {
+    // Empty range.
+    auto strided = std::views::iota(0, 0) | std::views::stride(3);
+    assert(strided.size() == 0);
+  }
+  {
+    // Stride larger than range size.
+    auto strided = std::views::iota(0, 3) | std::views::stride(10);
+    assert(strided.size() == 1);
+  }
+  {
+    // Stride equal to range size.
+    auto strided = std::views::iota(0, 5) | std::views::stride(5);
+    assert(strided.size() == 1);
+  }
+  {
+    // Stride of 1.
+    auto strided = std::views::iota(0, 7) | std::views::stride(1);
+    assert(strided.size() == 7);
+  }
   return true;
 }
 

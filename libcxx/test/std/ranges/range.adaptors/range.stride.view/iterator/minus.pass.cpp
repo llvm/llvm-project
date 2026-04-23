@@ -140,27 +140,6 @@ constexpr bool test_forward_minus(Iter begin, Iter end) {
   return true;
 }
 
-constexpr bool test_difference_minus() {
-  // operator-(iterator, difference_type) -- only for random access ranges.
-  int arr[]  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  using Base = BasicTestView<int*, int*>;
-
-  auto base = Base(arr, arr + 10);
-  auto sv   = std::ranges::stride_view(base, 3);
-
-  auto it = sv.begin();
-  ++it;
-  ++it;
-  ++it; // at index 9
-
-  auto it2 = it - 2; // back to index 3
-  assert(*it2 == 4);
-  auto it3 = it - 3; // back to index 0
-  assert(*it3 == 1);
-
-  return true;
-}
-
 constexpr bool test() {
   {
     int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
@@ -169,10 +148,40 @@ constexpr bool test() {
     std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     test_forward_minus(vec.begin(), vec.end());
   }
-  test_difference_minus();
+  {
+    // operator-(iterator, difference_type) -- only for random access ranges.
+    int arr[]  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    using Base = BasicTestView<int*, int*>;
+
+    auto base = Base(arr, arr + 10);
+    auto sv   = std::ranges::stride_view(base, 3);
+
+    auto it = sv.begin();
+    ++it;
+    ++it;
+    ++it; // at index 9
+
+    auto it2 = it - 2; // back to index 3
+    assert(*it2 == 4);
+    auto it3 = it - 3; // back to index 0
+    assert(*it3 == 1);
+  }
   {
     int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     test_non_forward_minus(SizedInputIter(arr), SizedInputIter(arr + 1), SizedInputIter(arr + 10));
+  }
+  {
+    // Test end - begin on the same view where size % stride != 0.
+    // 10 elements, stride 3: strided elements at 0,3,6,9.
+    int arr[]  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    using Base = BasicTestView<int*, int*>;
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 10), 3);
+    auto b     = sv.begin();
+    auto e     = sv.end();
+    assert(e - b == 4);
+    assert(b - e == -4);
+    assert(b - b == 0);
+    assert(e - e == 0);
   }
   return true;
 }

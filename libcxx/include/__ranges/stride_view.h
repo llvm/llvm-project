@@ -149,7 +149,7 @@ struct __stride_iterator_category<_View> {
 template <input_range _View>
   requires view<_View>
 template <bool _Const>
-class stride_view<_View>::__iterator : public __stride_iterator_category<_View> {
+class stride_view<_View>::__iterator : public __stride_iterator_category<__maybe_const<_Const, _View>> {
   using _Parent _LIBCPP_NODEBUG = __maybe_const<_Const, stride_view<_View>>;
   using _Base _LIBCPP_NODEBUG   = __maybe_const<_Const, _View>;
 

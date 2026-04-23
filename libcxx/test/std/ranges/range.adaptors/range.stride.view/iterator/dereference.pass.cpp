@@ -75,6 +75,22 @@ constexpr bool test() {
     ++it;
     assert(*it == 20);
   }
+  {
+    // Return type is a reference, not a value.
+    int arr[]  = {1, 2, 3};
+    using Base = BasicTestView<int*, int*>;
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 3), 1);
+    auto it    = sv.begin();
+    static_assert(std::is_same_v<decltype(*it), int&>);
+  }
+  {
+    // Dereference through a const-qualified iterator.
+    int arr[]      = {10, 20, 30};
+    using Base     = BasicTestView<int*, int*>;
+    auto sv        = std::ranges::stride_view(Base(arr, arr + 3), 2);
+    const auto cit = sv.begin();
+    assert(*cit == 10);
+  }
   return true;
 }
 

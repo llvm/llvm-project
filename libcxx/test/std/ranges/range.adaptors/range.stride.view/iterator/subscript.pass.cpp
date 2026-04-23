@@ -89,6 +89,14 @@ constexpr bool test() {
     assert(it[2] == 10);
     assert(it[-1] == 1);
   }
+  {
+    // Verify return type is a reference.
+    int arr[]  = {1, 2, 3};
+    using Base = BasicTestView<int*, int*>;
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 3), 1);
+    auto it    = sv.begin();
+    static_assert(std::is_same_v<decltype(it[0]), int&>);
+  }
   return true;
 }
 

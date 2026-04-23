@@ -98,6 +98,13 @@ constexpr bool test() {
     ++it;
     assert(*it == 300);
   }
+  {
+    // Empty range: begin() == end().
+    int data[] = {1};
+    auto v     = BasicTestView<int*, int*>{data, data};
+    auto sv    = std::ranges::stride_view(v, 3);
+    assert(sv.begin() == sv.end());
+  }
   return true;
 }
 

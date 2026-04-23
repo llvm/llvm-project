@@ -42,3 +42,7 @@ static_assert(std::ranges::range<test_view<cpp17_input_iterator>>);
 static_assert(std::ranges::input_range<test_view<cpp17_input_iterator>>);
 static_assert(std::ranges::view<test_view<cpp17_input_iterator>>);
 static_assert(CanStrideView<test_view<cpp17_input_iterator>, 1>);
+
+// stride_view itself models view.
+static_assert(std::ranges::view<std::ranges::stride_view<test_view<cpp17_input_iterator>>>);
+static_assert(std::ranges::view<std::ranges::stride_view<test_view<forward_iterator>>>);

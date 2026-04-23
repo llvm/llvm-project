@@ -90,6 +90,16 @@ constexpr bool test() {
     assert(result == 5);
   }
 
+  {
+    // Verify return type is a rvalue-reference.
+    int a[]    = {1, 2, 3};
+    using Base = BasicTestView<int*, int*>;
+    auto sv    = std::ranges::stride_view(Base(a, a + 3), 1);
+    auto it    = sv.begin();
+    static_assert(std::is_same_v<decltype(std::ranges::iter_move(it)), int&&>);
+    assert(std::ranges::iter_move(it) == 1);
+  }
+
   return true;
 }
 

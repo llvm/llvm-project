@@ -63,35 +63,68 @@ constexpr bool test() {
 
   auto begin    = vec.begin();
   auto end      = vec.end();
-  Diff distance = 4;
 
   using Base = RandomAccessView<Iter>;
   static_assert(std::ranges::random_access_range<Base>);
+  auto base = Base(begin, end);
 
   // += with stride 1: advancing by distance matches starting at begin + distance.
-  auto base = Base(begin, end);
-  auto sv   = std::ranges::stride_view(base, 1);
+  {
+    auto sv      = std::ranges::stride_view(base, 1);
+    auto it      = sv.begin();
+    auto& result = (it += 4);
+    assert(&result == &it);
 
-  auto base_offset = Base(begin + distance, end);
-  auto sv_offset   = std::ranges::stride_view(base_offset, 1);
-
-  auto it        = sv.begin();
-  auto it_offset = sv_offset.begin();
-
-  auto it_after = it += distance;
-  assert(*it == *it_offset);
-  assert(*it_after == *it_offset);
+    auto it2 = std::ranges::stride_view(Base(begin + 4, end), 1).begin();
+    assert(*it == *it2);
+  }
 
   // += past the end, then -= back: the remainder is handled correctly.
-  auto big_step    = (end - 1) - begin;
-  auto sv_big_step = std::ranges::stride_view(base, big_step);
-  it               = sv_big_step.begin();
+  {
+    auto sv = std::ranges::stride_view(base, (end - begin) - 1);
+    auto it = sv.begin();
 
-  // This += should move us into a position where the stride doesn't evenly divide the range.
-  // Do a -= 1 here to confirm that the remainder is taken into account.
-  it += 2;
-  it -= 1;
-  assert(*it == *(sv.begin() + big_step));
+    // This += should move us into a position where the stride doesn't evenly divide the range.
+    // Do a -= 1 here to confirm that the remainder is taken into account.
+    it += 2;
+    it -= 1;
+    assert(*it == *(sv.begin() + 1));
+  }
+
+  // += 0 is a no-op.
+  {
+    auto sv = std::ranges::stride_view(base, 3);
+    auto it = sv.begin();
+    it += 1; // at index 3
+    assert(*it == *(begin + 3));
+    it += 0;
+    assert(*it == *(begin + 3));
+  }
+
+  // += with negative n.
+  {
+    auto sv = std::ranges::stride_view(base, 3);
+    auto it = sv.begin();
+    it += 3; // at index 9
+    assert(*it == *(begin + 9));
+    it += -2; // back to index 3
+    assert(*it == *(begin + 3));
+    it += -1; // back to index 0
+    assert(*it == *begin);
+  }
+
+  // += negative from end.
+  {
+    int arr[]        = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    using CommonBase = BasicTestView<int*, int*>;
+    auto sv          = std::ranges::stride_view(CommonBase(arr, arr + 11), 3);
+    auto it          = sv.end();
+    it += -1; // last strided element (index 9)
+    assert(*it == 10);
+    it += -3; // back to begin (index 0)
+    assert(*it == 1);
+  }
+
   return true;
 }
 

@@ -161,11 +161,8 @@ constexpr bool test() {
     assert(it == sv.end());
   }
   {
-    // Regression test: end() const should use common_range<const _View>, not common_range<_View>.
-    // CommonForwardOnlyWhenConst is common + forward-only when const, but NOT common when non-const.
-    // With the bug, end() const would incorrectly check common_range<_View> (false), skip the second
-    // branch, and return default_sentinel. With the fix, it checks common_range<const _View> (true)
-    // and returns an iterator.
+    // end() const should use common_range<const _View>, not common_range<_View>. CommonForwardOnlyWhenConst is
+    // common + forward-only when const, but NOT common when non-const.
     int data[]      = {1, 2, 3, 4, 5};
     auto v          = CommonForwardOnlyWhenConst(data, 5);
     auto sv         = std::ranges::stride_view(std::move(v), 2);
@@ -183,6 +180,37 @@ constexpr bool test() {
     assert(*it == 5);
     ++it;
     assert(it == csv.end());
+  }
+  {
+    // Test the `common_range && forward_range && !sized_range && !bidirectional_range` branch.
+    // forward_iterator<int*> does not support operator-, so the view is not sized.
+    // end() should return an iterator (not default_sentinel).
+    int data[]    = {1, 2, 3, 4, 5};
+    using FwdView = BasicTestView<forward_iterator<int*>, forward_iterator<int*>>;
+    static_assert(std::ranges::common_range<FwdView>);
+    static_assert(std::ranges::forward_range<FwdView>);
+    static_assert(!std::ranges::bidirectional_range<FwdView>);
+    static_assert(!std::ranges::sized_range<FwdView>);
+
+    auto v  = FwdView{forward_iterator(data), forward_iterator(data + 5)};
+    auto sv = std::ranges::stride_view(v, 2);
+    static_assert(!std::is_same_v<std::default_sentinel_t, decltype(sv.end())>);
+
+    auto it = sv.begin();
+    assert(*it == 1);
+    ++it;
+    assert(*it == 3);
+    ++it;
+    assert(*it == 5);
+    ++it;
+    assert(it == sv.end());
+  }
+  {
+    // Empty range: begin() == end().
+    int data[] = {1};
+    using Base = BasicTestView<int*, int*>;
+    auto sv    = std::ranges::stride_view(Base(data, data), 3);
+    assert(sv.begin() == sv.end());
   }
   return true;
 }
