@@ -1042,7 +1042,8 @@ SBStructuredData SBProcess::GetExtendedCrashInformation() {
       platform_sp->FetchExtendedCrashInformation(*process_sp.get());
 
   if (!expected_data) {
-    llvm::consumeError(expected_data.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), expected_data.takeError(),
+                   "FetchExtendedCrashInformation failed: {0}");
     return data;
   }
 

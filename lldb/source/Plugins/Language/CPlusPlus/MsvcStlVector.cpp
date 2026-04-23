@@ -250,7 +250,9 @@ lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::Update() {
   llvm::Expected<uint64_t> element_bit_size_or_err =
       begin_ty.GetBitSize(nullptr);
   if (!element_bit_size_or_err) {
-    llvm::consumeError(element_bit_size_or_err.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   element_bit_size_or_err.takeError(),
+                   "failed to get vector<bool> element bit size: {0}");
     return lldb::ChildCacheState::eRefetch;
   }
 

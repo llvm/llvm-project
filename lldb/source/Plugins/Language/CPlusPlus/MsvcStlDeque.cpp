@@ -10,6 +10,7 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
@@ -143,7 +144,9 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
   }
   auto element_size_or_err = element_type.GetByteSize(nullptr);
   if (!element_size_or_err) {
-    llvm::consumeError(element_size_or_err.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   element_size_or_err.takeError(),
+                   "failed to get deque element byte size: {0}");
     return lldb::eRefetch;
   }
 

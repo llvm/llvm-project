@@ -212,7 +212,9 @@ Status ProcessMinidump::DoLoadCore() {
     // If we can't read an exception stream skip it
     // We should probably serve a warning
     if (!exception_stream_or_err) {
-      llvm::consumeError(exception_stream_or_err.takeError());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Process),
+                     exception_stream_or_err.takeError(),
+                     "failed to read exception stream: {0}");
       continue;
     }
     const llvm::minidump::ExceptionStream &exception_stream =

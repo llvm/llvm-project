@@ -1498,7 +1498,8 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
       llvm::Expected<uint32_t> file_index_or_err =
           GetFileIndex(*cii, group.NameIndex);
       if (!file_index_or_err) {
-        llvm::consumeError(file_index_or_err.takeError());
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), file_index_or_err.takeError(),
+                       "failed to get file index for line entry: {0}");
         continue;
       }
       uint32_t file_index = file_index_or_err.get();
@@ -1704,7 +1705,8 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   llvm::Expected<uint32_t> file_index_or_err =
       GetFileIndex(*cii, inlinee_line.Header->FileID);
   if (!file_index_or_err) {
-    llvm::consumeError(file_index_or_err.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), file_index_or_err.takeError(),
+                   "failed to get file index for inline site: {0}");
     return;
   }
   uint32_t file_offset = file_index_or_err.get();
@@ -1942,7 +1944,8 @@ void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter,
                                        bool show_color) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err) {
-    llvm::consumeError(ts_or_err.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), ts_or_err.takeError(),
+                   "failed to get C++ type system: {0}");
     return;
   }
   auto ts = *ts_or_err;

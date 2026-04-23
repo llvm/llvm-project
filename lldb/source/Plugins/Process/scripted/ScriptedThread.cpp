@@ -258,11 +258,12 @@ bool ScriptedThread::LoadArtificialStackFrames() {
       auto frame_from_script_obj_or_err = create_frame_from_script_object(idx);
 
       if (!frame_from_script_obj_or_err) {
-        llvm::consumeError(frame_from_script_obj_or_err.takeError());
         return ScriptedInterface::ErrorWithMessage<bool>(
             LLVM_PRETTY_FUNCTION,
-            llvm::Twine("Couldn't add artificial frame (" + llvm::Twine(idx) +
-                        llvm::Twine(") to ScriptedThread StackFrameList."))
+            llvm::Twine(
+                "Couldn't add artificial frame (" + llvm::Twine(idx) +
+                llvm::Twine(") to ScriptedThread StackFrameList: ") +
+                llvm::toString(frame_from_script_obj_or_err.takeError()))
                 .str(),
             error, LLDBLog::Thread);
       } else {

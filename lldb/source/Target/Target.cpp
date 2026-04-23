@@ -4204,7 +4204,8 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   output_sp->PutCString(
       reinterpret_cast<StreamString *>(stream.get())->GetData());
   if (!should_stop_or_err) {
-    llvm::consumeError(should_stop_or_err.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), should_stop_or_err.takeError(),
+                   "scripted stop hook HandleStop failed: {0}");
     return StopHookResult::KeepStopped;
   }
 

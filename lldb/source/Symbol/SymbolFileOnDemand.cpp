@@ -519,7 +519,8 @@ SymbolFileOnDemand::GetParameterStackSize(const Symbol &symbol) {
         LLDB_LOG(log, "{0} stack size would return for symbol {1} if hydrated.",
                  *stack_size, symbol.GetName());
       else
-        llvm::consumeError(stack_size.takeError());
+        LLDB_LOG_ERROR(log, stack_size.takeError(),
+                       "failed to get parameter stack size: {0}");
     }
     return SymbolFile::GetParameterStackSize(symbol);
   }

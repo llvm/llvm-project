@@ -17,6 +17,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
@@ -508,7 +509,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
       else
-        llvm::consumeError(json_transcript.takeError());
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Target), json_transcript.takeError(),
+                       "failed to parse transcript JSON: {0}");
     }
   }
 

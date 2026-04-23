@@ -1188,16 +1188,12 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   CompilerType val_type = GetCompilerType();
   if (val_type.IsInteger() || val_type.IsUnscopedEnumerationType() ||
       val_type.IsPointerType()) {
-    auto value_or_err = GetValueAsAPSInt();
-    if (value_or_err)
-      return value_or_err->getBoolValue();
-    llvm::consumeError(value_or_err.takeError());
+    if (auto maybe_value = llvm::expectedToOptional(GetValueAsAPSInt()))
+      return maybe_value->getBoolValue();
   }
   if (HasFloatingRepresentation(val_type)) {
-    auto value_or_err = GetValueAsAPFloat();
-    if (value_or_err)
-      return value_or_err->isNonZero();
-    llvm::consumeError(value_or_err.takeError());
+    if (auto maybe_value = llvm::expectedToOptional(GetValueAsAPFloat()))
+      return maybe_value->isNonZero();
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
@@ -1277,19 +1273,15 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
     auto value_or_err = new_val_sp->GetValueAsAPSInt();
     if (value_or_err)
       SetValueFromInteger(*value_or_err, error, can_update_var);
-    else {
-      llvm::consumeError(value_or_err.takeError());
-      error = Status::FromErrorString("error getting APSInt from new_val_sp");
-    }
+    else
+      error = Status::FromError(value_or_err.takeError());
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
       SetValueFromInteger(value_or_err->bitcastToAPInt(), error,
                           can_update_var);
-    else {
-      llvm::consumeError(value_or_err.takeError());
-      error = Status::FromErrorString("error getting APFloat from new_val_sp");
-    }
+    else
+      error = Status::FromError(value_or_err.takeError());
   } else if (new_val_type.IsPointerType()) {
     bool success = true;
     uint64_t int_val = new_val_sp->GetValueAsUnsigned(0, &success);

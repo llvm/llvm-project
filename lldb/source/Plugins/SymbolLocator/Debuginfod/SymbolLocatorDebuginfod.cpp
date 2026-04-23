@@ -174,7 +174,8 @@ GetFileForModule(const ModuleSpec &module_spec,
   llvm::Expected<std::string> cache_path_or_err = plugin_props.GetCachePath();
   // A cache location is *required*.
   if (!cache_path_or_err) {
-    llvm::consumeError(cache_path_or_err.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), cache_path_or_err.takeError(),
+                   "debuginfod cache path unavailable: {0}");
     return {};
   }
   std::string cache_path = *cache_path_or_err;
