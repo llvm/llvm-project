@@ -10047,8 +10047,24 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     CurMapType->addIncoming(FromMapType, FromBB);
     CurMapType->addIncoming(MemberMapType, ToElseBB);
 
-    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg, CurBeginArg,
-                               CurSizeArg,   CurMapType, CurNameArg};
+    // We need to propagete the DELETE bit to each map inserted by the mapper.
+    //
+    // OpenMP 6.0:281:34: The effect of the mapper modifier is to remove the
+    // list item from the map clause and to apply the clauses specified in the
+    // declared mapper to the construct on which the map clause appears...
+    // If any modifier with the map-type-modifying property appears in the map
+    // clause then the effect is as if that modifier appears in each map clause
+    // specified in the declared mapper.
+    Value *DeleteBitMask = Builder.CreateAnd(
+        MapType,
+        Builder.getInt64(
+            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                OpenMPOffloadMappingFlags::OMP_MAP_DELETE)));
+    Value *CurMapTypeWithDelete =
+        Builder.CreateOr(CurMapType, DeleteBitMask, "omp.maptype.with.delete");
+
+    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg,           CurBeginArg,
+                               CurSizeArg,   CurMapTypeWithDelete, CurNameArg};
 
     auto ChildMapperFn = CustomMapperCB(I);
     if (!ChildMapperFn)
