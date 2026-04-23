@@ -1043,7 +1043,6 @@ set(files
   functional
   future
   initializer_list
-  inttypes.h
   iomanip
   ios
   iosfwd
