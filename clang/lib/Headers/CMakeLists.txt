@@ -145,6 +145,7 @@ set(riscv_files
 set(spirv_files
   __clang_spirv_builtins.h
   __clang_spirv_libdevice_declares.h
+  __clang_spirv_math.h
   )
 
 set(systemz_files

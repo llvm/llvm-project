@@ -654,6 +654,8 @@ TARGET_BUILTIN(__builtin_altivec_vmulhsd, "V2LLiV2LLiV2LLi", "",
                "power10-vector")
 TARGET_BUILTIN(__builtin_altivec_vmulhud, "V2ULLiV2ULLiV2ULLi", "",
                "power10-vector")
+TARGET_BUILTIN(__builtin_altivec_vmulhsh, "V8SsV8SsV8Ss", "", "future-vector")
+TARGET_BUILTIN(__builtin_altivec_vmulhuh, "V8UsV8UsV8Us", "", "future-vector")
 
 // P10 Vector Expand with Mask built-ins.
 TARGET_BUILTIN(__builtin_altivec_vexpandbm, "V16UcV16Uc", "", "power10-vector")
@@ -1134,6 +1136,30 @@ UNALIASED_CUSTOM_BUILTIN(mma_dmsha2hash, "vW1024*W1024*Ii", true,
 UNALIASED_CUSTOM_BUILTIN(mma_dmsha3hash, "vW2048*Ii", true,
                          "mma,isa-future-instructions")
 UNALIASED_CUSTOM_BUILTIN(mma_dmxxshapad, "vW1024*VIiIiIi", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmsha256hash, mma_dmsha2hash, "vW1024*W1024*", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmsha512hash, mma_dmsha2hash, "vW1024*W1024*", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmsha3dw, mma_dmsha3hash, "vW2048*", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmcryshash, mma_dmsha3hash, "vW2048*", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmxxsha3512pad, mma_dmxxshapad, "vW1024*Vi1", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmxxsha3384pad, mma_dmxxshapad, "vW1024*Vi1", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmxxsha3256pad, mma_dmxxshapad, "vW1024*Vi1", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmxxsha3224pad, mma_dmxxshapad, "vW1024*Vi1", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmxxshake256pad, mma_dmxxshapad, "vW1024*Vi1", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmxxshake128pad, mma_dmxxshapad, "vW1024*Vi1", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmxxsha384512pad, mma_dmxxshapad, "vW1024*V", true,
+                         "mma,isa-future-instructions")
+CUSTOM_BUILTIN(dmxxsha224256pad, mma_dmxxshapad, "vW1024*V", true,
                          "mma,isa-future-instructions")
 
 // MMA builtins with positive/negative multiply/accumulate.

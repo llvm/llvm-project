@@ -156,6 +156,12 @@ def err_ice_explicit_conversion : Error<
   "integral constant expression requires explicit conversion from %0 to %1">;
 def note_ice_conversion_here : Note<
   "conversion to %select{integral|enumeration}0 type %1 declared here">;
+def note_alignment_invalid_type : Note<
+  "floating point types are not allowed here">;
+def note_alignment_invalid_member_pointer : Note<
+  "member pointers are not allowed here">;
+def note_alignment_invalid_function_pointer : Note<
+  "function pointers are not allowed here">;
 def err_ice_ambiguous_conversion : Error<
   "ambiguous conversion from type %0 to an integral or unscoped "
   "enumeration type">;
@@ -9600,14 +9606,6 @@ def err_atomic_builtin_must_be_pointer_intfltptr : Error<
 def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
-def err_arm_atomic_store_with_stshh_bad_type : Error<
-  "address argument to '__arm_atomic_store_with_stshh' must be a pointer to an "
-  "8,16,32, or 64-bit integer type (%0 invalid)">;
-def err_arm_atomic_store_with_stshh_bad_value_type : Error<
-  "value argument to '__arm_atomic_store_with_stshh' must be %0; got %1">;
-def err_arm_atomic_store_with_stshh_bad_order : Error<
-  "memory order argument to '__arm_atomic_store_with_stshh' must be one of "
-  "__ATOMIC_RELAXED, __ATOMIC_RELEASE, or __ATOMIC_SEQ_CST">;
 def err_atomic_exclusive_builtin_pointer_size : Error<
   "address argument to load or store exclusive builtin must be a pointer to "
   // Because the range of legal sizes for load/store exclusive varies with the
@@ -14200,6 +14198,10 @@ def warn_amdgpu_s_wait_event_mask_no_effect_target :
 
 def note_amdgpu_s_wait_event_suggested_value :
   Note<"value of 2 valid for export_ready for gfx11 and gfx12+">;
+
+def warn_amdgpu_num_reg_attr_deprecated : Warning<
+  "the %0 attribute is deprecated; use 'amdgpu_waves_per_eu' instead">,
+  InGroup<DeprecatedDeclarations>;
 
 def warn_comparison_in_enum_initializer : Warning<
   "comparison operator '%0' is potentially a typo for a shift operator '%1'">,

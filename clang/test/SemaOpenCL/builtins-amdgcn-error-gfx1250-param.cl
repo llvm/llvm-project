@@ -21,6 +21,8 @@ typedef unsigned short __attribute__((ext_vector_type(2))) ushort2;
 typedef int    v4i   __attribute__((ext_vector_type(4)));
 typedef int    v8i   __attribute__((ext_vector_type(8)));
 
+typedef unsigned int v4u   __attribute__((ext_vector_type(4)));
+
 void test_setprio_inc_wg(short a) {
   __builtin_amdgcn_s_setprio_inc_wg(a); // expected-error {{'__builtin_amdgcn_s_setprio_inc_wg' must be a constant integer}}
 }
@@ -183,7 +185,7 @@ void test_amdgcn_async_load_store_lds_cpol(global char* gaddr8, global int *gadd
   __builtin_amdgcn_global_store_async_from_lds_b128(gaddr128, laddr128, 16, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b128' must be a constant integer}}
 }
 
-void test_amdgcn_tensor_load_store(v4i sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4, int cpol)
+void test_amdgcn_tensor_load_store(v4u sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4, int cpol)
 {
   __builtin_amdgcn_tensor_load_to_lds(sg0, sg1, sg2, sg3, sg4, cpol); // expected-error {{'__builtin_amdgcn_tensor_load_to_lds' must be a constant integer}}
   __builtin_amdgcn_tensor_store_from_lds(sg0, sg1, sg2, sg3, sg4, cpol); // expected-error {{'__builtin_amdgcn_tensor_store_from_lds' must be a constant integer}}

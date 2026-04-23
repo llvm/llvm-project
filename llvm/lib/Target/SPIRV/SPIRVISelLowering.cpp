@@ -136,8 +136,12 @@ TargetLowering::ConstraintType
 SPIRVTargetLowering::getConstraintType(StringRef Constraint) const {
   // SPIR-V represents inline assembly via OpAsmINTEL where constraints are
   // passed through as literals defined by client API. Return C_RegisterClass
-  // for any constraint since SPIR-V does not distinguish between register,
-  // immediate, or memory operands at this level.
+  // for non-memory constraints since SPIR-V does not distinguish between
+  // register, immediate, or memory operands at this level. We do have to return
+  // C_Memory for memory constraints as otherwise IRTranslator gets confused
+  // trying to allocate registers for them.
+  if (Constraint == "m")
+    return C_Memory;
   return C_RegisterClass;
 }
 
@@ -546,12 +550,13 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
           SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, MIB);
           SPIRVTypeInst RetType = MRI->getVRegDef(MI.getOperand(1).getReg());
           assert(RetType && "Expected return type");
-          validatePtrTypes(STI, MRI, GR, MI, MI.getNumOperands() - 1,
-                           RetType->getOpcode() != SPIRV::OpTypeVector
-                               ? Int32Type
-                               : GR.getOrCreateSPIRVVectorType(
-                                     Int32Type, RetType->getOperand(2).getImm(),
-                                     MIB, false));
+          validatePtrTypes(
+              STI, MRI, GR, MI, MI.getNumOperands() - 1,
+              RetType->getOpcode() != SPIRV::OpTypeVector
+                  ? Int32Type
+                  : GR.getOrCreateSPIRVVectorType(
+                        Int32Type, GR.getScalarOrVectorComponentCount(RetType),
+                        MIB, false));
         } break;
         case SPIRV::OpenCLExtInst::fract:
         case SPIRV::OpenCLExtInst::modf:
