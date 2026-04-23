@@ -162,3 +162,7 @@ ol_result_t olIterateDevices(
 
   return OL_SUCCESS;
 }
+
+ol_result_t olDestroyProgram(ol_program_handle_t Program) {
+  mock::releaseDummyHandle(Program);
+}

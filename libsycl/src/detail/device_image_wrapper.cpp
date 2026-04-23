@@ -23,7 +23,7 @@ ProgramWrapper::ProgramWrapper(ol_device_handle_t Device,
 
 ProgramWrapper::~ProgramWrapper() {
   assert(MProgram);
-  std::ignore = olDestroyProgram(MProgram);
+  std::ignore = callNoCheck(olDestroyProgram, MProgram);
   // TODO: define a way to report errors from dtors.
 }
 

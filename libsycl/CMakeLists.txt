@@ -147,4 +147,6 @@ add_custom_target(libsycl-toolchain ALL
   COMMENT "Building libsycl toolchain..."
 )
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+
 add_subdirectory(unittests)
