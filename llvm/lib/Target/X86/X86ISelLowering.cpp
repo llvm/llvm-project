@@ -7083,7 +7083,7 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
     // Check for repeated inputs.
     bool IsRepeat = false;
     for (int j = 0, ue = UsedInputs.size(); j != ue; ++j) {
-      if (UsedInputs[j] != Inputs[i])
+      if (peekThroughBitcasts(UsedInputs[j]) != peekThroughBitcasts(Inputs[i]))
         continue;
       for (int &M : Mask)
         if (lo <= M)
