@@ -285,6 +285,10 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
+  void SetCheckValueObjectOwnership(bool check);
+
+  bool GetCheckValueObjectOwnership() const;
+
   std::optional<LoadScriptFromSymFile>
   GetAutoLoadScriptsForModule(llvm::StringRef module_name) const;
 
@@ -1720,6 +1724,12 @@ public:
   }
 
   void SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info);
+
+  /// Get the list of paths that LLDB will consider automatically loading
+  /// scripting resources from. Currently whether to load scripts
+  /// unconditionally is controlled via the
+  /// `target.load-script-from-symbol-file` setting.
+  FileSpecList GetSafeAutoLoadPaths() const;
 
   /// Add a signal for the target.  This will get copied over to the process
   /// if the signal exists on that target.  Only the values with Yes and No are

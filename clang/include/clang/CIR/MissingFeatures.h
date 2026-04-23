@@ -39,7 +39,6 @@ struct MissingFeatures {
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
   static bool setDSOLocal() { return false; }
-  static bool setComdat() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
@@ -221,6 +220,7 @@ struct MissingFeatures {
   static bool builtinCall() { return false; }
   static bool builtinCallF128() { return false; }
   static bool builtinCallMathErrno() { return false; }
+  static bool builtinBitCountExpr() { return false; }
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
   static bool countedBySize() { return false; }

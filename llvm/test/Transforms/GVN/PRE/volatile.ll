@@ -119,7 +119,7 @@ exit:
 }
 
 ; Does cross block PRE work with volatiles?
-define i32 @test7(i1 %c, ptr noalias nocapture %p, ptr noalias nocapture %q) {
+define i32 @test7(i1 %c, ptr noalias nocapture align 4 dereferenceable(4) %p, ptr noalias nocapture %q) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y_PRE:%.*]] = load i32, ptr [[P:%.*]], align 4
@@ -153,7 +153,7 @@ exit:
 
 ; Another volatile PRE case - two paths through a loop
 ; load in preheader, one path read only, one not
-define i32 @test8(i1 %b, i1 %c, ptr noalias %p, ptr noalias %q) {
+define i32 @test8(i1 %b, i1 %c, ptr noalias align 4 dereferenceable(4) %p, ptr noalias %q) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y1:%.*]] = load i32, ptr [[P:%.*]], align 4

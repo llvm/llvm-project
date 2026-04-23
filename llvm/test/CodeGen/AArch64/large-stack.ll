@@ -32,15 +32,16 @@ attributes #0 = { noinline optnone "frame-pointer"="all" uwtable }
 ; CHECK-NEXT:             sub	sp, sp, #[[STACK2:[0-9]+]], lsl #12
 ; CHECK-NEXT:             sub	sp, sp, #[[STACK3:[0-9]+]]
 ; CHECK:                  sub	x[[INDEX:[0-9]+]], x[[FRAME]], #8
+; CHECK-NEXT:             mov x10, #1 // =0x1
+; CHECK-NEXT:             adrp x8, .L.str
+; CHECK-NEXT:             add x8, x8, :lo12:.L.str
+; CHECK-NEXT:             add x11, sp, #8
 ; CHECK-NEXT:             str	x0, [x[[INDEX]]]
 ; CHECK-NEXT:             ldr	x[[VAL1:[0-9]+]], [x[[INDEX]]]
-; CHECK-NEXT:             add x10, sp, #8
-; CHECK-NEXT:             mov x11, #1 // =0x1
-; CHECK-NEXT:             str x11, [x10, x9, lsl #3]
-; CHECK-NEXT:             ldr x8, [x8]
-; CHECK-NEXT:             ldr x1, [x10, x8, lsl #3]
-; CHECK-NEXT:             adrp x0, .L.str
-; CHECK-NEXT:             add x0, x0, :lo12:.L.str
+; CHECK-NEXT:             str x10, [x11, x12, lsl #3]
+; CHECK-NEXT:             ldr x9, [x9]
+; CHECK-NEXT:             ldr x1, [x11, x9, lsl #3]
+; CHECK-NEXT:             mov x0, x8
 ; CHECK:                  bl	printf
 ; CHECK-COUNT-128:        add	sp, sp, #[[STACK1]], lsl #12
 ; CHECK-NEXT:             add	sp, sp, #[[STACK2]], lsl #12

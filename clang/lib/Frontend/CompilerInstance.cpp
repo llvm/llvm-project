@@ -41,6 +41,7 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleCache.h"
+#include "clang/Serialization/ModuleManager.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
@@ -944,10 +945,30 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
 
 // High-Level Operations
 
+void CompilerInstance::PrepareForExecution() {
+  // Set up the frontend timer for -ftime-report. BackendConsumer uses
+  // getTimerGroup() and getFrontendTimer() when TimePasses is set. In the
+  // cc1 driver path this was done in cc1_main before calling
+  // ExecuteCompilerInvocation; we consolidate it here so that all tools
+  // (cc1, clang-repl, libclang, etc.) get consistent behavior.
+  if (getCodeGenOpts().TimePasses && !FrontendTimer) {
+    createFrontendTimer();
+    getFrontendTimer().startTimer();
+  }
+
+  // FIXME: Consider consolidating additional per-instance setup here:
+  // - llvm::timeTraceProfilerInitialize) when TimeTracePath is set.
+  // - Plugin loading (LoadRequestedPlugins) and -mllvm argument processing.
+}
+
 bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   assert(hasDiagnostics() && "Diagnostics engine is not initialized!");
   assert(!getFrontendOpts().ShowHelp && "Client must handle '-help'!");
   assert(!getFrontendOpts().ShowVersion && "Client must handle '-version'!");
+
+  llvm::TimeTraceScope TimeScope("ExecuteCompiler");
+
+  PrepareForExecution();
 
   // Mark this point as the bottom of the stack if we don't have somewhere
   // better. We generally expect frontend actions to be invoked with (nearly)
@@ -1925,7 +1946,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
     // Check whether M refers to the file in the prebuilt module path.
     if (M && M->getASTFileKey() &&
-        *M->getASTFileKey() == ModuleFilename.makeKey(*FileMgr))
+        *M->getASTFileKey() ==
+            getASTReader()->getModuleManager().makeKey(ModuleFilename))
       return M;
 
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)

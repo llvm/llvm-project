@@ -1894,10 +1894,50 @@ private:
     buildConditionalIfChain(
         condExpr, [&](const Fortran::evaluate::Expr<T> &expr) {
           hlfir::Entity entity{gen(expr)};
-          entity = hlfir::loadTrivialScalar(loc, builder, entity);
           hlfir::AssignOp::create(builder, loc, entity, temp);
         });
     return temp;
+  }
+
+  /// Generate scalar conditional for trivial scalar types using fir.if SSA
+  /// results; avoids temporary and assignment.
+  template <typename T>
+  hlfir::Entity genTrivialScalarConditional(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+      mlir::Type elementType) {
+    assert(fir::isa_trivial(elementType) &&
+           "genTrivialScalarConditional only handles trivial scalar types");
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
+    getStmtCtx().pushScope();
+    const hlfir::EntityWithAttributes condEntity{gen(condExpr.condition())};
+    mlir::Value condition{hlfir::loadTrivialScalar(loc, builder, condEntity)};
+    condition = builder.createConvert(loc, builder.getI1Type(), condition);
+    auto results =
+        builder
+            .genIfOp(loc, {elementType}, condition,
+                     /*withElseRegion=*/true)
+            .genThen([&]() {
+              getStmtCtx().pushScope();
+              hlfir::Entity entity{gen(condExpr.thenValue())};
+              entity = hlfir::loadTrivialScalar(loc, builder, entity);
+              getStmtCtx().finalizeAndPop();
+              mlir::Value result =
+                  builder.createConvert(loc, elementType, entity);
+              fir::ResultOp::create(builder, loc, result);
+            })
+            .genElse([&]() {
+              getStmtCtx().pushScope();
+              hlfir::Entity entity{gen(condExpr.elseValue())};
+              entity = hlfir::loadTrivialScalar(loc, builder, entity);
+              getStmtCtx().finalizeAndPop();
+              mlir::Value result =
+                  builder.createConvert(loc, elementType, entity);
+              fir::ResultOp::create(builder, loc, result);
+            })
+            .getResults();
+    getStmtCtx().finalizeAndPop();
+    return hlfir::Entity{results[0]};
   }
 
   /// Generate conditional expression using an allocatable temporary with lazy
@@ -1992,8 +2032,12 @@ private:
         return *result;
     }
     // Scalar types (INTEGER, REAL, COMPLEX, LOGICAL, UNSIGNED, Derived).
-    return hlfir::EntityWithAttributes{genScalarConditional(
-        condExpr, hlfir::getFortranElementType(resultType), {})};
+    const mlir::Type elementType{hlfir::getFortranElementType(resultType)};
+    if (fir::isa_trivial(elementType))
+      return hlfir::EntityWithAttributes{
+          genTrivialScalarConditional(condExpr, elementType)};
+    return hlfir::EntityWithAttributes{
+        genScalarConditional(condExpr, elementType, {})};
   }
 
   hlfir::EntityWithAttributes

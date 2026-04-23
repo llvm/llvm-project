@@ -32,11 +32,14 @@ namespace {
 /// Helper function for loop bufferization. Cast the given buffer to the given
 /// memref type.
 static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
-  assert(isa<BaseMemRefType>(type) && "expected BaseMemRefType");
-  assert(isa<BaseMemRefType>(buffer.getType()) && "expected BaseMemRefType");
   // If the buffer already has the correct type, no cast is needed.
   if (buffer.getType() == type)
     return buffer;
+
+  // TODO: Properly support with options, for now it is hardcoded MemRef type
+  // based approach
+  assert(isa<BaseMemRefType>(type) && "expected BaseMemRefType");
+  assert(isa<BaseMemRefType>(buffer.getType()) && "expected BaseMemRefType");
   // TODO: In case `type` has a layout map that is not the fully dynamic
   // one, we may not be able to cast the buffer. In that case, the loop
   // iter_arg's layout map must be changed (see uses of `castBuffer`).
@@ -102,7 +105,7 @@ struct ConditionOpInterface
     SmallVector<Value> newArgs;
     for (const auto &it : llvm::enumerate(conditionOp.getArgs())) {
       Value value = it.value();
-      if (isa<TensorType>(value.getType())) {
+      if (isa<TensorLikeType>(value.getType())) {
         FailureOr<Value> maybeBuffer =
             getBuffer(rewriter, value, options, state);
         if (failed(maybeBuffer))
@@ -247,7 +250,7 @@ struct IfOpInterface
     // Compute bufferized result types.
     SmallVector<Type> newTypes;
     for (Value result : ifOp.getResults()) {
-      if (!isa<TensorType>(result.getType())) {
+      if (!isa<TensorLikeType>(result.getType())) {
         newTypes.push_back(result.getType());
         continue;
       }
@@ -286,25 +289,23 @@ struct IfOpInterface
     auto opResult = cast<OpResult>(value);
     auto thenValue = thenYieldOp.getOperand(opResult.getResultNumber());
     auto elseValue = elseYieldOp.getOperand(opResult.getResultNumber());
-    BaseMemRefType thenBufferType, elseBufferType;
-    if (isa<BaseMemRefType>(thenValue.getType())) {
+    BufferLikeType thenBufferType, elseBufferType;
+    if (isa<BufferLikeType>(thenValue.getType())) {
       // True branch was already bufferized.
-      thenBufferType = cast<BaseMemRefType>(thenValue.getType());
+      thenBufferType = cast<BufferLikeType>(thenValue.getType());
     } else {
-      auto maybeBufferType =
-          bufferization::detail::asMemRefType(bufferization::getBufferType(
-              thenValue, options, state, invocationStack));
+      auto maybeBufferType = bufferization::getBufferType(
+          thenValue, options, state, invocationStack);
       if (failed(maybeBufferType))
         return failure();
       thenBufferType = *maybeBufferType;
     }
-    if (isa<BaseMemRefType>(elseValue.getType())) {
+    if (isa<BufferLikeType>(elseValue.getType())) {
       // False branch was already bufferized.
-      elseBufferType = cast<BaseMemRefType>(elseValue.getType());
+      elseBufferType = cast<BufferLikeType>(elseValue.getType());
     } else {
-      auto maybeBufferType =
-          bufferization::detail::asMemRefType(bufferization::getBufferType(
-              elseValue, options, state, invocationStack));
+      auto maybeBufferType = bufferization::getBufferType(
+          elseValue, options, state, invocationStack);
       if (failed(maybeBufferType))
         return failure();
       elseBufferType = *maybeBufferType;
@@ -315,12 +316,19 @@ struct IfOpInterface
       return cast<BufferLikeType>(thenBufferType);
 
     // Memory space mismatch.
-    if (thenBufferType.getMemorySpace() != elseBufferType.getMemorySpace())
+    auto thenBaseMemRefType = dyn_cast<BaseMemRefType>(thenBufferType);
+    auto elseBaseMemRefType = dyn_cast<BaseMemRefType>(elseBufferType);
+    if (thenBaseMemRefType && elseBaseMemRefType &&
+        thenBaseMemRefType.getMemorySpace() !=
+            elseBaseMemRefType.getMemorySpace())
       return op->emitError("inconsistent memory space on then/else branches");
 
-    // Layout maps are different: Promote to fully dynamic layout map.
+    // TODO: Properly support with options, for now it is hardcoded MemRef type
+    // based approach Layout maps are different: Promote to fully dynamic layout
+    // map.
     return cast<BufferLikeType>(getMemRefTypeWithFullyDynamicLayout(
-        cast<TensorType>(opResult.getType()), thenBufferType.getMemorySpace()));
+        cast<TensorType>(opResult.getType()),
+        thenBaseMemRefType.getMemorySpace()));
   }
 };
 
@@ -399,7 +407,8 @@ struct IndexSwitchOpInterface
     assert(value.getDefiningOp() == op && "invalid value");
     int64_t resultNum = cast<OpResult>(value).getResultNumber();
 
-    // Helper function to get buffer type of a case.
+    // TODO: Properly support with options, for now it is hardcoded MemRef type
+    // based approach Helper function to get buffer type of a case.
     auto getYieldedBufferType = [&](Block &b) -> FailureOr<BaseMemRefType> {
       auto yieldOp = cast<scf::YieldOp>(b.getTerminator());
       Value yieldedValue = yieldOp->getOperand(resultNum);
@@ -430,7 +439,9 @@ struct IndexSwitchOpInterface
       if (bufferType.getMemorySpace() != yieldedBufferType->getMemorySpace())
         return op->emitError("inconsistent memory space on switch cases");
 
-      // Layout maps are different: Promote to fully dynamic layout map.
+      // TODO: Properly support with options, for now it is hardcoded MemRef
+      // type based approach Layout maps are different: Promote to fully dynamic
+      // layout map.
       bufferType = getMemRefTypeWithFullyDynamicLayout(
           cast<TensorType>(value.getType()), bufferType.getMemorySpace());
     }
@@ -444,7 +455,7 @@ struct IndexSwitchOpInterface
 static DenseSet<int64_t> getTensorIndices(ValueRange values) {
   DenseSet<int64_t> result;
   for (const auto &it : llvm::enumerate(values))
-    if (isa<TensorType>(it.value().getType()))
+    if (isa<TensorLikeType>(it.value().getType()))
       result.insert(it.index());
   return result;
 }
@@ -457,8 +468,8 @@ DenseSet<int64_t> getEquivalentBuffers(Block::BlockArgListType bbArgs,
   unsigned int minSize = std::min(bbArgs.size(), yieldedValues.size());
   DenseSet<int64_t> result;
   for (unsigned int i = 0; i < minSize; ++i) {
-    if (!isa<TensorType>(bbArgs[i].getType()) ||
-        !isa<TensorType>(yieldedValues[i].getType()))
+    if (!isa<TensorLikeType>(bbArgs[i].getType()) ||
+        !isa<TensorLikeType>(yieldedValues[i].getType()))
       continue;
     if (state.areEquivalentBufferizedValues(bbArgs[i], yieldedValues[i]))
       result.insert(i);
@@ -473,7 +484,7 @@ getBuffers(RewriterBase &rewriter, const MutableOperandRange &operands,
            const BufferizationOptions &options, BufferizationState &state) {
   SmallVector<Value> result;
   for (OpOperand &opOperand : operands) {
-    if (isa<TensorType>(opOperand.get().getType())) {
+    if (isa<TensorLikeType>(opOperand.get().getType())) {
       FailureOr<Value> resultBuffer =
           getBuffer(rewriter, opOperand.get(), options, state);
       if (failed(resultBuffer))
@@ -547,7 +558,7 @@ static FailureOr<BufferLikeType> computeLoopRegionIterArgBufferType(
 
   // Compute the buffer type of the yielded value.
   BufferLikeType yieldedValueBufferType;
-  if (isa<BaseMemRefType>(yieldedValue.getType())) {
+  if (isa<BufferLikeType>(yieldedValue.getType())) {
     // scf.yield was already bufferized.
     yieldedValueBufferType = cast<BufferLikeType>(yieldedValue.getType());
   } else {
@@ -582,6 +593,8 @@ static FailureOr<BufferLikeType> computeLoopRegionIterArgBufferType(
         "expected same shape");
   }
 #endif // NDEBUG
+  // TODO: Properly support with options, for now it is hardcoded MemRef type
+  // based approach
   return cast<BufferLikeType>(getMemRefTypeWithFullyDynamicLayout(
       iterTensorType, yieldedBufferType.getMemorySpace()));
 }
@@ -712,7 +725,7 @@ struct ForOpInterface
                 SmallVector<Value> &invocationStack) const {
     auto forOp = cast<scf::ForOp>(op);
     assert(getOwnerOfValue(value) == op && "invalid value");
-    assert(isa<TensorType>(value.getType()) && "expected tensor type");
+    assert(isa<TensorLikeType>(value.getType()) && "expected tensor type");
 
     if (auto opResult = dyn_cast<OpResult>(value)) {
       // The type of an OpResult must match the corresponding iter_arg type.
@@ -757,7 +770,7 @@ struct ForOpInterface
       Value initArg = it.value();
       Value result = forOp->getResult(it.index());
       // If the type is not a tensor, bufferization doesn't need to touch it.
-      if (!isa<TensorType>(result.getType())) {
+      if (!isa<TensorLikeType>(result.getType())) {
         castedInitArgs.push_back(initArg);
         continue;
       }
@@ -809,9 +822,8 @@ struct ForOpInterface
     auto forOp = cast<scf::ForOp>(op);
     auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
     for (OpResult opResult : op->getOpResults()) {
-      if (!isa<TensorType>(opResult.getType()))
+      if (!isa<TensorLikeType>(opResult.getType()))
         continue;
-
       // Note: This is overly strict. We should check for aliasing bufferized
       // values. But we don't have a "must-alias" analysis yet.
       if (bufferRelation(op, opResult, state) != BufferRelation::Equivalent)
@@ -938,7 +950,7 @@ struct WhileOpInterface
     for (int64_t idx = 0;
          idx < static_cast<int64_t>(conditionOp.getArgs().size()); ++idx) {
       Value value = conditionOp.getArgs()[idx];
-      if (!isa<TensorType>(value.getType()) ||
+      if (!isa<TensorLikeType>(value.getType()) ||
           (equivalentYieldsAfter.contains(idx) &&
            equivalentYieldsBefore.contains(idx))) {
         beforeYieldValues.push_back(value);
@@ -982,7 +994,7 @@ struct WhileOpInterface
       Value initArg = it.value();
       Value beforeArg = whileOp.getBeforeArguments()[it.index()];
       // If the type is not a tensor, bufferization doesn't need to touch it.
-      if (!isa<TensorType>(beforeArg.getType())) {
+      if (!isa<TensorLikeType>(beforeArg.getType())) {
         castedInitArgs.push_back(initArg);
         continue;
       }
@@ -995,7 +1007,7 @@ struct WhileOpInterface
     // The result types of a WhileOp are the same as the "after" bbArg types.
     SmallVector<Type> argsTypesAfter = llvm::map_to_vector(
         whileOp.getAfterArguments(), [&](BlockArgument bbArg) {
-          if (!isa<TensorType>(bbArg.getType()))
+          if (!isa<TensorLikeType>(bbArg.getType()))
             return bbArg.getType();
           // TODO: error handling
           return llvm::cast<Type>(
@@ -1048,7 +1060,7 @@ struct WhileOpInterface
                 SmallVector<Value> &invocationStack) const {
     auto whileOp = cast<scf::WhileOp>(op);
     assert(getOwnerOfValue(value) == op && "invalid value");
-    assert(isa<TensorType>(value.getType()) && "expected tensor type");
+    assert(isa<TensorLikeType>(value.getType()) && "expected tensor type");
 
     // Case 1: Block argument of the "before" region.
     if (auto bbArg = dyn_cast<BlockArgument>(value)) {
@@ -1074,7 +1086,7 @@ struct WhileOpInterface
       llvm_unreachable("invalid value");
     }
     Value conditionYieldedVal = whileOp.getConditionOp().getArgs()[resultNum];
-    if (!isa<TensorType>(conditionYieldedVal.getType())) {
+    if (!isa<TensorLikeType>(conditionYieldedVal.getType())) {
       // scf.condition was already bufferized.
       return cast<BufferLikeType>(conditionYieldedVal.getType());
     }
@@ -1103,7 +1115,7 @@ struct WhileOpInterface
     auto conditionOp = whileOp.getConditionOp();
     for (const auto &it : llvm::enumerate(conditionOp.getArgs())) {
       Block *block = conditionOp->getBlock();
-      if (!isa<TensorType>(it.value().getType()))
+      if (!isa<TensorLikeType>(it.value().getType()))
         continue;
       if (it.index() >= block->getNumArguments() ||
           !state.areEquivalentBufferizedValues(it.value(),
@@ -1116,7 +1128,7 @@ struct WhileOpInterface
     auto yieldOp = whileOp.getYieldOp();
     for (const auto &it : llvm::enumerate(yieldOp.getResults())) {
       Block *block = yieldOp->getBlock();
-      if (!isa<TensorType>(it.value().getType()))
+      if (!isa<TensorLikeType>(it.value().getType()))
         continue;
       if (it.index() >= block->getNumArguments() ||
           !state.areEquivalentBufferizedValues(it.value(),
@@ -1176,7 +1188,7 @@ struct YieldOpInterface
     SmallVector<Value> newResults;
     for (const auto &it : llvm::enumerate(yieldOp.getResults())) {
       Value value = it.value();
-      if (isa<TensorType>(value.getType())) {
+      if (isa<TensorLikeType>(value.getType())) {
         FailureOr<Value> maybeBuffer =
             getBuffer(rewriter, value, options, state);
         if (failed(maybeBuffer))
