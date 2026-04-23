@@ -3305,8 +3305,6 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 bool PPCAIXAsmPrinter::doFinalization(Module &M) {
   for (MCSymbol *Sym : ExtSymSDNodeSymbols)
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);
-
-
   return PPCAsmPrinter::doFinalization(M);
 }
 
