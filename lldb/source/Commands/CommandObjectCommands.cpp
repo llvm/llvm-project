@@ -662,8 +662,7 @@ protected:
     if (!m_interpreter.RemoveAlias(command_name)) {
       if (m_interpreter.AliasExists(command_name))
         result.AppendErrorWithFormat(
-            "Error occurred while attempting to unalias '%s'",
-            args[0].c_str());
+            "Error occurred while attempting to unalias '%s'", args[0].c_str());
       else
         result.AppendErrorWithFormat("'%s' is not an existing alias",
                                      args[0].c_str());
