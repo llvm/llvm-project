@@ -3065,6 +3065,7 @@ defm SWPAL : Swap<1, 1, "al">;
 // Used by the __swp* MS intrinsics to force SWP* emission regardless of -march.
 let isCodeGenOnly = 1 in {
   defm SWP  : Swap_cg<0, 0, "">;
+  defm SWPA : Swap_cg<1, 0, "a">;
 }
 
 // v9.6a atomic swap (FEAT_LSUI)

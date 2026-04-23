@@ -109,6 +109,20 @@ def int_aarch64_swp64 : Intrinsic<[llvm_i64_ty],
                                   [llvm_ptr_ty, llvm_i64_ty],
                                   [IntrNoFree, IntrWillReturn]>;
 
+// SWPA intrinsics — emit SWPA (acquire) directly, regardless of the LSE target
+def int_aarch64_swpa8  : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty],
+                                   [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_swpa16 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty],
+                                   [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_swpa32 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty],
+                                   [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_swpa64 : Intrinsic<[llvm_i64_ty],
+                                   [llvm_ptr_ty, llvm_i64_ty],
+                                   [IntrNoFree, IntrWillReturn]>;
+
 def int_aarch64_sdiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
                                 LLVMMatchType<0>], [IntrNoMem]>;
 def int_aarch64_udiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
