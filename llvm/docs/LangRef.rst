@@ -5507,6 +5507,14 @@ flag that indicates whether or not the inline asm expression has side effects,
 and a flag indicating whether the function containing the asm needs to align its
 stack conservatively.
 
+The compiler may not assume that the actual code executed at runtime matches the
+contents of the template string. Correctness-critical analyses must base their
+results only on the list of operand constraints and the flags -- not the
+contents of the template string. This ensures correct behavior if the assembly
+code emitted by this expression is altered later, e.g. via self-modifying code,
+as long as the code keeps upholding the requirements of the operand constraints
+and the flags.
+
 The template string supports argument substitution of the operands using "``$``"
 followed by a number, to indicate substitution of the given register/memory
 location, as specified by the constraint string. "``${NUM:MODIFIER}``" may also
@@ -28085,8 +28093,9 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or an
-``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
+The argument is either a ``poison`` value or an SSA variable whose defining
+instruction is ``alloca`` or a call of the ``llvm.structured.alloca``
+intrinsics. Otherwise, the IR is considered ill-formed.
 
 Semantics:
 """"""""""
@@ -28096,10 +28105,12 @@ If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
 Otherwise, the stack-allocated object that ``ptr`` points to is initially
 marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
 alive and has an uninitialized value.
-The stack object is marked as dead when either
-:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is
-executed or the function returns.
+Calling ``llvm.lifetime.start`` when the stack object is already alive just
+resets its contents to be uninitialized.
 
+The stack object is marked as dead again when either
+:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is executed or the
+function returns.
 After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
 The second '``llvm.lifetime.start``' call marks the object as alive, but it
@@ -28126,8 +28137,9 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or an
-``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
+The argument is either a ``poison`` value or an SSA variable whose defining
+instruction is ``alloca`` or a call of the ``llvm.structured.alloca``
+intrinsics. Otherwise, the IR is considered ill-formed.
 
 Semantics:
 """"""""""

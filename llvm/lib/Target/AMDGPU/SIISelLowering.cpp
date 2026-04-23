@@ -8348,6 +8348,18 @@ bool SITargetLowering::shouldUseLDSConstAddress(const GlobalValue *GV) const {
   if (!GV->hasExternalLinkage())
     return true;
 
+  // With object linking, external LDS declarations need relocations so the
+  // linker can assign their offsets.
+  if (AMDGPUTargetMachine::EnableObjectLinking) {
+    if (const auto *GVar = dyn_cast<GlobalVariable>(GV)) {
+      if (GVar->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+        assert(GVar->isDeclaration() && "AS3 GVs should be declaration here "
+                                        "when object linking is enabled");
+        return false;
+      }
+    }
+  }
+
   const auto OS = getTargetMachine().getTargetTriple().getOS();
   return OS == Triple::AMDHSA || OS == Triple::AMDPAL;
 }
@@ -13017,15 +13029,30 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV64(SDValue Op,
   if (!AllowInaccurateDiv)
     return SDValue();
 
-  SDValue NegY = DAG.getNode(ISD::FNEG, SL, VT, Y);
+  const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(X);
+  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+
+  // Pull out the negation so it folds for free into the source modifiers.
+  if (IsNegRcp)
+    X = DAG.getConstantFP(1.0, SL, VT);
+
+  SDValue NegY = IsNegRcp ? Y : DAG.getNode(ISD::FNEG, SL, VT, Y);
   SDValue One = DAG.getConstantFP(1.0, SL, VT);
 
   SDValue R = DAG.getNode(AMDGPUISD::RCP, SL, VT, Y);
+  if (IsNegRcp)
+    R = DAG.getNode(ISD::FNEG, SL, VT, R);
+
   SDValue Tmp0 = DAG.getNode(ISD::FMA, SL, VT, NegY, R, One);
 
   R = DAG.getNode(ISD::FMA, SL, VT, Tmp0, R, R);
   SDValue Tmp1 = DAG.getNode(ISD::FMA, SL, VT, NegY, R, One);
   R = DAG.getNode(ISD::FMA, SL, VT, Tmp1, R, R);
+
+  // Skip the last 2 correction terms for reciprocal.
+  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0)))
+    return R;
+
   SDValue Ret = DAG.getNode(ISD::FMUL, SL, VT, X, R);
   SDValue Tmp2 = DAG.getNode(ISD::FMA, SL, VT, NegY, Ret, X);
   return DAG.getNode(ISD::FMA, SL, VT, Tmp2, R, Ret);

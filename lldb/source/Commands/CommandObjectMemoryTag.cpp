@@ -218,7 +218,7 @@ protected:
       // getAsInteger returns true on failure
       if (entry.ref().getAsInteger(0, tag_value)) {
         result.AppendErrorWithFormat(
-            "'%s' is not a valid unsigned decimal string value.\n",
+            "'%s' is not a valid unsigned decimal string value.",
             entry.c_str());
         return;
       }
@@ -303,7 +303,7 @@ protected:
 
 CommandObjectMemoryTag::CommandObjectMemoryTag(CommandInterpreter &interpreter)
     : CommandObjectMultiword(
-          interpreter, "tag", "Commands for manipulating memory tags",
+          interpreter, "tag", "Commands for manipulating memory tags.",
           "memory tag <sub-command> [<sub-command-options>]") {
   CommandObjectSP read_command_object(
       new CommandObjectMemoryTagRead(interpreter));
