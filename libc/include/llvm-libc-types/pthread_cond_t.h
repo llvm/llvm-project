@@ -18,7 +18,7 @@ typedef struct {
     size_t __waiter_size;
   };
   __futex_word __futex;
-  char __shared;
+  char __is_shared;
   char __is_realtime;
   char __padding[2];
 } pthread_cond_t;

@@ -8,23 +8,15 @@
 
 #include "pthread_cond_destroy.h"
 
+#include "pthread_cond_utils.h"
+
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/CndVar.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-static_assert(
-    sizeof(CndVar) == sizeof(pthread_cond_t) &&
-        alignof(CndVar) == alignof(pthread_cond_t),
-    "The public pthread_cond_t type must be of the same size and alignment "
-    "as the internal condition variable type.");
-
 LLVM_LIBC_FUNCTION(int, pthread_cond_destroy, (pthread_cond_t * cond)) {
-  // TODO: use cpp:start_lifetime_as once
-  // https://github.com/llvm/llvm-project/pull/193326 is merged
-  auto *cndvar = reinterpret_cast<CndVar *>(cond);
-  cndvar->reset();
+  pthread_cond_utils::to_cndvar(cond)->reset();
   return 0;
 }
 

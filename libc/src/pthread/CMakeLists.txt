@@ -217,9 +217,7 @@ add_entrypoint_object(
   HDRS
     pthread_cond_broadcast.h
   DEPENDS
-    libc.include.llvm-libc-types.pthread_cond_t
-    libc.src.__support.macros.null_check
-    libc.src.__support.threads.CndVar
+    .pthread_cond_utils
 )
 
 add_entrypoint_object(
@@ -244,8 +242,7 @@ add_entrypoint_object(
   HDRS
     pthread_cond_destroy.h
   DEPENDS
-    libc.include.llvm-libc-types.pthread_cond_t
-    libc.src.__support.threads.CndVar
+    .pthread_cond_utils
 )
 
 add_entrypoint_object(
@@ -272,9 +269,7 @@ add_entrypoint_object(
   HDRS
     pthread_cond_signal.h
   DEPENDS
-    libc.include.llvm-libc-types.pthread_cond_t
-    libc.src.__support.macros.null_check
-    libc.src.__support.threads.CndVar
+    .pthread_cond_utils
 )
 
 add_entrypoint_object(

@@ -20,12 +20,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static_assert(
-    sizeof(CndVar) == sizeof(pthread_cond_t) &&
-        alignof(CndVar) == alignof(pthread_cond_t),
-    "The public pthread_cond_t type must be of the same size and alignment "
-    "as the internal condition variable type.");
-
 LLVM_LIBC_FUNCTION(int, pthread_cond_init,
                    (pthread_cond_t *__restrict cond,
                     const pthread_condattr_t *__restrict attr)) {

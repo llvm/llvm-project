@@ -49,8 +49,8 @@
   {                                                                            \
       /* .__waiter_queue = */ {NULL, NULL},                                    \
       /* .__futex = */ {0},                                                    \
-      /* .__shared = */ 0,                                                     \
-      /*__is_realtime = */ 1,                                                  \
+      /* .__is_shared = */ 0,                                                  \
+      /* .__is_realtime = */ 1,                                                \
       /* .__padding = */ {0},                                                  \
   }
 

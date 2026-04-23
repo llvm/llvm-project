@@ -45,9 +45,7 @@ LIBC_INLINE Mutex *to_mutex(pthread_mutex_t *mutex) {
   // TODO: use cpp:start_lifetime_as once
   // https://github.com/llvm/llvm-project/pull/193326 is merged
   Mutex *m = reinterpret_cast<Mutex *>(mutex);
-  // TODO: support robust mutex.
-  if (m->is_robust())
-    __builtin_trap();
+  LIBC_ASSERT(!m->is_robust() && "Robust mutex not supported yet");
   return m;
 }
 
