@@ -477,8 +477,8 @@ func.func @failing_issue_59135(%arg0: tensor<2x2xi1>, %arg1: f32, %arg2 : tensor
   return %9, %15 : tensor<2xi1>, tensor<2xi1>
 }
 // CHECK-LABEL: func @failing_issue_59135
-//       CHECK:   %[[TRUE:.+]] = arith.constant true
 //       CHECK:   %[[OP:.+]] = test.cse_of_single_block_op
+//       CHECK:   %[[TRUE:.+]] = arith.constant true
 //       CHECK:     test.region_yield %[[TRUE]]
 //       CHECK:   return %[[OP]], %[[OP]]
 
@@ -500,6 +500,36 @@ func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, te
   return %r1, %r2 : tensor<5xf32>, tensor<5xf32>
 }
 // CHECK-LABEL: func @cse_multiple_regions
+//       CHECK:   %[[if:.*]] = scf.if {{.*}} {
+//       CHECK:     tensor.empty
+//       CHECK:     scf.yield
+//       CHECK:   } else {
+//       CHECK:     scf.yield
+//       CHECK:   }
+//   CHECK-NOT:   scf.if
+//       CHECK:   return %[[if]], %[[if]]
+
+// -----
+
+func.func @cse_multiple_regions_with_dead_op(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>) {
+  %r1 = scf.if %c -> (tensor<5xf32>) {
+    %0 = tensor.empty() : tensor<5xf32>
+    %1 = arith.constant 1: index
+    %2 = arith.addi %1, %1 : index
+    scf.yield %0 : tensor<5xf32>
+  } else {
+    scf.yield %t : tensor<5xf32>
+  }
+  %r2 = scf.if %c -> (tensor<5xf32>) {
+    %0 = tensor.empty() : tensor<5xf32>
+    scf.yield %0 : tensor<5xf32>
+  } else {
+    scf.yield %t : tensor<5xf32>
+  }
+  return %r1, %r2 : tensor<5xf32>, tensor<5xf32>
+}
+
+// CHECK-LABEL: func @cse_multiple_regions_with_dead_op
 //       CHECK:   %[[if:.*]] = scf.if {{.*}} {
 //       CHECK:     tensor.empty
 //       CHECK:     scf.yield
@@ -683,3 +713,20 @@ func.func @cse_pointer_write_does_not_block_non_addressable_read() -> i32 {
   %2 = arith.addi %0, %1 : i32
   return %2 : i32
 }
+
+// -----
+
+// CHECK-LABEL: func @cse_dead_ops
+func.func @cse_dead_ops(%arg0: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %0 = arith.select %arg0, %c0_i32, %c0_i32 : i32
+  %1 = scf.if %arg0 -> (i32) {
+    %c0_i32_0 = arith.constant 0 : i32
+    scf.yield %c0_i32_0 : i32
+  } else {
+    %c0_i32_0 = arith.constant 0 : i32
+    scf.yield %c0_i32_0 : i32
+  }
+  return
+}
+// CHECK-NEXT: return
