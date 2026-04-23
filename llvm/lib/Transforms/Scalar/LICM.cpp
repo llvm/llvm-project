@@ -215,6 +215,11 @@ static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                                   ICFLoopSafetyInfo &SafetyInfo,
                                   MemorySSAUpdater &MSSAU, ScalarEvolution *SE);
 
+static bool sinkUnusedInvariantsFromPreheaderToExit(
+    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
+    SinkAndHoistLICMFlags &SinkFlags);
+
 static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
 using PointersAndHasReadsOutsideSet =
@@ -471,6 +476,13 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
                                     TLI, TTI, L, MSSAU, &SafetyInfo, Flags, ORE)
             : sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, TTI, L,
                          MSSAU, &SafetyInfo, Flags, ORE);
+
+  // Sink pre-header defs that are unused in-loop into the unique exit block to
+  // reduce register pressure.
+  if (Preheader && L->getExitBlock())
+    Changed |= sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo,
+                                                       MSSAU, SE, DT, Flags);
+
   Flags.setIsSink(false);
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI, L,
@@ -1465,6 +1477,178 @@ static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                       MemorySSA::BeforeTerminator);
   if (SE)
     SE->forgetBlockAndLoopDispositions(&I);
+}
+
+// If there's a single exit block, sink any loop-invariant values that were
+// defined in the preheader but not used inside the loop into the exit block
+// to reduce register pressure in the loop.
+static bool sinkUnusedInvariantsFromPreheaderToExit(
+    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
+    SinkAndHoistLICMFlags &SinkFlags) {
+  BasicBlock *ExitBlock = L->getExitBlock();
+  if (!ExitBlock)
+    return false;
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader)
+    return false;
+
+  // Collect instructions that are safe to sink and have no in-loop users.
+  SmallPtrSet<Instruction *, 16> LegalToSink;
+  for (Instruction &I : llvm::reverse(*Preheader)) {
+    if (I.isTerminator())
+      continue;
+
+    // New instructions were inserted at the end of the preheader.
+    if (isa<PHINode>(I))
+      break;
+
+    // Don't move instructions which might have side effects, since the side
+    // effects need to complete before instructions inside the loop. Note that
+    // it's okay if the instruction might have undefined behavior: LoopSimplify
+    // guarantees that the preheader dominates the exit block.
+    if (I.mayHaveSideEffects())
+      continue;
+
+    if (!canSinkOrHoistInst(I, AA, DT, L, MSSAU, true, SinkFlags, nullptr))
+      continue;
+
+    bool UsedInLoop = llvm::any_of(I.uses(), [L](Use &U) {
+      auto *UserI = cast<Instruction>(U.getUser());
+      BasicBlock *UseBB = UserI->getParent();
+      if (auto *PN = dyn_cast<PHINode>(UserI))
+        UseBB = PN->getIncomingBlock(U);
+      return L->contains(UseBB);
+    });
+    if (UsedInLoop)
+      continue;
+
+    LegalToSink.insert(&I);
+  }
+
+  if (LegalToSink.empty())
+    return false;
+
+  // Remove candidates that have a preheader user which is not itself a
+  // candidate, since that user keeps the definition live in the preheader.
+  // Iterate until stable to handle chains.
+  SmallPtrSet<Instruction *, 16> SinkCandidates(LegalToSink);
+  bool Shrunk = true;
+  while (Shrunk) {
+    Shrunk = false;
+    SmallVector<Instruction *, 8> ToRemove;
+    for (Instruction *I : SinkCandidates) {
+      bool HasUnsinkablePreheaderUser =
+          llvm::any_of(I->uses(), [Preheader, &SinkCandidates](Use &U) {
+            auto *UserI = cast<Instruction>(U.getUser());
+            BasicBlock *UseBB = UserI->getParent();
+            if (auto *PN = dyn_cast<PHINode>(UserI))
+              UseBB = PN->getIncomingBlock(U);
+            return UseBB == Preheader && !SinkCandidates.contains(UserI);
+          });
+      if (HasUnsinkablePreheaderUser)
+        ToRemove.push_back(I);
+    }
+    for (Instruction *I : ToRemove) {
+      SinkCandidates.erase(I);
+      Shrunk = true;
+    }
+  }
+
+  if (SinkCandidates.empty())
+    return false;
+
+  // Prune candidates that would increase register pressure. Sinking removes
+  // one live-across value but may make unsinkable preheader-defined operands
+  // newly live across the loop. Allow at most one such new live-across operand,
+  // since it may still enable sinking dependents for a net win.
+  SmallPtrSet<Instruction *, 4> Seen;
+  SmallDenseMap<Instruction *, bool, 16> AlreadyLiveAcross;
+  auto CountNewLiveAcrossOps =
+      [Preheader, &SinkCandidates, &Seen,
+       &AlreadyLiveAcross](Instruction *I) -> unsigned {
+    Seen.clear();
+    unsigned Count = 0;
+    for (Value *Op : I->operands()) {
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (!OpI || OpI->getParent() != Preheader)
+        continue;
+      if (!Seen.insert(OpI).second)
+        continue;
+      if (SinkCandidates.contains(OpI))
+        continue;
+      auto [It, Inserted] = AlreadyLiveAcross.try_emplace(OpI);
+      if (Inserted)
+        It->second = llvm::any_of(OpI->users(), [Preheader](User *U) {
+          auto *UI = dyn_cast<Instruction>(U);
+          // Check if the user is in a different block than the preheader.
+          // This is a heuristic to check if the user is live across the loop.
+          return UI && UI->getParent() != Preheader;
+        });
+      if (!It->second)
+        ++Count;
+    }
+    return Count;
+  };
+
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
+    SmallVector<Instruction *, 8> ToRemove;
+    for (Instruction *I : SinkCandidates)
+      if (CountNewLiveAcrossOps(I) > 1)
+        ToRemove.push_back(I);
+    for (Instruction *I : ToRemove) {
+      SinkCandidates.erase(I);
+      Changed = true;
+    }
+  }
+
+  if (SinkCandidates.empty())
+    return false;
+
+  // Sink surviving candidates in reverse program order so that defs in the
+  // exit block end up in their original relative order.
+  bool MadeAnyChanges = false;
+  MemoryAccess *ExitDef = nullptr;
+  MemorySSA *MSSA = MSSAU.getMemorySSA();
+
+  for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
+    if (!SinkCandidates.contains(&I))
+      continue;
+
+    SafetyInfo->removeInstruction(&I);
+    SafetyInfo->insertInstructionTo(&I, ExitBlock);
+    I.moveBefore(*ExitBlock, ExitBlock->getFirstInsertionPt());
+    if (SE)
+      SE->forgetValue(&I);
+
+    // Update MemorySSA. Avoid the expensive getPreviousDefRecursive call by
+    // caching a defining access from the preheader on the first sunk MemoryUse.
+    if (auto *OldMA = MSSA->getMemoryAccess(&I)) {
+      if (!ExitDef) {
+        if (auto *Accesses = MSSA->getBlockAccesses(Preheader)) {
+          if (!Accesses->empty()) {
+            MemoryAccess *Back = const_cast<MemoryAccess *>(&Accesses->back());
+            ExitDef = isa<MemoryUse>(Back)
+                          ? MSSA->getWalker()->getClobberingMemoryAccess(Back)
+                          : Back;
+          }
+        }
+        if (!ExitDef)
+          ExitDef = MSSA->getLiveOnEntryDef();
+      }
+      MemoryAccess *NewMA = MSSAU.createMemoryAccessInBB(&I, ExitDef, ExitBlock,
+                                                         MemorySSA::Beginning);
+      OldMA->replaceAllUsesWith(NewMA);
+      MSSAU.removeMemoryAccess(OldMA);
+    }
+
+    MadeAnyChanges = true;
+  }
+
+  return MadeAnyChanges;
 }
 
 static Instruction *sinkThroughTriviallyReplaceablePHI(
