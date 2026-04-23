@@ -1429,7 +1429,6 @@ BUILD_CONVERT_OP_FOR(double, 64)
 
 #undef BUILD_CONVERT_OP_FOR
 
-// FP-to-integer truncation. Symmetric to BUILD_CONVERT_OP_FOR above.
 #define BUILD_TRUNC_OP_FOR(SRC_T, WIDTH)                                       \
   BUILD_CONVERSION_OP(SRC_T, int32_t, truncSI32F##WIDTH, TruncSIOp)            \
   BUILD_CONVERSION_OP(SRC_T, uint32_t, truncUI32F##WIDTH, TruncUIOp)           \

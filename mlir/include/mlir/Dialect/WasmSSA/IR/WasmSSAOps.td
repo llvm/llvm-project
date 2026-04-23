@@ -1030,8 +1030,8 @@ def WasmSSA_ConvertSOp : WasmSSA_ConversionOp<"convert_s",
 def WasmSSA_TruncSIOp : WasmSSA_ConversionOp<"trunc_si",
     [{Truncate floating point value to signed integer.
 
-      Consume a floating point value and produces a signed integer holding the value truncated toward zero.
-      Traps if the value is NaN, is infinity, or is outside the range of the target integer type.}],
+    Consume a floating point value and produces a signed integer holding the value truncated toward zero.
+    Traps if the value is NaN, is infinity, or is outside the range of the target integer type.}],
     [{Example:
 
      ```mlir
@@ -1044,8 +1044,8 @@ def WasmSSA_TruncSIOp : WasmSSA_ConversionOp<"trunc_si",
 def WasmSSA_TruncUIOp : WasmSSA_ConversionOp<"trunc_ui",
     [{Truncate floating point value to unsigned integer.
 
-      Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
-      Traps if the value is NaN, is infinity, is negative, or is outside the range of the target integer type.}],
+    Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+    Traps if the value is NaN, is infinity, is negative, or is outside the range of the target integer type.}],
     [{Example:
 
      ```mlir
