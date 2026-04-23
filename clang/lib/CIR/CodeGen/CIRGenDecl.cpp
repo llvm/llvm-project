@@ -627,7 +627,7 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     // We have a constant initializer, but a nontrivial destructor. We still
     // need to perform a guarded "initialization" in order to register the
     // destructor.
-    emitCXXGuardedInit(d, gv, /*performInit=*/true);
+    emitCXXGuardedInit(d, gv, /*performInit=*/false);
     gvAddr.setStaticLocal(true);
   }
 

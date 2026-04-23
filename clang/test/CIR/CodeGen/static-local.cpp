@@ -506,7 +506,7 @@ void test_dtor() {
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z9test_dtorv()
 // CIR-BOTH: %[[GET_MS:.*]] = cir.get_global static_local @_ZZ9test_dtorvE4dtor : !cir.ptr<!rec_HasDtor>
 //
-// CIR-BEFORE-LPP: cir.local_init static_local @_ZZ9test_dtorvE4dtor ctor {
+// CIR-BEFORE-LPP: cir.local_init static_local @_ZZ9test_dtorvE4dtor dtor {
 //
 // CIR: %[[GET_GUARD:.*]] = cir.get_global @_ZGVZ9test_dtorvE4dtor : !cir.ptr<!s64i>
 // CIR: %[[GUARD_BYTE_PTR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
@@ -519,10 +519,6 @@ void test_dtor() {
 // CIR:   %[[IS_UNINIT:.*]] = cir.cmp ne %[[ACQUIRE]], %[[ZERO]] : !s32i
 // CIR:   cir.if %[[IS_UNINIT]] {
 //
-// CIR-BOTH: %{{.*}} = cir.get_global static_local @_ZZ9test_dtorvE4dtor : !cir.ptr<!rec_HasDtor>
-//
-// CIR-BEFORE-LPP:    cir.yield
-// CIR-BEFORE-LPP:  } dtor {
 // CIR-BEFORE-LPP:      %[[GET_MS_INIT:.*]] = cir.get_global static_local @_ZZ9test_dtorvE4dtor : !cir.ptr<!rec_HasDtor>
 // CIR-BEFORE-LPP:      cir.call @_ZN7HasDtorD1Ev(%[[GET_MS_INIT]]) : (!cir.ptr<!rec_HasDtor>) -> ()
 // CIR-BEFORE-LPP:      cir.yield
@@ -587,7 +583,7 @@ void test_ctor_dtor() {
 // CIR-BEFORE-LPP:     cir.yield
 // CIR-BEFORE-LPP:   }
 //
-// CIR:    %[[GET_MS_DECL:.*]] = cir.get_global static_local @_ZZ14test_ctor_dtorvE9ctor_dtor : !cir.ptr<!rec_HasCtorDtor>
+// CIR:    %[[GET_MS_DEL:.*]] = cir.get_global static_local @_ZZ14test_ctor_dtorvE9ctor_dtor : !cir.ptr<!rec_HasCtorDtor>
 // CIR:    %[[GET_DTOR:.*]] = cir.get_global @_ZN11HasCtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasCtorDtor>)>>
 // CIR:    %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasCtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:    %[[MS_DECAY:.*]] = cir.cast bitcast %[[GET_MS_DEL]] : !cir.ptr<!rec_HasCtorDtor> -> !cir.ptr<!void>
