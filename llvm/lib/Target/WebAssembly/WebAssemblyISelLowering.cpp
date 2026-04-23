@@ -3241,10 +3241,10 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return SDValue();
 
   if (ConversionOp == ISD::FP_ROUND) {
-    bool IsF64ToF32 = ConcatVT == MVT::v4f64 && SourceVT == MVT::v2f64 &&
-                      ResVT == MVT::v4f32;
-    bool IsF32ToF16 = ConcatVT == MVT::v8f32 && SourceVT == MVT::v4f32 &&
-                      ResVT == MVT::v8f16;
+    bool IsF64ToF32 =
+        ConcatVT == MVT::v4f64 && SourceVT == MVT::v2f64 && ResVT == MVT::v4f32;
+    bool IsF32ToF16 =
+        ConcatVT == MVT::v8f32 && SourceVT == MVT::v4f32 && ResVT == MVT::v8f16;
     if (!(IsF64ToF32 || IsF32ToF16))
       return SDValue();
   } else {
