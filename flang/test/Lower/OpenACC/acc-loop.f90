@@ -400,4 +400,3 @@ end subroutine
 ! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[DC_K]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "k"}
 ! CHECK: acc.loop combined(parallel) private(%[[P_I]], %[[P_J]], %[[P_K]] : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32) = (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32) to (%c10{{.*}}, %c100{{.*}}, %c200{{.*}} : i32, i32, i32)  step (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32)
 ! CHECK: } attributes {inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}
-
