@@ -10,7 +10,7 @@ class InvalidArgsLogTestCase(TestBase):
             "log enable",
             error=True,
             substrs=[
-                "error: log enable takes a log channel and one or more log types."
+                "error: log enable takes a log channel and one or more log types"
             ],
         )
 
@@ -20,7 +20,7 @@ class InvalidArgsLogTestCase(TestBase):
             "log disable",
             error=True,
             substrs=[
-                "error: log disable takes a log channel and one or more log types."
+                "error: log disable takes a log channel and one or more log types"
             ],
         )
 
