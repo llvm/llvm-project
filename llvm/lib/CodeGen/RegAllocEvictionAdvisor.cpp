@@ -195,13 +195,12 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
 ///
 /// Also allow urgent evictions of unspillable ranges from a strictly larger
 /// allocation order.
-bool RegAllocEvictionAdvisor::isUrgentEviction(
-    const LiveInterval &VirtReg, const LiveInterval &Intf) const {
+bool RegAllocEvictionAdvisor::isUrgentEviction(const LiveInterval &VirtReg,
+                                               const LiveInterval &Intf) const {
   return !VirtReg.isSpillable() &&
          (Intf.isSpillable() ||
           RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
-              RegClassInfo.getNumAllocatableRegs(
-                  MRI->getRegClass(Intf.reg())));
+              RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(Intf.reg())));
 }
 
 /// shouldEvict - determine if A should evict the assigned live range B. The
