@@ -16,6 +16,12 @@
 # RUN: llvm-objdump --section-headers a.out | FileCheck %s --check-prefix=CHECK2
 # CHECK2: .data         00000010 0000000000002000 DATA
 
+## A BYTE() with an unclosed paren in the include cannot be completed by the
+## parent output-section body.
+# RUN: cp trunc.lds inc.lds
+# RUN: not ld.lld -T a.lds a.o 2>&1 | FileCheck %s --check-prefix=TRUNC
+# TRUNC: error: inc.lds:1: unexpected EOF
+
 #--- a.s
 .section .text,"ax"
 .global _start
@@ -42,3 +48,6 @@ SECTIONS {
 
 #--- full.lds
 QUAD(0)
+
+#--- trunc.lds
+BYTE(42
