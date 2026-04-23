@@ -2225,6 +2225,115 @@ define i64 @vreduce_mul_nxv4i64(<vscale x 4 x i64> %v) {
   ret i64 %red
 }
 
+; Non-power-of-two number of M1 pieces; should not be split by buildMulTree.
+define i64 @vreduce_mul_nxv3i64(<vscale x 3 x i64> %v) {
+; RV32-LABEL: vreduce_mul_nxv3i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 0
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a3, a0, 3
+; RV32-NEXT:    srli a0, a0, 2
+; RV32-NEXT:    add a3, a0, a3
+; RV32-NEXT:    li a0, 1
+; RV32-NEXT:    vsetivli zero, 1, e32, m4, ta, ma
+; RV32-NEXT:  .LBB126_1: # %rdx.loop
+; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32-NEXT:    add a4, a2, a2
+; RV32-NEXT:    addi a2, a2, 1
+; RV32-NEXT:    addi a5, a4, 1
+; RV32-NEXT:    vslidedown.vx v12, v8, a4
+; RV32-NEXT:    vmv.x.s a4, v12
+; RV32-NEXT:    vslidedown.vx v12, v8, a5
+; RV32-NEXT:    vmv.x.s a5, v12
+; RV32-NEXT:    mulhu a6, a0, a4
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    mul a5, a0, a5
+; RV32-NEXT:    add a1, a6, a1
+; RV32-NEXT:    add a1, a1, a5
+; RV32-NEXT:    mul a0, a0, a4
+; RV32-NEXT:    bne a2, a3, .LBB126_1
+; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_nxv3i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 0
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    srli a2, a0, 3
+; RV64-NEXT:    srli a0, a0, 2
+; RV64-NEXT:    add a2, a0, a2
+; RV64-NEXT:    li a0, 1
+; RV64-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV64-NEXT:  .LBB126_1: # %rdx.loop
+; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64-NEXT:    vslidedown.vx v12, v8, a1
+; RV64-NEXT:    vmv.x.s a3, v12
+; RV64-NEXT:    addi a1, a1, 1
+; RV64-NEXT:    mul a0, a0, a3
+; RV64-NEXT:    bne a1, a2, .LBB126_1
+; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:    ret
+  %red = call i64 @llvm.vector.reduce.mul.nxv3i64(<vscale x 3 x i64> %v)
+  ret i64 %red
+}
+
+; Illegal element type; should not be split by buildMulTree.
+define i63 @vreduce_mul_nxv4i63(<vscale x 4 x i63> %v) {
+; RV32-LABEL: vreduce_mul_nxv4i63:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 0
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v9
+; RV32-NEXT:    vmul.vv v9, v10, v11
+; RV32-NEXT:    csrr a3, vlenb
+; RV32-NEXT:    li a0, 1
+; RV32-NEXT:    vmul.vv v8, v8, v9
+; RV32-NEXT:    srli a3, a3, 3
+; RV32-NEXT:    li a4, 32
+; RV32-NEXT:  .LBB127_1: # %rdx.loop
+; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vslidedown.vx v9, v8, a2
+; RV32-NEXT:    addi a2, a2, 1
+; RV32-NEXT:    vsrl.vx v10, v9, a4
+; RV32-NEXT:    vmv.x.s a5, v9
+; RV32-NEXT:    vmv.x.s a6, v10
+; RV32-NEXT:    mulhu a7, a0, a5
+; RV32-NEXT:    mul a1, a1, a5
+; RV32-NEXT:    mul a6, a0, a6
+; RV32-NEXT:    add a1, a7, a1
+; RV32-NEXT:    add a1, a1, a6
+; RV32-NEXT:    mul a0, a0, a5
+; RV32-NEXT:    bne a2, a3, .LBB127_1
+; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_nxv4i63:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 0
+; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    vmul.vv v9, v10, v11
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    srli a2, a2, 3
+; RV64-NEXT:    li a0, 1
+; RV64-NEXT:  .LBB127_1: # %rdx.loop
+; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vx v9, v8, a1
+; RV64-NEXT:    vmv.x.s a3, v9
+; RV64-NEXT:    addi a1, a1, 1
+; RV64-NEXT:    mul a0, a0, a3
+; RV64-NEXT:    bne a1, a2, .LBB127_1
+; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:    ret
+  %red = call i63 @llvm.vector.reduce.mul.nxv4i63(<vscale x 4 x i63> %v)
+  ret i63 %red
+}
+
 define i64 @vreduce_mul_nxv16i64(<vscale x 16 x i64> %v) {
 ; RV32-LABEL: vreduce_mul_nxv16i64:
 ; RV32:       # %bb.0:
@@ -2250,7 +2359,7 @@ define i64 @vreduce_mul_nxv16i64(<vscale x 16 x i64> %v) {
 ; RV32-NEXT:    vmul.vv v9, v10, v11
 ; RV32-NEXT:    vmul.vv v8, v8, v9
 ; RV32-NEXT:    li a4, 32
-; RV32-NEXT:  .LBB126_1: # %rdx.loop
+; RV32-NEXT:  .LBB128_1: # %rdx.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vx v9, v8, a2
@@ -2264,7 +2373,7 @@ define i64 @vreduce_mul_nxv16i64(<vscale x 16 x i64> %v) {
 ; RV32-NEXT:    add a1, a7, a1
 ; RV32-NEXT:    add a1, a1, a6
 ; RV32-NEXT:    mul a0, a0, a5
-; RV32-NEXT:    bne a2, a3, .LBB126_1
+; RV32-NEXT:    bne a2, a3, .LBB128_1
 ; RV32-NEXT:  # %bb.2: # %rdx.exit
 ; RV32-NEXT:    ret
 ;
@@ -2290,14 +2399,14 @@ define i64 @vreduce_mul_nxv16i64(<vscale x 16 x i64> %v) {
 ; RV64-NEXT:    vmul.vv v9, v10, v11
 ; RV64-NEXT:    vmul.vv v8, v8, v9
 ; RV64-NEXT:    li a0, 1
-; RV64-NEXT:  .LBB126_1: # %rdx.loop
+; RV64-NEXT:  .LBB128_1: # %rdx.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vx v9, v8, a1
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    mul a0, a0, a3
-; RV64-NEXT:    bne a1, a2, .LBB126_1
+; RV64-NEXT:    bne a1, a2, .LBB128_1
 ; RV64-NEXT:  # %bb.2: # %rdx.exit
 ; RV64-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.mul.nxv16i64(<vscale x 16 x i64> %v)
@@ -2360,6 +2469,217 @@ define i64 @vreduce_mul_nxv2i64_exact_vlen(<vscale x 2 x i64> %v) vscale_range(2
 ; RV64-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.mul.nxv2i64(<vscale x 2 x i64> %v)
   ret i64 %red
+}
+
+define i64 @vreduce_mul_nxv3i64_exact_vlen(<vscale x 3 x i64> %v) vscale_range(2,2) {
+; RV32-LABEL: vreduce_mul_nxv3i64_exact_vlen:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v12, v8, 5
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vslidedown.vi v16, v8, 4
+; RV32-NEXT:    vslidedown.vi v20, v8, 3
+; RV32-NEXT:    vslidedown.vi v24, v8, 1
+; RV32-NEXT:    vslidedown.vi v28, v8, 2
+; RV32-NEXT:    vmv.x.s a2, v8
+; RV32-NEXT:    vsrl.vx v4, v12, a1
+; RV32-NEXT:    vmv.x.s a0, v12
+; RV32-NEXT:    vsrl.vx v12, v16, a1
+; RV32-NEXT:    vmv.x.s a3, v16
+; RV32-NEXT:    vsrl.vx v16, v20, a1
+; RV32-NEXT:    vsrl.vx v8, v8, a1
+; RV32-NEXT:    vmv.x.s a4, v20
+; RV32-NEXT:    vsrl.vx v20, v24, a1
+; RV32-NEXT:    vmv.x.s a5, v28
+; RV32-NEXT:    vsrl.vx v28, v28, a1
+; RV32-NEXT:    vmv.x.s a1, v24
+; RV32-NEXT:    vmv.x.s a6, v4
+; RV32-NEXT:    vmv.x.s a7, v12
+; RV32-NEXT:    vmv.x.s t0, v16
+; RV32-NEXT:    vmv.x.s t1, v8
+; RV32-NEXT:    vmv.x.s t2, v20
+; RV32-NEXT:    vmv.x.s t3, v28
+; RV32-NEXT:    mul t4, a2, a1
+; RV32-NEXT:    mulhu t5, a2, a1
+; RV32-NEXT:    mul t3, t4, t3
+; RV32-NEXT:    mul a2, a2, t2
+; RV32-NEXT:    mulhu t2, t4, a5
+; RV32-NEXT:    mul a1, t1, a1
+; RV32-NEXT:    mul t1, t4, a5
+; RV32-NEXT:    add t2, t2, t3
+; RV32-NEXT:    add a2, t5, a2
+; RV32-NEXT:    mul t0, t1, t0
+; RV32-NEXT:    mulhu t3, t1, a4
+; RV32-NEXT:    mul t1, t1, a4
+; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    add t0, t3, t0
+; RV32-NEXT:    mul a2, t1, a7
+; RV32-NEXT:    mulhu a7, t1, a3
+; RV32-NEXT:    mul t1, t1, a3
+; RV32-NEXT:    mul a1, a1, a5
+; RV32-NEXT:    add a2, a7, a2
+; RV32-NEXT:    mul a5, t1, a6
+; RV32-NEXT:    mulhu a6, t1, a0
+; RV32-NEXT:    add a1, t2, a1
+; RV32-NEXT:    add a5, a6, a5
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, t0, a1
+; RV32-NEXT:    mul a1, a1, a3
+; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    mul a1, a1, a0
+; RV32-NEXT:    add a1, a5, a1
+; RV32-NEXT:    mul a0, t1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_nxv3i64_exact_vlen:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v11, v10, 1
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    vslidedown.vi v10, v8, 1
+; RV64-NEXT:    vmv.x.s a1, v8
+; RV64-NEXT:    vmv.x.s a2, v9
+; RV64-NEXT:    vslidedown.vi v8, v9, 1
+; RV64-NEXT:    vmv.x.s a3, v11
+; RV64-NEXT:    vmv.x.s a4, v10
+; RV64-NEXT:    vmv.x.s a5, v8
+; RV64-NEXT:    vmv.v.x v8, a2
+; RV64-NEXT:    vmv.v.x v11, a1
+; RV64-NEXT:    vmv.v.x v10, a0
+; RV64-NEXT:    vslide1down.vx v9, v8, a5
+; RV64-NEXT:    vslide1down.vx v10, v10, a3
+; RV64-NEXT:    vslide1down.vx v8, v11, a4
+; RV64-NEXT:    vmv.v.i v11, 1
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    vslidedown.vi v9, v8, 1
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
+  %red = call i64 @llvm.vector.reduce.mul.nxv3i64(<vscale x 3 x i64> %v)
+  ret i64 %red
+}
+
+define i63 @vreduce_mul_nxv4i63_exact_vlen(<vscale x 4 x i63> %v) vscale_range(2,2) {
+; RV32-LABEL: vreduce_mul_nxv4i63_exact_vlen:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v12, v9, 1
+; RV32-NEXT:    vmv.x.s a3, v9
+; RV32-NEXT:    vslidedown.vi v13, v9, 2
+; RV32-NEXT:    vslidedown.vi v9, v9, 3
+; RV32-NEXT:    vslidedown.vi v14, v8, 1
+; RV32-NEXT:    vmv.x.s a5, v8
+; RV32-NEXT:    vslidedown.vi v15, v8, 2
+; RV32-NEXT:    vslidedown.vi v8, v8, 3
+; RV32-NEXT:    vslidedown.vi v16, v11, 3
+; RV32-NEXT:    vslidedown.vi v17, v11, 2
+; RV32-NEXT:    vslidedown.vi v18, v11, 1
+; RV32-NEXT:    vmv.x.s a6, v11
+; RV32-NEXT:    vslidedown.vi v11, v10, 3
+; RV32-NEXT:    vslidedown.vi v19, v10, 2
+; RV32-NEXT:    vmv.x.s a7, v10
+; RV32-NEXT:    vslidedown.vi v10, v10, 1
+; RV32-NEXT:    vmv.x.s t0, v12
+; RV32-NEXT:    vmv.x.s a2, v13
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    vmv.x.s t1, v14
+; RV32-NEXT:    vmv.x.s a4, v15
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    vmv.v.x v8, a3
+; RV32-NEXT:    vmv.x.s a3, v16
+; RV32-NEXT:    vmv.v.x v9, a5
+; RV32-NEXT:    vmv.x.s a5, v17
+; RV32-NEXT:    vmv.v.x v12, a7
+; RV32-NEXT:    vmv.x.s a7, v18
+; RV32-NEXT:    vmv.v.x v13, a6
+; RV32-NEXT:    li a6, 32
+; RV32-NEXT:    vslide1down.vx v8, v8, t0
+; RV32-NEXT:    vmv.x.s t0, v11
+; RV32-NEXT:    vslide1down.vx v9, v9, t1
+; RV32-NEXT:    vmv.x.s t1, v10
+; RV32-NEXT:    vslide1down.vx v10, v12, t1
+; RV32-NEXT:    vmv.x.s t1, v19
+; RV32-NEXT:    vslide1down.vx v11, v13, a7
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    vslide1down.vx v9, v9, a4
+; RV32-NEXT:    vslide1down.vx v10, v10, t1
+; RV32-NEXT:    vslide1down.vx v11, v11, a5
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslide1down.vx v9, v9, a1
+; RV32-NEXT:    vslide1down.vx v10, v10, t0
+; RV32-NEXT:    vslide1down.vx v11, v11, a3
+; RV32-NEXT:    vslidedown.vi v12, v9, 1
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    vslidedown.vi v13, v9, 2
+; RV32-NEXT:    vslidedown.vi v9, v9, 3
+; RV32-NEXT:    vslidedown.vi v14, v8, 1
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vmul.vv v10, v10, v11
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v11, v8, 2
+; RV32-NEXT:    vslidedown.vi v8, v8, 3
+; RV32-NEXT:    vmv.x.s a2, v12
+; RV32-NEXT:    vmv.v.x v12, a0
+; RV32-NEXT:    vmv.x.s a0, v13
+; RV32-NEXT:    vmv.x.s a3, v9
+; RV32-NEXT:    vmv.x.s a4, v14
+; RV32-NEXT:    vmv.v.x v9, a1
+; RV32-NEXT:    vmv.x.s a1, v11
+; RV32-NEXT:    vmv.x.s a5, v8
+; RV32-NEXT:    vslide1down.vx v8, v12, a2
+; RV32-NEXT:    vslide1down.vx v9, v9, a4
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslide1down.vx v9, v9, a1
+; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    vslide1down.vx v9, v9, a5
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vmul.vv v8, v8, v9
+; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vrgather.vi v9, v8, 1
+; RV32-NEXT:    vmul.vv v8, v8, v9
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vsrl.vx v8, v8, a6
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_nxv4i63_exact_vlen:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v12, v11, 1
+; RV64-NEXT:    vmv.x.s a0, v11
+; RV64-NEXT:    vslidedown.vi v11, v10, 1
+; RV64-NEXT:    vmv.x.s a1, v10
+; RV64-NEXT:    vslidedown.vi v10, v9, 1
+; RV64-NEXT:    vmv.x.s a2, v9
+; RV64-NEXT:    vmv.x.s a3, v8
+; RV64-NEXT:    vslidedown.vi v8, v8, 1
+; RV64-NEXT:    vmv.x.s a4, v12
+; RV64-NEXT:    vmv.x.s a5, v11
+; RV64-NEXT:    vmv.x.s a6, v10
+; RV64-NEXT:    vmv.x.s a7, v8
+; RV64-NEXT:    vmv.v.x v8, a3
+; RV64-NEXT:    vmv.v.x v9, a2
+; RV64-NEXT:    vmv.v.x v10, a1
+; RV64-NEXT:    vmv.v.x v11, a0
+; RV64-NEXT:    vslide1down.vx v8, v8, a7
+; RV64-NEXT:    vslide1down.vx v9, v9, a6
+; RV64-NEXT:    vslide1down.vx v10, v10, a5
+; RV64-NEXT:    vslide1down.vx v11, v11, a4
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    vmul.vv v9, v10, v11
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    vrgather.vi v9, v8, 1
+; RV64-NEXT:    vmul.vv v8, v8, v9
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
+  %red = call i63 @llvm.vector.reduce.mul.nxv4i63(<vscale x 4 x i63> %v)
+  ret i63 %red
 }
 
 define signext i32 @vreduce_mul_nxv1i32_exact_vlen(<vscale x 1 x i32> %v) vscale_range(2,2) {

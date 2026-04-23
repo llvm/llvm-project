@@ -321,7 +321,7 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
     }
 
     unsigned M1MinElts = RISCV::RVVBitsPerBlock / EltSize;
-    if (MinElts <= M1MinElts)
+    if (MinElts <= M1MinElts || !isPowerOf2_32(MinElts / M1MinElts))
       return false;
 
     IRBuilder<> Builder(&II);
