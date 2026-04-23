@@ -1253,12 +1253,21 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     assert(!cir::MissingFeatures::sanitizers());
 
     // Extend or truncate the index type to pointer-sized integer.
-    if (promote && idx.getType() != ptrDiffTy) {
-      cir::CastKind kind = mlir::isa<cir::BoolType>(idx.getType())
-                               ? cir::CastKind::bool_to_int
-                               : cir::CastKind::integral;
-      idx =
-          builder.createOrFold<cir::CastOp>(idx.getLoc(), ptrDiffTy, kind, idx);
+    if (promote) {
+      // Choose the type we extend or truncate to based on the signedness of the
+      // index type.
+      mlir::Type desiredIdxTy =
+          e->getIdx()->getType()->isSignedIntegerOrEnumerationType()
+              ? ptrDiffTy
+              : uIntPtrTy;
+
+      if (idx.getType() != desiredIdxTy) {
+        cir::CastKind kind = mlir::isa<cir::BoolType>(idx.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral;
+        idx = builder.createOrFold<cir::CastOp>(idx.getLoc(), desiredIdxTy,
+                                                kind, idx);
+      }
     }
 
     return idx;

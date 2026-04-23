@@ -495,8 +495,8 @@ void boolean_index_access(int x) {
 // CIR: %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
 // CIR: %[[CMP:.*]] = cir.cmp gt %[[X]], %[[FOUR]] : !s32i
-// CIR: %[[IDX:.*]] = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s64i
-// CIR: %[[ELE:.*]] = cir.get_element %[[ARR_ADDR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
+// CIR: %[[IDX:.*]] = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !u64i
+// CIR: %[[ELE:.*]] = cir.get_element %[[ARR_ADDR]][%[[IDX]] : !u64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 // CIR: %[[VAL:.*]] = cir.load{{.*}} %[[ELE]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[VAL]], %[[N_ADDR]] : !s32i, !cir.ptr<!s32i>
 
@@ -564,9 +564,9 @@ char access_last_element_of_huge_array() {
 }
 
 // CIR: cir.func{{.*}} @_Z33access_last_element_of_huge_arrayv
-// CIR:   %[[IDX:.*]] = cir.const #cir.int<2305843009213693950> : !s64i
+// CIR:   %[[IDX:.*]] = cir.const #cir.int<2305843009213693950> : !u64i
 // CIR:   %[[HUGE:.*]] = cir.get_global @huge : !cir.ptr<!cir.array<!s8i x 2305843009213693951>>
-// CIR:   %[[ELE:.*]] = cir.get_element %[[HUGE]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 2305843009213693951>> -> !cir.ptr<!s8i>
+// CIR:   %[[ELE:.*]] = cir.get_element %[[HUGE]][%[[IDX]] : !u64i] : !cir.ptr<!cir.array<!s8i x 2305843009213693951>> -> !cir.ptr<!s8i>
 // CIR:   cir.load{{.*}} %[[ELE]] : !cir.ptr<!s8i>, !s8i
 
 // LLVM: define{{.*}} @_Z33access_last_element_of_huge_arrayv()
