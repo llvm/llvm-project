@@ -5,11 +5,6 @@
 // Regression test for the AddressSanitizer hsa_memory_copy interceptor: invalid
 // overlapping ranges are diagnosed (same family of checks as memcpy).
 //
-// Link against ROCm's HSA runtime. Tests under TestCases/AMDGPU run only when
-// lit finds a ROCm install (see lit.local.cfg.py): $ROCM_PATH or /opt/rocm,
-// with include/hsa/hsa.h and libhsa-runtime64. Compiler-rt must be built with
-// SANITIZER_AMDGPU enabled.
-//
 // REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
 // UNSUPPORTED: android
 

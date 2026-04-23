@@ -6,11 +6,6 @@
 // hsa_amd_memory_pool_free interceptors: freeing the same pool allocation
 // twice is diagnosed (same family of checks as double-free on malloc).
 //
-// Link against ROCm's HSA runtime. Tests under TestCases/AMDGPU run only when
-// lit finds a ROCm install (see lit.local.cfg.py): $ROCM_PATH or /opt/rocm,
-// with include/hsa/hsa.h and libhsa-runtime64. Compiler-rt must be built with
-// SANITIZER_AMDGPU enabled. The suite uses the dynamic ASan runtime only.
-//
 // REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
