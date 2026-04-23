@@ -1697,7 +1697,7 @@ class DEI_FT<string opstr, RegisterOperand RO,
 let hasSideEffects = 1 in
 class SYNC_FT<string opstr> :
   InstSE<(outs), (ins uimm5:$stype), "sync $stype",
-         [(MipsSync immZExt5:$stype)], II_SYNC, FrmOther, opstr>;
+         [(MipsSync timmZExt5:$stype)], II_SYNC, FrmOther, opstr>;
 
 class SYNCI_FT<string opstr, DAGOperand MO> :
   InstSE<(outs), (ins MO:$addr), !strconcat(opstr, "\t$addr"), [],
