@@ -3164,6 +3164,10 @@ getCodeGenOnlyAtomicArchExtension(unsigned Opc) {
   case AArch64::CASALH_cg:
   case AArch64::CASALW_cg:
   case AArch64::CASALX_cg:
+  case AArch64::SWPB_cg:
+  case AArch64::SWPH_cg:
+  case AArch64::SWPW_cg:
+  case AArch64::SWPX_cg:
     return {"lse", AArch64::FeatureLSE};
   }
 }
