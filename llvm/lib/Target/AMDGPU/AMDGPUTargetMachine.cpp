@@ -597,17 +597,6 @@ StringRef llvm::AMDGPU::getSchedStrategy(const Function &F) {
   return "";
 }
 
-static void
-diagnoseUnsupportedCoExecSchedulerSelection(const Function &F,
-                                            const GCNSubtarget &ST) {
-  if (ST.hasGFX1250Insts())
-    return;
-
-  F.getContext().diagnose(DiagnosticInfoUnsupported(
-      F, "'amdgpu-sched-strategy'='coexec' is only supported for gfx1250",
-      DiagnosticLocation(), DS_Warning));
-}
-
 static bool useNoopPostScheduler(const Function &F) {
   Attribute PostSchedStrategyAttr =
       F.getFnAttribute("amdgpu-post-sched-strategy");
@@ -1304,10 +1293,8 @@ GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   if (SchedStrategy == "iterative-maxocc")
     return createIterativeGCNMaxOccupancyMachineScheduler(C);
 
-  if (SchedStrategy == "coexec") {
-    diagnoseUnsupportedCoExecSchedulerSelection(C->MF->getFunction(), ST);
+  if (SchedStrategy == "coexec")
     return createGCNCoExecMachineScheduler(C);
-  }
 
   return createGCNMaxOccupancyMachineScheduler(C);
 }
