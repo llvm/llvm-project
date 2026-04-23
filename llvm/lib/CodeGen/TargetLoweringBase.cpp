@@ -2303,8 +2303,6 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FATAN;
   case Intrinsic::atan2:
     return ISD::FATAN2;
-  case Intrinsic::canonicalize:
-    return ISD::FCANONICALIZE;
   case Intrinsic::cos:
     return ISD::FCOS;
   case Intrinsic::cosh:
