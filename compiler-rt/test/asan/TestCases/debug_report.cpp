@@ -45,7 +45,7 @@ __asan_on_error() {
   void *bp = __asan_get_report_bp();
   void *sp = __asan_get_report_sp();
   void *addr = __asan_get_report_address();
-  int access_type = __asan_get_report_access_type();
+  int is_write = __asan_get_report_access_type();
   size_t access_size = __asan_get_report_access_size();
   const char *description = __asan_get_report_description();
 
@@ -59,19 +59,7 @@ __asan_on_error() {
   // CHECK: sp: 0x[[SP:[0-9a-f]+]]
   fprintf(stderr, "addr: " PTR_FMT "\n", addr);
   // CHECK: addr: 0x[[ADDR:[0-9a-f]+]]
-  auto at_name = [access_type]() {
-    switch (access_type) {
-    case 0:
-      return "read";
-    case 1:
-      return "write";
-    case 2:
-      return "assumption";
-    default:
-      __builtin_trap();
-    }
-  };
-  fprintf(stderr, "type: %s\n", at_name());
+  fprintf(stderr, "type: %s\n", (is_write ? "write" : "read"));
   // CHECK: type: write
   fprintf(stderr, "access_size: %ld\n", access_size);
   // CHECK: access_size: 1
