@@ -6,10 +6,12 @@
 import glob
 import os
 
+
 def getRoot(config):
     if not config.parent:
         return config
     return getRoot(config.parent)
+
 
 def walk_config_attr(cfg, name):
     """Return the first defined attribute `name` walking cfg -> parents."""
@@ -21,6 +23,7 @@ def walk_config_attr(cfg, name):
         cfg = cfg.parent
     return None
 
+
 def rocm_lib_dir(rocm_root):
     """Return lib or lib64 under rocm_root that provides libhsa-runtime64."""
     for libname in ("lib", "lib64"):
@@ -31,6 +34,7 @@ def rocm_lib_dir(rocm_root):
             return libdir
     return None
 
+
 def rocm_is_available(rocm_root):
     if not rocm_root or not os.path.isdir(rocm_root):
         return False
@@ -38,6 +42,7 @@ def rocm_is_available(rocm_root):
     if not os.path.isfile(hsa_h):
         return False
     return rocm_lib_dir(rocm_root) is not None
+
 
 root = getRoot(config)
 # AMDGPU ASan tests are only run with the dynamic ASan runtime (-shared-libasan).
