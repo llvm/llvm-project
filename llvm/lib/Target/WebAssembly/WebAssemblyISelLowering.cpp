@@ -3363,9 +3363,6 @@ static SDValue performBitcastCombine(SDNode *N,
 
   // bitcast <N x i1>(setcc ...) to concat iN, where N = 32 and 64 (illegal)
   if (NumElts == 32 || NumElts == 64) {
-    // Strategy: We will setcc them separately in v16i8 -> v16i1
-    // Bitcast them to i16, extend them to either i32 or i64.
-    // Add them together, shifting left 1 by 1.
     SDValue Concat, SetCCVector;
     ISD::CondCode SetCond;
 
@@ -3375,33 +3372,61 @@ static SDValue performBitcastCombine(SDNode *N,
     if (Concat.getOpcode() != ISD::CONCAT_VECTORS)
       return SDValue();
 
-    uint64_t ElementWidth =
-        SetCCVector.getValueType().getVectorElementType().getFixedSizeInBits();
+    // Reconstruct the wide bitmask from each CONCAT_VECTORS operand.
+    // Derive the per-chunk mask/integer types from the actual operand type
+    // instead of hardcoding v16i1 / i16 for every chunk.
+    EVT ConcatOperandVT = Concat.getOperand(0).getValueType();
+    unsigned ConcatOperandNumElts = ConcatOperandVT.getVectorNumElements();
 
-    SmallVector<SDValue> VectorsToShuffle;
-    for (size_t I = 0; I < Concat->ops().size(); I++) {
-      VectorsToShuffle.push_back(DAG.getBitcast(
-          MVT::i16,
-          DAG.getSetCC(DL, MVT::v16i1, Concat->ops()[I],
-                       extractSubVector(SetCCVector, I * (128 / ElementWidth),
-                                        DAG, DL, 128),
-                       SetCond)));
+    EVT ConcatOperandMaskVT =
+        EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                         ElementCount::getFixed(ConcatOperandNumElts));
+    EVT ConcatOperandBitmaskVT =
+        EVT::getIntegerVT(*DAG.getContext(), ConcatOperandNumElts);
+    EVT ReturnVT = N->getValueType(0);
+    SDValue ReconstructedBitmask = DAG.getConstant(0, DL, ReturnVT);
+    // Example:
+    //   v32i16 = concat(v8i16, v8i16, v8i16, v8i16)
+    //     -> v8i1 + v8i1 + v8i1 + v8i1
+    //     -> i8   + i8   + i8   + i8
+    //     -> reconstructed i32 bitmask
+    for (size_t I = 0; I < Concat->ops().size(); ++I) {
+      SDValue ConcatOperand = Concat.getOperand(I);
+      assert(ConcatOperand.getValueType() == ConcatOperandVT &&
+             "concat_vectors operands must have the same type");
+
+      SDValue SetCCVectorOperand =
+          extractSubVector(SetCCVector, I * ConcatOperandNumElts, DAG, DL, 128);
+      if (!SetCCVectorOperand ||
+          SetCCVectorOperand.getValueType() != ConcatOperandVT)
+        return SDValue();
+
+      // Build the per-chunk mask using the correct chunk type:
+      //   v16i8 -> v16i1 -> i16
+      //   v8i16 -> v8i1  -> i8
+      //   v4i32 -> v4i1  -> i4
+      //   v2i64 -> v2i1  -> i2
+      SDValue ConcatOperandMask = DAG.getSetCC(
+          DL, ConcatOperandMaskVT, ConcatOperand, SetCCVectorOperand, SetCond);
+      SDValue ConcatOperandBitmask =
+          DAG.getBitcast(ConcatOperandBitmaskVT, ConcatOperandMask);
+      SDValue ExtendedConcatOperandBitmask =
+          DAG.getZExtOrTrunc(ConcatOperandBitmask, DL, ReturnVT);
+
+      // Shift the previously reconstructed bits to make room for this chunk.
+      if (I != 0) {
+        ReconstructedBitmask = DAG.getNode(
+            ISD::SHL, DL, ReturnVT, ReconstructedBitmask,
+            DAG.getShiftAmountConstant(ConcatOperandNumElts, ReturnVT, DL));
+      }
+
+      // Merge disjoint partial bitmasks with OR.
+      ReconstructedBitmask =
+          DAG.getNode(ISD::OR, DL, ReturnVT, ReconstructedBitmask,
+                      ExtendedConcatOperandBitmask);
     }
 
-    MVT ReturnType = VectorsToShuffle.size() == 2 ? MVT::i32 : MVT::i64;
-    SDValue ReturningInteger = DAG.getConstant(0, DL, ReturnType);
-
-    for (SDValue V : VectorsToShuffle) {
-      ReturningInteger = DAG.getNode(
-          ISD::SHL, DL, ReturnType,
-          {ReturningInteger, DAG.getShiftAmountConstant(16, ReturnType, DL)});
-
-      SDValue ExtendedV = DAG.getZExtOrTrunc(V, DL, ReturnType);
-      ReturningInteger =
-          DAG.getNode(ISD::ADD, DL, ReturnType, {ReturningInteger, ExtendedV});
-    }
-
-    return ReturningInteger;
+    return ReconstructedBitmask;
   }
 
   return SDValue();

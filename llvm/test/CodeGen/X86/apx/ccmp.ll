@@ -1816,5 +1816,42 @@ if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
+; Fast-math patterns with CCMP instructions.
+; Fast-math canonicalization can introduce FREEZE nodes around SETCC operations.
+; With SETCC in isGuaranteedNotToBeUndefOrPoisonForTargetNode, these FREEZE
+; nodes are eliminated early, allowing CCMP pattern matching to work naturally.
+define i32 @test_or_fp_int(double %a, double %b, i32 %c, i32 %d) {
+; CHECK-LABEL: test_or_fp_int:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ucomisd %xmm1, %xmm0 # encoding: [0x66,0x0f,0x2e,0xc1]
+; CHECK-NEXT:    ccmpal {dfv=} %esi, %edi # encoding: [0x62,0xf4,0x04,0x07,0x39,0xf7]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: test_or_fp_int:
+; NDD:       # %bb.0:
+; NDD-NEXT:    ucomisd %xmm1, %xmm0 # encoding: [0x66,0x0f,0x2e,0xc1]
+; NDD-NEXT:    ccmpal {dfv=} %esi, %edi # encoding: [0x62,0xf4,0x04,0x07,0x39,0xf7]
+; NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NDD-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; SETZUCC-LABEL: test_or_fp_int:
+; SETZUCC:       # %bb.0:
+; SETZUCC-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
+; SETZUCC-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; SETZUCC-NEXT:    ucomisd %xmm1, %xmm0 # encoding: [0x66,0x0f,0x2e,0xc1]
+; SETZUCC-NEXT:    setzube %cl # encoding: [0x62,0xf4,0x7f,0x18,0x46,0xc1]
+; SETZUCC-NEXT:    orb %al, %cl # encoding: [0x08,0xc1]
+; SETZUCC-NEXT:    movzbl %cl, %eax # encoding: [0x0f,0xb6,0xc1]
+; SETZUCC-NEXT:    retq # encoding: [0xc3]
+  %cmp = icmp ne i32 %c, %d
+  %cmp1 = fcmp fast ole double %a, %b
+  %sel = select i1 %cmp, i1 true, i1 %cmp1
+  %ext = zext i1 %sel to i32
+  ret i32 %ext
+}
+
 declare dso_local void @foo(...)
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone
