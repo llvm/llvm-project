@@ -27,7 +27,7 @@ const char DefaultIgnoredParameterNames[] = "^[n]$";
 const unsigned DefaultLineCountThreshold = 0;
 
 const char ErrorMessage[] =
-    "%select{variable|exception variable|loop variable|"
+    "%select{variable|binding variable|exception variable|loop variable|"
     "parameter}0 name %1 is too short, expected at least %2 characters";
 
 IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
@@ -157,7 +157,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         << 0 << StandaloneVar << MinimumVariableNameLength;
   }
 
-  const auto *BindingVar = Result.Nodes.getNodeAs<VarDecl>("bindingVar");
+  const auto *BindingVar = Result.Nodes.getNodeAs<BindingDecl>("bindingVar");
   if (BindingVar) {
     if (!BindingVar->getIdentifier())
       return;
@@ -168,12 +168,12 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredBindingNames.match(VarName))
       return;
 
-    if (isShortLived(BindingVar, Result.SourceManager, Result.Context,
-                     LineCountThreshold))
-      return;
+    // if (isShortLived(BindingVar, Result.SourceManager, Result.Context,
+    //                  LineCountThreshold))
+    //   return;
 
     diag(BindingVar->getLocation(), ErrorMessage)
-        << 0 << BindingVar << MinimumBindingNameLength;
+        << 1 << BindingVar << MinimumBindingNameLength;
   }
 
   auto *ExceptionVarName = Result.Nodes.getNodeAs<VarDecl>("exceptionVar");
@@ -191,7 +191,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     diag(ExceptionVarName->getLocation(), ErrorMessage)
-        << 1 << ExceptionVarName << MinimumExceptionNameLength;
+        << 2 << ExceptionVarName << MinimumExceptionNameLength;
   }
 
   const auto *LoopVar = Result.Nodes.getNodeAs<VarDecl>("loopVar");
@@ -210,7 +210,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     diag(LoopVar->getLocation(), ErrorMessage)
-        << 2 << LoopVar << MinimumLoopCounterNameLength;
+        << 3 << LoopVar << MinimumLoopCounterNameLength;
   }
 
   const auto *ParamVar = Result.Nodes.getNodeAs<VarDecl>("paramVar");
@@ -229,7 +229,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     diag(ParamVar->getLocation(), ErrorMessage)
-        << 3 << ParamVar << MinimumParameterNameLength;
+        << 4 << ParamVar << MinimumParameterNameLength;
   }
 }
 
