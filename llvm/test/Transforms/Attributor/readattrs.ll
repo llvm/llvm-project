@@ -206,13 +206,13 @@ define <4 x i32> @test12_2(<4 x ptr> %ptrs) {
 }
 
 define i32 @volatile_load(ptr %p) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; TUNIT: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@volatile_load
 ; TUNIT-SAME: (ptr nofree noundef align 4 [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; TUNIT-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
 ; TUNIT-NEXT:    ret i32 [[LOAD]]
 ;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CGSCC: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@volatile_load
 ; CGSCC-SAME: (ptr nofree noundef align 4 [[P:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CGSCC-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
@@ -410,7 +410,7 @@ define i32 @read_only_constant_mem() {
 ; TUNIT: attributes #[[ATTR6:[0-9]+]] = { nounwind memory(argmem: read) }
 ; TUNIT: attributes #[[ATTR7]] = { nosync nounwind memory(argmem: read) }
 ; TUNIT: attributes #[[ATTR8]] = { nounwind memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR9]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR10]] = { nosync memory(none) }
 ; TUNIT: attributes #[[ATTR11]] = { nosync }
 ; TUNIT: attributes #[[ATTR12:[0-9]+]] = { nounwind memory(read) }
@@ -432,7 +432,7 @@ define i32 @read_only_constant_mem() {
 ; CGSCC: attributes #[[ATTR7:[0-9]+]] = { nounwind memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR8]] = { nosync nounwind memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR9]] = { nounwind memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR10]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR10]] = { nofree norecurse nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR11]] = { nosync memory(none) }
 ; CGSCC: attributes #[[ATTR12]] = { nosync }
 ; CGSCC: attributes #[[ATTR13:[0-9]+]] = { nounwind memory(read) }

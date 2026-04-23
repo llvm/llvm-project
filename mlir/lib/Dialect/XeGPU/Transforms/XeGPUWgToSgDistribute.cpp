@@ -498,9 +498,6 @@ struct WgToSgVectorBroadcastOp
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
-    if (!xegpu::XeGPUDialect::isEvenlyDistributable(wgShape, layout))
-      return failure();
-
     SmallVector<Value> newBroadcastOps;
     auto distSource = adaptor.getOperands().front();
     int numDistributions = count / distSource.size();
@@ -951,9 +948,6 @@ struct WgToSgLoadGatherOpWithOffset
   matchAndRewrite(xegpu::LoadGatherOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    if (!op.getOffsets())
-      return failure();
-
     Location loc = op.getLoc();
     VectorType resultType = dyn_cast<VectorType>(op.getResult().getType());
     if (!resultType)
@@ -1004,9 +998,6 @@ struct WgToSgStoreScatterOpWithOffset
   LogicalResult
   matchAndRewrite(xegpu::StoreScatterOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    if (!op.getOffsets())
-      return failure();
 
     Location loc = op.getLoc();
     VectorType valueType = dyn_cast<VectorType>(op.getValue().getType());
@@ -1644,7 +1635,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   converter.addConversion(
       [&](xegpu::TensorDescType type,
           SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-        xegpu::LayoutAttr layout = type.getLayoutAttr();
+        xegpu::DistributeLayoutAttr layout = type.getLayoutAttr();
         // Only convert WG-level tensor descs. SG-level or layout-less types
         // are already legal and should pass through unchanged.
         if (!layout || !layout.isForWorkgroup())
@@ -1784,17 +1775,5 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
 
-  // Remove layout attributes from SCF ops
-  getOperation()->walk([](Operation *op) {
-    if (!isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(op))
-      return;
-
-    SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : op->getDiscardableAttrs()) {
-      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
-        attrsToRemove.push_back(namedAttr.getName());
-    }
-    for (auto attrName : attrsToRemove)
-      op->removeDiscardableAttr(attrName);
-  });
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
 }

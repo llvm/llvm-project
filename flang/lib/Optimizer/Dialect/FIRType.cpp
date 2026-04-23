@@ -332,8 +332,7 @@ bool isBoxedRecordType(mlir::Type ty) {
   if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty)) {
     if (mlir::isa<fir::RecordType>(boxTy.getEleTy()))
       return true;
-    mlir::Type innerType = boxTy.unwrapInnerType();
-    return innerType && mlir::isa<fir::RecordType>(innerType);
+    return mlir::isa<fir::RecordType>(boxTy.unwrapInnerType());
   }
   return false;
 }
@@ -343,8 +342,7 @@ bool isClassStarType(mlir::Type ty) {
   if (auto clTy = mlir::dyn_cast<fir::ClassType>(fir::unwrapRefType(ty))) {
     if (mlir::isa<mlir::NoneType>(clTy.getEleTy()))
       return true;
-    mlir::Type innerType = clTy.unwrapInnerType();
-    return innerType && mlir::isa<mlir::NoneType>(innerType);
+    return mlir::isa<mlir::NoneType>(clTy.unwrapInnerType());
   }
   return false;
 }
@@ -415,18 +413,6 @@ bool isUnlimitedPolymorphicType(mlir::Type ty) {
     return true;
   // TYPE(*)
   return isAssumedType(ty);
-}
-
-mlir::Type unwrapInnerType(mlir::Type ty) {
-  return llvm::TypeSwitch<mlir::Type, mlir::Type>(ty)
-      .Case<fir::PointerType, fir::HeapType, fir::SequenceType>([](auto t) {
-        mlir::Type eleTy = t.getEleTy();
-        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
-          return seqTy.getEleTy();
-        return eleTy;
-      })
-      .Case([](fir::RecordType t) { return t; })
-      .Default([](mlir::Type) { return mlir::Type{}; });
 }
 
 bool isRecordWithAllocatableMember(mlir::Type ty) {
@@ -1455,7 +1441,14 @@ mlir::Type BaseBoxType::getBaseAddressType(bool dropHeapOrPtr) const {
 }
 
 mlir::Type BaseBoxType::unwrapInnerType() const {
-  return fir::unwrapInnerType(getEleTy());
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(getEleTy())
+      .Case<fir::PointerType, fir::HeapType, fir::SequenceType>([](auto t) {
+        mlir::Type eleTy = t.getEleTy();
+        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
+          return seqTy.getEleTy();
+        return eleTy;
+      })
+      .Default([](mlir::Type t) { return t; });
 }
 
 mlir::Type BaseBoxType::getElementOrSequenceType() const {

@@ -8,5 +8,5 @@
 name: foo
 body: |
   bb.0:
-    INLINEASM &"", 0 /* attdialect */, regdef:GR32, reguse tiedto:$abc
+    INLINEASM &"", attdialect, regdef:GR32, reguse tiedto:$abc
 ...

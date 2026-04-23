@@ -90,13 +90,39 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     if (!dimIndex)
       return failure();
 
+    // Save the op immediately before dimOp so we can identify and erase any
+    // ops inserted during the reification attempt if it fails. The
+    // pattern-rewrite invariant requires the IR to be unchanged on failure.
+    Operation *opBeforeReify = dimOp->getPrevNode();
+
+    // Erase any ops inserted between opBeforeReify and dimOp in reverse order
+    // to respect use-def chains within that range. Collect pointers first to
+    // avoid iterator invalidation: erasing a node in an ilist invalidates
+    // iterators to that node, and std::reverse_iterator stores the iterator to
+    // the *next* forward element, so make_early_inc_range(reverse(...)) would
+    // still dereference a stale iterator after erasure.
+    auto eraseInsertedOps = [&]() {
+      Block::iterator begin = opBeforeReify
+                                  ? std::next(opBeforeReify->getIterator())
+                                  : dimOp->getBlock()->begin();
+      SmallVector<Operation *> toErase;
+      for (Block::iterator it = begin; it != dimOp->getIterator(); ++it)
+        toErase.push_back(&*it);
+      for (Operation *op : llvm::reverse(toErase))
+        rewriter.eraseOp(op);
+    };
+
     FailureOr<OpFoldResult> replacement = reifyDimOfResult(
         rewriter, dimValue.getOwner(), dimValue.getResultNumber(), *dimIndex);
-    if (failed(replacement))
+    // An empty (or failed) OpFoldResult signals that this specific dimension
+    // cannot be reified. Some implementations materialize all dimensions at
+    // once (e.g. via reifyResultShapes) and may create ops for other dimensions
+    // before discovering that this dimension is not reifiable. Erase those
+    // stray ops before returning failure.
+    if (failed(replacement) || !replacement.value()) {
+      eraseInsertedOps();
       return failure();
-    // Check if the OpFoldResult is empty (unreifiable dimension).
-    if (!replacement.value())
-      return failure();
+    }
     Value replacementVal = getValueOrCreateConstantIndexOp(
         rewriter, dimOp.getLoc(), replacement.value());
     rewriter.replaceOp(dimOp, replacementVal);

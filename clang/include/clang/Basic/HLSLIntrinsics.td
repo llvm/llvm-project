@@ -91,7 +91,7 @@ defvar NumericTypesNoDbl = [Int16Ty, UInt16Ty, HalfTy, IntTy, UIntTy,
 // These classes are usable in both argument and return type positions.
 //===----------------------------------------------------------------------===//
 
-// The varying type — expanded per VaryingTypes.
+// The varying type - expanded per VaryingTypes.
 // As an argument: the arg type varies with each overload.
 // As a return type: returns the same type as the varying arg.
 def Varying : HLSLArgType, HLSLReturnType;
@@ -210,7 +210,7 @@ class HLSLBuiltin<string name, string builtin = ""> {
   // Whether the function has the convergent attribute
   bit IsConvergent = 0;
 
-  // Argument element types — drives overload expansion.
+  // Argument element types - drives overload expansion.
   // One overload set is generated per type (scalar + vectors + matrices).
   // Only used when Args contains Varying entries.
   list<HLSLType> VaryingTypes = [];
@@ -324,14 +324,14 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
   let VaryingMatDims = [];
 }
 
-// Unsigned abs is a constexpr identity — unsigned values are already non-negative.
+// Unsigned abs is a constexpr identity - unsigned values are already non-negative.
 def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
   let Doc = [{
 \fn T abs(T Val)
 \brief Returns the absolute value of the input value, \a Val.
 \param Val The input value.
 
-Unsigned overload — unsigned values are already non-negative, so this
+Unsigned overload - unsigned values are already non-negative, so this
 function returns its input unchanged.
 }];
   let ParamNames = ["V"];
@@ -1564,20 +1564,9 @@ group. Otherwise, the result is false.
 \return True if all values across all lanes are equal, false otherwise
 }];
   let ReturnType = VaryingShape<BoolTy>;
-  let VaryingTypes = [IntTy, UIntTy, FloatTy, Int64Ty, UInt64Ty, DoubleTy];
+  let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
   let Availability = SM6_0;
-  let VaryingMatDims = [];
-}
-
-// WaveActiveAllEqual — half and 16-bit integer types. The 6.2 availability 
-// annotations for the half and 16-bit types are emitted automatically.
-def hlsl_wave_active_all_equal_16bit :
-    HLSLOneArgBuiltin<"WaveActiveAllEqual",
-                "__builtin_hlsl_wave_active_all_equal"> {
-  let ReturnType = VaryingShape<BoolTy>;
-  let VaryingTypes = [HalfTy, Int16Ty, UInt16Ty];
-  let IsConvergent = 1;
   let VaryingMatDims = [];
 }
 
@@ -1702,6 +1691,7 @@ def hlsl_wave_active_max :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1714,6 +1704,7 @@ def hlsl_wave_active_min :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1727,6 +1718,7 @@ def hlsl_wave_active_product :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1739,6 +1731,7 @@ def hlsl_wave_active_sum :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1801,6 +1794,7 @@ def hlsl_wave_prefix_product :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1813,6 +1807,7 @@ def hlsl_wave_prefix_sum :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1828,5 +1823,6 @@ the specified wave.
   let Args = [Varying, UIntTy];
   let VaryingTypes = AllTypesWithBool;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }

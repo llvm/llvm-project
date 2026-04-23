@@ -405,7 +405,7 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: gpu.func @vector_reduce_scalar_cross_sg
   // CHECK-SAME: (%[[ARG0:.*]]: memref<32x32xf32>)
-  // CHECK-DAG: %[[CST:.*]] = arith.constant {{.*}} 0.000000e+00 : f32
+  // CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
   // CHECK-DAG: %[[LOAD:.*]] = xegpu.load_nd %{{.*}} : !xegpu.tensor_desc<8x8xf32> -> vector<8x8xf32>
   // CHECK-DAG: %[[CST_ACC:.*]] = arith.constant 0.000000e+00 : f32
   // CHECK-DAG: %[[LOCAL:.*]] = vector.multi_reduction <add>, %[[LOAD]], %[[CST_ACC]] [0, 1] : vector<8x8xf32> to f32

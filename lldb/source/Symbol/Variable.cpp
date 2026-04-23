@@ -578,7 +578,7 @@ static void PrivateAutoComplete(
       case eTypeClassObjCObjectPointer:
       case eTypeClassPointer: {
         bool omit_empty_base_classes = true;
-        if (llvm::expectedToStdOptional(
+        if (llvm::expectedToOptional(
                 compiler_type.GetNumChildren(omit_empty_base_classes, nullptr))
                 .value_or(0))
           request.AddCompletion((prefix_path + "->").str());
@@ -590,9 +590,10 @@ static void PrivateAutoComplete(
     } else {
       if (frame) {
         const bool get_file_globals = true;
+        const bool include_synthetic_vars = true;
 
-        VariableList *variable_list = frame->GetVariableList(get_file_globals,
-                                                             nullptr);
+        VariableList *variable_list = frame->GetVariableList(
+            get_file_globals, include_synthetic_vars, nullptr);
 
         if (variable_list) {
           for (const VariableSP &var_sp : *variable_list)
@@ -686,9 +687,10 @@ static void PrivateAutoComplete(
         } else if (frame) {
           // We haven't found our variable yet
           const bool get_file_globals = true;
+          const bool include_synthetic_vars = true;
 
-          VariableList *variable_list =
-              frame->GetVariableList(get_file_globals, nullptr);
+          VariableList *variable_list = frame->GetVariableList(
+              get_file_globals, include_synthetic_vars, nullptr);
 
           if (!variable_list)
             break;

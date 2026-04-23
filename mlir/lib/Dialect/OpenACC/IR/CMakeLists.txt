@@ -18,6 +18,7 @@ add_mlir_dialect_library(MLIROpenACCDialect
   MLIRGPUDialect
   MLIRLLVMDialect
   MLIRMemRefDialect
+  MLIRTransformUtils
   MLIROpenACCMPCommon
   )
 

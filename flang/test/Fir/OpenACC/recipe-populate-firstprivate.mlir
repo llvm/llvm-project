@@ -12,7 +12,7 @@
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<f32>, %[[DST:.*]]: !fir.ref<f32>):
 // CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<f32>
-// CHECK:   fir.store %[[LOAD]] to %[[DST]] : !fir.ref<f32>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : f32, !fir.ref<f32>
 // CHECK:   acc.terminator
 // CHECK: }
 // CHECK-NOT: destroy
@@ -34,7 +34,7 @@ func.func @test_scalar() {
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
 // CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
-// CHECK:   fir.store %[[LOAD]] to %[[DST]] : !fir.ref<i32>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
 // CHECK:   acc.terminator
 // CHECK: }
 // CHECK-NOT: destroy
@@ -56,7 +56,7 @@ func.func @test_int() {
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.logical<4>>, %[[DST:.*]]: !fir.ref<!fir.logical<4>>):
 // CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.logical<4>>
-// CHECK:   fir.store %[[LOAD]] to %[[DST]] : !fir.ref<!fir.logical<4>>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // CHECK:   acc.terminator
 // CHECK: }
 // CHECK-NOT: destroy
@@ -78,7 +78,7 @@ func.func @test_logical() {
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<complex<f32>>, %[[DST:.*]]: !fir.ref<complex<f32>>):
 // CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<complex<f32>>
-// CHECK:   fir.store %[[LOAD]] to %[[DST]] : !fir.ref<complex<f32>>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : complex<f32>, !fir.ref<complex<f32>>
 // CHECK:   acc.terminator
 // CHECK: }
 // CHECK-NOT: destroy
@@ -99,7 +99,7 @@ func.func @test_complex() {
 // CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.array<100xf32>>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<100xf32>>, %[[DST:.*]]: !fir.ref<!fir.array<100xf32>>):
-// CHECK:   hlfir.assign %[[SRC]] to %[[DST]] : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+// CHECK:   hlfir.assign %[[SRC]] to %[[DST]] temporary_lhs : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
 // CHECK:   acc.terminator
 // CHECK: }
 // CHECK-NOT: destroy
@@ -120,7 +120,7 @@ func.func @test_array_1d() {
 // CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.array<10x20xi32>>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<10x20xi32>>, %[[DST:.*]]: !fir.ref<!fir.array<10x20xi32>>):
-// CHECK:   hlfir.assign %[[SRC]] to %[[DST]] : !fir.ref<!fir.array<10x20xi32>>, !fir.ref<!fir.array<10x20xi32>>
+// CHECK:   hlfir.assign %[[SRC]] to %[[DST]] temporary_lhs : !fir.ref<!fir.array<10x20xi32>>, !fir.ref<!fir.array<10x20xi32>>
 // CHECK:   acc.terminator
 // CHECK: }
 // CHECK-NOT: destroy
@@ -141,7 +141,7 @@ func.func @test_array_2d() {
 // CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>, %[[DST:.*]]: !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>):
-// CHECK:   hlfir.assign %[[SRC]] to %[[DST]] : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>, !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>
+// CHECK:   hlfir.assign %[[SRC]] to %[[DST]] temporary_lhs : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>, !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>
 // CHECK:   acc.terminator
 // CHECK: }
 // CHECK-NOT: destroy
