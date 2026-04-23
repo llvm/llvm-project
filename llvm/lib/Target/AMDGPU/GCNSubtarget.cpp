@@ -733,10 +733,10 @@ Register GCNSubtarget::getRealSchedDependency(const MachineInstr &DefI,
   // although they are not a subregister themselves (vgpr0 is a "subreg" of
   // vgpr0_vgpr1 without being a subreg in itself).
   unsigned DefSubRegIdx = DefOp.getSubReg();
-  if (DefReg.isVirtual() && !DefSubRegIdx)
+  if (DefReg.isVirtual() && DefSubRegIdx == AMDGPU::NoSubRegister)
     return DefReg;
   unsigned UseSubRegIdx = getEffectiveSubRegIdx(*TRI, InstrInfo, UseI, UseOp);
-  if (UseReg.isVirtual() && !UseSubRegIdx)
+  if (UseReg.isVirtual() && UseSubRegIdx == AMDGPU::NoSubRegister)
     return DefReg;
 
   if (!TRI->checkSubRegInterference(DefReg, DefSubRegIdx, UseReg, UseSubRegIdx))
