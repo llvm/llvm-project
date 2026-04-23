@@ -39,12 +39,6 @@ LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
-/// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
-/// OpResult of of the given operation. If the operation contains regions, it is
-/// also applied recursively to the contained operations operation.
-/// TODO: To be replaced by recoverTemporaryLayouts()
-void recoverTemporaryLayoutsDeprecated(Operation *op);
-
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
 /// lacks a layout attribute.
@@ -198,6 +192,18 @@ std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
 setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
                 VectorType cdTy, DistributeLayoutAttr consumerLayout, int numSg,
                 const uArch::uArch *uArch);
+
+/// Sets up the anchor layouts for dpas_mx operands (A, B, C/D, A_scale, and
+/// B_scale). The numSg and consumerLayout (optional) are only used by sg layout
+/// creation. A_scale and B_scale are optional.
+std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
+                         DistributeLayoutAttr, DistributeLayoutAttr,
+                         DistributeLayoutAttr>>
+setupDpasMxLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
+                  VectorType cdTy, std::optional<VectorType> aScaleTy,
+                  std::optional<VectorType> bScaleTy,
+                  DistributeLayoutAttr consumerLayout, int numSg,
+                  const uArch::uArch *uArch);
 
 /// Gets the expected layout for a given consumer operand. This will check if
 /// the owning operation of the consumer operand is one of the special layout

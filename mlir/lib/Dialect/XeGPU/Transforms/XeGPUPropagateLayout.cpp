@@ -316,6 +316,9 @@ private:
   void visitDpasOp(xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
                    ArrayRef<const LayoutInfoLattice *> results);
 
+  void visitDpasMxOp(xegpu::DpasMxOp dpasMx, ArrayRef<LayoutInfoLattice *> operands,
+                     ArrayRef<const LayoutInfoLattice *> results);
+
   void visitStoreNdOp(xegpu::StoreNdOp store,
                       ArrayRef<LayoutInfoLattice *> operands,
                       ArrayRef<const LayoutInfoLattice *> results);
@@ -426,6 +429,9 @@ LogicalResult LayoutInfoPropagation::visitOperation(
   TypeSwitch<Operation *>(op)
       .Case(
           [&](xegpu::DpasOp dpasOp) { visitDpasOp(dpasOp, operands, results); })
+      .Case([&](xegpu::DpasMxOp dpasMxOp) {
+        visitDpasMxOp(dpasMxOp, operands, results);
+      })
       .Case([&](xegpu::StoreNdOp storeNdOp) {
         visitStoreNdOp(storeNdOp, operands, results);
       })
@@ -804,6 +810,39 @@ void LayoutInfoPropagation::visitDpasOp(
     std::tie(requiredALayout, requiredBLayout, requiredCDLayoutAttr) = *layouts;
 
     dpas.setLayoutAAttr(requiredALayout);
+
+/// Propagate layout for DpasMxOp operands using the layout attributes.
+/// DpasMxOp has operands: a, b, acc (optional), scale_a (optional), scale_b (optional)
+void LayoutInfoPropagation::visitDpasMxOp(
+    xegpu::DpasMxOp dpasMx, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+
+  // Get the layout attributes from the operation
+  xegpu::DistributeLayoutAttr layoutA = dpasMx.getLayoutAAttr();
+  xegpu::DistributeLayoutAttr layoutB = dpasMx.getLayoutBAttr();
+  xegpu::DistributeLayoutAttr layoutCD = dpasMx.getLayoutCdAttr();
+  xegpu::DistributeLayoutAttr layoutAScale = dpasMx.getLayoutAScaleAttr();
+  xegpu::DistributeLayoutAttr layoutBScale = dpasMx.getLayoutBScaleAttr();
+
+  // Propagate layouts to operands based on their positions:
+  // operands[0] = a, operands[1] = b, operands[2] = acc (optional),
+  // operands[3] = scale_a (optional), operands[4] = scale_b (optional)
+
+  if (layoutA && operands.size() > 0)
+    propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(layoutA)));
+
+  if (layoutB && operands.size() > 1)
+    propagateIfChanged(operands[1], operands[1]->meet(LayoutInfo(layoutB)));
+
+  if (layoutCD && operands.size() > 2)
+    propagateIfChanged(operands[2], operands[2]->meet(LayoutInfo(layoutCD)));
+
+  if (layoutAScale && operands.size() > 3)
+    propagateIfChanged(operands[3], operands[3]->meet(LayoutInfo(layoutAScale)));
+
+  if (layoutBScale && operands.size() > 4)
+    propagateIfChanged(operands[4], operands[4]->meet(LayoutInfo(layoutBScale)));
+}
     dpas.setLayoutBAttr(requiredBLayout);
     dpas.setLayoutCdAttr(requiredCDLayoutAttr);
     dpasALayout = LayoutInfo(requiredALayout);

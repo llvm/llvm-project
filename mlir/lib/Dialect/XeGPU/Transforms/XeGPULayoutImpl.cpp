@@ -1426,3 +1426,154 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // the operand.
   return xegpu::getDistributeLayoutAttr(operand.get());
 }
+/// Sets up the anchor layouts for dpas_mx operands (A, B, C/D, A_scale, and
+/// B_scale). The numSg and consumerLayout (optional) are only used by sg layout
+/// creation.
+std::optional<
+    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr>>
+xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
+                         VectorType bTy, VectorType cdTy,
+                         std::optional<VectorType> aScaleTy,
+                         std::optional<VectorType> bScaleTy,
+                         xegpu::DistributeLayoutAttr consumerLayout, int numSg,
+                         const xegpu::uArch::uArch *uArch) {
+  auto context = aTy.getContext();
+  const int subgroupSize = uArch->getSubgroupSize();
+
+  // Helper to create scale layout from parent layout
+  auto createScaleLayout = [&](VectorType parentTy, VectorType scaleTy,
+                               xegpu::DistributeLayoutAttr parentLayout,
+                               bool isBScale) -> xegpu::DistributeLayoutAttr {
+    if (!scaleTy || !parentLayout)
+      return nullptr;
+
+    // Calculate scaling factor by dividing parent shape by scale shape
+    ArrayRef<int64_t> parentShape = parentTy.getShape();
+    ArrayRef<int64_t> scaleShape = scaleTy.getShape();
+    int64_t scaleFactor = parentShape.back() / scaleShape.back();
+    int64_t rank = parentLayout.getRank();
+    assert(rank == 2 && "dpas layouts must be two dimensions");
+
+    SmallVector<int64_t> sgLayout = parentLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> sgData = parentLayout.getEffectiveSgDataAsInt();
+    SmallVector<int64_t> instData = parentLayout.getEffectiveInstDataAsInt();
+    SmallVector<int64_t> laneLayout =
+        parentLayout.getEffectiveLaneLayoutAsInt();
+    SmallVector<int64_t> laneData = parentLayout.getEffectiveLaneDataAsInt();
+    auto order = parentLayout.getOrder();
+
+    // Divide last dimension by scaling factor
+    if (!sgData.empty())
+      sgData.back() = sgData.back() / scaleFactor;
+    if (!instData.empty())
+      instData.back() = instData.back() / scaleFactor;
+
+    if (isBScale) {
+      // For B scale: lane_layout = [min(subgroupSize, scaleFactor), 1]
+      // lane_data = [1, number of scale elements]
+      laneLayout[rank - 2] =
+          std::min(static_cast<int64_t>(subgroupSize), scaleShape[rank-2]);
+      laneLayout[rank - 1] = 1;
+      laneData[rank - 2] = 1;
+      laneData[rank - 1] = scaleShape.back();
+    } else {
+      laneData.back() = scaleShape.back();
+    }
+
+    return xegpu::LayoutAttr::get(
+        context,
+        sgLayout.empty()
+            ? nullptr
+            : DenseI32ArrayAttr::get(
+                  context, SmallVector<int>(sgLayout.begin(), sgLayout.end())),
+        sgData.empty()
+            ? nullptr
+            : DenseI32ArrayAttr::get(
+                  context, SmallVector<int>(sgData.begin(), sgData.end())),
+        instData.empty()
+            ? nullptr
+            : DenseI32ArrayAttr::get(
+                  context, SmallVector<int>(instData.begin(), instData.end())),
+        laneLayout.empty() ? nullptr
+                           : DenseI32ArrayAttr::get(
+                                 context, SmallVector<int>(laneLayout.begin(),
+                                                           laneLayout.end())),
+        laneData.empty()
+            ? nullptr
+            : DenseI32ArrayAttr::get(
+                  context, SmallVector<int>(laneData.begin(), laneData.end())),
+        order);
+  };
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    auto dpasLayouts =
+        getupDpasSubgroupLayouts(context, aTy, bTy, cdTy, consumerLayout, numSg, uArch);
+    if (!dpasLayouts)
+      return std::nullopt;
+
+    auto [dpasALayout, dpasBLayout, dpasCDLayout] = *dpasLayouts;
+
+    // Create scale layouts
+    auto aScaleLayout =
+        aScaleTy.has_value()
+            ? createScaleLayout(aTy, *aScaleTy, dpasALayout, false)
+            : nullptr;
+    auto bScaleLayout =
+        bScaleTy.has_value()
+            ? createScaleLayout(bTy, *bScaleTy, dpasBLayout, true)
+            : nullptr;
+
+    return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
+                           bScaleLayout);
+  } else if (layoutKind == xegpu::LayoutKind::InstData) {
+    auto instDataVecs = getDpasInstDataVectors(aTy, bTy, cdTy, uArch);
+    if (!instDataVecs)
+      return std::nullopt;
+    auto [instDataA, instDataB, instDataCD] = *instDataVecs;
+
+    auto dpasALayout = xegpu::LayoutAttr::get(
+        context, SmallVector<int>(instDataA.begin(), instDataA.end()));
+    auto dpasBLayout = xegpu::LayoutAttr::get(
+        context, SmallVector<int>(instDataB.begin(), instDataB.end()));
+    auto dpasCDLayout = xegpu::LayoutAttr::get(
+        context, SmallVector<int>(instDataCD.begin(), instDataCD.end()));
+
+    // Create scale layouts
+    auto aScaleLayout =
+        aScaleTy.has_value()
+            ? createScaleLayout(aTy, *aScaleTy, dpasALayout, false)
+            : nullptr;
+    auto bScaleLayout =
+        bScaleTy.has_value()
+            ? createScaleLayout(bTy, *bScaleTy, dpasBLayout, true)
+            : nullptr;
+
+    return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
+                           bScaleLayout);
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+    const auto *uArchInstruction =
+        dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
+            xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
+    auto aLayout = getDefaultLaneLayout2DBlockIo(
+        aTy, uArch, uArchInstruction->getPackedFormatBitSizeA());
+    auto bLayout = getDefaultLaneLayout2DBlockIo(
+        bTy, uArch, uArchInstruction->getPackedFormatBitSizeB(), true);
+    auto cdLayout = getDefaultLaneLayout2DBlockIo(cdTy, uArch);
+
+    // Create scale layouts
+    auto aScaleLayout = aScaleTy.has_value()
+                            ? createScaleLayout(aTy, *aScaleTy, aLayout, false)
+                            : nullptr;
+    auto bScaleLayout = bScaleTy.has_value()
+                            ? createScaleLayout(bTy, *bScaleTy, bLayout, true)
+                            : nullptr;
+
+    return std::make_tuple(aLayout, bLayout, cdLayout, aScaleLayout,
+                           bScaleLayout);
+  }
+  return std::nullopt;
+}
