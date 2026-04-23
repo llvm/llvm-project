@@ -1389,6 +1389,214 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
+  UnrollBitCastPattern(MLIRContext *context,
+                       const vector::UnrollVectorOptions &options,
+                       PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::BitCastOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::BitCastOp bitCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, bitCastOp);
+    if (!targetShape)
+      return failure();
+
+    VectorType sourceType = bitCastOp.getSourceVectorType();
+    VectorType resultType = bitCastOp.getResultVectorType();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    Location loc = bitCastOp.getLoc();
+
+    // Bail out if target shape rank doesn't match result rank
+    if (targetShape->size() != resultShape.size())
+      return rewriter.notifyMatchFailure(
+          bitCastOp, "target shape rank must match result rank");
+
+    // BitCast changes element type, which may change the trailing dimension.
+    // For the source, deduce the tile shape from the result tile shape.
+    // The relationship: if result trailing dim is R and source is S,
+    // then resultBitWidth / R = sourceBitWidth / S (same bits per element).
+
+    unsigned sourceElementBits = sourceType.getElementTypeBitWidth();
+    unsigned resultElementBits = resultType.getElementTypeBitWidth();
+
+    // Deduce source tile shape: same as target except the trailing dimension
+    SmallVector<int64_t> sourceTileShape(targetShape->begin(),
+                                         targetShape->end());
+    int64_t lastDim = sourceTileShape.size() - 1;
+
+    // Scale the trailing dimension by the bitwidth ratio
+    sourceTileShape[lastDim] =
+        ((*targetShape)[lastDim] * resultElementBits) / sourceElementBits;
+
+    // Prepare the result vector
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
+    SmallVector<int64_t> resultStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceTileShape.size(), 1);
+
+    VectorType targetType =
+        VectorType::get(*targetShape, resultType.getElementType());
+
+    // Unroll the bitcast
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      // Compute corresponding source offsets
+      SmallVector<int64_t> sourceOffsets = resultOffsets;
+      sourceOffsets[lastDim] =
+          (resultOffsets[lastDim] * resultElementBits) / sourceElementBits;
+
+      Value sourceSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, bitCastOp.getSource(), sourceOffsets, sourceTileShape,
+          sourceStrides);
+      Value bitcastSlice = rewriter.createOrFold<vector::BitCastOp>(
+          loc, targetType, sourceSlice);
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, bitcastSlice, result, resultOffsets, resultStrides);
+    }
+
+    rewriter.replaceOp(bitCastOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
+  UnrollInterleavePattern(MLIRContext *context,
+                          const vector::UnrollVectorOptions &options,
+                          PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::InterleaveOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::InterleaveOp interleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, interleaveOp);
+    if (!targetShape)
+      return failure();
+
+    VectorType resultType = interleaveOp.getResultVectorType();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    Location loc = interleaveOp.getLoc();
+
+    // Bail out if target shape rank doesn't match result rank
+    if (targetShape->size() != resultShape.size())
+      return rewriter.notifyMatchFailure(
+          interleaveOp, "target shape rank must match result rank");
+
+    // Interleave doubles the trailing dimension: [N] -> [2*N]
+    // For source tile shape, halve the trailing dimension of target shape
+    SmallVector<int64_t> sourceTileShape(targetShape->begin(),
+                                         targetShape->end());
+    int64_t lastDim = sourceTileShape.size() - 1;
+    sourceTileShape[lastDim] = (*targetShape)[lastDim] / 2;
+
+    // Prepare the result vector
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
+    SmallVector<int64_t> resultStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceTileShape.size(), 1);
+
+    VectorType targetType =
+        VectorType::get(*targetShape, resultType.getElementType());
+
+    // Unroll the interleave
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      // Compute corresponding source offsets
+      SmallVector<int64_t> sourceOffsets = resultOffsets;
+      sourceOffsets[lastDim] = resultOffsets[lastDim] / 2;
+
+      Value lhsSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, interleaveOp.getLhs(), sourceOffsets, sourceTileShape,
+          sourceStrides);
+      Value rhsSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, interleaveOp.getRhs(), sourceOffsets, sourceTileShape,
+          sourceStrides);
+      Value interleaveSlice = rewriter.createOrFold<vector::InterleaveOp>(
+          loc, targetType, lhsSlice, rhsSlice);
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, interleaveSlice, result, resultOffsets, resultStrides);
+    }
+
+    rewriter.replaceOp(interleaveOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+struct UnrollDeinterleavePattern
+    : public OpRewritePattern<vector::DeinterleaveOp> {
+  UnrollDeinterleavePattern(MLIRContext *context,
+                            const vector::UnrollVectorOptions &options,
+                            PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::DeinterleaveOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::DeinterleaveOp deinterleaveOp,
+                                PatternRewriter &rewriter) const override {
+    // Get target shape based on the result type (res1)
+    auto targetShape = getTargetShape(options, deinterleaveOp);
+    if (!targetShape)
+      return failure();
+
+    VectorType resultType = deinterleaveOp.getResultVectorType();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    Location loc = deinterleaveOp.getLoc();
+
+    // Bail out if target shape rank doesn't match result rank
+    if (targetShape->size() != resultShape.size())
+      return rewriter.notifyMatchFailure(
+          deinterleaveOp, "target shape rank must match result rank");
+
+    // Deinterleave halves the trailing dimension: [2*N] -> [N]
+    // For source tile shape, double the trailing dimension of target shape
+    SmallVector<int64_t> sourceTileShape(targetShape->begin(),
+                                         targetShape->end());
+    int64_t lastDim = sourceTileShape.size() - 1;
+    sourceTileShape[lastDim] = (*targetShape)[lastDim] * 2;
+
+    // Prepare the result vectors
+    Value result1 = arith::ConstantOp::create(rewriter, loc, resultType,
+                                              rewriter.getZeroAttr(resultType));
+    Value result2 = arith::ConstantOp::create(rewriter, loc, resultType,
+                                              rewriter.getZeroAttr(resultType));
+    SmallVector<int64_t> resultStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceTileShape.size(), 1);
+
+    // Unroll the deinterleave
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      // Compute corresponding source offsets
+      SmallVector<int64_t> sourceOffsets = resultOffsets;
+      sourceOffsets[lastDim] = resultOffsets[lastDim] * 2;
+
+      Value sourceSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, deinterleaveOp.getSource(), sourceOffsets, sourceTileShape,
+          sourceStrides);
+
+      auto deinterleaveSlice =
+          vector::DeinterleaveOp::create(rewriter, loc, sourceSlice);
+
+      result1 = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, deinterleaveSlice.getRes1(), result1, resultOffsets,
+          resultStrides);
+      result2 = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, deinterleaveSlice.getRes2(), result2, resultOffsets,
+          resultStrides);
+    }
+
+    rewriter.replaceOp(deinterleaveOp, ValueRange{result1, result2});
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
@@ -1400,8 +1608,10 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
                UnrollStorePattern, UnrollBroadcastPattern, UnrollFromElements,
                UnrollToElements, UnrollStepPattern, UnrollShapeCastPattern,
-               UnrollCreateMaskPattern, UnrollConstantMaskPattern>(
-      patterns.getContext(), options, benefit);
+               UnrollCreateMaskPattern, UnrollConstantMaskPattern,
+               UnrollBitCastPattern, UnrollInterleavePattern,
+               UnrollDeinterleavePattern>(patterns.getContext(), options,
+                                          benefit);
 }
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(
