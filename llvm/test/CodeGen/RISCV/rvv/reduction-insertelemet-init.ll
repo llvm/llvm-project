@@ -25,14 +25,8 @@ define dso_local signext i32 @reduc_plus(ptr noundef readonly captures(none) %0,
 ; RV32-NEXT:    seqz a0, a1
 ; RV32-NEXT:    bnez a0, .LBB0_2
 ; RV32-NEXT:  .LBB0_4: # %.preheader
-; RV32-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
-; RV32-NEXT:    li a0, 13
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
-; RV32-NEXT:    vmv.s.x v12, a0
 ; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.i v10, 0
-; RV32-NEXT:    vmv1r.v v10, v12
 ; RV32-NEXT:  .LBB0_5: # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    sltu a0, a1, a3
 ; RV32-NEXT:    sub a1, a1, a3
@@ -42,8 +36,9 @@ define dso_local signext i32 @reduc_plus(ptr noundef readonly captures(none) %0,
 ; RV32-NEXT:    vadd.vv v10, v8, v10
 ; RV32-NEXT:    bnez a0, .LBB0_5
 ; RV32-NEXT:  # %bb.6:
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.i v8, 13
 ; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.s.x v8, zero
 ; RV32-NEXT:    vredsum.vs v8, v10, v8
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    ret
@@ -53,24 +48,19 @@ define dso_local signext i32 @reduc_plus(ptr noundef readonly captures(none) %0,
 ; RV64-NEXT:    blez a1, .LBB0_4
 ; RV64-NEXT:  # %bb.1: # %.preheader
 ; RV64-NEXT:    neg a0, a1
-; RV64-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    li a1, 13
-; RV64-NEXT:    vsetvli a3, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
-; RV64-NEXT:    vmv.s.x v12, a1
 ; RV64-NEXT:    slli a1, a2, 32
-; RV64-NEXT:    vmv1r.v v10, v12
 ; RV64-NEXT:    srli a1, a1, 32
+; RV64-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV64-NEXT:    vmv.v.i v10, 0
 ; RV64-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; RV64-NEXT:    vadd.vv v10, v8, v10
 ; RV64-NEXT:    bnez a0, .LBB0_2
 ; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV64-NEXT:    vmv.v.i v8, 13
 ; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmv.s.x v8, zero
 ; RV64-NEXT:    vredsum.vs v8, v10, v8
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
