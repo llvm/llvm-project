@@ -369,7 +369,7 @@ bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
 SmallPtrSet<const DeclRefExpr *, 16>
 allDeclRefExprs(const ValueDecl &VarDecl, const Stmt &Stmt, ASTContext &Context) {
   auto Matches = match(
-      findAll(declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef")),
+      findAll(declRefExpr(to(valueDecl(equalsNode(&VarDecl)))).bind("declRef")),
       Stmt, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
@@ -380,7 +380,7 @@ SmallPtrSet<const DeclRefExpr *, 16>
 allDeclRefExprs(const ValueDecl &VarDecl, const Decl &Decl, ASTContext &Context) {
   auto Matches = match(
       decl(forEachDescendant(
-          declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef"))),
+          declRefExpr(to(valueDecl(equalsNode(&VarDecl)))).bind("declRef"))),
       Decl, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
