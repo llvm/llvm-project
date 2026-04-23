@@ -12,11 +12,14 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <functional>
 #include <optional>
 
@@ -186,25 +189,27 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
   return true;
 }
 
+/// Get the inst_pref_size field width for the given subtarget.
+static unsigned getInstPrefSizeFieldWidth(const MCSubtargetInfo *STI) {
+  auto Version = getIsaVersion(STI->getCPU());
+  assert(Version.Major >= 11 && "inst_pref_size only exists on GFX11+");
+  if (Version.Major == 11)
+    return amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
+  return amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+}
+
 bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
                                         const MCAssembler *Asm) const {
-  auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
-    MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
-      return false;
-
-    ConstantValue = MCVal.getConstant();
-    return true;
-  };
-
-  assert(Args.size() == 3 &&
+  assert(Args.size() == 1 &&
          "AMDGPUMCExpr Argument count incorrect for InstPrefSize");
-  uint64_t CodeSizeInBytes = 0, FieldWidth = 0, CacheLineSize = 0;
-  if (!TryGetMCExprValue(Args[0], CodeSizeInBytes) ||
-      !TryGetMCExprValue(Args[1], FieldWidth) ||
-      !TryGetMCExprValue(Args[2], CacheLineSize))
-    return false;
 
+  uint64_t CodeSizeInBytes = 0;
+  if (!evaluateMCExprs(Args, Asm, {CodeSizeInBytes}))
+    return false;
+  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  unsigned FieldWidth = getInstPrefSizeFieldWidth(STI);
+  // All targets with inst_pref_size (GFX11+) have 128-byte cache lines.
+  constexpr unsigned CacheLineSize = 128;
   uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
   uint64_t MaxVal = (1u << FieldWidth) - 1;
   Res = MCValue::get(std::min(CodeSizeInLines, MaxVal));
@@ -311,13 +316,8 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
 }
 
 const AMDGPUMCExpr *
-AMDGPUMCExpr::createInstPrefSize(const MCExpr *CodeSizeBytes,
-                                 unsigned FieldWidth, unsigned CacheLineSize,
-                                 MCContext &Ctx) {
-  return create(AGVK_InstPrefSize,
-                {CodeSizeBytes, MCConstantExpr::create(FieldWidth, Ctx),
-                 MCConstantExpr::create(CacheLineSize, Ctx)},
-                Ctx);
+AMDGPUMCExpr::createInstPrefSize(const MCExpr *CodeSizeBytes, MCContext &Ctx) {
+  return create(AGVK_InstPrefSize, {CodeSizeBytes}, Ctx);
 }
 
 const AMDGPUMCExpr *AMDGPUMCExpr::createLit(LitModifier Lit, int64_t Value,
@@ -521,10 +521,9 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     }
     if (AGVK->getKind() == AMDGPUMCExpr::VariantKind::AGVK_InstPrefSize) {
       // The result is clamped to (1 << FieldWidth) - 1, so upper bits are
-      // known zero. FieldWidth is always a constant (Args[1]).
-      int64_t FieldWidth;
-      if (AGVK->getSubExpr(1)->evaluateAsAbsolute(FieldWidth) &&
-          FieldWidth > 0 && static_cast<uint64_t>(FieldWidth) < BitWidth) {
+      // known zero. FieldWidth is derived from the subtarget.
+      if (const MCSubtargetInfo *STI = AGVK->getCtx().getSubtargetInfo()) {
+        unsigned FieldWidth = getInstPrefSizeFieldWidth(STI);
         KnownBits KB(BitWidth);
         KB.Zero.setHighBits(BitWidth - FieldWidth);
         KBM[Expr] = KB;

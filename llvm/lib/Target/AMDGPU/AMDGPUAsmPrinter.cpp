@@ -269,8 +269,8 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
 
     uint32_t Mask, Shift, Width, CacheLineSize;
     STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
-    const MCExpr *InstPrefSize = AMDGPUMCExpr::createInstPrefSize(
-        CodeSizeExpr, Width, CacheLineSize, Ctx);
+    const MCExpr *InstPrefSize =
+        AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Ctx);
     KD.compute_pgm_rsrc3 =
         setBits(KD.compute_pgm_rsrc3, InstPrefSize, Mask, Shift, Ctx);
   }

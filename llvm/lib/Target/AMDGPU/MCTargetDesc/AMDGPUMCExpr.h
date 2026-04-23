@@ -101,9 +101,8 @@ public:
 
   /// Create an expression for instruction prefetch size computation:
   /// min(divideCeil(CodeSizeBytes, CacheLineSize), (1 << FieldWidth) - 1)
+  /// FieldWidth and CacheLineSize are derived from the subtarget.
   static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
-                                                unsigned FieldWidth,
-                                                unsigned CacheLineSize,
                                                 MCContext &Ctx);
 
   static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
@@ -111,6 +110,7 @@ public:
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }
   VariantKind getKind() const { return Kind; }
+  MCContext &getCtx() const { return Ctx; }
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;

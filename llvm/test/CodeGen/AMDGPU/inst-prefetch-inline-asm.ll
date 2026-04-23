@@ -14,9 +14,9 @@
 ;; pref_size = divideCeil(1028, 128) = 9
 
 ; GFX11-LABEL: .amdhsa_kernel test_fill
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-test_fill, 6, 128)<<4)&1008)>>4
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-test_fill)<<4)&1008)>>4
 ; GFX12-LABEL: .amdhsa_kernel test_fill
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-test_fill, 8, 128)<<4)&4080)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-test_fill)<<4)&4080)>>4
 ;; Object: kernel descriptor at 0x00, COMPUTE_PGM_RSRC3 at 0x2C:
 ;; pref_size=9 -> 9<<4 = 0x90
 ; OBJ-GFX11: 0020 {{.*}}90000000
@@ -31,9 +31,9 @@ define amdgpu_kernel void @test_fill() {
 ;; pref_size = 9
 
 ; GFX11-LABEL: .amdhsa_kernel test_space
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-test_space, 6, 128)<<4)&1008)>>4
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-test_space)<<4)&1008)>>4
 ; GFX12-LABEL: .amdhsa_kernel test_space
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-test_space, 8, 128)<<4)&4080)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-test_space)<<4)&4080)>>4
 ;; Object: kernel descriptor at 0x40, COMPUTE_PGM_RSRC3 at 0x6C:
 ;; pref_size=9 -> 9<<4 = 0x90
 ; OBJ-GFX11: 0060 {{.*}}90000000
@@ -48,9 +48,9 @@ define amdgpu_kernel void @test_space() {
 ;; pref_size = divideCeil(132, 128) = 2
 
 ; GFX11-LABEL: .amdhsa_kernel test_instructions
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-test_instructions, 6, 128)<<4)&1008)>>4
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-test_instructions)<<4)&1008)>>4
 ; GFX12-LABEL: .amdhsa_kernel test_instructions
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-test_instructions, 8, 128)<<4)&4080)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-test_instructions)<<4)&4080)>>4
 ;; Object: kernel descriptor at 0x80, COMPUTE_PGM_RSRC3 at 0xAC:
 ;; pref_size=2 -> 2<<4 = 0x20
 ; OBJ-GFX11: 00a0 {{.*}}20000000
@@ -65,9 +65,9 @@ define amdgpu_kernel void @test_instructions() {
 ;; pref_size = 1
 
 ; GFX11-LABEL: .amdhsa_kernel test_comments
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end3-test_comments, 6, 128)<<4)&1008)>>4
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end3-test_comments)<<4)&1008)>>4
 ; GFX12-LABEL: .amdhsa_kernel test_comments
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end3-test_comments, 8, 128)<<4)&4080)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end3-test_comments)<<4)&4080)>>4
 ;; Object: kernel descriptor at 0xC0, COMPUTE_PGM_RSRC3 at 0xEC:
 ;; pref_size=1 -> 1<<4 = 0x10
 ; OBJ-GFX11: 00e0 {{.*}}10000000
@@ -82,9 +82,9 @@ define amdgpu_kernel void @test_comments() {
 ;; pref_size = 1
 
 ; GFX11-LABEL: .amdhsa_kernel test_empty_asm
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end4-test_empty_asm, 6, 128)<<4)&1008)>>4
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end4-test_empty_asm)<<4)&1008)>>4
 ; GFX12-LABEL: .amdhsa_kernel test_empty_asm
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end4-test_empty_asm, 8, 128)<<4)&4080)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end4-test_empty_asm)<<4)&4080)>>4
 ;; Object: kernel descriptor at 0x100, COMPUTE_PGM_RSRC3 at 0x12C:
 ;; pref_size=1 -> 1<<4 = 0x10
 ; OBJ-GFX11: 0120 {{.*}}10000000
@@ -99,9 +99,9 @@ define amdgpu_kernel void @test_empty_asm() {
 ;; pref_size = divideCeil(1028, 128) = 9
 
 ; GFX11-LABEL: .amdhsa_kernel test_multiple_asm
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end5-test_multiple_asm, 6, 128)<<4)&1008)>>4
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end5-test_multiple_asm)<<4)&1008)>>4
 ; GFX12-LABEL: .amdhsa_kernel test_multiple_asm
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end5-test_multiple_asm, 8, 128)<<4)&4080)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end5-test_multiple_asm)<<4)&4080)>>4
 ;; Object: kernel descriptor at 0x140, COMPUTE_PGM_RSRC3 at 0x16C:
 ;; pref_size=9 -> 9<<4 = 0x90
 ; OBJ-GFX11: 0160 {{.*}}90000000
@@ -119,9 +119,9 @@ define amdgpu_kernel void @test_multiple_asm() {
 ;; pref_size should clamp to 63
 
 ; GFX11-LABEL: .amdhsa_kernel test_clamping
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end6-test_clamping, 6, 128)<<4)&1008)>>4
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end6-test_clamping)<<4)&1008)>>4
 ; GFX12-LABEL: .amdhsa_kernel test_clamping
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end6-test_clamping, 8, 128)<<4)&4080)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end6-test_clamping)<<4)&4080)>>4
 ;; Object: kernel descriptor at 0x180, COMPUTE_PGM_RSRC3 at 0x1AC:
 ;; gfx11: clamped to 63 -> 63<<4 = 0x3F0
 ;; gfx12: no clamping, 65 -> 65<<4 = 0x410
@@ -139,9 +139,9 @@ define amdgpu_kernel void @test_clamping() {
 ;; GFX11 max = 63, GFX12 max = 255 -> both clamp
 
 ; GFX11-LABEL: .amdhsa_kernel test_clamping_both
-; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end7-test_clamping_both, 6, 128)<<4)&1008)>>4
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end7-test_clamping_both)<<4)&1008)>>4
 ; GFX12-LABEL: .amdhsa_kernel test_clamping_both
-; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end7-test_clamping_both, 8, 128)<<4)&4080)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end7-test_clamping_both)<<4)&4080)>>4
 ;; Object: kernel descriptor at 0x1C0, COMPUTE_PGM_RSRC3 at 0x1EC:
 ;; gfx11: clamped to 63 -> 63<<4 = 0x3F0
 ;; gfx12: clamped to 255 -> 255<<4 = 0xFF0
