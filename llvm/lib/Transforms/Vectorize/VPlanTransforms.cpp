@@ -5895,6 +5895,17 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
     return new VPExpressionRecipe(ExtA, ExtB, Mul, Red);
   }
 
+  // reduce.fadd(fneg(fmul(fpext(a), fpext(b))))
+  //  -> VPExpressionRecipe(a, b, fmul, fsub, red)
+  if (match(VecOp,
+            m_FNeg(m_FMul(m_FPExt(m_VPValue()), m_FPExt(m_VPValue()))))) {
+    auto *FNeg = cast<VPWidenRecipe>(VecOp);
+    auto *FMul = cast<VPWidenRecipe>(FNeg->getOperand(0));
+    auto *ExtA = cast<VPWidenCastRecipe>(FMul->getOperand(0));
+    auto *ExtB = cast<VPWidenCastRecipe>(FMul->getOperand(1));
+    return new VPExpressionRecipe(ExtA, ExtB, FMul, FNeg, Red);
+  }
+
   // reduce.add(neg(mul(ext(a), ext(b))))
   //  -> VPExpressionRecipe(a, b, mul, sub, red)
   if (match(VecOp, m_Sub(m_ZeroInt(), m_Mul(m_ZExtOrSExt(m_VPValue()),
@@ -5935,14 +5946,23 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // It's therefore better to choose option (2) such that the partial
   // reduction is always positive (starting at '0') and to do a final
   // subtract in the middle block.
-  if (WidenRecipe->getOpcode() == Instruction::Sub &&
-      Chain.RK != RecurKind::Sub) {
+  if ((WidenRecipe->getOpcode() == Instruction::Sub &&
+       Chain.RK != RecurKind::Sub) ||
+      // FIXME: We don't have a RecurKind::FSub yet.
+      WidenRecipe->getOpcode() == Instruction::FSub) {
     VPBuilder Builder(WidenRecipe);
     Type *ElemTy = TypeInfo.inferScalarType(ExtendedOp);
-    auto *Zero = Plan.getZero(ElemTy);
-    auto *NegRecipe =
-        new VPWidenRecipe(Instruction::Sub, {Zero, ExtendedOp}, VPIRFlags(),
-                          VPIRMetadata(), DebugLoc::getUnknown());
+    VPWidenRecipe *NegRecipe;
+    if (WidenRecipe->getOpcode() == Instruction::FSub)
+      NegRecipe =
+          new VPWidenRecipe(Instruction::FNeg, {ExtendedOp}, VPIRFlags(),
+                            VPIRMetadata(), DebugLoc::getUnknown());
+    else {
+      auto *Zero = Plan.getZero(ElemTy);
+      NegRecipe =
+          new VPWidenRecipe(Instruction::Sub, {Zero, ExtendedOp}, VPIRFlags(),
+                            VPIRMetadata(), DebugLoc::getUnknown());
+    }
     Builder.insert(NegRecipe);
     ExtendedOp = NegRecipe;
   }

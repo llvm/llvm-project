@@ -525,6 +525,11 @@ inline AllRecipe_match<Instruction::FPExt, Op0_t> m_FPExt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline AllRecipe_match<Instruction::FNeg, Op0_t> m_FNeg(const Op0_t &Op0) {
+  return m_Unary<Instruction::FNeg, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
 inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
                         AllRecipe_match<Instruction::SExt, Op0_t>>
 m_ZExtOrSExt(const Op0_t &Op0) {

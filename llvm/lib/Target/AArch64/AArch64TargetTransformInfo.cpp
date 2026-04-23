@@ -5978,7 +5978,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     return Invalid;
 
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
-       Opcode != Instruction::FAdd) ||
+       Opcode != Instruction::FSub && Opcode != Instruction::FAdd) ||
       OpAExtend == TTI::PR_None)
     return Invalid;
 
@@ -6045,9 +6045,10 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
             NEONPred);
   };
 
-  bool IsSub = Opcode == Instruction::Sub;
+  bool IsSub = Opcode == Instruction::Sub || Opcode == Instruction::FSub;
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
   InstructionCost INegCost = IsSub ? 2 * InputLT.first * TTI::TCC_Basic : 0;
+  InstructionCost FNegCost = IsSub ? InputLT.first * TTI::TCC_Basic : 0;
 
   if (AccumLT.second.getScalarType() == MVT::i32 &&
       InputLT.second.getScalarType() == MVT::i8) {
@@ -6102,13 +6103,18 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
         llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
       return Cost * 2;
 
-    // SVE2 fmlalb/t and NEON fmlal(2)
+    // SVE2 fml[as]lb/t and NEON fml[as]l(2)
     if (IsSupported(ST->hasSVE2(), ST->hasFP16FML()) && InVT == MVT::f16)
+      return Cost * 2;
+
+    // SVE2p1 bfmlslb/t
+    if (IsSupported(ST->hasSVE2p1() && ST->hasBF16(), false) &&
+        InVT == MVT::bf16 && IsSub)
       return Cost * 2;
 
     // SVE and NEON bfmlalb/t
     if (IsSupported(ST->hasBF16(), ST->hasBF16()) && InVT == MVT::bf16)
-      return Cost * 2;
+      return Cost * 2 + FNegCost;
   }
 
   return BaseT::getPartialReductionCost(Opcode, InputTypeA, InputTypeB,

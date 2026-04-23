@@ -3369,17 +3369,23 @@ public:
       : VPExpressionRecipe(ExpressionTypes::ExtMulAccReduction,
                            {Ext0, Ext1, Mul, Red}) {}
   VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
-                     VPWidenRecipe *Mul, VPWidenRecipe *Sub,
+                     VPWidenRecipe *Mul, VPWidenRecipe *Neg,
                      VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtNegatedMulAccReduction,
-                           {Ext0, Ext1, Mul, Sub, Red}) {
-    assert(Mul->getOpcode() == Instruction::Mul && "Expected a mul");
-    assert(Red->getRecurrenceKind() == RecurKind::Add &&
+                           {Ext0, Ext1, Mul, Neg, Red}) {
+    assert((Mul->getOpcode() == Instruction::Mul ||
+            Mul->getOpcode() == Instruction::FMul) &&
+           "Expected a mul");
+    assert((Red->getRecurrenceKind() == RecurKind::Add ||
+            Red->getRecurrenceKind() == RecurKind::FAdd) &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
-    assert(SubConst && SubConst->isZero() &&
-           Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
+    if (Neg->getOpcode() == Instruction::Sub) {
+      [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
+      assert(SubConst && SubConst->isZero() &&
+             Neg->getOpcode() == Instruction::Sub && "Expected a negating sub");
+    } else
+      assert(Neg->getOpcode() == Instruction::FNeg && "Unexpected opcode");
   }
 
   ~VPExpressionRecipe() override {
