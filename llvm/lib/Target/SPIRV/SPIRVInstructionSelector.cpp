@@ -2035,6 +2035,7 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
                                "Lowering to SPIR-V of atomic store is only "
                                "allowed for integer or floating point types");
 
+  assert(I.getNumMemOperands());
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
 
