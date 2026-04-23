@@ -5542,12 +5542,6 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
   // copies together, a TOC access in the caller could be scheduled between
   // the assignment of the callee TOC and the branch to the callee, which leads
   // to incorrect code.
-  // On AIX there is a feature ("out of line glue code") which uses a special
-  // trampoline function __ptrgl to do the indirect call. If this option is
-  // enabled we instead simply load the address of the descriptor into r11,
-  // with the arguments in the 'normal' registers and branch to the __ptrgl
-  // stub.
-
   // Start by loading the function address from the descriptor.
   SDValue LDChain = getOutputChainFromCallSeq(CallSeqStart);
   auto MMOFlags = Subtarget.hasInvariantFunctionDescriptors()
@@ -5613,6 +5607,11 @@ static void prepareOutOfLineGlueCall(SelectionDAG &DAG, SDValue &Callee,
                                      SDValue CallSeqStart, const CallBase *CB,
                                      const SDLoc &dl, bool hasNest,
                                      const PPCSubtarget &Subtarget) {
+  // On AIX there is a feature ("out of line glue code") which uses a special
+  // trampoline function ._ptrgl to do the indirect call. If this option is
+  // enabled we instead simply load the address of the descriptor into gpr11,
+  // with the arguments in the 'normal' registers and branch to the ._ptrgl
+  // stub.
   const MCRegister PtrGlueReg = Subtarget.getGlueCodeDescriptorRegister();
   SDValue MoveToPhysicalReg =
       DAG.getCopyToReg(Chain, dl, PtrGlueReg, Callee, Glue);
