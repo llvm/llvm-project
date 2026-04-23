@@ -579,7 +579,9 @@ void test_inference() {
   std::unique_ptr<LifetimeBoundCtor> ptr;
   {
     MyObj obj;
-    ptr = create_target(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+    ptr = create_target(obj); // expected-warning {{object whose reference is captured does not live long enough}} \
+                              // expected-note {{function call result aliases the storage of 'obj'}} \
+                              // expected-note {{variable 'ptr' aliases the storage of 'obj'}}
   } // expected-note {{destroyed here}}
   (void)ptr; // expected-note {{later used here}}
 }

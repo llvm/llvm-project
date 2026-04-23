@@ -1035,7 +1035,8 @@ void lifetimebound_ctor_functional_cast() {
   LifetimeBoundCtor v;
   {
     MyObj obj;
-    v = LifetimeBoundCtor(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+    v = LifetimeBoundCtor(obj); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                // expected-note {{variable 'v' aliases the storage of 'obj'}}
   }                             // expected-note {{destroyed here}}
   (void)v;                      // expected-note {{later used here}}
 }
@@ -1044,7 +1045,8 @@ void lifetimebound_ctor_c_style_cast() {
   LifetimeBoundCtor v;
   {
     MyObj obj;
-    v = (LifetimeBoundCtor)(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+    v = (LifetimeBoundCtor)(obj); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                  // expected-note {{variable 'v' aliases the storage of 'obj'}}
   }                               // expected-note {{destroyed here}}
   (void)v;                        // expected-note {{later used here}}
 }
@@ -1053,7 +1055,8 @@ void lifetimebound_ctor_static_cast() {
   LifetimeBoundCtor v;
   {
     MyObj obj;
-    v = static_cast<LifetimeBoundCtor>(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+    v = static_cast<LifetimeBoundCtor>(obj); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                             // expected-note {{variable 'v' aliases the storage of 'obj'}}
   }                                          // expected-note {{destroyed here}}
   (void)v;                                   // expected-note {{later used here}}
 }
@@ -1062,7 +1065,9 @@ void lifetimebound_make_unique() {
   std::unique_ptr<LifetimeBoundCtor> ptr;
   {
     MyObj obj;
-    ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{object whose reference is captured does not live long enough}}
+    ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{object whose reference is captured does not live long enough}} \
+                                                    // tu-note {{function call result aliases the storage of 'obj'}} \
+                                                    // tu-note {{variable 'ptr' aliases the storage of 'obj'}}
   }                                                 // tu-note {{destroyed here}}
   (void)ptr;                                        // tu-note {{later used here}}
 }
@@ -1079,6 +1084,8 @@ void non_lifetimebound_make_unique() {
 
 void lifetimebound_make_unique_temp() {
   std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // tu-warning {{object whose reference is captured does not live long enough}} \
+                                                                                         // tu-note {{function call result aliases the storage of the temporary}} \
+                                                                                         // tu-note {{variable 'ptr' aliases the storage of the temporary}} \
                                                                                          // tu-note {{destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1116,7 +1123,9 @@ void lifetimebound_make_unique_multi_params() {
   MyObj obj_long;
   {
     MyObj obj_short;
-    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // tu-warning {{object whose reference is captured does not live long enough}}
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // tu-warning {{object whose reference is captured does not live long enough}} \
+                                                                         // tu-note {{function call result aliases the storage of 'obj_short'}} \
+                                                                         // tu-note {{variable 'ptr' aliases the storage of 'obj_short'}}
   } // tu-note {{destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1126,7 +1135,9 @@ void lifetimebound_make_unique_multi_params2() {
   MyObj obj_long;
   {
     MyObj obj_short;
-    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // tu-warning {{object whose reference is captured does not live long enough}}
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // tu-warning {{object whose reference is captured does not live long enough}} \
+                                                                            // tu-note {{function call result aliases the storage of 'obj_short'}} \
+                                                                            // tu-note {{variable 'ptr' aliases the storage of 'obj_short'}}
   } // tu-note {{destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1146,7 +1157,9 @@ void lifetimebound_make_unique_multi_params3_1() {
   MyObj obj_long;
   {
     MyObj obj_short;
-    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // tu-warning {{object whose reference is captured does not live long enough}}
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // tu-warning {{object whose reference is captured does not live long enough}} \
+                                                                              // tu-note {{function call result aliases the storage of 'obj_short'}} \
+                                                                              // tu-note {{variable 'ptr' aliases the storage of 'obj_short'}}
   } // tu-note {{destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1156,7 +1169,9 @@ void lifetimebound_make_unique_multi_params3_2() {
   MyObj obj_long;
   {
     MyObj obj_short;
-    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // tu-warning {{object whose reference is captured does not live long enough}}
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // tu-warning {{object whose reference is captured does not live long enough}} \
+                                                                              // tu-note {{function call result aliases the storage of 'obj_short'}} \
+                                                                              // tu-note {{variable 'ptr' aliases the storage of 'obj_short'}}
   } // tu-note {{destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -2865,7 +2880,9 @@ void owner_outlives_lifetimebound_source() {
   std::unique_ptr<S> ups;
   {
     std::string local;
-    ups = getUniqueS(local); // expected-warning {{object whose reference is captured does not live long enough}}
+    ups = getUniqueS(local); // expected-warning {{object whose reference is captured does not live long enough}} \
+                             // expected-note {{function call result aliases the storage of 'local'}} \
+                             // expected-note {{variable 'ups' aliases the storage of 'local'}}
   } // expected-note {{destroyed here}}
   (void)ups; // expected-note {{later used here}}
 }

@@ -242,7 +242,9 @@ struct HasUniquePtrField {
   std::unique_ptr<LifetimeBoundCtor> field; // tu-note {{this field dangles}}
 
   void setWithParam(MyObj obj) {
-    field = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{address of stack memory escapes to a field}}
+    field = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{address of stack memory escapes to a field}} \
+                                                      // tu-note {{function call result aliases the storage of 'obj'}} \
+                                                      // tu-note {{variable 'field' aliases the storage of 'obj'}}
   }
 };
 } // namespace MakeUnique
