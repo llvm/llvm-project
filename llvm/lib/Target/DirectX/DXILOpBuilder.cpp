@@ -161,7 +161,6 @@ struct OpCodeProperty {
   llvm::SmallVector<OpStage> Stages;
   int OverloadParamIndex; // parameter index which control the overload.
                           // When < 0, should be only 1 overload type.
-  bool Precise;
 };
 
 // Include getOpCodeClassName getOpCodeProperty, getOpCodeName and
@@ -492,8 +491,7 @@ static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
 }
 
 static void setDXILMetadata(CallInst *CI, const OpCodeProperty *Prop) {
-  if (OpPreciseEnabled && Prop->Precise &&
-      CI->getFunctionType()->getReturnType()->isFloatingPointTy()) {
+  if (OpPreciseEnabled && isa<FPMathOperator>(CI)) {
 
     const StringRef Key = "dx.precise";
     Module *M = CI->getModule();
