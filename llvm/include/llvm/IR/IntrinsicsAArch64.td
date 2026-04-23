@@ -49,6 +49,21 @@ def int_aarch64_cas64 : Intrinsic<[llvm_i64_ty],
                                   [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
                                   [IntrNoFree, IntrWillReturn]>;
 
+// CASA intrinsics — emit CASA* (acquire, no release) directly, regardless of
+// the LSE target feature. Same type conventions as cas*.
+def int_aarch64_casa8  : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                   [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_casa16 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                   [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_casa32 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                   [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_casa64 : Intrinsic<[llvm_i64_ty],
+                                   [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+                                   [IntrNoFree, IntrWillReturn]>;
+
 def int_aarch64_sdiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
                                 LLVMMatchType<0>], [IntrNoMem]>;
 def int_aarch64_udiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,

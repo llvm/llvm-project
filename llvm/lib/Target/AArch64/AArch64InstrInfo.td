@@ -3030,6 +3030,7 @@ defm CASAL : CompareAndSwap<1, 1, "al">;
 // Used by the __cas* MS intrinsics to force CAS* emission regardless of -march.
 let isCodeGenOnly = 1 in {
   defm CAS   : CompareAndSwap_cg<0, 0, "">;
+  defm CASA  : CompareAndSwap_cg<1, 0, "a">;
 }
 
 // v8.1 atomic CASP
