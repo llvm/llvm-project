@@ -1488,12 +1488,12 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
         (MinMaxOp == LHS ? RHS : LHS)->getFastMathFlags();
     FastMathFlags RetFMF = IIFMF & FoldedOpFMF;
     // Different intrinsics handle NaN propagation differently. For maximum and
-    // minimum, nnan does not rely on the folded instruction's flags. For the
-    // others, it does not rely on II's flags
+    // minimum, nnan does not rely on the folded instruction's flags. For
+    // maximumnum and minimumnum, it does not rely on II's flags. maxnum and
+    // minnum rely on both so there is no special handling
     if (MinMaxID == Intrinsic::maximum || MinMaxID == Intrinsic::minimum)
       RetFMF.setNoNaNs(IIFMF.noNaNs());
-    if (MinMaxID == Intrinsic::maxnum || MinMaxID == Intrinsic::minnum ||
-        MinMaxID == Intrinsic::maximumnum || MinMaxID == Intrinsic::minimumnum)
+    if (MinMaxID == Intrinsic::maximumnum || MinMaxID == Intrinsic::minimumnum)
       RetFMF.setNoNaNs(FoldedOpFMF.noNaNs());
     RetI->setFastMathFlags(RetFMF);
   }

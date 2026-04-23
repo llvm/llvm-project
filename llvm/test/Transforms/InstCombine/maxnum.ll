@@ -298,7 +298,7 @@ define float @maxnum_reuse_lhs_nnan_folded_only(float %x, float %y, float %z) {
 ; CHECK-LABEL: @maxnum_reuse_lhs_nnan_folded_only(
 ; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    call void @use(float [[M1]])
-; CHECK-NEXT:    [[M3:%.*]] = call nnan float @llvm.maxnum.f32(float [[M1]], float [[Z:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maxnum.f32(float [[M1]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[M3]]
 ;
   %m1 = call float @llvm.maxnum.f32(float %x, float %y)
