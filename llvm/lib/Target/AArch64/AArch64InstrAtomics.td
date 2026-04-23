@@ -663,6 +663,19 @@ def : Pat<(i32 (int_aarch64_swpa32 GPR64sp:$Rn, GPR32:$Rs)),
 def : Pat<(i64 (int_aarch64_swpa64 GPR64sp:$Rn, GPR64:$Rs)),
           (SWPAX_cg GPR64:$Rs, GPR64sp:$Rn)>;
 
+def : Pat<(i32 (int_aarch64_swpl8  GPR64sp:$Rn, (and GPR32:$Rs, (i32 255)))),
+          (SWPLB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpl8  GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPLB_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpl16 GPR64sp:$Rn, (and GPR32:$Rs, (i32 65535)))),
+          (SWPLH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpl16 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPLH_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_swpl32 GPR64sp:$Rn, GPR32:$Rs)),
+          (SWPLW_cg GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_swpl64 GPR64sp:$Rn, GPR64:$Rs)),
+          (SWPLX_cg GPR64:$Rs, GPR64sp:$Rn)>;
+
 // v8.9a/v9.4a FEAT_LRCPC patterns
 let Predicates = [HasRCPC3, HasNEON] in {
   // LDAP1 loads

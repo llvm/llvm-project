@@ -3066,6 +3066,7 @@ defm SWPAL : Swap<1, 1, "al">;
 let isCodeGenOnly = 1 in {
   defm SWP  : Swap_cg<0, 0, "">;
   defm SWPA : Swap_cg<1, 0, "a">;
+  defm SWPL : Swap_cg<0, 1, "l">;
 }
 
 // v9.6a atomic swap (FEAT_LSUI)
