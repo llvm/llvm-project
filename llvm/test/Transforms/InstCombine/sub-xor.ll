@@ -28,7 +28,7 @@ define <2 x i32> @low_mask_nsw_nuw_vec(<2 x i32> %x) {
 define i8 @arbitrary_mask_sub_i8(i8 %x) {
 ; CHECK-LABEL: @arbitrary_mask_sub_i8(
 ; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[M:%.*]] = sub nuw nsw i8 11, [[A]]
+; CHECK-NEXT:    [[M:%.*]] = xor i8 [[A]], 11
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %a = and i8 %x, 10 ; 0b00001010
@@ -74,7 +74,7 @@ define i8 @arbitrary_mask_sub_nuw_high_bit_dont_care_i8(i8 %x) {
 define <2 x i5> @arbitrary_mask_sub_v2i5(<2 x i5> %x) {
 ; CHECK-LABEL: @arbitrary_mask_sub_v2i5(
 ; CHECK-NEXT:    [[A:%.*]] = and <2 x i5> [[X:%.*]], splat (i5 -8)
-; CHECK-NEXT:    [[M:%.*]] = sub nuw nsw <2 x i5> splat (i5 -6), [[A]]
+; CHECK-NEXT:    [[M:%.*]] = xor <2 x i5> [[A]], splat (i5 -6)
 ; CHECK-NEXT:    ret <2 x i5> [[M]]
 ;
   %a = and <2 x i5> %x, <i5 24, i5 24> ; 0b11000
