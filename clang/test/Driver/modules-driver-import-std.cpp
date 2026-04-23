@@ -5,16 +5,16 @@
 // relative to the installed C++ standard library runtime libraries
 // We need to create them in order for Clang to find the manifest.
 // RUN: rm -rf %t && split-file %s %t
-// RUN: mkdir -p %t/Inputs/usr/lib/x86_64-linux-gnu
-// RUN: touch %t/Inputs/usr/lib/x86_64-linux-gnu/libc++.so
-// RUN: touch %t/Inputs/usr/lib/x86_64-linux-gnu/libc++.a
+// RUN: mkdir -p %t/FakeSysroot/usr/lib/x86_64-linux-gnu
+// RUN: touch %t/FakeSysroot/usr/lib/x86_64-linux-gnu/libc++.so
+// RUN: touch %t/FakeSysroot/usr/lib/x86_64-linux-gnu/libc++.a
 
 // RUN: sed "s|DIR|%/t|g" %t/libc++.modules.json.in > \
-// RUN:   %t/Inputs/usr/lib/x86_64-linux-gnu/libc++.modules.json
+// RUN:   %t/FakeSysroot/usr/lib/x86_64-linux-gnu/libc++.modules.json
 
-// RUN: mkdir -p %t/Inputs/usr/lib/share/libc++/v1
-// RUN: cat %t/std.cppm > %t/Inputs/usr/lib/share/libc++/v1/std.cppm
-// RUN: cat %t/std.compat.cppm > %t/Inputs/usr/lib/share/libc++/v1/std.compat.cppm
+// RUN: mkdir -p %t/FakeSysroot/usr/lib/share/libc++/v1
+// RUN: cat %t/std.cppm > %t/FakeSysroot/usr/lib/share/libc++/v1/std.cppm
+// RUN: cat %t/std.compat.cppm > %t/FakeSysroot/usr/lib/share/libc++/v1/std.compat.cppm
 
 //--- libc++.modules.json.in
 {
@@ -49,7 +49,7 @@ int main() {}
 
 // RUN: %clang -std=c++23 -c -fmodules-driver -Rmodules-driver -Rmodule-import \
 // RUN:   -stdlib=libc++ \
-// RUN:   --sysroot=%t/Inputs \
+// RUN:   --sysroot=%t/FakeSysroot \
 // RUN:   --target=x86_64-linux-gnu \
 // RUN:   %t/main.cpp 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
