@@ -1029,9 +1029,11 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 
       if (auto SrcIdx = TII->getReadlaneOperandOnVALUConversion(*U)) {
         MachineOperand &Src = U->getOperand(*SrcIdx);
-        unsigned Width = Src.isReg() && Src.getReg().isVirtual()
-            ? TRI->getRegSizeInBits(*MRI->getRegClass(Src.getReg()))
-            : 32;
+        if (!Src.isReg() || !Src.getReg().isVirtual())
+          continue;
+
+        unsigned Width =
+            TRI->getRegSizeInBits(*MRI->getRegClass(Src.getReg()));
         unsigned RFLCount = Width / 32;
         Info.NumUnavoidableReadfirstlanes += RFLCount;
 
