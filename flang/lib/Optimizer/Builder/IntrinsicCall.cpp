@@ -6828,6 +6828,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
 void IntrinsicLibrary::genMoveAlloc(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
 
+  // TODO: Handling coarray deallocation.
   const fir::ExtendedValue &from = args[0];
   const fir::ExtendedValue &to = args[1];
   const fir::ExtendedValue &status = args[2];
@@ -8699,8 +8700,8 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
           loc, resultType, builder.getDataLayout(), builder.getKindMap());
       if (sourceSizeAndAlign && resultSizeAndAlign &&
           sourceSizeAndAlign->first == resultSizeAndAlign->first) {
-        if (mlir::isa<mlir::IntegerType, mlir::FloatType>(sourceType) &&
-            mlir::isa<mlir::IntegerType, mlir::FloatType>(resultType)) {
+        if (sourceType.isSignlessIntOrFloat() &&
+            resultType.isSignlessIntOrFloat()) {
           mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
           if (sourceType != resultType)
             val = mlir::arith::BitcastOp::create(builder, loc, resultType, val);

@@ -23,8 +23,9 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; OPTIMIZE-NEXT:  Successor(s): vector loop
 ; OPTIMIZE-EMPTY:
 ; OPTIMIZE-NEXT:  <x1> vector loop: {
+; OPTIMIZE-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
+; OPTIMIZE-EMPTY:
 ; OPTIMIZE-NEXT:    vector.body:
-; OPTIMIZE-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; OPTIMIZE-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
 ; OPTIMIZE-NEXT:      EMIT vp<%next.gep> = ptradd ir<%A>, vp<[[VP6]]>
 ; OPTIMIZE-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer vp<%next.gep>
