@@ -46,7 +46,7 @@ LLVM
 Target Triples
 --------------
 
-Use the Clang option ``-target <Architecture>-<Vendor>-<OS>-<Environment>``
+Use the Clang option ``--target=<Architecture>-<Vendor>-<OS>-<Environment>``
 to specify the target triple:
 
   .. table:: AMDGPU Architectures
