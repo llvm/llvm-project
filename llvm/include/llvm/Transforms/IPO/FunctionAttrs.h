@@ -29,8 +29,8 @@ class Function;
 class Module;
 
 /// Returns the memory access properties of this copy of the function.
-LLVM_ABI MemoryEffects computeFunctionBodyMemoryAccess(Function &F,
-                                                       AAResults &AAR);
+LLVM_ABI MemoryEffects computeFunctionBodyMemoryAccess(
+    Function &F, AAResults &AAR, const TargetLibraryInfo &TLI);
 
 /// Propagate function attributes for function summaries along the index's
 /// callgraph during thinlink
