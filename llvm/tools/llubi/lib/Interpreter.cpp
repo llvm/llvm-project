@@ -165,6 +165,40 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         });
   }
 
+  AnyValue visitOverflowIntBinOpWithResult(
+      CallBase &CB,
+      function_ref<std::pair<APInt, bool>(const APInt &, const APInt &)>
+          ScalarFn) {
+    const AnyValue &LHS = getValue(CB.getOperand(0));
+    const AnyValue &RHS = getValue(CB.getOperand(1));
+    if (!LHS.isAggregate())
+      return visitIntBinOpWithResult(
+          CB, [&](const APInt &ScalarLHS, const APInt &ScalarRHS) -> AnyValue {
+            auto [Res, Overflow] = ScalarFn(ScalarLHS, ScalarRHS);
+            return std::vector{AnyValue(Res), AnyValue::boolean(Overflow)};
+          });
+
+    auto &LHSVec = LHS.asAggregate();
+    auto &RHSVec = RHS.asAggregate();
+    std::vector<AnyValue> ResVec;
+    std::vector<AnyValue> OverflowVec;
+    ResVec.reserve(LHSVec.size());
+    OverflowVec.reserve(LHSVec.size());
+    for (const auto &[ScalarLHS, ScalarRHS] : zip(LHSVec, RHSVec)) {
+      if (ScalarLHS.isPoison() || ScalarRHS.isPoison()) {
+        ResVec.push_back(AnyValue::poison());
+        OverflowVec.push_back(AnyValue::poison());
+        continue;
+      }
+      auto [Res, Overflow] =
+          ScalarFn(ScalarLHS.asInteger(), ScalarRHS.asInteger());
+      ResVec.push_back(AnyValue(Res));
+      OverflowVec.push_back(AnyValue::boolean(Overflow));
+    }
+    return std::vector{AnyValue(std::move(ResVec)),
+                       AnyValue(std::move(OverflowVec))};
+  }
+
   AnyValue
   computeTriOp(Type *Ty, const AnyValue &Op1, const AnyValue &Op2,
                const AnyValue &Op3,
@@ -587,8 +621,9 @@ public:
     case Intrinsic::usub_with_overflow:
     case Intrinsic::smul_with_overflow:
     case Intrinsic::umul_with_overflow: {
-      return visitIntBinOpWithResult(
-          CB, [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+      return visitOverflowIntBinOpWithResult(
+          CB,
+          [IID](const APInt &LHS, const APInt &RHS) -> std::pair<APInt, bool> {
             APInt Res;
             bool Overflow = false;
             switch (IID) {
@@ -613,7 +648,7 @@ public:
             default:
               llvm_unreachable("Unexpected intrinsic ID");
             }
-            return std::vector{AnyValue(Res), AnyValue::boolean(Overflow)};
+            return {Res, Overflow};
           });
     }
     case Intrinsic::sadd_sat:
