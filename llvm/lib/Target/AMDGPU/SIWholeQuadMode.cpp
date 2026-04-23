@@ -753,6 +753,9 @@ char SIWholeQuadMode::analyzeFunction(MachineFunction &MF) {
         if (II.OutNeeds & StateWQM)
           markInstructionUses(*MI, StateWQM, Worklist);
       }
+      // The side-effect backward propagation should not expand the wqm-region.
+      // So we only need to run the propagation once.
+      ExeczSideEffectInstrs.clear();
     }
   }
 
