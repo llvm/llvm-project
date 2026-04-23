@@ -95,6 +95,13 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
   if (!HalfTy->isIntegerTy())
     return false;
   unsigned HalfWidth = HalfTy->getIntegerBitWidth();
+
+  // Bail out on very small types (i1, i2): the full-width cttz can return
+  // values not representable in the half type (e.g., cttz.i4 can return 4,
+  // which doesn't fit in i2).
+  if (HalfWidth <= 2)
+    return false;
+
   unsigned FullWidth = HalfWidth * 2;
 
   // select (icmp eq (trunc SrcVal to i(N/2)), 0), HiResult, LoResult
@@ -121,11 +128,8 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
     return false;
 
   // LoResult: cttz(trunc(SrcVal), _),  must use same truncated value
-  Value *LoCttzArg;
-  if (!match(LoResult, m_OneUse(m_Intrinsic<Intrinsic::cttz>(m_Value(LoCttzArg),
-                                                             m_Value()))))
-    return false;
-  if (LoCttzArg != LoTrunc)
+  if (!match(LoResult, m_OneUse(m_Intrinsic<Intrinsic::cttz>(
+                           m_Specific(LoTrunc), m_Value()))))
     return false;
 
   // HiResult: add/or_disjoint(cttz(trunc(lshr(SrcVal, N/2)), _), N/2)
@@ -178,6 +182,13 @@ static bool foldSelectSplitCTLZ(Instruction &I) {
   if (!HalfTy->isIntegerTy())
     return false;
   unsigned HalfWidth = HalfTy->getIntegerBitWidth();
+
+  // Bail out on very small types (i1, i2): the full-width ctlz can return
+  // values not representable in the half type (e.g., ctlz.i4 can return 4,
+  // which doesn't fit in i2).
+  if (HalfWidth <= 2)
+    return false;
+
   unsigned FullWidth = HalfWidth * 2;
 
   // select (icmp eq HiPart, 0), LoResult, HiResult
