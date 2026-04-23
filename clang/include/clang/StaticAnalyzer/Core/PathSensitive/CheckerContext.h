@@ -168,7 +168,7 @@ public:
   }
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Expr *Ex) const { return Pred->getSVal(Ex); }
+  SVal getSVal(const Expr *E) const { return Pred->getSVal(E); }
 
   ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
 

@@ -2061,7 +2061,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                                       ->getType()->isRecordType()))
           for (auto Child : Ex->children()) {
             assert(Child);
-            const Expr *ChildExpr = dyn_cast<Expr>(Child);
+            const auto *ChildExpr = dyn_cast<Expr>(Child);
             SVal Val =
                 ChildExpr ? State->getSVal(ChildExpr, LCtx) : UnknownVal();
             State = escapeValues(State, Val, PSK_EscapeOther);
@@ -2798,7 +2798,7 @@ assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
       return std::pair<ProgramStateRef, ProgramStateRef>{nullptr, State};
   }
 
-  const Expr *ConditionExpr = dyn_cast<Expr>(ConditionStmt);
+  const auto *ConditionExpr = dyn_cast<Expr>(ConditionStmt);
   assert(ConditionExpr && "The condition must be an Expr from here!");
 
   SVal X = State->getSVal(ConditionExpr, N->getLocationContext());

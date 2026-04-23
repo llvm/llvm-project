@@ -35,7 +35,7 @@ class SymbolReaper;
 class EnvironmentEntry
     : public std::pair<const Expr *, const StackFrameContext *> {
 public:
-  EnvironmentEntry(const Expr *Ex, const LocationContext *L);
+  EnvironmentEntry(const Expr *E, const LocationContext *L);
 
   const Expr *getExpr() const { return first; }
   const LocationContext *getLocationContext() const { return second; }

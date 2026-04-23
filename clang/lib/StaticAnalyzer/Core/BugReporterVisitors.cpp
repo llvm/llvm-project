@@ -1740,7 +1740,7 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
 
     if (DS) {
       SI.StoreKind = StoreInfo::Initialization;
-    } else if (const BlockExpr *BExpr = dyn_cast<BlockExpr>(S)) {
+    } else if (const auto *BExpr = dyn_cast<BlockExpr>(S)) {
       SI.StoreKind = StoreInfo::BlockCapture;
       if (VR) {
         // See if we can get the BlockVarRegion.

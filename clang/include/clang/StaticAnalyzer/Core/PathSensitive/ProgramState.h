@@ -377,10 +377,10 @@ public:
   /// Get the lvalue for an array index.
   SVal getLValue(QualType ElementType, SVal Idx, SVal Base) const;
 
-  /// Returns the SVal bound to the expression \p Ex in the state's environment.
-  SVal getSVal(const Expr *Ex, const LocationContext *LCtx) const;
+  /// Returns the SVal bound to the expression \p E in the state's environment.
+  SVal getSVal(const Expr *E, const LocationContext *LCtx) const;
 
-  SVal getSValAsScalarOrLoc(const Expr *Ex, const LocationContext *LCtx) const;
+  SVal getSValAsScalarOrLoc(const Expr *E, const LocationContext *LCtx) const;
 
   /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
@@ -792,18 +792,17 @@ inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) c
   return UnknownVal();
 }
 
-inline SVal ProgramState::getSVal(const Expr *Ex,
+inline SVal ProgramState::getSVal(const Expr *E,
                                   const LocationContext *LCtx) const {
-  return Env.getSVal(EnvironmentEntry(Ex, LCtx),
-                     *getStateManager().svalBuilder);
+  return Env.getSVal(EnvironmentEntry(E, LCtx), *getStateManager().svalBuilder);
 }
 
 inline SVal
-ProgramState::getSValAsScalarOrLoc(const Expr *Ex,
+ProgramState::getSValAsScalarOrLoc(const Expr *E,
                                    const LocationContext *LCtx) const {
-  QualType T = Ex->getType();
-  if (Ex->isGLValue() || Loc::isLocType(T) || T->isIntegralOrEnumerationType())
-    return getSVal(Ex, LCtx);
+  QualType T = E->getType();
+  if (E->isGLValue() || Loc::isLocType(T) || T->isIntegralOrEnumerationType())
+    return getSVal(E, LCtx);
   return UnknownVal();
 }
 
