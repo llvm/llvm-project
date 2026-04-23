@@ -344,8 +344,7 @@ struct LoweringPreparePass
       // Emit the initializer and add a global destructor if appropriate.
       mlir::Block *insertBlock = builder.getInsertionBlock();
       if (!ctorRegion.empty()) {
-        assert(ctorRegion.hasOneBlock() &&
-               "MaxSizedRegion<1> should enforce this");
+        assert(ctorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
 
         mlir::Block &block = ctorRegion.front();
         insertBlock->getOperations().splice(
@@ -354,8 +353,7 @@ struct LoweringPreparePass
       }
 
       if (!dtorRegion.empty()) {
-        assert(dtorRegion.hasOneBlock() &&
-               "MaxSizedRegion<1> should enforce this");
+        assert(dtorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
 
         emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion,
                                     *insertBlock);
@@ -1301,7 +1299,7 @@ void LoweringPreparePass::lowerLocalInitOp(
   }
 
   cir::GlobalOp globalOp = initOp.getReferencedGlobal(symbolTables);
-  assert(globalOp && "No global-op found?");
+  assert(globalOp && "No global-op found");
 
   handleStaticLocal(globalOp, initOp);
 

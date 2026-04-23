@@ -3838,9 +3838,10 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
     UnitAttr : $tls,
     UnitAttr : $static_local
   );
+
   let regions = (region
-      MaxSizedRegion<1>:$ctorRegion,
-      MaxSizedRegion<1>:$dtorRegion
+    MaxSizedRegion<1>:$ctorRegion,
+    MaxSizedRegion<1>:$dtorRegion
   );
 
   let assemblyFormat = [{
@@ -3852,12 +3853,12 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
   }];
 
   let extraClassDeclaration = [{
-  /// Look up the cir.global this op references. Returns null if the symbol
-  /// is absent or is not a cir.global, callers that run after verification
-  /// can assume non-null.
-  cir::GlobalOp getReferencedGlobal(mlir::SymbolTableCollection &tables) {
-    return llvm::dyn_cast_or_null<cir::GlobalOp>(
-        tables.lookupNearestSymbolFrom(*this, getGlobalNameAttr()));
+    /// Look up the cir.global this op references. Returns null if the symbol
+    /// is absent or is not a cir.global, callers that run after verification
+    /// can assume non-null.
+    cir::GlobalOp getReferencedGlobal(mlir::SymbolTableCollection &tables) {
+      return llvm::dyn_cast_or_null<cir::GlobalOp>(
+          tables.lookupNearestSymbolFrom(*this, getGlobalNameAttr()));
 }
 }];
 
