@@ -105,8 +105,13 @@
 ; CE-NEXT:            .
 ; C0-NEXT: >>>>>>
 
-; Now build an alternate set of checks where input lines that might be elided by
-; ellipses have annotations.
+; Now build an alternate set of checks that exercises --dump-input-context
+; when the failing CHECK's search range covers many input lines.  The
+; "not found" diagnostic's `~~~` underlines are elided to a start + end
+; marker, so intermediate input lines are pulled into visibility only by
+; --dump-input-context (or by unrelated annotations like MatchFuzzy).
+; The "annotations factor into the ellipsis-worthwhile calculation"
+; property is still exercised by filter.txt's ANNOTATION-FULL block.
 
 ; RUN: cp %t.in %t.wide.in
 ; RUN: echo 'CHECK-LABEL: lab1'    >  %t.wide.chk

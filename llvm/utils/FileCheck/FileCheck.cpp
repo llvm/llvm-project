@@ -462,6 +462,7 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
       // a new line or a "not found" diagnostic (Lead='X').
       unsigned E = DiagItr->InputEndLine;
       unsigned LastRenderable = DiagItr->InputEndCol == 1 ? E - 1 : E;
+      bool ElideMiddle = A.Marker.Lead == 'X';
       for (unsigned L = DiagItr->InputStartLine + 1; L <= E; ++L) {
         // If a range ends before the first column on a line, then it has no
         // characters on that line, so there's nothing to render.
@@ -469,12 +470,17 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
           break;
         // For a "not found", emit only the last-renderable-line marker to avoid
         // `~~~` continuation obscuring the content.
-        if (A.Marker.Lead == 'X' && L != LastRenderable)
+        if (ElideMiddle && L != LastRenderable)
           continue;
         InputAnnotation B;
         B.DiagIndex = A.DiagIndex;
         B.Label = A.Label;
-        B.IsFirstLine = false;
+        // The elided end marker is the only annotation for this diagnostic
+        // after the first-line marker, so treat it as a first-line annotation
+        // for filter purposes.  Otherwise --dump-input-filter=error (the
+        // default) would keep the start line visible but not pull the end
+        // line into view, hiding the close of the search range.
+        B.IsFirstLine = ElideMiddle && L == LastRenderable;
         B.InputLine = L;
         B.Marker = A.Marker;
         B.Marker.Lead = '~';

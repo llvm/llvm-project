@@ -155,6 +155,10 @@
 ; ANNOTATION-NEXT:            .
 ; ANNOTATION-NEXT:            .
 ; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT:           32: foo8 
+; ANNOTATION-NEXT:           33: foo9 
+; ANNOTATION-NEXT:           34: end 
+; ANNOTATION-NEXT: check:3'0     ~~~~
 ; ANNOTATION-NEXT: >>>>>>
 
 ;      ERROR: <<<<<<
@@ -180,6 +184,10 @@
 ; ERROR-NEXT:            .
 ; ERROR-NEXT:            .
 ; ERROR-NEXT:            .
+; ERROR-NEXT:           32: foo8 
+; ERROR-NEXT:           33: foo9 
+; ERROR-NEXT:           34: end 
+; ERROR-NEXT: check:3'0     ~~~~
 ; ERROR-NEXT: >>>>>>
 
 ;--------------------------------------------------
