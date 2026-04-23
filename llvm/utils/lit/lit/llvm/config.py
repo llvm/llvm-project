@@ -527,6 +527,7 @@ class LLVMConfig(object):
         name,
         search_env=None,
         required=False,
+        quiet=False,
         search_paths=None,
         use_installed=False,
     ):
@@ -564,7 +565,8 @@ class LLVMConfig(object):
                 self.lit_config.params.get("use_normalized_slashes")
             ):
                 tool = tool.replace("\\", "/")
-            self.lit_config.dbg("using {}: {}".format(name, tool))
+            if not quiet:
+                self.lit_config.note("using {}: {}".format(name, tool))
         return tool
 
     def _get_clang_paths(self, additional_tool_dirs):
