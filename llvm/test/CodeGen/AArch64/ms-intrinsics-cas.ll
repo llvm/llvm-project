@@ -88,3 +88,43 @@ define i64 @test_casa64(ptr %p, i64 %rs, i64 %rt) {
   %r = call i64 @llvm.aarch64.casa64(ptr %p, i64 %rs, i64 %rt)
   ret i64 %r
 }
+
+define i32 @test_casl8(ptr %p, i32 %rs, i32 %rt) {
+; CHECK-LABEL: test_casl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    caslb w1, w2, [x0]
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.casl8(ptr %p, i32 %rs, i32 %rt)
+  ret i32 %r
+}
+
+define i32 @test_casl16(ptr %p, i32 %rs, i32 %rt) {
+; CHECK-LABEL: test_casl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    caslh w1, w2, [x0]
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.casl16(ptr %p, i32 %rs, i32 %rt)
+  ret i32 %r
+}
+
+define i32 @test_casl32(ptr %p, i32 %rs, i32 %rt) {
+; CHECK-LABEL: test_casl32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casl w1, w2, [x0]
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.casl32(ptr %p, i32 %rs, i32 %rt)
+  ret i32 %r
+}
+
+define i64 @test_casl64(ptr %p, i64 %rs, i64 %rt) {
+; CHECK-LABEL: test_casl64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casl x1, x2, [x0]
+; CHECK-NEXT:    mov x0, x1
+; CHECK-NEXT:    ret
+  %r = call i64 @llvm.aarch64.casl64(ptr %p, i64 %rs, i64 %rt)
+  ret i64 %r
+}
