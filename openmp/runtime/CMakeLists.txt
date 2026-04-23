@@ -327,6 +327,16 @@ if(LIBOMP_STATS)
   set(LIBOMP_USE_STDCPPLIB TRUE)
 endif()
 
+# Thread cancellation via pthread_cancel.  Disabled on platforms that lack it
+# (Android, WASI) but can also be forced off via -DLIBOMP_USE_CANCEL_THREADS=OFF.
+if(ANDROID OR WASM)
+  set(LIBOMP_USE_CANCEL_THREADS_DEFAULT FALSE)
+else()
+  set(LIBOMP_USE_CANCEL_THREADS_DEFAULT TRUE)
+endif()
+set(LIBOMP_USE_CANCEL_THREADS "${LIBOMP_USE_CANCEL_THREADS_DEFAULT}" CACHE BOOL
+  "Enable thread cancellation via pthread_cancel?")
+
 # Shared library can be switched to a static library
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
   "Shared library instead of static library?")
