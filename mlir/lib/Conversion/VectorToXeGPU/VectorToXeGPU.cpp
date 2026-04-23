@@ -552,29 +552,6 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     bool isOutOfBounds = readOp.hasOutOfBoundsDim();
     // Check if the memref has address space 3 (shared local memory)
     bool isSharedMemory = xegpu::XeGPUDialect::isSharedMemory(readMemTy);
-
-    // TODO:This check needs to be replaced with proper uArch capability check
-    auto chip = xegpu::getChipStr(readOp);
-    // Lower to scattered load Op if the target HW doesn't have 2d block load
-    // support and the load is not from shared memory.
-    if (chip != "pvc" && chip != "bmg" && !isSharedMemory) {
-
-      // TODO: add support for OutOfBound access
-      if (isOutOfBounds)
-        return failure();
-      return lowerToScatteredLoadOp(readOp, rewriter);
-    }
-
-    // Handle the 1D non-SLM case using load.gather.
-    if (loadedVecTy.getRank() == 1 && !isOutOfBounds && !isSharedMemory)
-      return lowerToScatteredLoadOp(readOp, rewriter);
-
-    // Perform common data transfer checks.
-    // TODO: Maybe too strict for SLM case.
-    if (failed(
-            storeLoadPreconditions(rewriter, readOp, loadedVecTy, readMemTy)))
-      return failure();
-
     // Handle the SLM case.
     if (isSharedMemory) {
       // If the memref is SLM only support 2D case for now.
@@ -607,6 +584,28 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       rewriter.replaceOp(readOp, loadMatrixOp.getResult());
       return success();
     }
+
+    // TODO:This check needs to be replaced with proper uArch capability check
+    auto chip = xegpu::getChipStr(readOp);
+    // Lower to scattered load Op if the target HW doesn't have 2d block load
+    // support and the load is not from shared memory.
+    if (chip != "pvc" && chip != "bmg") {
+
+      // TODO: add support for OutOfBound access
+      if (isOutOfBounds)
+        return failure();
+      return lowerToScatteredLoadOp(readOp, rewriter);
+    }
+
+    // Handle the 1D non-SLM case using load.gather.
+    if (loadedVecTy.getRank() == 1 && !isOutOfBounds)
+      return lowerToScatteredLoadOp(readOp, rewriter);
+
+    // Perform common data transfer checks.
+    // TODO: Maybe too strict for SLM case.
+    if (failed(
+            storeLoadPreconditions(rewriter, readOp, loadedVecTy, readMemTy)))
+      return failure();
 
     if (isOutOfBounds && !isZeroConstant(readOp.getPadding()))
       return rewriter.notifyMatchFailure(
@@ -673,25 +672,6 @@ struct TransferWriteLowering
     // Check if the memref has address space 3 (shared local memory)
     bool isSharedMemory = xegpu::XeGPUDialect::isSharedMemory(writeMemTy);
 
-    // TODO:This check needs to be replaced with proper uArch capability check
-    auto chip = xegpu::getChipStr(writeOp);
-    // Lower to scattered store Op if the target HW doesn't have 2d block
-    // store support and the memref is not SLM.
-    if (chip != "pvc" && chip != "bmg" && !isSharedMemory) {
-
-      // TODO: add support for OutOfBound access
-      if (writeOp.hasOutOfBoundsDim())
-        return failure();
-      return lowerToScatteredStoreOp(writeOp, rewriter);
-    }
-
-    if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy, writeMemTy)))
-      return failure();
-
-    AffineMap map = writeOp.getPermutationMap();
-    if (!map.isMinorIdentity())
-      return rewriter.notifyMatchFailure(writeOp, "Expects identity map");
-
     // For shared local memory (address space 3), use create_mem_desc +
     // store_matrix
     if (isSharedMemory) {
@@ -719,6 +699,25 @@ struct TransferWriteLowering
       rewriter.eraseOp(writeOp);
       return success();
     }
+
+    // TODO:This check needs to be replaced with proper uArch capability check
+    auto chip = xegpu::getChipStr(writeOp);
+    // Lower to scattered store Op if the target HW doesn't have 2d block
+    // store support and the memref is not SLM.
+    if (chip != "pvc" && chip != "bmg") {
+
+      // TODO: add support for OutOfBound access
+      if (writeOp.hasOutOfBoundsDim())
+        return failure();
+      return lowerToScatteredStoreOp(writeOp, rewriter);
+    }
+
+    if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy, writeMemTy)))
+      return failure();
+
+    AffineMap map = writeOp.getPermutationMap();
+    if (!map.isMinorIdentity())
+      return rewriter.notifyMatchFailure(writeOp, "Expects identity map");
 
     auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
         rewriter, loc, writeOp.getBase(),
