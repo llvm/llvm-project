@@ -2010,7 +2010,10 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   SmallSetVector<CachedHashString, 16> OperandConversionKinds;
   SmallSetVector<CachedHashString, 16> InstructionConversionKinds;
   std::vector<std::vector<uint8_t>> ConversionTable;
-  size_t MaxRowLength = 2; // minimum is custom converter plus terminator.
+
+  // minimum is custom converter plus a operand index in parsed OperandVector
+  // (0 for custom converter) and terminator (CVT_Done).
+  size_t MaxRowLength = 3;
 
   // TargetOperandClass - This is the target's operand class, like X86Operand.
   std::string TargetOperandClass = Target.getName().str() + "Operand";
@@ -3602,7 +3605,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       assert(I != Info.SubtargetFeatures.end() && "Didn't import predicate?");
       OS << I->second.getEnumBitName() << ", ";
     }
-    OS << "},\n";
+    OS << "}, // " << getNameForFeatureBitset(FeatureBitset) << "\n";
   }
   OS << "};\n\n";
 

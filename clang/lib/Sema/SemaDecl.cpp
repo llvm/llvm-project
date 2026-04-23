@@ -47,6 +47,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -2898,14 +2899,16 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   // previous decl", for example if the attribute needs to be consistent
   // between redeclarations, you need to call a custom merge function here.
   InheritableAttr *NewAttr = nullptr;
-  if (const auto *AA = dyn_cast<AvailabilityAttr>(Attr))
-    NewAttr = S.mergeAvailabilityAttr(
+  if (const auto *AA = dyn_cast<AvailabilityAttr>(Attr)) {
+    const IdentifierInfo *InferredPlatformII = nullptr;
+    if (AvailabilityAttr *Inf = AA->getInferredAttrAs())
+      InferredPlatformII = Inf->getPlatform();
+    NewAttr = S.mergeAndInferAvailabilityAttr(
         D, *AA, AA->getPlatform(), AA->isImplicit(), AA->getIntroduced(),
         AA->getDeprecated(), AA->getObsoleted(), AA->getUnavailable(),
         AA->getMessage(), AA->getStrict(), AA->getReplacement(), AMK,
-        AA->getPriority(), AA->getEnvironment(),
-        AA->getOrigAnyAppleOSVersion());
-  else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
+        AA->getPriority(), AA->getEnvironment(), InferredPlatformII);
+  } else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
     NewAttr = S.mergeVisibilityAttr(D, *VA, VA->getVisibility());
   else if (const auto *VA = dyn_cast<TypeVisibilityAttr>(Attr))
     NewAttr = S.mergeTypeVisibilityAttr(D, *VA, VA->getVisibility());
@@ -8241,6 +8244,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
+  LoadExternalExtnameUndeclaredIdentifiers();
+
   if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
     StringLiteral *SE = cast<StringLiteral>(E);
@@ -8255,7 +8260,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       if (isDeclExternC(NewVD)) {
         NewVD->addAttr(I->second);
         ExtnameUndeclaredIdentifiers.erase(I);
-      } else
+      } else if (NewVD->getDeclContext()
+                     ->getRedeclContext()
+                     ->isTranslationUnit())
         Diag(NewVD->getLocation(), diag::warn_redefine_extname_not_applied)
             << /*Variable*/ 1 << NewVD;
     }
@@ -9269,9 +9276,12 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
         continue;
       if (Overridden.insert(BaseMD).second) {
         MD->addOverriddenMethod(BaseMD);
-        CheckOverridingFunctionReturnType(MD, BaseMD);
-        CheckOverridingFunctionAttributes(MD, BaseMD);
-        CheckOverridingFunctionExceptionSpec(MD, BaseMD);
+        bool Invalid = false;
+        Invalid |= CheckOverridingFunctionReturnType(MD, BaseMD);
+        Invalid |= CheckOverridingFunctionAttributes(MD, BaseMD);
+        Invalid |= CheckOverridingFunctionExceptionSpec(MD, BaseMD);
+        if (Invalid)
+          MD->setInvalidDecl();
         CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
       }
 
@@ -10545,6 +10555,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                        isMemberSpecialization ||
                        isFunctionTemplateSpecialization);
 
+  LoadExternalExtnameUndeclaredIdentifiers();
+
   // Handle GNU asm-label extension (encoded as an attribute).
   if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
@@ -10558,7 +10570,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       if (isDeclExternC(NewFD)) {
         NewFD->addAttr(I->second);
         ExtnameUndeclaredIdentifiers.erase(I);
-      } else
+      } else if (NewFD->getDeclContext()
+                     ->getRedeclContext()
+                     ->isTranslationUnit())
         Diag(NewFD->getLocation(), diag::warn_redefine_extname_not_applied)
             << /*Variable*/0 << NewFD;
     }
@@ -12881,7 +12895,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
     return true;
   }
   const Expr *Culprit;
-  if (Init->isConstantInitializer(Context, false, &Culprit))
+  if (Init->isConstantInitializer(Context, /*ForRef=*/false, &Culprit))
     return false;
 
   // Emit ObjC-specific diagnostics for non-constant literals at file scope.
@@ -12891,7 +12905,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
     // the offender.
     if (auto ALE = dyn_cast<ObjCArrayLiteral>(Init)) {
       for (auto *Elm : ALE->elements()) {
-        if (!Elm->isConstantInitializer(Context, false, nullptr)) {
+        if (!Elm->isConstantInitializer(Context)) {
           Diag(Elm->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
               << ObjC().CheckLiteralKind(Init) << Elm->getSourceRange();
@@ -12906,14 +12920,14 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
 
         // Check that the key is a string literal and is constant.
         if (!isa<ObjCStringLiteral>(Elm.Key) ||
-            !Elm.Key->isConstantInitializer(Context, false, nullptr)) {
+            !Elm.Key->isConstantInitializer(Context)) {
           Diag(Elm.Key->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
               << ObjC().CheckLiteralKind(Init) << Elm.Key->getSourceRange();
           return true;
         }
 
-        if (!Elm.Value->isConstantInitializer(Context, false, nullptr)) {
+        if (!Elm.Value->isConstantInitializer(Context)) {
           Diag(Elm.Value->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
               << ObjC().CheckLiteralKind(Init) << Elm.Value->getSourceRange();
@@ -13932,6 +13946,16 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     return;
   }
 
+  // __amdgpu_feature_predicate_t cannot be initialised
+  if (VDecl->getType().getDesugaredType(Context) ==
+      Context.AMDGPUFeaturePredicateTy) {
+    Diag(VDecl->getLocation(),
+         diag::err_amdgcn_predicate_type_is_not_constructible)
+        << VDecl;
+    VDecl->setInvalidDecl();
+    return;
+  }
+
   // WebAssembly tables can't be used to initialise a variable.
   if (!Init->getType().isNull() && Init->getType()->isWebAssemblyTableType()) {
     Diag(Init->getExprLoc(), diag::err_wasm_table_art) << 0;
@@ -14454,6 +14478,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
   if (VarDecl *Var = dyn_cast<VarDecl>(RealDecl)) {
     QualType Type = Var->getType();
 
+    if (Type.getDesugaredType(Context) == Context.AMDGPUFeaturePredicateTy) {
+      Diag(Var->getLocation(),
+           diag::err_amdgcn_predicate_type_is_not_constructible)
+          << Var;
+      Var->setInvalidDecl();
+      return;
+    }
     // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
     if (isa<DecompositionDecl>(RealDecl)) {
       Diag(Var->getLocation(), diag::err_decomp_decl_requires_init) << Var;
@@ -17013,8 +17044,12 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       return nullptr;
     }
 
-    if (Body && FSI->HasPotentialAvailabilityViolations)
-      DiagnoseUnguardedAvailabilityViolations(dcl);
+    if (Body) {
+      if (FSI->HasPotentialAvailabilityViolations)
+        DiagnoseUnguardedAvailabilityViolations(dcl);
+      else if (AMDGPU().HasPotentiallyUnguardedBuiltinUsage(FD))
+        AMDGPU().DiagnoseUnguardedBuiltinUsage(FD);
+    }
 
     assert(!FSI->ObjCShouldCallSuper &&
            "This should only be set for ObjC methods, which should have been "
@@ -18017,7 +18052,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   bool IsFixed = !UnderlyingType.isUnset() || ScopedEnum;
 
   if (Kind == TagTypeKind::Enum) {
-    if (UnderlyingType.isInvalid() || (!UnderlyingType.get() && ScopedEnum)) {
+    if (UnderlyingType.isInvalid() || (!UnderlyingType.get() && ScopedEnum) ||
+        Invalid) {
       // No underlying type explicitly specified, or we failed to parse the
       // type, default to int.
       EnumUnderlying = Context.IntTy.getTypePtr();

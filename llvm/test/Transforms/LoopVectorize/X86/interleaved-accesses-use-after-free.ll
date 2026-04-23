@@ -52,12 +52,12 @@ define void @test(ptr %arg, ptr %arg1) #0 {
 bb:
   br label %bb2
 
-bb2:                                              ; preds = %bb4, %bb
+bb2:
   %phi = phi ptr [ %arg, %bb ], [ %phi3, %bb4 ]
   %phi3 = phi ptr [ %arg1, %bb ], [ null, %bb4 ]
   br label %bb4
 
-bb4:                                              ; preds = %bb4, %bb2
+bb4:
   %phi5 = phi ptr [ %getelementptr15, %bb4 ], [ %phi, %bb2 ]
   %phi6 = phi ptr [ %getelementptr14, %bb4 ], [ %phi3, %bb2 ]
   %load = load i64, ptr %phi5, align 8
@@ -86,10 +86,7 @@ bb4:                                              ; preds = %bb4, %bb2
   br i1 %icmp, label %bb2, label %bb4
 }
 
-; Function Attrs: memory(readwrite, inaccessiblemem: none)
 declare void @foo() #0
-
-; Function Attrs: memory(argmem: readwrite)
 declare void @pluto() #1
 
 attributes #0 = { memory(readwrite, inaccessiblemem: none) }

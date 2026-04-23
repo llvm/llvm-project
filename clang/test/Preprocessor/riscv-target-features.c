@@ -1586,12 +1586,12 @@
 // Experimental extensions
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_p0p20 -E -dM %s \
+// RUN:   -march=rv32i_p0p21 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-P-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_p0p20 -E -dM %s \
+// RUN:   -march=rv64i_p0p21 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-P-EXT %s
-// CHECK-P-EXT: __riscv_p 20000{{$}}
+// CHECK-P-EXT: __riscv_p 21000{{$}}
 //
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izfbfmin1p0 -E -dM %s \

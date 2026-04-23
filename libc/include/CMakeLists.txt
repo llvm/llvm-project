@@ -180,6 +180,11 @@ add_header_macro(
     .llvm-libc-types.uint_ur_t
 )
 
+add_header(
+  syscall
+  HDR
+    syscall.h
+)
 
 add_header_macro(
   sysexits
@@ -237,6 +242,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  cpio
+  ../libc/include/cpio.yaml
+  cpio.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   setjmp
   ../libc/include/setjmp.yaml
   setjmp.h
@@ -252,6 +265,7 @@ add_header_macro(
   string.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.annex_k_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-types.errno_t
     .llvm-libc-types.rsize_t
@@ -275,9 +289,13 @@ add_header_macro(
     .llvm-libc-types.ACTION
     .llvm-libc-types.ENTRY
     .llvm-libc-types.VISIT
+    .llvm-libc-types.posix_tnode
     .llvm-libc-types.__search_compare_t
     .llvm-libc-types.size_t
     .llvm-libc-types.struct_hsearch_data
+    .llvm-libc-types.__action_closure_fn_t
+    .llvm-libc-types.__action_fn_t
+    .llvm-libc-types.__free_fn_t
     .llvm_libc_common_h
 )
 
@@ -442,6 +460,20 @@ add_header_macro(
     .llvm-libc-types.pthread_t
     .llvm_libc_common_h
 )
+
+if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+  add_header_macro(
+    ucontext
+    ../libc/include/ucontext.yaml
+    ucontext.h
+    DEPENDS
+      .llvm_libc_common_h
+      .llvm-libc-types.mcontext_t
+      .llvm-libc-types.ucontext_t
+      .llvm-libc-types.sigset_t
+      .llvm-libc-types.stack_t
+  )
+endif()
 
 add_header_macro(
   sched
@@ -706,8 +738,10 @@ add_header_macro(
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
     .llvm-libc-types.struct_iovec
+    .llvm-libc-types.struct_linger
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
+    .llvm-libc-types.struct_sockaddr_storage
 )
 
 add_header_macro(
@@ -855,6 +889,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.wint_t
+    .llvm-libc-types.wctype_t
 )
 
 add_header_macro(
@@ -921,8 +956,9 @@ function(get_all_install_header_targets out_var)
 endfunction(get_all_install_header_targets)
 
 get_all_install_header_targets(all_install_header_targets ${TARGET_PUBLIC_HEADERS})
+add_custom_target(generate-libc-headers DEPENDS ${all_install_header_targets})
 add_library(libc-headers INTERFACE)
-add_dependencies(libc-headers ${all_install_header_targets})
+add_dependencies(libc-headers generate-libc-headers)
 target_include_directories(libc-headers SYSTEM INTERFACE ${LIBC_INCLUDE_DIR})
 
 foreach(target IN LISTS all_install_header_targets)

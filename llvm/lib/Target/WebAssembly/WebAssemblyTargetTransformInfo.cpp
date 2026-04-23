@@ -167,6 +167,9 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i32, 4},
       {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 4},
       {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 4},
+      // 6x extend_low, extend_high
+      {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8, 6},
+      {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8, 6},
       // shuffle
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i32, 2},
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i32, 4},

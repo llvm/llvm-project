@@ -89,7 +89,8 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
-    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        xegpu::createXeGPUSgToWiDistributeExperimental());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createLoopInvariantCodeMotionPass());
@@ -97,7 +98,10 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUVectorLinearize());
   }
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertMathToXeVM());
-  pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeGPUToXeVMPass());
+  ConvertXeGPUToXeVMPassOptions xegpuToXeVMOptions;
+  xegpuToXeVMOptions.use64bitIndex = options.use64bitIndex;
+  pm.addNestedPass<gpu::GPUModuleOp>(
+      createConvertXeGPUToXeVMPass(xegpuToXeVMOptions));
   {
     ConvertGpuOpsToLLVMSPVOpsOptions gpuToLLVMSPVOptions;
     gpuToLLVMSPVOptions.use64bitIndex = options.use64bitIndex;

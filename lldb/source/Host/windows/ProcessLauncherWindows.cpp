@@ -9,6 +9,7 @@
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/windows/PseudoConsole.h"
+#include "lldb/Host/windows/WindowsFileAction.h"
 #include "lldb/Host/windows/windows.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -81,9 +82,7 @@ GetFlattenedWindowsCommandStringW(llvm::ArrayRef<const char *> args) {
   if (args.empty())
     return L"";
 
-  std::vector<llvm::StringRef> args_ref;
-  for (int i = 0; args[i] != nullptr; ++i)
-    args_ref.push_back(args[i]);
+  std::vector<llvm::StringRef> args_ref(args.begin(), args.end());
 
   return llvm::sys::flattenWindowsCommandLine(args_ref);
 }
@@ -130,7 +129,9 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   startupinfoex.StartupInfo.cb = sizeof(STARTUPINFOEXW);
   startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-  bool use_pty = launch_info.ShouldUsePTY();
+  PseudoConsole::Mode pty_mode = launch_info.ShouldUsePTY()
+                                     ? launch_info.GetPTY().GetMode()
+                                     : PseudoConsole::Mode::None;
 
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
   HANDLE stdout_handle = GetStdioHandle(launch_info, STDOUT_FILENO);
@@ -152,13 +153,31 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   ProcThreadAttributeList attributelist = std::move(*attributelist_or_err);
 
   std::vector<HANDLE> inherited_handles;
-  if (use_pty) {
+  switch (pty_mode) {
+  case PseudoConsole::Mode::ConPTY: {
     HPCON hPC = launch_info.GetPTY().GetPseudoTerminalHandle();
     if (auto err = attributelist.SetupPseudoConsole(hPC)) {
       error = Status::FromError(std::move(err));
       return HostProcess();
     }
-  } else {
+    break;
+  }
+  case PseudoConsole::Mode::Pipe: {
+    PseudoConsole &pty = launch_info.GetPTY();
+    startupinfoex.StartupInfo.hStdInput = pty.GetChildStdinHandle();
+    startupinfoex.StartupInfo.hStdOutput = pty.GetChildStdoutHandle();
+    startupinfoex.StartupInfo.hStdError = pty.GetChildStdoutHandle();
+    inherited_handles = {pty.GetChildStdinHandle(), pty.GetChildStdoutHandle()};
+    if (!UpdateProcThreadAttribute(
+            startupinfoex.lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+            inherited_handles.data(), inherited_handles.size() * sizeof(HANDLE),
+            nullptr, nullptr)) {
+      error = Status(::GetLastError(), eErrorTypeWin32);
+      return HostProcess();
+    }
+    break;
+  }
+  case PseudoConsole::Mode::None: {
     auto inherited_handles_or_err =
         GetInheritedHandles(startupinfoex, &launch_info, stdout_handle,
                             stderr_handle, stdin_handle);
@@ -167,6 +186,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
       return HostProcess();
     }
     inherited_handles = std::move(*inherited_handles_or_err);
+    break;
+  }
   }
 
   const char *hide_console_var =
@@ -182,7 +203,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   if (launch_info.GetFlags().Test(eLaunchFlagDebug))
     flags |= DEBUG_ONLY_THIS_PROCESS;
 
-  if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO) || use_pty)
+  if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO) ||
+      pty_mode != PseudoConsole::Mode::None)
     flags &= ~CREATE_NEW_CONSOLE;
 
   std::vector<wchar_t> environment =
@@ -210,8 +232,9 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   BOOL result = ::CreateProcessW(
       wexecutable.c_str(), pwcommandLine, NULL, NULL,
-      /*bInheritHandles=*/!inherited_handles.empty() || use_pty, flags,
-      environment.data(),
+      /*bInheritHandles=*/!inherited_handles.empty() ||
+          pty_mode != PseudoConsole::Mode::None,
+      flags, environment.data(),
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 
@@ -226,6 +249,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     // Do not call CloseHandle on pi.hProcess, since we want to pass that back
     // through the HostProcess.
     ::CloseHandle(pi.hThread);
+    if (pty_mode == PseudoConsole::Mode::Pipe)
+      launch_info.GetPTY().CloseAnonymousPipes();
   }
 
   if (!result)
@@ -255,10 +280,19 @@ llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
 
   if (launch_info) {
     for (size_t i = 0; i < launch_info->GetNumFileActions(); ++i) {
-      const FileAction *act = launch_info->GetFileActionAtIndex(i);
-      if (act->GetAction() == FileAction::eFileActionDuplicate &&
+      const WindowsFileAction *act = static_cast<const WindowsFileAction *>(
+          launch_info->GetFileActionAtIndex(i));
+      if (std::find(inherited_handles.begin(), inherited_handles.end(),
+                    act->GetHandle()) != inherited_handles.end())
+        continue;
+      if (act->GetAction() != FileAction::eFileActionDuplicate)
+        continue;
+      if (act->GetActionArgument() != -1 &&
           act->GetFD() == act->GetActionArgument())
-        inherited_handles.push_back(reinterpret_cast<HANDLE>(act->GetFD()));
+        inherited_handles.push_back(act->GetHandle());
+      else if (act->GetActionArgumentHandle() != INVALID_HANDLE_VALUE &&
+               act->GetHandle() == act->GetActionArgumentHandle())
+        inherited_handles.push_back(act->GetHandle());
     }
   }
 
@@ -298,16 +332,21 @@ HANDLE ProcessLauncherWindows::GetStdioHandle(const llvm::StringRef path,
   DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD create = 0;
   DWORD flags = 0;
-  if (fd == STDIN_FILENO) {
+  switch (fd) {
+  case STDIN_FILENO:
     access = GENERIC_READ;
     create = OPEN_EXISTING;
     flags = FILE_ATTRIBUTE_READONLY;
-  }
-  if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
+    break;
+  case STDERR_FILENO:
+    flags = FILE_FLAG_WRITE_THROUGH;
+    [[fallthrough]];
+  case STDOUT_FILENO:
     access = GENERIC_WRITE;
     create = CREATE_ALWAYS;
-    if (fd == STDERR_FILENO)
-      flags = FILE_FLAG_WRITE_THROUGH;
+    break;
+  default:
+    break;
   }
 
   std::wstring wpath;

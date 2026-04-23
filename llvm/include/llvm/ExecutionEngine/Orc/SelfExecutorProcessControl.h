@@ -15,7 +15,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_SELFEXECUTORPROCESSCONTROL_H
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 
 #include <memory>
 
@@ -50,20 +49,14 @@ public:
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
+  Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override;
+
+  Expected<std::unique_ptr<MemoryAccess>> createDefaultMemoryAccess() override;
+
   Error disconnect() override;
 
 private:
-  class InProcessDylibManager : public DylibManager {
-  public:
-    InProcessDylibManager(char GlobalManglingPrefix);
-    Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
-    void
-    lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
-                       DylibManager::SymbolLookupCompleteFn Complete) override;
-
-  private:
-    char GlobalManglingPrefix;
-  };
+  class InProcessDylibManager;
 
   static shared::CWrapperFunctionBuffer
   jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,
@@ -73,8 +66,6 @@ private:
 #ifdef __APPLE__
   std::unique_ptr<UnwindInfoManager> UnwindInfoMgr;
 #endif // __APPLE__
-  InProcessMemoryAccess IPMA;
-  InProcessDylibManager IPDM;
 };
 
 } // namespace llvm::orc

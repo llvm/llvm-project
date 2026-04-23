@@ -359,6 +359,12 @@ def sub_to_add : GICombineRule<
          [{ return Helper.matchCombineSubToAdd(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${mi}, ${matchinfo}); }])>;
 
+// (sub -1, x) -> (xor x, -1)
+def sub_minus_one : GICombineRule<
+  (defs root:$root),
+  (match (G_SUB $root, -1, $op1)),
+  (apply (G_XOR $root, $op1, -1))>;
+
 // shl ([asz]ext x), y => zext (shl x, y), if shift does not overflow int
 def reduce_shl_of_extend_matchdata : GIDefMatchData<"RegisterImmPair">;
 def reduce_shl_of_extend : GICombineRule<
@@ -1357,11 +1363,19 @@ def constant_fold_binop : GICombineRule<
    [{ return Helper.matchConstantFoldBinOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
+def constant_fold_fp_binop_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op,
+           [G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FREM, G_FCOPYSIGN,
+            G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM,
+            G_FMINIMUMNUM, G_FMAXIMUMNUM],
+           (pattern (op $dst, $src0, $src1)))>;
+
 def constant_fold_fp_binop : GICombineRule<
   (defs root:$d, constantfp_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FADD, G_FSUB, G_FMUL, G_FDIV):$d,
-   [{ return Helper.matchConstantFoldFPBinOp(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithFConstant(*${d}, ${matchinfo}); }])>;
+  (match (constant_fold_fp_binop_frags $d):$mi,
+   [{ return Helper.matchConstantFoldFPBinOp(*${mi}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceInstWithFConstant(*${mi}, ${matchinfo}); }])>;
 
 
 def constant_fold_fma : GICombineRule<
@@ -1985,6 +1999,20 @@ def APlusBMinusCPlusA : GICombineRule<
           (G_SUB $sub1, $B, $add1),
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
+  
+// fold (A - (0 - B)) to (A + B)
+def AMinusZeroMinusB : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub1, 0, $B),
+          (G_SUB $root, $A, $sub1)),
+   (apply (G_ADD $root, $A, $B))>;
+
+// fold A - (A - B) -> B
+def AMinusBMinusA: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $add, $A, $B),
+          (G_SUB $root, $A, $add)),
+   (apply (GIReplaceReg $root, $B))>;
    
 // fold (not (add X, -1)) -> (sub 0, X)
 def NotAPlusNegOne: GICombineRule<
@@ -2056,6 +2084,8 @@ def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusAplusC,
   AMinusBMinusC,
   APlusBMinusCPlusA,
+  AMinusZeroMinusB,
+  AMinusBMinusA,
   NotAPlusNegOne,
   APlusC1MinusC2,
   C2MinusAPlusC1,
@@ -2344,9 +2374,9 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines, 
+    combine_use_vector_truncate, merge_combines, overflow_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
-    binop_with_neg]>;
+    binop_with_neg, sub_minus_one]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

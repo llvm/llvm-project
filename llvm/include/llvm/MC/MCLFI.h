@@ -22,4 +22,6 @@ class Triple;
 LLVM_ABI void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
                                       const Triple &TheTriple);
 
+LLVM_ABI void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx);
+
 } // namespace llvm

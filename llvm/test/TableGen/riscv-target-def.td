@@ -203,11 +203,14 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK: #undef TUNE_PROC
 
 // CHECK: #ifdef GET_RISCVExtensionBitmaskTable_IMPL
+// CHECK-EMPTY:
 // CHECK-NEXT: static const RISCVExtensionBitmask ExtensionBitmask[]={
 // CHECK-NEXT:     {"f", 0, 5ULL},
 // CHECK-NEXT:     {"i", 0, 8ULL},
 // CHECK-NEXT: };
-// CHECK-NEXT: #endif
+// CHECK-EMPTY:
+// CHECK-NEXT: #undef GET_RISCVExtensionBitmaskTable_IMPL
+// CHECK-NEXT: #endif // GET_RISCVExtensionBitmaskTable_IMPL
 
 #ifdef DUPLICATE
 def TuneFeatureBar : RISCVTuneFeature<"bar", "abc", "def", "HasBar", "true", "TBA">;

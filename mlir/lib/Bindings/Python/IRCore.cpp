@@ -20,6 +20,7 @@
 #include "mlir-c/Support.h"
 
 #include <array>
+#include <cassert>
 #include <functional>
 #include <optional>
 #include <string>
@@ -2583,7 +2584,6 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
   // To ensure that the same dynamic trait gets the same TypeID despite how many
   // times `attach` is called, we store it as an attribute on the target class.
-  constexpr const char *typeIDAttr = "_TYPE_ID";
   if (!nb::hasattr(target, typeIDAttr)) {
     nb::setattr(target, typeIDAttr,
                 nb::cast(PyTypeID(PyGlobals::get().allocateTypeID())));
@@ -2617,6 +2617,7 @@ bool PyDynamicOpTraits::IsTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::IsTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::IsTerminator, PyDynamicOpTrait> cls(
       m, "IsTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitIsTerminatorGetTypeID());
   cls.attr("attach") = classmethod(
       [](const nb::object &cls, const nb::object &opName,
          DefaultingPyMlirContext context) {
@@ -2635,6 +2636,7 @@ bool PyDynamicOpTraits::NoTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::NoTerminator, PyDynamicOpTrait> cls(
       m, "NoTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitNoTerminatorGetTypeID());
   cls.attr("attach") = classmethod(
       [](const nb::object &cls, const nb::object &opName,
          DefaultingPyMlirContext context) {
@@ -2733,17 +2735,71 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
 #endif
 }
 
+/// Apply currentLocAction: wrap or fuse Location.current onto baseLoc.
+static MlirLocation
+applyCurrentLocAction(MlirContext ctx, MlirLocation baseLoc,
+                      PyGlobals::TracebackLoc::CurrentLocAction action) {
+  using Action = PyGlobals::TracebackLoc::CurrentLocAction;
+  if (action == Action::Fallback)
+    return baseLoc;
+
+  auto *currentLoc = PyThreadContextEntry::getDefaultLocation();
+  if (!currentLoc)
+    return baseLoc;
+  assert(mlirLocationGetContext(currentLoc->get()).ptr == ctx.ptr &&
+         "Location.current must belong to the current MLIR context");
+
+  // NamelocWrap: walk the NameLoc chain on Location.current, collect scope
+  // names, wrap baseLoc innermost-first so result is Outer(Inner(baseLoc)).
+  // If Location.current is not a NameLoc, scopeNames is empty and baseLoc
+  // is returned unchanged (nameloc_wrap is a no-op for non-NameLoc contexts).
+  thread_local std::vector<MlirStringRef> scopeNames;
+  scopeNames.clear();
+  MlirLocation walk = currentLoc->get();
+  while (mlirLocationIsAName(walk)) {
+    scopeNames.push_back(mlirIdentifierStr(mlirLocationNameGetName(walk)));
+    walk = mlirLocationNameGetChildLoc(walk);
+  }
+  for (auto it = scopeNames.rbegin(); it != scopeNames.rend(); ++it)
+    baseLoc = mlirLocationNameGet(ctx, *it, baseLoc);
+  return baseLoc;
+}
+
 PyLocation
 maybeGetTracebackLocation(const std::optional<PyLocation> &location) {
-  if (location.has_value())
-    return location.value();
-  if (!PyGlobals::get().getTracebackLoc().locTracebacksEnabled())
-    return DefaultingPyLocation::resolve();
+  auto &tbl = PyGlobals::get().getTracebackLoc();
 
+  // Tracebacks not enabled — return explicit loc or fall back to
+  // Location.current.
+  if (!tbl.locTracebacksEnabled())
+    return location.has_value() ? location.value()
+                                : DefaultingPyLocation::resolve();
+
+  // From here: tracebacks are enabled.
+  using OnExplicit = PyGlobals::TracebackLoc::OnExplicitAction;
   PyMlirContext &ctx = DefaultingPyMlirContext::resolve();
-  MlirLocation mlirLoc = tracebackToLocation(ctx.get());
+  MlirLocation baseLoc;
+
+  // Step 1: on_explicit — resolve explicit loc= vs traceback.
+  if (location.has_value()) {
+    switch (tbl.tracebackActionOnExplicitLoc()) {
+    case OnExplicit::UseExplicit:
+      baseLoc = location->get();
+      break;
+    case OnExplicit::UseTraceback:
+      baseLoc = tracebackToLocation(ctx.get());
+      break;
+    }
+  } else {
+    baseLoc = tracebackToLocation(ctx.get());
+  }
+
+  // Step 2: current_loc — compose with Location.current.
+  baseLoc = applyCurrentLocAction(ctx.get(), baseLoc,
+                                  tbl.tracebackActionOnCurrentLoc());
+
   PyMlirContextRef ref = PyMlirContext::forContext(ctx.get());
-  return {ref, mlirLoc};
+  return {ref, baseLoc};
 }
 } // namespace
 
@@ -2824,6 +2880,19 @@ void populateRoot(nb::module_ &m) {
   m.attr("T") = nb::type_var("T");
   m.attr("U") = nb::type_var("U");
 
+  // Policies for how loc_tracebacks() composes the three location sources
+  // (explicit loc=, generated traceback, Location.current).
+  nb::enum_<PyGlobals::TracebackLoc::OnExplicitAction>(m, "OnExplicitAction")
+      .value("USE_EXPLICIT",
+             PyGlobals::TracebackLoc::OnExplicitAction::UseExplicit)
+      .value("USE_TRACEBACK",
+             PyGlobals::TracebackLoc::OnExplicitAction::UseTraceback);
+
+  nb::enum_<PyGlobals::TracebackLoc::CurrentLocAction>(m, "CurrentLocAction")
+      .value("FALLBACK", PyGlobals::TracebackLoc::CurrentLocAction::Fallback)
+      .value("NAMELOC_WRAP",
+             PyGlobals::TracebackLoc::CurrentLocAction::NamelocWrap);
+
   nb::class_<PyGlobals>(m, "_Globals")
       .def_prop_rw("dialect_search_modules",
                    &PyGlobals::getDialectSearchPrefixes,
@@ -2868,6 +2937,24 @@ void populateRoot(nb::module_ &m) {
       .def("register_traceback_file_exclusion",
            [](PyGlobals &self, const std::string &filename) {
              self.getTracebackLoc().registerTracebackFileExclusion(filename);
+           })
+      .def("traceback_action_on_explicit_loc",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().tracebackActionOnExplicitLoc();
+           })
+      .def("set_traceback_action_on_explicit_loc",
+           [](PyGlobals &self,
+              PyGlobals::TracebackLoc::OnExplicitAction action) {
+             self.getTracebackLoc().setTracebackActionOnExplicitLoc(action);
+           })
+      .def("traceback_action_on_current_loc",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().tracebackActionOnCurrentLoc();
+           })
+      .def("set_traceback_action_on_current_loc",
+           [](PyGlobals &self,
+              PyGlobals::TracebackLoc::CurrentLocAction action) {
+             self.getTracebackLoc().setTracebackActionOnCurrentLoc(action);
            });
 
   // Aside from making the globals accessible to python, having python manage
@@ -3938,7 +4025,19 @@ void populateIRCore(nb::module_ &m) {
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
                walk_order: The order of traversal (PRE_ORDER or POST_ORDER).
-               op_class: If provided, only operations of this type are passed to the callback.)");
+               op_class: If provided, only operations of this type are passed to the callback.)")
+      .def(
+          "has_trait",
+          [](PyOperationBase &self, nb::type_object &traitCls) {
+            PyTypeID traitTypeID =
+                nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+            MlirIdentifier opName =
+                mlirOperationGetName(self.getOperation().get());
+            return mlirOperationNameHasTrait(
+                mlirIdentifierStr(opName), traitTypeID.get(),
+                self.getOperation().getContext()->get());
+          },
+          "trait_cls"_a, "Checks if the operation has a given trait.");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
@@ -4150,6 +4249,18 @@ void populateIRCore(nb::module_ &m) {
       nb::sig("def parse(cls, source: str, *, source_name: str = '', context: Context | None = None) -> typing.Self"),
       // clang-format on
       "Parses a specific, generated OpView based on class level attributes.");
+  opViewClass.attr("has_trait") = classmethod(
+      [](nb::object &self, nb::type_object &traitCls,
+         DefaultingPyMlirContext &context) {
+        PyTypeID traitTypeID =
+            nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+        std::string opName = nb::cast<std::string>(self.attr("OPERATION_NAME"));
+        return mlirOperationNameHasTrait(
+            mlirStringRefCreate(opName.data(), opName.size()),
+            traitTypeID.get(), context->get());
+      },
+      "cls"_a, "trait_cls"_a, "context"_a = nb::none(),
+      "Checks if the operation has a given trait.");
 
   PyOpAdaptor::bind(m);
 

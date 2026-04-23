@@ -13,6 +13,7 @@ Implementation Status
    dirent
    endian
    errno
+   fcntl
    fenv
    float
    glob
@@ -21,6 +22,7 @@ Implementation Status
    math/index.rst
    net/if
    netinet/in
+   poll
    search
    setjmp
    signal
@@ -32,6 +34,7 @@ Implementation Status
    strings
    sys/mman
    sys/resource
+   sys/socket
    sys/stat
    sys/statvfs
    sys/time

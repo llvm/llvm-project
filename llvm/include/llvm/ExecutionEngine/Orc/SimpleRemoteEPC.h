@@ -15,9 +15,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/Support/Compiler.h"
@@ -32,18 +29,14 @@ namespace orc {
 class LLVM_ABI SimpleRemoteEPC : public ExecutorProcessControl,
                                  public SimpleRemoteEPCTransportClient {
 public:
-  /// A setup object containing callbacks to construct a memory manager and
-  /// memory access object. Both are optional. If not specified,
-  /// EPCGenericJITLinkMemoryManager and EPCGenericMemoryAccess will be used.
+  /// A setup object containing a callback to construct a memory manager.
+  /// If not specified, EPCGenericJITLinkMemoryManager will be used.
   struct Setup {
     using CreateMemoryManagerFn =
         Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>(
             SimpleRemoteEPC &);
-    using CreateMemoryAccessFn =
-        Expected<std::unique_ptr<MemoryAccess>>(SimpleRemoteEPC &);
 
     unique_function<CreateMemoryManagerFn> CreateMemoryManager;
-    unique_function<CreateMemoryAccessFn> CreateMemoryAccess;
   };
 
   /// Create a SimpleRemoteEPC using the given transport type and args.
@@ -81,6 +74,10 @@ public:
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
+  Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override;
+
+  Expected<std::unique_ptr<MemoryAccess>> createDefaultMemoryAccess() override;
+
   Error disconnect() override;
 
   Expected<HandleMessageAction>
@@ -96,8 +93,6 @@ private:
 
   static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
   createDefaultMemoryManager(SimpleRemoteEPC &SREPC);
-  static Expected<std::unique_ptr<MemoryAccess>>
-  createDefaultMemoryAccess(SimpleRemoteEPC &SREPC);
 
   Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
@@ -125,9 +120,7 @@ private:
 
   std::unique_ptr<SimpleRemoteEPCTransport> T;
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
-  std::unique_ptr<MemoryAccess> OwnedMemAccess;
 
-  std::unique_ptr<EPCGenericDylibManager> EPCDylibMgr;
   ExecutorAddr RunAsMainAddr;
   ExecutorAddr RunAsVoidFunctionAddr;
   ExecutorAddr RunAsIntFunctionAddr;

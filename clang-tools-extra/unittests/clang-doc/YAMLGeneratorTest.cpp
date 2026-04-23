@@ -30,9 +30,10 @@ TEST_F(YAMLGeneratorTest, emitNamespaceYAML) {
   I.Path = "path/to/A";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.Children.Namespaces.emplace_back(
-      EmptySID, "ChildNamespace", InfoType::IT_namespace,
-      "path::to::A::Namespace::ChildNamespace", "path/to/A/Namespace");
+  Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace,
+                         "path::to::A::Namespace::ChildNamespace",
+                         "path/to/A/Namespace");
+  I.Children.Namespaces.push_back(NewNamespace);
   I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
                                   "path::to::A::Namespace::ChildStruct",
                                   "path/to/A/Namespace");
@@ -92,15 +93,12 @@ TEST_F(YAMLGeneratorTest, emitRecordYAML) {
   I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
 
   // Member documentation.
-  CommentInfo TopComment;
-  TopComment.Kind = CommentKind::CK_FullComment;
-  TopComment.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Brief = TopComment.Children.back().get();
-  Brief->Kind = CommentKind::CK_ParagraphComment;
-  Brief->Children.emplace_back(allocatePtr<CommentInfo>());
-  Brief->Children.back()->Kind = CommentKind::CK_TextComment;
-  Brief->Children.back()->Name = "ParagraphComment";
-  Brief->Children.back()->Text = "Value of the thing.";
+  CommentInfo BriefChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
+                                             "Value of the thing.",
+                                             "ParagraphComment")};
+  CommentInfo TopCommentChildren[] = {
+      CommentInfo(CommentKind::CK_ParagraphComment, BriefChildren)};
+  CommentInfo TopComment(CommentKind::CK_FullComment, TopCommentChildren);
   I.Members.back().Description.push_back(std::move(TopComment));
 
   I.TagType = TagTypeKind::Class;
@@ -376,102 +374,75 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   I.Params.emplace_back(TypeInfo("int"), "J");
   I.Access = AccessSpecifier::AS_none;
 
-  CommentInfo Top;
-  Top.Kind = CommentKind::CK_FullComment;
+  // BlankLine
+  CommentInfo BlankChildren[] = {CommentInfo(CommentKind::CK_TextComment)};
+  CommentInfo BlankLine(CommentKind::CK_ParagraphComment, BlankChildren);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *BlankLine = Top.Children.back().get();
-  BlankLine->Kind = CommentKind::CK_ParagraphComment;
-  BlankLine->Children.emplace_back(allocatePtr<CommentInfo>());
-  BlankLine->Children.back()->Kind = CommentKind::CK_TextComment;
+  // Brief
+  CommentInfo BriefChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
+                                             " Brief description.",
+                                             "ParagraphComment")};
+  CommentInfo Brief(CommentKind::CK_ParagraphComment, BriefChildren);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Brief = Top.Children.back().get();
-  Brief->Kind = CommentKind::CK_ParagraphComment;
-  Brief->Children.emplace_back(allocatePtr<CommentInfo>());
-  Brief->Children.back()->Kind = CommentKind::CK_TextComment;
-  Brief->Children.back()->Name = "ParagraphComment";
-  Brief->Children.back()->Text = " Brief description.";
+  // Extended
+  CommentInfo ExtChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
+                                           " Extended description that"),
+                               CommentInfo(CommentKind::CK_TextComment, {},
+                                           " continues onto the next line.")};
+  CommentInfo Extended(CommentKind::CK_ParagraphComment, ExtChildren);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Extended = Top.Children.back().get();
-  Extended->Kind = CommentKind::CK_ParagraphComment;
-  Extended->Children.emplace_back(allocatePtr<CommentInfo>());
-  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
-  Extended->Children.back()->Text = " Extended description that";
-  Extended->Children.emplace_back(allocatePtr<CommentInfo>());
-  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
-  Extended->Children.back()->Text = " continues onto the next line.";
+  // HTML
+  StringRef HtmlKeys[] = {"class"};
+  StringRef HtmlValues[] = {"test"};
+  CommentInfo HtmlStart(CommentKind::CK_HTMLStartTagComment, {}, "", "ul", "",
+                        "", "", false, false, HtmlKeys, HtmlValues);
+  CommentInfo HtmlStartLi(CommentKind::CK_HTMLStartTagComment, {}, "", "li");
+  CommentInfo HtmlEnd(CommentKind::CK_HTMLEndTagComment, {}, "", "ul", "", "",
+                      "", false, true);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *HTML = Top.Children.back().get();
-  HTML->Kind = CommentKind::CK_ParagraphComment;
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_TextComment;
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
-  HTML->Children.back()->Name = "ul";
-  HTML->Children.back()->AttrKeys.emplace_back("class");
-  HTML->Children.back()->AttrValues.emplace_back("test");
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
-  HTML->Children.back()->Name = "li";
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_TextComment;
-  HTML->Children.back()->Text = " Testing.";
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_HTMLEndTagComment;
-  HTML->Children.back()->Name = "ul";
-  HTML->Children.back()->SelfClosing = true;
+  CommentInfo HtmlChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment), HtmlStart, HtmlStartLi,
+      CommentInfo(CommentKind::CK_TextComment, {}, " Testing."), HtmlEnd};
+  CommentInfo HTML(CommentKind::CK_ParagraphComment, HtmlChildren);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Verbatim = Top.Children.back().get();
-  Verbatim->Kind = CommentKind::CK_VerbatimBlockComment;
-  Verbatim->Name = "verbatim";
-  Verbatim->CloseName = "endverbatim";
-  Verbatim->Children.emplace_back(allocatePtr<CommentInfo>());
-  Verbatim->Children.back()->Kind = CommentKind::CK_VerbatimBlockLineComment;
-  Verbatim->Children.back()->Text = " The description continues.";
+  // Verbatim
+  CommentInfo VerbLine(CommentKind::CK_VerbatimBlockLineComment, {},
+                       " The description continues.");
+  CommentInfo VerbChildren[] = {VerbLine};
+  CommentInfo Verbatim(CommentKind::CK_VerbatimBlockComment, VerbChildren, "",
+                       "verbatim", "endverbatim");
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *ParamOut = Top.Children.back().get();
-  ParamOut->Kind = CommentKind::CK_ParamCommandComment;
-  ParamOut->Direction = "[out]";
-  ParamOut->ParamName = "I";
-  ParamOut->Explicit = true;
-  ParamOut->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamOut->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamOut->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamOut->Children.back()->Children.back()->Kind =
-      CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamOut->Children.back()->Children.back()->Kind =
-      CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.back()->Text = " is a parameter.";
+  // ParamOut
+  CommentInfo ParamOutParaChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment),
+      CommentInfo(CommentKind::CK_TextComment, {}, " is a parameter.")};
+  CommentInfo ParamOutPara(CommentKind::CK_ParagraphComment,
+                           ParamOutParaChildren);
+  CommentInfo ParamOutChildren[] = {ParamOutPara};
+  CommentInfo ParamOut(CommentKind::CK_ParamCommandComment, ParamOutChildren,
+                       "", "", "", "[out]", "I", true);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *ParamIn = Top.Children.back().get();
-  ParamIn->Kind = CommentKind::CK_ParamCommandComment;
-  ParamIn->Direction = "[in]";
-  ParamIn->ParamName = "J";
-  ParamIn->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamIn->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamIn->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
-  ParamIn->Children.back()->Children.back()->Text = " is a parameter.";
-  ParamIn->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
+  // ParamIn
+  CommentInfo ParamInParaChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment, {}, " is a parameter."),
+      CommentInfo(CommentKind::CK_TextComment)};
+  CommentInfo ParamInPara(CommentKind::CK_ParagraphComment,
+                          ParamInParaChildren);
+  CommentInfo ParamInChildren[] = {ParamInPara};
+  CommentInfo ParamIn(CommentKind::CK_ParamCommandComment, ParamInChildren, "",
+                      "", "", "[in]", "J");
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Return = Top.Children.back().get();
-  Return->Kind = CommentKind::CK_BlockCommandComment;
-  Return->Name = "return";
-  Return->Explicit = true;
-  Return->Children.emplace_back(allocatePtr<CommentInfo>());
-  Return->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  Return->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  Return->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
-  Return->Children.back()->Children.back()->Text = "void";
+  // Return
+  CommentInfo ReturnParaChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment, {}, "void")};
+  CommentInfo ReturnPara(CommentKind::CK_ParagraphComment, ReturnParaChildren);
+  CommentInfo ReturnChildren[] = {ReturnPara};
+  CommentInfo Return(CommentKind::CK_BlockCommandComment, ReturnChildren, "",
+                     "return", "", "", "", true);
+
+  CommentInfo TopChildren[] = {BlankLine, Brief,    Extended, HTML,
+                               Verbatim,  ParamOut, ParamIn,  Return};
+  CommentInfo Top(CommentKind::CK_FullComment, TopChildren);
 
   I.Description.emplace_back(std::move(Top));
 

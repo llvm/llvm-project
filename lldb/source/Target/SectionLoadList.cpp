@@ -65,81 +65,74 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
                                             addr_t load_addr,
                                             bool warn_multiple) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
-  ModuleSP module_sp(section->GetModule());
+  ModuleSP module_sp = section->GetModule();
 
-  if (module_sp) {
-    LLDB_LOG_VERBOSE(
-        log, "(section = {0} ({1}.{2}), load_addr = {3:x}) module = {4}",
-        section.get(), module_sp->GetFileSpec(), section->GetName(), load_addr,
-        module_sp.get());
-
-    if (section->GetByteSize() == 0)
-      return false; // No change
-
-    // Fill in the section -> load_addr map
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    sect_to_addr_collection::iterator sta_pos =
-        m_sect_to_addr.find(section.get());
-    if (sta_pos != m_sect_to_addr.end()) {
-      if (load_addr == sta_pos->second)
-        return false; // No change...
-      else
-        sta_pos->second = load_addr;
-    } else
-      m_sect_to_addr[section.get()] = load_addr;
-
-    // Fill in the load_addr -> section map
-    addr_to_sect_collection::iterator ats_pos = m_addr_to_sect.find(load_addr);
-    if (ats_pos != m_addr_to_sect.end()) {
-      // Some sections are ok to overlap, and for others we should warn. When
-      // we have multiple load addresses that correspond to a section, we will
-      // always attribute the section to the be last section that claims it
-      // exists at that address. Sometimes it is ok for more that one section
-      // to be loaded at a specific load address, and other times it isn't. The
-      // "warn_multiple" parameter tells us if we should warn in this case or
-      // not. The DynamicLoader plug-in subclasses should know which sections
-      // should warn and which shouldn't (darwin shared cache modules all
-      // shared the same "__LINKEDIT" sections, so the dynamic loader can pass
-      // false for "warn_multiple").
-      if (warn_multiple && section != ats_pos->second) {
-        ModuleSP module_sp(section->GetModule());
-        if (module_sp) {
-          ModuleSP curr_module_sp(ats_pos->second->GetModule());
-          if (curr_module_sp) {
-            module_sp->ReportWarning(
-                "address {0:x16} maps to more than one section: {1}.{2} and "
-                "{3}.{4}",
-                load_addr, module_sp->GetFileSpec().GetFilename().GetCString(),
-                section->GetName().GetCString(),
-                curr_module_sp->GetFileSpec().GetFilename().GetCString(),
-                ats_pos->second->GetName().GetCString());
-          }
-        }
-      }
-      ats_pos->second = section;
-    } else {
-      // Remove the old address->section entry, if
-      // there is one.
-      for (const auto &entry : m_addr_to_sect) {
-        if (entry.second == section) {
-          const auto &it_pos = m_addr_to_sect.find(entry.first);
-          m_addr_to_sect.erase(it_pos);
-          break;
-        }
-      }
-      m_addr_to_sect[load_addr] = section;
-    }
-    return true; // Changed
-
-  } else {
-    LLDB_LOGF(
-        log,
-        "SectionLoadList::%s (section = %p (%s), load_addr = 0x%16.16" PRIx64
-        ") error: module has been deleted",
-        __FUNCTION__, static_cast<void *>(section.get()),
-        section->GetName().AsCString(), load_addr);
+  if (!module_sp) {
+    LLDB_LOG(log,
+             "SectionLoadList::{0} (section = {1} ({2}), load_addr = {3:x}) "
+             "error: module has been deleted",
+             __FUNCTION__, static_cast<void *>(section.get()),
+             section->GetName(), load_addr);
+    return false;
   }
-  return false;
+
+  LLDB_LOG_VERBOSE(log,
+                   "(section = {0} ({1}.{2}), load_addr = {3:x}) module = {4}",
+                   section.get(), module_sp->GetFileSpec(), section->GetName(),
+                   load_addr, module_sp.get());
+
+  if (section->GetByteSize() == 0)
+    return false;
+
+  // Fill in the section -> load_addr map.
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  sect_to_addr_collection::iterator sta_pos =
+      m_sect_to_addr.find(section.get());
+  addr_t old_load_addr = LLDB_INVALID_ADDRESS;
+
+  if (sta_pos != m_sect_to_addr.end()) {
+    if (load_addr == sta_pos->second)
+      return false;
+    old_load_addr = sta_pos->second;
+    sta_pos->second = load_addr;
+  } else {
+    m_sect_to_addr.insert({section.get(), load_addr});
+  }
+
+  // Fill in the load_addr -> section map.
+  addr_to_sect_collection::iterator ats_pos = m_addr_to_sect.find(load_addr);
+  if (ats_pos != m_addr_to_sect.end()) {
+    // Some sections are ok to overlap, and for others we should warn. When
+    // we have multiple load addresses that correspond to a section, we will
+    // always attribute the section to the be last section that claims it
+    // exists at that address. Sometimes it is ok for more that one section
+    // to be loaded at a specific load address, and other times it isn't. The
+    // "warn_multiple" parameter tells us if we should warn in this case or
+    // not. The DynamicLoader plug-in subclasses should know which sections
+    // should warn and which shouldn't (darwin shared cache modules all
+    // shared the same "__LINKEDIT" sections, so the dynamic loader can pass
+    // false for "warn_multiple").
+    if (warn_multiple && section != ats_pos->second) {
+      if (ModuleSP curr_module_sp = ats_pos->second->GetModule()) {
+        module_sp->ReportWarning(
+            "address {0:x16} maps to more than one section: {1}.{2} and "
+            "{3}.{4}",
+            load_addr, module_sp->GetFileSpec().GetFilename().GetCString(),
+            section->GetName().GetCString(),
+            curr_module_sp->GetFileSpec().GetFilename().GetCString(),
+            ats_pos->second->GetName().GetCString());
+      }
+    }
+    ats_pos->second = section;
+  } else {
+    m_addr_to_sect.insert({load_addr, section});
+  }
+
+  // Remove the old address->section entry if there was one.
+  if (old_load_addr != LLDB_INVALID_ADDRESS && old_load_addr != load_addr)
+    m_addr_to_sect.erase(old_load_addr);
+
+  return true;
 }
 
 size_t SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp) {
@@ -156,9 +149,9 @@ size_t SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp) {
             section_sp->GetModule()->GetFileSpec());
         module_name = module_file_spec.GetPath();
       }
-      LLDB_LOGF(log, "SectionLoadList::%s (section = %p (%s.%s))", __FUNCTION__,
-                static_cast<void *>(section_sp.get()), module_name.c_str(),
-                section_sp->GetName().AsCString());
+      LLDB_LOG(log, "SectionLoadList::{0} (section = {1} ({2}.{3}))",
+               __FUNCTION__, static_cast<void *>(section_sp.get()), module_name,
+               section_sp->GetName());
     }
 
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -195,7 +188,7 @@ bool SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp,
         "SectionLoadList::%s (section = %p (%s.%s), load_addr = 0x%16.16" PRIx64
         ")",
         __FUNCTION__, static_cast<void *>(section_sp.get()),
-        module_name.c_str(), section_sp->GetName().AsCString(), load_addr);
+        module_name.c_str(), section_sp->GetName().AsCString(""), load_addr);
   }
   bool erased = false;
   std::lock_guard<std::recursive_mutex> guard(m_mutex);

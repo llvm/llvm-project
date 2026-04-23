@@ -27,13 +27,31 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   }
+
+  StringRef intrinsicName;
+  mlir::Type returnType = convertType(e->getType());
+  llvm::SmallVector<mlir::Value> ops;
+
+  // `iceArguments` is a bitmap indicating whether the argument at the i-th bit
+  // is required to be a constant integer expression.
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Should not codegen an error");
+  for (auto [idx, arg] : llvm::enumerate(e->arguments()))
+    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+
   switch (builtinID) {
   default:
     llvm_unreachable("unexpected builtin ID");
 
   // Zbb
   case RISCV::BI__builtin_riscv_orc_b_32:
-  case RISCV::BI__builtin_riscv_orc_b_64:
+  case RISCV::BI__builtin_riscv_orc_b_64: {
+    intrinsicName = "riscv.orc.b";
+    break;
+  }
+
   // Zbc
   case RISCV::BI__builtin_riscv_clmul_32:
   case RISCV::BI__builtin_riscv_clmul_64:
@@ -69,9 +87,20 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   case RISCV::BI__builtin_riscv_ctz_64:
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load:
-  case RISCV::BI__builtin_riscv_ntl_store:
+  case RISCV::BI__builtin_riscv_ntl_store: {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented RISC-V builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
+
   // Zihintpause
-  case RISCV::BI__builtin_riscv_pause:
+  case RISCV::BI__builtin_riscv_pause: {
+    intrinsicName = "riscv.pause";
+    returnType = builder.getVoidTy();
+    break;
+  }
+
   // XCValu
   case RISCV::BI__builtin_riscv_cv_alu_addN:
   case RISCV::BI__builtin_riscv_cv_alu_addRN:
@@ -109,4 +138,7 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
 
     // TODO: Handle vector builtins in tablegen.
   }
+
+  mlir::Location loc = getLoc(e->getSourceRange());
+  return builder.emitIntrinsicCallOp(loc, intrinsicName, returnType, ops);
 }
