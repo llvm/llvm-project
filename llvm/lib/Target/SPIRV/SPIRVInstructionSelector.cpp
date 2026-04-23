@@ -34,6 +34,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <functional>
 #include <optional>
 
 #define DEBUG_TYPE "spirv-isel"
@@ -144,11 +145,6 @@ private:
                            MachineInstr &I, Register SrcReg,
                            unsigned BitSetOpcode, bool SwapPrimarySide) const;
 
-  bool selectFirstBitSet64Overflow(Register ResVReg, SPIRVTypeInst ResType,
-                                   MachineInstr &I, Register SrcReg,
-                                   unsigned BitSetOpcode,
-                                   bool SwapPrimarySide) const;
-
   bool selectGlobalValue(Register ResVReg, MachineInstr &I,
                          const MachineInstr *Init = nullptr) const;
 
@@ -256,10 +252,6 @@ private:
   bool selectPopCount64(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, Register SrcReg,
                         unsigned Opcode) const;
-
-  bool selectPopCount64Overflow(Register ResVReg, SPIRVTypeInst ResType,
-                                MachineInstr &I, Register SrcReg,
-                                unsigned Opcode) const;
 
   template <bool Signed>
   bool selectDot4AddPacked(Register ResVReg, SPIRVTypeInst ResType,
@@ -510,6 +502,13 @@ private:
                                               unsigned ComponentCount,
                                               MachineInstr &I,
                                               SPIRVTypeInst I32Type) const;
+
+  bool
+  handle64BitOverflow(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
+                      Register SrcReg, unsigned int Opcode,
+                      std::function<bool(Register, SPIRVTypeInst,
+                                         MachineInstr &, Register, unsigned)>
+                          CallbackFunction) const;
 };
 
 bool sampledTypeIsSignedInteger(const llvm::Type *HandleType) {
@@ -1345,8 +1344,6 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicUMin);
   case TargetOpcode::G_ATOMICRMW_XCHG:
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicExchange);
-  case TargetOpcode::G_ATOMIC_CMPXCHG:
-    return selectAtomicCmpXchg(ResVReg, ResType, I);
 
   case TargetOpcode::G_ATOMICRMW_FADD:
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFAddEXT);
@@ -1685,74 +1682,6 @@ bool SPIRVInstructionSelector::selectPopCount32(Register ResVReg,
   return selectOpWithSrcs(ResVReg, ResType, I, {SrcReg}, Opcode);
 }
 
-bool SPIRVInstructionSelector::selectPopCount64Overflow(
-    Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I, Register SrcReg,
-    unsigned int Opcode) const {
-
-  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
-  assert(ComponentCount < 5 && "Vec 5+ will generate invalid SPIR-V ops");
-
-  MachineIRBuilder MIRBuilder(I);
-  SPIRVTypeInst BaseType = GR.retrieveScalarOrVectorIntType(ResType);
-  SPIRVTypeInst I64Type = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
-  SPIRVTypeInst I64x2Type =
-      GR.getOrCreateSPIRVVectorType(I64Type, 2, MIRBuilder, false);
-  SPIRVTypeInst Vec2ResType =
-      GR.getOrCreateSPIRVVectorType(BaseType, 2, MIRBuilder, false);
-
-  std::vector<Register> PartialRegs;
-
-  unsigned CurrentComponent = 0;
-  for (; CurrentComponent + 1 < ComponentCount; CurrentComponent += 2) {
-    Register PopCountResult =
-        MRI->createVirtualRegister(GR.getRegClass(I64x2Type));
-
-    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                       TII.get(SPIRV::OpVectorShuffle))
-                   .addDef(PopCountResult)
-                   .addUse(GR.getSPIRVTypeID(I64x2Type))
-                   .addUse(SrcReg)
-                   .addUse(SrcReg)
-                   .addImm(CurrentComponent)
-                   .addImm(CurrentComponent + 1);
-
-    MIB.constrainAllUses(TII, TRI, RBI);
-
-    Register SubVecReg =
-        MRI->createVirtualRegister(GR.getRegClass(Vec2ResType));
-
-    if (!selectPopCount64(SubVecReg, Vec2ResType, I, PopCountResult, Opcode))
-      return false;
-
-    PartialRegs.push_back(SubVecReg);
-  }
-
-  // On odd component counts we need to handle one more component
-  if (CurrentComponent != ComponentCount) {
-    bool ZeroAsNull = !STI.isShader();
-    Register FinalElemReg = MRI->createVirtualRegister(GR.getRegClass(I64Type));
-    Register ConstIntLastIdx = GR.getOrCreateConstInt(
-        ComponentCount - 1, I, BaseType, TII, ZeroAsNull);
-
-    if (!selectOpWithSrcs(FinalElemReg, I64Type, I, {SrcReg, ConstIntLastIdx},
-                          SPIRV::OpVectorExtractDynamic))
-      return false;
-
-    Register FinalElemResReg =
-        MRI->createVirtualRegister(GR.getRegClass(BaseType));
-
-    if (!selectPopCount64(FinalElemResReg, BaseType, I, FinalElemReg, Opcode))
-      return false;
-
-    PartialRegs.push_back(FinalElemResReg);
-  }
-
-  // Join all the resulting registers back into the return type in order
-  // (ie i32x2, i32x2, i32x1 -> i32x5)
-  return selectOpWithSrcs(ResVReg, ResType, I, std::move(PartialRegs),
-                          SPIRV::OpCompositeConstruct);
-}
-
 bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I,
@@ -1760,7 +1689,10 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
                                                 unsigned Opcode) const {
   unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
   if (ComponentCount > 2)
-    return selectPopCount64Overflow(ResVReg, ResType, I, SrcReg, Opcode);
+    return handle64BitOverflow(
+        ResVReg, ResType, I, SrcReg, Opcode,
+        [this](Register R, SPIRVTypeInst T, MachineInstr &I, Register S,
+               unsigned O) { return this->selectPopCount64(R, T, I, S, O); });
 
   MachineIRBuilder MIRBuilder(I);
 
@@ -2253,12 +2185,11 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   Register ScopeReg = buildI32Constant(Scope, I);
 
   Register Ptr = I.getOperand(1).getReg();
-  // TODO: Changed as it's implemented in the translator. See test/atomicrmw.ll
-  // auto ScSem =
-  // getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr));
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr)));
   AtomicOrdering AO = MemOp->getSuccessOrdering();
-  uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
-  Register MemSemReg = buildI32Constant(MemSem /*| ScSem*/, I);
+  uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO)) | ScSem;
+  Register MemSemReg = buildI32Constant(MemSem, I);
 
   Register ValueReg = I.getOperand(2).getReg();
   if (NegateOpcode != 0) {
@@ -2421,35 +2352,12 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
 bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
                                                    SPIRVTypeInst ResType,
                                                    MachineInstr &I) const {
-  Register ScopeReg;
-  Register MemSemEqReg;
-  Register MemSemNeqReg;
+  assert(isa<GIntrinsic>(I) &&
+         "selectAtomicCmpXchg only handles the spv_cmpxchg intrinsic");
   Register Ptr = I.getOperand(2).getReg();
-  if (!isa<GIntrinsic>(I)) {
-    assert(I.hasOneMemOperand());
-    const MachineMemOperand *MemOp = *I.memoperands_begin();
-    unsigned Scope = static_cast<uint32_t>(getMemScope(
-        GR.CurMF->getFunction().getContext(), MemOp->getSyncScopeID()));
-    ScopeReg = buildI32Constant(Scope, I);
-
-    unsigned ScSem = static_cast<uint32_t>(
-        getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr)));
-    AtomicOrdering AO = MemOp->getSuccessOrdering();
-    unsigned MemSemEq = static_cast<uint32_t>(getMemSemantics(AO)) | ScSem;
-    Register MemSemEqReg = buildI32Constant(MemSemEq, I);
-    AtomicOrdering FO = MemOp->getFailureOrdering();
-    unsigned MemSemNeq = static_cast<uint32_t>(getMemSemantics(FO)) | ScSem;
-    if (MemSemEq == MemSemNeq)
-      MemSemNeqReg = MemSemEqReg;
-    else {
-      MemSemNeqReg = buildI32Constant(MemSemEq, I);
-    }
-  } else {
-    ScopeReg = I.getOperand(5).getReg();
-    MemSemEqReg = I.getOperand(6).getReg();
-    MemSemNeqReg = I.getOperand(7).getReg();
-  }
-
+  Register ScopeReg = I.getOperand(5).getReg();
+  Register MemSemEqReg = I.getOperand(6).getReg();
+  Register MemSemNeqReg = I.getOperand(7).getReg();
   Register Cmp = I.getOperand(3).getReg();
   Register Val = I.getOperand(4).getReg();
   SPIRVTypeInst SpvValTy = GR.getSPIRVTypeForVReg(Val);
@@ -3569,6 +3477,77 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
 
   // Finally, convert the result back to i16 (or vector of i16).
   return selectOpWithSrcs(ResVReg, ResType, I, {ShiftReg}, ExtendOpcode);
+}
+
+bool SPIRVInstructionSelector::handle64BitOverflow(
+    Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I, Register SrcReg,
+    unsigned int Opcode,
+    std::function<bool(Register, SPIRVTypeInst, MachineInstr &, Register,
+                       unsigned)>
+        CallbackFunction) const {
+
+  SPIRVTypeInst BaseType = GR.retrieveScalarOrVectorIntType(ResType);
+  assert(BaseType->getOpcode() == SPIRV::OpTypeInt &&
+         "handle64BitOverflow should only be used for integer types");
+  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
+  assert(ComponentCount < 5 && "Vec 5+ will generate invalid SPIR-V ops");
+
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVTypeInst I64Type = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
+  SPIRVTypeInst I64x2Type =
+      GR.getOrCreateSPIRVVectorType(I64Type, 2, MIRBuilder, false);
+  SPIRVTypeInst Vec2ResType =
+      GR.getOrCreateSPIRVVectorType(BaseType, 2, MIRBuilder, false);
+
+  std::vector<Register> PartialRegs;
+
+  unsigned CurrentComponent = 0;
+  for (; CurrentComponent + 1 < ComponentCount; CurrentComponent += 2) {
+    Register PopCountResult =
+        MRI->createVirtualRegister(GR.getRegClass(I64x2Type));
+
+    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpVectorShuffle))
+                   .addDef(PopCountResult)
+                   .addUse(GR.getSPIRVTypeID(I64x2Type))
+                   .addUse(SrcReg)
+                   .addUse(SrcReg)
+                   .addImm(CurrentComponent)
+                   .addImm(CurrentComponent + 1);
+
+    MIB.constrainAllUses(TII, TRI, RBI);
+
+    Register SubVecReg =
+        MRI->createVirtualRegister(GR.getRegClass(Vec2ResType));
+
+    if (!CallbackFunction(SubVecReg, Vec2ResType, I, PopCountResult, Opcode))
+      return false;
+
+    PartialRegs.push_back(SubVecReg);
+  }
+  // On odd component counts we need to handle one more component
+  if (CurrentComponent != ComponentCount) {
+    bool ZeroAsNull = !STI.isShader();
+    Register FinalElemReg = MRI->createVirtualRegister(GR.getRegClass(I64Type));
+    Register ConstIntLastIdx = GR.getOrCreateConstInt(
+        ComponentCount - 1, I, BaseType, TII, ZeroAsNull);
+
+    if (!selectOpWithSrcs(FinalElemReg, I64Type, I, {SrcReg, ConstIntLastIdx},
+                          SPIRV::OpVectorExtractDynamic))
+      return false;
+
+    Register FinalElemResReg =
+        MRI->createVirtualRegister(GR.getRegClass(BaseType));
+
+    if (!CallbackFunction(FinalElemResReg, BaseType, I, FinalElemReg, Opcode))
+      return false;
+
+    PartialRegs.push_back(FinalElemResReg);
+  }
+  // Join all the resulting registers back into the return type in order
+  // (ie i32x2, i32x2, i32x1 -> i32x5)
+  return selectOpWithSrcs(ResVReg, ResType, I, std::move(PartialRegs),
+                          SPIRV::OpCompositeConstruct);
 }
 
 bool SPIRVInstructionSelector::selectBitreverseNative(Register ResVReg,
@@ -5916,83 +5895,6 @@ bool SPIRVInstructionSelector::selectFirstBitSet32(
   return true;
 }
 
-bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
-    Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I, Register SrcReg,
-    unsigned BitSetOpcode, bool SwapPrimarySide) const {
-
-  // SPIR-V allow vectors of size 2,3,4 only. Calling with a larger vectors
-  // requires creating a param register and return register with an invalid
-  // vector size. If that is resolved, then this function can be used for
-  // vectors of any component size.
-  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
-  assert(ComponentCount < 5 && "Vec 5+ will generate invalid SPIR-V ops");
-
-  MachineIRBuilder MIRBuilder(I);
-  SPIRVTypeInst BaseType = GR.retrieveScalarOrVectorIntType(ResType);
-  SPIRVTypeInst I64Type = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
-  SPIRVTypeInst I64x2Type =
-      GR.getOrCreateSPIRVVectorType(I64Type, 2, MIRBuilder, false);
-  SPIRVTypeInst Vec2ResType =
-      GR.getOrCreateSPIRVVectorType(BaseType, 2, MIRBuilder, false);
-
-  std::vector<Register> PartialRegs;
-
-  // Loops 0, 2, 4, ... but stops one loop early when ComponentCount is odd
-  unsigned CurrentComponent = 0;
-  for (; CurrentComponent + 1 < ComponentCount; CurrentComponent += 2) {
-    // This register holds the firstbitX result for each of the i64x2 vectors
-    // extracted from SrcReg
-    Register BitSetResult =
-        MRI->createVirtualRegister(GR.getRegClass(I64x2Type));
-
-    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                       TII.get(SPIRV::OpVectorShuffle))
-                   .addDef(BitSetResult)
-                   .addUse(GR.getSPIRVTypeID(I64x2Type))
-                   .addUse(SrcReg)
-                   .addUse(SrcReg)
-                   .addImm(CurrentComponent)
-                   .addImm(CurrentComponent + 1);
-
-    MIB.constrainAllUses(TII, TRI, RBI);
-
-    Register SubVecBitSetReg =
-        MRI->createVirtualRegister(GR.getRegClass(Vec2ResType));
-
-    if (!selectFirstBitSet64(SubVecBitSetReg, Vec2ResType, I, BitSetResult,
-                             BitSetOpcode, SwapPrimarySide))
-      return false;
-
-    PartialRegs.push_back(SubVecBitSetReg);
-  }
-
-  // On odd component counts we need to handle one more component
-  if (CurrentComponent != ComponentCount) {
-    bool ZeroAsNull = !STI.isShader();
-    Register FinalElemReg = MRI->createVirtualRegister(GR.getRegClass(I64Type));
-    Register ConstIntLastIdx = GR.getOrCreateConstInt(
-        ComponentCount - 1, I, BaseType, TII, ZeroAsNull);
-
-    if (!selectOpWithSrcs(FinalElemReg, I64Type, I, {SrcReg, ConstIntLastIdx},
-                          SPIRV::OpVectorExtractDynamic))
-      return false;
-
-    Register FinalElemBitSetReg =
-        MRI->createVirtualRegister(GR.getRegClass(BaseType));
-
-    if (!selectFirstBitSet64(FinalElemBitSetReg, BaseType, I, FinalElemReg,
-                             BitSetOpcode, SwapPrimarySide))
-      return false;
-
-    PartialRegs.push_back(FinalElemBitSetReg);
-  }
-
-  // Join all the resulting registers back into the return type in order
-  // (ie i32x2, i32x2, i32x1 -> i32x5)
-  return selectOpWithSrcs(ResVReg, ResType, I, std::move(PartialRegs),
-                          SPIRV::OpCompositeConstruct);
-}
-
 bool SPIRVInstructionSelector::selectFirstBitSet64(
     Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I, Register SrcReg,
     unsigned BitSetOpcode, bool SwapPrimarySide) const {
@@ -6009,8 +5911,14 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
   // operate on vectors with 2 or less components. When largers vectors are
   // seen. Split them, recurse, then recombine them.
   if (ComponentCount > 2) {
-    return selectFirstBitSet64Overflow(ResVReg, ResType, I, SrcReg,
-                                       BitSetOpcode, SwapPrimarySide);
+    auto Func = [this, SwapPrimarySide](Register ResVReg, SPIRVTypeInst ResType,
+                                        MachineInstr &I, Register SrcReg,
+                                        unsigned Opcode) -> bool {
+      return this->selectFirstBitSet64(ResVReg, ResType, I, SrcReg, Opcode,
+                                       SwapPrimarySide);
+    };
+
+    return handle64BitOverflow(ResVReg, ResType, I, SrcReg, BitSetOpcode, Func);
   }
 
   // 1. Split int64 into 2 pieces using a bitcast

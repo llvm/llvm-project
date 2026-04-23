@@ -4933,28 +4933,26 @@ static unsigned getTargetVShiftUniformOpcode(unsigned Opc, bool IsVariable) {
 static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
                                           SDValue SrcOp, uint64_t ShiftAmt,
                                           SelectionDAG &DAG) {
-  MVT ElementType = VT.getVectorElementType();
+  assert(
+      (Opc == X86ISD::VSHLI || Opc == X86ISD::VSRLI || Opc == X86ISD::VSRAI) &&
+      "Unknown target vector shift-by-constant node");
 
   // Bitcast the source vector to the output type, this is mainly necessary for
   // vXi8/vXi64 shifts.
-  if (VT != SrcOp.getSimpleValueType())
-    SrcOp = DAG.getBitcast(VT, SrcOp);
+  SrcOp = DAG.getBitcast(VT, SrcOp);
 
   // Fold this packed shift into its first operand if ShiftAmt is 0.
   if (ShiftAmt == 0)
     return SrcOp;
 
   // Check for ShiftAmt >= element width
-  if (ShiftAmt >= ElementType.getSizeInBits()) {
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  if (ShiftAmt >= EltSizeInBits) {
     if (Opc == X86ISD::VSRAI)
-      ShiftAmt = ElementType.getSizeInBits() - 1;
+      ShiftAmt = EltSizeInBits - 1;
     else
       return DAG.getConstant(0, dl, VT);
   }
-
-  assert(
-      (Opc == X86ISD::VSHLI || Opc == X86ISD::VSRLI || Opc == X86ISD::VSRAI) &&
-      "Unknown target vector shift-by-constant node");
 
   // Fold this packed vector shift into a build vector if SrcOp is a
   // vector of Constants or UNDEFs.
@@ -11341,15 +11339,8 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
 
       MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
       MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
-      Src = DAG.getBitcast(SrcVT, Src);
-
-      // Shift the offset'd elements into place for the truncation.
-      // TODO: Use getTargetVShiftByConstNode.
-      if (Offset)
-        Src = DAG.getNode(
-            X86ISD::VSRLI, DL, SrcVT, Src,
-            DAG.getTargetConstant(Offset * EltSizeInBits, DL, MVT::i8));
-
+      Src = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, SrcVT, Src,
+                                       Offset * EltSizeInBits, DAG);
       return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, !UndefUppers);
     }
   }
@@ -12402,14 +12393,12 @@ static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
   if (!IsLegal) {
     if ((RotateAmt % 16) == 0)
       return SDValue();
-    // TODO: Use getTargetVShiftByConstNode.
     unsigned ShlAmt = RotateAmt;
     unsigned SrlAmt = RotateVT.getScalarSizeInBits() - RotateAmt;
-    V1 = DAG.getBitcast(RotateVT, V1);
-    SDValue SHL = DAG.getNode(X86ISD::VSHLI, DL, RotateVT, V1,
-                              DAG.getTargetConstant(ShlAmt, DL, MVT::i8));
-    SDValue SRL = DAG.getNode(X86ISD::VSRLI, DL, RotateVT, V1,
-                              DAG.getTargetConstant(SrlAmt, DL, MVT::i8));
+    SDValue SHL = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, RotateVT, V1,
+                                             ShlAmt, DAG);
+    SDValue SRL = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, RotateVT, V1,
+                                             SrlAmt, DAG);
     SDValue Rot = DAG.getNode(ISD::OR, DL, RotateVT, SHL, SRL);
     return DAG.getBitcast(VT, Rot);
   }
@@ -22304,9 +22293,8 @@ static SDValue expandFP_TO_UINT_SSE(MVT VT, SDValue Src, const SDLoc &dl,
     return DAG.getNode(X86ISD::BLENDV, dl, VT, Small, Overflow, Small);
   }
 
-  SDValue IsOverflown =
-      DAG.getNode(X86ISD::VSRAI, dl, VT, Small,
-                  DAG.getTargetConstant(DstBits - 1, dl, MVT::i8));
+  SDValue IsOverflown = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, VT, Small,
+                                                   DstBits - 1, DAG);
   return DAG.getNode(ISD::OR, dl, VT, Small,
                      DAG.getNode(ISD::AND, dl, VT, Big, IsOverflown));
 }
@@ -26148,8 +26136,8 @@ static SDValue LowerEXTEND_VECTOR_INREG(SDValue Op,
     Curr = DAG.getBitcast(DestVT, Curr);
 
     unsigned SignExtShift = DestWidth - InSVT.getSizeInBits();
-    SignExt = DAG.getNode(X86ISD::VSRAI, dl, DestVT, Curr,
-                          DAG.getTargetConstant(SignExtShift, dl, MVT::i8));
+    SignExt = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, DestVT, Curr,
+                                         SignExtShift, DAG);
   }
 
   if (VT == MVT::v2i64) {
@@ -45771,6 +45759,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::GlobalBaseReg:
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
+  // SETCC/SETCC_CARRY always produces a well-defined result based on
+  // EFLAGS/carry flag.
+  case X86ISD::SETCC:
+  case X86ISD::SETCC_CARRY:
     return true;
   case X86ISD::PACKSS:
   case X86ISD::PACKUS: {
@@ -51986,9 +51978,9 @@ static SDValue combineAndMaskToShift(SDNode *N, const SDLoc &DL,
   if (EltBitWidth != DAG.ComputeNumSignBits(Op0))
     return SDValue();
 
-  unsigned ShiftVal = SplatVal.countr_one();
-  SDValue ShAmt = DAG.getTargetConstant(EltBitWidth - ShiftVal, DL, MVT::i8);
-  SDValue Shift = DAG.getNode(X86ISD::VSRLI, DL, VT, Op0, ShAmt);
+  unsigned ShiftVal = EltBitWidth - SplatVal.countr_one();
+  SDValue Shift = getTargetVShiftByConstNode(
+      X86ISD::VSRLI, DL, VT.getSimpleVT(), Op0, ShiftVal, DAG);
   return DAG.getBitcast(N->getValueType(0), Shift);
 }
 

@@ -1,5 +1,6 @@
 add_custom_target(libc-integration-tests)
-add_dependencies(check-libc libc-integration-tests-build)
+add_dependencies(check-libc libc-integration-tests)
+add_dependencies(check-libc-lit libc-integration-tests-build)
 
 function(add_libc_integration_test_suite name)
   add_custom_target(${name})
