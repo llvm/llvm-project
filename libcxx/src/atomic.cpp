@@ -17,8 +17,6 @@
 #include <thread>
 #include <type_traits>
 
-#include "include/apple_availability.h"
-
 #ifdef __linux__
 
 #  include <linux/futex.h>
@@ -94,7 +92,7 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
   _LIBCPP_FUTEX(__ptr, FUTEX_WAKE_PRIVATE, __notify_one ? 1 : INT_MAX, 0, 0, 0);
 }
 
-#elif defined(__APPLE__) && defined(_LIBCPP_USE_ULOCK)
+#elif defined(__APPLE__)
 
 extern "C" int __ulock_wait(
     uint32_t operation, void* addr, uint64_t value, uint32_t timeout); /* timeout is specified in microseconds */

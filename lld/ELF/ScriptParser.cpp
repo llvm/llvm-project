@@ -300,8 +300,7 @@ void ScriptParser::readDefsym() {
   Expr e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
-  auto *cmd = make<SymbolAssignment>(
-      name, e, 0, getCurrentMB().getBufferIdentifier().str());
+  auto *cmd = make<SymbolAssignment>(name, e, 0, curBuf.filename.str());
   ctx.script->sectionCommands.push_back(cmd);
 }
 
@@ -343,8 +342,7 @@ void ScriptParser::addFile(StringRef s) {
     ctx.driver.addLibrary(s.substr(2));
   } else {
     // Case 4: s is a relative path. Search in the directory of the script file.
-    std::string filename = std::string(getCurrentMB().getBufferIdentifier());
-    StringRef directory = sys::path::parent_path(filename);
+    StringRef directory = sys::path::parent_path(curBuf.filename);
     if (!directory.empty()) {
       SmallString<0> path(directory);
       sys::path::append(path, s);
@@ -727,6 +725,7 @@ void ScriptParser::readSectionsStmt(SmallVectorImpl<SectionCommand *> &v,
         [&] { readStmts([&](StringRef t) { readSectionsStmt(v, t); }); });
     return;
   }
+
   if (SectionCommand *cmd = readAssignment(tok))
     v.push_back(cmd);
   else

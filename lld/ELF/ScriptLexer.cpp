@@ -58,8 +58,7 @@ ScriptLexer::ScriptLexer(Ctx &ctx, MemoryBufferRef mb)
 
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
-  StringRef s = getCurrentMB().getBuffer();
-
+  StringRef s(curBuf.begin, curBuf.s.end() - curBuf.begin);
   size_t pos = s.rfind('\n', prevTok.data() - s.data());
   if (pos != StringRef::npos)
     s = s.substr(pos + 1);
@@ -72,8 +71,7 @@ size_t ScriptLexer::getColumnNumber() {
 }
 
 std::string ScriptLexer::getCurrentLocation() {
-  std::string filename = std::string(getCurrentMB().getBufferIdentifier());
-  return (filename + ":" + Twine(prevTokLine)).str();
+  return (curBuf.filename + ":" + Twine(prevTokLine)).str();
 }
 
 // We don't want to record cascading errors. Keep only the first one.
@@ -269,9 +267,4 @@ ScriptLexer::Token ScriptLexer::till(StringRef tok) {
   prevTok = {};
   setError("unexpected EOF");
   return {};
-}
-
-MemoryBufferRef ScriptLexer::getCurrentMB() {
-  return MemoryBufferRef(StringRef(curBuf.begin, curBuf.s.end() - curBuf.begin),
-                         curBuf.filename);
 }

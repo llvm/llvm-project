@@ -92,7 +92,7 @@ Value *VPLane::getAsRuntimeExpr(IRBuilderBase &Builder,
     return Builder.CreateSub(getRuntimeVF(Builder, Builder.getInt32Ty(), VF),
                              Builder.getInt32(VF.getKnownMinValue() - Lane));
   case VPLane::Kind::First:
-    return Builder.getInt32(Lane);
+    return Builder.getInt64(Lane);
   }
   llvm_unreachable("Unknown lane kind");
 }

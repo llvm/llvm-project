@@ -79,7 +79,6 @@ public:
   void expect(StringRef expect);
   Token till(StringRef tok);
   std::string getCurrentLocation();
-  MemoryBufferRef getCurrentMB();
 
 private:
   StringRef getLine();
