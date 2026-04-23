@@ -85,7 +85,7 @@ entry:
 
 define i128 @fshr_i128_3rd_arg_const(i128 %a, i128 %b) {
 ; CHECK-LABEL: 'fshr_i128_3rd_arg_const'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:8 SizeLat:8 for: %r = tail call i128 @llvm.fshr.i128(i128 %a, i128 %b, i128 9)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:3 Lat:3 SizeLat:3 for: %r = tail call i128 @llvm.fshr.i128(i128 %a, i128 %b, i128 9)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i128 %r
 ;
 entry:
@@ -136,7 +136,7 @@ entry:
 
 define <16 x i8> @fshr_v16i8_3rd_arg_vec_const_lanes_different(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: 'fshr_v16i8_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %r = tail call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 9, i8 1, i8 13, i8 7, i8 31, i8 23, i8 43, i8 51, i8 3, i8 3, i8 17, i8 3, i8 11, i8 15, i8 3, i8 3>)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r = tail call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 9, i8 1, i8 13, i8 7, i8 31, i8 23, i8 43, i8 51, i8 3, i8 3, i8 17, i8 3, i8 11, i8 15, i8 3, i8 3>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %r
 ;
 entry:
@@ -166,7 +166,7 @@ entry:
 
 define <8 x i16> @fshr_v8i16_3rd_arg_vec_const_lanes_different(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: 'fshr_v8i16_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %r = tail call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> <i16 3, i16 1, i16 13, i16 8, i16 7, i16 31, i16 43, i16 51>)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r = tail call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> <i16 3, i16 1, i16 13, i16 8, i16 7, i16 31, i16 43, i16 51>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %r
 ;
 entry:
@@ -196,7 +196,7 @@ entry:
 
 define <4 x i32> @fshr_v4i32_3rd_arg_vec_const_lanes_different(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: 'fshr_v4i32_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %r = tail call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 1, i32 3, i32 11, i32 2>)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r = tail call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 1, i32 3, i32 11, i32 2>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %r
 ;
 entry:
@@ -226,7 +226,7 @@ entry:
 
 define <2 x i64> @fshr_v2i64_3rd_arg_vec_const_lanes_different(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: 'fshr_v2i64_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %r = tail call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> <i64 1, i64 2>)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r = tail call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> <i64 1, i64 2>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %r
 ;
 entry:
@@ -256,7 +256,7 @@ entry:
 
 define <2 x i66> @fshr_v2i66_3rd_arg_vec_const_lanes_different(<2 x i66> %a, <2 x i66> %b) {
 ; CHECK-LABEL: 'fshr_v2i66_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:20 SizeLat:20 for: %r = tail call <2 x i66> @llvm.fshr.v2i66(<2 x i66> %a, <2 x i66> %b, <2 x i66> <i66 1, i66 2>)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:3 Lat:3 SizeLat:3 for: %r = tail call <2 x i66> @llvm.fshr.v2i66(<2 x i66> %a, <2 x i66> %b, <2 x i66> <i66 1, i66 2>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i66> %r
 ;
 entry:
@@ -266,7 +266,7 @@ entry:
 
 define <2 x i128> @fshr_v2i128_3rd_arg_vec_const_all_lanes_same(<2 x i128> %a, <2 x i128> %b) {
 ; CHECK-LABEL: 'fshr_v2i128_3rd_arg_vec_const_all_lanes_same'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:20 SizeLat:20 for: %r = tail call <2 x i128> @llvm.fshr.v2i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> splat (i128 1))
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:3 Lat:3 SizeLat:3 for: %r = tail call <2 x i128> @llvm.fshr.v2i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> splat (i128 1))
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i128> %r
 ;
 entry:
@@ -276,7 +276,7 @@ entry:
 
 define <2 x i128> @fshr_v2i128_3rd_arg_vec_const_lanes_different(<2 x i128> %a, <2 x i128> %b) {
 ; CHECK-LABEL: 'fshr_v2i128_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:20 SizeLat:20 for: %r = tail call <2 x i128> @llvm.fshr.v2i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> <i128 1, i128 2>)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:3 Lat:3 SizeLat:3 for: %r = tail call <2 x i128> @llvm.fshr.v2i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> <i128 1, i128 2>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i128> %r
 ;
 entry:
@@ -379,7 +379,7 @@ entry:
 
 define i128 @rotr_i128_3rd_arg_const(i128 %a) {
 ; CHECK-LABEL: 'rotr_i128_3rd_arg_const'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %r = tail call i128 @llvm.fshr.i128(i128 %a, i128 %a, i128 9)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:3 Lat:3 SizeLat:3 for: %r = tail call i128 @llvm.fshr.i128(i128 %a, i128 %a, i128 9)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i128 %r
 ;
 entry:
@@ -409,7 +409,7 @@ entry:
 
 define <16 x i8> @rotr_v16i8_3rd_arg_vec_const_lanes_different(<16 x i8> %a) {
 ; CHECK-LABEL: 'rotr_v16i8_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r = tail call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a, <16 x i8> %a, <16 x i8> <i8 9, i8 1, i8 13, i8 7, i8 31, i8 23, i8 43, i8 51, i8 3, i8 3, i8 17, i8 3, i8 11, i8 15, i8 3, i8 3>)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r = tail call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a, <16 x i8> %a, <16 x i8> <i8 9, i8 1, i8 13, i8 7, i8 31, i8 23, i8 43, i8 51, i8 3, i8 3, i8 17, i8 3, i8 11, i8 15, i8 3, i8 3>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %r
 ;
 entry:
@@ -439,7 +439,7 @@ entry:
 
 define <8 x i16> @rotr_v8i16_3rd_arg_vec_const_lanes_different(<8 x i16> %a) {
 ; CHECK-LABEL: 'rotr_v8i16_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r = tail call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a, <8 x i16> %a, <8 x i16> <i16 3, i16 1, i16 13, i16 8, i16 7, i16 31, i16 43, i16 51>)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r = tail call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a, <8 x i16> %a, <8 x i16> <i16 3, i16 1, i16 13, i16 8, i16 7, i16 31, i16 43, i16 51>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %r
 ;
 entry:
@@ -469,7 +469,7 @@ entry:
 
 define <4 x i32> @rotr_v4i32_3rd_arg_vec_const_lanes_different(<4 x i32> %a) {
 ; CHECK-LABEL: 'rotr_v4i32_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r = tail call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a, <4 x i32> %a, <4 x i32> <i32 1, i32 3, i32 11, i32 2>)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r = tail call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a, <4 x i32> %a, <4 x i32> <i32 1, i32 3, i32 11, i32 2>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %r
 ;
 entry:
@@ -499,7 +499,7 @@ entry:
 
 define <2 x i64> @rotr_v2i64_3rd_arg_vec_const_lanes_different(<2 x i64> %a) {
 ; CHECK-LABEL: 'rotr_v2i64_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r = tail call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a, <2 x i64> %a, <2 x i64> <i64 1, i64 2>)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r = tail call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a, <2 x i64> %a, <2 x i64> <i64 1, i64 2>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %r
 ;
 entry:
@@ -519,7 +519,7 @@ entry:
 
 define <2 x i128> @rotr_v2i128_3rd_arg_vec_const_all_lanes_same(<2 x i128> %a) {
 ; CHECK-LABEL: 'rotr_v2i128_3rd_arg_vec_const_all_lanes_same'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %r = tail call <2 x i128> @llvm.fshr.v2i128(<2 x i128> %a, <2 x i128> %a, <2 x i128> splat (i128 1))
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:3 Lat:3 SizeLat:3 for: %r = tail call <2 x i128> @llvm.fshr.v2i128(<2 x i128> %a, <2 x i128> %a, <2 x i128> splat (i128 1))
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i128> %r
 ;
 entry:
@@ -529,7 +529,7 @@ entry:
 
 define <2 x i128> @rotr_v2i128_3rd_arg_vec_const_lanes_different(<2 x i128> %a) {
 ; CHECK-LABEL: 'rotr_v2i128_3rd_arg_vec_const_lanes_different'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %r = tail call <2 x i128> @llvm.fshr.v2i128(<2 x i128> %a, <2 x i128> %a, <2 x i128> <i128 1, i128 2>)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:3 Lat:3 SizeLat:3 for: %r = tail call <2 x i128> @llvm.fshr.v2i128(<2 x i128> %a, <2 x i128> %a, <2 x i128> <i128 1, i128 2>)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i128> %r
 ;
 entry:

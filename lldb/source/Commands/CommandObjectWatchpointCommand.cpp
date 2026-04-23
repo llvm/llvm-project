@@ -483,7 +483,7 @@ protected:
         if (wp)
           wp->ClearCallback();
       } else {
-        result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n", cur_wp_id);
+        result.AppendErrorWithFormat("Invalid watchpoint ID: %u.", cur_wp_id);
         return;
       }
     }
@@ -548,15 +548,14 @@ protected:
                                     result.GetOutputStream().GetIndentLevel() +
                                         2);
             } else {
-              result.AppendMessageWithFormat(
-                  "Watchpoint %u does not have an associated command.\n",
+              result.AppendMessageWithFormatv(
+                  "Watchpoint {0} does not have an associated command.",
                   cur_wp_id);
             }
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n",
-                                       cur_wp_id);
+          result.AppendErrorWithFormat("Invalid watchpoint ID: %u.", cur_wp_id);
         }
       }
     }

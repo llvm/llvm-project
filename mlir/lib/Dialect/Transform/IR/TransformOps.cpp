@@ -35,6 +35,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
@@ -173,8 +174,8 @@ transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
     // visible handle) to the cloned scope operations. This effectively prevents
     // the transformation from accessing any IR outside the scope.
     auto scope = state.make_region_scope(reg);
-    auto clones = llvm::to_vector(
-        llvm::map_range(originals, [](Operation *op) { return op->clone(); }));
+    auto clones = llvm::map_to_vector(
+        originals, [](Operation *op) { return op->clone(); });
     llvm::scope_exit deleteClones([&] {
       for (Operation *clone : clones)
         clone->erase();
@@ -413,37 +414,33 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
                                ? GreedyRewriteConfig::kNoLimit
                                : getMaxNumRewrites());
 
-  // Apply patterns and CSE repetitively until a fixpoint is reached. If no CSE
-  // was requested, apply the greedy pattern rewrite only once. (The greedy
-  // pattern rewrite driver already iterates to a fixpoint internally.)
-  bool cseChanged = false;
+  if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+    // Op is isolated from above. The greedy driver iterates to a fixpoint
+    // internally and optionally runs full CSE between iterations.
+    config.enableCSEBetweenIterations(getApplyCse());
+    if (failed(applyPatternsGreedily(target, frozenPatterns, config))) {
+      return emitSilenceableFailure(target)
+             << "greedy pattern application failed";
+    }
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  // Non-isolated case: gather the ops manually because the op-list
+  // GreedyPatternRewriteDriver overload only performs a single iteration and
+  // does not simplify regions. CSE is driven externally to reach a fixpoint.
+  SmallVector<Operation *> ops;
+  target->walk([&](Operation *nestedOp) {
+    if (target != nestedOp)
+      ops.push_back(nestedOp);
+  });
+
   // One or two iterations should be sufficient. Stop iterating after a certain
   // threshold to make debugging easier.
   static const int64_t kNumMaxIterations = 50;
   int64_t iteration = 0;
+  bool cseChanged = false;
   do {
-    LogicalResult result = failure();
-    if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-      // Op is isolated from above. Apply patterns and also perform region
-      // simplification.
-      result = applyPatternsGreedily(target, frozenPatterns, config);
-    } else {
-      // Manually gather list of ops because the other
-      // GreedyPatternRewriteDriver overloads only accepts ops that are isolated
-      // from above. This way, patterns can be applied to ops that are not
-      // isolated from above. Regions are not being simplified. Furthermore,
-      // only a single greedy rewrite iteration is performed.
-      SmallVector<Operation *> ops;
-      target->walk([&](Operation *nestedOp) {
-        if (target != nestedOp)
-          ops.push_back(nestedOp);
-      });
-      result = applyOpPatternsGreedily(ops, frozenPatterns, config);
-    }
-
-    // A failure typically indicates that the pattern application did not
-    // converge.
-    if (failed(result)) {
+    if (failed(applyOpPatternsGreedily(ops, frozenPatterns, config))) {
       return emitSilenceableFailure(target)
              << "greedy pattern application failed";
     }
@@ -2506,6 +2503,17 @@ verifyNamedSequenceOp(transform::NamedSequenceOp op, bool emitWarnings) {
   if (op.getBody().front().empty())
     return emitSilenceableFailure(op) << "expected a non-empty body block";
 
+  // Check that all operations in the body implement TransformOpInterface
+  for (Operation &child : op.getBody().front().without_terminator()) {
+    if (!isa<transform::TransformOpInterface>(child)) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableFailure(&child)
+          << "expected children ops to implement TransformOpInterface";
+      diag.attachNote(child.getLoc()) << "op without interface";
+      return diag;
+    }
+  }
+
   Operation *terminator = &op.getBody().front().back();
   if (!isa<transform::YieldOp>(terminator)) {
     DiagnosedSilenceableFailure diag = emitSilenceableFailure(op)
@@ -2658,13 +2666,13 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
                                 transform::TransformState &state) {
   int64_t numPayloads =
       llvm::TypeSwitch<Type, int64_t>(getHandle().getType())
-          .Case<TransformHandleTypeInterface>([&](auto x) {
+          .Case([&](TransformHandleTypeInterface x) {
             return llvm::range_size(state.getPayloadOps(getHandle()));
           })
-          .Case<TransformValueHandleTypeInterface>([&](auto x) {
+          .Case([&](TransformValueHandleTypeInterface x) {
             return llvm::range_size(state.getPayloadValues(getHandle()));
           })
-          .Case<TransformParamTypeInterface>([&](auto x) {
+          .Case([&](TransformParamTypeInterface x) {
             return llvm::range_size(state.getParams(getHandle()));
           })
           .DefaultUnreachable("unknown transform dialect type interface");
@@ -2745,6 +2753,16 @@ LogicalResult transform::SplitHandleOp::verify() {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PayloadOp
+//===----------------------------------------------------------------------===//
+
+void transform::PayloadOp::getCheckedNormalForms(
+    SmallVectorImpl<NormalFormAttrInterface> &normalForms) {
+  llvm::append_range(normalForms,
+                     getNormalForms().getAsRange<NormalFormAttrInterface>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2883,7 +2901,7 @@ static bool isValueUsePotentialConsumer(OpOperand &use) {
   return isHandleConsumed(use.get(), iface);
 }
 
-LogicalResult
+static LogicalResult
 checkDoubleConsume(Value value,
                    function_ref<InFlightDiagnostic()> reportError) {
   OpOperand *potentialConsumer = nullptr;

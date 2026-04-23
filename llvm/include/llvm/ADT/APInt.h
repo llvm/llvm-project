@@ -443,7 +443,7 @@ public:
       assert(BitWidth && "zero width values not allowed");
       return isPowerOf2_64(U.VAL);
     }
-    return countPopulationSlowCase() == 1;
+    return isPowerOf2SlowCase();
   }
 
   /// Check if this APInt's negated value is a power of two greater than zero.
@@ -549,16 +549,22 @@ public:
   /// \returns the low "numBits" bits of this APInt.
   LLVM_ABI APInt getLoBits(unsigned numBits) const;
 
-  /// Determine if two APInts have the same value, after zero-extending
-  /// one of them (if needed!) to ensure that the bit-widths match.
-  static bool isSameValue(const APInt &I1, const APInt &I2) {
+  /// Determine if two APInts have the same value, after zero-extending or
+  /// sign-extending (if \p SignedCompare) one of them (if needed!) to ensure
+  /// that the bit-widths match.
+  static bool isSameValue(const APInt &I1, const APInt &I2,
+                          bool SignedCompare = false) {
     if (I1.getBitWidth() == I2.getBitWidth())
       return I1 == I2;
 
-    if (I1.getBitWidth() > I2.getBitWidth())
-      return I1 == I2.zext(I1.getBitWidth());
+    auto ZExtOrSExt = [SignedCompare](const APInt &I, unsigned BitWidth) {
+      return SignedCompare ? I.sext(BitWidth) : I.zext(BitWidth);
+    };
 
-    return I1.zext(I2.getBitWidth()) == I2;
+    if (I1.getBitWidth() > I2.getBitWidth())
+      return I1 == ZExtOrSExt(I2, I1.getBitWidth());
+
+    return ZExtOrSExt(I1, I2.getBitWidth()) == I2;
   }
 
   /// Overload to compute a hash_code for an APInt value.
@@ -1260,6 +1266,14 @@ public:
     if (isSingleWord())
       return (U.VAL & ~RHS.U.VAL) == 0;
     return isSubsetOfSlowCase(RHS);
+  }
+
+  /// This operation checks if all bits are set in either this or RHS.
+  bool isInverseOf(const APInt &RHS) const {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord())
+      return (U.VAL ^ RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
+    return isInverseOfSlowCase(RHS);
   }
 
   /// @}
@@ -2079,11 +2093,17 @@ private:
   /// out-of-line slow case for countPopulation
   LLVM_ABI unsigned countPopulationSlowCase() const LLVM_READONLY;
 
+  /// out-of-line slow case for isPowerOf2
+  LLVM_ABI bool isPowerOf2SlowCase() const LLVM_READONLY;
+
   /// out-of-line slow case for intersects.
   LLVM_ABI bool intersectsSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for isSubsetOf.
   LLVM_ABI bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
+
+  /// out-of-line slow case for isInverseOf.
+  LLVM_ABI bool isInverseOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for setBits.
   LLVM_ABI void setBitsSlowCase(unsigned loBit, unsigned hiBit);

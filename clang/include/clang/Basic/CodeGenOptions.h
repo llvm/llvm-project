@@ -20,6 +20,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Hash.h"
 #include "llvm/Support/Regex.h"
@@ -66,12 +67,14 @@ public:
   using VectorLibrary = llvm::driver::VectorLibrary;
   using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
   using WinX64EHUnwindV2Mode = llvm::WinX64EHUnwindV2Mode;
+  using ControlFlowGuardMechanism = llvm::ControlFlowGuardMechanism;
 
   using DebugCompressionType = llvm::DebugCompressionType;
   using EmitDwarfUnwindType = llvm::EmitDwarfUnwindType;
   using DebugTemplateNamesKind = llvm::codegenoptions::DebugTemplateNamesKind;
   using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
   using DebuggerKind = llvm::DebuggerKind;
+  using RelocSectionSymType = llvm::RelocSectionSymType;
 
 #define CODEGENOPT(Name, Bits, Default, Compatibility) unsigned Name : Bits;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)
@@ -212,6 +215,16 @@ public:
     Detailed, ///< Trap Message includes more context (e.g. the expression being
               ///< overflowed). This is more helpful for debugging but produces
               ///< larger debug info than `Basic`.
+  };
+
+  enum class BoolFromMem {
+    Strict,   ///< In-memory bool values are assumed to be 0 or 1, and any other
+              ///< value is UB.
+    Truncate, ///< Convert in-memory bools to i1 by checking if the least
+              ///< significant bit is 1.
+    NonZero,  ///< Convert in-memory bools to i1 by checking if any bit is set
+              ///< to 1.
+    NonStrictDefault = NonZero
   };
 
   /// The code model to use (-mcmodel).
@@ -521,7 +534,7 @@ public:
   /// Name of the stack usage file (i.e., .su file) if user passes
   /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
   /// passed on the command line.
-  std::string StackUsageOutput;
+  std::string StackUsageFile;
 
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.
@@ -659,6 +672,23 @@ public:
   // loader?
   bool isLoaderReplaceableFunctionName(StringRef FuncName) const {
     return llvm::is_contained(LoaderReplaceableFunctionNames, FuncName);
+  }
+
+  /// Are we building at -O1 or higher?
+  bool isOptimizedBuild() const { return OptimizationLevel > 0; }
+
+  /// When loading a bool from a storage unit larger than i1, should it
+  /// be converted to i1 by comparing to 0 or by truncating to i1?
+  bool isConvertingBoolWithCmp0() const {
+    switch (getLoadBoolFromMem()) {
+    case BoolFromMem::Strict:
+    case BoolFromMem::Truncate:
+      return false;
+
+    case BoolFromMem::NonZero:
+      return true;
+    }
+    llvm_unreachable("Unknown BoolFromMem enum");
   }
 };
 

@@ -255,6 +255,7 @@ public:
       break;
     case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
+    case llvm::Triple::riscv64be:
       break;
     }
   }
@@ -519,6 +520,7 @@ public:
       break;
     case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
+    case llvm::Triple::riscv64be:
       break;
     }
   }
@@ -1086,6 +1088,36 @@ public:
 
   const char *getStaticInitSectionSpecifier() const override {
     return ".text.startup";
+  }
+};
+
+// QURT Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY QURTTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__qurt__");
+  }
+
+public:
+  using OSTargetInfo<Target>::OSTargetInfo;
+};
+
+// SerenityOS target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY SerenityTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__serenity__");
+    DefineStd(Builder, "unix", Opts);
+  }
+
+public:
+  SerenityTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WIntType = TargetInfo::UnsignedInt;
   }
 };
 

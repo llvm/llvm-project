@@ -32,27 +32,9 @@ public:
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
-
-  Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
-                                     const DataLayout &DL) const;
-
-  /// getFunctionParamOptimizedAlign - since function arguments are passed via
-  /// .param space, we may want to increase their alignment in a way that
-  /// ensures that we can effectively vectorize their loads & stores. We can
-  /// increase alignment only if the function has internal or has private
-  /// linkage as for other linkage types callers may already rely on default
-  /// alignment. To allow using 128-bit vectorized loads/stores, this function
-  /// ensures that alignment is 16 or greater.
-  Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
-                                       const DataLayout &DL) const;
-
-  /// Helper for computing alignment of a device function byval parameter.
-  Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
-                                   Align InitialAlign,
-                                   const DataLayout &DL) const;
 
   // Helper for getting a function parameter name. Name is composed from
   // its index and the function name. Negative index corresponds to special
@@ -256,9 +238,6 @@ private:
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
-
-  Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                             const DataLayout &DL) const;
 };
 
 } // namespace llvm

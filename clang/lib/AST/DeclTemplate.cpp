@@ -1662,27 +1662,27 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
   case Decl::Kind::ClassTemplateSpecialization: {
     const auto *CTSD = cast<ClassTemplateSpecializationDecl>(D);
     auto P = CTSD->getSpecializedTemplateOrPartial();
-    TemplateParameterList *TPL;
     if (const auto *CTPSD =
             dyn_cast<ClassTemplatePartialSpecializationDecl *>(P)) {
-      TPL = CTPSD->getTemplateParameters();
-      // FIXME: Obtain Args deduced for the partial specialization.
-      return {TPL->getParam(Index), {}};
+      TemplateParameterList *TPL = CTPSD->getTemplateParameters();
+      return {TPL->getParam(Index),
+              CTSD->getTemplateInstantiationArgs()[Index]};
     }
-    TPL = cast<ClassTemplateDecl *>(P)->getTemplateParameters();
+    TemplateParameterList *TPL =
+        cast<ClassTemplateDecl *>(P)->getTemplateParameters();
     return {TPL->getParam(Index), CTSD->getTemplateArgs()[Index]};
   }
   case Decl::Kind::VarTemplateSpecialization: {
     const auto *VTSD = cast<VarTemplateSpecializationDecl>(D);
     auto P = VTSD->getSpecializedTemplateOrPartial();
-    TemplateParameterList *TPL;
     if (const auto *VTPSD =
             dyn_cast<VarTemplatePartialSpecializationDecl *>(P)) {
-      TPL = VTPSD->getTemplateParameters();
-      // FIXME: Obtain Args deduced for the partial specialization.
-      return {TPL->getParam(Index), {}};
+      TemplateParameterList *TPL = VTPSD->getTemplateParameters();
+      return {TPL->getParam(Index),
+              VTSD->getTemplateInstantiationArgs()[Index]};
     }
-    TPL = cast<VarTemplateDecl *>(P)->getTemplateParameters();
+    TemplateParameterList *TPL =
+        cast<VarTemplateDecl *>(P)->getTemplateParameters();
     return {TPL->getParam(Index), VTSD->getTemplateArgs()[Index]};
   }
   case Decl::Kind::ClassTemplatePartialSpecialization:
@@ -1707,10 +1707,12 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
   case Decl::Kind::CXXConstructor:
   case Decl::Kind::CXXDestructor:
   case Decl::Kind::CXXMethod:
-  case Decl::Kind::Function:
-    return getReplacedTemplateParameter(
-        cast<FunctionDecl>(D)->getTemplateSpecializationInfo()->getTemplate(),
-        Index);
+  case Decl::Kind::Function: {
+    const FunctionTemplateSpecializationInfo *Info =
+        cast<FunctionDecl>(D)->getTemplateSpecializationInfo();
+    return {Info->getTemplate()->getTemplateParameters()->getParam(Index),
+            Info->TemplateArguments->asArray()[Index]};
+  }
   default:
     llvm_unreachable("Unhandled templated declaration kind");
   }
@@ -1781,4 +1783,133 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
   }
   // FIXME: Adjust alias templates?
   return D;
+}
+
+ExplicitInstantiationDecl::ExplicitInstantiationDecl(
+    DeclContext *DC, NamedDecl *Specialization, SourceLocation ExternLoc,
+    SourceLocation TemplateLoc, NestedNameSpecifierLoc QualifierLoc,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+    TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK)
+    : Decl(ExplicitInstantiation, DC, TemplateLoc),
+      SpecAndTSK(Specialization, TSK), ExternLoc(ExternLoc), NameLoc(NameLoc) {
+  unsigned Flags = 0;
+  if (QualifierLoc)
+    Flags |= HasQualifierFlag;
+  if (ArgsAsWritten)
+    Flags |= HasArgsAsWrittenFlag;
+  // Set flags BEFORE writing trailing objects, because
+  // numTrailingObjects reads TypeAndFlags.getInt() to compute offsets.
+  TypeAndFlags.setPointerAndInt(TypeAsWritten, Flags);
+  if (QualifierLoc)
+    *getTrailingObjects<NestedNameSpecifierLoc>() = QualifierLoc;
+  if (ArgsAsWritten)
+    *getTrailingObjects<const ASTTemplateArgumentListInfo *>() = ArgsAsWritten;
+}
+
+ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
+    ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
+    SourceLocation ExternLoc, SourceLocation TemplateLoc,
+    NestedNameSpecifierLoc QualifierLoc,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+    TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
+  unsigned Extra = additionalSizeToAlloc<NestedNameSpecifierLoc,
+                                         const ASTTemplateArgumentListInfo *>(
+      QualifierLoc ? 1 : 0, ArgsAsWritten ? 1 : 0);
+  return new (C, DC, Extra) ExplicitInstantiationDecl(
+      DC, Specialization, ExternLoc, TemplateLoc, QualifierLoc, ArgsAsWritten,
+      NameLoc, TypeAsWritten, TSK);
+}
+
+ExplicitInstantiationDecl *
+ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                              unsigned TrailingFlags) {
+  unsigned Extra = additionalSizeToAlloc<NestedNameSpecifierLoc,
+                                         const ASTTemplateArgumentListInfo *>(
+      (TrailingFlags & HasQualifierFlag) ? 1 : 0,
+      (TrailingFlags & HasArgsAsWrittenFlag) ? 1 : 0);
+  auto *D = new (C, ID, Extra) ExplicitInstantiationDecl(EmptyShell());
+  // Set the flags so the reader knows which trailing objects are present.
+  D->TypeAndFlags.setInt(TrailingFlags);
+  return D;
+}
+
+SourceLocation ExplicitInstantiationDecl::getTagKWLoc() const {
+  if (auto *TSI = getRawTypeSourceInfo()) {
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getElaboratedKeywordLoc();
+    if (auto TL = TSI->getTypeLoc().getAs<TagTypeLoc>())
+      return TL.getElaboratedKeywordLoc();
+  }
+  return SourceLocation();
+}
+
+NestedNameSpecifierLoc ExplicitInstantiationDecl::getQualifierLoc() const {
+  if (hasTrailingQualifier())
+    return *getTrailingObjects<NestedNameSpecifierLoc>();
+  if (auto *TSI = getRawTypeSourceInfo())
+    return TSI->getTypeLoc().getPrefix();
+  return NestedNameSpecifierLoc();
+}
+
+TypeSourceInfo *ExplicitInstantiationDecl::getTypeAsWritten() const {
+  auto *TSI = getRawTypeSourceInfo();
+  if (!TSI)
+    return nullptr;
+  TypeLoc TL = TSI->getTypeLoc();
+  // For class templates and nested classes, the "type" is fully described by
+  // the unified accessors (getQualifierLoc, getTemplateArg, getTagKWLoc).
+  if (TL.getAs<TemplateSpecializationTypeLoc>() || TL.getAs<TagTypeLoc>())
+    return nullptr;
+  return TSI;
+}
+
+unsigned ExplicitInstantiationDecl::getNumTemplateArgs() const {
+  if (const auto *Args = getTrailingArgsInfo())
+    return Args->NumTemplateArgs;
+  if (auto *TSI = getRawTypeSourceInfo())
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getNumArgs();
+  return 0;
+}
+
+TemplateArgumentLoc
+ExplicitInstantiationDecl::getTemplateArg(unsigned I) const {
+  if (const auto *Args = getTrailingArgsInfo())
+    return (*Args)[I];
+  auto *TSI = getRawTypeSourceInfo();
+  return TSI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().getArgLoc(I);
+}
+
+SourceLocation ExplicitInstantiationDecl::getTemplateArgsLAngleLoc() const {
+  if (const auto *Args = getTrailingArgsInfo())
+    return Args->getLAngleLoc();
+  if (auto *TSI = getRawTypeSourceInfo())
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getLAngleLoc();
+  return SourceLocation();
+}
+
+SourceLocation ExplicitInstantiationDecl::getTemplateArgsRAngleLoc() const {
+  if (const auto *Args = getTrailingArgsInfo())
+    return Args->getRAngleLoc();
+  if (auto *TSI = getRawTypeSourceInfo())
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getRAngleLoc();
+  return SourceLocation();
+}
+
+SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
+  // For func/var templates with postfix type syntax (arrays, functions),
+  // the type extends past the name, so use the type's end location.
+  if (auto *TSI = getTypeAsWritten())
+    if (TSI->getType().hasPostfixDeclaratorSyntax())
+      return TSI->getTypeLoc().getEndLoc();
+  // Otherwise, template args RAngleLoc or NameLoc.
+  SourceLocation RAngle = getTemplateArgsRAngleLoc();
+  return RAngle.isValid() ? RAngle : NameLoc;
+}
+
+SourceRange ExplicitInstantiationDecl::getSourceRange() const {
+  SourceLocation Begin = ExternLoc.isValid() ? ExternLoc : getLocation();
+  return SourceRange(Begin, getEndLoc());
 }

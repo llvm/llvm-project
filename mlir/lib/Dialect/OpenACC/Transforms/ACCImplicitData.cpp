@@ -198,6 +198,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
@@ -364,7 +365,7 @@ ACCImplicitData::generatePrivateRecipe(ModuleOp &module, Value var,
   builder.setInsertionPointToStart(module.getBody());
 
   auto recipe =
-      acc::PrivateRecipeOp::createAndPopulate(builder, loc, recipeName, type);
+      acc::PrivateRecipeOp::createAndPopulate(builder, loc, recipeName, var);
   if (!recipe.has_value())
     return accSupport.emitNYI(loc, "implicit private"), nullptr;
   return recipe.value();
@@ -389,7 +390,7 @@ ACCImplicitData::generateFirstprivateRecipe(ModuleOp &module, Value var,
   builder.setInsertionPointToStart(module.getBody());
 
   auto recipe = acc::FirstprivateRecipeOp::createAndPopulate(builder, loc,
-                                                             recipeName, type);
+                                                             recipeName, var);
   if (!recipe.has_value())
     return accSupport.emitNYI(loc, "implicit firstprivate"), nullptr;
   return recipe.value();
@@ -716,8 +717,7 @@ void ACCImplicitData::generateImplicitDataOps(
   auto isCandidate{[&](Value val) -> bool {
     return isCandidateForImplicitData(val, accRegion, accSupport);
   }};
-  auto candidateVars(
-      llvm::to_vector(llvm::make_filter_range(liveInValues, isCandidate)));
+  auto candidateVars(llvm::filter_to_vector(liveInValues, isCandidate));
   if (candidateVars.empty())
     return;
 

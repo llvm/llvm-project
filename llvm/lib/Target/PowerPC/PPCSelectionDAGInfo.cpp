@@ -75,10 +75,24 @@ void PPCSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
 }
 
+std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForMemccpy(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue C, SDValue Size, const CallInst *CI) const {
+  return DAG.getMemccpy(Chain, dl, Dst, Src, C, Size, CI);
+  ;
+}
+
 std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForMemcmp(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Op1, SDValue Op2,
     SDValue Op3, const CallInst *CI) const {
   return DAG.getMemcmp(Chain, dl, Op1, Op2, Op3, CI);
+}
+
+std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForStrcmp(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op1, SDValue Op2,
+    MachinePointerInfo Op1PtrInfo, MachinePointerInfo Op2PtrInfo,
+    const CallInst *CI) const {
+  return DAG.getStrcmp(Chain, DL, Op1, Op2, CI);
 }
 
 std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForStrcpy(

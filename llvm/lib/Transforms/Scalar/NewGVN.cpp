@@ -309,7 +309,7 @@ public:
   // Leader functions
   Value *getLeader() const { return RepLeader.first; }
   void setLeader(std::pair<Value *, unsigned int> Leader) {
-    RepLeader = Leader;
+    RepLeader = std::move(Leader);
   }
   const std::pair<Value *, unsigned int> &getNextLeader() const {
     return NextLeader;
@@ -318,10 +318,10 @@ public:
   bool addPossibleLeader(std::pair<Value *, unsigned int> LeaderPair) {
     if (LeaderPair.second < RepLeader.second) {
       NextLeader = RepLeader;
-      RepLeader = LeaderPair;
+      RepLeader = std::move(LeaderPair);
       return true;
     } else if (LeaderPair.second < NextLeader.second) {
-      NextLeader = LeaderPair;
+      NextLeader = std::move(LeaderPair);
     }
     return false;
   }
@@ -2098,7 +2098,8 @@ void NewGVN::addAdditionalUsers(ExprResult &Res, Instruction *User) const {
   if (Res.PredDep) {
     if (const auto *PBranch = dyn_cast<PredicateBranch>(Res.PredDep))
       PredicateToUsers[PBranch->Condition].insert(User);
-    else if (const auto *PAssume = dyn_cast<PredicateAssume>(Res.PredDep))
+    else if (const auto *PAssume =
+                 dyn_cast<PredicateConditionAssume>(Res.PredDep))
       PredicateToUsers[PAssume->Condition].insert(User);
   }
   Res.PredDep = nullptr;

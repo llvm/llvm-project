@@ -17,9 +17,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;  }
 ;}
 
-define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end) nounwind uwtable ssp {
+define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end) {
 ; CHECK-LABEL: define void @function0(
-; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[START:%.*]], i32 [[END:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[START:%.*]], i32 [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp slt i32 [[START]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP16]], label %[[FOR_BODY_LR_PH:.*]], label %[[FOR_END:.*]]
@@ -54,9 +54,9 @@ define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end)
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[INDEX]], [[TMP0]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP13]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP14]], align 4, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul <4 x i32> [[WIDE_LOAD]], splat (i32 5)
@@ -74,9 +74,9 @@ define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end)
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END:.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[TMP18]], [[TMP19]]
 ; CHECK-NEXT:    br i1 [[CMP5]], label %[[IF_THEN:.*]], label %[[IF_END]]
@@ -141,9 +141,9 @@ for.end:
 ;   return sum;
 ; }
 
-define i32 @reduction_func(ptr nocapture %A, i32 %n) nounwind uwtable readonly ssp {
+define i32 @reduction_func(ptr nocapture %A, i32 %n) readonly {
 ; CHECK-LABEL: define i32 @reduction_func(
-; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP10]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -157,7 +157,7 @@ define i32 @reduction_func(ptr nocapture %A, i32 %n) nounwind uwtable readonly s
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 30)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[VEC_PHI]], splat (i32 2)
@@ -177,7 +177,7 @@ define i32 @reduction_func(ptr nocapture %A, i32 %n) nounwind uwtable readonly s
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_INC:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[SUM_011:%.*]] = phi i32 [ [[SUM_1:%.*]], %[[FOR_INC]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP7]], 30
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[IF_THEN:.*]], label %[[FOR_INC]]
@@ -202,7 +202,7 @@ entry:
   %cmp10 = icmp sgt i32 %n, 0
   br i1 %cmp10, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
   %sum.011 = phi i32 [ %sum.1, %for.inc ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -210,19 +210,19 @@ for.body:                                         ; preds = %entry, %for.inc
   %cmp1 = icmp sgt i32 %0, 30
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %add = add i32 %sum.011, 2
   %add4 = add i32 %add, %0
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %sum.1 = phi i32 [ %add4, %if.then ], [ %sum.011, %for.body ]
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %sum.1, %for.inc ]
   ret i32 %sum.0.lcssa
 }
@@ -280,19 +280,19 @@ define void @PR34523(ptr %p, i16 %val) {
 bb1:
   br label %bb2
 
-bb2:                                             ; preds = %bb4, %bb1
+bb2:
   %i = phi i16 [ %val, %bb1 ], [ %_tmp2, %bb4 ]
   br label %bb3
 
-bb3:                                             ; preds = %bb2
+bb3:
   %_tmp1 = phi ptr [ %p, %bb2 ]
   br label %bb4
 
-bb4:                                             ; preds = %bb3
+bb4:
   %_tmp2 = add i16 %i, 1
   %_tmp3 = icmp slt i16 %_tmp2, 2
   br i1 %_tmp3, label %bb2, label %bb5
 
-bb5:                                             ; preds = %bb4
+bb5:
   unreachable
 }

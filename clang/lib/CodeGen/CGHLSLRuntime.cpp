@@ -20,7 +20,7 @@
 #include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Attrs.inc"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
@@ -36,6 +36,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -95,16 +96,112 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   RootSignatureValMD->addOperand(MDVals);
 }
 
+// Given a MemberExpr of a resource or resource array type, find the parent
+// VarDecl of the struct or class instance that contains this resource and
+// build the full resource name based on the member access path.
+//
+// For example, for a member access like "myStructArray[0].memberA",
+// this function will find the VarDecl of "myStructArray" and use the
+// EmbeddedResourceNameBuilder to build the resource name
+// "myStructArray.0.memberA".
+static const VarDecl *findStructResourceParentDeclAndBuildName(
+    const MemberExpr *ME, EmbeddedResourceNameBuilder &NameBuilder) {
+
+  SmallVector<const Expr *> WorkList;
+  const VarDecl *VD = nullptr;
+  const Expr *E = ME;
+
+  for (;;) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      assert(isa<VarDecl>(DRE->getDecl()) &&
+             "member expr base is not a var decl");
+      VD = cast<VarDecl>(DRE->getDecl());
+      NameBuilder.pushName(VD->getName());
+      break;
+    }
+
+    WorkList.push_back(E);
+    if (const auto *MExp = dyn_cast<MemberExpr>(E))
+      E = MExp->getBase();
+    else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+      E = ICE->getSubExpr();
+    else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+      E = ASE->getBase();
+    else if (isa<CXXThisExpr>(E))
+      // Resource member access on "this" pointer not yet implemented
+      // (llvm/llvm-project#190299)
+      return nullptr;
+    else
+      llvm_unreachable("unexpected expr type in resource member access");
+
+    assert(E && "expected valid expression");
+  }
+
+  while (!WorkList.empty()) {
+    E = WorkList.pop_back_val();
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      NameBuilder.pushName(
+          ME->getMemberNameInfo().getName().getAsIdentifierInfo()->getName());
+    } else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      if (ICE->getCastKind() == CK_UncheckedDerivedToBase) {
+        CXXRecordDecl *DerivedRD =
+            ICE->getSubExpr()->getType()->getAsCXXRecordDecl();
+        CXXRecordDecl *BaseRD = ICE->getType()->getAsCXXRecordDecl();
+        NameBuilder.pushBaseNameHierarchy(DerivedRD, BaseRD);
+      }
+    } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      const Expr *IdxExpr = ASE->getIdx();
+      std::optional<llvm::APSInt> Value =
+          IdxExpr->getIntegerConstantExpr(VD->getASTContext());
+      assert(Value &&
+             "expected constant index in struct with resource array access");
+      NameBuilder.pushArrayIndex(Value->getZExtValue());
+    } else {
+      llvm_unreachable("unexpected expr type in resource member access");
+    }
+  }
+  return VD;
+}
+
+// Given a MemberExpr of a resource or resource array type, find the
+// corresponding global resource declaration associated with the owning struct
+// or class instance via HLSLAssociatedResourceDeclAttr.
+static const VarDecl *
+findAssociatedResourceDeclForStruct(ASTContext &AST, const MemberExpr *ME) {
+
+  EmbeddedResourceNameBuilder NameBuilder;
+  const VarDecl *ParentVD =
+      findStructResourceParentDeclAndBuildName(ME, NameBuilder);
+  if (!ParentVD)
+    return nullptr;
+
+  if (!ParentVD->hasGlobalStorage())
+    return nullptr;
+
+  IdentifierInfo *II = NameBuilder.getNameAsIdentifier(AST);
+  for (const Attr *A : ParentVD->getAttrs()) {
+    if (const auto *ADA = dyn_cast<HLSLAssociatedResourceDeclAttr>(A)) {
+      VarDecl *AssocResVD = ADA->getResDecl();
+      if (AssocResVD->getIdentifier() == II)
+        return AssocResVD;
+    }
+  }
+  return nullptr;
+}
+
 // Find array variable declaration from DeclRef expression
-static const ValueDecl *getArrayDecl(const Expr *E) {
-  if (const DeclRefExpr *DRE =
-          dyn_cast_or_null<DeclRefExpr>(E->IgnoreImpCasts()))
+static const ValueDecl *getArrayDecl(ASTContext &AST, const Expr *E) {
+  E = E->IgnoreImpCasts();
+  if (const auto *DRE = dyn_cast_or_null<DeclRefExpr>(E))
     return DRE->getDecl();
+  if (isa<MemberExpr>(E))
+    return findAssociatedResourceDeclForStruct(AST, cast<MemberExpr>(E));
   return nullptr;
 }
 
 // Find array variable declaration from nested array subscript AST nodes
-static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
+static const ValueDecl *getArrayDecl(ASTContext &AST,
+                                     const ArraySubscriptExpr *ASE) {
   const Expr *E = nullptr;
   while (ASE != nullptr) {
     E = ASE->getBase()->IgnoreImpCasts();
@@ -112,15 +209,15 @@ static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
       return nullptr;
     ASE = dyn_cast<ArraySubscriptExpr>(E);
   }
-  return getArrayDecl(E);
+  return getArrayDecl(AST, E);
 }
 
-// Get the total size of the array, or -1 if the array is unbounded.
+// Get the total size of the array, or 0 if the array is unbounded.
 static int getTotalArraySize(ASTContext &AST, const clang::Type *Ty) {
   Ty = Ty->getUnqualifiedDesugaredType();
   assert(Ty->isArrayType() && "expected array type");
   if (Ty->isIncompleteArrayType())
-    return -1;
+    return 0;
   return AST.getConstantArrayElementCount(cast<ConstantArrayType>(Ty));
 }
 
@@ -151,6 +248,10 @@ static CXXMethodDecl *lookupResourceInitMethodAndSetupArgs(
   Value *NameStr = buildNameForResource(Name, CGM);
   Value *Space = llvm::ConstantInt::get(CGM.IntTy, Binding.getSpace());
 
+  bool HasCounter = hasCounterHandle(ResourceDecl);
+  assert((!HasCounter || Binding.hasCounterImplicitOrderID()) &&
+         "resources with counter handle must have a binding with counter "
+         "implicit order ID");
   if (Binding.isExplicit()) {
     // explicit binding
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, Binding.getSlot());
@@ -173,7 +274,7 @@ static CXXMethodDecl *lookupResourceInitMethodAndSetupArgs(
   Args.add(RValue::get(Range), AST.IntTy);
   Args.add(RValue::get(Index), AST.UnsignedIntTy);
   Args.add(RValue::get(NameStr), AST.getPointerType(AST.CharTy.withConst()));
-  if (Binding.hasCounterImplicitOrderID()) {
+  if (HasCounter) {
     uint32_t CounterBinding = Binding.getCounterImplicitOrderID();
     auto *CounterOrderID = llvm::ConstantInt::get(CGM.IntTy, CounterBinding);
     Args.add(RValue::get(CounterOrderID), AST.UnsignedIntTy);
@@ -321,12 +422,6 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(
         // Emit static and groupshared variables and resource classes inside
         // cbuffer as regular globals
         CGM.EmitGlobal(VD);
-      } else {
-        // Anything else that is not in the hlsl_constant address space must be
-        // an empty struct or a zero-sized array and can be ignored
-        assert(BufDecl->getASTContext().getTypeSize(VDTy) == 0 &&
-               "constant buffer decl with non-zero sized type outside of "
-               "hlsl_constant address space");
       }
       continue;
     }
@@ -486,6 +581,10 @@ void CGHLSLRuntime::finishCodeGen() {
   if (CodeGenOpts.AllResourcesBound)
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error,
                     "dx.allresourcesbound", 1);
+  if (CodeGenOpts.OptimizationLevel == 0)
+    M.addModuleFlag(llvm::Module::ModFlagBehavior::Override,
+                    "dx.disable_optimizations", 1);
+
   // NativeHalfType corresponds to the -fnative-half-type clang option which is
   // aliased by clang-dxc's -enable-16bit-types option. This option is used to
   // set the UseNativeLowPrecision DXIL module flag in the DirectX backend
@@ -522,8 +621,6 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
   // later in the compiler-flow for such module functions is not aware of and
   // hence not able to set attributes of the newly materialized entry functions.
   // So, set attributes of entry function here, as appropriate.
-  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-    Fn->addFnAttr(llvm::Attribute::OptimizeNone);
   Fn->addFnAttr(llvm::Attribute::NoInline);
 
   if (CGM.getLangOpts().HLSLSpvEnableMaximalReconvergence) {
@@ -765,6 +862,17 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     }
   }
 
+  if (SemanticName == "SV_VERTEXID") {
+    if (ST == Triple::EnvironmentType::Vertex) {
+      if (CGM.getTarget().getTriple().isSPIRV())
+        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                      Semantic->getAttrName()->getName(),
+                                      /* BuiltIn::VertexIndex */ 42);
+      else
+        return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+    }
+  }
+
   llvm_unreachable(
       "Load hasn't been implemented yet for this system semantic. FIXME");
 }
@@ -876,7 +984,7 @@ CGHLSLRuntime::handleStructSemanticStore(
   assert(RD->getNumFields() == ST->getNumElements());
 
   auto FieldDecl = RD->field_begin();
-  for (unsigned I = 0; I < ST->getNumElements(); ++I) {
+  for (unsigned I = 0; I < ST->getNumElements(); ++I, ++FieldDecl) {
     llvm::Value *Extract = B.CreateExtractValue(Source, I);
     AttrBegin =
         handleSemanticStore(B, FD, Extract, *FieldDecl, AttrBegin, AttrEnd);
@@ -948,15 +1056,18 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::DenseMap<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
+  SmallVector<std::pair<llvm::Value *, llvm::Type *>> OutputSemantic;
 
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
     if (Param.hasStructRetAttr()) {
       SRetOffset = 1;
       llvm::Type *VarType = Param.getParamStructRetType();
-      llvm::Value *Var = B.CreateAlloca(VarType);
-      OutputSemantic.try_emplace(FD, Var);
+      llvm::Value *Var =
+          CGM.getLangOpts().EmitLogicalPointer
+              ? cast<Instruction>(B.CreateStructuredAlloca(VarType))
+              : cast<Instruction>(B.CreateAlloca(VarType));
+      OutputSemantic.push_back(std::make_pair(Var, VarType));
       Args.push_back(Var);
       continue;
     }
@@ -978,7 +1089,11 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       if (!SemanticValue)
         return;
       if (Param.hasByValAttr()) {
-        llvm::Value *Var = B.CreateAlloca(Param.getParamByValType());
+        llvm::Value *Var =
+            CGM.getLangOpts().EmitLogicalPointer
+                ? cast<Instruction>(
+                      B.CreateStructuredAlloca(Param.getParamByValType()))
+                : cast<Instruction>(B.CreateAlloca(Param.getParamByValType()));
         B.CreateStore(SemanticValue, Var);
         SemanticValue = Var;
       }
@@ -992,16 +1107,18 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   CI->setCallingConv(Fn->getCallingConv());
 
   if (Fn->getReturnType() != CGM.VoidTy)
-    OutputSemantic.try_emplace(FD, CI);
+    // Element type is unused, so set to dummy value (NULL).
+    OutputSemantic.push_back(std::make_pair(CI, nullptr));
 
-  for (auto &[Decl, Source] : OutputSemantic) {
+  for (auto &SourcePair : OutputSemantic) {
+    llvm::Value *Source = SourcePair.first;
+    llvm::Type *ElementType = SourcePair.second;
     AllocaInst *AI = dyn_cast<AllocaInst>(Source);
-    llvm::Value *SourceValue =
-        AI ? B.CreateLoad(AI->getAllocatedType(), Source) : Source;
+    llvm::Value *SourceValue = AI ? B.CreateLoad(ElementType, Source) : Source;
 
-    auto AttrBegin = Decl->specific_attr_begin<HLSLAppliedSemanticAttr>();
-    auto AttrEnd = Decl->specific_attr_end<HLSLAppliedSemanticAttr>();
-    handleSemanticStore(B, FD, SourceValue, Decl, AttrBegin, AttrEnd);
+    auto AttrBegin = FD->specific_attr_begin<HLSLAppliedSemanticAttr>();
+    auto AttrEnd = FD->specific_attr_end<HLSLAppliedSemanticAttr>();
+    handleSemanticStore(B, FD, SourceValue, FD, AttrBegin, AttrEnd);
   }
 
   B.CreateRetVoid();
@@ -1113,9 +1230,7 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
       /*ReturnType=*/HandleTy, IntrID, Args, nullptr,
       Twine(GV->getName()).concat("_h"));
 
-  llvm::Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, 0);
-  Builder.CreateAlignedStore(CreateHandle, HandleRef,
-                             HandleRef->getPointerAlignment(DL));
+  Builder.CreateAlignedStore(CreateHandle, GV, GV->getPointerAlignment(DL));
   Builder.CreateRetVoid();
 
   CGM.AddCXXGlobalInit(InitResFunc);
@@ -1153,6 +1268,8 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>())
+    addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
+  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinOutputAttr>())
     addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
 }
 
@@ -1226,8 +1343,8 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // Let clang codegen handle local and static resource array subscripts,
   // or when the subscript references on opaque expression (as part of
   // ArrayInitLoopExpr AST node).
-  const VarDecl *ArrayDecl =
-      dyn_cast_or_null<VarDecl>(getArrayDecl(ArraySubsExpr));
+  const VarDecl *ArrayDecl = dyn_cast_or_null<VarDecl>(
+      getArrayDecl(CGF.CGM.getContext(), ArraySubsExpr));
   if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
       ArrayDecl->getStorageClass() == SC_Static)
     return std::nullopt;
@@ -1292,11 +1409,15 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
         CGF.CGM, ResourceTy->getAsCXXRecordDecl(), Range, Index,
         ArrayDecl->getName(), Binding, Args);
 
-    if (!CreateMethod)
+    if (!CreateMethod) {
       // This can happen if someone creates an array of structs that looks like
       // an HLSL resource record array but it does not have the required static
       // create method. No binding will be generated for it.
+      assert(!ResourceTy->getAsCXXRecordDecl()->isImplicit() &&
+             "create method lookup should always succeed for built-in resource "
+             "records");
       return std::nullopt;
+    }
 
     callResourceInitMethod(CGF, CreateMethod, Args, ValueSlot.getAddress());
 
@@ -1324,7 +1445,8 @@ bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
   assert(ResultTy->isHLSLResourceRecordArray() && "expected resource array");
 
   // Let Clang codegen handle local and static resource array copies.
-  const VarDecl *ArrayDecl = dyn_cast_or_null<VarDecl>(getArrayDecl(RHSExpr));
+  const VarDecl *ArrayDecl =
+      dyn_cast_or_null<VarDecl>(getArrayDecl(CGF.CGM.getContext(), RHSExpr));
   if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
       ArrayDecl->getStorageClass() == SC_Static)
     return false;
@@ -1358,6 +1480,32 @@ bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
   return EndIndex.has_value();
 }
 
+RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
+                                                        SourceLocation Loc,
+                                                        CodeGenFunction &CGF) {
+
+  assert(LV.getType()->isConstantMatrixType() && "expected matrix type");
+  assert(LV.getType().getAddressSpace() == LangAS::hlsl_constant &&
+         "expected cbuffer matrix");
+
+  QualType MatQualTy = LV.getType();
+  llvm::Type *MemTy = CGF.ConvertTypeForMem(MatQualTy);
+  llvm::Type *LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(MatQualTy);
+
+  if (LayoutTy == MemTy)
+    return LV.getAddress();
+
+  Address SrcAddr = LV.getAddress();
+  // NOTE: B\C CreateMemTemp flattens MatrixTypes which causes
+  // overlapping GEPs in emitBufferCopy. Use CreateTempAlloca with
+  // the non-padded layout.
+  CharUnits Align =
+      CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(MemTy));
+  RawAddress DestAlloca = CGF.CreateTempAlloca(MemTy, Align, "matrix.buf.copy");
+  emitBufferCopy(CGF, DestAlloca, SrcAddr, MatQualTy);
+  return DestAlloca;
+}
+
 std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
     const ArraySubscriptExpr *E, CodeGenFunction &CGF,
     llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase) {
@@ -1386,22 +1534,70 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
 
   LValueBaseInfo EltBaseInfo;
   TBAAAccessInfo EltTBAAInfo;
-  Address Addr =
-      CGF.EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-  llvm::Value *Idx = EmitIdxAfterBase(/*Promote*/ true);
 
   // Index into the object as-if we have an array of the padded element type,
   // and then dereference the element itself to avoid reading padding that may
   // be past the end of the in-memory object.
   SmallVector<llvm::Value *, 2> Indices;
+  llvm::Value *Idx = EmitIdxAfterBase(/*Promote*/ true);
   Indices.push_back(Idx);
   Indices.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 0));
 
+  if (CGF.getLangOpts().EmitLogicalPointer) {
+    // The fact that we emit an array-to-pointer decay might be an oversight,
+    // but for now, we simply ignore it (see #179951).
+    const CastExpr *CE = cast<CastExpr>(E->getBase());
+    assert(CE->getCastKind() == CastKind::CK_ArrayToPointerDecay);
+
+    LValue LV = CGF.EmitLValue(CE->getSubExpr());
+    Address Addr = LV.getAddress();
+    LayoutTy = llvm::ArrayType::get(
+        LayoutTy,
+        cast<llvm::ArrayType>(Addr.getElementType())->getNumElements());
+    auto *GEP = cast<StructuredGEPInst>(CGF.Builder.CreateStructuredGEP(
+        LayoutTy, Addr.emitRawPointer(CGF), Indices, "cbufferidx"));
+    Addr =
+        Address(GEP, GEP->getResultElementType(), RowAlignedSize, KnownNonNull);
+    return CGF.MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
+  }
+
+  Address Addr =
+      CGF.EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
   llvm::Value *GEP = CGF.Builder.CreateGEP(LayoutTy, Addr.emitRawPointer(CGF),
                                            Indices, "cbufferidx");
   Addr = Address(GEP, Addr.getElementType(), RowAlignedSize, KnownNonNull);
-
   return CGF.MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
+}
+
+std::optional<LValue>
+CGHLSLRuntime::emitResourceMemberExpr(CodeGenFunction &CGF,
+                                      const MemberExpr *ME) {
+  assert((ME->getType()->isHLSLResourceRecord() ||
+          ME->getType()->isHLSLResourceRecordArray()) &&
+         "expected resource member expression");
+
+  if (ME->getType()->isHLSLResourceRecordArray()) {
+    // FIXME: Handle member access of the whole array of resources
+    // (llvm/llvm-project#187087). Access to individual resource array elements
+    // is already handled in emitResourceArraySubscriptExpr.
+    return std::nullopt;
+  }
+
+  const VarDecl *ResourceVD =
+      findAssociatedResourceDeclForStruct(CGF.CGM.getContext(), ME);
+  if (!ResourceVD)
+    return std::nullopt;
+
+  GlobalVariable *ResGV =
+      cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(ResourceVD));
+  const DataLayout &DL = CGM.getDataLayout();
+  llvm::Type *Ty = ResGV->getValueType();
+  CharUnits Align = CharUnits::fromQuantity(DL.getABITypeAlign(Ty));
+  Address Addr = Address(ResGV, Ty, Align);
+  LValue LV = LValue::MakeAddr(Addr, ME->getType(), CGM.getContext(),
+                               LValueBaseInfo(AlignmentSource::Type),
+                               CGM.getTBAAAccessInfo(ME->getType()));
+  return LV;
 }
 
 namespace {
@@ -1558,10 +1754,7 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   auto *Field = dyn_cast<FieldDecl>(E->getMemberDecl());
   assert(Field && "Unexpected access into HLSL buffer");
 
-  // Get the field index for the struct.
   const RecordDecl *Rec = Field->getParent();
-  unsigned FieldIdx =
-      CGM.getTypes().getCGRecordLayout(Rec).getLLVMFieldNo(Field);
 
   // Work out the buffer layout type to index into.
   QualType RecType = CGM.getContext().getCanonicalTagType(Rec);
@@ -1573,15 +1766,36 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   llvm::StructType *LayoutTy = HLSLBufferLayoutBuilder(CGM).layOutStruct(
       RecType->getAsCanonical<RecordType>(), EmptyOffsets);
 
+  // Get the field index for the layout struct, accounting for padding.
+  unsigned FieldIdx =
+      CGM.getTypes().getCGRecordLayout(Rec).getLLVMFieldNo(Field);
+  assert(FieldIdx < LayoutTy->getNumElements() &&
+         "Layout struct is smaller than member struct");
+  unsigned Skipped = 0;
+  for (unsigned I = 0; I <= FieldIdx;) {
+    llvm::Type *ElementTy = LayoutTy->getElementType(I + Skipped);
+    if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(ElementTy))
+      ++Skipped;
+    else
+      ++I;
+  }
+  FieldIdx += Skipped;
+  assert(FieldIdx < LayoutTy->getNumElements() && "Access out of bounds");
+
   // Now index into the struct, making sure that the type we return is the
   // buffer layout type rather than the original type in the AST.
   QualType FieldType = Field->getType();
   llvm::Type *FieldLLVMTy = CGM.getTypes().ConvertTypeForMem(FieldType);
   CharUnits Align = CharUnits::fromQuantity(
       CGF.CGM.getDataLayout().getABITypeAlign(FieldLLVMTy));
-  Address Addr(CGF.Builder.CreateStructGEP(LayoutTy, Base.getPointer(CGF),
-                                           FieldIdx, Field->getName()),
-               FieldLLVMTy, Align, KnownNonNull);
+
+  Value *Ptr = CGF.getLangOpts().EmitLogicalPointer
+                   ? CGF.Builder.CreateStructuredGEP(
+                         LayoutTy, Base.getPointer(CGF),
+                         llvm::ConstantInt::get(CGM.IntTy, FieldIdx))
+                   : CGF.Builder.CreateStructGEP(LayoutTy, Base.getPointer(CGF),
+                                                 FieldIdx, Field->getName());
+  Address Addr(Ptr, FieldLLVMTy, Align, KnownNonNull);
 
   LValue LV = LValue::MakeAddr(Addr, FieldType, CGM.getContext(),
                                LValueBaseInfo(AlignmentSource::Type),

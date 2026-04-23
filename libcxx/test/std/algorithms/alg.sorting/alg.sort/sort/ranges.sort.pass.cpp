@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <concepts>
 #include <functional>
 #include <ranges>
@@ -187,8 +188,6 @@ constexpr bool test() {
     [[maybe_unused]] std::same_as<std::ranges::dangling> decltype(auto) result = std::ranges::sort(std::array{1, 2, 3});
   }
 
-  // TODO: Enable the tests once the implementation switched to use iter_move/iter_swap
-  /*
   { // ProxyIterator
     {
       std::array in = {2, 1, 3};
@@ -205,7 +204,6 @@ constexpr bool test() {
       assert((in == std::array{1, 2, 3}));
     }
   }
-  */
 
   return true;
 }

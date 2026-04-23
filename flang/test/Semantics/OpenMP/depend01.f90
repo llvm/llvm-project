@@ -29,6 +29,12 @@ program omp_depend
   print *, a(5:10), b
   !$omp end task
 
+  !ERROR: 'a' in DEPEND clause must have a positive stride
+  !ERROR: Stride of triplet must not be zero
+  !$omp task shared(a) depend(in: a(1:10:0))
+  print *, a(1:10)
+  !$omp end task
+
   !$omp end single
   !$omp end parallel
 

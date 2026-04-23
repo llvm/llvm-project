@@ -526,10 +526,13 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
     MachineBasicBlock::iterator InsertBefore, unsigned SubIdx,
     LiveInterval &DestLI, bool Late, SlotIndex Def, const MCInstrDesc &Desc) {
   bool FirstCopy = !Def.isValid();
-  MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
-      .addReg(ToReg, RegState::Define | getUndefRegState(FirstCopy)
-              | getInternalReadRegState(!FirstCopy), SubIdx)
-      .addReg(FromReg, 0, SubIdx);
+  MachineInstr *CopyMI =
+      BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
+          .addReg(ToReg,
+                  RegState::Define | getUndefRegState(FirstCopy) |
+                      getInternalReadRegState(!FirstCopy),
+                  SubIdx)
+          .addReg(FromReg, {}, SubIdx);
 
   CopyMI->setFlag(MachineInstr::LRSplit);
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
@@ -640,7 +643,15 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
     if (RM.OrigMI && TII.isAsCheapAsAMove(*RM.OrigMI) &&
         Edit->canRematerializeAt(RM, UseIdx)) {
       if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
-        SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
+        LaneBitmask UsedLanes = LaneBitmask::getAll();
+        if (OrigLI.hasSubRanges()) {
+          UsedLanes = LaneBitmask::getNone();
+          for (const LiveInterval::SubRange &SR : OrigLI.subranges())
+            if (SR.liveAt(UseIdx))
+              UsedLanes |= SR.LaneMask;
+        }
+        SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late, 0,
+                                              nullptr, UsedLanes);
         ++NumRemats;
         // Define the value in Reg.
         return defValue(RegIdx, ParentVNI, Def, false);

@@ -82,6 +82,7 @@ extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<uint32_t> InstrumentationSleepTime;
 extern cl::opt<bool> KeepNops;
+extern cl::opt<bool> LargeCodeModel;
 extern cl::opt<bool> Lite;
 extern cl::list<std::string> PrintOnly;
 extern cl::opt<std::string> PrintOnlyFile;
@@ -286,13 +287,23 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
-cl::bits<GadgetScannerKind> GadgetScannersToRun(
-    "scanners", cl::desc("which gadget scanners to run"),
+static cl::list<GadgetKindBitmask> GadgetScannersToRun(
+    "scanners", cl::desc("Which gadget scanners to run"),
     cl::values(
-        clEnumValN(GS_PACRET, "pacret",
-                   "pac-ret: return address protection (subset of \"pauth\")"),
-        clEnumValN(GS_PAUTH, "pauth", "All Pointer Authentication scanners"),
-        clEnumValN(GS_ALL, "all", "All implemented scanners")),
+        clEnumValN(GS_PTRAUTH_RETURN_TARGETS, "ptrauth-pac-ret",
+                   "Unprotected returns (pac-ret)"),
+        clEnumValN(GS_PTRAUTH_TAIL_CALLS, "ptrauth-tail-calls",
+                   "Tail calls performed with unprotected link register"),
+        clEnumValN(GS_PTRAUTH_BRANCH_AND_CALL_TARGETS, "ptrauth-forward-cf",
+                   "Unprotected calls and branches (forward control-flow)"),
+        clEnumValN(GS_PTRAUTH_SIGN_ORACLES, "ptrauth-sign-oracles",
+                   "Signing of untrusted pointers (signing oracles)"),
+        clEnumValN(GS_PTRAUTH_AUTH_ORACLES, "ptrauth-auth-oracles",
+                   "Authentication oracles"),
+
+        clEnumValN(GS_PTRAUTH_ALL_MASK, "ptrauth-all",
+                   "All Pointer Authentication scanners"),
+        clEnumValN(GS_ALL_MASK, "all", "All implemented scanners")),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 // Primary targets for hooking runtime library initialization hooking
@@ -364,8 +375,6 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 } // namespace bolt
 } // namespace llvm
 
-using ELF64LEPhdrTy = ELF64LEFile::Elf_Phdr;
-
 namespace {
 
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
@@ -395,16 +404,16 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     : InputFile(File), Argc(Argc), Argv(Argv), ToolPath(ToolPath),
       SHStrTab(StringTableBuilder::ELF) {
   ErrorAsOutParameter EAO(&Err);
-  auto ELF64LEFile = dyn_cast<ELF64LEObjectFile>(InputFile);
-  if (!ELF64LEFile) {
+  if (!isa<ELF64LEObjectFile>(InputFile) &&
+      !isa<ELF32LEObjectFile>(InputFile)) {
     Err = createStringError(errc::not_supported,
-                            "Only 64-bit LE ELF binaries are supported");
+                            "Only 32-bit and 64-bit LE ELF binaries "
+                            "are supported");
     return;
   }
 
   bool IsPIC = false;
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
-  if (Obj.getHeader().e_type != ELF::ET_EXEC) {
+  if (File->getEType() != ELF::ET_EXEC) {
     Stdout << "BOLT-INFO: shared object or position-independent executable "
               "detected\n";
     IsPIC = true;
@@ -539,13 +548,12 @@ static bool checkVMA(const typename ELFT::Phdr &Phdr,
   return false;
 }
 
-void RewriteInstance::markGnuRelroSections() {
-  using ELFT = ELF64LE;
+template <typename ELFT>
+void RewriteInstance::markGnuRelroSections(ELFObjectFile<ELFT> *ELFObjFile) {
   using ELFShdrTy = typename ELFObjectFile<ELFT>::Elf_Shdr;
-  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELFT> &Obj = ELF64LEFile->getELFFile();
+  const ELFFile<ELFT> &Obj = ELFObjFile->getELFFile();
 
-  auto handleSection = [&](const ELFT::Phdr &Phdr, SectionRef SecRef) {
+  auto handleSection = [&](const typename ELFT::Phdr &Phdr, SectionRef SecRef) {
     BinarySection *BinarySection = BC->getSectionForSectionRef(SecRef);
     // If the section is non-allocatable, ignore it for GNU_RELRO purposes:
     // it can't be made read-only after runtime relocations processing.
@@ -576,37 +584,39 @@ void RewriteInstance::markGnuRelroSections() {
                  << " as GNU_RELRO\n";
   };
 
-  for (const ELFT::Phdr &Phdr : cantFail(Obj.program_headers()))
+  for (const typename ELFT::Phdr &Phdr : cantFail(Obj.program_headers()))
     if (Phdr.p_type == ELF::PT_GNU_RELRO)
       for (SectionRef SecRef : InputFile->sections())
         handleSection(Phdr, SecRef);
 }
 
-Error RewriteInstance::discoverStorage() {
+template <typename ELFT>
+Error RewriteInstance::discoverStorage(ELFObjectFile<ELFT> *ELFObjFile) {
   NamedRegionTimer T("discoverStorage", "discover storage", TimerGroupName,
                      TimerGroupDesc, opts::TimeRewrite);
 
-  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
+  const ELFFile<ELFT> &Obj = ELFObjFile->getELFFile();
 
   BC->StartFunctionAddress = Obj.getHeader().e_entry;
 
   NextAvailableAddress = 0;
   uint64_t NextAvailableOffset = 0;
-  Expected<ELF64LE::PhdrRange> PHsOrErr = Obj.program_headers();
+  auto PHsOrErr = Obj.program_headers();
   if (Error E = PHsOrErr.takeError())
     return E;
 
-  ELF64LE::PhdrRange PHs = PHsOrErr.get();
-  for (const ELF64LE::Phdr &Phdr : PHs) {
+  auto PHs = PHsOrErr.get();
+  for (const typename ELFT::Phdr &Phdr : PHs) {
     switch (Phdr.p_type) {
     case ELF::PT_LOAD:
       BC->FirstAllocAddress = std::min(BC->FirstAllocAddress,
                                        static_cast<uint64_t>(Phdr.p_vaddr));
-      NextAvailableAddress = std::max(NextAvailableAddress,
-                                      Phdr.p_vaddr + Phdr.p_memsz);
-      NextAvailableOffset = std::max(NextAvailableOffset,
-                                     Phdr.p_offset + Phdr.p_filesz);
+      NextAvailableAddress =
+          std::max(NextAvailableAddress,
+                   static_cast<uint64_t>(Phdr.p_vaddr) + Phdr.p_memsz);
+      NextAvailableOffset =
+          std::max(NextAvailableOffset,
+                   static_cast<uint64_t>(Phdr.p_offset) + Phdr.p_filesz);
 
       BC->SegmentMapInfo[Phdr.p_vaddr] =
           SegmentInfo{Phdr.p_vaddr,
@@ -670,7 +680,7 @@ Error RewriteInstance::discoverStorage() {
     NextAvailableAddress = opts::CustomAllocationVMA;
     // Sanity check the user-supplied address and emit warnings if something
     // seems off.
-    for (const ELF64LE::Phdr &Phdr : PHs) {
+    for (const typename ELFT::Phdr &Phdr : PHs) {
       switch (Phdr.p_type) {
       case ELF::PT_LOAD:
         if (NextAvailableAddress >= Phdr.p_vaddr &&
@@ -733,8 +743,10 @@ Error RewriteInstance::discoverStorage() {
     if (opts::Instrument)
       Phnum += 2;
 
-    NextAvailableAddress += Phnum * sizeof(ELF64LEPhdrTy);
-    NextAvailableOffset += Phnum * sizeof(ELF64LEPhdrTy);
+    NextAvailableAddress +=
+        Phnum * sizeof(typename ELFObjectFile<ELFT>::Elf_Phdr);
+    NextAvailableOffset +=
+        Phnum * sizeof(typename ELFObjectFile<ELFT>::Elf_Phdr);
 
     // Align at cache line.
     NextAvailableAddress = alignTo(NextAvailableAddress, 64);
@@ -1041,7 +1053,7 @@ void RewriteInstance::discoverFileObjects() {
     /// a local if it has a "private global" prefix, e.g. ".L". Thus we have to
     /// change the prefix to enforce global scope of the symbol.
     std::string Name =
-        SymName.starts_with(BC->AsmInfo->getPrivateGlobalPrefix())
+        SymName.starts_with(BC->AsmInfo->getInternalSymbolPrefix())
             ? "PG" + std::string(SymName)
             : std::string(SymName);
 
@@ -1727,15 +1739,18 @@ void RewriteInstance::registerFragments() {
 
   // The first global symbol is identified by the symbol table sh_info value.
   // Used as local symbol search stopping point.
-  auto *ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
-  auto *SymTab = llvm::find_if(cantFail(Obj.sections()), [](const auto &Sec) {
-    return Sec.sh_type == ELF::SHT_SYMTAB;
-  });
-  assert(SymTab);
-  // Symtab sh_info contains the value one greater than the symbol table index
-  // of the last local symbol.
-  ELFSymbolRef LocalSymEnd = ELF64LEFile->toSymbolRef(SymTab, SymTab->sh_info);
+  auto getLocalSymEnd = [](auto *ELFFile) -> ELFSymbolRef {
+    const auto &Obj = ELFFile->getELFFile();
+    auto *SymTab = llvm::find_if(cantFail(Obj.sections()), [](const auto &Sec) {
+      return Sec.sh_type == ELF::SHT_SYMTAB;
+    });
+    assert(SymTab);
+    return ELFFile->toSymbolRef(SymTab, SymTab->sh_info);
+  };
+  ELFSymbolRef LocalSymEnd =
+      isa<ELF32LEObjectFile>(InputFile)
+          ? getLocalSymEnd(cast<ELF32LEObjectFile>(InputFile))
+          : getLocalSymEnd(cast<ELF64LEObjectFile>(InputFile));
 
   for (auto &Fragment : AmbiguousFragments) {
     const StringRef &ParentName = Fragment.first;
@@ -2196,6 +2211,19 @@ Error RewriteInstance::readSpecialSections() {
     check_error(SectionNameOrErr.takeError(), "cannot get section name");
     StringRef SectionName = *SectionNameOrErr;
 
+    // Detect a debug section and check if it's compressed.
+    // Compressed debug sections currently aren't supported.
+    if (isDebugSection(SectionName)) {
+      HasDebugInfo = true;
+      if (opts::UpdateDebugSections && isCompressedDebugSection(Section)) {
+        return createStringError(errc::not_supported,
+                                 Twine("compressed debug section '") +
+                                     SectionName +
+                                     "' detected. --update-debug-sections "
+                                     "requires uncompressed debug info");
+      }
+    }
+
     if (Error E = Section.getContents().takeError())
       return E;
     BC->registerSection(Section);
@@ -2204,8 +2232,6 @@ Error RewriteInstance::readSpecialSections() {
                << Twine::utohexstr(Section.getAddress()) << ":0x"
                << Twine::utohexstr(Section.getAddress() + Section.getSize())
                << "\n");
-    if (isDebugSection(SectionName))
-      HasDebugInfo = true;
   }
 
   // Set IsRelro section attribute based on PT_GNU_RELRO segment.
@@ -2214,6 +2240,13 @@ Error RewriteInstance::readSpecialSections() {
   if (HasDebugInfo && !opts::UpdateDebugSections && !opts::AggregateOnly) {
     BC->errs() << "BOLT-WARNING: debug info will be stripped from the binary. "
                   "Use -update-debug-sections to keep it.\n";
+  }
+
+  if (opts::LargeCodeModel.getNumOccurrences() == 0 && !BC->UseLargeCodeModel &&
+      BC->getUniqueSectionByName(".ltext")) {
+    BC->outs() << "BOLT-INFO: .ltext detected - enabling large code model\n";
+    BC->UseLargeCodeModel = true;
+    BC->updateLSDAEncoding();
   }
 
   HasTextRelocations = (bool)BC->getUniqueSectionByName(
@@ -2448,6 +2481,8 @@ int64_t getRelocationAddend(const ELFObjectFile<ELFT> *Obj,
 
 int64_t getRelocationAddend(const ELFObjectFileBase *Obj,
                             const RelocationRef &Rel) {
+  if (auto *ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj))
+    return getRelocationAddend(ELF32LE, Rel);
   return getRelocationAddend(cast<ELF64LEObjectFile>(Obj), Rel);
 }
 
@@ -2475,6 +2510,8 @@ uint32_t getRelocationSymbol(const ELFObjectFile<ELFT> *Obj,
 
 uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
                              const RelocationRef &Rel) {
+  if (auto *ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj))
+    return getRelocationSymbol(ELF32LE, Rel);
   return getRelocationSymbol(cast<ELF64LEObjectFile>(Obj), Rel);
 }
 } // anonymous namespace
@@ -2771,8 +2808,7 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
   auto ExtractAddendValue = [&](uint64_t Address) -> uint64_t {
     ErrorOr<BinarySection &> Section = BC->getSectionForAddress(Address);
     assert(Section && "cannot get section for data address from RELR");
-    DataExtractor DE = DataExtractor(Section->getContents(),
-                                     BC->AsmInfo->isLittleEndian(), PSize);
+    DataExtractor DE(Section->getContents(), BC->AsmInfo->isLittleEndian());
     uint64_t Offset = Address - Section->getAddress();
     return DE.getUnsigned(&Offset, PSize);
   };
@@ -2785,8 +2821,7 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
     BC->addDynamicRelocation(Address, nullptr, RType, Addend);
   };
 
-  DataExtractor DE = DataExtractor(Section.getContents(),
-                                   BC->AsmInfo->isLittleEndian(), PSize);
+  DataExtractor DE(Section.getContents(), BC->AsmInfo->isLittleEndian());
   uint64_t Offset = 0, Address = 0;
   uint64_t RelrCount = DynamicRelrSize / DynamicRelrEntrySize;
   while (RelrCount--) {
@@ -3136,10 +3171,11 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
         ReferencedSymbol = nullptr;
         ExtractedValue = Address;
       } else if (RefFunctionOffset) {
-        if (ContainingBF && ContainingBF != ReferencedBF &&
-            !ReferencedBF->isInConstantIsland(Address)) {
+        if (ContainingBF && ContainingBF != ReferencedBF) {
           ReferencedSymbol =
-              ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
+              ReferencedBF->isInConstantIsland(Address)
+                  ? ReferencedBF->getOrCreateIslandAccess(Address)
+                  : ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
         } else {
           ReferencedSymbol = ReferencedBF->getOrCreateLocalLabel(Address);
 
@@ -3230,7 +3266,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
           Name = SymbolName;
         } else {
           if (StringRef(SymbolName)
-                  .starts_with(BC->AsmInfo->getPrivateGlobalPrefix()))
+                  .starts_with(BC->AsmInfo->getInternalSymbolPrefix()))
             Name = NR.uniquify("PG" + SymbolName);
           else
             Name = NR.uniquify(SymbolName);
@@ -3856,20 +3892,21 @@ void RewriteInstance::runBinaryAnalyses() {
   BinaryFunctionPassManager Manager(*BC);
   // FIXME: add a pass that warns about which functions do not have CFG,
   // and therefore, analysis is most likely to be less accurate.
-  using GSK = opts::GadgetScannerKind;
-  using PAuthScanner = PAuthGadgetScanner::Analysis;
+  using PtrAuthScanner = PAuthGadgetScanner::Analysis;
+
+  // Accumulate all enabled analyses.
+  decltype(~opts::GS_ALL_MASK) EnabledAnalyses = 0;
+  for (auto NamedOptionSubmask : opts::GadgetScannersToRun)
+    EnabledAnalyses |= NamedOptionSubmask;
 
   // If no command line option was given, act as if "all" was specified.
-  bool RunAll = !opts::GadgetScannersToRun.getBits() ||
-                opts::GadgetScannersToRun.isSet(GSK::GS_ALL);
+  if (opts::GadgetScannersToRun.empty())
+    EnabledAnalyses = opts::GS_ALL_MASK;
 
-  if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PAUTH)) {
-    Manager.registerPass(
-        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/false));
-  } else if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PACRET)) {
-    Manager.registerPass(
-        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/true));
-  }
+  const auto PtrAuthAnalyses = static_cast<opts::GadgetKindBitmask>(
+      EnabledAnalyses & opts::GS_PTRAUTH_ALL_MASK);
+  if (PtrAuthAnalyses)
+    Manager.registerPass(std::make_unique<PtrAuthScanner>(PtrAuthAnalyses));
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
 }
@@ -4071,6 +4108,9 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
       CodeSections.emplace_back(&Section);
 
   auto compareSections = [&](const BinarySection *A, const BinarySection *B) {
+    if (A == B)
+      return false;
+
     // If both A and B have names starting with ".text.cold", then
     // - if opts::HotFunctionsAtEnd is true, we want order
     //   ".text.cold.T", ".text.cold.T-1", ... ".text.cold.1", ".text.cold"
@@ -4536,14 +4576,16 @@ void RewriteInstance::updateSegmentInfo() {
   }
 }
 
-void RewriteInstance::patchELFPHDRTable() {
-  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
+template <typename ELFT>
+void RewriteInstance::patchELFPHDRTable(ELFObjectFile<ELFT> *File) {
+  using PhdrTy = typename ELFT::Phdr;
+
+  const ELFFile<ELFT> &Obj = File->getELFFile();
   raw_fd_ostream &OS = Out->os();
 
   Phnum = Obj.getHeader().e_phnum;
 
-  if (BC->NewSegments.empty()) {
+  if (BC->NewSegments.empty() && BC->BOLTReserved.empty()) {
     BC->outs() << "BOLT-INFO: not adding new segments\n";
     return;
   }
@@ -4565,7 +4607,7 @@ void RewriteInstance::patchELFPHDRTable() {
   OS.seek(PHDRTableOffset);
 
   auto createPhdr = [](const SegmentInfo &SI) {
-    ELF64LEPhdrTy Phdr;
+    PhdrTy Phdr;
     Phdr.p_type = ELF::PT_LOAD;
     Phdr.p_offset = SI.FileOffset;
     Phdr.p_vaddr = SI.Address;
@@ -4582,27 +4624,29 @@ void RewriteInstance::patchELFPHDRTable() {
     return Phdr;
   };
 
-  auto writeNewSegmentPhdrs = [&]() {
-    for (const SegmentInfo &SI : BC->NewSegments) {
-      ELF64LEPhdrTy Phdr = createPhdr(SI);
-      OS.write(reinterpret_cast<const char *>(&Phdr), sizeof(Phdr));
-    }
-  };
+  // Collect modified program headers, then insert new PT_LOAD segments
+  // right after existing PT_LOAD segments to maintain ascending p_vaddr
+  // order required by the ELF specification.
+  SmallVector<PhdrTy, 16> Phdrs;
 
-  bool ModdedGnuStack = false;
-  bool AddedSegment = false;
-
-  // Copy existing program headers with modifications.
-  for (const ELF64LE::Phdr &Phdr : cantFail(Obj.program_headers())) {
-    ELF64LE::Phdr NewPhdr = Phdr;
+  bool SkippedGnuStack = false;
+  for (const PhdrTy &Phdr : cantFail(Obj.program_headers())) {
+    PhdrTy NewPhdr = Phdr;
     switch (Phdr.p_type) {
+    case ELF::PT_LOAD: {
+      // Mark segment as executable if it contains BOLTReserved space.
+      AddressRange Seg(Phdr.p_vaddr, Phdr.p_vaddr + Phdr.p_memsz);
+      if (!BC->BOLTReserved.empty() && Seg.contains(BC->BOLTReserved))
+        NewPhdr.p_flags |= ELF::PF_X;
+      break;
+    }
     case ELF::PT_PHDR:
       if (PHDRTableAddress) {
         NewPhdr.p_offset = PHDRTableOffset;
         NewPhdr.p_vaddr = PHDRTableAddress;
         NewPhdr.p_paddr = PHDRTableAddress;
-        NewPhdr.p_filesz = sizeof(NewPhdr) * Phnum;
-        NewPhdr.p_memsz = sizeof(NewPhdr) * Phnum;
+        NewPhdr.p_filesz = sizeof(PhdrTy) * Phnum;
+        NewPhdr.p_memsz = sizeof(PhdrTy) * Phnum;
       }
       break;
     case ELF::PT_GNU_EH_FRAME: {
@@ -4620,34 +4664,33 @@ void RewriteInstance::patchELFPHDRTable() {
     }
     case ELF::PT_GNU_STACK:
       if (opts::UseGnuStack) {
-        // Overwrite the header with the new segment header.
         assert(BC->NewSegments.size() == 1 &&
                "Expected exactly one new segment");
-        NewPhdr = createPhdr(BC->NewSegments.front());
-        ModdedGnuStack = true;
-      }
-      break;
-    case ELF::PT_DYNAMIC:
-      if (!opts::UseGnuStack) {
-        // Insert new headers before DYNAMIC.
-        writeNewSegmentPhdrs();
-        AddedSegment = true;
+        SkippedGnuStack = true;
+        continue; // Remove; new PT_LOAD will be added after existing ones.
       }
       break;
     }
-    OS.write(reinterpret_cast<const char *>(&NewPhdr), sizeof(NewPhdr));
+    Phdrs.push_back(NewPhdr);
   }
 
-  if (!opts::UseGnuStack && !AddedSegment) {
-    // Append new headers to the end of the table.
-    writeNewSegmentPhdrs();
-  }
-
-  if (opts::UseGnuStack && !ModdedGnuStack) {
+  if (opts::UseGnuStack && !SkippedGnuStack) {
     BC->errs()
         << "BOLT-ERROR: could not find PT_GNU_STACK program header to modify\n";
     exit(1);
   }
+
+  // Insert new PT_LOAD segments right after the last existing PT_LOAD to
+  // maintain ascending p_vaddr order.
+  auto LastPTLoad = llvm::find_if(
+      reverse(Phdrs), [](const PhdrTy &P) { return P.p_type == ELF::PT_LOAD; });
+  assert(LastPTLoad != Phdrs.rend() && "No existing PT_LOAD found");
+  auto InsertPos = LastPTLoad.base();
+  for (const SegmentInfo &SI : BC->NewSegments)
+    InsertPos = std::next(Phdrs.insert(InsertPos, createPhdr(SI)));
+
+  OS.write(reinterpret_cast<const char *>(Phdrs.data()),
+           sizeof(PhdrTy) * Phdrs.size());
 
   OS.seek(SavedPos);
 }
@@ -4670,9 +4713,11 @@ uint64_t appendPadding(raw_pwrite_stream &OS, uint64_t Offset,
 
 }
 
-void RewriteInstance::rewriteNoteSections() {
-  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
+template <typename ELFT>
+void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
+  using ShdrTy = typename ELFT::Shdr;
+
+  const ELFFile<ELFT> &Obj = File->getELFFile();
   raw_fd_ostream &OS = Out->os();
 
   uint64_t NextAvailableOffset = std::max(
@@ -4680,13 +4725,13 @@ void RewriteInstance::rewriteNoteSections() {
   OS.seek(NextAvailableOffset);
 
   // Copy over non-allocatable section contents and update file offsets.
-  for (const ELF64LE::Shdr &Section : cantFail(Obj.sections())) {
+  for (const ShdrTy &Section : cantFail(Obj.sections())) {
     if (Section.sh_type == ELF::SHT_NULL)
       continue;
     if (Section.sh_flags & ELF::SHF_ALLOC)
       continue;
 
-    SectionRef SecRef = ELF64LEFile->toSectionRef(&Section);
+    SectionRef SecRef = File->toSectionRef(&Section);
     BinarySection *BSec = BC->getSectionForSectionRef(SecRef);
     assert(BSec && !BSec->isAllocatable() &&
            "Matching non-allocatable BinarySection should exist.");
@@ -5161,9 +5206,7 @@ void RewriteInstance::updateELFSymbolTable(
   auto addExtraSymbols = [&](const BinaryFunction &Function,
                              const ELFSymTy &FunctionSymbol) {
     if (Function.isFolded()) {
-      BinaryFunction *ICFParent = Function.getFoldedIntoFunction();
-      while (ICFParent->isFolded())
-        ICFParent = ICFParent->getFoldedIntoFunction();
+      const BinaryFunction *ICFParent = Function.getFoldedIntoFunction();
       ELFSymTy ICFSymbol = FunctionSymbol;
       SmallVector<char, 256> Buf;
       ICFSymbol.st_name =
@@ -5275,6 +5318,12 @@ void RewriteInstance::updateELFSymbolTable(
 
     const BinaryFunction *Function =
         BC->getBinaryFunctionAtAddress(Symbol.st_value);
+    // In relocation mode, if this is a folded function, use the parent function
+    // instead so that the symbol gets updated to the parent's output address.
+    // In non-relocation mode, folded functions are emitted at their original
+    // location, so we keep the original function reference.
+    if (BC->HasRelocations && Function && Function->isFolded())
+      Function = Function->getFoldedIntoFunction();
     // Ignore false function references, e.g. when the section address matches
     // the address of the function.
     if (Function && Symbol.getType() == ELF::STT_SECTION)
@@ -5345,19 +5394,36 @@ void RewriteInstance::updateELFSymbolTable(
     } else {
       // Check if the function symbol matches address inside a function, i.e.
       // it marks a secondary entry point.
+      // Also look up local NOTYPE symbols inside functions so we can
+      // update their addresses to reflect the output layout.
+      // Skip AArch64/RISC-V marker symbols ($d, $x) inside functions —
+      // BOLT generates its own via addExtraSymbols.
+      auto IsMarkerSymbol = [&]() {
+        return BC->getMarkerType(Symbol.getType(), Symbol.st_size,
+                                 *SymbolName) != MarkerSymType::NONE;
+      };
+      const bool IsLocalLabel = Symbol.getType() == ELF::STT_NOTYPE &&
+                                Symbol.getBinding() == ELF::STB_LOCAL &&
+                                Symbol.st_size == 0 && !IsMarkerSymbol();
       Function =
-          (Symbol.getType() == ELF::STT_FUNC)
+          (Symbol.getType() == ELF::STT_FUNC || IsLocalLabel)
               ? BC->getBinaryFunctionContainingAddress(Symbol.st_value,
                                                        /*CheckPastEnd=*/false,
                                                        /*UseMaxSize=*/true)
               : nullptr;
 
+      assert((!Function || !IsLocalLabel || !Function->isFolded()) &&
+             "Local label inside ICF-folded function");
+
       if (Function && Function->isEmitted()) {
-        assert(Function->getLayout().isHotColdSplit() &&
-               "Adding symbols based on cold fragment when there are more than "
-               "2 fragments");
         const uint64_t OutputAddress =
             Function->translateInputToOutputAddress(Symbol.st_value);
+
+        // Remove symbols that cannot be mapped to the output, e.g.
+        // data-in-code labels (jump tables) whose addresses BOLT
+        // does not track.
+        if (!OutputAddress)
+          continue;
 
         NewSymbol.st_value = OutputAddress;
         // Force secondary entry points to have zero size.
@@ -5407,19 +5473,14 @@ void RewriteInstance::updateELFSymbolTable(
             NewSymbol.st_shndx = getNewSectionIndex(Symbol.st_shndx);
         }
 
-        // Detect local syms in the text section that we didn't update
-        // and that were preserved by the linker to support relocations against
-        // .text. Remove them from the symtab.
-        if (Symbol.getType() == ELF::STT_NOTYPE &&
-            Symbol.getBinding() == ELF::STB_LOCAL && Symbol.st_size == 0) {
-          if (BC->getBinaryFunctionContainingAddress(Symbol.st_value,
-                                                     /*CheckPastEnd=*/false,
-                                                     /*UseMaxSize=*/true)) {
-            // Can only delete the symbol if not patching. Such symbols should
-            // not exist in the dynamic symbol table.
-            assert(!IsDynSym && "cannot delete symbol");
-            continue;
-          }
+        // Drop AArch64/RISC-V marker symbols ($d, $x) inside functions —
+        // BOLT generates its own via addExtraSymbols.
+        if (IsMarkerSymbol() &&
+            BC->getBinaryFunctionContainingAddress(Symbol.st_value,
+                                                   /*CheckPastEnd=*/false,
+                                                   /*UseMaxSize=*/true)) {
+          assert(!IsDynSym && "cannot delete symbol");
+          continue;
         }
       }
     }
@@ -6075,6 +6136,11 @@ uint64_t RewriteInstance::getNewFunctionAddress(uint64_t OldAddress) {
   if (!Function)
     return 0;
 
+  // If this function was folded, its output address is 0 since it wasn't
+  // emitted. Get the parent function's address.
+  if (Function->isFolded())
+    Function = Function->getFoldedIntoFunction();
+
   return Function->getOutputAddress();
 }
 
@@ -6108,18 +6174,7 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
   return 0;
 }
 
-void RewriteInstance::rewriteFile() {
-  std::error_code EC;
-  Out = std::make_unique<ToolOutputFile>(opts::OutputFilename, EC,
-                                         sys::fs::OF_None);
-  check_error(EC, "cannot create output executable file");
-
-  raw_fd_ostream &OS = Out->os();
-
-  // Copy allocatable part of the input.
-  OS << InputFile->getData().substr(0, FirstNonAllocatableOffset);
-
-  auto Streamer = BC->createStreamer(OS);
+void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
   // Make sure output stream has enough reserved space, otherwise
   // pwrite() will fail.
   uint64_t Offset = std::max(getFileOffsetForAddress(NextAvailableAddress),
@@ -6127,9 +6182,6 @@ void RewriteInstance::rewriteFile() {
   Offset = OS.seek(Offset);
   assert((Offset != (uint64_t)-1) && "Error resizing output file");
 
-  // Overwrite functions with fixed output address. This is mostly used by
-  // non-relocation mode, with one exception: injected functions are covered
-  // here in both modes.
   uint64_t CountOverwrittenFunctions = 0;
   uint64_t OverwrittenScore = 0;
   for (BinaryFunction *Function : BC->getAllBinaryFunctions()) {
@@ -6205,6 +6257,20 @@ void RewriteInstance::rewriteFile() {
                     "this binary\n";
     }
   }
+}
+
+void RewriteInstance::rewriteFile() {
+  std::error_code EC;
+  Out = std::make_unique<ToolOutputFile>(opts::OutputFilename, EC,
+                                         sys::fs::OF_None);
+  check_error(EC, "cannot create output executable file");
+
+  raw_fd_ostream &OS = Out->os();
+
+  // Copy allocatable part of the input.
+  OS << InputFile->getData().substr(0, FirstNonAllocatableOffset);
+
+  rewriteFunctionsInPlace(OS);
 
   if (BC->HasRelocations && opts::TrapOldCode) {
     uint64_t SavedPos = OS.tell();
@@ -6299,6 +6365,13 @@ void RewriteInstance::rewriteFile() {
     BC->printSections(BC->outs());
   }
 
+  if (OS.has_error()) {
+    BC->errs() << "BOLT-ERROR: failed to write output file '"
+               << opts::OutputFilename << "': " << OS.error().message() << "\n";
+    OS.clear_error();
+    exit(1);
+  }
+
   Out->keep();
   EC = sys::fs::setPermissions(
       opts::OutputFilename,
@@ -6362,6 +6435,7 @@ void RewriteInstance::writeEHFrameHeader() {
 
   // If there was not enough space, allocate more memory for .eh_frame_hdr.
   if (!OldEHFrameHdrSection) {
+    Out->os().seek(getFileOffsetForAddress(NextAvailableAddress));
     NextAvailableAddress =
         appendPadding(Out->os(), NextAvailableAddress, EHFrameHdrAlign);
 
@@ -6463,4 +6537,8 @@ bool RewriteInstance::isDebugSection(StringRef SectionName) {
     return true;
 
   return false;
+}
+
+bool RewriteInstance::isCompressedDebugSection(const SectionRef &Section) {
+  return (ELFSectionRef(Section).getFlags() & ELF::SHF_COMPRESSED) != 0;
 }

@@ -236,8 +236,13 @@ getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
         if (Ref.Qualifier || Ref.Targets.empty() || Ref.NameLoc.isMacroID())
           return;
         // Only qualify return type and function name.
-        if (Ref.NameLoc != FD->getReturnTypeSourceRange().getBegin() &&
-            Ref.NameLoc != FD->getLocation())
+        if (auto ReturnTypeRange = FD->getReturnTypeSourceRange();
+            Ref.NameLoc != FD->getLocation() &&
+            (ReturnTypeRange.isInvalid() ||
+             SM.isBeforeInTranslationUnit(Ref.NameLoc,
+                                          ReturnTypeRange.getBegin()) ||
+             SM.isBeforeInTranslationUnit(ReturnTypeRange.getEnd(),
+                                          Ref.NameLoc)))
           return;
 
         for (const NamedDecl *ND : Ref.Targets) {

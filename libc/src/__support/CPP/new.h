@@ -12,6 +12,7 @@
 #include "hdr/func/free.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/macro-utils.h"
 #include "src/__support/macros/properties/compiler.h"
 
 #include <stddef.h> // For size_t
@@ -54,7 +55,7 @@ LIBC_INLINE void *operator new[](size_t, void *p) { return p; }
 
 #ifndef LIBC_COMPILER_IS_MSVC
 #define DELETE_NAME(name)                                                      \
-  __asm__(LIBC_MACRO_TO_STRING(LIBC_NAMESPACE) "_" LIBC_MACRO_TO_STRING(name))
+  __asm__(LLVM_LIBC_STRINGIFY(LIBC_NAMESPACE) "_" LLVM_LIBC_STRINGIFY(name))
 #else
 #define DELETE_NAME(name)
 #endif // LIBC_COMPILER_IS_MSVC

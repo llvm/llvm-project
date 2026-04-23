@@ -430,7 +430,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
 
 Status PlatformWindows::UnloadImage(Process *process, uint32_t image_token) {
   const addr_t address = process->GetImagePtrFromToken(image_token);
-  if (address == LLDB_INVALID_IMAGE_TOKEN)
+  if (address == LLDB_INVALID_ADDRESS)
     return Status::FromErrorString("invalid image token");
 
   StreamString expression;
@@ -522,9 +522,9 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     return nullptr;
   error = process_sp->Launch(launch_info);
 #ifdef _WIN32
-  if (error.Success())
-    process_sp->SetPseudoConsoleHandle(launch_info.GetPTYSP());
-  else {
+  if (error.Success()) {
+    process_sp->SetPseudoConsoleHandle();
+  } else {
     Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
               error.AsCString());

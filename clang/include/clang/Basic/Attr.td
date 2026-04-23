@@ -146,6 +146,12 @@ def HLSLInputBuiltin
                            S->getType().isConstQualified()}],
                     "static const globals">;
 
+def HLSLOutputBuiltin
+    : SubsetSubject<Var, [{S->hasGlobalStorage() &&
+                           S->getStorageClass() == StorageClass::SC_Static &&
+                           !S->getType().isConstQualified()}],
+                    "non-const static globals">;
+
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
 
@@ -278,7 +284,8 @@ class VariadicParamOrParamIdxArgument<string name> : Argument<name, 1>;
 class ParamIdxArgument<string name, bit opt = 0> : Argument<name, opt>;
 
 // A version of the form major.minor[.subminor].
-class VersionArgument<string name, bit opt = 0> : Argument<name, opt>;
+class VersionArgument<string name, bit opt = 0, bit fake = 0>
+    : Argument<name, opt, fake>;
 
 // This one's a doozy, so it gets its own special type
 // It can be an unsigned integer, or a type. Either can
@@ -334,7 +341,10 @@ class VariadicEnumArgument<string name, string type, bit is_string,
 }
 
 // Represents an attribute wrapped by another attribute.
-class WrappedAttr<string name, bit opt = 0> : Argument<name, opt>;
+class WrappedAttr<string name, bit opt = 0, string type = ""> : Argument<name, opt> {
+  // C++ class name for the wrapped attr (without the ' *' suffix).
+  string AttrType = type;
+}
 
 // This handles one spelling of an attribute.
 class Spelling<string name, string variety, int version = 1> {
@@ -476,7 +486,7 @@ def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetM68k : TargetArch<["m68k"]>;
-def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
+def TargetRISCV : TargetArch<["riscv32", "riscv64", "riscv32be", "riscv64be"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetX86_64 : TargetArch<["x86_64"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
@@ -852,7 +862,7 @@ def AbiTag : Attr {
 def AddressSpace : TypeAttr {
   let Spellings = [Clang<"address_space">];
   let Args = [IntArgument<"AddressSpace">];
-  let Documentation = [Undocumented];
+  let Documentation = [AddressSpaceDocs];
 }
 
 def Alias : Attr {
@@ -927,9 +937,15 @@ def AlignNatural : InheritableAttr {
 
 def AlwaysInline : DeclOrStmtAttr {
   let Spellings = [GCC<"always_inline">, CXX11<"clang", "always_inline">,
-                   C23<"clang", "always_inline">, CustomKeyword<"__forceinline">];
+                   C23<"clang", "always_inline">, CustomKeyword<"__forceinline">,
+                   CXX11<"msvc", "forceinline">, C23<"msvc", "forceinline">,
+                   CXX11<"msvc", "forceinline_calls">, C23<"msvc", "forceinline_calls">];
   let Accessors = [Accessor<"isClangAlwaysInline", [CXX11<"clang", "always_inline">,
-                                                    C23<"clang", "always_inline">]>];
+                                                    C23<"clang", "always_inline">]>,
+                   Accessor<"isMSVCForceInline", [CXX11<"msvc", "forceinline">,
+                                                  C23<"msvc", "forceinline">]>,
+                   Accessor<"isMSVCForceInlineCalls", [CXX11<"msvc", "forceinline_calls">,
+                                                       C23<"msvc", "forceinline_calls">]>];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
   let Documentation = [AlwaysInlineDocs];
@@ -969,9 +985,10 @@ def XRayLogArgs : InheritableAttr {
 
 def PatchableFunctionEntry
     : InheritableAttr,
-      TargetSpecificAttr<TargetArch<
-          ["aarch64", "aarch64_be", "loongarch32", "loongarch64", "riscv32",
-           "riscv64", "x86", "x86_64", "ppc", "ppc64", "ppc64le"]>> {
+      TargetSpecificAttr<
+          TargetArch<["aarch64", "aarch64_be", "loongarch32", "loongarch64",
+                      "riscv32", "riscv64", "x86", "x86_64", "ppc", "ppc64",
+                      "ppc64le", "systemz"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>,
@@ -1093,7 +1110,8 @@ def Availability : InheritableAttr {
               VersionArgument<"deprecated">, VersionArgument<"obsoleted">,
               BoolArgument<"unavailable">, StringArgument<"message">,
               BoolArgument<"strict">, StringArgument<"replacement">,
-              IntArgument<"priority">, IdentifierArgument<"environment">];
+              IntArgument<"priority">, IdentifierArgument<"environment">,
+              WrappedAttr<"InferredAttr", 1, "AvailabilityAttr">];
   let AdditionalMembers =
 [{static llvm::StringRef getPrettyPlatformName(llvm::StringRef Platform) {
     return llvm::StringSwitch<llvm::StringRef>(Platform)
@@ -1112,6 +1130,7 @@ def Availability : InheritableAttr {
              .Case("maccatalyst_app_extension", "macCatalyst (App Extension)")
              .Case("xros", "visionOS")
              .Case("xros_app_extension", "visionOS (App Extension)")
+             .Case("anyappleos", "any Apple OS")
              .Case("swift", "Swift")
              .Case("shadermodel", "Shader Model")
              .Case("ohos", "OpenHarmony OS")
@@ -1131,6 +1150,7 @@ static llvm::StringRef getPlatformNameSourceSpelling(llvm::StringRef Platform) {
              .Case("maccatalyst_app_extension", "macCatalystApplicationExtension")
              .Case("xros", "visionOS")
              .Case("xros_app_extension", "visionOSApplicationExtension")
+             .Case("anyappleos", "anyAppleOS")
              .Case("zos", "z/OS")
              .Case("shadermodel", "ShaderModel")
              .Default(Platform);
@@ -1153,6 +1173,7 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("visionOSApplicationExtension", "xros_app_extension")
              .Case("visionos", "xros")
              .Case("visionos_app_extension", "xros_app_extension")
+             .Case("anyAppleOS", "anyappleos")
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 }
@@ -1184,6 +1205,8 @@ static std::vector<llvm::StringRef> equivalentPlatformNames(llvm::StringRef Plat
              .Case("xros_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
              .Case("visionOSApplicationExtension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
              .Case("visionos_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
+             .Case("anyappleos", {"anyappleos", "anyAppleOS"})
+             .Case("anyAppleOS", {"anyappleos", "anyAppleOS"})
              .Default({Platform});
 }
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
@@ -1224,6 +1247,20 @@ static llvm::Triple::OSType getOSType(llvm::StringRef Platform) {
              .Case("xros", OSType::XROS)
              .Case("xros_app_extension", OSType::XROS)
              .Default(OSType::UnknownOS);
+}
+
+const AvailabilityAttr *getEffectiveAttr() const {
+  if (auto *Inf = getInferredAttrAs())
+    return Inf;
+  return this;
+}
+AvailabilityAttr *getEffectiveAttr() {
+  return const_cast<AvailabilityAttr *>(
+      static_cast<const AvailabilityAttr *>(this)->getEffectiveAttr());
+}
+VersionTuple getEffectiveIntroduced() const { return getEffectiveAttr()->getIntroduced(); }
+const IdentifierInfo *getEffectiveEnvironment() const {
+  return getEffectiveAttr()->getEnvironment();
 }
 
 }];
@@ -2370,6 +2407,13 @@ def NoInline : DeclOrStmtAttr {
   let SimpleHandler = 1;
 }
 
+def NoOutline : DeclOrStmtAttr {
+  let Spellings = [Clang<"no_outline">];
+  let Subjects = SubjectList<[Function, ObjCMethod, Block], ErrorDiag>;
+  let Documentation = [NoOutlineDocs];
+  let SimpleHandler = true;
+}
+
 def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"nomips16">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
@@ -2629,6 +2673,19 @@ def CountedByOrNull : DeclOrTypeAttr {
   let LangOpts = [COnly];
 }
 
+def NoFieldProtection : DeclOrTypeAttr {
+  let Spellings = [Clang<"no_field_protection">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def PointerFieldProtection : DeclOrTypeAttr {
+  let Spellings = [Clang<"pointer_field_protection">];
+  let Subjects = SubjectList<[CXXRecord], ErrorDiag>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}
+
 def SizedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"sized_by">];
   let Subjects = SubjectList<[Field], ErrorDiag>;
@@ -2722,6 +2779,13 @@ def NoStackProtector : InheritableAttr {
                    C23<"gnu", "no_stack_protector">, Declspec<"safebuffers">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [NoStackProtectorDocs];
+  let SimpleHandler = 1;
+}
+
+def StackProtectorIgnore : InheritableAttr {
+  let Spellings = [Clang<"stack_protector_ignore">];
+  let Subjects = SubjectList<[LocalVar]>;
+  let Documentation = [StackProtectorIgnoreDocs];
   let SimpleHandler = 1;
 }
 
@@ -3260,6 +3324,7 @@ def InitPriority : InheritableAttr, TargetSpecificAttr<TargetSupportsInitPriorit
   let Args = [UnsignedArgument<"Priority">];
   let Subjects = SubjectList<[Var], ErrorDiag>;
   let Documentation = [InitPriorityDocs];
+  let IsTypeDependent = 1;
 }
 
 def Section : InheritableAttr {
@@ -4126,7 +4191,7 @@ def NoThreadSafetyAnalysis : InheritableAttr {
 
 def GuardedBy : InheritableAttr {
   let Spellings = [GNU<"guarded_by">];
-  let Args = [ExprArgument<"Arg">];
+  let Args = [VariadicExprArgument<"Args">];
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -4137,7 +4202,7 @@ def GuardedBy : InheritableAttr {
 
 def PtGuardedBy : InheritableAttr {
   let Spellings = [GNU<"pt_guarded_by">];
-  let Args = [ExprArgument<"Arg">];
+  let Args = [VariadicExprArgument<"Args">];
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -4545,11 +4610,11 @@ def LoopHint : Attr {
                           ["vectorize", "vectorize_width", "interleave", "interleave_count",
                            "unroll", "unroll_count", "unroll_and_jam", "unroll_and_jam_count",
                            "pipeline", "pipeline_initiation_interval", "distribute",
-                           "vectorize_predicate"],
+                           "vectorize_predicate", "licm"],
                           ["Vectorize", "VectorizeWidth", "Interleave", "InterleaveCount",
                            "Unroll", "UnrollCount", "UnrollAndJam", "UnrollAndJamCount",
                            "PipelineDisabled", "PipelineInitiationInterval", "Distribute",
-                           "VectorizePredicate"]>,
+                           "VectorizePredicate", "LICMDisabled"]>,
               EnumArgument<"State", "LoopHintState", /*is_string=*/false,
                            ["enable", "disable", "numeric", "fixed_width",
                             "scalable_width", "assume_safety", "full"],
@@ -4572,6 +4637,7 @@ def LoopHint : Attr {
     case PipelineInitiationInterval: return "pipeline_initiation_interval";
     case Distribute: return "distribute";
     case VectorizePredicate: return "vectorize_predicate";
+    case LICMDisabled: return "licm";
     }
     llvm_unreachable("Unhandled LoopHint option.");
   }
@@ -4686,17 +4752,15 @@ def OMPDeclareTargetDecl : InheritableAttr {
   let SemaHandler = 0;
   let Subjects = SubjectList<[Function, SharedVar]>;
   let Documentation = [OMPDeclareTargetDocs];
-  let Args = [
-    EnumArgument<"MapType", "MapTypeTy", /*is_string=*/false,
-                 [ "to", "enter", "link" ],
-                 [ "MT_To", "MT_Enter", "MT_Link" ]>,
-    EnumArgument<"DevType", "DevTypeTy", /*is_string=*/false,
-                 [ "host", "nohost", "any" ],
-                 [ "DT_Host", "DT_NoHost", "DT_Any" ]>,
-    ExprArgument<"IndirectExpr">,
-    BoolArgument<"Indirect">,
-    UnsignedArgument<"Level">
-  ];
+  let Args = [EnumArgument<
+                  "MapType", "MapTypeTy",
+                  /*is_string=*/false, ["to", "enter", "link", "local"],
+                  ["MT_To", "MT_Enter", "MT_Link", "MT_Local"]>,
+              EnumArgument<"DevType", "DevTypeTy",
+                           /*is_string=*/false, ["host", "nohost", "any"],
+                           ["DT_Host", "DT_NoHost", "DT_Any"]>,
+              ExprArgument<"IndirectExpr">, BoolArgument<"Indirect">,
+              UnsignedArgument<"Level">];
   let AdditionalMembers = [{
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
     static std::optional<MapTypeTy>
@@ -4705,6 +4769,15 @@ def OMPDeclareTargetDecl : InheritableAttr {
     static std::optional<DevTypeTy> getDeviceType(const ValueDecl *VD);
     static std::optional<SourceLocation> getLocation(const ValueDecl *VD);
   }];
+}
+
+def OMPTargetIndirectCall : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  // The attribute is added to the VarDecl of the function pointer used in
+  // an indirect call in a OMP target region.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
 }
 
 def OMPAllocateDecl : InheritableAttr {
@@ -5017,6 +5090,14 @@ def HLSLResourceBinding: InheritableAttr {
   }];
 }
 
+def HLSLAssociatedResourceDecl : InheritableAttr {
+  let Spellings = [];
+  let Args = [DeclArgument<Var, "ResDecl">];
+  let Subjects = SubjectList<[ExternalGlobalVar], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def HLSLUnparsedSemantic : HLSLAnnotationAttr {
   let Spellings = [];
   let Args = [DefaultIntArgument<"Index", 0>,
@@ -5094,12 +5175,22 @@ def HLSLROV : TypeAttr {
 def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
   let LangOpts = [HLSL];
-  let Args = [
-	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-				 /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
-				 ["SRV", "UAV", "CBuffer", "Sampler"],
-				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
-  ];
+  let Args = [EnumArgument<
+      "ResourceClass", "llvm::hlsl::ResourceClass",
+      /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
+      ["SRV", "UAV", "CBuffer", "Sampler"],
+      /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLResourceDimension : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "dimension">];
+  let LangOpts = [HLSL];
+  let Args = [EnumArgument<
+      "Dimension", "llvm::hlsl::ResourceDimension",
+      /*is_string=*/true, ["Unknown", "1D", "2D", "3D", "Cube"],
+      ["Unknown", "Dim1D", "Dim2D", "Dim3D", "Cube"],
+      /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
   let Documentation = [InternalOnly];
 }
 
@@ -5161,6 +5252,14 @@ def HLSLVkExtBuiltinInput : InheritableAttr {
   let Subjects = SubjectList<[HLSLInputBuiltin], ErrorDiag>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLVkExtBuiltinInputDocs];
+}
+
+def HLSLVkExtBuiltinOutput : InheritableAttr {
+  let Spellings = [CXX11<"vk", "ext_builtin_output">];
+  let Args = [UnsignedArgument<"BuiltIn">];
+  let Subjects = SubjectList<[HLSLOutputBuiltin], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkExtBuiltinOutputDocs];
 }
 
 def HLSLVkPushConstant : InheritableAttr {
@@ -5345,4 +5444,19 @@ def ModularFormat : InheritableAttr {
               VariadicStringArgument<"Aspects">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [ModularFormatDocs];
+}
+
+def OverflowBehavior : TypeAttr {
+  let Spellings = [Clang<"overflow_behavior">];
+  let Args = [IdentifierArgument<"BehaviorKind">];
+  let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
+                             "variables, typedefs, and data members">;
+  let Documentation = [Undocumented];
+}
+
+def Personality : InheritableAttr {
+  let Spellings = [Clang<"personality">];
+  let Args = [DeclArgument<Function, "Routine">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [PersonalityDocs];
 }

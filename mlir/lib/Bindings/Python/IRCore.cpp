@@ -10,26 +10,25 @@
 #include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 // clang-format on
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Debug.h"
 #include "mlir-c/Diagnostics.h"
+#include "mlir-c/ExtensibleDialect.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 
+#include <array>
+#include <cassert>
+#include <functional>
 #include <optional>
+#include <string>
 
 namespace nb = nanobind;
 using namespace nb::literals;
 using namespace mlir;
-
-using llvm::SmallVector;
-using llvm::StringRef;
-using llvm::Twine;
+using nanobind::detail::join;
 
 static const char kModuleParseDocstring[] =
     R"(Parses a module's assembly format from a string.
@@ -52,11 +51,10 @@ operations.
 // Utilities.
 //------------------------------------------------------------------------------
 
-/// Helper for creating an @classmethod.
-template <class Func, typename... Args>
-static nb::object classmethod(Func f, Args... args) {
-  nb::object cf = nb::cpp_function(f, args...);
-  return nb::borrow<nb::object>((PyClassMethod_New(cf.ptr())));
+/// Local helper to compute std::hash for a value.
+template <typename T>
+static size_t hash(const T &value) {
+  return std::hash<T>{}(value);
 }
 
 static nb::object
@@ -79,18 +77,19 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
-MlirBlock createBlock(const nb::sequence &pyArgTypes,
-                      const std::optional<nb::sequence> &pyArgLocs) {
-  SmallVector<MlirType> argTypes;
+MlirBlock createBlock(
+    const nb::typed<nb::sequence, PyType> &pyArgTypes,
+    const std::optional<nb::typed<nb::sequence, PyLocation>> &pyArgLocs) {
+  std::vector<MlirType> argTypes;
   argTypes.reserve(nb::len(pyArgTypes));
-  for (const auto &pyType : pyArgTypes)
+  for (nb::handle pyType : pyArgTypes)
     argTypes.push_back(
         nb::cast<python::MLIR_BINDINGS_PYTHON_DOMAIN::PyType &>(pyType));
 
-  SmallVector<MlirLocation> argLocs;
+  std::vector<MlirLocation> argLocs;
   if (pyArgLocs) {
     argLocs.reserve(nb::len(*pyArgLocs));
-    for (const auto &pyLoc : *pyArgLocs)
+    for (nb::handle pyLoc : *pyArgLocs)
       argLocs.push_back(
           nb::cast<python::MLIR_BINDINGS_PYTHON_DOMAIN::PyLocation &>(pyLoc));
   } else if (!argTypes.empty()) {
@@ -100,10 +99,9 @@ MlirBlock createBlock(const nb::sequence &pyArgTypes,
   }
 
   if (argTypes.size() != argLocs.size())
-    throw nb::value_error(("Expected " + Twine(argTypes.size()) +
-                           " locations, got: " + Twine(argLocs.size()))
-                              .str()
-                              .c_str());
+    throw nb::value_error(
+        join("Expected ", argTypes.size(), " locations, got: ", argLocs.size())
+            .c_str());
   return mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
 }
 
@@ -158,9 +156,10 @@ PyAttrBuilderMap::dunderGetItemNamed(const std::string &attributeKind) {
 }
 
 void PyAttrBuilderMap::dunderSetItemNamed(const std::string &attributeKind,
-                                          nb::callable func, bool replace) {
+                                          nb::callable func, bool replace,
+                                          bool allow_existing) {
   PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
-                                            replace);
+                                            replace, allow_existing);
 }
 
 void PyAttrBuilderMap::bind(nb::module_ &m) {
@@ -175,6 +174,7 @@ void PyAttrBuilderMap::bind(nb::module_ &m) {
                   "attribute kind.")
       .def_static("insert", &PyAttrBuilderMap::dunderSetItemNamed,
                   "attribute_kind"_a, "attr_builder"_a, "replace"_a = false,
+                  "allow_existing"_a = false,
                   "Register an attribute builder for building MLIR "
                   "attributes from Python values.");
 }
@@ -191,25 +191,6 @@ nb::object PyBlock::getCapsule() {
 // Collections.
 //------------------------------------------------------------------------------
 
-nb::typed<nb::object, PyRegion> PyRegionIterator::dunderNext() {
-  operation->checkValid();
-  if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
-    PyErr_SetNone(PyExc_StopIteration);
-    // python functions should return NULL after setting any exception
-    return nb::object();
-  }
-  MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
-  return nb::cast(PyRegion(operation, region));
-}
-
-void PyRegionIterator::bind(nb::module_ &m) {
-  nb::class_<PyRegionIterator>(m, "RegionIterator")
-      .def("__iter__", &PyRegionIterator::dunderIter,
-           "Returns an iterator over the regions in the operation.")
-      .def("__next__", &PyRegionIterator::dunderNext,
-           "Returns the next region in the iteration.");
-}
-
 PyRegionList::PyRegionList(PyOperationRef operation, intptr_t startIndex,
                            intptr_t length, intptr_t step)
     : Sliceable(startIndex,
@@ -217,16 +198,6 @@ PyRegionList::PyRegionList(PyOperationRef operation, intptr_t startIndex,
                              : length,
                 step),
       operation(std::move(operation)) {}
-
-PyRegionIterator PyRegionList::dunderIter() {
-  operation->checkValid();
-  return PyRegionIterator(operation, startIndex);
-}
-
-void PyRegionList::bindDerived(ClassTy &c) {
-  c.def("__iter__", &PyRegionList::dunderIter,
-        "Returns an iterator over the regions in the sequence.");
-}
 
 intptr_t PyRegionList::getRawNumElements() {
   operation->checkValid();
@@ -437,13 +408,20 @@ void PyOpOperandIterator::bind(nb::module_ &m) {
 // PyThreadPool
 //------------------------------------------------------------------------------
 
-PyThreadPool::PyThreadPool() {
-  ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
+PyThreadPool::PyThreadPool() { threadPool = mlirLlvmThreadPoolCreate(); }
+
+PyThreadPool::~PyThreadPool() {
+  if (threadPool.ptr)
+    mlirLlvmThreadPoolDestroy(threadPool);
+}
+
+int PyThreadPool::getMaxConcurrency() const {
+  return mlirLlvmThreadPoolGetMaxConcurrency(threadPool);
 }
 
 std::string PyThreadPool::_mlir_thread_pool_ptr() const {
   std::stringstream ss;
-  ss << ownedThreadPool.get();
+  ss << threadPool.ptr;
   return ss.str();
 }
 
@@ -791,7 +769,7 @@ nb::str PyDiagnostic::getMessage() {
   return nb::cast<nb::str>(fileObject.attr("getvalue")());
 }
 
-nb::tuple PyDiagnostic::getNotes() {
+nb::typed<nb::tuple, PyDiagnostic> PyDiagnostic::getNotes() {
   checkValid();
   if (materializedNotes)
     return *materializedNotes;
@@ -800,7 +778,7 @@ nb::tuple PyDiagnostic::getNotes() {
   for (intptr_t i = 0; i < numNotes; ++i) {
     MlirDiagnostic noteDiag = mlirDiagnosticGetNote(diagnostic, i);
     nb::object diagnostic = nb::cast(PyDiagnostic(noteDiag));
-    PyTuple_SET_ITEM(notes.ptr(), i, diagnostic.release().ptr());
+    PyTuple_SetItem(notes.ptr(), i, diagnostic.release().ptr());
   }
   materializedNotes = std::move(notes);
 
@@ -824,7 +802,7 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
   MlirDialect dialect = mlirContextGetOrLoadDialect(getContext()->get(),
                                                     {key.data(), key.size()});
   if (mlirDialectIsNull(dialect)) {
-    std::string msg = (Twine("Dialect '") + key + "' not found").str();
+    std::string msg = join("Dialect '", key, "' not found");
     if (attrError)
       throw nb::attribute_error(msg.c_str());
     throw nb::index_error(msg.c_str());
@@ -1105,10 +1083,9 @@ void PyOperationBase::writeBytecode(const nb::object &fileOrStringObject,
       operation, config, accum.getCallback(), accum.getUserData());
   mlirBytecodeWriterConfigDestroy(config);
   if (mlirLogicalResultIsFailure(res))
-    throw nb::value_error((Twine("Unable to honor desired bytecode version ") +
-                           Twine(*bytecodeVersion))
-                              .str()
-                              .c_str());
+    throw nb::value_error(
+        join("Unable to honor desired bytecode version ", *bytecodeVersion)
+            .c_str());
 }
 
 void PyOperationBase::walk(std::function<PyWalkResult(MlirOperation)> callback,
@@ -1255,14 +1232,14 @@ static void maybeInsertOperation(PyOperationRef &op,
 
 nb::object PyOperation::create(std::string_view name,
                                std::optional<std::vector<PyType *>> results,
-                               llvm::ArrayRef<MlirValue> operands,
+                               const MlirValue *operands, size_t numOperands,
                                std::optional<nb::dict> attributes,
                                std::optional<std::vector<PyBlock *>> successors,
                                int regions, PyLocation &location,
                                const nb::object &maybeIp, bool inferType) {
-  llvm::SmallVector<MlirType, 4> mlirResults;
-  llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
-  llvm::SmallVector<std::pair<std::string, MlirAttribute>, 4> mlirAttributes;
+  std::vector<MlirType> mlirResults;
+  std::vector<MlirBlock> mlirSuccessors;
+  std::vector<std::pair<std::string, MlirAttribute>> mlirAttributes;
 
   // General parameter validation.
   if (regions < 0)
@@ -1286,9 +1263,9 @@ nb::object PyOperation::create(std::string_view name,
       try {
         key = nb::cast<std::string>(it.first);
       } catch (nb::cast_error &err) {
-        std::string msg = "Invalid attribute key (not a string) when "
-                          "attempting to create the operation \"" +
-                          std::string(name) + "\" (" + err.what() + ")";
+        std::string msg = join("Invalid attribute key (not a string) when "
+                               "attempting to create the operation \"",
+                               name, "\" (", err.what(), ")");
         throw nb::type_error(msg.c_str());
       }
       try {
@@ -1296,16 +1273,15 @@ nb::object PyOperation::create(std::string_view name,
         // TODO: Verify attribute originates from the same context.
         mlirAttributes.emplace_back(std::move(key), attribute);
       } catch (nb::cast_error &err) {
-        std::string msg = "Invalid attribute value for the key \"" + key +
-                          "\" when attempting to create the operation \"" +
-                          std::string(name) + "\" (" + err.what() + ")";
+        std::string msg = join("Invalid attribute value for the key \"", key,
+                               "\" when attempting to create the operation \"",
+                               name, "\" (", err.what(), ")");
         throw nb::type_error(msg.c_str());
       } catch (std::runtime_error &) {
         // This exception seems thrown when the value is "None".
-        std::string msg =
-            "Found an invalid (`None`?) attribute value for the key \"" + key +
-            "\" when attempting to create the operation \"" +
-            std::string(name) + "\"";
+        std::string msg = join(
+            "Found an invalid (`None`?) attribute value for the key \"", key,
+            "\" when attempting to create the operation \"", name, "\"");
         throw std::runtime_error(msg);
       }
     }
@@ -1313,7 +1289,7 @@ nb::object PyOperation::create(std::string_view name,
   // Unpack/validate successors.
   if (successors) {
     mlirSuccessors.reserve(successors->size());
-    for (auto *successor : *successors) {
+    for (PyBlock *successor : *successors) {
       // TODO: Verify successor originate from the same context.
       if (!successor)
         throw nb::value_error("successor block cannot be None");
@@ -1325,8 +1301,8 @@ nb::object PyOperation::create(std::string_view name,
   // point, exceptions cannot be thrown or else the state will leak.
   MlirOperationState state =
       mlirOperationStateGet(toMlirStringRef(name), location);
-  if (!operands.empty())
-    mlirOperationStateAddOperands(&state, operands.size(), operands.data());
+  if (numOperands > 0)
+    mlirOperationStateAddOperands(&state, numOperands, operands);
   state.enableResultTypeInference = inferType;
   if (!mlirResults.empty())
     mlirOperationStateAddResults(&state, mlirResults.size(),
@@ -1335,9 +1311,9 @@ nb::object PyOperation::create(std::string_view name,
     // Note that the attribute names directly reference bytes in
     // mlirAttributes, so that vector must not be changed from here
     // on.
-    llvm::SmallVector<MlirNamedAttribute, 4> mlirNamedAttributes;
+    std::vector<MlirNamedAttribute> mlirNamedAttributes;
     mlirNamedAttributes.reserve(mlirAttributes.size());
-    for (auto &it : mlirAttributes)
+    for (const std::pair<std::string, MlirAttribute> &it : mlirAttributes)
       mlirNamedAttributes.push_back(mlirNamedAttributeGet(
           mlirIdentifierGet(mlirAttributeGetContext(it.second),
                             toMlirStringRef(it.first)),
@@ -1349,7 +1325,7 @@ nb::object PyOperation::create(std::string_view name,
     mlirOperationStateAddSuccessors(&state, mlirSuccessors.size(),
                                     mlirSuccessors.data());
   if (regions) {
-    llvm::SmallVector<MlirRegion, 4> mlirRegions;
+    std::vector<MlirRegion> mlirRegions;
     mlirRegions.resize(regions);
     for (int i = 0; i < regions; ++i)
       mlirRegions[i] = mlirRegionCreate();
@@ -1383,7 +1359,7 @@ nb::object PyOperation::createOpView() {
   MlirIdentifier ident = mlirOperationGetName(get());
   MlirStringRef identStr = mlirIdentifierStr(ident);
   auto operationCls = PyGlobals::get().lookupOperationClass(
-      StringRef(identStr.data, identStr.length));
+      std::string_view(identStr.data, identStr.length));
   if (operationCls)
     return PyOpView::constructDerived(*operationCls, getRef().getObject());
   return nb::cast(PyOpView(getRef().getObject()));
@@ -1468,46 +1444,43 @@ PyOpResultList PyOpResultList::slice(intptr_t startIndex, intptr_t length,
 // PyOpView
 //------------------------------------------------------------------------------
 
-static void populateResultTypes(StringRef name, nb::list resultTypeList,
+static void populateResultTypes(std::string_view name,
+                                nb::sequence resultTypeList,
                                 const nb::object &resultSegmentSpecObj,
                                 std::vector<int32_t> &resultSegmentLengths,
                                 std::vector<PyType *> &resultTypes) {
-  resultTypes.reserve(resultTypeList.size());
+  resultTypes.reserve(nb::len(resultTypeList));
   if (resultSegmentSpecObj.is_none()) {
     // Non-variadic result unpacking.
-    for (const auto &it : llvm::enumerate(resultTypeList)) {
+    size_t index = 0;
+    for (nb::handle resultType : resultTypeList) {
       try {
-        resultTypes.push_back(nb::cast<PyType *>(it.value()));
+        resultTypes.push_back(nb::cast<PyType *>(resultType));
         if (!resultTypes.back())
           throw nb::cast_error();
       } catch (nb::cast_error &err) {
-        throw nb::value_error((llvm::Twine("Result ") +
-                               llvm::Twine(it.index()) + " of operation \"" +
-                               name + "\" must be a Type (" + err.what() + ")")
-                                  .str()
+        throw nb::value_error(join("Result ", index, " of operation \"", name,
+                                   "\" must be a Type (", err.what(), ")")
                                   .c_str());
       }
+      ++index;
     }
   } else {
     // Sized result unpacking.
     auto resultSegmentSpec = nb::cast<std::vector<int>>(resultSegmentSpecObj);
-    if (resultSegmentSpec.size() != resultTypeList.size()) {
-      throw nb::value_error((llvm::Twine("Operation \"") + name +
-                             "\" requires " +
-                             llvm::Twine(resultSegmentSpec.size()) +
-                             " result segments but was provided " +
-                             llvm::Twine(resultTypeList.size()))
-                                .str()
-                                .c_str());
+    if (resultSegmentSpec.size() != nb::len(resultTypeList)) {
+      throw nb::value_error(
+          join("Operation \"", name, "\" requires ", resultSegmentSpec.size(),
+               " result segments but was provided ", nb::len(resultTypeList))
+              .c_str());
     }
-    resultSegmentLengths.reserve(resultTypeList.size());
-    for (const auto &it :
-         llvm::enumerate(llvm::zip(resultTypeList, resultSegmentSpec))) {
-      int segmentSpec = std::get<1>(it.value());
+    resultSegmentLengths.reserve(nb::len(resultTypeList));
+    for (size_t i = 0, e = resultSegmentSpec.size(); i < e; ++i) {
+      int segmentSpec = resultSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
         try {
-          auto *resultType = nb::cast<PyType *>(std::get<0>(it.value()));
+          auto *resultType = nb::cast<PyType *>(resultTypeList[i]);
           if (resultType) {
             resultTypes.push_back(resultType);
             resultSegmentLengths.push_back(1);
@@ -1516,29 +1489,24 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
             resultSegmentLengths.push_back(0);
           } else {
             throw nb::value_error(
-                (llvm::Twine("Result ") + llvm::Twine(it.index()) +
-                 " of operation \"" + name +
-                 "\" must be a Type (was None and result is not optional)")
-                    .str()
+                join("Result ", i, " of operation \"", name,
+                     "\" must be a Type (was None and result is not optional)")
                     .c_str());
           }
         } catch (nb::cast_error &err) {
-          throw nb::value_error((llvm::Twine("Result ") +
-                                 llvm::Twine(it.index()) + " of operation \"" +
-                                 name + "\" must be a Type (" + err.what() +
-                                 ")")
-                                    .str()
+          throw nb::value_error(join("Result ", i, " of operation \"", name,
+                                     "\" must be a Type (", err.what(), ")")
                                     .c_str());
         }
       } else if (segmentSpec == -1) {
         // Unpack sequence by appending.
         try {
-          if (std::get<0>(it.value()).is_none()) {
+          if (resultTypeList[i].is_none()) {
             // Treat it as an empty list.
             resultSegmentLengths.push_back(0);
           } else {
             // Unpack the list.
-            auto segment = nb::cast<nb::sequence>(std::get<0>(it.value()));
+            auto segment = nb::cast<nb::sequence>(resultTypeList[i]);
             for (nb::handle segmentItem : segment) {
               resultTypes.push_back(nb::cast<PyType *>(segmentItem));
               if (!resultTypes.back()) {
@@ -1551,11 +1519,9 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error((llvm::Twine("Result ") +
-                                 llvm::Twine(it.index()) + " of operation \"" +
-                                 name + "\" must be a Sequence of Types (" +
-                                 err.what() + ")")
-                                    .str()
+          throw nb::value_error(join("Result ", i, " of operation \"", name,
+                                     "\" must be a Sequence of Types (",
+                                     err.what(), ")")
                                     .c_str());
         }
       } else {
@@ -1569,13 +1535,13 @@ MlirValue getUniqueResult(MlirOperation operation) {
   auto numResults = mlirOperationGetNumResults(operation);
   if (numResults != 1) {
     auto name = mlirIdentifierStr(mlirOperationGetName(operation));
-    throw nb::value_error((Twine("Cannot call .result on operation ") +
-                           StringRef(name.data, name.length) + " which has " +
-                           Twine(numResults) +
-                           " results (it is only valid for operations with a "
-                           "single result)")
-                              .str()
-                              .c_str());
+    throw nb::value_error(
+        join("Cannot call .result on operation ",
+             std::string_view(name.data, name.length), " which has ",
+             numResults,
+             " results (it is only valid for operations with a "
+             "single result)")
+            .c_str());
   }
   return mlirOperationGetResult(operation, 0);
 }
@@ -1599,10 +1565,10 @@ static MlirValue getOpResultOrValue(nb::handle operand) {
   throw nb::value_error("is not a Value");
 }
 
-nb::object PyOpView::buildGeneric(
+nb::typed<nb::object, PyOperation> PyOpView::buildGeneric(
     std::string_view name, std::tuple<int, bool> opRegionSpec,
     nb::object operandSegmentSpecObj, nb::object resultSegmentSpecObj,
-    std::optional<nb::list> resultTypeList, nb::list operandList,
+    std::optional<nb::sequence> resultTypeList, nb::sequence operandList,
     std::optional<nb::dict> attributes,
     std::optional<std::vector<PyBlock *>> successors,
     std::optional<int> regions, PyLocation &location,
@@ -1625,20 +1591,16 @@ nb::object PyOpView::buildGeneric(
     regions = opMinRegionCount;
   }
   if (*regions < opMinRegionCount) {
-    throw nb::value_error(
-        (llvm::Twine("Operation \"") + name + "\" requires a minimum of " +
-         llvm::Twine(opMinRegionCount) +
-         " regions but was built with regions=" + llvm::Twine(*regions))
-            .str()
-            .c_str());
+    throw nb::value_error(join("Operation \"", name,
+                               "\" requires a minimum of ", opMinRegionCount,
+                               " regions but was built with regions=", *regions)
+                              .c_str());
   }
   if (opHasNoVariadicRegions && *regions > opMinRegionCount) {
-    throw nb::value_error(
-        (llvm::Twine("Operation \"") + name + "\" requires a maximum of " +
-         llvm::Twine(opMinRegionCount) +
-         " regions but was built with regions=" + llvm::Twine(*regions))
-            .str()
-            .c_str());
+    throw nb::value_error(join("Operation \"", name,
+                               "\" requires a maximum of ", opMinRegionCount,
+                               " regions but was built with regions=", *regions)
+                              .c_str());
   }
 
   // Unpack results.
@@ -1649,50 +1611,42 @@ nb::object PyOpView::buildGeneric(
   }
 
   // Unpack operands.
-  llvm::SmallVector<MlirValue, 4> operands;
+  std::vector<MlirValue> operands;
   operands.reserve(operands.size());
+  size_t index = 0;
   if (operandSegmentSpecObj.is_none()) {
     // Non-sized operand unpacking.
-    for (const auto &it : llvm::enumerate(operandList)) {
+    for (nb::handle operand : operandList) {
       try {
-        operands.push_back(getOpResultOrValue(it.value()));
+        operands.push_back(getOpResultOrValue(operand));
       } catch (nb::builtin_exception &err) {
-        throw nb::value_error((llvm::Twine("Operand ") +
-                               llvm::Twine(it.index()) + " of operation \"" +
-                               name + "\" must be a Value (" + err.what() + ")")
-                                  .str()
+        throw nb::value_error(join("Operand ", index, " of operation \"", name,
+                                   "\" must be a Value (", err.what(), ")")
                                   .c_str());
       }
+      ++index;
     }
   } else {
     // Sized operand unpacking.
     auto operandSegmentSpec = nb::cast<std::vector<int>>(operandSegmentSpecObj);
-    if (operandSegmentSpec.size() != operandList.size()) {
-      throw nb::value_error((llvm::Twine("Operation \"") + name +
-                             "\" requires " +
-                             llvm::Twine(operandSegmentSpec.size()) +
-                             "operand segments but was provided " +
-                             llvm::Twine(operandList.size()))
-                                .str()
-                                .c_str());
+    if (operandSegmentSpec.size() != nb::len(operandList)) {
+      throw nb::value_error(
+          join("Operation \"", name, "\" requires ", operandSegmentSpec.size(),
+               "operand segments but was provided ", nb::len(operandList))
+              .c_str());
     }
-    operandSegmentLengths.reserve(operandList.size());
-    for (const auto &it :
-         llvm::enumerate(llvm::zip(operandList, operandSegmentSpec))) {
-      int segmentSpec = std::get<1>(it.value());
+    operandSegmentLengths.reserve(nb::len(operandList));
+    for (size_t i = 0, e = operandSegmentSpec.size(); i < e; ++i) {
+      int segmentSpec = operandSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
-        auto &operand = std::get<0>(it.value());
+        const nanobind::handle operand = operandList[i];
         if (!operand.is_none()) {
           try {
-
             operands.push_back(getOpResultOrValue(operand));
           } catch (nb::builtin_exception &err) {
-            throw nb::value_error((llvm::Twine("Operand ") +
-                                   llvm::Twine(it.index()) +
-                                   " of operation \"" + name +
-                                   "\" must be a Value (" + err.what() + ")")
-                                      .str()
+            throw nb::value_error(join("Operand ", i, " of operation \"", name,
+                                       "\" must be a Value (", err.what(), ")")
                                       .c_str());
           }
 
@@ -1702,21 +1656,19 @@ nb::object PyOpView::buildGeneric(
           operandSegmentLengths.push_back(0);
         } else {
           throw nb::value_error(
-              (llvm::Twine("Operand ") + llvm::Twine(it.index()) +
-               " of operation \"" + name +
-               "\" must be a Value (was None and operand is not optional)")
-                  .str()
+              join("Operand ", i, " of operation \"", name,
+                   "\" must be a Value (was None and operand is not optional)")
                   .c_str());
         }
       } else if (segmentSpec == -1) {
         // Unpack sequence by appending.
         try {
-          if (std::get<0>(it.value()).is_none()) {
+          if (operandList[i].is_none()) {
             // Treat it as an empty list.
             operandSegmentLengths.push_back(0);
           } else {
             // Unpack the list.
-            auto segment = nb::cast<nb::sequence>(std::get<0>(it.value()));
+            auto segment = nb::cast<nb::sequence>(operandList[i]);
             for (nb::handle segmentItem : segment) {
               operands.push_back(getOpResultOrValue(segmentItem));
             }
@@ -1726,11 +1678,9 @@ nb::object PyOpView::buildGeneric(
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error((llvm::Twine("Operand ") +
-                                 llvm::Twine(it.index()) + " of operation \"" +
-                                 name + "\" must be a Sequence of Values (" +
-                                 err.what() + ")")
-                                    .str()
+          throw nb::value_error(join("Operand ", i, " of operation \"", name,
+                                     "\" must be a Sequence of Values (",
+                                     err.what(), ")")
                                     .c_str());
         }
       } else {
@@ -1776,7 +1726,8 @@ nb::object PyOpView::buildGeneric(
   // Delegate to create.
   return PyOperation::create(name,
                              /*results=*/std::move(resultTypes),
-                             /*operands=*/operands,
+                             /*operands=*/operands.data(),
+                             /*numOperands=*/operands.size(),
                              /*attributes=*/std::move(attributes),
                              /*successors=*/std::move(successors),
                              /*regions=*/*regions, location, maybeIp,
@@ -2071,7 +2022,7 @@ nb::object PySymbolTable::dunderGetItem(const std::string &name) {
       symbolTable, mlirStringRefCreate(name.data(), name.length()));
   if (mlirOperationIsNull(symbol))
     throw nb::key_error(
-        ("Symbol '" + name + "' not in the symbol table.").c_str());
+        join("Symbol '", name, "' not in the symbol table.").c_str());
 
   return PyOperation::forOperation(operation->getContext(), symbol,
                                    operation.getObject())
@@ -2306,6 +2257,44 @@ PyOpOperandList PyOpOperandList::slice(intptr_t startIndex, intptr_t length,
   return PyOpOperandList(operation, startIndex, length, step);
 }
 
+/// A list of OpOperands. Internally, these are stored as consecutive elements,
+/// random access is cheap. The (returned) OpOperand list is associated with the
+/// operation whose operands these are, and thus extends the lifetime of this
+/// operation.
+class PyOpOperands : public Sliceable<PyOpOperands, PyOpOperand> {
+public:
+  static constexpr const char *pyClassName = "OpOperands";
+  using SliceableT = Sliceable<PyOpOperandList, PyOpOperand>;
+
+  PyOpOperands(PyOperationRef operation, intptr_t startIndex = 0,
+               intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirOperationGetNumOperands(operation->get())
+                               : length,
+                  step),
+        operation(operation) {}
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyOpOperands, PyOpOperand>;
+
+  intptr_t getRawNumElements() {
+    operation->checkValid();
+    return mlirOperationGetNumOperands(operation->get());
+  }
+
+  PyOpOperand getRawElement(intptr_t pos) {
+    MlirOpOperand opOperand = mlirOperationGetOpOperand(operation->get(), pos);
+    return PyOpOperand(opOperand);
+  }
+
+  PyOpOperands slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyOpOperands(operation, startIndex, length, step);
+  }
+
+  PyOperationRef operation;
+};
+
 PyOpSuccessors::PyOpSuccessors(PyOperationRef operation, intptr_t startIndex,
                                intptr_t length, intptr_t step)
     : Sliceable(startIndex,
@@ -2445,8 +2434,7 @@ bool PyOpAttributeMap::dunderContains(const std::string &name) {
 }
 
 void PyOpAttributeMap::forEachAttr(
-    MlirOperation op,
-    llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn) {
+    MlirOperation op, std::function<void(MlirStringRef, MlirAttribute)> fn) {
   intptr_t n = mlirOperationGetNumAttributes(op);
   for (intptr_t i = 0; i < n; ++i) {
     MlirNamedAttribute na = mlirOperationGetAttribute(op, i);
@@ -2475,7 +2463,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
            "exist.")
       .def(
           "__iter__",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::iterator, nb::str> {
             nb::list keys;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
@@ -2486,7 +2474,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Iterates over attribute names.")
       .def(
           "keys",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::list, nb::str> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
@@ -2497,7 +2485,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of attribute names.")
       .def(
           "values",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::list, PyAttribute> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef, MlirAttribute attr) {
@@ -2509,7 +2497,9 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of attribute values.")
       .def(
           "items",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self)
+              -> nb::typed<nb::list,
+                           nb::typed<nb::tuple, nb::str, PyAttribute>> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(),
@@ -2524,80 +2514,152 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of `(name, attribute)` tuples.");
 }
 
+void PyOpAdaptor::bind(nb::module_ &m) {
+  nb::class_<PyOpAdaptor>(m, "OpAdaptor")
+      .def(nb::init<nb::typed<nb::list, PyValue>, PyOpAttributeMap>(),
+           "Creates an OpAdaptor with the given operands and attributes.",
+           "operands"_a, "attributes"_a)
+      .def(nb::init<nb::typed<nb::list, PyValue>, PyOpView &>(),
+           "Creates an OpAdaptor with the given operands and operation view.",
+           "operands"_a, "opview"_a)
+      .def_prop_ro(
+          "operands", [](PyOpAdaptor &self) { return self.operands; },
+          "Returns the operands of the adaptor.")
+      .def_prop_ro(
+          "attributes", [](PyOpAdaptor &self) { return self.attributes; },
+          "Returns the attributes of the adaptor.");
+}
+
+static MlirLogicalResult verifyTraitByMethod(MlirOperation op, void *userData,
+                                             const char *methodName) {
+  nb::handle targetObj(static_cast<PyObject *>(userData));
+  if (!nb::hasattr(targetObj, methodName))
+    return mlirLogicalResultSuccess();
+  PyMlirContextRef ctx = PyMlirContext::forContext(mlirOperationGetContext(op));
+  nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
+  bool success = nb::cast<bool>(targetObj.attr(methodName)(opView));
+  return success ? mlirLogicalResultSuccess() : mlirLogicalResultFailure();
+};
+
+static bool attachOpTrait(const nb::object &opName, MlirDynamicOpTrait trait,
+                          PyMlirContext &context) {
+  std::string opNameStr;
+  if (opName.is_type()) {
+    opNameStr = nb::cast<std::string>(opName.attr("OPERATION_NAME"));
+  } else if (nb::isinstance<nb::str>(opName)) {
+    opNameStr = nb::cast<std::string>(opName);
+  } else {
+    throw nb::type_error("the root argument must be a type or a string");
+  }
+
+  return mlirDynamicOpTraitAttach(
+      trait, MlirStringRef{opNameStr.data(), opNameStr.size()}, context.get());
+}
+
+bool PyDynamicOpTrait::attach(const nb::object &opName,
+                              const nb::object &target,
+                              PyMlirContext &context) {
+  if (!nb::hasattr(target, "verify_invariants") &&
+      !nb::hasattr(target, "verify_region_invariants"))
+    throw nb::type_error(
+        "the target object must have at least one of 'verify_invariants' or "
+        "'verify_region_invariants' methods");
+
+  MlirDynamicOpTraitCallbacks callbacks;
+  callbacks.construct = [](void *userData) {
+    nb::handle(static_cast<PyObject *>(userData)).inc_ref();
+  };
+  callbacks.destruct = [](void *userData) {
+    nb::handle(static_cast<PyObject *>(userData)).dec_ref();
+  };
+
+  callbacks.verifyTrait = [](MlirOperation op,
+                             void *userData) -> MlirLogicalResult {
+    return verifyTraitByMethod(op, userData, "verify_invariants");
+  };
+  callbacks.verifyRegionTrait = [](MlirOperation op,
+                                   void *userData) -> MlirLogicalResult {
+    return verifyTraitByMethod(op, userData, "verify_region_invariants");
+  };
+
+  // To ensure that the same dynamic trait gets the same TypeID despite how many
+  // times `attach` is called, we store it as an attribute on the target class.
+  if (!nb::hasattr(target, typeIDAttr)) {
+    nb::setattr(target, typeIDAttr,
+                nb::cast(PyTypeID(PyGlobals::get().allocateTypeID())));
+  }
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitCreate(
+      nb::cast<PyTypeID>(target.attr(typeIDAttr)).get(), callbacks,
+      static_cast<void *>(target.ptr()));
+  return attachOpTrait(opName, trait, context);
+}
+
+void PyDynamicOpTrait::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTrait> cls(m, "DynamicOpTrait");
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName, nb::object target,
+         DefaultingPyMlirContext context) {
+        if (target.is_none())
+          target = cls;
+        return PyDynamicOpTrait::attach(opName, target, *context.get());
+      },
+      nb::arg("cls"), nb::arg("op_name"), nb::arg("target").none() = nb::none(),
+      nb::arg("context").none() = nb::none(),
+      "Attach the dynamic op trait subclass to the given operation name.");
+}
+
+bool PyDynamicOpTraits::IsTerminator::attach(const nb::object &opName,
+                                             PyMlirContext &context) {
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitIsTerminatorCreate();
+  return attachOpTrait(opName, trait, context);
+}
+
+void PyDynamicOpTraits::IsTerminator::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTraits::IsTerminator, PyDynamicOpTrait> cls(
+      m, "IsTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitIsTerminatorGetTypeID());
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName,
+         DefaultingPyMlirContext context) {
+        return PyDynamicOpTraits::IsTerminator::attach(opName, *context.get());
+      },
+      "Attach IsTerminator trait to the given operation name.", nb::arg("cls"),
+      nb::arg("op_name"), nb::arg("context").none() = nb::none());
+}
+
+bool PyDynamicOpTraits::NoTerminator::attach(const nb::object &opName,
+                                             PyMlirContext &context) {
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitNoTerminatorCreate();
+  return attachOpTrait(opName, trait, context);
+}
+
+void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTraits::NoTerminator, PyDynamicOpTrait> cls(
+      m, "NoTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitNoTerminatorGetTypeID());
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName,
+         DefaultingPyMlirContext context) {
+        return PyDynamicOpTraits::NoTerminator::attach(opName, *context.get());
+      },
+      "Attach NoTerminator trait to the given operation name.", nb::arg("cls"),
+      nb::arg("op_name"), nb::arg("context").none() = nb::none());
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
 
 namespace {
-// see
-// https://raw.githubusercontent.com/python/pythoncapi_compat/master/pythoncapi_compat.h
-
-#ifndef _Py_CAST
-#define _Py_CAST(type, expr) ((type)(expr))
-#endif
-
-// Static inline functions should use _Py_NULL rather than using directly NULL
-// to prevent C++ compiler warnings. On C23 and newer and on C++11 and newer,
-// _Py_NULL is defined as nullptr.
-#ifndef _Py_NULL
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ > 201710L) ||               \
-    (defined(__cplusplus) && __cplusplus >= 201103)
-#define _Py_NULL nullptr
-#else
-#define _Py_NULL NULL
-#endif
-#endif
-
-// Python 3.10.0a3
-#if PY_VERSION_HEX < 0x030A00A3
-
-// bpo-42262 added Py_XNewRef()
-#if !defined(Py_XNewRef)
-[[maybe_unused]] PyObject *_Py_XNewRef(PyObject *obj) {
-  Py_XINCREF(obj);
-  return obj;
-}
-#define Py_XNewRef(obj) _Py_XNewRef(_PyObject_CAST(obj))
-#endif
-
-// bpo-42262 added Py_NewRef()
-#if !defined(Py_NewRef)
-[[maybe_unused]] PyObject *_Py_NewRef(PyObject *obj) {
-  Py_INCREF(obj);
-  return obj;
-}
-#define Py_NewRef(obj) _Py_NewRef(_PyObject_CAST(obj))
-#endif
-
-#endif // Python 3.10.0a3
-
-// Python 3.9.0b1
-#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
-
-// bpo-40429 added PyThreadState_GetFrame()
-PyFrameObject *PyThreadState_GetFrame(PyThreadState *tstate) {
-  assert(tstate != _Py_NULL && "expected tstate != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(tstate->frame));
-}
-
-// bpo-40421 added PyFrame_GetBack()
-PyFrameObject *PyFrame_GetBack(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(frame->f_back));
-}
-
-// bpo-40421 added PyFrame_GetCode()
-PyCodeObject *PyFrame_GetCode(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  assert(frame->f_code != _Py_NULL && "expected frame->f_code != _Py_NULL");
-  return _Py_CAST(PyCodeObject *, Py_NewRef(frame->f_code));
-}
-
-#endif // Python 3.9.0b1
 
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 MlirLocation tracebackToLocation(MlirContext ctx) {
+#if defined(Py_LIMITED_API)
+  // Frame introspection C APIs are not available under the limited API.
+  // Traceback-based auto-location is not supported; return unknown.
+  return mlirLocationUnknownGet(ctx);
+#else
   size_t framesLimit =
       PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
   // Use a thread_local here to avoid requiring a large amount of space.
@@ -2606,6 +2668,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   size_t count = 0;
 
   nb::gil_scoped_acquire acquire;
+
   PyThreadState *tstate = PyThreadState_GET();
   PyFrameObject *next;
   PyFrameObject *pyFrame = PyThreadState_GetFrame(tstate);
@@ -2619,7 +2682,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     PyCodeObject *code = PyFrame_GetCode(pyFrame);
     auto fileNameStr =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_filename));
-    llvm::StringRef fileName(fileNameStr);
+    std::string_view fileName(fileNameStr);
     if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
       continue;
 
@@ -2627,14 +2690,15 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
 #if PY_VERSION_HEX < 0x030B00F0
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
-    llvm::StringRef funcName(name);
+    std::string_view funcName(name);
     int startLine = PyFrame_GetLineNumber(pyFrame);
-    MlirLocation loc =
-        mlirLocationFileLineColGet(ctx, wrap(fileName), startLine, 0);
+    MlirLocation loc = mlirLocationFileLineColGet(
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        0);
 #else
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
-    llvm::StringRef funcName(name);
+    std::string_view funcName(name);
     int startLine, startCol, endLine, endCol;
     int lasti = PyFrame_GetLasti(pyFrame);
     if (!PyCode_Addr2Location(code, lasti, &startLine, &startCol, &endLine,
@@ -2642,10 +2706,12 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
       throw nb::python_error();
     }
     MlirLocation loc = mlirLocationFileLineColRangeGet(
-        ctx, wrap(fileName), startLine, startCol, endLine, endCol);
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        startCol, endLine, endCol);
 #endif
 
-    frames[count] = mlirLocationNameGet(ctx, wrap(funcName), loc);
+    frames[count] = mlirLocationNameGet(
+        ctx, mlirStringRefCreate(funcName.data(), funcName.size()), loc);
     ++count;
   }
   // When the loop breaks (after the last iter), current frame (if non-null)
@@ -2666,19 +2732,74 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     caller = mlirLocationCallSiteGet(frames[i], caller);
 
   return mlirLocationCallSiteGet(callee, caller);
+#endif
+}
+
+/// Apply currentLocAction: wrap or fuse Location.current onto baseLoc.
+static MlirLocation
+applyCurrentLocAction(MlirContext ctx, MlirLocation baseLoc,
+                      PyGlobals::TracebackLoc::CurrentLocAction action) {
+  using Action = PyGlobals::TracebackLoc::CurrentLocAction;
+  if (action == Action::Fallback)
+    return baseLoc;
+
+  auto *currentLoc = PyThreadContextEntry::getDefaultLocation();
+  if (!currentLoc)
+    return baseLoc;
+  assert(mlirLocationGetContext(currentLoc->get()).ptr == ctx.ptr &&
+         "Location.current must belong to the current MLIR context");
+
+  // NamelocWrap: walk the NameLoc chain on Location.current, collect scope
+  // names, wrap baseLoc innermost-first so result is Outer(Inner(baseLoc)).
+  // If Location.current is not a NameLoc, scopeNames is empty and baseLoc
+  // is returned unchanged (nameloc_wrap is a no-op for non-NameLoc contexts).
+  thread_local std::vector<MlirStringRef> scopeNames;
+  scopeNames.clear();
+  MlirLocation walk = currentLoc->get();
+  while (mlirLocationIsAName(walk)) {
+    scopeNames.push_back(mlirIdentifierStr(mlirLocationNameGetName(walk)));
+    walk = mlirLocationNameGetChildLoc(walk);
+  }
+  for (auto it = scopeNames.rbegin(); it != scopeNames.rend(); ++it)
+    baseLoc = mlirLocationNameGet(ctx, *it, baseLoc);
+  return baseLoc;
 }
 
 PyLocation
 maybeGetTracebackLocation(const std::optional<PyLocation> &location) {
-  if (location.has_value())
-    return location.value();
-  if (!PyGlobals::get().getTracebackLoc().locTracebacksEnabled())
-    return DefaultingPyLocation::resolve();
+  auto &tbl = PyGlobals::get().getTracebackLoc();
 
+  // Tracebacks not enabled — return explicit loc or fall back to
+  // Location.current.
+  if (!tbl.locTracebacksEnabled())
+    return location.has_value() ? location.value()
+                                : DefaultingPyLocation::resolve();
+
+  // From here: tracebacks are enabled.
+  using OnExplicit = PyGlobals::TracebackLoc::OnExplicitAction;
   PyMlirContext &ctx = DefaultingPyMlirContext::resolve();
-  MlirLocation mlirLoc = tracebackToLocation(ctx.get());
+  MlirLocation baseLoc;
+
+  // Step 1: on_explicit — resolve explicit loc= vs traceback.
+  if (location.has_value()) {
+    switch (tbl.tracebackActionOnExplicitLoc()) {
+    case OnExplicit::UseExplicit:
+      baseLoc = location->get();
+      break;
+    case OnExplicit::UseTraceback:
+      baseLoc = tracebackToLocation(ctx.get());
+      break;
+    }
+  } else {
+    baseLoc = tracebackToLocation(ctx.get());
+  }
+
+  // Step 2: current_loc — compose with Location.current.
+  baseLoc = applyCurrentLocAction(ctx.get(), baseLoc,
+                                  tbl.tracebackActionOnCurrentLoc());
+
   PyMlirContextRef ref = PyMlirContext::forContext(ctx.get());
-  return {ref, mlirLoc};
+  return {ref, baseLoc};
 }
 } // namespace
 
@@ -2686,9 +2807,91 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
+static std::string formatMLIRError(const MLIRError &e) {
+  auto locStr = [](const PyLocation &loc) {
+    PyPrintAccumulator accum;
+    mlirLocationPrint(loc, accum.getCallback(), accum.getUserData());
+    std::string s = nb::cast<std::string>(nb::str(accum.join()));
+    std::string_view sv(s);
+    if (sv.size() > 5) {
+      sv.remove_prefix(4); // "loc("
+      sv.remove_suffix(1); // ")"
+    }
+    return std::string(sv);
+  };
+  auto indent = [](std::string s) {
+    size_t pos = 0;
+    while ((pos = s.find('\n', pos)) != std::string::npos) {
+      s.replace(pos, 1, "\n  ");
+      pos += 3;
+    }
+    return s;
+  };
+
+  std::ostringstream os;
+  os << e.message;
+  if (!e.errorDiagnostics.empty())
+    os << ":";
+  for (const auto &diag : e.errorDiagnostics) {
+    os << "\nerror: " << locStr(diag.location) << ": " << indent(diag.message);
+    for (const auto &note : diag.notes) {
+      os << "\n note: " << locStr(note.location) << ": "
+         << indent(note.message);
+    }
+  }
+  return os.str();
+}
+
+void MLIRError::bind(nb::module_ &m) {
+  auto cls = nb::exception<MLIRError>(m, "MLIRError", PyExc_Exception);
+  nb::register_exception_translator(
+      [](const std::exception_ptr &p, void *payload) {
+        try {
+          if (p)
+            std::rethrow_exception(p);
+        } catch (MLIRError &e) {
+          std::string formatted = formatMLIRError(e);
+          nb::object ty = nb::borrow(static_cast<PyObject *>(payload));
+          nb::object obj = ty(formatted);
+          obj.attr("_message") = nb::cast(std::move(e.message));
+          obj.attr("_error_diagnostics") =
+              nb::cast(std::move(e.errorDiagnostics));
+          PyErr_SetObject(static_cast<PyObject *>(payload), obj.ptr());
+        }
+      },
+      cls.ptr());
+  auto propertyType = nb::borrow<nb::type_object>(
+      reinterpret_cast<PyObject *>(&PyProperty_Type));
+  nb::setattr(
+      cls, "message",
+      propertyType(nb::cpp_function(
+          [](nb::object self) -> nb::str { return self.attr("_message"); },
+          nb::is_method())));
+  nb::setattr(cls, "error_diagnostics",
+              propertyType(nb::cpp_function(
+                  [](nb::object self)
+                      -> nb::typed<nb::list, PyDiagnostic::DiagnosticInfo> {
+                    return self.attr("_error_diagnostics");
+                  },
+                  nb::is_method())));
+}
+
 void populateRoot(nb::module_ &m) {
   m.attr("T") = nb::type_var("T");
   m.attr("U") = nb::type_var("U");
+
+  // Policies for how loc_tracebacks() composes the three location sources
+  // (explicit loc=, generated traceback, Location.current).
+  nb::enum_<PyGlobals::TracebackLoc::OnExplicitAction>(m, "OnExplicitAction")
+      .value("USE_EXPLICIT",
+             PyGlobals::TracebackLoc::OnExplicitAction::UseExplicit)
+      .value("USE_TRACEBACK",
+             PyGlobals::TracebackLoc::OnExplicitAction::UseTraceback);
+
+  nb::enum_<PyGlobals::TracebackLoc::CurrentLocAction>(m, "CurrentLocAction")
+      .value("FALLBACK", PyGlobals::TracebackLoc::CurrentLocAction::Fallback)
+      .value("NAMELOC_WRAP",
+             PyGlobals::TracebackLoc::CurrentLocAction::NamelocWrap);
 
   nb::class_<PyGlobals>(m, "_Globals")
       .def_prop_rw("dialect_search_modules",
@@ -2703,7 +2906,8 @@ void populateRoot(nb::module_ &m) {
           },
           "dialect_namespace"_a)
       .def("_register_dialect_impl", &PyGlobals::registerDialectImpl,
-           "dialect_namespace"_a, "dialect_class"_a,
+           "dialect_namespace"_a, "dialect_class"_a, nb::kw_only(),
+           "replace"_a = false,
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
            "operation_name"_a, "operation_class"_a, nb::kw_only(),
@@ -2733,6 +2937,24 @@ void populateRoot(nb::module_ &m) {
       .def("register_traceback_file_exclusion",
            [](PyGlobals &self, const std::string &filename) {
              self.getTracebackLoc().registerTracebackFileExclusion(filename);
+           })
+      .def("traceback_action_on_explicit_loc",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().tracebackActionOnExplicitLoc();
+           })
+      .def("set_traceback_action_on_explicit_loc",
+           [](PyGlobals &self,
+              PyGlobals::TracebackLoc::OnExplicitAction action) {
+             self.getTracebackLoc().setTracebackActionOnExplicitLoc(action);
+           })
+      .def("traceback_action_on_current_loc",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().tracebackActionOnCurrentLoc();
+           })
+      .def("set_traceback_action_on_current_loc",
+           [](PyGlobals &self,
+              PyGlobals::TracebackLoc::CurrentLocAction action) {
+             self.getTracebackLoc().setTracebackActionOnCurrentLoc(action);
            });
 
   // Aside from making the globals accessible to python, having python manage
@@ -2774,6 +2996,28 @@ void populateRoot(nb::module_ &m) {
       "dialect_class"_a, nb::kw_only(), "replace"_a = false,
       "Produce a class decorator for registering an Operation class as part of "
       "a dialect");
+  m.def(
+      "register_op_adaptor",
+      [](const nb::type_object &opClass, bool replace) -> nb::object {
+        return nb::cpp_function(
+            [opClass,
+             replace](nb::type_object adaptorClass) -> nb::type_object {
+              std::string operationName =
+                  nb::cast<std::string>(adaptorClass.attr("OPERATION_NAME"));
+              PyGlobals::get().registerOpAdaptorImpl(operationName,
+                                                     adaptorClass, replace);
+              // Dict-stuff the new adaptorClass by name onto the opClass.
+              opClass.attr("Adaptor") = adaptorClass;
+              return adaptorClass;
+            });
+      },
+      // clang-format off
+      nb::sig("def register_op_adaptor(op_class: type, *, replace: bool = False) "
+        "-> typing.Callable[[type[T]], type[T]]"),
+      // clang-format on
+      "op_class"_a, nb::kw_only(), "replace"_a = false,
+      "Produce a class decorator for registering an OpAdaptor class for an "
+      "operation.");
   m.def(
       MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR,
       [](PyTypeID mlirTypeID, bool replace) -> nb::object {
@@ -2878,7 +3122,8 @@ void populateIRCore(nb::module_ &m) {
                    "Returns True if an error was encountered during diagnostic "
                    "handling.")
       .def("__enter__", &PyDiagnosticHandler::contextEnter,
-           "Enters the diagnostic handler as a context manager.")
+           "Enters the diagnostic handler as a context manager.",
+           nb::sig("def __enter__(self, /) -> DiagnosticHandler"))
       .def("__exit__", &PyDiagnosticHandler::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the diagnostic handler context manager.");
@@ -2924,7 +3169,8 @@ void populateIRCore(nb::module_ &m) {
                   &PyMlirContext::createFromCapsule,
                   "Creates a Context from a capsule wrapping MlirContext.")
       .def("__enter__", &PyMlirContext::contextEnter,
-           "Enters the context as a context manager.")
+           "Enters the context as a context manager.",
+           nb::sig("def __enter__(self, /) -> Context"))
       .def("__exit__", &PyMlirContext::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the context manager.")
@@ -2954,7 +3200,7 @@ void populateIRCore(nb::module_ &m) {
                 self.get(), {name.data(), name.size()});
             if (mlirDialectIsNull(dialect)) {
               throw nb::value_error(
-                  (Twine("Dialect '") + name + "' not found").str().c_str());
+                  join("Dialect '", name, "' not found").c_str());
             }
             return PyDialectDescriptor(self.getRef(), dialect);
           },
@@ -3150,7 +3396,8 @@ void populateIRCore(nb::module_ &m) {
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyLocation::createFromCapsule,
                   "Creates a Location from a capsule wrapping MlirLocation.")
       .def("__enter__", &PyLocation::contextEnter,
-           "Enters the location as a context manager.")
+           "Enters the location as a context manager.",
+           nb::sig("def __enter__(self, /) -> Location"))
       .def("__exit__", &PyLocation::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the location context manager.")
@@ -3190,9 +3437,9 @@ void populateIRCore(nb::module_ &m) {
             if (frames.empty())
               throw nb::value_error("No caller frames provided.");
             MlirLocation caller = frames.back().get();
-            for (const PyLocation &frame :
-                 llvm::reverse(llvm::ArrayRef(frames).drop_back()))
-              caller = mlirLocationCallSiteGet(frame.get(), caller);
+            for (size_t index = frames.size() - 1; index-- > 0;) {
+              caller = mlirLocationCallSiteGet(frames[index].get(), caller);
+            }
             return PyLocation(context->getRef(),
                               mlirLocationCallSiteGet(callee.get(), caller));
           },
@@ -3259,9 +3506,9 @@ void populateIRCore(nb::module_ &m) {
           [](const std::vector<PyLocation> &pyLocations,
              std::optional<PyAttribute> metadata,
              DefaultingPyMlirContext context) {
-            llvm::SmallVector<MlirLocation, 4> locations;
+            std::vector<MlirLocation> locations;
             locations.reserve(pyLocations.size());
-            for (auto &pyLocation : pyLocations)
+            for (const PyLocation &pyLocation : pyLocations)
               locations.push_back(pyLocation.get());
             MlirLocation location = mlirLocationFusedGet(
                 context->get(), locations.size(), locations.data(),
@@ -3535,6 +3782,12 @@ void populateIRCore(nb::module_ &m) {
           },
           "Returns the list of operation operands.")
       .def_prop_ro(
+          "op_operands",
+          [](PyOperationBase &self) {
+            return PyOpOperands(self.getOperation().getRef());
+          },
+          "Returns the list of op operands.")
+      .def_prop_ro(
           "regions",
           [](PyOperationBase &self) {
             return PyRegionList(self.getOperation().getRef());
@@ -3739,17 +3992,52 @@ void populateIRCore(nb::module_ &m) {
 
             Note:
               After erasing, any Python references to the operation become invalid.)")
-      .def("walk", &PyOperationBase::walk, "callback"_a,
-           "walk_order"_a = PyWalkOrder::PostOrder,
-           // clang-format off
-          nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder) -> None"),
-           // clang-format on
-           R"(
+      .def(
+          "walk",
+          [](PyOperationBase &self,
+             std::function<PyWalkResult(MlirOperation)> callback,
+             PyWalkOrder walkOrder, std::optional<nb::object> opClass) {
+            if (!opClass)
+              return self.walk(callback, walkOrder);
+            self.walk(
+                [&](MlirOperation mlirOp) -> PyWalkResult {
+                  nb::object opview =
+                      PyOperation::forOperation(
+                          self.getOperation().getContext(), mlirOp)
+                          ->createOpView();
+                  if (nb::isinstance(opview, *opClass))
+                    return callback(mlirOp);
+                  return PyWalkResult::Advance;
+                },
+                walkOrder);
+          },
+          "callback"_a, "walk_order"_a = PyWalkOrder::PostOrder,
+          "op_class"_a = nb::none(),
+          // clang-format off
+           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = ..., op_class: type[OpView] | None = None) -> None"),
+          // clang-format on
+          R"(
              Walks the operation tree with a callback function.
+
+             If op_class is provided, the callback is only invoked on operations
+             of that type; all other operations are skipped silently.
 
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
-               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).)");
+               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).
+               op_class: If provided, only operations of this type are passed to the callback.)")
+      .def(
+          "has_trait",
+          [](PyOperationBase &self, nb::type_object &traitCls) {
+            PyTypeID traitTypeID =
+                nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+            MlirIdentifier opName =
+                mlirOperationGetName(self.getOperation().get());
+            return mlirOperationNameHasTrait(
+                mlirIdentifierStr(opName), traitTypeID.get(),
+                self.getOperation().getContext()->get());
+          },
+          "trait_cls"_a, "Checks if the operation has a given trait.");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
@@ -3757,13 +4045,14 @@ void populateIRCore(nb::module_ &m) {
           [](std::string_view name,
              std::optional<std::vector<PyType *>> results,
              std::optional<std::vector<PyValue *>> operands,
-             std::optional<nb::dict> attributes,
+             std::optional<nb::typed<nb::dict, nb::str, PyAttribute>>
+                 attributes,
              std::optional<std::vector<PyBlock *>> successors, int regions,
              const std::optional<PyLocation> &location,
              const nb::object &maybeIp,
              bool inferType) -> nb::typed<nb::object, PyOperation> {
             // Unpack/validate operands.
-            llvm::SmallVector<MlirValue, 4> mlirOperands;
+            std::vector<MlirValue> mlirOperands;
             if (operands) {
               mlirOperands.reserve(operands->size());
               for (PyValue *operand : *operands) {
@@ -3774,9 +4063,9 @@ void populateIRCore(nb::module_ &m) {
             }
 
             PyLocation pyLoc = maybeGetTracebackLocation(location);
-            return PyOperation::create(name, results, mlirOperands, attributes,
-                                       successors, regions, pyLoc, maybeIp,
-                                       inferType);
+            return PyOperation::create(
+                name, results, mlirOperands.data(), mlirOperands.size(),
+                attributes, successors, regions, pyLoc, maybeIp, inferType);
           },
           "name"_a, "results"_a = nb::none(), "operands"_a = nb::none(),
           "attributes"_a = nb::none(), "successors"_a = nb::none(),
@@ -3859,8 +4148,10 @@ void populateIRCore(nb::module_ &m) {
                  std::tuple<int, bool> opRegionSpec,
                  nb::object operandSegmentSpecObj,
                  nb::object resultSegmentSpecObj,
-                 std::optional<nb::list> resultTypeList, nb::list operandList,
-                 std::optional<nb::dict> attributes,
+                 std::optional<nb::sequence> resultTypeList,
+                 nb::sequence operandList,
+                 std::optional<nb::typed<nb::dict, nb::str, PyAttribute>>
+                     attributes,
                  std::optional<std::vector<PyBlock *>> successors,
                  std::optional<int> regions,
                  const std::optional<PyLocation> &location,
@@ -3906,8 +4197,9 @@ void populateIRCore(nb::module_ &m) {
   // ods_operand_segments/ods_result_segments as arguments to the constructor,
   // rather than to access them as attributes.
   opViewClass.attr("build_generic") = classmethod(
-      [](nb::handle cls, std::optional<nb::list> resultTypeList,
-         nb::list operandList, std::optional<nb::dict> attributes,
+      [](nb::handle cls, std::optional<nb::sequence> resultTypeList,
+         nb::sequence operandList,
+         std::optional<nb::typed<nb::dict, nb::str, PyAttribute>> attributes,
          std::optional<std::vector<PyBlock *>> successors,
          std::optional<int> regions, std::optional<PyLocation> location,
          const nb::object &maybeIp) {
@@ -3925,6 +4217,9 @@ void populateIRCore(nb::module_ &m) {
       "cls"_a, "results"_a = nb::none(), "operands"_a = nb::none(),
       "attributes"_a = nb::none(), "successors"_a = nb::none(),
       "regions"_a = nb::none(), "loc"_a = nb::none(), "ip"_a = nb::none(),
+      // clang-format off
+      nb::sig("def build_generic(cls, results: Sequence[Type] | None = None, operands: Sequence[Value] | None = None, attributes: dict[str, Attribute] | None = None, successors: Sequence[Block] | None = None, regions: int | None = None, loc: Location | None = None, ip: InsertionPoint | None = None) -> typing.Self"),
+      // clang-format on
       "Builds a specific, generated OpView based on class level attributes.");
   opViewClass.attr("parse") = classmethod(
       [](const nb::object &cls, const std::string &sourceStr,
@@ -3944,13 +4239,30 @@ void populateIRCore(nb::module_ &m) {
             mlirIdentifierStr(mlirOperationGetName(*parsed.get()));
         std::string_view parsedOpName(identifier.data, identifier.length);
         if (clsOpName != parsedOpName)
-          throw MLIRError(Twine("Expected a '") + clsOpName + "' op, got: '" +
-                          parsedOpName + "'");
+          throw MLIRError(join("Expected a '", clsOpName, "' op, got: '",
+                               parsedOpName, "'"));
         return PyOpView::constructDerived(cls, parsed.getObject());
       },
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
       "context"_a = nb::none(),
+      // clang-format off
+      nb::sig("def parse(cls, source: str, *, source_name: str = '', context: Context | None = None) -> typing.Self"),
+      // clang-format on
       "Parses a specific, generated OpView based on class level attributes.");
+  opViewClass.attr("has_trait") = classmethod(
+      [](nb::object &self, nb::type_object &traitCls,
+         DefaultingPyMlirContext &context) {
+        PyTypeID traitTypeID =
+            nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+        std::string opName = nb::cast<std::string>(self.attr("OPERATION_NAME"));
+        return mlirOperationNameHasTrait(
+            mlirStringRefCreate(opName.data(), opName.size()),
+            traitTypeID.get(), context->get());
+      },
+      "cls"_a, "trait_cls"_a, "context"_a = nb::none(),
+      "Checks if the operation has a given trait.");
+
+  PyOpAdaptor::bind(m);
 
   //----------------------------------------------------------------------------
   // Mapping of PyRegion.
@@ -4046,8 +4358,9 @@ void populateIRCore(nb::module_ &m) {
           "Returns a forward-optimized sequence of operations.")
       .def_static(
           "create_at_start",
-          [](PyRegion &parent, const nb::sequence &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+          [](PyRegion &parent, nb::typed<nb::sequence, PyType> pyArgTypes,
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             parent.checkValid();
             MlirBlock block = createBlock(pyArgTypes, pyArgLocs);
             mlirRegionInsertOwnedBlock(parent, 0, block);
@@ -4075,7 +4388,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "create_before",
           [](PyBlock &self, const nb::args &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             self.checkValid();
             MlirBlock block =
                 createBlock(nb::cast<nb::sequence>(pyArgTypes), pyArgLocs);
@@ -4089,7 +4403,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "create_after",
           [](PyBlock &self, const nb::args &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             self.checkValid();
             MlirBlock block =
                 createBlock(nb::cast<nb::sequence>(pyArgTypes), pyArgLocs);
@@ -4120,10 +4435,7 @@ void populateIRCore(nb::module_ &m) {
           "__eq__", [](PyBlock &self, nb::object &other) { return false; },
           "Compares block with non-block object (always returns False).")
       .def(
-          "__hash__",
-          [](PyBlock &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
-          },
+          "__hash__", [](PyBlock &self) { return hash(self.get().ptr); },
           "Returns the hash value of the block.")
       .def(
           "__str__",
@@ -4175,7 +4487,8 @@ void populateIRCore(nb::module_ &m) {
       .def(nb::init<PyBlock &>(), "block"_a,
            "Inserts after the last operation but still inside the block.")
       .def("__enter__", &PyInsertionPoint::contextEnter,
-           "Enters the insertion point as a context manager.")
+           "Enters the insertion point as a context manager.",
+           nb::sig("def __enter__(self, /) -> InsertionPoint"))
       .def("__exit__", &PyInsertionPoint::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the insertion point context manager.")
@@ -4308,10 +4621,7 @@ void populateIRCore(nb::module_ &m) {
           "Compares attribute with non-attribute object (always returns "
           "False).")
       .def(
-          "__hash__",
-          [](PyAttribute &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
-          },
+          "__hash__", [](PyAttribute &self) { return hash(self.get().ptr); },
           "Returns the hash value of the attribute.")
       .def(
           "dump", [](PyAttribute &self) { mlirAttributeDump(self); },
@@ -4433,10 +4743,7 @@ void populateIRCore(nb::module_ &m) {
           "other"_a.none(),
           "Compares type with non-type object (always returns False).")
       .def(
-          "__hash__",
-          [](PyType &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
-          },
+          "__hash__", [](PyType &self) { return hash(self.get().ptr); },
           "Returns the hash value of the `Type`.")
       .def(
           "dump", [](PyType &self) { mlirTypeDump(self); }, kDumpDocstring)
@@ -4477,8 +4784,7 @@ void populateIRCore(nb::module_ &m) {
             if (!mlirTypeIDIsNull(mlirTypeID))
               return PyTypeID(mlirTypeID);
             auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(self)));
-            throw nb::value_error(
-                (origRepr + llvm::Twine(" has no typeid.")).str().c_str());
+            throw nb::value_error(join(origRepr, " has no typeid.").c_str());
           },
           "Returns the `TypeID` of the `Type`, or raises `ValueError` if "
           "`Type` has no "
@@ -4519,7 +4825,7 @@ void populateIRCore(nb::module_ &m) {
   m.attr("_T") = nb::type_var("_T", "bound"_a = m.attr("Type"));
 
   nb::class_<PyValue>(m, "Value", nb::is_generic(),
-                      nb::sig("class Value(Generic[_T])"))
+                      nb::sig("class Value(typing.Generic[_T])"))
       .def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), "value"_a,
            "Creates a Value reference from another `Value`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule,
@@ -4537,7 +4843,8 @@ void populateIRCore(nb::module_ &m) {
           kDumpDocstring)
       .def_prop_ro(
           "owner",
-          [](PyValue &self) -> nb::typed<nb::object, PyOpView> {
+          [](PyValue &self)
+              -> nb::typed<nb::object, std::variant<PyOpView, PyBlock>> {
             MlirValue v = self.get();
             if (mlirValueIsAOpResult(v)) {
               assert(mlirOperationEqual(self.getParentOperation()->get(),
@@ -4575,10 +4882,7 @@ void populateIRCore(nb::module_ &m) {
           "__eq__", [](PyValue &self, nb::object other) { return false; },
           "Compares value with non-value object (always returns False).")
       .def(
-          "__hash__",
-          [](PyValue &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
-          },
+          "__hash__", [](PyValue &self) { return hash(self.get().ptr); },
           "Returns the hash value of the value.")
       .def(
           "__str__",
@@ -4639,12 +4943,12 @@ void populateIRCore(nb::module_ &m) {
           "Returns the string form of value as an operand (i.e., the ValueID).")
       .def_prop_ro(
           "type",
-          [](PyValue &self) -> nb::typed<nb::object, PyType> {
+          [](PyValue &self) {
             return PyType(self.getParentOperation()->getContext(),
                           mlirValueGetType(self.get()))
                 .maybeDownCast();
           },
-          "Returns the type of the value.")
+          "Returns the type of the value.", nb::sig("def type(self) -> _T"))
       .def(
           "set_type",
           [](PyValue &self, const PyType &type) {
@@ -4668,31 +4972,10 @@ void populateIRCore(nb::module_ &m) {
           "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
       .def(
           "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, const nb::list &exceptions) {
-            // Convert Python list to a SmallVector of MlirOperations
-            llvm::SmallVector<MlirOperation> exceptionOps;
-            for (nb::handle exception : exceptions) {
-              exceptionOps.push_back(nb::cast<PyOperation &>(exception).get());
-            }
-
-            mlirValueReplaceAllUsesExcept(
-                self, with, static_cast<intptr_t>(exceptionOps.size()),
-                exceptionOps.data());
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
-      .def(
-          "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, PyOperation &exception) {
-            MlirOperation exceptedUser = exception.get();
-            mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
-      .def(
-          "replace_all_uses_except",
           [](PyValue &self, PyValue &with,
              std::vector<PyOperation> &exceptions) {
-            // Convert Python list to a SmallVector of MlirOperations
-            llvm::SmallVector<MlirOperation> exceptionOps;
+            // Convert Python list to a std::vector of MlirOperations
+            std::vector<MlirOperation> exceptionOps;
             for (PyOperation &exception : exceptions)
               exceptionOps.push_back(exception);
             mlirValueReplaceAllUsesExcept(
@@ -4825,9 +5108,9 @@ void populateIRCore(nb::module_ &m) {
   PyOpAttributeMap::bind(m);
   PyOpOperandIterator::bind(m);
   PyOpOperandList::bind(m);
+  PyOpOperands::bind(m);
   PyOpResultList::bind(m);
   PyOpSuccessors::bind(m);
-  PyRegionIterator::bind(m);
   PyRegionList::bind(m);
 
   // Debug bindings.
@@ -4835,6 +5118,14 @@ void populateIRCore(nb::module_ &m) {
 
   // Attribute builder getter.
   PyAttrBuilderMap::bind(m);
+
+  // Extensible Dialect
+  PyDynamicOpTrait::bind(m);
+  PyDynamicOpTraits::IsTerminator::bind(m);
+  PyDynamicOpTraits::NoTerminator::bind(m);
+
+  // MLIRError exception.
+  MLIRError::bind(m);
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

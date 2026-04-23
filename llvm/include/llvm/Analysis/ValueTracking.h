@@ -329,6 +329,11 @@ LLVM_ABI bool canIgnoreSignBitOfZero(const Use &U);
 /// the value is NaN.
 LLVM_ABI bool canIgnoreSignBitOfNaN(const Use &U);
 
+/// Return true if the floating-point value \p V is known to be an integer
+/// value.
+LLVM_ABI bool isKnownIntegral(const Value *V, const SimplifyQuery &SQ,
+                              FastMathFlags FMF);
+
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
 /// values obviously, but is also true for i32 0, i32 -1, i16 0xF0F0, double
@@ -677,10 +682,7 @@ LLVM_ABI ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.
 LLVM_ABI ConstantRange computeConstantRange(const Value *V, bool ForSigned,
-                                            bool UseInstrInfo = true,
-                                            AssumptionCache *AC = nullptr,
-                                            const Instruction *CtxI = nullptr,
-                                            const DominatorTree *DT = nullptr,
+                                            const SimplifyQuery &SQ,
                                             unsigned Depth = 0);
 
 /// Combine constant ranges from computeConstantRange() and computeKnownBits().
@@ -995,6 +997,24 @@ LLVM_ABI bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
 LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
                                                    PHINode *&P, Value *&Init,
                                                    Value *&OtherOp);
+
+/// Attempt to match a simple value-accumulating recurrence of the form:
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%OtherOp0, %OtherOp1,
+///   %llvm.intrinsic.acc)
+/// OR
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%llvm.intrinsic.acc, %OtherOp0,
+///   %OtherOp1)
+///
+/// The recurrence relation is of kind:
+///   X_0 = %a (initial value),
+///   X_i = call @llvm.ternary.intrinsic(X_i-1, %b, %c)
+/// Where %b, %c are not required to be loop-invariant.
+LLVM_ABI bool matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                    PHINode *&P, Value *&Init,
+                                                    Value *&OtherOp0,
+                                                    Value *&OtherOp1);
 
 /// Return true if RHS is known to be implied true by LHS.  Return false if
 /// RHS is known to be implied false by LHS.  Otherwise, return std::nullopt if

@@ -352,7 +352,6 @@ def : Pat<(bitconvert FPR64:$src), (MOVFR2GR_D FPR64:$src)>;
 // FP Rounding
 let Predicates = [HasBasicD, IsLA64] in {
 def : PatFpr<frint, FRINT_D, FPR64>;
-def : PatFpr<flog2, FLOGB_D, FPR64>;
 } // Predicates = [HasBasicD, IsLA64]
 
 /// Pseudo-instructions needed for the soft-float ABI with LA32D

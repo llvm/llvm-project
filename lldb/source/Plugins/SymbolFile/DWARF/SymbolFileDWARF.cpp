@@ -132,7 +132,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_symbolfiledwarf_properties);
+    m_collection_sp->Initialize(g_symbolfiledwarf_properties_def);
   }
 
   bool IgnoreFileIndexes() const {
@@ -519,12 +519,7 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
     return debug_map_symfile->GetTypeSystemForLanguage(language);
 
-  auto type_system_or_err =
-      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system_or_err)
-    if (auto ts = *type_system_or_err)
-      ts->SetSymbolFile(this);
-  return type_system_or_err;
+  return SymbolFileCommon::GetTypeSystemForLanguage(language);
 }
 
 void SymbolFileDWARF::InitializeObject() {
@@ -671,7 +666,7 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
           if (section && section->GetFileSize() == 1) {
             m_objfile_sp->GetModule()->ReportWarning(
                 "empty dSYM file detected, dSYM was created with an "
-                "executable with no debug info.");
+                "executable with no debug info");
           }
         }
       }
@@ -1624,7 +1619,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
         log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
         def_die.GetID(), DW_TAG_value_to_name(def_die.Tag()), def_die.Tag(),
-        type->GetName().AsCString());
+        type->GetName().GetStringRef());
   assert(compiler_type);
   return dwarf_ast->CompleteTypeFromDWARF(def_die, type, compiler_type);
 }
@@ -1929,7 +1924,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
           "unable to locate separate debug file (dwo, dwp). Debugging will be "
-          "degraded.");
+          "degraded");
     }
     return nullptr;
   }
@@ -2026,9 +2021,9 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
       GetObjectFile()->GetModule()->ReportWarning(
           "{0}", error.AsCString("unknown error"));
       GetObjectFile()->GetModule()->ReportWarning(
-          "Unable to locate module needed for external types.\n"
+          "unable to locate module needed for external types.\n"
           "Debugging will be degraded due to missing types. Rebuilding the "
-          "project will regenerate the needed module files.");
+          "project will regenerate the needed module files");
       continue;
     }
 
@@ -2048,10 +2043,10 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
     if (dwo_id != dwo_dwo_id) {
       GetObjectFile()->GetModule()->ReportWarning(
-          "Module {0} is out-of-date (hash mismatch).\n"
+          "module {0} is out-of-date (hash mismatch).\n"
           "Type information from this module may be incomplete or inconsistent "
           "with the rest of the program. Rebuilding the project will "
-          "regenerate the needed module files.",
+          "regenerate the needed module files",
           dwo_module_spec.GetFileSpec().GetPath());
     }
   }
@@ -2232,7 +2227,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
         } else {
           GetObjectFile()->GetModule()->ReportWarning(
               "{0:x16}: compile unit {1} failed to create a valid "
-              "lldb_private::CompileUnit class.",
+              "lldb_private::CompileUnit class",
               cu_offset, cu_idx);
         }
       }
@@ -3579,6 +3574,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   DWARFFormValue type_die_form;
   bool is_external = false;
   bool is_artificial = false;
+  std::optional<uint64_t> tag_offset = std::nullopt;
   DWARFFormValue const_value_form, location_form;
   Variable::RangeList scope_ranges;
 
@@ -3589,6 +3585,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
+    case DW_AT_LLVM_tag_offset:
+      tag_offset = form_value.Unsigned();
+      break;
     case DW_AT_decl_file:
       decl.SetFile(
           attributes.CompileUnitAtIndex(i)->GetFile(form_value.Unsigned()));
@@ -3829,7 +3828,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   return std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
       scope_ranges, &decl, location_list, is_external, is_artificial,
-      location_is_const_value_data, is_static_member);
+      location_is_const_value_data, is_static_member, tag_offset);
 }
 
 DWARFDIE

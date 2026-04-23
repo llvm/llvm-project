@@ -138,19 +138,19 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   } AEABILibcall;
   switch (LC) {
   case RTLIB::MEMCPY:
-    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memcpy)
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::impl___aeabi_memcpy)
       return SDValue();
 
     AEABILibcall = AEABI_MEMCPY;
     break;
   case RTLIB::MEMMOVE:
-    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memmove)
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::impl___aeabi_memmove)
       return SDValue();
 
     AEABILibcall = AEABI_MEMMOVE;
     break;
   case RTLIB::MEMSET:
-    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memset)
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::impl___aeabi_memset)
       return SDValue();
 
     AEABILibcall = AEABI_MEMSET;
@@ -303,7 +303,7 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
   unsigned NumMEMCPYs = (NumMemOps + MaxLoadsInLDM - 1) / MaxLoadsInLDM;
 
   // Code size optimisation: do not inline memcpy if expansion results in
-  // more instructions than the libary call.
+  // more instructions than the library call.
   if (NumMEMCPYs > 1 && Subtarget.hasMinSize()) {
     return SDValue();
   }

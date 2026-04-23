@@ -56,12 +56,17 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
     assert(launch_info.GetMonitorProcessCallback());
     llvm::Expected<HostThread> maybe_thread =
         process.StartMonitoring(launch_info.GetMonitorProcessCallback());
-    if (!maybe_thread)
+    if (!maybe_thread) {
       error = Status::FromErrorStringWithFormatv(
           "failed to launch host thread: {}",
           llvm::toString(maybe_thread.takeError()));
-    if (log)
-      log->PutCString("started monitoring child process.");
+    } else {
+      if (log)
+        log->PutCString("started monitoring child process.");
+
+      // Allow the thread to exit on its own once its work is done.
+      maybe_thread->Reset();
+    }
   } else {
     // Invalid process ID, something didn't go well
     if (error.Success())

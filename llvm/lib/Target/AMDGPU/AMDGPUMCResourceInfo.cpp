@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCResourceInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -25,10 +26,9 @@
 using namespace llvm;
 
 MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
-                                    MCContext &OutContext, bool IsLocal) {
-  auto GOCS = [FuncName, &OutContext, IsLocal](StringRef Suffix) {
-    StringRef Prefix =
-        IsLocal ? OutContext.getAsmInfo()->getPrivateGlobalPrefix() : "";
+                                    MCContext &OutContext) {
+  auto GOCS = [FuncName, &OutContext](StringRef Suffix) {
+    StringRef Prefix = OutContext.getAsmInfo()->getInternalSymbolPrefix();
     return OutContext.getOrCreateSymbol(Twine(Prefix) + FuncName +
                                         Twine(Suffix));
   };
@@ -59,8 +59,8 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
 
 const MCExpr *MCResourceInfo::getSymRefExpr(StringRef FuncName,
                                             ResourceInfoKind RIK,
-                                            MCContext &Ctx, bool IsLocal) {
-  return MCSymbolRefExpr::create(getSymbol(FuncName, RIK, Ctx, IsLocal), Ctx);
+                                            MCContext &Ctx) {
+  return MCSymbolRefExpr::create(getSymbol(FuncName, RIK, Ctx), Ctx);
 }
 
 void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
@@ -190,12 +190,11 @@ void MCResourceInfo::assignResourceInfoExpr(
     const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
     MCContext &OutContext) {
   const TargetMachine &TM = MF.getTarget();
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   const MCConstantExpr *LocalConstExpr =
       MCConstantExpr::create(LocalValue, OutContext);
   const MCExpr *SymVal = LocalConstExpr;
-  MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext, IsLocal);
+  MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
   LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                     << LocalValue << " as function local usage\n");
   if (!Callees.empty()) {
@@ -207,10 +206,9 @@ void MCResourceInfo::assignResourceInfoExpr(
       if (!Seen.insert(Callee).second)
         continue;
 
-      bool IsCalleeLocal = Callee->hasLocalLinkage();
       MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
       MCSymbol *CalleeValSym =
-          getSymbol(CalleeFnSym->getName(), RIK, OutContext, IsCalleeLocal);
+          getSymbol(CalleeFnSym->getName(), RIK, OutContext);
 
       // Avoid constructing recursive definitions by detecting whether `Sym` is
       // found transitively within any of its `CalleeValSym`.
@@ -256,7 +254,6 @@ void MCResourceInfo::gatherResourceInfo(
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
   MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
 
   if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())) {
@@ -271,6 +268,30 @@ void MCResourceInfo::gatherResourceInfo(
 
   LLVM_DEBUG(dbgs() << "MCResUse: Gathering resource information for "
                     << FnSym->getName() << '\n');
+
+  auto SetToLocal = [&](int64_t Value, ResourceInfoKind RIK) {
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
+    Sym->setVariableValue(MCConstantExpr::create(Value, OutContext));
+  };
+
+  // When link-time object linking is enabled, set all resource symbols to
+  // concrete local values.
+  if (AMDGPUTargetMachine::EnableObjectLinking) {
+    LLVM_DEBUG(dbgs() << "MCResUse:   object linking enabled, no call-graph "
+                         "propagation; emitting local resource values only\n");
+    SetToLocal(FRI.NumVGPR, RIK_NumVGPR);
+    SetToLocal(FRI.NumAGPR, RIK_NumAGPR);
+    SetToLocal(FRI.NumExplicitSGPR, RIK_NumSGPR);
+    SetToLocal(FRI.NumNamedBarrier, RIK_NumNamedBarrier);
+    SetToLocal(FRI.PrivateSegmentSize, RIK_PrivateSegSize);
+    SetToLocal(FRI.UsesVCC, RIK_UsesVCC);
+    SetToLocal(FRI.UsesFlatScratch, RIK_UsesFlatScratch);
+    SetToLocal(FRI.HasDynamicallySizedStack, RIK_HasDynSizedStack);
+    SetToLocal(FRI.HasRecursion, RIK_HasRecursion);
+    SetToLocal(FRI.HasIndirectCall, RIK_HasIndirectCall);
+    return;
+  }
+
   LLVM_DEBUG({
     if (!FRI.Callees.empty()) {
       dbgs() << "MCResUse: Callees:\n";
@@ -288,8 +309,7 @@ void MCResourceInfo::gatherResourceInfo(
                              FRI.Callees, OutContext);
     } else {
       const MCExpr *SymRef = MCSymbolRefExpr::create(MaxSym, OutContext);
-      MCSymbol *LocalNumSym =
-          getSymbol(FnSym->getName(), RIK, OutContext, IsLocal);
+      MCSymbol *LocalNumSym = getSymbol(FnSym->getName(), RIK, OutContext);
       const MCExpr *MaxWithLocal = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
       LocalNumSym->setVariableValue(MaxWithLocal);
@@ -308,8 +328,7 @@ void MCResourceInfo::gatherResourceInfo(
     // The expression for private segment size should be: FRI.PrivateSegmentSize
     // + max(FRI.Callees, FRI.CalleeSegmentSize)
     SmallVector<const MCExpr *, 8> ArgExprs;
-    MCSymbol *Sym =
-        getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext, IsLocal);
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext);
     if (FRI.CalleeSegmentSize) {
       LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                         << FRI.CalleeSegmentSize
@@ -324,11 +343,9 @@ void MCResourceInfo::gatherResourceInfo(
       if (!Seen.insert(Callee).second)
         continue;
       if (!Callee->isDeclaration()) {
-        bool IsCalleeLocal = Callee->hasLocalLinkage();
         MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
         MCSymbol *CalleeValSym =
-            getSymbol(CalleeFnSym->getName(), RIK_PrivateSegSize, OutContext,
-                      IsCalleeLocal);
+            getSymbol(CalleeFnSym->getName(), RIK_PrivateSegSize, OutContext);
 
         // Avoid constructing recursive definitions by detecting whether `Sym`
         // is found transitively within any of its `CalleeValSym`.
@@ -354,14 +371,6 @@ void MCResourceInfo::gatherResourceInfo(
     }
     Sym->setVariableValue(localConstExpr);
   }
-
-  auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
-    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext, IsLocal);
-    LLVM_DEBUG(
-        dbgs() << "MCResUse:   " << Sym->getName() << ": Adding " << LocalValue
-               << ", no further propagation as indirect callee found within\n");
-    Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
-  };
 
   if (!FRI.HasIndirectCall) {
     assignResourceInfoExpr(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC,
@@ -391,10 +400,9 @@ const MCExpr *MCResourceInfo::createTotalNumVGPRs(const MachineFunction &MF,
                                                   MCContext &Ctx) {
   const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
   return AMDGPUMCExpr::createTotalNumVGPR(
-      getSymRefExpr(FnSym->getName(), RIK_NumAGPR, Ctx, IsLocal),
-      getSymRefExpr(FnSym->getName(), RIK_NumVGPR, Ctx, IsLocal), Ctx);
+      getSymRefExpr(FnSym->getName(), RIK_NumAGPR, Ctx),
+      getSymRefExpr(FnSym->getName(), RIK_NumVGPR, Ctx), Ctx);
 }
 
 const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
@@ -402,12 +410,11 @@ const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
                                                   MCContext &Ctx) {
   const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
   return MCBinaryExpr::createAdd(
-      getSymRefExpr(FnSym->getName(), RIK_NumSGPR, Ctx, IsLocal),
+      getSymRefExpr(FnSym->getName(), RIK_NumSGPR, Ctx),
       AMDGPUMCExpr::createExtraSGPRs(
-          getSymRefExpr(FnSym->getName(), RIK_UsesVCC, Ctx, IsLocal),
-          getSymRefExpr(FnSym->getName(), RIK_UsesFlatScratch, Ctx, IsLocal),
-          hasXnack, Ctx),
+          getSymRefExpr(FnSym->getName(), RIK_UsesVCC, Ctx),
+          getSymRefExpr(FnSym->getName(), RIK_UsesFlatScratch, Ctx), hasXnack,
+          Ctx),
       Ctx);
 }

@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -46,7 +47,7 @@ static cl::opt<bool> DisableVSXFMAMutate(
 #define DEBUG_TYPE "ppc-vsx-fma-mutate"
 
 namespace llvm { namespace PPC {
-  int getAltVSXFMAOpcode(uint16_t Opcode);
+int32_t getAltVSXFMAOpcode(uint32_t Opcode);
 } }
 
 namespace {

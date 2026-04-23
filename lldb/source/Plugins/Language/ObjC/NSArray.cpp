@@ -56,8 +56,6 @@ public:
 
   lldb::ChildCacheState Update() override = 0;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 protected:
   virtual lldb::addr_t GetDataAddress() = 0;
 
@@ -217,8 +215,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
@@ -489,8 +485,8 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetChildAtIndex(
   object_at_idx += (pyhs_idx * m_ptr_size);
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 template <typename D32, typename D64>
@@ -524,20 +520,6 @@ lldb_private::formatters::GenericNSArrayMSyntheticFrontEnd<D32, D64>::Update() {
 
   return error.Success() ? lldb::ChildCacheState::eReuse
                          : lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<size_t> lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
-    GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = ExtractIndexFromString(name.AsCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  uint32_t idx = *optional_idx;
-  if (idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  return idx;
 }
 
 template <typename D32, typename D64>
@@ -616,22 +598,6 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
 }
 
 template <typename D32, typename D64, bool Inline>
-llvm::Expected<size_t>
-lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<
-    D32, D64, Inline>::GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = ExtractIndexFromString(name.AsCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  uint32_t idx = *optional_idx;
-  if (idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  return idx;
-}
-
-template <typename D32, typename D64, bool Inline>
 llvm::Expected<uint32_t>
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<
     D32, D64, Inline>::CalculateNumChildren() {
@@ -696,8 +662,8 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
     return lldb::ValueObjectSP();
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 lldb_private::formatters::NSArray0SyntheticFrontEnd::NSArray0SyntheticFrontEnd(

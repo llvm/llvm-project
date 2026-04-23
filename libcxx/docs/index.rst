@@ -131,9 +131,9 @@ velocity, libc++ drops support for older compilers as newer ones are released.
 ============ =================== ========================== =====================
 Compiler     Versions            Restrictions               Support policy
 ============ =================== ========================== =====================
-Clang        20, 21, 22-git                                 latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
+Clang        21, 22, 23-git                                 latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
 AppleClang   26.0                                           latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
-Open XL      17.1.3 (AIX)                                   latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
+Open XL      17.1.4 (AIX)                                   latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
 GCC          15                  In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
 ============ =================== ========================== =====================
 
@@ -142,7 +142,7 @@ Libc++ also supports common platforms and architectures:
 ===================== ========================= ============================
 Target platform       Target architecture       Notes
 ===================== ========================= ============================
-macOS 10.13+          i386, x86_64, arm64
+macOS 11.0+           i386, x86_64, arm64       Deployment target lower bound is the minimum between what Chrome resp. the last stable `Xcode release <https://developer.apple.com/support/xcode>`_ support
 FreeBSD 12+           i386, x86_64, arm
 Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
 Android 5.0+          i386, x86_64, arm, arm64

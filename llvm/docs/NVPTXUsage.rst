@@ -21,7 +21,7 @@ LLVM IR.
    This document assumes a basic familiarity with CUDA and the PTX
    assembly language. Information about the CUDA Driver API and the PTX assembly
    language can be found in the `CUDA documentation
-   <http://docs.nvidia.com/cuda/index.html>`_.
+   <http://docs.nvidia.com/cuda/index.html>`__.
 
 
 
@@ -300,6 +300,42 @@ including the portion reserved for system software use.
 The '``dynamic_smem_size``' variant returns the amount of dynamic shared
 memory allocated per CTA for the kernel at launch time.
 
+'``llvm.nvvm.read.ptx.sreg.reserved_smem_offset_*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_begin()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_end()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_cap()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_0()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_1()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.read.ptx.sreg.reserved_smem_offset_*``' intrinsics provide
+access to PTX special registers that hold information about reserved shared
+memory offsets. 
+
+The '``reserved_smem_offset_begin``' intrinsic reads the start offset of
+the reserved shared memory region.
+
+The '``reserved_smem_offset_end``' intrinsic reads the end offset of the
+reserved shared memory region.
+
+The '``reserved_smem_offset_cap``' intrinsic reads the capacity limit of
+the reserved shared memory region.
+
+The '``reserved_smem_offset_0``' and '``reserved_smem_offset_1``' intrinsics
+read additional offsets in the reserved shared memory region.
+
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#special-registers-reserved-smem>`__.
+
 Barriers
 --------
 
@@ -431,8 +467,8 @@ actions are performed ``atomically``:
 * The mbarrier object transitions to the next phase.
 * The pending arrival count is reinitialized to the expected arrival count.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier>`__.
 
 '``llvm.nvvm.mbarrier.init``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -850,8 +886,8 @@ elected thread is captured in the i32 return value. The i1 return
 value is set to ``True`` for the leader thread and ``False`` for all
 the other threads. Election of a leader thread happens deterministically,
 i.e. the same leader thread is elected for the same ``membermask``
-every time. For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`_.
+every time. For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`__.
 
 Membar/Fences
 -------------
@@ -878,7 +914,8 @@ to operations performed on objects in `shared_cta` space. Likewise, when
 `sync_restrict` is restricted to `shared_cluster`, then memory semantics must be
 `acquire` and the effect of the fence operation only applies to operations
 performed on objects in `shared_cluster` memory space. The scope for both
-operations is `cluster`. For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+operations is `cluster`. For more details, please refer the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__.
 
 '``llvm.nvvm.fence.mbarrier_init.release.cluster``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -897,7 +934,8 @@ Overview:
 memory operations for which the fence instruction provides the memory ordering
 guarantees. The `mbarrier_init` modifiers restricts the synchronizing effect to
 the prior `mbarrier_init` operation executed by the same thread on mbarrier
-objects in `shared_cta` memory space. For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+objects in `shared_cta` memory space. For more details, please refer the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
 
 '``llvm.nvvm.fence.proxy.async_generic.acquire/release.sync_restrict``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -914,7 +952,8 @@ Overview:
 """""""""
 
 `nvvm.fence.proxy.async_generic.{semantics}.sync_restrict` are used to establish
-ordering between a prior memory access performed via the `async proxy <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>`__
+ordering between a prior memory access performed via the `async proxy
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>`__
 and a subsequent memory access performed via the generic proxy.
 ``nvvm.fence.proxy.async_generic.release.sync_restrict`` can form a release
 sequence that synchronizes with an acquire sequence that contains the
@@ -925,7 +964,8 @@ performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
 restricted to `shared_cluster`, then memory semantics must be `acquire` and the
 effect of the fence operation only applies to operations performed on objects in
 `shared_cluster` memory space. The scope for both operations is `cluster`.
-For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+For more details, please refer the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
 
 '``llvm.nvvm.fence.proxy.<proxykind>``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1005,7 +1045,7 @@ memory accesses across the proxies is to be provided. The only supported value
 for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing
 is used unconditionally, and the address specified by the operand addr must fall
 within the ``.global`` state space. Otherwise, the behavior is undefined. For
-more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
+more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`__.
 
 Address Space Intrinsics
 ------------------------
@@ -1065,6 +1105,196 @@ Semantics:
 If the given pointer in the generic address space refers to memory which falls
 within the state space of the intrinsic (and therefore could be safely address
 space casted to this space), 1 is returned, otherwise 0 is returned.
+
+Narrow Floating-Point Conversion intrinsics
+-------------------------------------------
+
+These intrinsics perform conversions involving narrow floating-point formats.
+The following table describes the rounding modes used across these intrinsics:
+
+.. _narrow-fp-rounding-modes:
+
+.. table:: Narrow Floating-Point Conversion Rounding Modes
+   :widths: 30 60
+
+   +-----------------------+---------------------------------------------------+
+   | Rounding Mode         | Description                                       |
+   +=======================+===================================================+
+   |``rn`` (default)       | Round to nearest, with ties to even               |
+   +-----------------------+---------------------------------------------------+
+   |``rz``                 | Round towards zero                                |
+   +-----------------------+---------------------------------------------------+
+   |``rp``                 | Round towards positive infinity                   |
+   +-----------------------+---------------------------------------------------+
+   |``rs``                 | Stochastic rounding which is achieved through the |
+   |                       | use of the supplied random bits (``%rnd_bits``).  |
+   |                       | The result s rounded in the direction towards     |
+   |                       | zero or away from zero based on the carry out of  |
+   |                       | the integer addition of the of mantissa from      |
+   |                       | the input.                                        |
+   +-----------------------+---------------------------------------------------+
+
+.. _scale-factor:
+
+Some conversions involve a scale factor which is provided as a packed 16-bit 
+integer containing two scaling factors of type ``ue8m0``, one for each input.
+For down conversion, inputs are divided by ``scale_factor`` and then the 
+conversion is performed. For up-conversion, inputs are converted to destination 
+type and then multiplied by ``scale_factor``.
+
+``fp8`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to{.e4m3x2, .e5m2x2}.rn{.relu}(float %a, float %b)
+    declare i16 @llvm.nvvm.ff.to.ue8m0x2{.rz, .rp}{.satfinite}(float %a, float %b)
+    declare i16 @llvm.f16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}(<2 x half> %a)
+    declare i16 @llvm.bf16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare i16 @llvm.bf16x2.to.ue8m0x2{.rz, .rp}{.satfinite}(<2 x bfloat> %a)
+    declare <2 x half> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
+    declare <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 %a)
+    declare <4 x i8> @llvm.nvvm.f32x4.to{.e4m3x4, .e5m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
+
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``e4m3`` and ``e5m2`` narrow 
+floating-point formats. In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 8-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 8-bits of the result.
+
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format and a positive 
+``MAX_NORM`` in ``.ue8m0x2`` for which the destination sign is not supported. 
+Also, if the input value is ``NaN``, then the result is ``NaN`` in the 
+specified destination format. The ``satfinite`` modifier is assumed to be 
+present for conversions involving ``e4m3`` and ``e5m2`` types as the 
+destination.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
+``s2f6`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to.s2f6x2.rn{.relu}.satfinite.scale.n2.ue8m0(float %a, float %b, i16 %scale_factor)
+    declare i16 @llvm.nvvm.bf16x2.to.s2f6x2.rn{.relu}.satfinite.scale.n2.ue8m0(<2 x bfloat> %a, i16 %scale_factor)
+    declare <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
+
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``s2f6`` narrow 
+floating-point format. In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 8-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 8-bits of the result.
+
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
+input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
+destination format.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
+``fp6`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(float %a, float %b)
+    declare i16 @llvm.nvvm.f16x2.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(<2 x half> %a)
+    declare i16 @llvm.nvvm.bf16x2.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare <2 x half> @llvm.nvvm{.e2m3x2, .e3m2x2}.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm{.e2m3x2, .e3m2x2}.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
+    declare <4 x i8> @llvm.nvvm.f32x4.to{.e2m3x4, .e3m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
+    
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``e2m3`` and ``e3m2`` narrow 
+floating-point formats. In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 8-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 8-bits of the result with 2 MSBs 
+padded with 0s in both cases.
+
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
+input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
+destination format.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
+``fp4`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to.e2m1x2.rn{.relu}.satfinite(float %a, float %b)
+    declare i16 @llvm.nvvm.f16x2.to.e2m1x2.rn{.relu}.satfinite(<2 x half> %a)
+    declare i16 @llvm.nvvm.bf16x2.to.e2m1x2.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm.e2m1x2.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
+    declare i16 @llvm.nvvm.f32x4.to.e2m1x4.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
+
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``e2m1`` narrow 
+floating-point format. For conversions involving ``e2m1x2``, the packed 
+``e2m1x2`` value is stored in the lower byte of the ``i16`` argument or result.
+In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 4-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 4-bits of the result.
+
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
+input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
+destination format.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
 Arithmetic Intrinsics
 ---------------------
@@ -1187,6 +1417,106 @@ forming 2 ``<4 x i32>``. For ``%a``, zero-extension is used in the
 used in the '``llvm.nvvm.idp4a.[us].u``' variants, while sign-extension is used
 with '``llvm.nvvm.idp4a.[us].s``' variants. The dot product of these 4-element
 vectors is added to ``%c`` to produce the return.
+
+'``llvm.nvvm.add.*``' Half-precision Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare half @llvm.nvvm.add.rn.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+    declare half @llvm.nvvm.add.rn.ftz.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.add.*``' intrinsics perform an addition operation with the 
+specified rounding mode and modifiers. 
+
+Semantics:
+""""""""""
+
+The '``.sat``' modifier performs a saturating addition where the result is 
+clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
+The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
+zero.
+
+'``llvm.nvvm.mul.*``' Half-precision Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare half @llvm.nvvm.mul.rn.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.mul.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+    declare half @llvm.nvvm.mul.rn.ftz.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.mul.*``' intrinsics perform a multiplication operation with 
+the specified rounding mode and modifiers. 
+
+Semantics:
+""""""""""
+
+The '``.sat``' modifier performs a saturating multiplication where the result is 
+clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
+The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
+zero.
+
+'``llvm.nvvm.fma.*``' Half-precision Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare half @llvm.nvvm.fma.rn{.ftz}.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+    declare bfloat @llvm.nvvm.fma.rn.bf16(bfloat %a, bfloat %b, bfloat %c)
+    declare <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+
+    declare half @llvm.nvvm.fma.rn{.ftz}.sat.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.sat.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+
+    declare half @llvm.nvvm.fma.rn{.ftz}.relu.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.relu.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+    declare bfloat @llvm.nvvm.fma.rn.relu.bf16(bfloat %a, bfloat %b, bfloat %c)
+    declare <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+
+    declare half @llvm.nvvm.fma.rn.oob{.relu}.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn.oob{.relu}.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+    declare bfloat @llvm.nvvm.fma.rn.oob{.relu}.bf16(bfloat %a, bfloat %b, bfloat %c)
+    declare <2 x bfloat> @llvm.nvvm.fma.rn.oob{.relu}.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fma.*``' intrinsics perform a fused multiply-add with no loss 
+of precision in the intermediate product and addition.
+
+Semantics:
+""""""""""
+
+The '``.sat``' modifier performs a saturating operation where the result is 
+clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
+The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
+zero.
+The '``.relu``' modifier clamps the result to ``0`` if negative and ``NaN`` 
+results are flushed to canonical ``NaN``.
+The '``.oob``' modifier clamps the result to ``0`` if either of the operands is 
+an ``OOB NaN`` (defined under `Tensors <https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors>`__) value.
 
 Bit Manipulation Intrinsics
 ---------------------------
@@ -1513,8 +1843,8 @@ the amount of memory to be copied and it must be a multiple of 16.
   presence of a multicast mask (``i16 %mc``) and generates the PTX instruction
   with the ``.multicast::cluster`` modifier.
 
-For more information, refer PTX ISA 
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.global.to.shared.cta``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1538,8 +1868,8 @@ to be copied and it must be a multiple of 16. The last argument (denoted by
 cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint`` variant of the
 PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.shared.cta.to.global``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1568,8 +1898,8 @@ chunk of source data is copied to the destination.
   When set, it indicates a valid cache_hint (``i64 %ch``) and generates the
   ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.shared.cta.to.cluster``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1591,8 +1921,8 @@ memory. The destination has to be in the shared memory of a different CTA within
 the cluster. The 32-bit operand ``%size`` specifies the amount of memory to be
 copied and it must be a multiple of 16.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.prefetch.L2``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1618,8 +1948,8 @@ prefetched in terms of bytes and it must be a multiple of 16.
   indicates a valid cache_hint (``i64 %ch``) and generates the
   ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`__.
 
 '``llvm.nvvm.prefetch.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1666,8 +1996,8 @@ by the '``.level::eviction_priority``' modifier.
 * A prefetch into the uniform cache requires a generic address, and no operation
   occurs if the address maps to a const, local, or shared memory location.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`__.
 
 '``llvm.nvvm.applypriority.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1692,8 +2022,8 @@ operand size is an integer constant that specifies the amount of data, in bytes,
 in the specified cache level on which the priority is to be applied. The only
 supported value for the size operand is 128.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-applypriority>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-applypriority>`__.
 
 ``llvm.nvvm.discard.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1732,7 +2062,10 @@ undefined.
    %fb = freeze i64 %b  ;; freezes undef to stable bit-pattern
    ;; %fa may compare different to %fb!
    
-For more information, refer to the  `CUDA C++ discard documentation <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_access_properties/discard_memory.html>`__ and to the `PTX ISA discard documentation <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`__ .
+For more information, refer to the  `CUDA C++ discard documentation
+<https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_access_properties/discard_memory.html>`__
+and to the `PTX ISA discard documentation
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`__ .
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1764,8 +2097,8 @@ coordinates specified by the ``i32 %d0 ... i32 %d4`` arguments. In
 destination tensor. The first coordinate ``i32 %x0`` denotes the column index
 followed by four coordinates indicating the four row-indices. So, this mode
 takes a total of 5 coordinates as input arguments. For more information on
-``gather4`` mode, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+``gather4`` mode, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
 * The last three arguments to these intrinsics are flags indicating support for
   multicast, cache_hint and cta_group::1/2 modifiers. These flag arguments must
@@ -1787,8 +2120,8 @@ takes a total of 5 coordinates as input arguments. For more information on
   ``cta_group::1`` and ``cta_group::2`` variants of the PTX instruction
   respectively.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1825,14 +2158,14 @@ are also specified (denoted by ``i16 im2col0...i16 %im2col2``). For the
 of the tensor operation. For the ``im2col.w`` and ``im2col.w.128`` mode, the
 number of offsets is always 2, denoted by ``i16 %wHalo`` and ``i16 %wOffset``
 arguments. For more information on ``im2col.w`` and ``im2col.w.128`` modes,
-refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`__.
 
 The last three arguments to these intrinsics are flags, with the same
 functionality as described in the ``tile`` mode intrinsics above.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1864,16 +2197,16 @@ coordinates specified by the ``i32 %d0 ... i32 %d4`` arguments. In
 destination tensor. The first coordinate ``i32 %x0`` denotes the column index
 followed by four coordinates indicating the four row-indices. So, this mode
 takes a total of 5 coordinates as input arguments. For more information on
-``gather4`` mode, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+``gather4`` mode, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
 * The last argument to these intrinsics is a boolean flag indicating support for
   cache_hint. This flag argument must be a compile-time constant. When set, it
   indicates a valid cache_hint (``i64 %ch``) and generates the
   ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1909,16 +2242,16 @@ also specified (denoted by ``i16 im2col0...i16 %im2col2``). For the ``im2col``
 mode, the number of offsets is two less than the number of dimensions of the
 tensor operation. For the ``im2col.w`` and ``im2col.w.128`` mode, the number of
 offsets is always 2, denoted by ``i16 %wHalo`` and ``i16 %wOffset`` arguments.
-For more information on ``im2col.w`` and ``im2col.w.128`` modes, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+For more information on ``im2col.w`` and ``im2col.w.128`` modes, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`__.
 
 * The last argument to these intrinsics is a boolean flag  indicating support
   for cache_hint. This flag argument must be a compile-time constant. When set,
   it indicates a valid cache_hint (``i64 %ch``) and generates the
   ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.s2g.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1948,16 +2281,16 @@ of the tensor data ranges from 1d to 5d with the coordinates specified by the
 tensor is divided into four rows in the 2D destination tensor. The first
 coordinate ``i32 %x0`` denotes the column index followed by four coordinates
 indicating the four row-indices. So, this mode takes a total of 5 coordinates as
-input arguments. For more information on ``scatter4`` mode, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+input arguments. For more information on ``scatter4`` mode, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
 * The last argument to these intrinsics is a boolean flag indicating support for
   cache_hint. This flag argument must be a compile-time constant. When set, it
   indicates a valid cache_hint (``i64 %ch``) and generates the
   ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1983,8 +2316,8 @@ mode. In this mode, the tensor has to be at least three-dimensional. Unlike the
 argument to these intrinsics is a boolean flag, with the same functionality as
 described in the ``s2g.tile`` mode intrinsics above.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2017,16 +2350,16 @@ In ``tile.gather4`` mode, four rows in the 2-dimnesional source tensor are
 fetched to the L2 cache. The first coordinate ``i32 %x0`` denotes the column
 index followed by four coordinates indicating the four row-indices. So, this
 mode takes a total of 5 coordinates as input arguments. For more information
-on ``gather4`` mode, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+on ``gather4`` mode, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
 * The last argument to these intrinsics is a boolean flag indicating support
   for cache_hint. This flag argument must be a compile-time constant. When set,
   it indicates a valid cache_hint (``i64 %ch``) and generates the
   ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2062,15 +2395,15 @@ tensor coordinates, im2col offsets are also specified (denoted by
 two less than the number of dimensions of the tensor operation. For the
 ``im2col.w`` and ``im2col.w.128`` modes, the number of offsets is always 2,
 denoted by ``i16 %wHalo`` and ``i16 %wOffset`` arguments. For more information
-on ``im2col.w`` and ``im2col.w.128`` modes, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+on ``im2col.w`` and ``im2col.w.128`` modes, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`__.
 
 
 The last argument to these intrinsics is a boolean flag, with the same
 functionality as described in the ``tile`` mode intrinsics above.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2111,8 +2444,8 @@ the ``tile.1d`` intrinsics.
   indicates a valid cache_hint (``i64 %ch``) and generates the
   ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2138,8 +2471,8 @@ The supported reduction operations supported are the same as the ones in the
 tile mode. The last argument to these intrinsics is a boolean flag, with the
 same functionality as described in the ``tile`` mode intrinsics above.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`__.
 
 Warp Group Intrinsics
 ---------------------
@@ -2172,8 +2505,8 @@ the following locations:
   instructions of the same shape in which case an ordering guarantee is
   provided by default.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence>`__.
 
 '``llvm.nvvm.wgmma.commit_group.sync.aligned``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2199,8 +2532,8 @@ wgmma-group.
 An executing thread can wait for the completion of all ``wgmma.mma_async``
 operations in a wgmma-group by using ``wgmma.wait_group``.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group>`__.
 
 '``llvm.nvvm.wgmma.wait_group.sync.aligned``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2228,8 +2561,8 @@ fragments of matrix A of a ``wgmma.mma_async`` instruction without first
 performing a ``wgmma.wait_group`` instruction that waits on a wgmma-group
 including that ``wgmma.mma_async`` instruction is undefined behavior.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`__.
 
 '``llvm.nvvm.griddepcontrol.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2556,15 +2889,15 @@ The llvm.nvvm.tcgen05.* intrinsics model the TCGEN05 family of instructions
 exposed by PTX. These intrinsics use 'Tensor Memory' (henceforth ``tmem``).
 NVPTX represents this memory using ``addrspace(6)`` and is always 32-bits.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory>`__.
 
 The tensor-memory pointers may only be used with the tcgen05 intrinsics.
 There are specialized load/store instructions provided (tcgen05.ld/st) to
 work with tensor-memory.
 
-See the PTX ISA for more information on tensor-memory load/store instructions
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-and-register-load-store-instructions>`_.
+For more information on tensor-memory load/store instructions, refer to `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-and-register-load-store-instructions>`__.
 
 '``llvm.nvvm.tcgen05.alloc``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2593,8 +2926,8 @@ explicitly uses shared memory address space for the ``%dst`` operand. The
 ``.cg1`` and ``.cg2`` variants generate ``cta_group::1`` and ``cta_group::2``
 variants of the instruction respectively.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`__.
 
 '``llvm.nvvm.tcgen05.dealloc``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2618,8 +2951,8 @@ Tensor Memory allocation. The 32-bit operand ``%ncols`` specifies the number
 of columns to be de-allocated. The ``.cg1`` and ``.cg2`` variants generate
 ``cta_group::1`` and ``cta_group::2`` variants of the instruction respectively.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`__.
 
 '``llvm.nvvm.tcgen05.relinq.alloc.permit``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2643,8 +2976,8 @@ after any of its constituent threads execute
 ``tcgen05.relinquish_alloc_permit``. The ``.cg1`` and ``.cg2`` variants generate
 ``cta_group::1`` and ``cta_group::2`` flavors of the instruction respectively.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`__.
 
 '``llvm.nvvm.tcgen05.commit``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2671,8 +3004,8 @@ multiple CTAs (specified by ``%mc``) in the cluster. The ``.cg1`` and ``.cg2``
 variants generate ```cta_group::1`` and ``cta_group::2`` flavors of the
 instruction respectively.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit>`__.
 
 '``llvm.nvvm.tcgen05.wait``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2695,8 +3028,8 @@ The '``@llvm.nvvm.tcgen05.wait.ld/st``' intrinsics correspond to the
 ``tcgen05.wait::st`` causes the executing thread to block until all prior
 ``tcgen05.st`` operations issued by the executing thread have completed.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait>`__.
 
 '``llvm.nvvm.tcgen05.fence``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2716,8 +3049,8 @@ The '``@llvm.nvvm.tcgen05.fence.*``' intrinsics correspond to the
 ``tcgen05.fence::{before/after}_thread_sync`` pair of PTX instructions. These
 instructions act as code motion fences for asynchronous tcgen05 operations.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence>`__.
 
 '``llvm.nvvm.tcgen05.shift``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2740,8 +3073,8 @@ downwards across all the rows, except the last, by one row. The address operand
 ``%tmem_addr`` specifies the base address of the matrix in the Tensor Memory
 whose rows must be down shifted.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-shift>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-shift>`__.
 
 '``llvm.nvvm.tcgen05.cp``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2802,11 +3135,11 @@ When the source format is ``.b4x16_p64``, a contiguous set of 16 elements of
 4-bits each followed by eight bytes of padding (``_p64``) in shared memory is
 decompressed into 16 elements of 8-bits (``.b8x16``) each in the Tensor Memory.
 
-For more information on the decompression schemes, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#optional-decompression>`_.
+For more information on the decompression schemes, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#optional-decompression>`__.
 
-For more information on the tcgen05.cp instruction, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-cp>`_.
+For more information on the tcgen05.cp instruction, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-cp>`__.
 
 '``llvm.nvvm.tcgen05.ld.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2886,8 +3219,8 @@ respectively
     1           max
 =========== =============
 
-For more information, refer to the
-`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld>`__.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld>`__.
 
 
 '``llvm.nvvm.tcgen05.st.*``'
@@ -2939,8 +3272,8 @@ The last argument `i1 %unpack` is a compile-time constant which when set,
 indicates that a 32-bit element in the register to be unpacked into two 16-bit
 elements and store them in adjacent columns.
 
-For more information, refer to the
-`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st>`__.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st>`__.
 
 tcgen05.mma Intrinsics
 ----------------------
@@ -3613,8 +3946,44 @@ The '``llvm.nvvm.pm.event.mask``' intrinsic triggers one or more performance
 monitor events. Each bit in the 16-bit immediate operand `%mask_val`` controls
 an event.
 
-For more information on the pmevent instructions, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`_.
+For more information on the pmevent instructions, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`__.
+
+Warp-level Matrix Transpose Intrinsics
+---------------------------------------
+
+'``llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i32 @llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16(i32 %src)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16``' intrinsic
+transposes an 8x8 matrix of 16-bit elements distributed across all 32
+threads of a warp. Each thread provides a 32-bit register containing two
+packed ``.b16`` elements, and receives back two packed ``.b16`` elements
+from the transposed matrix in the same format.
+
+The mandatory ``.sync`` qualifier indicates that ``movmatrix`` causes the
+executing thread to wait until all threads in the warp execute the same
+``movmatrix`` intrinsic before resuming execution.
+
+The mandatory ``.aligned`` qualifier indicates that all threads in the warp
+must execute the same ``movmatrix`` intrinsic. In conditionally executed
+code, a ``movmatrix`` intrinsic should only be used if it is known that
+all threads in the warp evaluate the condition identically, otherwise the
+behavior is undefined.
+
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-movmatrix>`__.
+
 
 Other Intrinsics
 ----------------
@@ -3635,7 +4004,7 @@ The library can be found under ``nvvm/libdevice/`` in the CUDA Toolkit and
 there is a separate version for each compute architecture.
 
 For a list of all math functions implemented in libdevice, see
-`libdevice Users Guide <http://docs.nvidia.com/cuda/libdevice-users-guide/index.html>`_.
+`libdevice Users Guide <http://docs.nvidia.com/cuda/libdevice-users-guide/index.html>`__.
 
 To accommodate various math-related compiler flags that can affect code
 generation of libdevice code, the library code depends on a special LLVM IR

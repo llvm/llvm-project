@@ -124,14 +124,6 @@ private:
 template <StlType Stl>
 class AbstractListFrontEnd : public SyntheticChildrenFrontEnd {
 public:
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-    if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    }
-    return *optional_idx;
-  }
   lldb::ChildCacheState Update() override;
 
 protected:
@@ -336,9 +328,9 @@ ValueObjectSP LibCxxForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (error.Fail())
     return nullptr;
 
-  return CreateValueObjectFromData(llvm::formatv("[{0}]", idx).str(), data,
-                                   m_backend.GetExecutionContextRef(),
-                                   m_element_type);
+  return CreateChildValueObjectFromData(llvm::formatv("[{0}]", idx).str(), data,
+                                        m_backend.GetExecutionContextRef(),
+                                        m_element_type);
 }
 
 lldb::ChildCacheState LibCxxForwardListFrontEnd::Update() {
@@ -442,8 +434,8 @@ lldb::ValueObjectSP LibCxxListFrontEnd::GetChildAtIndex(uint32_t idx) {
     lldb::addr_t addr = current_sp->GetParent()->GetPointerValue().address;
     addr = addr + 2 * process_sp->GetAddressByteSize();
     ExecutionContext exe_ctx(process_sp);
-    current_sp =
-        CreateValueObjectFromAddress("__value_", addr, exe_ctx, m_element_type);
+    current_sp = CreateChildValueObjectFromAddress("__value_", addr, exe_ctx,
+                                                   m_element_type);
     if (!current_sp)
       return lldb::ValueObjectSP();
   }
@@ -458,9 +450,9 @@ lldb::ValueObjectSP LibCxxListFrontEnd::GetChildAtIndex(uint32_t idx) {
 
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromData(name.GetString(), data,
-                                   m_backend.GetExecutionContextRef(),
-                                   m_element_type);
+  return CreateChildValueObjectFromData(name.GetString(), data,
+                                        m_backend.GetExecutionContextRef(),
+                                        m_element_type);
 }
 
 lldb::ChildCacheState LibCxxListFrontEnd::Update() {
@@ -527,9 +519,9 @@ ValueObjectSP MsvcStlForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (error.Fail())
     return nullptr;
 
-  return CreateValueObjectFromData(llvm::formatv("[{0}]", idx).str(), data,
-                                   m_backend.GetExecutionContextRef(),
-                                   m_element_type);
+  return CreateChildValueObjectFromData(llvm::formatv("[{0}]", idx).str(), data,
+                                        m_backend.GetExecutionContextRef(),
+                                        m_element_type);
 }
 
 lldb::ChildCacheState MsvcStlForwardListFrontEnd::Update() {
@@ -561,11 +553,11 @@ llvm::Expected<uint32_t> MsvcStlListFrontEnd::CalculateNumChildren() {
   auto size_sp =
       m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Mysize"});
   if (!size_sp)
-    return llvm::createStringError("Failed to resolve size.");
+    return llvm::createStringError("failed to resolve size");
 
   m_count = size_sp->GetValueAsUnsigned(UINT32_MAX);
   if (m_count == UINT32_MAX)
-    return llvm::createStringError("Failed to read size value.");
+    return llvm::createStringError("failed to read size value");
 
   return m_count;
 }
@@ -598,9 +590,9 @@ lldb::ValueObjectSP MsvcStlListFrontEnd::GetChildAtIndex(uint32_t idx) {
 
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromData(name.GetString(), data,
-                                   m_backend.GetExecutionContextRef(),
-                                   m_element_type);
+  return CreateChildValueObjectFromData(name.GetString(), data,
+                                        m_backend.GetExecutionContextRef(),
+                                        m_element_type);
 }
 
 lldb::ChildCacheState MsvcStlListFrontEnd::Update() {

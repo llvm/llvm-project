@@ -482,7 +482,8 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       VisitLifetimeBoundArg(Callee, ObjectArg);
     else if (EnableGSLAnalysis) {
       if (auto *CME = dyn_cast<CXXMethodDecl>(Callee);
-          CME && lifetimes::shouldTrackImplicitObjectArg(CME))
+          CME && lifetimes::shouldTrackImplicitObjectArg(
+                     CME, /*RunningUnderLifetimeSafety=*/false))
         VisitGSLPointerArg(Callee, ObjectArg);
     }
   }
@@ -1336,6 +1337,9 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         // expression.
         if (LK == LK_StmtExprResult)
           return false;
+        if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+          if (VD->getType().getAddressSpace() == LangAS::opencl_local)
+            return false;
         SemaRef.Diag(DiagLoc, diag::warn_ret_stack_addr_ref)
             << InitEntity->getType()->isReferenceType() << DRE->getDecl()
             << isa<ParmVarDecl>(DRE->getDecl()) << (LK == LK_MustTail)

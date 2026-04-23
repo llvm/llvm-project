@@ -15,7 +15,7 @@ option(LIBOMPTEST_INSTALL_COMPONENTS
        "Install ompTest library, headers and package files." OFF)
 
 # Exit early if OMPT support or LLVM-tests were disabled by the user.
-if((NOT ${LIBOMP_OMPT_SUPPORT}) OR (NOT ${LLVM_INCLUDE_TESTS}))
+if((NOT LIBOMP_OMPT_SUPPORT) OR (NOT LLVM_INCLUDE_TESTS))
   return()
 endif()
 
@@ -85,11 +85,12 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
   # Link against the default GTest which at this point primarily pulls in the
   # include directories and compile definitions. It is important to make these
   # available to dependant targets, e.g. for unit tests.
-  target_link_libraries(omptest INTERFACE default_gtest)
+  target_link_libraries(omptest PUBLIC default_gtest)
 
-  # Link against Threads (recommended for GTest).
+  # Link against Threads, which may be required for GTest.
+  # But keep it out of the link interface to avoid transitive dependencies.
   find_package(Threads REQUIRED)
-  target_link_libraries(omptest PUBLIC Threads::Threads)
+  target_link_libraries(omptest PRIVATE Threads::Threads)
 
   # Ensure that embedded GTest symbols are exported from libomptest.so even in
   # builds that default to hidden.
