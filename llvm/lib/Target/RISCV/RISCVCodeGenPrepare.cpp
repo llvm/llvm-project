@@ -270,24 +270,30 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
 
 // For reduction operations with an initial value, ir:
 //  %6 = phi <vscale x 4 x i32> [ %12, %4 ],
-//          [ insertelement (<vscale x 4 x i32> zeroinitializer, i32 13, i32 0), %2 ]
+//          [ insertelement (<vscale x 4 x i32> zeroinitializer, i32 13, i32 0),
+//          %2 ]
 //  %11 = add <vscale x 4 x i32> %a10, %6
-//  %12 = tail call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true),
-//                                <vscale x 4 x i32> %11, <vscale x 4 x i32> %6, i32 %vl)
+//  %12 = tail call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1>
+//  splat (i1 true),
+//                                <vscale x 4 x i32> %11, <vscale x 4 x i32> %6,
+//                                i32 %vl)
 //
-//bb:
+// bb:
 //  %18 = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %12)
 //
 //  insertelement (<vscale x 2 x i64> zeroinitializer, i64 13, i32 0),
-//  which generates multiple vmv instructions. By initializing with zeroinitializer and adding
-//  the initial value after the reduction, some vmv instructions can be avoided. ir:
+//  which generates multiple vmv instructions. By initializing with
+//  zeroinitializer and adding the initial value after the reduction, some vmv
+//  instructions can be avoided. ir:
 //
 //  %6 = phi <vscale x 4 x i32> [ %12, %4 ], [zeroinitializer, %2 ]
 //  %11 = add <vscale x 4 x i32> %a10, %6
-//  %12 = tail call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true),
-//                                <vscale x 4 x i32> %11, <vscale x 4 x i32> %6, i32 %vl)
+//  %12 = tail call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1>
+//  splat (i1 true),
+//                                <vscale x 4 x i32> %11, <vscale x 4 x i32> %6,
+//                                i32 %vl)
 //
-//bb:
+// bb:
 //  %18 = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %12)
 //  %19 = add i32 %18, 13
 bool RISCVCodeGenPrepare::simplyInsertElementForReduction(IntrinsicInst &II) {
