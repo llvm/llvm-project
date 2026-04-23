@@ -187,6 +187,14 @@ nb::object PyBlock::getCapsule() {
   return nb::steal<nb::object>(mlirPythonBlockToCapsule(get()));
 }
 
+MlirBlock PyBlock::unwrap(PyObject *obj) {
+  PyBlock *pyBlock;
+  if (nb::try_cast<PyBlock *>(nb::handle(obj), pyBlock)) {
+    return pyBlock->get();
+  }
+  return {nullptr};
+}
+
 //------------------------------------------------------------------------------
 // Collections.
 //------------------------------------------------------------------------------
@@ -501,6 +509,19 @@ void PyMlirContext::contextExit(const nb::object &excType,
                                 const nb::object &excVal,
                                 const nb::object &excTb) {
   PyThreadContextEntry::popContext(*this);
+}
+
+MlirContext PyMlirContext::unwrap(PyObject *obj) {
+  if (obj == Py_None) {
+    if (PyMlirContext *current = PyThreadContextEntry::getDefaultContext())
+      return current->get();
+  } else {
+    PyMlirContext *pyCtx;
+    if (nb::try_cast<PyMlirContext *>(nb::handle(obj), pyCtx)) {
+      return pyCtx->get();
+    }
+  }
+  return {nullptr};
 }
 
 nb::object PyMlirContext::attachDiagnosticHandler(nb::object callback) {
@@ -822,6 +843,21 @@ PyDialectRegistry PyDialectRegistry::createFromCapsule(nb::object capsule) {
   return PyDialectRegistry(rawRegistry);
 }
 
+PyObject *PyDialectRegistry::wrap(MlirDialectRegistry registry) {
+  if (mlirDialectRegistryIsNull(registry)) {
+    Py_RETURN_NONE;
+  }
+  return nb::cast(PyDialectRegistry(registry)).release().ptr();
+}
+
+MlirDialectRegistry PyDialectRegistry::unwrap(PyObject *obj) {
+  PyDialectRegistry *pyRegistry;
+  if (nb::try_cast<PyDialectRegistry *>(nb::handle(obj), pyRegistry)) {
+    return pyRegistry->get();
+  }
+  return {nullptr};
+}
+
 //------------------------------------------------------------------------------
 // PyLocation
 //------------------------------------------------------------------------------
@@ -846,6 +882,27 @@ void PyLocation::contextExit(const nb::object &excType,
                              const nb::object &excVal,
                              const nb::object &excTb) {
   PyThreadContextEntry::popLocation(*this);
+}
+
+PyObject *PyLocation::wrap(MlirLocation loc) {
+  if (mlirLocationIsNull(loc)) {
+    Py_RETURN_NONE;
+  }
+  auto ctx = PyMlirContext::forContext(mlirLocationGetContext(loc));
+  return nb::cast(PyLocation(ctx, loc)).release().ptr();
+}
+
+MlirLocation PyLocation::unwrap(PyObject *obj) {
+  if (obj == Py_None) {
+    if (PyLocation *current = PyThreadContextEntry::getDefaultLocation())
+      return current->get();
+  } else {
+    PyLocation *pyLoc;
+    if (nb::try_cast<PyLocation *>(nb::handle(obj), pyLoc)) {
+      return pyLoc->get();
+    }
+  }
+  return {nullptr};
 }
 
 PyLocation &DefaultingPyLocation::resolve() {
@@ -909,6 +966,21 @@ nb::object PyModule::createFromCapsule(nb::object capsule) {
 
 nb::object PyModule::getCapsule() {
   return nb::steal<nb::object>(mlirPythonModuleToCapsule(get()));
+}
+
+PyObject *PyModule::wrap(MlirModule module) {
+  if (mlirModuleIsNull(module)) {
+    Py_RETURN_NONE;
+  }
+  return PyModule::forModule(module).releaseObject().release().ptr();
+}
+
+MlirModule PyModule::unwrap(PyObject *obj) {
+  PyModule *pyModule;
+  if (nb::try_cast<PyModule *>(nb::handle(obj), pyModule)) {
+    return pyModule->get();
+  }
+  return {nullptr};
 }
 
 //------------------------------------------------------------------------------
@@ -1001,6 +1073,22 @@ MlirOperation PyOperation::get() const {
 
 PyOperationRef PyOperation::getRef() {
   return PyOperationRef(this, nb::borrow<nb::object>(handle));
+}
+
+PyObject *PyOperation::wrap(MlirOperation op) {
+  if (mlirOperationIsNull(op)) {
+    Py_RETURN_NONE;
+  }
+  auto ctx = PyMlirContext::forContext(mlirOperationGetContext(op));
+  return PyOperation::forOperation(ctx, op).releaseObject().release().ptr();
+}
+
+MlirOperation PyOperation::unwrap(PyObject *obj) {
+  PyOperation *pyOp;
+  if (nb::try_cast<PyOperation *>(nb::handle(obj), pyOp)) {
+    return pyOp->get();
+  }
+  return {nullptr};
 }
 
 void PyOperation::setAttached(const nb::object &parent) {
@@ -1888,6 +1976,22 @@ nb::typed<nb::object, PyAttribute> PyAttribute::maybeDownCast() {
   return typeCaster.value()(thisObj);
 }
 
+PyObject *PyAttribute::wrap(MlirAttribute attr) {
+  if (mlirAttributeIsNull(attr)) {
+    Py_RETURN_NONE;
+  }
+  auto ctx = PyMlirContext::forContext(mlirAttributeGetContext(attr));
+  return PyAttribute(ctx, attr).maybeDownCast().release().ptr();
+}
+
+MlirAttribute PyAttribute::unwrap(PyObject *obj) {
+  PyAttribute *pyAttribute;
+  if (nb::try_cast<PyAttribute *>(nb::handle(obj), pyAttribute)) {
+    return pyAttribute->get();
+  }
+  return {nullptr};
+}
+
 //------------------------------------------------------------------------------
 // PyNamedAttribute.
 //------------------------------------------------------------------------------
@@ -1934,6 +2038,23 @@ nb::typed<nb::object, PyType> PyType::maybeDownCast() {
   return typeCaster.value()(thisObj);
 }
 
+PyObject *PyType::wrap(MlirType type) {
+  if (mlirTypeIsNull(type)) {
+    Py_RETURN_NONE;
+  }
+  auto ctx = PyMlirContext::forContext(mlirTypeGetContext(type));
+  PyType pyType(ctx, type);
+  return pyType.maybeDownCast().release().ptr();
+}
+
+MlirType PyType::unwrap(PyObject *obj) {
+  PyType *pyType;
+  if (nb::try_cast<PyType *>(nb::handle(obj), pyType)) {
+    return pyType->get();
+  }
+  return {nullptr};
+}
+
 //------------------------------------------------------------------------------
 // PyTypeID.
 //------------------------------------------------------------------------------
@@ -1948,6 +2069,22 @@ PyTypeID PyTypeID::createFromCapsule(nb::object capsule) {
     throw nb::python_error();
   return PyTypeID(mlirTypeID);
 }
+
+PyObject *PyTypeID::wrap(MlirTypeID typeID) {
+  if (mlirTypeIDIsNull(typeID)) {
+    Py_RETURN_NONE;
+  }
+  return nb::cast(PyTypeID(typeID)).release().ptr();
+}
+
+MlirTypeID PyTypeID::unwrap(PyObject *obj) {
+  PyTypeID *pyTypeID;
+  if (nb::try_cast<PyTypeID *>(nb::handle(obj), pyTypeID)) {
+    return pyTypeID->get();
+  }
+  return {nullptr};
+}
+
 bool PyTypeID::operator==(const PyTypeID &other) const {
   return mlirTypeIDEqual(typeID, other.typeID);
 }
@@ -2002,6 +2139,23 @@ PyValue PyValue::createFromCapsule(nb::object capsule) {
     throw nb::python_error();
   PyOperationRef ownerRef = getValueOwnerRef(value);
   return PyValue(ownerRef, value);
+}
+
+PyObject *PyValue::wrap(MlirValue value) {
+  if (mlirValueIsNull(value)) {
+    Py_RETURN_NONE;
+  }
+  PyOperationRef ownerRef = getValueOwnerRef(value);
+  PyValue pyValue(ownerRef, value);
+  return pyValue.maybeDownCast().release().ptr();
+}
+
+MlirValue PyValue::unwrap(PyObject *obj) {
+  PyValue *pyValue;
+  if (nb::try_cast<PyValue *>(nb::handle(obj), pyValue)) {
+    return pyValue->get();
+  }
+  return {nullptr};
 }
 
 //------------------------------------------------------------------------------
@@ -3139,6 +3293,12 @@ void populateIRCore(nb::module_ &m) {
            "Returns the raw pointer to the LLVM thread pool as a string.");
 
   nb::class_<PyMlirContext>(m, "Context")
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyMlirContext::unwrap),
+                                MLIR_PYTHON_CAPSULE_CONTEXT_UNWRAP);
+                          })
       .def(
           "__init__",
           [](PyMlirContext &self) {
@@ -3379,6 +3539,20 @@ void populateIRCore(nb::module_ &m) {
   // Mapping of PyDialectRegistry
   //----------------------------------------------------------------------------
   nb::class_<PyDialectRegistry>(m, "DialectRegistry")
+      .def_prop_ro_static(
+          MLIR_PYTHON_CAPI_WRAP_ATTR,
+          [](nanobind::object /*self*/) {
+            return nb::capsule(
+                reinterpret_cast<void *>(PyDialectRegistry::wrap),
+                MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY_WRAP);
+          })
+      .def_prop_ro_static(
+          MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+          [](nanobind::object /*self*/) {
+            return nb::capsule(
+                reinterpret_cast<void *>(PyDialectRegistry::unwrap),
+                MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY_UNWRAP);
+          })
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyDialectRegistry::getCapsule,
                    "Gets a capsule wrapping the MlirDialectRegistry.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR,
@@ -3391,6 +3565,18 @@ void populateIRCore(nb::module_ &m) {
   // Mapping of Location
   //----------------------------------------------------------------------------
   nb::class_<PyLocation>(m, "Location")
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_WRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyLocation::wrap),
+                                MLIR_PYTHON_CAPSULE_LOCATION_WRAP);
+                          })
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyLocation::unwrap),
+                                MLIR_PYTHON_CAPSULE_LOCATION_UNWRAP);
+                          })
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyLocation::getCapsule,
                    "Gets a capsule wrapping the MlirLocation.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyLocation::createFromCapsule,
@@ -3609,6 +3795,18 @@ void populateIRCore(nb::module_ &m) {
   // Mapping of Module
   //----------------------------------------------------------------------------
   nb::class_<PyModule>(m, "Module", nb::is_weak_referenceable())
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_WRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyModule::wrap),
+                                MLIR_PYTHON_CAPSULE_MODULE_WRAP);
+                          })
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyModule::unwrap),
+                                MLIR_PYTHON_CAPSULE_MODULE_UNWRAP);
+                          })
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyModule::getCapsule,
                    "Gets a capsule wrapping the MlirModule.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyModule::createFromCapsule,
@@ -4040,6 +4238,18 @@ void populateIRCore(nb::module_ &m) {
           "trait_cls"_a, "Checks if the operation has a given trait.");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_WRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyOperation::wrap),
+                                MLIR_PYTHON_CAPSULE_OPERATION_WRAP);
+                          })
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyOperation::unwrap),
+                                MLIR_PYTHON_CAPSULE_OPERATION_UNWRAP);
+                          })
       .def_static(
           "create",
           [](std::string_view name,
@@ -4304,6 +4514,12 @@ void populateIRCore(nb::module_ &m) {
   nb::class_<PyBlock>(m, "Block")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyBlock::getCapsule,
                    "Gets a capsule wrapping the MlirBlock.")
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyBlock::unwrap),
+                                MLIR_PYTHON_CAPSULE_BLOCK_UNWRAP);
+                          })
       .def_prop_ro(
           "owner",
           [](PyBlock &self) -> nb::typed<nb::object, PyOpView> {
@@ -4482,7 +4698,6 @@ void populateIRCore(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyInsertionPoint.
   //----------------------------------------------------------------------------
-
   nb::class_<PyInsertionPoint>(m, "InsertionPoint")
       .def(nb::init<PyBlock &>(), "block"_a,
            "Inserts after the last operation but still inside the block.")
@@ -4571,6 +4786,18 @@ void populateIRCore(nb::module_ &m) {
       .def_static(
           MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAttribute::createFromCapsule,
           "Creates an Attribute from a capsule wrapping `MlirAttribute`.")
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_WRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyAttribute::wrap),
+                                MLIR_PYTHON_CAPSULE_ATTRIBUTE_WRAP);
+                          })
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyAttribute::unwrap),
+                                MLIR_PYTHON_CAPSULE_ATTRIBUTE_UNWRAP);
+                          })
       .def_static(
           "parse",
           [](const std::string &attrSpec, DefaultingPyMlirContext context)
@@ -4702,6 +4929,7 @@ void populateIRCore(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyType.
   //----------------------------------------------------------------------------
+
   nb::class_<PyType>(m, "Type")
       // Delegate to the PyType copy constructor, which will also lifetime
       // extend the backing context which owns the MlirType.
@@ -4711,6 +4939,18 @@ void populateIRCore(nb::module_ &m) {
                    "Gets a capsule wrapping the `MlirType`.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyType::createFromCapsule,
                   "Creates a Type from a capsule wrapping `MlirType`.")
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_WRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyType::wrap),
+                                MLIR_PYTHON_CAPSULE_TYPE_WRAP);
+                          })
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyType::unwrap),
+                                MLIR_PYTHON_CAPSULE_TYPE_UNWRAP);
+                          })
       .def_static(
           "parse",
           [](std::string typeSpec,
@@ -4798,6 +5038,18 @@ void populateIRCore(nb::module_ &m) {
                    "Gets a capsule wrapping the `MlirTypeID`.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyTypeID::createFromCapsule,
                   "Creates a `TypeID` from a capsule wrapping `MlirTypeID`.")
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_WRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyTypeID::wrap),
+                                MLIR_PYTHON_CAPSULE_TYPEID_WRAP);
+                          })
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyTypeID::unwrap),
+                                MLIR_PYTHON_CAPSULE_TYPEID_UNWRAP);
+                          })
       // Note, this tests whether the underlying TypeIDs are the same,
       // not whether the wrapper MlirTypeIDs are the same, nor whether
       // the Python objects are the same (i.e., PyTypeID is a value type).
@@ -4832,6 +5084,18 @@ void populateIRCore(nb::module_ &m) {
                    "Gets a capsule wrapping the `MlirValue`.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyValue::createFromCapsule,
                   "Creates a `Value` from a capsule wrapping `MlirValue`.")
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_WRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyValue::wrap),
+                                MLIR_PYTHON_CAPSULE_VALUE_WRAP);
+                          })
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyValue::unwrap),
+                                MLIR_PYTHON_CAPSULE_VALUE_UNWRAP);
+                          })
       .def_prop_ro(
           "context",
           [](PyValue &self) -> nb::typed<nb::object, PyMlirContext> {

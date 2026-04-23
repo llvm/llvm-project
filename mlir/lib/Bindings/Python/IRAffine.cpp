@@ -531,6 +531,22 @@ PyIntegerSet PyIntegerSet::createFromCapsule(const nb::object &capsule) {
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+PyObject *PyAffineMap::wrap(MlirAffineMap map) {
+  if (mlirAffineMapIsNull(map)) {
+    Py_RETURN_NONE;
+  }
+  auto ctx = PyMlirContext::forContext(mlirAffineMapGetContext(map));
+  return nb::cast(PyAffineMap(ctx, map)).release().ptr();
+}
+
+MlirAffineMap PyAffineMap::unwrap(PyObject *obj) {
+  PyAffineMap *pyAffineMap;
+  if (nb::try_cast<PyAffineMap *>(nb::handle(obj), pyAffineMap)) {
+    return pyAffineMap->get();
+  }
+  return {nullptr};
+}
+
 void populateIRAffine(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyAffineExpr and derived classes.
@@ -706,6 +722,18 @@ void populateIRAffine(nb::module_ &m) {
   // Mapping of PyAffineMap.
   //----------------------------------------------------------------------------
   nb::class_<PyAffineMap>(m, "AffineMap")
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_WRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyAffineMap::wrap),
+                                MLIR_PYTHON_CAPSULE_AFFINE_MAP_WRAP);
+                          })
+      .def_prop_ro_static(MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+                          [](nanobind::object /*self*/) {
+                            return nb::capsule(
+                                reinterpret_cast<void *>(PyAffineMap::unwrap),
+                                MLIR_PYTHON_CAPSULE_AFFINE_MAP_UNWRAP);
+                          })
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyAffineMap::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAffineMap::createFromCapsule)
       .def("__eq__",

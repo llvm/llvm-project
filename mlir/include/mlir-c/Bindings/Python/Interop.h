@@ -57,6 +57,62 @@
 #define MAKE_MLIR_PYTHON_QUALNAME(local)                                       \
   MLIR_PYTHON_STRINGIZE_ARG(MLIR_PYTHON_PACKAGE_PREFIX) local
 
+#define MLIR_PYTHON_CAPSULE_AFFINE_MAP_WRAP                                    \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.AffineMap._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_AFFINE_MAP_UNWRAP                                  \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.AffineMap._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_ATTRIBUTE_WRAP                                     \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_ATTRIBUTE_UNWRAP                                   \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_BLOCK_UNWRAP                                       \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Block._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_CONTEXT_UNWRAP                                     \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Context._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY_WRAP                              \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.DialectRegistry._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY_UNWRAP                            \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.DialectRegistry._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_LOCATION_WRAP                                      \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Location._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_LOCATION_UNWRAP                                    \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Location._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_MODULE_WRAP                                        \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Module._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_MODULE_UNWRAP                                      \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Module._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_OPERATION_WRAP                                     \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Operation._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_OPERATION_UNWRAP                                   \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Operation._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_TYPE_WRAP                                          \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Type._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_TYPE_UNWRAP                                        \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Type._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_VALUE_WRAP                                         \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Value._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_VALUE_UNWRAP                                       \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.Value._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_TYPEID_WRAP                                        \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_TYPEID_UNWRAP                                      \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID._CAPIUnwrap")
+
+#define MLIR_PYTHON_CAPSULE_FROZEN_REWRITE_PATTERN_SET_WRAP                    \
+  MAKE_MLIR_PYTHON_QUALNAME("rewrite.FrozenRewritePatternSet._CAPIWrap")
+#define MLIR_PYTHON_CAPSULE_FROZEN_REWRITE_PATTERN_SET_UNWRAP                  \
+  MAKE_MLIR_PYTHON_QUALNAME("rewrite.FrozenRewritePatternSet._CAPIUnwrap")
+
 #define MLIR_PYTHON_CAPSULE_AFFINE_EXPR                                        \
   MAKE_MLIR_PYTHON_QUALNAME("ir.AffineExpr._CAPIPtr")
 #define MLIR_PYTHON_CAPSULE_AFFINE_MAP                                         \
@@ -116,6 +172,16 @@
  * (possibly) be an instance of the subclass.
  */
 #define MLIR_PYTHON_MAYBE_DOWNCAST_ATTR "maybe_downcast"
+
+/** Attribute on MLIR Python objects that exposes a capsule wrapping a
+ * function pointer for wrapping the corresponding C-API pointer.
+ * The signature of the function is: def _CAPIWrap(capsule) -> object */
+#define MLIR_PYTHON_CAPI_WRAP_ATTR "_CAPIWrap"
+
+/** Attribute on MLIR Python objects that exposes a capsule wrapping a
+ * function pointer for unwrapping the corresponding Python object.
+ * The signature of the function is: def _CAPIUnwrap(object) -> capsule */
+#define MLIR_PYTHON_CAPI_UNWRAP_ATTR "_CAPIUnwrap"
 
 /** Attribute on main C extension module (_mlir) that corresponds to the
  * type caster registration binding. The signature of the function is:

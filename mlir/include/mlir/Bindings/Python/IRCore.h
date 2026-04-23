@@ -222,6 +222,8 @@ public:
 
   /// Accesses the underlying MlirContext.
   MlirContext get() { return context; }
+  static PyObject *wrap(MlirContext ctx);
+  static MlirContext unwrap(PyObject *obj);
 
   /// Gets a strong reference to this context, which will ensure it is kept
   /// alive for the life of the reference.
@@ -321,6 +323,8 @@ public:
 
   operator MlirLocation() const { return loc; }
   MlirLocation get() const { return loc; }
+  static PyObject *wrap(MlirLocation v);
+  static MlirLocation unwrap(PyObject *obj);
 
   /// Enter and exit the context manager.
   static nanobind::object contextEnter(nanobind::object location);
@@ -523,6 +527,8 @@ public:
 
   operator MlirDialectRegistry() const { return registry; }
   MlirDialectRegistry get() const { return registry; }
+  static PyObject *wrap(MlirDialectRegistry v);
+  static MlirDialectRegistry unwrap(PyObject *obj);
 
   nanobind::object getCapsule();
   static PyDialectRegistry createFromCapsule(nanobind::object capsule);
@@ -552,6 +558,8 @@ public:
   /// Returns a PyModule reference for the given MlirModule. This always returns
   /// a new object.
   static PyModuleRef forModule(MlirModule module);
+  static PyObject *wrap(MlirModule v);
+  static MlirModule unwrap(PyObject *obj);
   PyModule(PyModule &) = delete;
   PyModule(PyMlirContext &&) = delete;
   ~PyModule();
@@ -645,6 +653,8 @@ class MLIR_PYTHON_API_EXPORTED PyOperation : public PyOperationBase,
 public:
   ~PyOperation() override;
   PyOperation &getOperation() override { return *this; }
+  static PyObject *wrap(MlirOperation v);
+  static MlirOperation unwrap(PyObject *obj);
 
   /// Returns a PyOperation for the given MlirOperation, optionally associating
   /// it with a parentKeepAlive.
@@ -830,6 +840,8 @@ public:
 
   void checkValid() { return parentOperation->checkValid(); }
 
+  static MlirBlock unwrap(PyObject *obj);
+
   /// Gets a capsule wrapping the void* within the MlirBlock.
   nanobind::object getCapsule();
 
@@ -891,6 +903,8 @@ public:
   bool operator==(const PyType &other) const;
   operator MlirType() const { return type; }
   MlirType get() const { return type; }
+  static PyObject *wrap(MlirType v);
+  static MlirType unwrap(PyObject *obj);
 
   /// Gets a capsule wrapping the void* within the MlirType.
   nanobind::object getCapsule();
@@ -925,6 +939,9 @@ public:
 
   /// Creates a PyTypeID from the MlirTypeID wrapped by a capsule.
   static PyTypeID createFromCapsule(nanobind::object capsule);
+
+  static PyObject *wrap(MlirTypeID typeID);
+  static MlirTypeID unwrap(PyObject *obj);
 
 private:
   MlirTypeID typeID;
@@ -1018,6 +1035,8 @@ public:
   bool operator==(const PyAttribute &other) const;
   operator MlirAttribute() const { return attr; }
   MlirAttribute get() const { return attr; }
+  static PyObject *wrap(MlirAttribute v);
+  static MlirAttribute unwrap(PyObject *obj);
 
   /// Gets a capsule wrapping the void* within the MlirAttribute.
   nanobind::object getCapsule();
@@ -1184,6 +1203,8 @@ public:
 
   MlirValue get() { return value; }
   PyOperationRef &getParentOperation() { return parentOperation; }
+  static PyObject *wrap(MlirValue v);
+  static MlirValue unwrap(PyObject *obj);
 
   void checkValid() { return parentOperation->checkValid(); }
 
@@ -1240,6 +1261,8 @@ public:
   bool operator==(const PyAffineMap &other) const;
   operator MlirAffineMap() const { return affineMap; }
   MlirAffineMap get() const { return affineMap; }
+  static PyObject *wrap(MlirAffineMap v);
+  static MlirAffineMap unwrap(PyObject *obj);
 
   /// Gets a capsule wrapping the void* within the MlirAffineMap.
   nanobind::object getCapsule();
@@ -1872,11 +1895,11 @@ MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);
 template <class Func, typename... Args>
 inline nanobind::object classmethod(Func f, Args... args) {
   nanobind::object cf = nanobind::cpp_function(f, args...);
-  static SafeInit<nanobind::object> classmethodFn([]() {
+  static SafeInit<nanobind::object> classmethodFn;
+  return classmethodFn.get([]() {
     return std::make_unique<nanobind::object>(
         nanobind::module_::import_("builtins").attr("classmethod"));
-  });
-  return classmethodFn.get()(cf);
+  })(cf);
 }
 
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

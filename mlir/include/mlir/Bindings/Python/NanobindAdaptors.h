@@ -33,14 +33,46 @@
 
 namespace mlir {
 namespace python {
+
 namespace {
 
 nanobind::module_ &irModule() {
-  static SafeInit<nanobind::module_> init([]() {
+  static SafeInit<nanobind::module_> init;
+  return init.get([]() {
     return std::make_unique<nanobind::module_>(
         nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir")));
   });
-  return init.get();
+}
+
+template <typename FuncPtr>
+std::unique_ptr<FuncPtr> getUnwrapFunc(nanobind::handle src,
+                                       const char *capsuleName) {
+  nanobind::object capsule = nanobind::getattr(
+      src.type(), MLIR_PYTHON_CAPI_UNWRAP_ATTR, nanobind::none());
+  if (!capsule.is_none()) {
+    auto ptr = reinterpret_cast<FuncPtr>(
+        PyCapsule_GetPointer(capsule.ptr(), capsuleName));
+    return std::make_unique<FuncPtr>(ptr);
+  }
+  return std::make_unique<FuncPtr>(nullptr);
+}
+
+template <typename FuncPtr>
+std::unique_ptr<FuncPtr> getWrapFunc(nanobind::handle mod,
+                                     const char *className,
+                                     const char *capsuleName) {
+  auto ptr = std::make_unique<FuncPtr>(nullptr);
+  nanobind::object cls = nanobind::getattr(mod, className, nanobind::none());
+  if (cls.is_none())
+    return ptr;
+
+  nanobind::object capsule =
+      nanobind::getattr(cls, MLIR_PYTHON_CAPI_WRAP_ATTR, nanobind::none());
+  if (!capsule.is_none()) {
+    *ptr = reinterpret_cast<FuncPtr>(
+        PyCapsule_GetPointer(capsule.ptr(), capsuleName));
+  }
+  return ptr;
 }
 
 } // namespace
@@ -94,6 +126,16 @@ struct type_caster<MlirAffineMap> {
   NB_TYPE_CASTER(MlirAffineMap,
                  const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.AffineMap")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirAffineMap (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_AFFINE_MAP_UNWRAP);
+    });
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirAffineMapIsNull(value));
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAffineMap(capsule->ptr());
       return pyErrClearIfFalse(!mlirAffineMapIsNull(value));
@@ -102,6 +144,18 @@ struct type_caster<MlirAffineMap> {
   }
   static handle from_cpp(MlirAffineMap v, rv_policy,
                          cleanup_list *cleanup) noexcept {
+    if (v.ptr == nullptr)
+      return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirAffineMap);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mlir::python::irModule(), "AffineMap",
+          MLIR_PYTHON_CAPSULE_AFFINE_MAP_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(v));
+    }
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonAffineMapToCapsule(v));
     return mlir::python::irModule()
@@ -117,6 +171,16 @@ struct type_caster<MlirAttribute> {
   NB_TYPE_CASTER(MlirAttribute,
                  const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirAttribute (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_ATTRIBUTE_UNWRAP);
+    });
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirAttributeIsNull(value));
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAttribute(capsule->ptr());
       return pyErrClearIfFalse(!mlirAttributeIsNull(value));
@@ -125,6 +189,18 @@ struct type_caster<MlirAttribute> {
   }
   static handle from_cpp(MlirAttribute v, rv_policy,
                          cleanup_list *cleanup) noexcept {
+    if (v.ptr == nullptr)
+      return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirAttribute);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mlir::python::irModule(), "Attribute",
+          MLIR_PYTHON_CAPSULE_ATTRIBUTE_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(v));
+    }
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonAttributeToCapsule(v));
     return mlir::python::irModule()
@@ -140,6 +216,17 @@ template <>
 struct type_caster<MlirBlock> {
   NB_TYPE_CASTER(MlirBlock, const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.Block")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirBlock (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_BLOCK_UNWRAP);
+    });
+
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirBlockIsNull(value));
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToBlock(capsule->ptr());
       return pyErrClearIfFalse(!mlirBlockIsNull(value));
@@ -154,6 +241,20 @@ struct type_caster<MlirContext> {
   NB_TYPE_CASTER(MlirContext,
                  const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.Context")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirContext (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_CONTEXT_UNWRAP);
+    });
+
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      if (!mlirContextIsNull(value)) {
+        return true;
+      }
+      PyErr_Clear();
+    }
     if (src.is_none()) {
       // Gets the current thread-bound context.
       src = mlir::python::irModule().attr("Context").attr("current");
@@ -182,6 +283,17 @@ struct type_caster<MlirDialectRegistry> {
   NB_TYPE_CASTER(MlirDialectRegistry,
                  const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.DialectRegistry")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirDialectRegistry (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY_UNWRAP);
+    });
+
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirDialectRegistryIsNull(value));
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToDialectRegistry(capsule->ptr());
       return pyErrClearIfFalse(!mlirDialectRegistryIsNull(value));
@@ -190,6 +302,18 @@ struct type_caster<MlirDialectRegistry> {
   }
   static handle from_cpp(MlirDialectRegistry v, rv_policy,
                          cleanup_list *cleanup) noexcept {
+    if (v.ptr == nullptr)
+      return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirDialectRegistry);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mlir::python::irModule(), "DialectRegistry",
+          MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(v));
+    }
     nanobind::object capsule = nanobind::steal<nanobind::object>(
         mlirPythonDialectRegistryToCapsule(v));
     return mlir::python::irModule()
@@ -205,6 +329,17 @@ struct type_caster<MlirLocation> {
   NB_TYPE_CASTER(MlirLocation,
                  const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.Location")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirLocation (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_LOCATION_UNWRAP);
+    });
+
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirLocationIsNull(value));
+    }
     if (src.is_none()) {
       // Gets the current thread-bound context.
       src = mlir::python::irModule().attr("Location").attr("current");
@@ -217,6 +352,18 @@ struct type_caster<MlirLocation> {
   }
   static handle from_cpp(MlirLocation v, rv_policy,
                          cleanup_list *cleanup) noexcept {
+    if (v.ptr == nullptr)
+      return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirLocation);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mlir::python::irModule(), "Location",
+          MLIR_PYTHON_CAPSULE_LOCATION_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(v));
+    }
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonLocationToCapsule(v));
     return mlir::python::irModule()
@@ -231,6 +378,17 @@ template <>
 struct type_caster<MlirModule> {
   NB_TYPE_CASTER(MlirModule, const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.Module")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirModule (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_MODULE_UNWRAP);
+    });
+
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirModuleIsNull(value));
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToModule(capsule->ptr());
       return pyErrClearIfFalse(!mlirModuleIsNull(value));
@@ -239,13 +397,24 @@ struct type_caster<MlirModule> {
   }
   static handle from_cpp(MlirModule v, rv_policy,
                          cleanup_list *cleanup) noexcept {
+    if (v.ptr == nullptr)
+      return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirModule);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mlir::python::irModule(), "Module", MLIR_PYTHON_CAPSULE_MODULE_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(v));
+    }
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonModuleToCapsule(v));
     return mlir::python::irModule()
         .attr("Module")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
-  };
+  }
 };
 
 /// Casts object <-> MlirFrozenRewritePatternSet.
@@ -253,8 +422,19 @@ template <>
 struct type_caster<MlirFrozenRewritePatternSet> {
   NB_TYPE_CASTER(
       MlirFrozenRewritePatternSet,
-      const_name(MAKE_MLIR_PYTHON_QUALNAME("rewrite.FrozenRewritePatternSet")))
+      const_name("mlir._mlir_libs._mlir.rewrite.FrozenRewritePatternSet"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirFrozenRewritePatternSet (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_FROZEN_REWRITE_PATTERN_SET_UNWRAP);
+    });
+
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(value.ptr != nullptr);
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule->ptr());
       return pyErrClearIfFalse(value.ptr != nullptr);
@@ -262,14 +442,34 @@ struct type_caster<MlirFrozenRewritePatternSet> {
     return false;
   }
   static handle from_cpp(MlirFrozenRewritePatternSet v, rv_policy,
-                         handle) noexcept {
+                         cleanup_list *cleanup) noexcept {
+    if (v.ptr == nullptr)
+      return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirFrozenRewritePatternSet);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      auto ptr = std::make_unique<FuncPtr>(nullptr);
+      PyObject *mod_ptr =
+          PyImport_ImportModule(MAKE_MLIR_PYTHON_QUALNAME("rewrite"));
+      if (!mod_ptr) {
+        PyErr_Clear();
+        return ptr;
+      }
+      nanobind::object mod = nanobind::steal<nanobind::object>(mod_ptr);
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mod, "FrozenRewritePatternSet",
+          MLIR_PYTHON_CAPSULE_FROZEN_REWRITE_PATTERN_SET_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(v));
+    }
     nanobind::object capsule = nanobind::steal<nanobind::object>(
         mlirPythonFrozenRewritePatternSetToCapsule(v));
     return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("rewrite"))
         .attr("FrozenRewritePatternSet")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
-  };
+  }
 };
 
 /// Casts object <-> MlirOperation.
@@ -278,6 +478,17 @@ struct type_caster<MlirOperation> {
   NB_TYPE_CASTER(MlirOperation,
                  const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.Operation")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirOperation (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_OPERATION_UNWRAP);
+    });
+
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirOperationIsNull(value));
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToOperation(capsule->ptr());
       return pyErrClearIfFalse(!mlirOperationIsNull(value));
@@ -288,13 +499,23 @@ struct type_caster<MlirOperation> {
                          cleanup_list *cleanup) noexcept {
     if (v.ptr == nullptr)
       return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirOperation);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mlir::python::irModule(), "Operation",
+          MLIR_PYTHON_CAPSULE_OPERATION_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(v));
+    }
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonOperationToCapsule(v));
     return mlir::python::irModule()
         .attr("Operation")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
-  };
+  }
 };
 
 /// Casts object <-> MlirValue.
@@ -302,6 +523,16 @@ template <>
 struct type_caster<MlirValue> {
   NB_TYPE_CASTER(MlirValue, const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.Value")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirValue (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_VALUE_UNWRAP);
+    });
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirValueIsNull(value));
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToValue(capsule->ptr());
       return pyErrClearIfFalse(!mlirValueIsNull(value));
@@ -312,6 +543,15 @@ struct type_caster<MlirValue> {
                          cleanup_list *cleanup) noexcept {
     if (v.ptr == nullptr)
       return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirValue);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mlir::python::irModule(), "Value", MLIR_PYTHON_CAPSULE_VALUE_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(v));
+    }
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonValueToCapsule(v));
     return mlir::python::irModule()
@@ -319,7 +559,7 @@ struct type_caster<MlirValue> {
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
         .release();
-  };
+  }
 };
 
 /// Casts object -> MlirPassManager.
@@ -341,6 +581,17 @@ template <>
 struct type_caster<MlirTypeID> {
   NB_TYPE_CASTER(MlirTypeID, const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirTypeID (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_TYPEID_UNWRAP);
+    });
+
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirTypeIDIsNull(value));
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToTypeID(capsule->ptr());
       return pyErrClearIfFalse(!mlirTypeIDIsNull(value));
@@ -351,13 +602,22 @@ struct type_caster<MlirTypeID> {
                          cleanup_list *cleanup) noexcept {
     if (v.ptr == nullptr)
       return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirTypeID);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mlir::python::irModule(), "TypeID", MLIR_PYTHON_CAPSULE_TYPEID_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(v));
+    }
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonTypeIDToCapsule(v));
     return mlir::python::irModule()
         .attr("TypeID")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
-  };
+  }
 };
 
 /// Casts object <-> MlirType.
@@ -365,6 +625,17 @@ template <>
 struct type_caster<MlirType> {
   NB_TYPE_CASTER(MlirType, const_name(MAKE_MLIR_PYTHON_QUALNAME("ir.Type")))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
+    using FuncPtr = MlirType (*)(PyObject *);
+    static mlir::python::SafeInit<FuncPtr> unwrap_init;
+    FuncPtr unwrap_func = unwrap_init.get([&]() {
+      return mlir::python::getUnwrapFunc<FuncPtr>(
+          src, MLIR_PYTHON_CAPSULE_TYPE_UNWRAP);
+    });
+
+    if (unwrap_func) {
+      value = unwrap_func(src.ptr());
+      return pyErrClearIfFalse(!mlirTypeIsNull(value));
+    }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToType(capsule->ptr());
       return pyErrClearIfFalse(!mlirTypeIsNull(value));
@@ -373,6 +644,17 @@ struct type_caster<MlirType> {
   }
   static handle from_cpp(MlirType t, rv_policy,
                          cleanup_list *cleanup) noexcept {
+    if (t.ptr == nullptr)
+      return nanobind::none();
+    using FuncPtr = PyObject *(*)(MlirType);
+    static mlir::python::SafeInit<FuncPtr> wrap_init;
+    FuncPtr wrap_func = wrap_init.get([]() {
+      return mlir::python::getWrapFunc<FuncPtr>(
+          mlir::python::irModule(), "Type", MLIR_PYTHON_CAPSULE_TYPE_WRAP);
+    });
+    if (wrap_func) {
+      return handle(wrap_func(t));
+    }
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonTypeToCapsule(t));
     return mlir::python::irModule()
@@ -471,11 +753,11 @@ public:
         std::forward<Func>(f),
         nanobind::name(name), // nanobind::scope(thisClass),
         extra...);
-    static SafeInit<nanobind::object> classmethodFn([]() {
+    static SafeInit<nanobind::object> classmethodFn;
+    thisClass.attr(name) = classmethodFn.get([]() {
       return std::make_unique<nanobind::object>(
           nanobind::module_::import_("builtins").attr("classmethod"));
-    });
-    thisClass.attr(name) = classmethodFn.get()(cf);
+    })(cf);
     return *this;
   }
 

@@ -353,6 +353,8 @@ public:
       mlirFrozenRewritePatternSetDestroy(set);
   }
   MlirFrozenRewritePatternSet get() { return set; }
+  static PyObject *wrap(MlirFrozenRewritePatternSet set);
+  static MlirFrozenRewritePatternSet unwrap(PyObject *obj);
 
   nb::object getCapsule() {
     return nb::steal<nb::object>(
@@ -370,6 +372,23 @@ public:
 private:
   MlirFrozenRewritePatternSet set;
 };
+
+PyObject *PyFrozenRewritePatternSet::wrap(MlirFrozenRewritePatternSet set) {
+  if (set.ptr == nullptr) {
+    Py_RETURN_NONE;
+  }
+  return nb::cast(PyFrozenRewritePatternSet(set), nb::rv_policy::move)
+      .release()
+      .ptr();
+}
+
+MlirFrozenRewritePatternSet PyFrozenRewritePatternSet::unwrap(PyObject *obj) {
+  PyFrozenRewritePatternSet *pySet;
+  if (nb::try_cast<PyFrozenRewritePatternSet *>(nb::handle(obj), pySet)) {
+    return pySet->get();
+  }
+  return {nullptr};
+}
 
 void PyRewritePatternSet::bind(nb::module_ &m) {
   nb::class_<PyRewritePatternSet>(m, "RewritePatternSet")
@@ -742,6 +761,20 @@ void populateRewriteSubmodule(nb::module_ &m) {
                    "source/target materializations");
 
   nb::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet")
+      .def_prop_ro_static(
+          MLIR_PYTHON_CAPI_WRAP_ATTR,
+          [](nanobind::object /*self*/) {
+            return nb::capsule(
+                reinterpret_cast<void *>(PyFrozenRewritePatternSet::wrap),
+                MLIR_PYTHON_CAPSULE_FROZEN_REWRITE_PATTERN_SET_WRAP);
+          })
+      .def_prop_ro_static(
+          MLIR_PYTHON_CAPI_UNWRAP_ATTR,
+          [](nanobind::object /*self*/) {
+            return nb::capsule(
+                reinterpret_cast<void *>(PyFrozenRewritePatternSet::unwrap),
+                MLIR_PYTHON_CAPSULE_FROZEN_REWRITE_PATTERN_SET_UNWRAP);
+          })
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR,
                    &PyFrozenRewritePatternSet::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR,

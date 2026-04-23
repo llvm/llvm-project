@@ -19,7 +19,6 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <typeinfo>
 #include <variant>
@@ -40,11 +39,10 @@ namespace python {
 template <typename T>
 class SafeInit {
 public:
-  typedef std::unique_ptr<T> (*F)();
+  SafeInit() = default;
 
-  explicit SafeInit(F init_fn) : initFn(init_fn) {}
-
-  T &get() {
+  template <typename F>
+  T &get(const F &init_fn) {
     if (T *result = output.load()) {
       return *result;
     }
@@ -53,7 +51,7 @@ public:
     // released during its execution. The intended use case is for module
     // imports which are safe to perform multiple times. We are careful not to
     // hold a lock across init_fn() to avoid lock ordering problems.
-    std::unique_ptr<T> m = initFn();
+    std::unique_ptr<T> m = init_fn();
     {
       nanobind::ft_lock_guard lock(mu);
       if (T *result = output.load()) {
@@ -68,7 +66,6 @@ public:
 private:
   nanobind::ft_mutex mu;
   std::atomic<T *> output{nullptr};
-  F initFn;
 };
 
 struct MlirTypeIDHash {
