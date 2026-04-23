@@ -234,3 +234,79 @@ define float @test_multiple_register_outputs_same() #0 {
   ret float %add
 }
 
+; RISCV Specific constraints
+
+; TODO: Issue if anything other than i(2^x)
+define void @test_input_imm_K() {
+  ; CHECK-LABEL: name: test_input_imm_K
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, imm, 4
+  ; CHECK-NEXT:   PseudoRET
+  call void asm sideeffect "", "K"(i4 4)
+  ret void
+}
+
+define void @test_input_imm_K_i2() {
+  ; CHECK-LABEL: name: test_input_imm_K_i2
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, imm, -1
+  ; CHECK-NEXT:   PseudoRET
+  call void asm sideeffect "", "K"(i2 3)
+  ret void
+}
+
+
+define void @test_input_imm_K_i1() {
+  ; CHECK-LABEL: name: test_input_imm_K_i1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, imm, 0
+  ; CHECK-NEXT:   PseudoRET
+  call void asm sideeffect "", "K"(i1 0)
+  ret void
+}
+
+define void @test_input_imm_I() {
+  ; CHECK-LABEL: name: test_input_imm_I
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, imm, 42
+  ; CHECK-NEXT:   PseudoRET
+  call void asm sideeffect "", "I"(i8 42)
+  ret void
+}
+
+define void @test_input_imm_I_i2() {
+  ; CHECK-LABEL: name: test_input_imm_I_i2
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, imm, -1
+  ; CHECK-NEXT:   PseudoRET
+  call void asm sideeffect "", "I"(i2 3)
+  ret void
+}
+
+define void @test_input_imm_I_i1() {
+  ; CHECK-LABEL: name: test_input_imm_I_i1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, imm, 0
+  ; CHECK-NEXT:   PseudoRET
+  call void asm sideeffect "", "K"(i1 0)
+  ret void
+}
+
+define void @test_S_constraint() {
+  ; CHECK-LABEL: name: test_S_constraint
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect mayload attdialect, imm, @var
+  ; CHECK-NEXT:   PseudoRET
+  call void asm sideeffect "", "S"(ptr @var)
+  ret void
+}
+
+define void @test_J_constraint() {
+  ; CHECK-LABEL: name: test_J_constraint
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, imm, 0
+  ; CHECK-NEXT:   PseudoRET
+  call void asm sideeffect "", "J"(i8 0)
+  ret void
+}
+

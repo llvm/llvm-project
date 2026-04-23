@@ -84,6 +84,7 @@ class LLVMContext;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineJumpTableInfo;
 class MachineLoop;
 class MachineRegisterInfo;
@@ -5383,6 +5384,15 @@ public:
   virtual void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                             std::vector<SDValue> &Ops,
                                             SelectionDAG &DAG) const;
+
+  /// GlobalISel - Allow targets to lower target-specific operands into the Ops
+  /// vector befor generic lowering occures.
+  virtual bool
+  LowerAsmOperandForConstraint(Value *Val, StringRef Constraint,
+                               std::vector<MachineOperand> &Ops,
+                               MachineIRBuilder &MIRBuilder) const {
+    return false;
+  }
 
   // Lower custom output constraints. If invalid, return SDValue().
   virtual SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Glue,
