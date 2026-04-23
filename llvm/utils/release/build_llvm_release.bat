@@ -246,6 +246,7 @@ set cmake_flags=^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
   -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -DZLIB_LIBRARY_RELEASE=%zlibdir%/lib/zs.lib ^
   -Dzstd_INCLUDE_DIR=%zstddir%/include ^
   -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib
 
@@ -312,6 +313,7 @@ set cmake_flags=^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
   -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -DZLIB_LIBRARY_RELEASE=%zlibdir%/lib/zs.lib ^
   -Dzstd_INCLUDE_DIR=%zstddir%/include ^
   -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib ^
   -DCLANG_DEFAULT_LINKER=lld

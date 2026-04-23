@@ -366,10 +366,11 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_readfirstlane_b32 s4, v2
 ; SDAG-NEXT:    s_mov_b32 m0, s4
-; SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
+; SDAG-NEXT:    v_mov_b32_e32 v5, 0
 ; SDAG-NEXT:    s_mov_b32 s6, 2
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; SDAG-NEXT:    ; asyncmark
@@ -406,10 +407,11 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_readfirstlane_b32 s4, v2
 ; GISEL-NEXT:    s_mov_b32 m0, s4
-; GISEL-NEXT:    s_mov_b32 s6, 0
+; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
+; GISEL-NEXT:    s_mov_b32 s6, 0
 ; GISEL-NEXT:    s_mov_b32 s7, 2
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_mov_b32_e32 v6, s7

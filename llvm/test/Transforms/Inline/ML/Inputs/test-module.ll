@@ -63,6 +63,6 @@ define i32 @switcher(i32) minsize {
   ret i32 %13
 }
 
-; CHECK-NOT: @adder
-; DEFAULT-LABEL:        @adder
+; CHECK-NOT: @multiplier
+; DEFAULT-LABEL:        define internal i32 @adder
 ; DEFAULT-NEXT:         %2 = mul

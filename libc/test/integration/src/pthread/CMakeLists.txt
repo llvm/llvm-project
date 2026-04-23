@@ -13,6 +13,7 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
@@ -27,11 +28,13 @@ add_integration_test(
   DEPENDS
     libc.include.pthread
     libc.src.errno.errno
+    libc.src.__support.CPP.atomic
     libc.src.pthread.pthread_barrier_destroy
     libc.src.pthread.pthread_barrier_wait
     libc.src.pthread.pthread_barrier_init
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
+    libc.src.string.memset
     libc.src.stdio.printf
 )
 

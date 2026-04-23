@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include <memory>
 #include <tuple>
@@ -672,6 +673,55 @@ TEST_F(PlatformDarwinLocateTest,
   }
 }
 
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromDSYM_AutoLoadUsesModuleName) {
+  // Test that the auto-load-scripts-for-modules setting uses the module
+  // name (not the sanitized script name) for lookup. The module is named
+  // "TestModule.1" (with a dot), and the script is "TestModule_1.py"
+  // (sanitized). Setting "TestModule_1=true" should NOT affect loading
+  // because the lookup key should be "TestModule.1".
+
+  // Create dummy module file at <test-root>/TestModule.1.o
+  FileSpec module_fspec(CreateFile("TestModule.1.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  FileSpec dsym_module_fspec(
+      CreateFile("TestModule.1.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fspec);
+
+  CreateFile("TestModule_1.py", m_tmp_dsym_python_dir);
+
+  m_target_sp->SetLoadScriptFromSymbolFile(eLoadScriptFromSymFileFalse);
+
+  // Setting the sanitized script name should NOT cause loading.
+  m_target_sp->SetAutoLoadScriptsForModule("TestModule_1",
+                                           eLoadScriptFromSymFileTrue);
+
+  {
+    StreamString ss;
+    auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                      ->LocateExecutableScriptingResourcesFromDSYM(
+                          ss, module_fspec, *m_target_sp, dsym_module_fspec);
+
+    ASSERT_EQ(fspecs.size(), 1u);
+    EXPECT_EQ(fspecs.begin()->second, eLoadScriptFromSymFileFalse);
+  }
+
+  // Now set the actual module name. This should override the default.
+  m_target_sp->SetAutoLoadScriptsForModule("TestModule.1",
+                                           eLoadScriptFromSymFileTrue);
+
+  {
+    StreamString ss;
+    auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                      ->LocateExecutableScriptingResourcesFromDSYM(
+                          ss, module_fspec, *m_target_sp, dsym_module_fspec);
+
+    ASSERT_EQ(fspecs.size(), 1u);
+    EXPECT_EQ(fspecs.begin()->second, eLoadScriptFromSymFileTrue);
+  }
+}
+
 struct SpecialCharTestCase {
   char special_char;
   char replacement;
@@ -718,3 +768,20 @@ INSTANTIATE_TEST_SUITE_P(PlatformDarwinLocateWithSpecialCharsTest,
                          PlatformDarwinLocateWithSpecialCharsTestFixture,
                          testing::ValuesIn(std::vector<SpecialCharTestCase>{
                              {' ', '_'}, {'.', '_'}, {'-', '_'}, {'+', 'x'}}));
+
+TEST_F(PlatformDarwinLocateTest, GetSafeAutoLoadPaths) {
+  // Tests PlatformDarwin::GetSafeAutoLoadPaths returns a path into the SDK on
+  // Darwin platforms.
+
+  auto paths_or_err = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                          ->GetSafeAutoLoadPaths(*m_target_sp);
+
+  ASSERT_THAT_EXPECTED(paths_or_err, llvm::Succeeded());
+
+  ASSERT_EQ(paths_or_err->GetSize(), 1u);
+
+  // The returned path should be $SDKROOT/usr/share/lldb.
+  FileSpec path = paths_or_err->GetFileSpecAtIndex(0);
+  EXPECT_TRUE(llvm::StringRef(path.GetPath()).ends_with("/usr/share/lldb"))
+      << "Unexpected path: " << path.GetPath();
+}

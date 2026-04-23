@@ -221,6 +221,10 @@ functions:
     return_type: int
     arguments:
       - type: pthread_mutex_t *
+  - name: pthread_mutex_trylock
+    return_type: int
+    arguments:
+      - type: pthread_mutex_t *
   - name: pthread_mutex_unlock
     return_type: int
     arguments:

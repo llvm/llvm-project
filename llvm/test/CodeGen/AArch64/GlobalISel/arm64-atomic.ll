@@ -760,6 +760,8 @@ define i32 @fetch_and_or(ptr %p) #0 {
 ; CHECK-NOLSE-O0:       ; %bb.0:
 ; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32
 ; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Spill
+; CHECK-NOLSE-O0-NEXT:    mov w8, #5 ; =0x5
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #24] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    ldr w8, [x0]
 ; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    b LBB8_1
@@ -768,7 +770,7 @@ define i32 @fetch_and_or(ptr %p) #0 {
 ; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB8_2 Depth 2
 ; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Reload
 ; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Reload
-; CHECK-NOLSE-O0-NEXT:    mov w9, #5 ; =0x5
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Reload
 ; CHECK-NOLSE-O0-NEXT:    orr w12, w8, w9
 ; CHECK-NOLSE-O0-NEXT:  LBB8_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB8_1 Depth=1
@@ -6503,17 +6505,29 @@ define { ptr, i1 } @cmpxchg_ptr(ptr %ptr, ptr %desired, ptr %new) {
 }
 
 define internal double @bitcast_to_double(ptr %ptr) {
-; CHECK-NOLSE-LABEL: bitcast_to_double:
-; CHECK-NOLSE:       ; %bb.0:
-; CHECK-NOLSE-NEXT:    ldar x8, [x0]
-; CHECK-NOLSE-NEXT:    fmov d0, x8
-; CHECK-NOLSE-NEXT:    ret
+; CHECK-NOLSE-O1-LABEL: bitcast_to_double:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ldar x8, [x0]
+; CHECK-NOLSE-O1-NEXT:    fmov d0, x8
+; CHECK-NOLSE-O1-NEXT:    ret
 ;
-; CHECK-OUTLINE-LABEL: bitcast_to_double:
-; CHECK-OUTLINE:       ; %bb.0:
-; CHECK-OUTLINE-NEXT:    ldar x8, [x0]
-; CHECK-OUTLINE-NEXT:    fmov d0, x8
-; CHECK-OUTLINE-NEXT:    ret
+; CHECK-OUTLINE-O1-LABEL: bitcast_to_double:
+; CHECK-OUTLINE-O1:       ; %bb.0:
+; CHECK-OUTLINE-O1-NEXT:    ldar x8, [x0]
+; CHECK-OUTLINE-O1-NEXT:    fmov d0, x8
+; CHECK-OUTLINE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: bitcast_to_double:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    ldar x0, [x0]
+; CHECK-NOLSE-O0-NEXT:    fmov d0, x0
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-OUTLINE-O0-LABEL: bitcast_to_double:
+; CHECK-OUTLINE-O0:       ; %bb.0:
+; CHECK-OUTLINE-O0-NEXT:    ldar x0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    fmov d0, x0
+; CHECK-OUTLINE-O0-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: bitcast_to_double:
 ; CHECK-LSE-O1:       ; %bb.0:
@@ -6523,8 +6537,8 @@ define internal double @bitcast_to_double(ptr %ptr) {
 ;
 ; CHECK-LSE-O0-LABEL: bitcast_to_double:
 ; CHECK-LSE-O0:       ; %bb.0:
-; CHECK-LSE-O0-NEXT:    ldar x8, [x0]
-; CHECK-LSE-O0-NEXT:    fmov d0, x8
+; CHECK-LSE-O0-NEXT:    ldar x0, [x0]
+; CHECK-LSE-O0-NEXT:    fmov d0, x0
 ; CHECK-LSE-O0-NEXT:    ret
   %load = load atomic i64, ptr %ptr seq_cst, align 8
   %bitcast = bitcast i64 %load to double
@@ -6532,17 +6546,29 @@ define internal double @bitcast_to_double(ptr %ptr) {
 }
 
 define internal float @bitcast_to_float(ptr %ptr) {
-; CHECK-NOLSE-LABEL: bitcast_to_float:
-; CHECK-NOLSE:       ; %bb.0:
-; CHECK-NOLSE-NEXT:    ldar w8, [x0]
-; CHECK-NOLSE-NEXT:    fmov s0, w8
-; CHECK-NOLSE-NEXT:    ret
+; CHECK-NOLSE-O1-LABEL: bitcast_to_float:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ldar w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    fmov s0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
 ;
-; CHECK-OUTLINE-LABEL: bitcast_to_float:
-; CHECK-OUTLINE:       ; %bb.0:
-; CHECK-OUTLINE-NEXT:    ldar w8, [x0]
-; CHECK-OUTLINE-NEXT:    fmov s0, w8
-; CHECK-OUTLINE-NEXT:    ret
+; CHECK-OUTLINE-O1-LABEL: bitcast_to_float:
+; CHECK-OUTLINE-O1:       ; %bb.0:
+; CHECK-OUTLINE-O1-NEXT:    ldar w8, [x0]
+; CHECK-OUTLINE-O1-NEXT:    fmov s0, w8
+; CHECK-OUTLINE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: bitcast_to_float:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    ldar w0, [x0]
+; CHECK-NOLSE-O0-NEXT:    fmov s0, w0
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-OUTLINE-O0-LABEL: bitcast_to_float:
+; CHECK-OUTLINE-O0:       ; %bb.0:
+; CHECK-OUTLINE-O0-NEXT:    ldar w0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    fmov s0, w0
+; CHECK-OUTLINE-O0-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: bitcast_to_float:
 ; CHECK-LSE-O1:       ; %bb.0:
@@ -6552,8 +6578,8 @@ define internal float @bitcast_to_float(ptr %ptr) {
 ;
 ; CHECK-LSE-O0-LABEL: bitcast_to_float:
 ; CHECK-LSE-O0:       ; %bb.0:
-; CHECK-LSE-O0-NEXT:    ldar w8, [x0]
-; CHECK-LSE-O0-NEXT:    fmov s0, w8
+; CHECK-LSE-O0-NEXT:    ldar w0, [x0]
+; CHECK-LSE-O0-NEXT:    fmov s0, w0
 ; CHECK-LSE-O0-NEXT:    ret
   %load = load atomic i32, ptr %ptr seq_cst, align 8
   %bitcast = bitcast i32 %load to float
@@ -6561,19 +6587,33 @@ define internal float @bitcast_to_float(ptr %ptr) {
 }
 
 define internal half @bitcast_to_half(ptr %ptr) {
-; CHECK-NOLSE-LABEL: bitcast_to_half:
-; CHECK-NOLSE:       ; %bb.0:
-; CHECK-NOLSE-NEXT:    ldarh w8, [x0]
-; CHECK-NOLSE-NEXT:    fmov s0, w8
-; CHECK-NOLSE-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-NEXT:    ret
+; CHECK-NOLSE-O1-LABEL: bitcast_to_half:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ldarh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    fmov s0, w8
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-NOLSE-O1-NEXT:    ret
 ;
-; CHECK-OUTLINE-LABEL: bitcast_to_half:
-; CHECK-OUTLINE:       ; %bb.0:
-; CHECK-OUTLINE-NEXT:    ldarh w8, [x0]
-; CHECK-OUTLINE-NEXT:    fmov s0, w8
-; CHECK-OUTLINE-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-OUTLINE-NEXT:    ret
+; CHECK-OUTLINE-O1-LABEL: bitcast_to_half:
+; CHECK-OUTLINE-O1:       ; %bb.0:
+; CHECK-OUTLINE-O1-NEXT:    ldarh w8, [x0]
+; CHECK-OUTLINE-O1-NEXT:    fmov s0, w8
+; CHECK-OUTLINE-O1-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-OUTLINE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: bitcast_to_half:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    ldarh w0, [x0]
+; CHECK-NOLSE-O0-NEXT:    fmov s0, w0
+; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-OUTLINE-O0-LABEL: bitcast_to_half:
+; CHECK-OUTLINE-O0:       ; %bb.0:
+; CHECK-OUTLINE-O0-NEXT:    ldarh w0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    fmov s0, w0
+; CHECK-OUTLINE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-OUTLINE-O0-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: bitcast_to_half:
 ; CHECK-LSE-O1:       ; %bb.0:
@@ -6584,8 +6624,8 @@ define internal half @bitcast_to_half(ptr %ptr) {
 ;
 ; CHECK-LSE-O0-LABEL: bitcast_to_half:
 ; CHECK-LSE-O0:       ; %bb.0:
-; CHECK-LSE-O0-NEXT:    ldarh w8, [x0]
-; CHECK-LSE-O0-NEXT:    fmov s0, w8
+; CHECK-LSE-O0-NEXT:    ldarh w0, [x0]
+; CHECK-LSE-O0-NEXT:    fmov s0, w0
 ; CHECK-LSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
 ; CHECK-LSE-O0-NEXT:    ret
   %load = load atomic i16, ptr %ptr seq_cst, align 8

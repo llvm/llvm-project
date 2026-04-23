@@ -360,12 +360,22 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 }
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
-  GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
-                RootSD->getOrdinal(),
-                GOFF::ERAttr{Symbol.isIndirect(), Symbol.getCodeData(),
-                             Symbol.getBindingStrength(), Symbol.getLinkage(),
-                             GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
-  writeSymbol(ER);
+  if (Symbol.getCodeData() == GOFF::ESD_EXE_DATA) {
+    MCSectionGOFF *ED = Symbol.getADA()->getParent();
+    GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
+                  ED->getEDAttributes(),
+                  GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
+                               Symbol.getLinkage(), Symbol.getBindingScope(),
+                               0});
+    writeSymbol(PR);
+  } else {
+    GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
+                  RootSD->getOrdinal(),
+                  GOFF::ERAttr{Symbol.isIndirect(), Symbol.getCodeData(),
+                               Symbol.getBindingStrength(), Symbol.getLinkage(),
+                               GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
+    writeSymbol(ER);
+  }
 }
 
 void GOFFWriter::defineSymbols() {
