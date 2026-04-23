@@ -1537,15 +1537,8 @@ static void configureNamedModuleOutputArgs(Compilation &C,
   auto &Job = *Node.Job;
   const auto &TCArgs = getToolChainArgs(C, Job);
   auto JobArgs = Job.getArguments();
-
   JobArgs.push_back(
       TCArgs.MakeArgString("-fmodule-output=" + ModuleOutputPath));
-  // Ensure that this job will emit a module. If the main input for this job
-  // is not of types::CXXModule, we need to explicitly add this.
-  if (Job.getInputInfos().front().getType() != types::TY_CXXModule) {
-    JobArgs.push_back(TCArgs.MakeArgString("-fmodules-reduced-bmi"));
-  }
-
   Job.replaceArguments(std::move(JobArgs));
 }
 
