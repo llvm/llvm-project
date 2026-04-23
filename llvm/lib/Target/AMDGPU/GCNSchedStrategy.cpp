@@ -3203,10 +3203,10 @@ void PreRARematStage::finalizeGCNSchedStage() {
     return;
 
   // Revert re-scheduling in all affected regions.
-  for (const auto &[RegionIdx, OrigMIOrder, MaxVirtPressure] : RegionReverts) {
+  for (const auto &[RegionIdx, OrigMIOrder, MaxPressure] : RegionReverts) {
     REMAT_DEBUG(dbgs() << "Reverting re-scheduling in region " << RegionIdx
                        << '\n');
-    DAG.Pressure[RegionIdx] = MaxVirtPressure;
+    DAG.Pressure[RegionIdx] = MaxPressure;
     modifyRegionSchedule(RegionIdx, OrigMIOrder);
   }
 

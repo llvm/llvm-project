@@ -325,7 +325,7 @@ public:
 protected:
   const LiveIntervals &LIS;
   LiveRegSet VirtLiveRegs;
-  GCNRegPressure CurVirtPressure, MaxVirtPressure;
+  GCNRegPressure CurPressure, MaxPressure;
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
@@ -354,9 +354,9 @@ public:
   const decltype(VirtLiveRegs) &getLiveRegs() const { return VirtLiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
 
-  void clearMaxPressure() { MaxVirtPressure.clear(); }
+  void clearMaxPressure() { MaxPressure.clear(); }
 
-  GCNRegPressure getPressure() const { return CurVirtPressure; }
+  GCNRegPressure getPressure() const { return CurPressure; }
 
   decltype(VirtLiveRegs) moveLiveRegs() { return std::move(VirtLiveRegs); }
 };
@@ -388,12 +388,12 @@ public:
   /// to reported by LIS.
   bool isValid() const;
 
-  const GCNRegPressure &getMaxPressure() const { return MaxVirtPressure; }
+  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
 
-  void resetMaxPressure() { MaxVirtPressure = CurVirtPressure; }
+  void resetMaxPressure() { MaxPressure = CurPressure; }
 
   GCNRegPressure getMaxPressureAndReset() {
-    GCNRegPressure RP = MaxVirtPressure;
+    GCNRegPressure RP = MaxPressure;
     resetMaxPressure();
     return RP;
   }
@@ -417,8 +417,8 @@ public:
 
   /// \p return MaxPressure and clear it.
   GCNRegPressure moveMaxPressure() {
-    auto Res = MaxVirtPressure;
-    MaxVirtPressure.clear();
+    auto Res = MaxPressure;
+    MaxPressure.clear();
     return Res;
   }
 
@@ -472,7 +472,7 @@ public:
                const LiveRegSet *VirtLiveRegsCopy = nullptr);
 
   /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
-  /// Calculate the impact \p MI will have on CurVirtPressure and \return the
+  /// Calculate the impact \p MI will have on CurPressure and \return the
   /// speculated pressure. In order to support RP Speculation, this does not
   /// rely on the implicit program ordering in the LiveIntervals.
   GCNRegPressure bumpDownwardPressure(const MachineInstr *MI,
