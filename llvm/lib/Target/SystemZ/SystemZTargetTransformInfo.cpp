@@ -1128,6 +1128,15 @@ static unsigned getOperandsExtensionCost(const Instruction *I) {
   return ExtCost;
 }
 
+InstructionCost SystemZTTIImpl::getCFInstrCost(unsigned Opcode,
+                                               TTI::TargetCostKind CostKind,
+                                               const Instruction *I) const {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Opcode == Instruction::PHI ? TTI::TCC_Free : TTI::TCC_Basic;
+  // Branches are assumed to be predicted.
+  return TTI::TCC_Free;
+}
+
 InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
