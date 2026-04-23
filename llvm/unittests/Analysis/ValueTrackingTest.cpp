@@ -3491,7 +3491,8 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *Stride = &*F->arg_begin();
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
     EXPECT_EQ(5, CR2.getLower());
     EXPECT_EQ(0, CR2.getUpper());
   }
@@ -3516,7 +3517,8 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *Stride = &*F->arg_begin();
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
     EXPECT_EQ(6, CR2.getLower());
     EXPECT_EQ(0, CR2.getUpper());
   }
@@ -3541,7 +3543,8 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *Stride = &*F->arg_begin();
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
     EXPECT_EQ(5, CR2.getLower());
     EXPECT_EQ(APInt::getSignedMinValue(32), CR2.getUpper());
   }
@@ -3566,7 +3569,8 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *Stride = &*F->arg_begin();
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
     EXPECT_EQ(6, CR2.getLower());
     EXPECT_EQ(APInt::getSignedMinValue(32), CR2.getUpper());
   }
