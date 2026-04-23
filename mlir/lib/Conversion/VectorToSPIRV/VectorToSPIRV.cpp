@@ -879,6 +879,11 @@ struct VectorGatherOpConverter final
                                          "expected spirv.storage_class");
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (!typeConverter.getTargetEnv().allows(
+            spirv::Extension::SPV_INTEL_masked_gather_scatter))
+      return rewriter.notifyMatchFailure(gatherOp,
+                                         "target environment does not enable "
+                                         "SPV_INTEL_masked_gather_scatter");
     auto loc = gatherOp.getLoc();
 
     // Compute base element pointer from memref + offsets.
@@ -959,6 +964,11 @@ struct VectorScatterOpConverter final
                                          "expected spirv.storage_class");
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (!typeConverter.getTargetEnv().allows(
+            spirv::Extension::SPV_INTEL_masked_gather_scatter))
+      return rewriter.notifyMatchFailure(scatterOp,
+                                         "target environment does not enable "
+                                         "SPV_INTEL_masked_gather_scatter");
     auto loc = scatterOp.getLoc();
 
     // Compute base element pointer from memref + offsets.
@@ -1271,9 +1281,8 @@ void mlir::populateVectorToSPIRVPatterns(
       VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
       VectorInterleaveOpConvert, VectorDeinterleaveOpConvert,
       VectorScalarBroadcastPattern, VectorLoadOpConverter,
-      VectorStoreOpConverter, VectorGatherOpConverter, VectorScatterOpConverter,
-      VectorStepOpConvert>(typeConverter, patterns.getContext(),
-                           PatternBenefit(1));
+      VectorStoreOpConverter, VectorStepOpConvert>(
+      typeConverter, patterns.getContext(), PatternBenefit(1));
 
   // Make sure that the more specialized dot product pattern has higher benefit
   // than the generic one that extracts all elements.
@@ -1284,4 +1293,10 @@ void mlir::populateVectorToSPIRVPatterns(
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(
     RewritePatternSet &patterns) {
   patterns.add<VectorReductionToIntDotProd>(patterns.getContext());
+}
+
+void mlir::populateVectorGatherScatterToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.add<VectorGatherOpConverter, VectorScatterOpConverter>(
+      typeConverter, patterns.getContext(), PatternBenefit(1));
 }
