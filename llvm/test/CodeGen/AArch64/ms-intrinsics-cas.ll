@@ -128,3 +128,43 @@ define i64 @test_casl64(ptr %p, i64 %rs, i64 %rt) {
   %r = call i64 @llvm.aarch64.casl64(ptr %p, i64 %rs, i64 %rt)
   ret i64 %r
 }
+
+define i32 @test_casal8(ptr %p, i32 %rs, i32 %rt) {
+; CHECK-LABEL: test_casal8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casalb w1, w2, [x0]
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.casal8(ptr %p, i32 %rs, i32 %rt)
+  ret i32 %r
+}
+
+define i32 @test_casal16(ptr %p, i32 %rs, i32 %rt) {
+; CHECK-LABEL: test_casal16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casalh w1, w2, [x0]
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.casal16(ptr %p, i32 %rs, i32 %rt)
+  ret i32 %r
+}
+
+define i32 @test_casal32(ptr %p, i32 %rs, i32 %rt) {
+; CHECK-LABEL: test_casal32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casal w1, w2, [x0]
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.casal32(ptr %p, i32 %rs, i32 %rt)
+  ret i32 %r
+}
+
+define i64 @test_casal64(ptr %p, i64 %rs, i64 %rt) {
+; CHECK-LABEL: test_casal64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    casal x1, x2, [x0]
+; CHECK-NEXT:    mov x0, x1
+; CHECK-NEXT:    ret
+  %r = call i64 @llvm.aarch64.casal64(ptr %p, i64 %rs, i64 %rt)
+  ret i64 %r
+}

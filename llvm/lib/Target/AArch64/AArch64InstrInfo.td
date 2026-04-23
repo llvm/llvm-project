@@ -3032,6 +3032,7 @@ let isCodeGenOnly = 1 in {
   defm CAS   : CompareAndSwap_cg<0, 0, "">;
   defm CASA  : CompareAndSwap_cg<1, 0, "a">;
   defm CASL  : CompareAndSwap_cg<0, 1, "l">;
+  defm CASAL : CompareAndSwap_cg<1, 1, "al">;
 }
 
 // v8.1 atomic CASP
