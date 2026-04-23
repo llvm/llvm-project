@@ -1283,6 +1283,8 @@ is provided below.
 * ``LIBOMPTARGET_RECORD_DEVICE=<Num> (default 0)``
 * ``LIBOMPTARGET_RECORD_OUTPUT=[TRUE/FALSE] (default TRUE)``
 
+.. _libomptarget_record:
+
 LIBOMPTARGET_RECORD
 """""""""""""""""""
 
@@ -1292,12 +1294,16 @@ overhead to the recorded program. When the recording is disabled, the following
 recording environment variables are not considered. The recording is disabled by
 default.
 
+.. _libomptarget_record_dir:
+
 LIBOMPTARGET_RECORD_DIR
 """""""""""""""""""""""
 
 This environment variable is used to specify the relative or absolute path to
 the directory where the recorded files will be stored. If omitted or empty, the
 files will be stored in current working directory.
+
+.. _libomptarget_record_report:
 
 LIBOMPTARGET_RECORD_REPORT
 """"""""""""""""""""""""""
