@@ -19,7 +19,6 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -3859,24 +3858,102 @@ const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
 }
 
-bool SIRegisterInfo::is3OperandVALU(const MachineInstr &MI) const {
+unsigned SIRegisterInfo::getVGPRBankIndex(MCRegister Reg) const {
+  return getHWRegIndex(Reg) % 4;
+}
+
+bool SIRegisterInfo::canHave3VGPROperands(const MachineInstr &MI) const {
   if (!SIInstrInfo::isVALU(MI))
     return false;
 
   const MCInstrDesc &Desc = MI.getDesc();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  const MachineFunction &MF = *MI.getMF();
   unsigned NumVGPRSrcs = 0;
 
   // Count explicit source operands whose register class can hold VGPRs.
   // Skip defs (operands 0..NumDefs-1); only inspect use slots.
   for (unsigned i = Desc.getNumDefs(), e = Desc.getNumOperands(); i < e; ++i) {
     const TargetRegisterClass *OpRC = TII->getRegClass(Desc, i);
-    if (OpRC && hasVGPRs(OpRC))
-      ++NumVGPRSrcs;
+    if (OpRC && hasVGPRs(OpRC)) {
+      if (++NumVGPRSrcs >= 3)
+        return true;
+    }
   }
 
-  return NumVGPRSrcs >= 3;
+  return false;
+}
+
+void SIRegisterInfo::addVGPRBankConflictHints(Register VirtReg,
+                                              ArrayRef<MCPhysReg> Order,
+                                              SmallVectorImpl<MCPhysReg> &Hints,
+                                              const MachineFunction &MF,
+                                              const VirtRegMap *VRM) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  if (EnableVGPRBankConflictAvoidance && VRM && isVGPR(MRI, VirtReg)) {
+    // Track which banks are already in use by allocated operands
+    SmallDenseMap<unsigned, unsigned, 4> BankUsage; // bank_id -> use_count
+    bool HasRelevant3OpVALU = false;
+
+    // Scan all uses of this virtual register
+    for (const MachineInstr &Use : MRI.use_nodbg_instructions(VirtReg)) {
+      if (!canHave3VGPROperands(Use))
+        continue;
+
+      HasRelevant3OpVALU = true;
+
+      // Check which banks are used by other operands
+      for (const MachineOperand &MO : Use.uses()) {
+        if (!MO.isReg() || MO.getReg() == VirtReg)
+          continue;
+
+        Register OpReg = MO.getReg();
+
+        // Only care about already-allocated physical registers
+        if (OpReg.isVirtual()) {
+          if (VRM->hasPhys(OpReg))
+            OpReg = VRM->getPhys(OpReg);
+          else
+            continue;
+        }
+
+        if (OpReg.isPhysical() && isVGPR(MRI, OpReg)) {
+          unsigned Bank = getHWRegIndex(OpReg) % 4;
+          BankUsage[Bank]++;
+        }
+      }
+    }
+
+    if (HasRelevant3OpVALU && !BankUsage.empty()) {
+      constexpr unsigned MaxBankHints =
+          32; // Arbitrary limit to avoid excessive hints
+      unsigned Added = 0;
+
+      // Pass 1: conflict-free candidates (no operands on this bank)
+      for (MCPhysReg Cand : Order) {
+        if (Added >= MaxBankHints)
+          break;
+        unsigned CandBank = getVGPRBankIndex(Cand);
+        if (!BankUsage.count(CandBank)) {
+          Hints.push_back(Cand);
+          ++Added;
+        }
+      }
+
+      // Pass 2: moderate-conflict candidates (1 existing; 2-way conflict)
+      for (MCPhysReg Cand : Order) {
+        if (Added >= MaxBankHints)
+          break;
+        unsigned CandBank = getVGPRBankIndex(Cand);
+        auto It = BankUsage.find(CandBank);
+        if (It != BankUsage.end() && It->second < 2) {
+          Hints.push_back(Cand);
+          ++Added;
+        }
+      }
+      // 3-way conflicts (usage >= 2) are not hinted; the allocator falls
+      // back to Order naturally via AllocationOrder iteration.
+    }
+  }
 }
 
 bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
@@ -3910,7 +3987,6 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
       // isLo(Paired) is implicitly true here from the API of
       // getMatchingSuperReg.
       Hints.push_back(PairedPhys);
-    BaseImplRetVal = false;
     break;
   }
   case AMDGPURI::Size16: {
@@ -3940,7 +4016,6 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
           Hints.push_back(PhysReg);
       }
     }
-    BaseImplRetVal = false;
     break;
   }
   default: {
@@ -3952,70 +4027,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
   }
 
   // Bank conflict avoidance for VGPRs
-  if (EnableVGPRBankConflictAvoidance && VRM && isVGPR(MRI, VirtReg)) {
-    // Track which banks are already in use by allocated operands
-    SmallDenseMap<unsigned, unsigned, 4> BankUsage; // bank_id -> use_count
-    bool HasRelevant3OpVALU = false;
-
-    // Scan all uses of this virtual register
-    for (const MachineInstr &Use : MRI.use_nodbg_instructions(VirtReg)) {
-      if (!is3OperandVALU(Use))
-        continue;
-
-      HasRelevant3OpVALU = true;
-
-      // Check which banks are used by other operands
-      for (const MachineOperand &MO : Use.uses()) {
-        if (!MO.isReg() || MO.getReg() == VirtReg)
-          continue;
-
-        Register OpReg = MO.getReg();
-
-        // Only care about already-allocated physical registers
-        if (OpReg.isVirtual()) {
-          if (VRM->hasPhys(OpReg))
-            OpReg = VRM->getPhys(OpReg);
-          else
-            continue;
-        }
-
-        if (OpReg.isPhysical() && isVGPR(MRI, OpReg)) {
-          unsigned Bank = getHWRegIndex(OpReg) % 4;
-          BankUsage[Bank]++;
-        }
-      }
-    }
-
-    if (HasRelevant3OpVALU && !BankUsage.empty()) {
-      constexpr unsigned MaxBankHints = 32; // Arbitrary limit to avoid excessive hints
-      unsigned Added = 0;
-
-      // Pass 1: conflict-free candidates (no operands on this bank)
-      for (MCPhysReg Cand : Order) {
-        if (Added >= MaxBankHints)
-          break;
-        unsigned CandBank = getHWRegIndex(Cand) % 4;
-        if (!BankUsage.count(CandBank)) {
-          Hints.push_back(Cand);
-          ++Added;
-        }
-      }
-
-      // Pass 2: moderate-conflict candidates (1 existing; 2-way conflict)
-      for (MCPhysReg Cand : Order) {
-        if (Added >= MaxBankHints)
-          break;
-        unsigned CandBank = getHWRegIndex(Cand) % 4;
-        auto It = BankUsage.find(CandBank);
-        if (It != BankUsage.end() && It->second < 2) {
-          Hints.push_back(Cand);
-          ++Added;
-        }
-      }
-      // 3-way conflicts (usage >= 2) are not hinted; the allocator falls
-      // back to Order naturally via AllocationOrder iteration.
-    }
-  }
+  addVGPRBankConflictHints(VirtReg, Order, Hints, MF, VRM);
 
   return BaseImplRetVal;
 }
