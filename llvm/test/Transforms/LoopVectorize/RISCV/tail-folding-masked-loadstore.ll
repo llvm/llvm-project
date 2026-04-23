@@ -43,8 +43,6 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
-; NO-VP-NEXT:    [[INC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
@@ -56,13 +54,12 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; NO-VP-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_LOAD]]
 ; NO-VP-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP9]], ptr align 4 [[TMP8]], <vscale x 4 x i1> [[TMP7]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[INC]]
-; NO-VP-NEXT:    br i1 [[TMP10]], label [[FOR_INC:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       middle.block:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[INC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[I_011:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ], [ 0, [[ENTRY:%.*]] ]
+; NO-VP-NEXT:    [[I_011:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; NO-VP-NEXT:    br label [[FOR_BODY1:%.*]]
 ; NO-VP:       for.body:
 ; NO-VP-NEXT:    [[I_11:%.*]] = phi i64 [ [[INC1:%.*]], [[FOR_INC1:%.*]] ], [ [[I_011]], [[SCALAR_PH]] ]

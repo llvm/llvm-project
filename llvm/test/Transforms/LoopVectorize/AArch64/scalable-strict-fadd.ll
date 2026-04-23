@@ -40,8 +40,6 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED:       vector.ph:
 ; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
-; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -50,14 +48,13 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP4]], align 4
 ; CHECK-UNORDERED-NEXT:    [[TMP5]] = fadd <vscale x 8 x float> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
 ; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[TMP5]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-UNORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
-; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-UNORDERED:       for.body:
@@ -83,8 +80,6 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED:       vector.ph:
 ; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
-; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
-; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -93,13 +88,12 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, ptr [[TMP4]], align 4
 ; CHECK-ORDERED-NEXT:    [[TMP5]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[VEC_PHI]], <vscale x 8 x float> [[WIDE_LOAD]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-ORDERED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-ORDERED:       middle.block:
-; CHECK-ORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-ORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-ORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-ORDERED:       scalar.ph:
-; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED:       for.body:
@@ -192,8 +186,6 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
-; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -216,17 +208,16 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP13]] = fadd <vscale x 8 x float> [[WIDE_LOAD5]], [[VEC_PHI2]]
 ; CHECK-UNORDERED-NEXT:    [[TMP14]] = fadd <vscale x 8 x float> [[WIDE_LOAD6]], [[VEC_PHI3]]
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-UNORDERED-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX:%.*]] = fadd <vscale x 8 x float> [[TMP12]], [[TMP11]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX7:%.*]] = fadd <vscale x 8 x float> [[TMP13]], [[BIN_RDX]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX8:%.*]] = fadd <vscale x 8 x float> [[TMP14]], [[BIN_RDX7]]
 ; CHECK-UNORDERED-NEXT:    [[TMP16:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX8]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-UNORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
-; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP16]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-UNORDERED:       for.body:
@@ -253,8 +244,6 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
-; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -274,13 +263,12 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[TMP13:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[TMP12]], <vscale x 8 x float> [[WIDE_LOAD2]])
 ; CHECK-ORDERED-NEXT:    [[TMP14]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[TMP13]], <vscale x 8 x float> [[WIDE_LOAD3]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-ORDERED-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ORDERED-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-ORDERED-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-ORDERED:       middle.block:
-; CHECK-ORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-ORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-ORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-ORDERED:       scalar.ph:
-; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP14]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED:       for.body:
@@ -416,9 +404,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED:       vector.ph:
 ; CHECK-UNORDERED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
-; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
-; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP2]], 2
 ; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = insertelement <vscale x 4 x float> splat (float -0.000000e+00), float [[A2]], i32 0
 ; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x float> splat (float -0.000000e+00), float [[A1]], i32 0
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -435,12 +421,12 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED-NEXT:    [[TMP13]] = fadd <vscale x 4 x float> [[TMP11]], [[VEC_PHI1]]
 ; CHECK-UNORDERED-NEXT:    [[TMP14]] = fadd <vscale x 4 x float> [[TMP12]], [[VEC_PHI]]
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; CHECK-UNORDERED-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP2]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
 ; CHECK-UNORDERED-NEXT:    [[TMP16:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP14]])
 ; CHECK-UNORDERED-NEXT:    [[TMP17:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP13]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[TMP2]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP16]], [[MIDDLE_BLOCK]] ], [ [[A2]], [[ENTRY:%.*]] ]
@@ -484,9 +470,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED:       vector.ph:
 ; CHECK-ORDERED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
-; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
-; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP2]], 2
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -501,10 +485,10 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-NEXT:    [[TMP11]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[TMP10]])
 ; CHECK-ORDERED-NEXT:    [[TMP12]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI1]], <vscale x 4 x float> [[TMP9]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; CHECK-ORDERED-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ORDERED-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP2]]
 ; CHECK-ORDERED-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-ORDERED:       middle.block:
-; CHECK-ORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; CHECK-ORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[TMP2]]
 ; CHECK-ORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-ORDERED:       scalar.ph:
 ; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ [[A2]], [[ENTRY:%.*]] ]
@@ -650,8 +634,6 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-UNORDERED:       vector.ph:
 ; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
-; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -663,14 +645,13 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = fadd <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-UNORDERED-NEXT:    [[TMP8]] = fadd <vscale x 4 x float> [[VEC_PHI]], [[TMP7]]
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
 ; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP8]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-UNORDERED-NEXT:    br i1 true, label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
-; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-UNORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-UNORDERED:       for.body:
@@ -707,8 +688,6 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ORDERED:       vector.ph:
 ; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
-; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -720,13 +699,12 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = fadd <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-ORDERED-NEXT:    [[TMP8]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[TMP7]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ORDERED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-ORDERED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-ORDERED:       middle.block:
-; CHECK-ORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-ORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-ORDERED-NEXT:    br i1 true, label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-ORDERED:       scalar.ph:
-; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-ORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED:       for.body:
@@ -850,8 +828,6 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-UNORDERED:       vector.ph:
 ; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -864,14 +840,13 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-UNORDERED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP5]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00)
 ; CHECK-UNORDERED-NEXT:    [[TMP7]] = fadd <vscale x 4 x float> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
 ; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP7]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-UNORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
-; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ 1.000000e+00, [[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-UNORDERED:       for.body:
@@ -905,8 +880,6 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED:       vector.ph:
 ; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
-; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -919,13 +892,12 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP5]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00)
 ; CHECK-ORDERED-NEXT:    [[TMP7]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[PREDPHI]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ORDERED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-ORDERED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-ORDERED:       middle.block:
-; CHECK-ORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-ORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-ORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-ORDERED:       scalar.ph:
-; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ 1.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED:       for.body:
@@ -1045,8 +1017,6 @@ define float @fadd_multiple(ptr noalias nocapture %a, ptr noalias nocapture %b, 
 ; CHECK-UNORDERED:       vector.ph:
 ; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
-; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1058,14 +1028,13 @@ define float @fadd_multiple(ptr noalias nocapture %a, ptr noalias nocapture %b, 
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x float>, ptr [[TMP6]], align 4
 ; CHECK-UNORDERED-NEXT:    [[TMP7]] = fadd <vscale x 8 x float> [[TMP5]], [[WIDE_LOAD1]]
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
 ; CHECK-UNORDERED-NEXT:    [[TMP9:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[TMP7]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-UNORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
-; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ -0.000000e+00, [[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-UNORDERED:       for.body:
@@ -1181,8 +1150,6 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
-; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1213,17 +1180,16 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP17]] = call <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD5]], <vscale x 8 x float> [[WIDE_LOAD9]], <vscale x 8 x float> [[VEC_PHI2]])
 ; CHECK-UNORDERED-NEXT:    [[TMP18]] = call <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD6]], <vscale x 8 x float> [[WIDE_LOAD10]], <vscale x 8 x float> [[VEC_PHI3]])
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-UNORDERED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX:%.*]] = fadd <vscale x 8 x float> [[TMP16]], [[TMP15]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX11:%.*]] = fadd <vscale x 8 x float> [[TMP17]], [[BIN_RDX]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX12:%.*]] = fadd <vscale x 8 x float> [[TMP18]], [[BIN_RDX11]]
 ; CHECK-UNORDERED-NEXT:    [[TMP20:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX12]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-UNORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
-; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP20]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-UNORDERED:       for.body:
@@ -1252,8 +1218,6 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
-; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1285,13 +1249,12 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[TMP21:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[TMP20]], <vscale x 8 x float> [[TMP17]])
 ; CHECK-ORDERED-NEXT:    [[TMP22]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[TMP21]], <vscale x 8 x float> [[TMP18]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-ORDERED-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ORDERED-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-ORDERED-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-ORDERED:       middle.block:
-; CHECK-ORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-ORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-ORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-ORDERED:       scalar.ph:
-; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP22]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED:       for.body:
@@ -1430,8 +1393,6 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
-; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1462,17 +1423,16 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP17]] = call nnan <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD5]], <vscale x 8 x float> [[WIDE_LOAD9]], <vscale x 8 x float> [[VEC_PHI2]])
 ; CHECK-UNORDERED-NEXT:    [[TMP18]] = call nnan <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD6]], <vscale x 8 x float> [[WIDE_LOAD10]], <vscale x 8 x float> [[VEC_PHI3]])
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-UNORDERED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX:%.*]] = fadd nnan <vscale x 8 x float> [[TMP16]], [[TMP15]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX11:%.*]] = fadd nnan <vscale x 8 x float> [[TMP17]], [[BIN_RDX]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX12:%.*]] = fadd nnan <vscale x 8 x float> [[TMP18]], [[BIN_RDX11]]
 ; CHECK-UNORDERED-NEXT:    [[TMP20:%.*]] = call nnan float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX12]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-UNORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
-; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-UNORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP20]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-UNORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-UNORDERED:       for.body:
@@ -1501,8 +1461,6 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
-; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1534,13 +1492,12 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[TMP21:%.*]] = call nnan float @llvm.vector.reduce.fadd.nxv8f32(float [[TMP20]], <vscale x 8 x float> [[TMP17]])
 ; CHECK-ORDERED-NEXT:    [[TMP22]] = call nnan float @llvm.vector.reduce.fadd.nxv8f32(float [[TMP21]], <vscale x 8 x float> [[TMP18]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-ORDERED-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ORDERED-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; CHECK-ORDERED-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK-ORDERED:       middle.block:
-; CHECK-ORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-ORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-ORDERED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-ORDERED:       scalar.ph:
-; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-ORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-ORDERED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP22]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED:       for.body:

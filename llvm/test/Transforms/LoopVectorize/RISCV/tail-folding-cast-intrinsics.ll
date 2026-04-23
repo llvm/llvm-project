@@ -74,8 +74,6 @@ define void @vp_sext(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -85,13 +83,12 @@ define void @vp_sext(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP10]], ptr [[TMP11]], align 8, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP6]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -191,8 +188,6 @@ define void @vp_zext(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -202,13 +197,12 @@ define void @vp_zext(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP10]], ptr [[TMP11]], align 8, !alias.scope [[META12:![0-9]+]], !noalias [[META9]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP6]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -308,8 +302,6 @@ define void @vp_trunc(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -319,13 +311,12 @@ define void @vp_trunc(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 2 x i32> [[TMP10]], ptr [[TMP11]], align 4, !alias.scope [[META19:![0-9]+]], !noalias [[META16]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP6]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -425,8 +416,6 @@ define void @vp_fpext(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -436,13 +425,12 @@ define void @vp_fpext(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 2 x double> [[TMP10]], ptr [[TMP11]], align 8, !alias.scope [[META26:![0-9]+]], !noalias [[META23]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP6]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; NO-VP-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -542,8 +530,6 @@ define void @vp_fptrunc(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -553,13 +539,12 @@ define void @vp_fptrunc(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 2 x float> [[TMP10]], ptr [[TMP11]], align 4, !alias.scope [[META33:![0-9]+]], !noalias [[META30]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP6]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
+; NO-VP-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -659,8 +644,6 @@ define void @vp_sitofp(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -670,13 +653,12 @@ define void @vp_sitofp(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 4 x float> [[TMP12]], ptr [[TMP13]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
-; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP37:![0-9]+]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP37:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -776,8 +758,6 @@ define void @vp_uitofp(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -787,13 +767,12 @@ define void @vp_uitofp(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 4 x float> [[TMP12]], ptr [[TMP13]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
-; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP39:![0-9]+]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP39:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -893,8 +872,6 @@ define void @vp_fptosi(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -904,13 +881,12 @@ define void @vp_fptosi(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP12]], ptr [[TMP13]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
-; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -1010,8 +986,6 @@ define void @vp_fptoui(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1021,13 +995,12 @@ define void @vp_fptoui(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP12]], ptr [[TMP13]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
-; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP43:![0-9]+]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP43:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -1127,8 +1100,6 @@ define void @vp_inttoptr(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1138,13 +1109,12 @@ define void @vp_inttoptr(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    store <vscale x 2 x ptr> [[TMP12]], ptr [[TMP13]], align 8
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
-; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP45:![0-9]+]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP45:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -1217,8 +1187,6 @@ define void @vp_ptrtoint(ptr %a, ptr %b, i64 %N) {
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -1232,13 +1200,12 @@ define void @vp_ptrtoint(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP10]], ptr [[TMP11]], align 8
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP47:![0-9]+]]
+; NO-VP-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP47:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

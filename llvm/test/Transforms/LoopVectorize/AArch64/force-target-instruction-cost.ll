@@ -319,8 +319,6 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; COST1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST1:       [[VECTOR_PH]]:
-; COST1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
-; COST1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COST1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST1:       [[VECTOR_BODY]]:
 ; COST1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -332,10 +330,10 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST1-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
 ; COST1-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 8
 ; COST1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; COST1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COST1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP0]]
 ; COST1-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; COST1:       [[MIDDLE_BLOCK]]:
-; COST1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; COST1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP0]]
 ; COST1-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
 ; COST1:       [[SCALAR_PH]]:
 ;
@@ -346,8 +344,6 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST10-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; COST10-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST10:       [[VECTOR_PH]]:
-; COST10-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
-; COST10-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COST10-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST10:       [[VECTOR_BODY]]:
 ; COST10-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -357,10 +353,10 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST10-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[X]], i64 [[INDEX]]
 ; COST10-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
 ; COST10-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; COST10-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COST10-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP0]]
 ; COST10-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; COST10:       [[MIDDLE_BLOCK]]:
-; COST10-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; COST10-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP0]]
 ; COST10-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
 ; COST10:       [[SCALAR_PH]]:
 ;

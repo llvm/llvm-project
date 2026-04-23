@@ -7019,11 +7019,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // which may be needed for epilogue vectorization.
   VPlanTransforms::removeBranchOnConst(BestVPlan, /*OnlyLatches=*/true);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
-  std::optional<uint64_t> MaxRuntimeStep;
-  if (auto MaxVScale = getMaxVScale(*CM.TheFunction, CM.TTI))
-    MaxRuntimeStep = uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
+  uint64_t MaxRuntimeStep = BestVF.getKnownMinValue() * BestUF *
+                            getMaxVScale(*CM.TheFunction, CM.TTI).value_or(0);
   VPlanTransforms::materializeVectorTripCount(
-      BestVPlan, VectorPH, CM.foldTailByMasking(),
+      BestVPlan, PSE, VectorPH, CM.foldTailByMasking(),
       CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF(),
       MaxRuntimeStep);
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);

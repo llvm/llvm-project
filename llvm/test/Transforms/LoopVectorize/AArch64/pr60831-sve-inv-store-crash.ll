@@ -117,9 +117,7 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[START]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[START]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[START]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
@@ -137,10 +135,10 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; CHECK-NEXT:    store i64 [[TMP11]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[TMP7]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ]
@@ -168,9 +166,7 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP4]], i64 0
 ; IC2-NEXT:    [[TMP9:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IC2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 1
-; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP5]]
-; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; IC2-NEXT:    [[TMP6:%.*]] = add i64 [[START]], [[N_VEC]]
+; IC2-NEXT:    [[TMP6:%.*]] = add i64 [[START]], [[TMP0]]
 ; IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IC2-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[START]], i64 0
 ; IC2-NEXT:    [[VEC_IND:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
@@ -187,10 +183,10 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    store i64 [[TMP15]], ptr [[DST:%.*]], align 1
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; IC2-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[TMP10]], [[TMP9]]
-; IC2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IC2-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IC2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP0]]
+; IC2-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IC2:       middle.block:
-; IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP0]]
 ; IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IC2:       scalar.ph:
 ; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP6]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ]
@@ -233,9 +229,7 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[START]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[START]], i64 0
@@ -256,10 +250,10 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; CHECK-NEXT:    store i64 [[TMP16]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[TMP12]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[OFFSET_IDX]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ]
@@ -289,9 +283,7 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP6]], i64 0
 ; IC2-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IC2-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 1
-; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP7]]
-; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; IC2-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC]], 2
+; IC2-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP2]], 2
 ; IC2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[START]], [[TMP10]]
 ; IC2-NEXT:    [[TMP13:%.*]] = shl <vscale x 4 x i64> [[BROADCAST_SPLAT1]], splat (i64 1)
 ; IC2-NEXT:    [[TMP11:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
@@ -311,10 +303,10 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    store i64 [[TMP20]], ptr [[DST:%.*]], align 1
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
 ; IC2-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[TMP14]], [[TMP13]]
-; IC2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IC2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IC2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP2]]
+; IC2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IC2:       middle.block:
-; IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[TMP2]]
 ; IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IC2:       scalar.ph:
 ; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[OFFSET_IDX]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ]

@@ -14,8 +14,6 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; LMUL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL1:       vector.ph:
-; LMUL1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
-; LMUL1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; LMUL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL1:       vector.body:
 ; LMUL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -27,13 +25,13 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
 ; LMUL1-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP7]], align 4
 ; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; LMUL1-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; LMUL1-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; LMUL1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP0]]
+; LMUL1-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL1:       middle.block:
-; LMUL1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; LMUL1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP0]]
 ; LMUL1-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; LMUL1:       scalar.ph:
-; LMUL1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; LMUL1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; LMUL1-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL1:       for.body:
 ; LMUL1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -62,8 +60,6 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; LMUL2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL2:       vector.ph:
-; LMUL2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
-; LMUL2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; LMUL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL2:       vector.body:
 ; LMUL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -75,13 +71,13 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
 ; LMUL2-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP7]], align 4
 ; LMUL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; LMUL2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; LMUL2-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; LMUL2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP0]]
+; LMUL2-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL2:       middle.block:
-; LMUL2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; LMUL2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP0]]
 ; LMUL2-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; LMUL2:       scalar.ph:
-; LMUL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; LMUL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; LMUL2-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL2:       for.body:
 ; LMUL2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

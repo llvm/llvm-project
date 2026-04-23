@@ -13,8 +13,6 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; TFNONE:       vector.ph:
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -27,13 +25,12 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[PREDPHI]], i64 1
 ; TFNONE-NEXT:    store double [[TMP14]], ptr [[P:%.*]], align 8
 ; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; TFNONE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; TFNONE-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; TFNONE-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP0]]
+; TFNONE-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TFNONE:       middle.block:
-; TFNONE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; TFNONE-NEXT:    br i1 [[CMP_N]], label [[END:%.*]], label [[SCALAR_PH]]
+; TFNONE-NEXT:    br i1 true, label [[END:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
-; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; TFNONE-NEXT:    br label [[LOOP:%.*]]
 ; TFNONE:       loop:
 ; TFNONE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_END:%.*]] ]

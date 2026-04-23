@@ -42,8 +42,6 @@ define float @fadd(ptr noalias nocapture readonly %a, i64 %n) {
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N1]], [[TMP3]]
-; NO-VP-NEXT:    [[N:%.*]] = sub i64 [[N1]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -52,13 +50,12 @@ define float @fadd(ptr noalias nocapture readonly %a, i64 %n) {
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[ARRAYIDX]], align 4
 ; NO-VP-NEXT:    [[ADD]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[SUM_07]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
-; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; NO-VP-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[IV_NEXT]], [[N1]]
+; NO-VP-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       middle.block:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N1]], [[N]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; NO-VP-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N1]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
 ; NO-VP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[ADD]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY1]] ]
 ; NO-VP-NEXT:    br label [[FOR_BODY1:%.*]]
 ; NO-VP:       for.body:

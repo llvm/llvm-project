@@ -73,8 +73,6 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; NO-ZVFBFMIN-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; NO-ZVFBFMIN-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-ZVFBFMIN:       [[VECTOR_PH]]:
-; NO-ZVFBFMIN-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
-; NO-ZVFBFMIN-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-ZVFBFMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-ZVFBFMIN:       [[VECTOR_BODY]]:
 ; NO-ZVFBFMIN-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -89,13 +87,12 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; NO-ZVFBFMIN-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x float> [[WIDE_LOAD2]])
 ; NO-ZVFBFMIN-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP3]], align 4
 ; NO-ZVFBFMIN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
-; NO-ZVFBFMIN-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-ZVFBFMIN-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; NO-ZVFBFMIN-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; NO-ZVFBFMIN-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-ZVFBFMIN:       [[MIDDLE_BLOCK]]:
-; NO-ZVFBFMIN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NO-ZVFBFMIN-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-ZVFBFMIN-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NO-ZVFBFMIN:       [[SCALAR_PH]]:
-; NO-ZVFBFMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; NO-ZVFBFMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; NO-ZVFBFMIN-NEXT:    br label %[[LOOP:.*]]
 ; NO-ZVFBFMIN:       [[LOOP]]:
 ; NO-ZVFBFMIN-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -139,7 +136,7 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; ZVFBFMIN-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP12]], [[TMP6]]
 ; ZVFBFMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP12]]
 ; ZVFBFMIN-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; ZVFBFMIN-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; ZVFBFMIN-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; ZVFBFMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFBFMIN-NEXT:    br label %[[EXIT:.*]]
 ; ZVFBFMIN:       [[EXIT]]:
