@@ -13,7 +13,6 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -36,36 +35,30 @@ namespace {
 
 // Build the kernel argument array used for the CUDA kernel launch.
 //
-// For each operand:
-//   - memref operands are unpacked into their descriptor scalar fields so the
-//     host-side parameter list matches the NVVM-lowered device kernel signature
-//     (gpu-to-nvvm expands each memref into 3 + 2*rank scalar parameters).
-//     We delegate to MemRefDescriptor::unpack so we follow the canonical memref
-//     descriptor layout owned by the LLVMCommon library;
+// Per-operand flattening is delegated to LLVMTypeConverter::promoteOperands so
+// the host-side parameter list follows the same calling convention as the
+// device kernel produced by gpu-to-nvvm using the same type converter:
+//   - ranked memrefs are unpacked into their descriptor scalar fields
+//     (allocatedPtr, alignedPtr, offset, sizes..., strides...);
+//   - unranked memrefs are unpacked via UnrankedMemRefDescriptor::unpack;
+//   - the useBarePtrCallConv case (single aligned pointer per memref) is
+//     honored via the type converter's configured option;
 //   - all other operands are passed through unchanged.
 //
 // The flattened values are materialized on the stack in a single struct
 // (preserving argument order), and a companion pointer array is populated with
 // the address of each field. That pointer array is what the CUDA launch
 // interface expects as kernelParams.
-static mlir::Value createKernelArgArray(mlir::Location loc,
-                                        mlir::ValueRange origOperands,
-                                        mlir::ValueRange adaptedOperands,
-                                        mlir::PatternRewriter &rewriter) {
+static mlir::Value
+createKernelArgArray(mlir::Location loc, mlir::ValueRange origOperands,
+                     mlir::ValueRange adaptedOperands,
+                     const mlir::LLVMTypeConverter &typeConverter,
+                     mlir::PatternRewriter &rewriter) {
 
   auto *ctx = rewriter.getContext();
 
-  llvm::SmallVector<mlir::Value, 8> flatValues;
-  flatValues.reserve(adaptedOperands.size());
-  for (auto [origArg, adaptedArg] :
-       llvm::zip_equal(origOperands, adaptedOperands)) {
-    if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(origArg.getType())) {
-      mlir::MemRefDescriptor::unpack(rewriter, loc, adaptedArg, memrefTy,
-                                     flatValues);
-      continue;
-    }
-    flatValues.push_back(adaptedArg);
-  }
+  llvm::SmallVector<mlir::Value, 4> flatValues = typeConverter.promoteOperands(
+      loc, origOperands, adaptedOperands, rewriter);
 
   auto structTypes = llvm::map_to_vector(
       flatValues, [](mlir::Value v) { return v.getType(); });
@@ -125,7 +118,8 @@ struct GPULaunchKernelConversion
           rewriter, loc, i32Ty, rewriter.getIntegerAttr(i32Ty, 0));
 
     mlir::Value kernelArgs = createKernelArgArray(
-        loc, op.getKernelOperands(), adaptor.getKernelOperands(), rewriter);
+        loc, op.getKernelOperands(), adaptor.getKernelOperands(),
+        *this->getTypeConverter(), rewriter);
 
     auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
     auto kernel = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(op.getKernelName());

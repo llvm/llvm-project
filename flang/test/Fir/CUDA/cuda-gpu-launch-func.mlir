@@ -396,3 +396,48 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : ve
 // CHECK: %[[SIX:.*]] = llvm.mlir.constant(6 : i32) : i32
 // CHECK: llvm.alloca %[[SIX]] x !llvm.ptr : (i32) -> !llvm.ptr
 // CHECK: llvm.call @_FortranACUFLaunchKernel
+
+// -----
+
+// Dynamic-shape memref: the descriptor layout is unchanged but sizes/strides
+// are runtime values. Verify that the same 7-field flattening is produced for
+// memref<?x?xf32> as for a statically-shaped rank-2 memref.
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  llvm.func @_QMmod1Phost_sub_dyn(%dim0: i64, %dim1: i64, %stride0: i64, %stride1: i64) {
+    %c1_i64 = llvm.mlir.constant(1 : i64) : i64
+    %c0_i64 = llvm.mlir.constant(0 : i64) : i64
+    %c128_i64 = llvm.mlir.constant(128 : i64) : i64
+    %c0_i32 = llvm.mlir.constant(0 : i32) : i32
+    %buf = llvm.alloca %c1_i64 x f32 : (i64) -> !llvm.ptr
+    %u0 = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    %u1 = llvm.insertvalue %buf, %u0[0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    %u2 = llvm.insertvalue %buf, %u1[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    %u3 = llvm.insertvalue %c0_i64, %u2[2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    %u4 = llvm.insertvalue %dim0, %u3[3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    %u5 = llvm.insertvalue %dim1, %u4[3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    %u6 = llvm.insertvalue %stride0, %u5[4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    %desc = llvm.insertvalue %stride1, %u6[4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+    %memref = builtin.unrealized_conversion_cast %desc : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> to memref<?x?xf32>
+    gpu.launch_func @cuda_device_mod::@_QMmod1Psub_dyn blocks in (%c1_i64, %c1_i64, %c1_i64) threads in (%c128_i64, %c1_i64, %c1_i64) : i64 dynamic_shared_memory_size %c0_i32 args(%memref : memref<?x?xf32>) {cuf.proc_attr = #cuf.cuda_proc<global>}
+    llvm.return
+  }
+  llvm.func @_QMmod1Psub_dyn(!llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i64) -> ()
+  gpu.binary @cuda_device_mod  [#gpu.object<#nvvm.target, "">]
+}
+
+// CHECK-LABEL: llvm.func @_QMmod1Phost_sub_dyn
+// Dynamic rank-2 descriptor: 7 extractvalues in the same order as the static
+// rank-2 case (alloc, align, offset, sizes[0], sizes[1], strides[0], strides[1]).
+// CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: llvm.extractvalue %{{.*}}[2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: llvm.extractvalue %{{.*}}[3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: llvm.extractvalue %{{.*}}[3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: llvm.extractvalue %{{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: llvm.extractvalue %{{.*}}[4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// Per-arg struct has 7 flattened fields, identical to the static rank-2 case.
+// CHECK: llvm.alloca %{{.*}} x !llvm.struct<(ptr, ptr, i64, i64, i64, i64, i64)> : (i32) -> !llvm.ptr
+// Param array has 7 pointer slots.
+// CHECK: %[[SEVEN:.*]] = llvm.mlir.constant(7 : i32) : i32
+// CHECK: llvm.alloca %[[SEVEN]] x !llvm.ptr : (i32) -> !llvm.ptr
+// CHECK: llvm.call @_FortranACUFLaunchKernel
