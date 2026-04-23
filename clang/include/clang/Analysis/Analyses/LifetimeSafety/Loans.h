@@ -65,6 +65,7 @@ public:
     return AccessPath(Kind::PlaceholderThis, MD);
   }
   AccessPath(const AccessPath &Other) : K(Other.K), Root(Other.Root) {}
+  AccessPath &operator=(const AccessPath &) = delete;
 
   Kind getKind() const { return K; }
 
