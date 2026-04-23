@@ -1129,8 +1129,8 @@ static unsigned getOperandsExtensionCost(const Instruction *I) {
 }
 
 InstructionCost SystemZTTIImpl::getCFInstrCost(unsigned Opcode,
-                                           TTI::TargetCostKind CostKind,
-                                           const Instruction *I) const {
+                                               TTI::TargetCostKind CostKind,
+                                               const Instruction *I) const {
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? TTI::TCC_Free : TTI::TCC_Basic;
   // Branches are assumed to be predicted.
