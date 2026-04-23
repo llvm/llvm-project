@@ -1114,22 +1114,19 @@ Intrinsic::matchIntrinsicSignature(FunctionType *FTy,
   return MatchIntrinsicTypes_Match;
 }
 
+static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos) {
+  // The last type in the descriptor (after decoding return and argument types)
+  // should be VarArg for variable argument intrinsics.
+  if (Infos.size() == 1 && Infos[0].Kind == Intrinsic::IITDescriptor::VarArg) {
+    Infos.consume_front();
+    return true;
+  }
+  return false;
+}
+
 bool Intrinsic::matchIntrinsicVarArg(
     bool isVarArg, ArrayRef<Intrinsic::IITDescriptor> &Infos) {
-  // If there are no descriptors left, then it can't be a vararg.
-  if (Infos.empty())
-    return isVarArg;
-
-  // There should be only one descriptor remaining at this point.
-  if (Infos.size() != 1)
-    return true;
-
-  // Check and verify the descriptor.
-  IITDescriptor D = Infos.consume_front();
-  if (D.Kind == IITDescriptor::VarArg)
-    return !isVarArg;
-
-  return true;
+  return isVarArg != isIntrinsicVarArg(Infos);
 }
 
 bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
