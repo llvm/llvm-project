@@ -2046,8 +2046,7 @@ protected:
         return;
       }
     } else if (argc != 0) {
-      result.AppendErrorWithFormat("%s takes 0 or one arg",
-                                   m_cmd_name.c_str());
+      result.AppendErrorWithFormat("%s takes 0 or one arg", m_cmd_name.c_str());
       return;
     }
 

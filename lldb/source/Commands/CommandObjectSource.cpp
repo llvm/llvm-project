@@ -471,8 +471,8 @@ protected:
     FileSpec file_spec;
     if (!DumpLinesInSymbolContexts(result.GetOutputStream(), sc_list,
                                    module_list, file_spec)) {
-      result.AppendErrorWithFormat(
-          "No modules contain load address 0x%" PRIx64, m_options.address);
+      result.AppendErrorWithFormat("No modules contain load address 0x%" PRIx64,
+                                   m_options.address);
       return false;
     }
     return true;
@@ -1002,8 +1002,7 @@ protected:
 
         if (sc_list.GetSize() == 0) {
           result.AppendErrorWithFormat(
-              "no modules contain load address 0x%" PRIx64,
-              m_options.address);
+              "no modules contain load address 0x%" PRIx64, m_options.address);
           return;
         }
       }

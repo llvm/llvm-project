@@ -1482,8 +1482,8 @@ protected:
 
       case eFormatOctal:
         if (entry.ref().getAsInteger(8, uval64)) {
-          result.AppendErrorWithFormat(
-              "'%s' is not a valid octal string value", entry.c_str());
+          result.AppendErrorWithFormat("'%s' is not a valid octal string value",
+                                       entry.c_str());
           return;
         } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value %" PRIo64
@@ -1505,8 +1505,7 @@ protected:
           process->WriteMemory(addr, buffer_data, buffer_size, error);
 
       if (write_size != buffer_size) {
-        result.AppendErrorWithFormat("Memory write to 0x%" PRIx64
-                                     " failed: %s",
+        result.AppendErrorWithFormat("Memory write to 0x%" PRIx64 " failed: %s",
                                      addr, error.AsCString());
         return;
       }

@@ -866,8 +866,7 @@ public:
           if (thread) {
             resume_threads.push_back(thread);
           } else {
-            result.AppendErrorWithFormat("invalid thread index %u",
-                                         thread_idx);
+            result.AppendErrorWithFormat("invalid thread index %u", thread_idx);
             return;
           }
         }
