@@ -54,3 +54,47 @@ define i64 @test_swp64(ptr %p, i64 %v) {
   %r = call i64 @llvm.aarch64.swp64(ptr %p, i64 %v)
   ret i64 %r
 }
+
+define i32 @test_swpa8(ptr %p, i32 %v) {
+; CHECK-LABEL: test_swpa8:
+; CHECK:       // %bb.0:
+; NOLSE-NEXT:    .arch_extension lse
+; CHECK-NEXT:    swpab w1, w0, [x0]
+; NOLSE-NEXT:    .arch_extension nolse
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.swpa8(ptr %p, i32 %v)
+  ret i32 %r
+}
+
+define i32 @test_swpa16(ptr %p, i32 %v) {
+; CHECK-LABEL: test_swpa16:
+; CHECK:       // %bb.0:
+; NOLSE-NEXT:    .arch_extension lse
+; CHECK-NEXT:    swpah w1, w0, [x0]
+; NOLSE-NEXT:    .arch_extension nolse
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.swpa16(ptr %p, i32 %v)
+  ret i32 %r
+}
+
+define i32 @test_swpa32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_swpa32:
+; CHECK:       // %bb.0:
+; NOLSE-NEXT:    .arch_extension lse
+; CHECK-NEXT:    swpa w1, w0, [x0]
+; NOLSE-NEXT:    .arch_extension nolse
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.swpa32(ptr %p, i32 %v)
+  ret i32 %r
+}
+
+define i64 @test_swpa64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_swpa64:
+; CHECK:       // %bb.0:
+; NOLSE-NEXT:    .arch_extension lse
+; CHECK-NEXT:    swpa x1, x0, [x0]
+; NOLSE-NEXT:    .arch_extension nolse
+; CHECK-NEXT:    ret
+  %r = call i64 @llvm.aarch64.swpa64(ptr %p, i64 %v)
+  ret i64 %r
+}
