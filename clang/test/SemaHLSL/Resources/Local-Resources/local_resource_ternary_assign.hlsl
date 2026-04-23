@@ -4,7 +4,7 @@
 // Test that ternary resource assignment post-declaration triggers a
 // warning in clang but still produces valid IR.
 //
-// DXC: passes sema but fails codegen with:
+// DXC: passes sema but fails codegen (DxilCondenseResources) with:
 //   "local resource not guaranteed to map to unique global resource."
 
 RWByteAddressBuffer gBuf0 : register(u0);
