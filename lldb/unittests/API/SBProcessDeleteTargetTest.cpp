@@ -25,6 +25,8 @@ class SBProcessDeleteTargetTest : public testing::Test {
 protected:
   void SetUp() override {
     debugger = SBDebugger::Create(/*source_init_files=*/false);
+    debugger.SetScriptLanguage(eScriptLanguageNone);
+    ASSERT_EQ(debugger.GetScriptLanguage(), eScriptLanguageNone);
   }
 
   void TearDown() override { SBDebugger::Destroy(debugger); }
@@ -91,11 +93,11 @@ TEST_F(SBProcessDeleteTargetTest, GetTargetAndSaveCoreFailSafelyAfterDelete) {
   ASSERT_TRUE(debugger.DeleteTarget(target));
   ASSERT_FALSE(target.IsValid());
   EXPECT_FALSE(process.IsValid());
+  EXPECT_FALSE(options.GetProcess().IsValid());
 
   EXPECT_FALSE(process.GetTarget().IsValid());
 
   SBError error = process.SaveCore(options);
   EXPECT_TRUE(error.Fail());
-  EXPECT_STREQ("SBProcess is invalid because its target has been deleted",
-               error.GetCString());
+  EXPECT_STREQ("SBProcess is invalid", error.GetCString());
 }
