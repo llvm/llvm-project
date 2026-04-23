@@ -151,9 +151,6 @@ static bool isQualifyingIntCompare(const MachineInstr &MI) {
 }
 
 bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
-  if (!EnableCodeAlignment.getBits())
-    return false;
-
   const Function &F = MF.getFunction();
   // hasOptSize() returns true for both -Os and -Oz.
   if (F.hasOptSize())
@@ -161,6 +158,14 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
 
   const auto *Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
+
+  // Default: enable for Apple M-line per-feature.
+  if (!EnableCodeAlignment.getBits() && Subtarget->isAppleMLike()) {
+    if (Subtarget->hasFuseFCmpFCSel())
+      EnableCodeAlignment.addValue(FcmpFcsel);
+    if (Subtarget->hasFuseCmpCSel())
+      EnableCodeAlignment.addValue(CmpCsel);
+  }
 
   if (!(EnableCodeAlignment.isSet(FcmpFcsel) &&
         Subtarget->hasFuseFCmpFCSel()) &&
