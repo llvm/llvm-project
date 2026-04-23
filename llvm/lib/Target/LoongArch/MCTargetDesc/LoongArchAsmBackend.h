@@ -24,18 +24,19 @@
 namespace llvm {
 
 class LoongArchAsmBackend : public MCAsmBackend {
-  const MCSubtargetInfo &STI;
-  uint8_t OSABI;
-  bool Is64Bit;
-  const MCTargetOptions &TargetOptions;
   DenseMap<MCSection *, const MCSymbolRefExpr *> SecToAlignSym;
   // Temporary symbol used to check whether a PC-relative fixup is resolved.
   MCSymbol *PCRelTemp = nullptr;
 
   bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
 
+protected:
+  const MCSubtargetInfo &STI;
+  const MCTargetOptions &TargetOptions;
+  bool Is64Bit;
+
 public:
-  LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
+  LoongArchAsmBackend(const MCSubtargetInfo &STI, bool Is64Bit,
                       const MCTargetOptions &Options);
 
   bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
@@ -57,8 +58,6 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override;
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
   DenseMap<MCSection *, const MCSymbolRefExpr *> &getSecToAlignSym() {
     return SecToAlignSym;
