@@ -110,8 +110,8 @@ void SPIRVTargetLowering::getTgtMemIntrinsic(
     MachineFunction &MF, unsigned Intrinsic) const {
   IntrinsicInfo Info;
 
-  unsigned AlignIdx = -1;
-  unsigned OrderingIdx = -1;
+  unsigned AlignIdx = 0;
+  unsigned OrderingIdx = 0;
   unsigned FlagsIdx;
 
   switch (Intrinsic) {
@@ -141,12 +141,12 @@ void SPIRVTargetLowering::getTgtMemIntrinsic(
   // TODO: take into account opaque pointers (don't use getElementType).
   // MVT::getVT(PtrTy->getElementType());
 
-  if (AlignIdx != -1) {
+  if (AlignIdx) {
     auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
     Info.align = Align(AlignOp->getZExtValue());
   }
 
-  if (OrderingIdx != -1) {
+  if (OrderingIdx) {
     Info.order = static_cast<AtomicOrdering>(
         cast<ConstantInt>(I.getOperand(OrderingIdx))->getZExtValue());
   }
