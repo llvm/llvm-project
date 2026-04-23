@@ -355,7 +355,7 @@ protected:
     } else {
       if (command.GetArgumentCount() > 1) {
         result.AppendErrorWithFormat(
-            "too many arguments; expected frame-index, saw '%s'.\n",
+            "too many arguments; expected frame-index, saw '%s'.",
             command[0].c_str());
         m_options.GenerateOptionUsage(
             result.GetErrorStream(), *this,
@@ -384,8 +384,7 @@ protected:
       m_exe_ctx.SetFrameSP(thread->GetSelectedFrame(SelectMostRelevantFrame));
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Frame index (%u) out of range.\n",
-                                   frame_idx);
+      result.AppendErrorWithFormat("Frame index (%u) out of range.", frame_idx);
     }
   }
 
@@ -908,27 +907,26 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
                                                 CommandReturnObject &result) {
 #if LLDB_ENABLE_PYTHON
   if (m_options.m_class_name.empty()) {
-    result.AppendErrorWithFormat(
-        "%s needs a Python class name (-l argument).\n", m_cmd_name.c_str());
+    result.AppendErrorWithFormat("%s needs a Python class name (-l argument).",
+                                 m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_module.empty()) {
-    result.AppendErrorWithFormat("%s needs a module name (-s argument).\n",
+    result.AppendErrorWithFormat("%s needs a module name (-s argument).",
                                  m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_symbols.empty()) {
     result.AppendErrorWithFormat(
-        "%s needs at least one symbol name (-n argument).\n",
-        m_cmd_name.c_str());
+        "%s needs at least one symbol name (-n argument).", m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_regex && m_options.m_symbols.size() > 1) {
     result.AppendErrorWithFormat(
-        "%s needs only one symbol regular expression (-n argument).\n",
+        "%s needs only one symbol regular expression (-n argument).",
         m_cmd_name.c_str());
     return;
   }
@@ -1051,7 +1049,7 @@ public:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     uint32_t recognizer_id;
     if (!llvm::to_integer(command.GetArgumentAtIndex(0), recognizer_id)) {
-      result.AppendErrorWithFormat("'%s' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%s' is not a valid recognizer id.",
                                    command.GetArgumentAtIndex(0));
       return;
     }
@@ -1077,7 +1075,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, true)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.",
                                    recognizer_id);
       return;
     }
@@ -1102,7 +1100,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, false)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.",
                                    recognizer_id);
       return;
     }
@@ -1127,7 +1125,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.RemoveRecognizerWithID(recognizer_id)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.",
                                    recognizer_id);
       return;
     }
@@ -1210,7 +1208,7 @@ protected:
     }
     if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one frame index argument.\n", m_cmd_name.c_str());
+          "'%s' takes exactly one frame index argument.", m_cmd_name.c_str());
       return;
     }
 

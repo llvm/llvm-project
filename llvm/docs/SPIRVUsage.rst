@@ -223,6 +223,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8-bit integers and 4-component vectors of 8-bit integers packed into 32-bit integers.
    * - ``SPV_KHR_linkonce_odr``
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
+   * - ``SPV_AMD_weak_linkage``
+     - Allows to use the Weak linkage type that lets a function or global variable to be replaced by a definition with Export linkage from another module during linking.
    * - ``SPV_KHR_no_integer_wrap_decoration``
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
    * - ``SPV_KHR_shader_clock``

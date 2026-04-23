@@ -112,7 +112,7 @@ endif()
 # Trick to combine these into a bitcode file via the linker's LTO pass.
 add_executable(libompdevice ${src_files})
 set_target_properties(libompdevice PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   LINKER_LANGUAGE CXX
   BUILD_RPATH ""
   INSTALL_RPATH ""
@@ -171,14 +171,14 @@ install(TARGETS libompdevice
 
 add_library(ompdevice.all_objs OBJECT IMPORTED)
 set_property(TARGET ompdevice.all_objs APPEND PROPERTY IMPORTED_OBJECTS
-             ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-${target_name}.bc)
+              ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-${target_name}.bc)
 
 # Archive all the object files generated above into a static library
 add_library(ompdevice STATIC)
 add_dependencies(ompdevice libompdevice)
 set_target_properties(ompdevice PROPERTIES
-  ARCHIVE_OUTPUT_DIRECTORY "${OPENMP_INSTALL_LIBDIR}"
-  ARCHIVE_OUTPUT_NAME ompdevice
+   ARCHIVE_OUTPUT_DIRECTORY "${OPENMP_INSTALL_LIBDIR}"
+   ARCHIVE_OUTPUT_NAME ompdevice
   LINKER_LANGUAGE CXX
 )
 target_link_libraries(ompdevice PRIVATE ompdevice.all_objs)
