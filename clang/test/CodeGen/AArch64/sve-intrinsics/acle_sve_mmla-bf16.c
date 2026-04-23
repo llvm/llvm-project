@@ -10,7 +10,7 @@
 #include <arm_sve.h>
 
 #ifdef SVE_OVERLOADED_FORMS
-#define SVE_ACLE_FUNC(A1, A3) A1##A3
+#define SVE_ACLE_FUNC(A1, A2_UNUSED) A1
 #else
 #define SVE_ACLE_FUNC(A1, A2) A1##A2
 #endif

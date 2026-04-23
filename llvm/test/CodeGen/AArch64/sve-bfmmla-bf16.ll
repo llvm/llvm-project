@@ -12,5 +12,3 @@ entry:
 }
 
 declare <vscale x 8 x bfloat> @llvm.aarch64.sve.bfmmla.bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
-
-attributes #0 = { "target-features"="+sve,+sve-b16mm" }

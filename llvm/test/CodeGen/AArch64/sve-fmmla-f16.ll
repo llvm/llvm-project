@@ -12,5 +12,3 @@ entry:
 }
 
 declare <vscale x 8 x half> @llvm.aarch64.sve.fmmla.nxv8f16.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>)
-
-attributes #0 = { "target-features"="+sve,+sve2p2,+f16mm" }

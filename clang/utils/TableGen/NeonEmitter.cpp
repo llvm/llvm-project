@@ -1126,8 +1126,7 @@ std::string Intrinsic::mangleName(std::string Name, ClassKind LocalCK) const {
 
   if (Name == "vcvt_f16_f32" || Name == "vcvt_f32_f16" ||
       Name == "vcvt_f32_f64" || Name == "vcvt_f64_f32" ||
-      Name == "vcvt_f32_bf16" || Name == "vmmlaq_f16_f16" ||
-      Name == "vmmlaq_f32_f16")
+      Name == "vcvt_f32_bf16")
     return Name;
 
   if (!typeCode.empty()) {
