@@ -14,6 +14,7 @@
 #include "RISCVInlineAsmLowering.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
+#include "llvm/IR/Constants.h"
 
 using namespace llvm;
 
