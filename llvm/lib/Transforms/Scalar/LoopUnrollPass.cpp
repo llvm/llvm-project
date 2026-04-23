@@ -698,6 +698,9 @@ UnrollCostEstimator::UnrollCostEstimator(
   NotDuplicatable = Metrics.notDuplicatable;
   Convergence = Metrics.Convergence;
   LoopSize = Metrics.NumInsts;
+  // Convergent operations make the remainder prelude unsafe by adding a
+  // control-flow dependency, unless the trip count is uniform per
+  // UniformityInfo, in which case all paths agree and the remainder is safe.
   ConvergenceAllowsRuntime =
       (Metrics.Convergence != ConvergenceKind::Uncontrolled &&
        !getLoopConvergenceHeart(L)) ||
@@ -1400,9 +1403,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // If the loop contains a convergent operation, the prelude we'd add
   // to do the first few instructions before we hit the unrolled loop
   // is unsafe -- it adds a control-flow dependency to the convergent
-  // operation.  Therefore restrict remainder loop (try unrolling without).
-  // This is already accounted for in UCE.ConvergenceAllowsRuntime, which
-  // also considers whether the trip count is uniform across all threads.
+  // operation. Therefore restrict remainder loop (try unrolling without).
   UP.AllowRemainder &= UCE.ConvergenceAllowsRuntime;
 
   // Try to find the trip count upper bound if we cannot find the exact trip
