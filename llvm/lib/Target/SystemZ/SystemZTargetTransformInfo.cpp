@@ -555,7 +555,7 @@ static bool isFoldableRMW(const Instruction *I, Type *Ty) {
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-    if (BitWidth != 8)
+    if (BitWidth != 8 && BitWidth != 16 && BitWidth != 32 && BitWidth != 64)
       return false;
     break;
   case Instruction::Add:

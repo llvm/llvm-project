@@ -2,7 +2,7 @@
 
 ; and-05.ll tests the multiclass RMWIByte for i8 types. 
 ; This test verifies the DAGToDag implementation for i16, i32, and i64 types,
-; covering both 12-bit unsigned (XI) and 20-bit signed (XIY) displacements.
+; covering both 12-bit unsigned (NI) and 20-bit signed (NIY) displacements.
 
 ; There are certain liomitations:
 ; 1. Displacement Range Limitations:
@@ -177,7 +177,7 @@ define void @and_i32_niy_max_byte(ptr %src) {
   ret void
 }
 
-; Check i16 high end of XI range:  Original 4095 + 1 (LSB) = 4095.
+; Check i16 high end of NI range:  Original 4095 + 1 (LSB) = 4095.
 define void @and_i16_ni_high_disp(ptr %src) {
 ; CHECK-LABEL: and_i16_ni_high_disp:
 ; CHECK: ni 4095(%r2), 1
@@ -189,7 +189,7 @@ define void @and_i16_ni_high_disp(ptr %src) {
   ret void
 }
 
-; Check i32 high end of XI range:  Original 4092 + 3 (LSB) = 4095.
+; Check i32 high end of NI range:  Original 4092 + 3 (LSB) = 4095.
 define void @and_i32_ni_high_disp(ptr %src) {
 ; CHECK-LABEL: and_i32_ni_high_disp:
 ; CHECK: ni 4095(%r2), 1
@@ -201,7 +201,7 @@ define void @and_i32_ni_high_disp(ptr %src) {
   ret void
 }
 
-; Check i64 high end of XI range:  Original 4088 + 7 (LSB) = 4095.
+; Check i64 high end of NI range:  Original 4088 + 7 (LSB) = 4095.
 define void @and_i64_ni_high_disp(ptr %src) {
 ; CHECK-LABEL: and_i64_ni_high_disp:
 ; CHECK: ni 4095(%r2), 1
@@ -213,7 +213,7 @@ define void @and_i64_ni_high_disp(ptr %src) {
   ret void
 }
 
-; Check i16 transisition to niy: Original 4095 + 1 (LSB) = 4096 (triggers XIY).
+; Check i16 transisition to niy: Original 4095 + 1 (LSB) = 4096 (triggers NIY).
 define void @and_i16_niy_transition_disp(ptr %src) {
 ; CHECK-LABEL: and_i16_niy_transition_disp:
 ; CHECK:niy 4096(%r2), 1
@@ -225,7 +225,7 @@ define void @and_i16_niy_transition_disp(ptr %src) {
   ret void
 }
 
-; Check i32 transisition to niy: Original 4093 + 3 (LSB) = 4096 (triggers XIY).
+; Check i32 transisition to niy: Original 4093 + 3 (LSB) = 4096 (triggers NIY).
 define void @and_i32_niy_transition_disp(ptr %src) {
 ; CHECK-LABEL: and_i32_niy_transition_disp:
 ; CHECK:niy 4096(%r2), 1
@@ -237,7 +237,7 @@ define void @and_i32_niy_transition_disp(ptr %src) {
   ret void
 }
 
-; Check i64  transisition to niy: Original 4089 + 7 (LSB) = 4096 (triggers XIY).
+; Check i64  transisition to niy: Original 4089 + 7 (LSB) = 4096 (triggers NIY).
 define void @and_i64_niy_transition_disp(ptr %src) {
 ; CHECK-LABEL: and_i64_niy_transition_disp:
 ; CHECK:niy 4096(%r2), 1
@@ -249,7 +249,7 @@ define void @and_i64_niy_transition_disp(ptr %src) {
   ret void
 }
 
-; Check i16 high end of the XIY range: Original 524286 + 1 (LSB) = 524287.
+; Check i16 high end of the NIY range: Original 524286 + 1 (LSB) = 524287.
 define void @and_i16_niy_high_end_disp(ptr %src) {
 ; CHECK-LABEL: and_i16_niy_high_end_disp:
 ; CHECK:niy 524287(%r2), 127
@@ -261,7 +261,7 @@ define void @and_i16_niy_high_end_disp(ptr %src) {
   ret void
 }
 
-; Check i32  high end of the XIY range: Original 524284 + 3 (LSB) = 524287.
+; Check i32  high end of the NIY range: Original 524284 + 3 (LSB) = 524287.
 define void @and_i32_niy_high_end_disp(ptr %src) {
 ; CHECK-LABEL: and_i32_niy_high_end_disp:
 ; CHECK:niy 524287(%r2), 127
@@ -273,7 +273,7 @@ define void @and_i32_niy_high_end_disp(ptr %src) {
   ret void
 }
 
-; Check i64 high end of the XIY range: Original 524280 + 7 (LSB) = 524287.
+; Check i64 high end of the NIY range: Original 524280 + 7 (LSB) = 524287.
 define void @and_i64_niy_high_end_disp(ptr %src) {
 ; CHECK-LABEL: and_i64_niy_high_end_disp:
 ; CHECK:niy 524287(%r2), 127
@@ -441,8 +441,8 @@ define void @and_i64_niy_neg_out_of_range_disp(ptr %src) {
   ret void
 }
 
-; Check that XI does not allow an index for i16.
-; Original 4094 + 1 (LSB) = 4095 (Max range for XI).
+; Check that NI does not allow an index for i16.
+; Original 4094 + 1 (LSB) = 4095 (Max range for NI).
 define void @and_i16_ni_no_index(i64 %src, i64 %index) {
 ; CHECK-LABEL: and_i16_ni_no_index:
 ; CHECK: agr %r2, %r3
@@ -457,8 +457,8 @@ define void @and_i16_ni_no_index(i64 %src, i64 %index) {
   ret void
 }
 
-; Check that XI does not allow an index for i32.
-; Original 4092 + 3 (LSB) = 4095 (Max range for XI).
+; Check that NI does not allow an index for i32.
+; Original 4092 + 3 (LSB) = 4095 (Max range for NI).
 define void @and_i32_ni_no_index(i64 %src, i64 %index) {
 ; CHECK-LABEL: and_i32_ni_no_index:
 ; CHECK: agr %r2, %r3
@@ -473,8 +473,8 @@ define void @and_i32_ni_no_index(i64 %src, i64 %index) {
   ret void
 }
 
-; Check that XI does not allow an index for i64.
-; Original 4088 + 7 (LSB) = 4095 (Max range for XI).
+; Check that NI does not allow an index for i64.
+; Original 4088 + 7 (LSB) = 4095 (Max range for NI).
 define void @and_i64_ni_no_index(i64 %src, i64 %index) {
 ; CHECK-LABEL: and_i64_ni_no_index:
 ; CHECK: agr %r2, %r3
@@ -489,8 +489,8 @@ define void @and_i64_ni_no_index(i64 %src, i64 %index) {
   ret void
 }
 
-; Check that XIY does not allow an index for i16.
-; Original 4095 + 1 (LSB) = 4096 (triggers XIY).
+; Check that NIY does not allow an index for i16.
+; Original 4095 + 1 (LSB) = 4096 (triggers NIY).
 define void @and_i16_niy_no_index(i64 %src, i64 %index) {
 ; CHECK-LABEL: and_i16_niy_no_index:
 ; CHECK: agr %r2, %r3
@@ -505,8 +505,8 @@ define void @and_i16_niy_no_index(i64 %src, i64 %index) {
   ret void
 }
 
-; Check that XIY does not allow an index for i32.
-; Original 4093 + 3 (LSB) = 4096 (triggers XIY).
+; Check that NIY does not allow an index for i32.
+; Original 4093 + 3 (LSB) = 4096 (triggers NIY).
 define void @and_i32_niy_no_index(i64 %src, i64 %index) {
 ; CHECK-LABEL: and_i32_niy_no_index:
 ; CHECK: agr %r2, %r3
@@ -521,8 +521,8 @@ define void @and_i32_niy_no_index(i64 %src, i64 %index) {
   ret void
 }
 
-; Check that XIY does not allow an index for i64.
-; Original 4089 + 7 (LSB) = 4096 (triggers XIY).
+; Check that NIY does not allow an index for i64.
+; Original 4089 + 7 (LSB) = 4096 (triggers NIY).
 define void @and_i64_niy_no_index(i64 %src, i64 %index) {
 ; CHECK-LABEL: and_i64_niy_no_index:
 ; CHECK: agr %r2, %r3
@@ -537,7 +537,7 @@ define void @and_i64_niy_no_index(i64 %src, i64 %index) {
   ret void
 }
 
-; Volatile memory should not be folded into XI.
+; Volatile memory should not be folded into NI.
 define i32 @test_volatile(ptr %ptr) {
 ; CHECK-LABEL: test_volatile:
 ; CHECK-NOT: ni {{.*}}, 1

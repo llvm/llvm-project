@@ -145,3 +145,32 @@ define void @test_vector_no_fold(<4 x i32> %val, ptr %p) {
   ret void
 }
 
+define void @test_xor_i16(ptr %p) {
+; CHECK-LABEL: 'test_xor_i16'
+; CHECK: cost of 0 {{.*}} xor i16
+; CHECK: cost of 0 {{.*}} store i16
+  %v = load i16, ptr %p
+  %res = xor i16 %v, 1
+  store i16 %res, ptr %p
+  ret void
+}
+
+define void @test_or_i32(ptr %p) {
+; CHECK-LABEL: 'test_or_i32'
+; CHECK: cost of 0 {{.*}} or i32
+; CHECK: cost of 0 {{.*}} store i32
+  %v = load i32, ptr %p
+  %res = or i32 %v, 1
+  store i32 %res, ptr %p
+  ret void
+}
+
+define void @test_and_i64(ptr %p) {
+; CHECK-LABEL: 'test_and_i64'
+; CHECK: cost of 0 {{.*}} and i64
+; CHECK: cost of 0 {{.*}} store i64
+  %v = load i64, ptr %p
+  %res = and i64 %v, 1
+  store i64 %res, ptr %p
+  ret void
+}
