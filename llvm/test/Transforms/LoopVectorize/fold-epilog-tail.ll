@@ -5,7 +5,7 @@
 define void @test_epilogue_tf(ptr %A, i64 %n) {
 ; CHECK: LV: Checking a loop in 'test_epilogue_tf'
 ; CHECK: LV: epilogue tail-folding is not supported yet
-; CHECK: LV: FoldEpilogueTail flag is not supported yet, we are falling back on vectorizing with scalar tail.
+; CHECK: The tail-folding policy fold-epilogue-tail is not supported yet, fall back to an epilogue.
 entry:
   br label %for.body
 
