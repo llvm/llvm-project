@@ -870,11 +870,12 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
         continue;
 
-      // VPReplicateRecipe is sometimes incompatible with ExtractValue:
-      // scalarizeInstruction() will fail if the recipe dictates that it
-      // setOperand(1), because ExtractValue's indices are read-only.
-      // To be on the safe side, skip the optimization in the case of
-      // ExtractValue.
+      // VPWidenRecipe with an underlying ExtractValueInst stores the
+      // ExtractValue's indices() as part of the recipe's operands. This makes
+      // it incompatible with conversion to VPReplicateRecipe, because
+      // VPReplicateRecipe's scalarizeInstruction() will attempt to set each
+      // operand of the ExtractValueInst, but the indices can not be set via
+      // setOperand().
       if (match(Def,
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
