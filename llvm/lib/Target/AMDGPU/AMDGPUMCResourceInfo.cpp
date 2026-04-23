@@ -284,12 +284,11 @@ void MCResourceInfo::gatherResourceInfo(
     SetToLocal(FRI.NumExplicitSGPR, RIK_NumSGPR);
     SetToLocal(FRI.NumNamedBarrier, RIK_NumNamedBarrier);
     SetToLocal(FRI.PrivateSegmentSize, RIK_PrivateSegSize);
-    SetToLocal(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC);
-    SetToLocal(FRI.UsesFlatScratch, ResourceInfoKind::RIK_UsesFlatScratch);
-    SetToLocal(FRI.HasDynamicallySizedStack,
-               ResourceInfoKind::RIK_HasDynSizedStack);
-    SetToLocal(FRI.HasRecursion, ResourceInfoKind::RIK_HasRecursion);
-    SetToLocal(FRI.HasIndirectCall, ResourceInfoKind::RIK_HasIndirectCall);
+    SetToLocal(FRI.UsesVCC, RIK_UsesVCC);
+    SetToLocal(FRI.UsesFlatScratch, RIK_UsesFlatScratch);
+    SetToLocal(FRI.HasDynamicallySizedStack, RIK_HasDynSizedStack);
+    SetToLocal(FRI.HasRecursion, RIK_HasRecursion);
+    SetToLocal(FRI.HasIndirectCall, RIK_HasIndirectCall);
     return;
   }
 
