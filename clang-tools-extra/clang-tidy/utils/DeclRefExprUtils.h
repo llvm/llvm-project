@@ -17,11 +17,11 @@ namespace clang::tidy::utils::decl_ref_expr {
 
 /// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Stmt``.
 llvm::SmallPtrSet<const DeclRefExpr *, 16>
-allDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt, ASTContext &Context);
+allDeclRefExprs(const ValueDecl &VarDecl, const Stmt &Stmt, ASTContext &Context);
 
 /// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Decl``.
 llvm::SmallPtrSet<const DeclRefExpr *, 16>
-allDeclRefExprs(const VarDecl &VarDecl, const Decl &Decl, ASTContext &Context);
+allDeclRefExprs(const ValueDecl &VarDecl, const Decl &Decl, ASTContext &Context);
 
 /// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Stmt`` where
 /// ``VarDecl`` is guaranteed to be accessed in a const fashion.
