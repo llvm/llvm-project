@@ -1649,7 +1649,7 @@ defm : ExtAddPairwiseShuffleExtend<v16i8, v8i16, "I16x8",
                                    18, 19, 22, 23,
                                    26, 27, 30, 31>;
 
-// f64x2 <-> f32x4 conversions
+// f64x2 <-> f32x4 and f32x4 <-> f16x8 conversions
 def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def demote_zero : SDNode<"WebAssemblyISD::DEMOTE_ZERO", demote_t>;
 defm "" : SIMDConvert<F32x4, F64x2, demote_zero,
