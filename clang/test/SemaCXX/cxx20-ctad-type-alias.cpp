@@ -628,3 +628,32 @@ template <typename T> using S3 = S2<T>; // expected-note {{candidate function te
                                         // expected-note {{implicit deduction guide declared}}
 S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
 }
+
+
+namespace GH164264_1 {
+template <class T, auto = 0>
+struct A {
+    A(T) {}
+};
+
+template <class T, class U>
+using Foo = A<T, U{}>;
+
+template <class T, class U = int>
+using Bar = Foo<T, U>;
+
+Bar a{0};
+}
+
+namespace GH164264_2 {
+template <auto>
+struct A {};
+
+template <class U>
+using Foo = A<U{}>;
+
+template <class U = int>
+using Bar = Foo<U>;
+
+Bar a{};
+}

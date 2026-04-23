@@ -1161,6 +1161,8 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   SmallVector<DeducedTemplateArgument> DeduceResults(
       F->getTemplateParameters()->size());
 
+  TemplateParameterList *AliasParams = AliasTemplate->getTemplateParameters();
+
   // FIXME: DeduceTemplateArguments stops immediately at the first
   // non-deducible template argument. However, this doesn't seem to cause
   // issues for practice cases, we probably need to extend it to continue
@@ -1175,16 +1177,27 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   SmallVector<unsigned> NonDeducedTemplateParamsInFIndex;
   // !!NOTE: DeduceResults respects the sequence of template parameters of
   // the deduction guide f.
+
+  auto GetDefaultArgument =
+      [&AliasParams, &SemaRef](unsigned Index) -> const TemplateArgument * {
+    if (Index >= AliasParams->size())
+      return nullptr;
+    return SemaRef.getASTContext().getDefaultTemplateArgumentOrNone(
+        AliasParams->getParam(Index));
+  };
+
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
     if (!IsNonDeducedArgument(D))
       DeducedArgs.push_back(D);
+    else if (const TemplateArgument *Arg = GetDefaultArgument(Index))
+      DeducedArgs.push_back(*Arg);
     else
       NonDeducedTemplateParamsInFIndex.push_back(Index);
   }
   auto DeducedAliasTemplateParams =
-      TemplateParamsReferencedInTemplateArgumentList(
-          SemaRef, AliasTemplate->getTemplateParameters(), DeducedArgs);
+      TemplateParamsReferencedInTemplateArgumentList(SemaRef, AliasParams,
+                                                     DeducedArgs);
   // All template arguments null by default.
   SmallVector<TemplateArgument> TemplateArgsForBuildingFPrime(
       F->getTemplateParameters()->size());
@@ -1200,15 +1213,14 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // Store template arguments that refer to the newly-created template
   // parameters, used for building `TemplateArgsForBuildingFPrime`.
   SmallVector<TemplateArgument, 16> TransformedDeducedAliasArgs(
-      AliasTemplate->getTemplateParameters()->size());
+      AliasParams->size());
   // We might be already within a pack expansion, but rewriting template
   // parameters is independent of that. (We may or may not expand new packs
   // when rewriting. So clear the state)
   Sema::ArgPackSubstIndexRAII PackSubstReset(SemaRef, std::nullopt);
 
   for (unsigned AliasTemplateParamIdx : DeducedAliasTemplateParams) {
-    auto *TP =
-        AliasTemplate->getTemplateParameters()->getParam(AliasTemplateParamIdx);
+    auto *TP = AliasParams->getParam(AliasTemplateParamIdx);
     // Rebuild any internal references to earlier parameters and reindex as
     // we go.
     MultiLevelTemplateArgumentList Args;
@@ -1317,10 +1329,8 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
                                    FirstUndeducedParamIdx, IsDeducible);
 
     auto *FPrimeTemplateParamList = TemplateParameterList::Create(
-        Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
-        AliasTemplate->getTemplateParameters()->getLAngleLoc(),
-        FPrimeTemplateParams,
-        AliasTemplate->getTemplateParameters()->getRAngleLoc(),
+        Context, AliasParams->getTemplateLoc(), AliasParams->getLAngleLoc(),
+        FPrimeTemplateParams, AliasParams->getRAngleLoc(),
         /*RequiresClause=*/RequiresClause);
     auto *Result = cast<FunctionTemplateDecl>(buildDeductionGuide(
         SemaRef, AliasTemplate, FPrimeTemplateParamList,
