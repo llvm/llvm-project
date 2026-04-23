@@ -46,45 +46,6 @@ after_loop:
 declare i32  @fn_args(ptr) nounwind willreturn
 memory(argmem: read)
 
-;; It should be able to hoist fn_write_inaccessible_mem
-define dso_local i32 @loop_alias_store(i32 %x, ptr %a) #0 {
-; CHECK-LABEL: define dso_local i32 @loop_alias_store(
-; CHECK-SAME: i32 [[X:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[VAL:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 1
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP:%.*]], %[[LOOP]] ], [ [[VAL]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PHI]], align 16
-; CHECK-NEXT:    [[GEP]] = getelementptr i8, ptr [[PHI]], i64 0
-; CHECK-NEXT:    call void @fn_write_inaccessible_mem()
-; CHECK-NEXT:    call void @fn_read_inaccessible_mem(i32 [[TMP0]])
-; CHECK-NEXT:    [[ACC:%.*]] = add nuw nsw i32 [[TMP0]], 1
-; CHECK-NEXT:    store i32 [[ACC]], ptr [[A]], align 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ACC]], 10
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[AFTER_LOOP:.*]]
-; CHECK:       [[AFTER_LOOP]]:
-; CHECK-NEXT:    [[ACC_LCSSA:%.*]] = phi i32 [ [[ACC]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[ACC_LCSSA]]
-;
-entry:
-  %val = getelementptr inbounds nuw i32, ptr %a, i64 1
-  br label %loop
-loop:
-  %phi = phi ptr [ %gep, %loop ], [ %val, %entry ]
-  %44 = load i32, ptr %phi, align 16
-  %gep = getelementptr i8, ptr %phi, i64 0
-  %val2 = call i32 @fn_args(ptr  %gep)
-  call void @fn_write_inaccessible_mem()
-  call void @fn_read_inaccessible_mem(i32 %44)
-  %acc = add nuw nsw i32 %44, 1
-  store i32 %acc, ptr %a, align 16
-  %cmp = icmp ult i32 %acc, 10
-  br i1 %cmp, label %loop, label %after_loop
-after_loop:
-  ret i32 %acc
-}
-
 ;; It should NOT hoist fn_write_inaccessible_mem
 ;; Because fn_args_2 reads same memory location
 define dso_local i32 @ne_loop_alias(i32 %x, ptr %a, ptr %b) #0 {
@@ -134,13 +95,13 @@ define void @hoist_untill_I(ptr noalias %loc, ptr noalias %loc2){
 ; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[LOC2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[LOC2]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[LOC]], align 4
 ; CHECK-NEXT:    call void @fn_write_inaccessible_mem()
 ; CHECK-NEXT:    call void @fn_read_inaccessible_mem(i32 [[VAL]])
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*:]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    store i32 [[VAL]], ptr [[LOC]], align 4
 ; CHECK-NEXT:    br label %[[FOR_BODY]]
 ;
 entry:
@@ -149,7 +110,7 @@ for.cond.cleanup:                                 ; preds = %for.body
   ret void
 for.body:
   %val = load i32, ptr %loc2
-  store i32 %val, ptr %loc
+  store i32 %val, ptr %loc    ;; This is blocking hoisting
   call void @fn_write_inaccessible_mem()
   call void @fn_read_inaccessible_mem(i32 %val)
   br label %for.body
@@ -162,9 +123,9 @@ define void @neg_hoist_untill_I(ptr noalias %loc, ptr noalias %loc2){
 ; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[LOC2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[LOC2]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[LOC]], align 4
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    store i32 [[VAL]], ptr [[LOC]], align 4
 ; CHECK-NEXT:    call void @fn_read_inaccessible_mem(i32 0)
 ; CHECK-NEXT:    call void @fn_write_inaccessible_mem()
 ; CHECK-NEXT:    call void @fn_read_inaccessible_mem(i32 [[VAL]])

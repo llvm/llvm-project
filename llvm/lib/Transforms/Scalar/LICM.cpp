@@ -2333,12 +2333,7 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
         auto *MD = getClobberingMemoryAccess(*MSSA, BAA, Flags,
                                              const_cast<MemoryUse *>(MU));
         if (!MSSA->isLiveOnEntryDef(MD) && CurLoop->contains(MD->getBlock())) {
-          auto *MDI = dyn_cast_or_null<MemoryDef>(MD);
-          // It checks only if I is clobbering.
-          // If IMD is not the same as I (that it wants to hoist), assumes they
-          // clobber
-          // Sync store is not allowed, but store hoist is allowed
-          if (!Flags.getIsSink() && (!MDI || MDI->getMemoryInst() != I))
+          if (!Flags.getIsSink() && !MSSA->dominates(IMD, MU))
             return false;
         }
       } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
