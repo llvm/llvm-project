@@ -519,6 +519,18 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       KBM[Expr] = KnownBits::makeConstant(APValue);
       return;
     }
+    if (AGVK->getKind() == AMDGPUMCExpr::VariantKind::AGVK_InstPrefSize) {
+      // The result is clamped to (1 << FieldWidth) - 1, so upper bits are
+      // known zero. FieldWidth is always a constant (Args[1]).
+      int64_t FieldWidth;
+      if (AGVK->getSubExpr(1)->evaluateAsAbsolute(FieldWidth) &&
+          FieldWidth > 0 && static_cast<uint64_t>(FieldWidth) < BitWidth) {
+        KnownBits KB(BitWidth);
+        KB.Zero.setHighBits(BitWidth - FieldWidth);
+        KBM[Expr] = KB;
+        return;
+      }
+    }
     KBM[Expr] = KnownBits(BitWidth);
     return;
   }

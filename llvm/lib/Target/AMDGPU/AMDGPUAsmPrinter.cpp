@@ -262,20 +262,17 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   // size. At this point .Lfunc_end has been emitted (by the base AsmPrinter)
   // right after the function code, so (Lfunc_end - func_sym) gives the
   // exact function code size in bytes.
-  // We store it as a separate KD field rather than OR'ing into
-  // compute_pgm_rsrc3, because the label subtraction MCExpr is unresolvable
-  // in text mode and would prevent printing of other fields (e.g.
-  // named_barrier_count) that share the same register.
   if (STM.hasInstPrefSize()) {
     const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
         MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
         MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
 
-    uint32_t Width, CacheLineSize;
-    STM.getInstPrefSizeArgs(KD.inst_pref_size_mask, KD.inst_pref_size_shift,
-                            Width, CacheLineSize);
-    KD.inst_pref_size = AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Width,
-                                                         CacheLineSize, Ctx);
+    uint32_t Mask, Shift, Width, CacheLineSize;
+    STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
+    const MCExpr *InstPrefSize = AMDGPUMCExpr::createInstPrefSize(
+        CodeSizeExpr, Width, CacheLineSize, Ctx);
+    KD.compute_pgm_rsrc3 =
+        setBits(KD.compute_pgm_rsrc3, InstPrefSize, Mask, Shift, Ctx);
   }
 
   auto &Streamer = getTargetStreamer()->getStreamer();

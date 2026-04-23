@@ -11,7 +11,7 @@
 
 ; The inst_pref_size is computed via MCExpr label subtraction, resolved at
 ; assembly/link time. In text output it appears as:
-;   instprefsize(<code_size>, <field_width>, <cache_line_size>)
+;   ((instprefsize(<code_size>, <field_width>, <cache_line_size>)<<Shift)&Mask)>>Shift
 ; where:
 ;   <code_size>       = .Lfunc_endN - func_sym (exact function code size in bytes)
 ;   <field_width>     = bit width of the inst_pref_size field (6 for GFX11, 8 for GFX12+)
@@ -19,9 +19,9 @@
 ;   instprefsize      = min(divideCeil(code_size, cache_line_size), (1 << field_width) - 1)
 
 ; GCN-LABEL: .amdhsa_kernel large
-; GFX11: .amdhsa_inst_pref_size instprefsize(.Lfunc_end0-large, 6, 128)
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-large, 6, 128)<<4)&1008)>>4
 ; GFX11: codeLenInByte = {{[0-9]+}}
-; GFX12: .amdhsa_inst_pref_size instprefsize(.Lfunc_end0-large, 8, 128)
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-large, 8, 128)<<4)&4080)>>4
 ; GFX12: codeLenInByte = {{[0-9]+}}
 ;; Object: kernel descriptor at 0x00, COMPUTE_PGM_RSRC3 at 0x2C:
 ;; gfx11 pref=3 (0x30), gfx12 pref=4 (0x40)
@@ -34,8 +34,8 @@ bb:
 }
 
 ; GCN-LABEL: .amdhsa_kernel small
-; GFX11: .amdhsa_inst_pref_size instprefsize(.Lfunc_end1-small, 6, 128)
-; GFX12: .amdhsa_inst_pref_size instprefsize(.Lfunc_end1-small, 8, 128)
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-small, 6, 128)<<4)&1008)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-small, 8, 128)<<4)&4080)>>4
 ; GCN: codeLenInByte = {{[0-9]+}}
 ;; Object: kernel descriptor at 0x40, COMPUTE_PGM_RSRC3 at 0x6C:
 ;; pref=1 (0x10) for both
@@ -50,8 +50,8 @@ bb:
 ; The MCExpr resolves to the correct inst_pref_size at assembly time.
 
 ; GCN-LABEL: .amdhsa_kernel inline_asm
-; GFX11: .amdhsa_inst_pref_size instprefsize(.Lfunc_end2-inline_asm, 6, 128)
-; GFX12: .amdhsa_inst_pref_size instprefsize(.Lfunc_end2-inline_asm, 8, 128)
+; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-inline_asm, 6, 128)<<4)&1008)>>4
+; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-inline_asm, 8, 128)<<4)&4080)>>4
 ; GCN: codeLenInByte = {{[0-9]+}}
 ;; Object: kernel descriptor at 0x80, COMPUTE_PGM_RSRC3 at 0xAC:
 ;; pref=9 (0x90) for both
