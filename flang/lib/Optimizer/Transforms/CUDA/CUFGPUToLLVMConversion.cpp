@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Support/Fortran.h"
+#include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -33,34 +34,14 @@ using namespace Fortran::runtime;
 
 namespace {
 
-// Flatten a memref descriptor value into its individual scalar fields using
-// the same ordering as MLIR's standard memref-to-LLVM lowering:
-//   allocatedPtr, alignedPtr, offset, sizes[0..rank-1], strides[0..rank-1].
-// This must match the device-side ABI produced by the gpu-to-nvvm lowering,
-// which expands each memref argument into (3 + 2*rank) scalar parameters.
-static void flattenMemRefDescriptor(mlir::Location loc, mlir::Value desc,
-                                    int64_t rank,
-                                    mlir::PatternRewriter &rewriter,
-                                    llvm::SmallVectorImpl<mlir::Value> &out) {
-  assert(mlir::isa<mlir::LLVM::LLVMStructType>(desc.getType()) &&
-         "expected adapted memref operand to be an LLVM descriptor struct");
-  out.push_back(mlir::LLVM::ExtractValueOp::create(rewriter, loc, desc, 0));
-  out.push_back(mlir::LLVM::ExtractValueOp::create(rewriter, loc, desc, 1));
-  out.push_back(mlir::LLVM::ExtractValueOp::create(rewriter, loc, desc, 2));
-  for (int64_t d = 0; d < rank; ++d)
-    out.push_back(mlir::LLVM::ExtractValueOp::create(
-        rewriter, loc, desc, mlir::ArrayRef<int64_t>{3, d}));
-  for (int64_t d = 0; d < rank; ++d)
-    out.push_back(mlir::LLVM::ExtractValueOp::create(
-        rewriter, loc, desc, mlir::ArrayRef<int64_t>{4, d}));
-}
-
 // Build the kernel argument array used for the CUDA kernel launch.
 //
 // For each operand:
-//   - memref operands are flattened into their descriptor scalar fields so the
+//   - memref operands are unpacked into their descriptor scalar fields so the
 //     host-side parameter list matches the NVVM-lowered device kernel signature
-//     (gpu-to-nvvm expands each memref into 3 + 2*rank scalar parameters);
+//     (gpu-to-nvvm expands each memref into 3 + 2*rank scalar parameters).
+//     We delegate to MemRefDescriptor::unpack so we follow the canonical memref
+//     descriptor layout owned by the LLVMCommon library;
 //   - all other operands are passed through unchanged.
 //
 // The flattened values are materialized on the stack in a single struct
@@ -79,8 +60,8 @@ static mlir::Value createKernelArgArray(mlir::Location loc,
   for (auto [origArg, adaptedArg] :
        llvm::zip_equal(origOperands, adaptedOperands)) {
     if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(origArg.getType())) {
-      flattenMemRefDescriptor(loc, adaptedArg, memrefTy.getRank(), rewriter,
-                              flatValues);
+      mlir::MemRefDescriptor::unpack(rewriter, loc, adaptedArg, memrefTy,
+                                     flatValues);
       continue;
     }
     flatValues.push_back(adaptedArg);
