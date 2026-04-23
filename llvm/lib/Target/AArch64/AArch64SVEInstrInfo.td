@@ -4898,7 +4898,7 @@ let Predicates = [HasSVE_B16MM] in {
 //===----------------------------------------------------------------------===//
 // F16MM Instructions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasSVE2p2, HasF16MM] in {
+let Predicates = [HasSVE2p2, HasSVE_F16MM] in {
   defm FMMLA_ZZZ_H : sve_fp_matrix_mla<0b100, "fmmla", ZPR16, ZPR16, int_aarch64_sve_fmmla, nxv8f16, nxv8f16>;
 }
 
