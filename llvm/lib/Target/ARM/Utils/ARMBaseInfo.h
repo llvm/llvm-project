@@ -196,12 +196,12 @@ namespace ARMSysReg {
     FeatureBitset FeaturesRequired;
 
     // return true if FeaturesRequired are all present in ActiveFeatures
-    bool hasRequiredFeatures(FeatureBitset ActiveFeatures) const {
+    bool hasRequiredFeatures(const FeatureBitset &ActiveFeatures) const {
       return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
     }
 
     // returns true if TestFeatures are all present in FeaturesRequired
-    bool isInRequiredFeatures(FeatureBitset TestFeatures) const {
+    bool isInRequiredFeatures(const FeatureBitset &TestFeatures) const {
       return (FeaturesRequired & TestFeatures) == TestFeatures;
     }
   };

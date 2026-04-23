@@ -126,7 +126,7 @@ class TailFoldingOption {
     return Bits;
   }
 
-  void reportError(std::string Opt) {
+  void reportError(const std::string &Opt) {
     errs() << "invalid argument '" << Opt
            << "' to -sve-tail-folding=; the option should be of the form\n"
               "  (disabled|all|default|simple)[+(reductions|recurrences"
