@@ -289,8 +289,8 @@ struct LoweringPreparePass
       // Emit the initializer and add a global destructor if appropriate.
       auto &ctorRegion = globalOp.getCtorRegion();
       assert(!ctorRegion.empty() && "This should never be empty here.");
-      if (!ctorRegion.hasOneBlock())
-        llvm_unreachable("Multiple blocks NYI");
+      assert(ctorRegion.hasOneBlock() &&
+             "Multi-block static local ctor regions are not yet supported");
       mlir::Block &block = ctorRegion.front();
       mlir::Block *insertBlock = builder.getInsertionBlock();
       insertBlock->getOperations().splice(insertBlock->end(),
@@ -981,7 +981,12 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                                   cir::GlobalLinkageKind::InternalLinkage);
 
-  // Move over the initialzation code of the ctor region.
+  // Move over the initialization code of the ctor region.
+  // The ctor region may have multiple blocks when exception handling
+  // scaffolding creates extra blocks (e.g., unreachable/trap blocks).
+  // We move all operations from the first block (minus the yield) into
+  // the function entry, and discard extra blocks (which contain only
+  // unreachable terminators from EH cleanup paths).
   mlir::Block *entryBB = f.addEntryBlock();
   if (!op.getCtorRegion().empty()) {
     mlir::Block &block = op.getCtorRegion().front();
