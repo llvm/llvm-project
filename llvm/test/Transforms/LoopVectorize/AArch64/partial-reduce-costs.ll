@@ -664,3 +664,127 @@ exit:
 !33 = distinct !{!33, !34, !35}
 !34 = !{!"llvm.loop.interleave.count", i32 1}
 !35 = !{!"llvm.loop.vectorize.width", i32 4}
+
+; fsub(float, fpext(half)->float * fpext(half)->float)
+define float @sub_reduction_float_fpext_half_fpext_half(ptr %src1, ptr %src2, ptr %src3, float %init, i32 %n) {
+; NEON-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
+; SVE-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
+; SVE2-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
+; SVE2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SVE2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; SVE2p1-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
+; SVE2p1:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2p1:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SVE2p1:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2p1:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; SVE2p3-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
+; SVE2p3:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SVE2p3:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; I8MM-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
+; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi float [ %init, %entry ], [ %sub2, %loop ]
+  %gep1 = getelementptr inbounds half, ptr %src1, i32 %iv
+  %load1 = load half, ptr %gep1
+  %fpext1 = fpext half %load1 to float
+  %gep2 = getelementptr inbounds half, ptr %src2, i32 %iv
+  %load2 = load half, ptr %gep2
+  %fpext2 = fpext half %load2 to float
+  %mul12 = fmul float %fpext1, %fpext2
+  %gep3 = getelementptr inbounds half, ptr %src3, i32 %iv
+  %load3 = load half, ptr %gep3
+  %fpext3 = fpext half %load3 to float
+  %mul13 = fmul float %fpext2, %fpext3
+  %add1 = fadd fast float %acc, %mul12
+  %sub2 = fsub fast float %add1, %mul13
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp ult i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit, !llvm.loop !36
+
+exit:
+  ret float %sub2
+}
+
+; fsub(float, fpext(bfloat)->float * fpext(bfloat)->float)
+define float @sub_reduction_float_fpext_bfloat_fpext_bfloat(ptr %src1, ptr %src2, ptr %src3, float %init, i32 %n) "target-features"="+bf16" {
+; NEON-LABEL: 'sub_reduction_float_fpext_bfloat_fpext_bfloat'
+; NEON:  Cost of 2 for VF 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; NEON:  Cost of 3 for VF 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; NEON:  Cost of 2 for VF 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; NEON:  Cost of 3 for VF 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; SVE-LABEL: 'sub_reduction_float_fpext_bfloat_fpext_bfloat'
+; SVE:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE:  Cost of 3 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SVE:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE:  Cost of 3 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; SVE2-LABEL: 'sub_reduction_float_fpext_bfloat_fpext_bfloat'
+; SVE2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2:  Cost of 3 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SVE2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2:  Cost of 3 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; SVE2p1-LABEL: 'sub_reduction_float_fpext_bfloat_fpext_bfloat'
+; SVE2p1:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2p1:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SVE2p1:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2p1:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; SVE2p3-LABEL: 'sub_reduction_float_fpext_bfloat_fpext_bfloat'
+; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; I8MM-LABEL: 'sub_reduction_float_fpext_bfloat_fpext_bfloat'
+; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; I8MM:  Cost of 3 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; I8MM:  Cost of 3 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi float [ %init, %entry ], [ %sub2, %loop ]
+  %gep1 = getelementptr inbounds bfloat, ptr %src1, i32 %iv
+  %load1 = load bfloat, ptr %gep1
+  %fpext1 = fpext bfloat %load1 to float
+  %gep2 = getelementptr inbounds bfloat, ptr %src2, i32 %iv
+  %load2 = load bfloat, ptr %gep2
+  %fpext2 = fpext bfloat %load2 to float
+  %mul12 = fmul float %fpext1, %fpext2
+  %gep3 = getelementptr inbounds bfloat, ptr %src3, i32 %iv
+  %load3 = load bfloat, ptr %gep3
+  %fpext3 = fpext bfloat %load3 to float
+  %mul13 = fmul float %fpext2, %fpext3
+  %add1 = fadd fast float %acc, %mul12
+  %sub2 = fsub fast float %add1, %mul13
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp ult i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit, !llvm.loop !36
+
+exit:
+  ret float %sub2
+}
+
+!36 = distinct !{!36, !37, !38}
+!37 = !{!"llvm.loop.interleave.count", i32 1}
+!38 = !{!"llvm.loop.vectorize.width", i32 4}
