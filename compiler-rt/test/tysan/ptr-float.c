@@ -7,7 +7,7 @@ void zero_array() {
   for (i = 0; i < 1; ++i)
     P[i] = 0.0f;
   // CHECK: ERROR: TypeSanitizer: type-aliasing-violation
-  // CHECK: WRITE of size 4 at {{.*}} with type float accesses an existing object of type p1 float
+  // CHECK: WRITE of size 4 at {{.*}} with type float accesses an existing object of type float*
   // CHECK: {{#0 0x.* in zero_array .*ptr-float.c:}}[[@LINE-3]]
 }
 

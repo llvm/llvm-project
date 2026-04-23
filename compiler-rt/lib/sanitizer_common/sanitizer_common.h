@@ -15,6 +15,8 @@
 #ifndef SANITIZER_COMMON_H
 #define SANITIZER_COMMON_H
 
+#include <stdarg.h>
+
 #include "sanitizer_flags.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
@@ -674,6 +676,9 @@ class InternalScopedString {
  private:
   InternalMmapVector<char> buffer_;
 };
+
+int internal_vsnprintf(char* buff, int buff_length, const char* format,
+                       va_list args);
 
 template <class T>
 struct CompareLess {

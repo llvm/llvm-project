@@ -125,8 +125,8 @@ static int AppendPointer(char **buff, const char *buff_end, u64 ptr_value) {
   return result;
 }
 
-int VSNPrintf(char *buff, int buff_length,
-              const char *format, va_list args) {
+int internal_vsnprintf(char* buff, int buff_length, const char* format,
+                       va_list args) {
   static const char *kPrintfFormatsHelp =
       "Supported Printf formats: %([0-9]*)?(z|l|ll)?{d,u,x,X}; %p; "
       "%[-]([0-9]*)?(\\.\\*)?s; %c\nProvided format: ";
@@ -282,8 +282,8 @@ static void NOINLINE SharedPrintfCodeNoBuffer(bool append_pid,
       if (needed_length >= buffer_size)
         continue;
     }
-    needed_length += VSNPrintf(buffer + needed_length,
-                               buffer_size - needed_length, format, args);
+    needed_length += internal_vsnprintf(
+        buffer + needed_length, buffer_size - needed_length, format, args);
     if (needed_length >= buffer_size)
       continue;
     // If the message fit into the buffer, print it and exit.
@@ -332,7 +332,7 @@ void Report(const char *format, ...) {
 int internal_snprintf(char *buffer, uptr length, const char *format, ...) {
   va_list args;
   va_start(args, format);
-  int needed_length = VSNPrintf(buffer, length, format, args);
+  int needed_length = internal_vsnprintf(buffer, length, format, args);
   va_end(args);
   return needed_length;
 }
@@ -352,8 +352,8 @@ void InternalScopedString::AppendF(const char *format, ...) {
 
     va_list args;
     va_start(args, format);
-    uptr sz = VSNPrintf(buffer_.data() + prev_len, buffer_.size() - prev_len,
-                        format, args);
+    uptr sz = internal_vsnprintf(buffer_.data() + prev_len,
+                                 buffer_.size() - prev_len, format, args);
     va_end(args);
     if (sz < buffer_.size() - prev_len) {
       buffer_.resize(prev_len + sz + 1);
