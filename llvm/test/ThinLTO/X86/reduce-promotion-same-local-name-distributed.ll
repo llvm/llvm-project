@@ -17,6 +17,10 @@
 ; RUN:  -r %t/b.bc,m2,p \
 ; RUN:  -r %t/a.bc,m2,x
 
+; RUN: llvm-dis %t/a.bc.thinlto.bc -o - | FileCheck %s --check-prefix=CHECK-DECL
+
+; CHECK-DECL: importType: declaration
+
 ; RUN: opt -passes=function-import -always-rename-promoted-locals=false -import-all-index -enable-import-metadata -summary-file %t/a.bc.thinlto.bc %t/a.bc -o %t/a.bc.out
 ; RUN: opt -passes=function-import -always-rename-promoted-locals=false -import-all-index -summary-file %t/b.bc.thinlto.bc %t/b.bc -o %t/b.bc.out
 ; RUN: llvm-dis %t/a.bc.out -o - | FileCheck %s --check-prefix=CHECK-A
@@ -25,6 +29,18 @@
 ; CHECK-A: define hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo.llvm.
 ; CHECK-A: declare hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo(
 ; CHECK-B: define hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo(
+
+; RUN: llvm-lto2 run %t/a.bc %t/b.bc \
+; RUN:   -thinlto-distributed-indexes \
+; RUN:  --whole-program-visibility-enabled-in-lto=true \
+; RUN:  -save-temps -o %t/lto-out \
+; RUN:  -r %t/a.bc,m1,px \
+; RUN:  -r %t/b.bc,m2,p \
+; RUN:  -r %t/a.bc,m2,x
+
+; RUN: llvm-dis %t/a.bc.thinlto.bc -o - | FileCheck %s --check-prefix=CHECK-DEF
+
+; CHECK-DEF-NOT: importType: declaration
 
 ;--- a.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
