@@ -3,7 +3,7 @@
 int i;
 
 struct Pup {
-  // expected-error@+1 {{HLSL doesn't support constructors or destructors}}
+  // expected-error@+1 {{HLSL does not support constructors or destructors}}
   Pup() {
     i++;
   }
