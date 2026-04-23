@@ -31,6 +31,14 @@
 //   as an IR pass.  (If support for callbr in GlobalISel is implemented, it’s
 //   worth considering whether this is still required.)
 //
+// llvm.asm.constraint.br:
+//
+//   Remove the "llvm.asm.constraint.br" call and opt to prefer either
+//   "registers" (on the callbr's default path) or "memory" (on the callbr's
+//   indirect path). We choose the latter only when compiling at '-O0', because
+//   the fast register allocator isn't equipped to fold registers if register
+//   pressure is too great.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/InlineAsmPrepare.h"
@@ -39,7 +47,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -49,6 +59,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 
@@ -63,7 +74,8 @@ public:
   InlineAsmPrepare() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+    AU.addRequired<DominatorTreeWrapperPass>();
   }
   bool runOnFunction(Function &F) override;
 
@@ -74,15 +86,20 @@ char InlineAsmPrepare::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(InlineAsmPrepare, "inline-asm-prepare",
-                      "Prepare inline asm insts", false, false)
+INITIALIZE_PASS_BEGIN(InlineAsmPrepare, DEBUG_TYPE, "Prepare inline asm insts",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(InlineAsmPrepare, "inline-asm-prepare",
-                    "Prepare inline asm insts", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(InlineAsmPrepare, DEBUG_TYPE, "Prepare inline asm insts",
+                    false, false)
 
 FunctionPass *llvm::createInlineAsmPreparePass() {
   return new InlineAsmPrepare();
 }
+
+//===----------------------------------------------------------------------===//
+//                      Process CallBr instructions
+//===----------------------------------------------------------------------===//
 
 #ifndef NDEBUG
 static void printDebugDomInfo(const DominatorTree &DT, const Use &U,
@@ -170,7 +187,7 @@ static bool splitCriticalEdges(CallBrInst *CBR, DominatorTree *DT) {
 /// have a location to place the intrinsic. Then remap users of the original
 /// callbr output SSA value to instead point to the appropriate
 /// llvm.callbr.landingpad value.
-static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
+static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree *DT) {
   bool Changed = false;
   SmallPtrSet<const BasicBlock *, 4> Visited;
   IRBuilder<> Builder(CBR->getContext());
@@ -191,7 +208,7 @@ static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
     CallInst *Intrinsic = Builder.CreateIntrinsic(
         CBR->getType(), Intrinsic::callbr_landingpad, {CBR});
     SSAUpdate.AddAvailableValue(IndDest, Intrinsic);
-    updateSSA(DT, CBR, Intrinsic, SSAUpdate);
+    updateSSA(*DT, CBR, Intrinsic, SSAUpdate);
     Changed = true;
   }
 
@@ -202,35 +219,81 @@ static bool processCallBrInst(Function &F, CallBrInst *CBR, DominatorTree *DT) {
   bool Changed = false;
 
   Changed |= splitCriticalEdges(CBR, DT);
-  Changed |= insertIntrinsicCalls(CBR, *DT);
+  Changed |= insertIntrinsicCalls(CBR, DT);
 
   return Changed;
 }
 
-static SmallVector<CallBrInst *, 2> findCallBrs(Function &F) {
-  SmallVector<CallBrInst *, 2> CBRs;
-  for (BasicBlock &BB : F)
-    if (auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator()))
-      if (!CBR->getType()->isVoidTy() && !CBR->use_empty())
-        CBRs.push_back(CBR);
-  return CBRs;
-}
+//===----------------------------------------------------------------------===//
+//               Process 'llvm.asm.constraint.br' instructions
+//===----------------------------------------------------------------------===//
 
-static bool runImpl(Function &F, ArrayRef<CallBrInst *> CBRs,
-                    DominatorTree *DT) {
+static bool processAsmConstraintBrInst(Function &F, CallBrInst &CBR,
+                                       bool IsOptLevelNone, DomTreeUpdater *DTU,
+                                       const TargetMachine *TM) {
   bool Changed = false;
 
-  for (CallBrInst *CBR : CBRs)
-    Changed |= processCallBrInst(F, CBR, DT);
+  BasicBlock *BB = CBR.getParent();
+  BasicBlock *PrefReg = CBR.getDefaultDest();
+  BasicBlock *PrefMem = CBR.getIndirectDest(0);
+  BasicBlock *Merge = isa<CallBrInst>(PrefReg->getTerminator())
+                          ? nullptr
+                          : PrefReg->getSingleSuccessor();
+
+  CBR.eraseFromParent();
+
+  if (IsOptLevelNone) {
+    DeleteDeadBlock(PrefReg, DTU);
+    IRBuilder(BB).CreateBr(PrefMem);
+    MergeBlockIntoPredecessor(PrefMem, DTU);
+    if (Merge)
+      MergeBlockIntoPredecessor(Merge, DTU);
+  } else {
+    DeleteDeadBlock(PrefMem, DTU);
+    IRBuilder(BB).CreateBr(PrefReg);
+    MergeBlockIntoPredecessor(PrefReg, DTU);
+    if (Merge)
+      MergeBlockIntoPredecessor(Merge, DTU);
+  }
+
+  DTU->flush();
+
+  return Changed;
+}
+
+static void getCallBrInsts(Function &F,
+                           SmallVectorImpl<CallBrInst *> &AsmConstraintBrs,
+                           SmallVectorImpl<CallBrInst *> &OtherCallBrs) {
+  for (auto &BB : F)
+    if (auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator())) {
+      if (CBR->getIntrinsicID() == Intrinsic::asm_constraint_br)
+        AsmConstraintBrs.push_back(CBR);
+      else if (!CBR->getType()->isVoidTy() && !CBR->use_empty())
+        OtherCallBrs.push_back(CBR);
+    }
+}
+
+static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater *DTU,
+                    const TargetMachine *TM) {
+  bool Changed = false;
+  SmallVector<CallBrInst *, 4> AsmConstraintBrs;
+  SmallVector<CallBrInst *, 4> OtherCallBrs;
+
+  getCallBrInsts(F, AsmConstraintBrs, OtherCallBrs);
+
+  // Process 'llvm.asm.constraint.br' instructions first.
+  for (auto *CBR : AsmConstraintBrs)
+    Changed |= processAsmConstraintBrInst(F, *CBR, IsOptLevelNone, DTU, TM);
+
+  // Process the rest of the 'callbr' instructions.
+  for (auto *CBR : OtherCallBrs)
+    if (!CBR->getType()->isVoidTy() && !CBR->use_empty())
+      Changed |= processCallBrInst(F, CBR, DTU ? &DTU->getDomTree() : nullptr);
 
   return Changed;
 }
 
 bool InlineAsmPrepare::runOnFunction(Function &F) {
-  SmallVector<CallBrInst *, 2> CBRs = findCallBrs(F);
-  if (CBRs.empty())
-    return false;
-
   // It's highly likely that most programs do not contain CallBrInsts. Follow a
   // similar pattern from SafeStackLegacyPass::runOnFunction to reuse previous
   // domtree analysis if available, otherwise compute it lazily. This avoids
@@ -238,27 +301,26 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
   // contain CallBrInsts. It does pessimize programs with callbr at higher
   // optimization levels, as the DominatorTree created here is not reused by
   // subsequent passes.
-  DominatorTree *DT;
+  const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  std::optional<DomTreeUpdater> DTU;
   std::optional<DominatorTree> LazilyComputedDomTree;
   if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
-    DT = &DTWP->getDomTree();
-  else {
-    LazilyComputedDomTree.emplace(F);
-    DT = &*LazilyComputedDomTree;
-  }
+    DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
 
-  return runImpl(F, CBRs, DT);
+  bool IsOptLevelNone =
+      skipFunction(F) ? true : TM->getOptLevel() == CodeGenOptLevel::None;
+
+  return runImpl(F, IsOptLevelNone, DTU ? &*DTU : nullptr, TM);
 }
 
 PreservedAnalyses InlineAsmPreparePass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {
-  SmallVector<CallBrInst *, 2> CBRs = findCallBrs(F);
-  if (CBRs.empty())
-    return PreservedAnalyses::all();
-
   auto *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  bool IsOptLevelNone =
+      F.hasOptNone() ? true : TM->getOptLevel() == CodeGenOptLevel::None;
 
-  if (runImpl(F, CBRs, DT)) {
+  if (runImpl(F, IsOptLevelNone, DT ? &DTU : nullptr, TM)) {
     PreservedAnalyses PA;
     PA.preserve<DominatorTreeAnalysis>();
     return PA;

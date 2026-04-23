@@ -66,13 +66,26 @@ define dso_local void @test_c() nounwind {
 
 define dso_local void @test_k() nounwind {
 ; CHECK-LABEL: test_k:
-; CHECK:       # %bb.0:
+; CHECK:       # %bb.0: # %asm.pref.reg
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    movl %fs:0, %eax
 ; CHECK-NEXT:    #NO_APP
+  callbr void @llvm.asm.constraint.br()
+      to label %asm.pref.reg [label %asm.pref.mem]
+
+asm.pref.reg:
   %tmp = tail call i64 asm "movl %fs:${1:a}, ${0:k}", "=q,irm,~{dirflag},~{fpsr},~{flags}"(i64 0)
+  br label %asm.merge
+
+asm.pref.mem:
+  %tmp1 = tail call i64 asm "movl %fs:${1:a}, ${0:k}", "=q,irm,~{dirflag},~{fpsr},~{flags}"(i64 0)
+  br label %asm.merge
+
+asm.merge:
   unreachable
 }
+
+declare void @llvm.asm.constraint.br()
 
 define dso_local void @test_n() nounwind {
 ; CHECK-LABEL: test_n:
@@ -86,14 +99,21 @@ define dso_local void @test_n() nounwind {
 }
 
 define void @test_q() {
-; CHECK-LABEL: test_q:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    #TEST 0
-; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: test_q:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    #APP
+; X86-NEXT:    #TEST %eax
+; X86-NEXT:    #NO_APP
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_q:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    #APP
+; X64-NEXT:    #TEST %rax
+; X64-NEXT:    #NO_APP
+; X64-NEXT:    retq
 entry:
-  call void asm sideeffect "#TEST ${0:q}", "=*imr"( ptr elementtype( i64) null )
+  %0 = call i64 asm sideeffect "#TEST ${0:q}", "=imr"()
   ret void
 }
 
