@@ -7166,10 +7166,12 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   attrs.MinThreads = 1;
   attrs.MaxThreads.front() = combinedMaxThreadsVal;
   attrs.ReductionDataSize = reductionDataSize;
-  // TODO: Allow modified buffer length similar to
-  // fopenmp-cuda-teams-reduction-recs-num flag in clang.
-  if (attrs.ReductionDataSize != 0)
-    attrs.ReductionBufferLength = 1024;
+  // A ReductionBufferLength of 0 tells the offload plugin to size the teams
+  // reduction buffer to the actual number of teams at launch (NumBlocks[0]),
+  // which is exactly the highest team id any reduction in this kernel can
+  // produce. This avoids both under- and over-sized allocations compared to
+  // hardcoding a fixed upper bound.
+  attrs.ReductionBufferLength = 0;
 }
 
 /// Gather LLVM runtime values for all clauses evaluated in the host that are

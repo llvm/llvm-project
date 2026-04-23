@@ -452,11 +452,14 @@ struct GenericKernelTy {
   }
 
   /// Return a device pointer to a new kernel launch environment.
-  Expected<KernelLaunchEnvironmentTy *>
-  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
-                             const KernelArgsTy &KernelArgs,
-                             const DynBlockMemConfTy &DynBlockMemConf,
-                             AsyncInfoWrapperTy &AsyncInfoWrapper) const;
+  ///
+  /// \p NumBlocks0 is the number of teams for this launch and is used to size
+  /// the teams-reduction buffer when the kernel environment's
+  /// ReductionBufferLength is 0 (i.e. unspecified at compile time).
+  Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
+      GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
+      const DynBlockMemConfTy &DynBlockMemConf,
+      AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const;
 
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {

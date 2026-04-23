@@ -110,7 +110,7 @@ Expected<KernelLaunchEnvironmentTy *>
 GenericKernelTy::getKernelLaunchEnvironment(
     GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
     const DynBlockMemConfTy &DynBlockMemConf,
-    AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+    AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const {
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
@@ -119,9 +119,25 @@ GenericKernelTy::getKernelLaunchEnvironment(
       KernelArgs.Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
-  if ((!KernelEnvironment.Configuration.ReductionDataSize ||
-       !KernelEnvironment.Configuration.ReductionBufferLength) &&
-      KernelArgs.DynCGroupMem == 0)
+  const auto &RedCfg = KernelEnvironment.Configuration;
+  // ReductionDataSize is the single source of truth for whether a teams-
+  // reduction buffer is needed; ReductionBufferLength is only a static
+  // upper bound on the number of teams and is meaningless without a
+  // non-zero data size. Reject the malformed combination explicitly so we
+  // never hand the device a null ReductionBuffer that the reduction
+  // runtime would then dereference.
+  if (RedCfg.ReductionBufferLength && !RedCfg.ReductionDataSize)
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "kernel environment has a non-zero "
+                         "ReductionBufferLength but ReductionDataSize is 0");
+  const bool NeedsReductionBuffer = RedCfg.ReductionDataSize != 0;
+  if (NeedsReductionBuffer && KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "kernel was built against an older OpenMP "
+                         "kernel-launch-environment ABI (v%u); current "
+                         "runtime requires v%u for cross-team reductions",
+                         KernelArgs.Version, OMP_KERNEL_ARG_VERSION);
+  if (!NeedsReductionBuffer && !KernelArgs.DynCGroupMem)
     return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
 
   auto AllocOrErr = GenericDevice.dataAlloc(sizeof(KernelLaunchEnvironmentTy),
@@ -143,11 +159,16 @@ GenericKernelTy::getKernelLaunchEnvironment(
   LocalKLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
   LocalKLE.ReductionBuffer = nullptr;
 
-  if (KernelEnvironment.Configuration.ReductionDataSize &&
-      KernelEnvironment.Configuration.ReductionBufferLength) {
+  if (NeedsReductionBuffer) {
+    // Size the teams-reduction buffer. ReductionBufferLength is the
+    // statically known upper bound on the number of teams. When it is 0
+    // (i.e. num_teams was not a compile-time constant), we size the buffer
+    // to exactly match the number of teams for this launch (NumBlocks0).
+    uint32_t BufferElements = RedCfg.ReductionBufferLength
+                                  ? RedCfg.ReductionBufferLength
+                                  : NumBlocks0;
     auto AllocOrErr = GenericDevice.dataAlloc(
-        KernelEnvironment.Configuration.ReductionDataSize *
-            KernelEnvironment.Configuration.ReductionBufferLength,
+        uint64_t(RedCfg.ReductionDataSize) * BufferElements,
         /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
     if (!AllocOrErr)
       return AllocOrErr.takeError();
@@ -268,8 +289,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     AsyncInfoWrapper.freeAllocationAfterSynchronization(
         DynBlockMemConf.FallbackPtr);
 
-  auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
-      GenericDevice, KernelArgs, DynBlockMemConf, AsyncInfoWrapper);
+  auto KernelLaunchEnvOrErr =
+      getKernelLaunchEnvironment(GenericDevice, KernelArgs, DynBlockMemConf,
+                                 AsyncInfoWrapper, NumBlocks[0]);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 

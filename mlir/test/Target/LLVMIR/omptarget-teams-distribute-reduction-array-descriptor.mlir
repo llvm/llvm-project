@@ -64,10 +64,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 // AMDGCN: getelementptr {{.*}} ptr {{%.*}}, i32 0, i32 0
 // AMDGCN: store ptr {{%.*}}, ptr
 
-// AMDGCN-LABEL: define internal void @_omp_reduction_list_to_global_reduce_func
-// AMDGCN: call void @llvm.memcpy{{.*}}(ptr {{.*}}, ptr {{.*}}, i64 {{[0-9]+}}, i1 false)
-// AMDGCN: getelementptr {{.*}} ptr {{%.*}}, i32 0, i32 0
-// AMDGCN: store ptr {{%.*}}, ptr
+// No longer emitted: __kmpc_gpu_xteam_reduce_nowait does not take the
+// list-to-global reduce callback, so createReductionsGPU stops emitting it.
+// AMDGCN-NOT: define internal void @_omp_reduction_list_to_global_reduce_func
 
 // AMDGCN-LABEL: define internal void @_omp_reduction_global_to_list_copy_func
 // AMDGCN: call void @llvm.memcpy{{.*}}(ptr {{.*}}, ptr {{.*}}, i64 {{[0-9]+}}, i1 false)
@@ -130,10 +129,9 @@ module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true
 // NVPTX: getelementptr {{.*}} ptr {{%.*}}, i32 0, i32 0
 // NVPTX: store ptr {{%.*}}, ptr
 
-// NVPTX-LABEL: define internal void @_omp_reduction_list_to_global_reduce_func
-// NVPTX: call void @llvm.memcpy{{.*}}(ptr {{.*}}, ptr {{.*}}, i64 {{[0-9]+}}, i1 false)
-// NVPTX: getelementptr {{.*}} ptr {{%.*}}, i32 0, i32 0
-// NVPTX: store ptr {{%.*}}, ptr
+// No longer emitted: __kmpc_gpu_xteam_reduce_nowait does not take the
+// list-to-global reduce callback, so createReductionsGPU stops emitting it.
+// NVPTX-NOT: define internal void @_omp_reduction_list_to_global_reduce_func
 
 // NVPTX-LABEL: define internal void @_omp_reduction_global_to_list_copy_func
 // NVPTX: call void @llvm.memcpy{{.*}}(ptr {{.*}}, ptr {{.*}}, i64 {{[0-9]+}}, i1 false)

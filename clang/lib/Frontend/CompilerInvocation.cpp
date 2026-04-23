@@ -3891,7 +3891,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fopenmp_cuda_blocks_per_sm_EQ,
                 Twine(Opts.OpenMPCUDABlocksPerSM));
 
-  if (Opts.OpenMPCUDAReductionBufNum != 1024)
+  if (Opts.OpenMPCUDAReductionBufNum)
     GenerateArg(Consumer, OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
                 Twine(Opts.OpenMPCUDAReductionBufNum));
 

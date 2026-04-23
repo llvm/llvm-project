@@ -2728,6 +2728,12 @@ public:
     SmallVector<int32_t, 3> MaxThreads = {-1};
     int32_t MinThreads = 1;
     int32_t ReductionDataSize = 0;
+    /// New codegen should leave the reduction buffer length as 0, which signals
+    /// the offload plugin to size the buffer from the actual number of teams at
+    /// launch (NumBlocks[0]). A non-zero value is treated by the plugin as a
+    /// compile-time upper bound on the number of teams; it is only emitted by
+    /// older compilers and kept here to preserve backwards compatibility with
+    /// ConfigurationEnvironmentTy (see offload/include/Shared/Environment.h).
     int32_t ReductionBufferLength = 0;
   };
 
@@ -3411,9 +3417,12 @@ public:
   ///        for teams reduction.
   /// \param TeamsReductionBufferLength The number of elements (each of up to
   ///        \p TeamsReductionDataSize size), in the teams reduction buffer.
+  ///        A value of 0 means the buffer length is unknown at compile time;
+  ///        in that case the offload plugin sizes the buffer at launch to
+  ///        match the actual number of teams.
   LLVM_ABI void createTargetDeinit(const LocationDescription &Loc,
                                    int32_t TeamsReductionDataSize = 0,
-                                   int32_t TeamsReductionBufferLength = 1024);
+                                   int32_t TeamsReductionBufferLength = 0);
 
   ///}
 

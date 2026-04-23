@@ -58,6 +58,10 @@ struct ConfigurationEnvironmentTy {
   int32_t MinTeams = -1;
   int32_t MaxTeams = -1;
   int32_t ReductionDataSize = 0;
+  // Reserved slot; new codegen writes 0 (plugin sizes the teams-reduction
+  // buffer from NumBlocks[0] at launch), but a non-zero value from older
+  // binaries is still honored as a compile-time upper bound on the number
+  // of teams.
   int32_t ReductionBufferLength = 0;
   //}
 };
@@ -85,8 +89,7 @@ enum class DynCGroupMemFallbackType : uint8_t {
 struct KernelLaunchEnvironmentTy {
   void *ReductionBuffer = nullptr;
   void *DynCGroupMemFbPtr = nullptr;
-  uint32_t ReductionCnt = 0;
-  uint32_t ReductionIterCnt = 0;
+  uint32_t ReductionTeamsDone = 0;
   uint32_t DynCGroupMemSize = 0;
   DynCGroupMemFallbackType DynCGroupMemFb = DynCGroupMemFallbackType::None;
 };

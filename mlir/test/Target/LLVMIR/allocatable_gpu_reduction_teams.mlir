@@ -82,18 +82,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 // CHECK:   store float %[[ALLOC_VAL]], ptr %[[GLOB_ELEM_PTR]], align 4
 // CHECK: }
 
-// CHECK: define internal void @_omp_reduction_list_to_global_reduce_func({{.*}}) {{.*}} {
-// Allocate a descriptor to manage the element retrieved from the globalized local array.
-// CHECK:   %[[ALLOC_DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, align 8, addrspace(5)
-// CHECK:   %[[ALLOC_DESC_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[ALLOC_DESC]] to ptr
-
-// CHECK:   %[[RED_ARR_LIST:.*]] = getelementptr inbounds [1 x ptr], ptr %{{.*}}, i64 0, i64 0
-// CHECK:   %[[GLOB_ELEM_PTR:.*]] = getelementptr inbounds %[[GLOBALIZED_LOCALS]], ptr %{{.*}}, i32 0, i32 0
-// CHECK:   %[[ALLOC_PTR_PTR:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8 }, ptr %[[ALLOC_DESC_ASCAST]], i32 0, i32 0
-// Store the pointer to the gloalized local element into the locally allocated descriptor.
-// CHECK:   store ptr %[[GLOB_ELEM_PTR]], ptr %[[ALLOC_PTR_PTR]], align 8
-// CHECK:   store ptr %[[ALLOC_DESC_ASCAST]], ptr %[[RED_ARR_LIST]], align 8
-// CHECK: }
+// Note: the _omp_reduction_list_to_global_reduce_func helper is intentionally
+// no longer emitted by OpenMPIRBuilder::createReductionsGPU after the move to
+// __kmpc_gpu_xteam_reduce_nowait, which does not take that callback.
+// CHECK-NOT: define internal void @_omp_reduction_list_to_global_reduce_func
 
 // CHECK: define internal void @_omp_reduction_global_to_list_copy_func({{.*}}) {{.*}} {
 // CHECK:   %[[RED_ARR_LIST:.*]] = getelementptr inbounds [1 x ptr], ptr %{{.*}}, i64 0, i64 0

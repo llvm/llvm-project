@@ -788,8 +788,12 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
           ? 0
           : DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
+  // The teams-reduction buffer is sized at kernel launch by the offload
+  // plugin to match the actual number of teams, so we always pass 0 as the
+  // buffer length (signal for dynamic sizing) regardless of any value
+  // supplied via the deprecated -fopenmp-cuda-teams-reduction-recs-num flag.
   OMPBuilder.createTargetDeinit(Bld, ReductionDataSize,
-                                C.getLangOpts().OpenMPCUDAReductionBufNum);
+                                /*TeamsReductionBufferLength=*/0);
   TeamsReductions.clear();
 }
 
@@ -1698,8 +1702,6 @@ void CGOpenMPRuntimeGPU::emitReduction(
   bool ParallelReduction = isOpenMPParallelDirective(Options.ReductionKind);
   bool TeamsReduction = isOpenMPTeamsDirective(Options.ReductionKind);
 
-  ASTContext &C = CGM.getContext();
-
   if (Options.SimpleReduction) {
     assert(!TeamsReduction && !ParallelReduction &&
            "Invalid reduction selection in emitReduction.");
@@ -1790,12 +1792,14 @@ void CGOpenMPRuntimeGPU::emitReduction(
     Idx++;
   }
 
+  // ReductionBufNum is unused by the current teams-reduction runtime; the
+  // buffer length is resolved at kernel launch by the offload plugin. Ignore
+  // the deprecated -fopenmp-cuda-teams-reduction-recs-num value here.
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
           OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, /*IsByRef=*/{}, false,
           TeamsReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
-          CGF.getTarget().getGridValue(),
-          C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
+          CGF.getTarget().getGridValue(), /*ReductionBufNum=*/0, RTLoc));
   CGF.Builder.restoreIP(AfterIP);
 }
 

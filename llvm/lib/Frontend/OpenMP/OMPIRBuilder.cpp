@@ -4660,18 +4660,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     CodeGenIP = Builder.saveIP();
     StructType *ReductionsBufferTy = StructType::create(
         Ctx, ReductionTypeArgs, "struct._globalized_locals_ty");
-    Function *RedFixedBufferFn = getOrCreateRuntimeFunctionPtr(
-        RuntimeFunction::OMPRTL___kmpc_reduction_get_fixed_buffer);
 
     Expected<Function *> LtGCFunc = emitListToGlobalCopyFunction(
         ReductionInfos, ReductionsBufferTy, FuncAttrs, IsByRef);
     if (!LtGCFunc)
       return LtGCFunc.takeError();
-
-    Expected<Function *> LtGRFunc = emitListToGlobalReduceFunction(
-        ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs, IsByRef);
-    if (!LtGRFunc)
-      return LtGRFunc.takeError();
 
     Expected<Function *> GtLCFunc = emitGlobalToListCopyFunction(
         ReductionInfos, ReductionsBufferTy, FuncAttrs, IsByRef);
@@ -4685,23 +4678,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
     Builder.restoreIP(CodeGenIP);
 
-    Value *KernelTeamsReductionPtr = createRuntimeFunctionCall(
-        RedFixedBufferFn, {}, "_openmp_teams_reductions_buffer_$_$ptr");
-
-    Value *Args3[] = {SrcLocInfo,
-                      KernelTeamsReductionPtr,
-                      Builder.getInt32(ReductionBufNum),
-                      ReductionDataSize,
-                      RL,
-                      *SarFunc,
-                      WcFunc,
-                      *LtGCFunc,
-                      *LtGRFunc,
-                      *GtLCFunc,
-                      *GtLRFunc};
+    Value *Args3[] = {SrcLocInfo, RL,        *SarFunc, WcFunc,
+                      *LtGCFunc,  *GtLCFunc, *GtLRFunc};
 
     Function *TeamsReduceFn = getOrCreateRuntimeFunctionPtr(
-        RuntimeFunction::OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2);
+        RuntimeFunction::OMPRTL___kmpc_gpu_xteam_reduce_nowait);
     Res = createRuntimeFunctionCall(TeamsReduceFn, Args3);
   }
 
@@ -8270,7 +8251,10 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
 
   createRuntimeFunctionCall(Fn, {});
 
-  if (!TeamsReductionBufferLength || !TeamsReductionDataSize)
+  // A zero-valued TeamsReductionBufferLength is legal: it signals the plugin
+  // to size the teams-reduction buffer dynamically from the actual number of
+  // teams at launch. The reduction data size, however, is required.
+  if (!TeamsReductionDataSize)
     return;
 
   Function *Kernel = Builder.GetInsertBlock()->getParent();

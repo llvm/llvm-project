@@ -242,12 +242,6 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
                                                void *reduce_data,
                                                ShuffleReductFnTy shflFct,
                                                InterWarpCopyFnTy cpyFct);
-
-int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
-    IdentTy *Loc, void *GlobalBuffer, uint32_t num_of_records,
-    uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
-    InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
-    ListGlobalFnTy glcpyFct, ListGlobalFnTy glredFct);
 ///}
 
 /// Synchronization
