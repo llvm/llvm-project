@@ -10,7 +10,7 @@ constructor/representer in `setup_yaml_parser` before loading or printing any sc
 
 import abc
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, Optional, Union
 import yaml
 from dex.dextIR.ValueIR import ValueIR
 from dex.utils.Exceptions import Error
@@ -50,11 +50,11 @@ class Where:
     """
 
     def __init__(self, attributes: dict):
-        self.file: str | None = attributes.pop("file", None)
-        self.function: list[str] | str | None = attributes.pop("function", None)
-        self.lines: int | DexRange | None = attributes.pop("lines", None)
-        self.after_hit_count: int | None = attributes.pop("after_hit_count", None)
-        self.for_hit_count: int | None = attributes.pop("for_hit_count", None)
+        self.file: Optional[str] = attributes.pop("file", None)
+        self.function: Union[list[str], str, None] = attributes.pop("function", None)
+        self.lines: Union[int, DexRange, None] = attributes.pop("lines", None)
+        self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
+        self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
         self.conditions: dict = attributes.pop("conditions", None)
         if attributes:
             raise DexterNodeError(
@@ -77,7 +77,7 @@ class Where:
         ]
         return f"Where(" + ", ".join(elts) + ")"
 
-    def get_attrs(self) -> dict[str, Any]:
+    def get_attrs(self) -> Dict[str, Any]:
         return {
             "file": self.file,
             "function": self.function,
@@ -126,7 +126,7 @@ class Expect:
     """
 
     @staticmethod
-    def get_variable_result(value: ValueIR) -> str | None:
+    def get_variable_result(value: ValueIR) -> Optional[str]:
         """For Expects that extract actual results from ValueIR, this method returns that result from the given value,
         excluding any subvalues (i.e. struct members), or None if there is no valid result for this ValueIR.
         """
@@ -142,7 +142,7 @@ class Value(Expect):
         self.actual_values = None
 
     @staticmethod
-    def get_variable_result(value: ValueIR) -> str | None:
+    def get_variable_result(value: ValueIR) -> Optional[str]:
         if value.could_evaluate and not (
             value.is_irretrievable or value.is_optimized_away
         ):

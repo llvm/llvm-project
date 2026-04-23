@@ -11,7 +11,7 @@ results.
 
 from pathlib import PurePath
 import os
-from typing import Any, Callable
+from typing import Any, Callable, Optional, Set, Union
 import yaml
 
 from dex.test_script.Nodes import (
@@ -37,9 +37,9 @@ class Scope:
 
     def __init__(
         self,
-        file: str | None = None,
-        where: Where | None = None,
-        parent_scope: "Scope | None" = None,
+        file: Union[str, None] = None,
+        where: Union[Where, None] = None,
+        parent_scope: "Union[Scope, None]" = None,
     ):
         """Can be initialized with either a file for the default Scope, or with the properties of a Where
         for any script-nested Scope.
@@ -110,8 +110,8 @@ class DexterScript:
     # Any visitor function provided may return a truthy value to abort the visit and return that value.
     def visit_script(
         self,
-        visit_where: Callable[[Where, Scope], Any] | None = None,
-        visit_expect: Callable[[Expect, Any, Scope], Any] | None = None,
+        visit_where: Optional[Callable[[Where, Scope], Any]] = None,
+        visit_expect: Optional[Callable[[Expect, Any, Scope], Any]] = None,
     ) -> Any:
         """Visits all nodes in the script in pre-order traversal, calling any non-none provided visitor functions for
         each respective node type. Note that we do not visit expected values independently of their associated expect;
@@ -124,7 +124,7 @@ class DexterScript:
         )
 
     @property
-    def root_wheres(self) -> set[Where]:
+    def root_wheres(self) -> Set[Where]:
         return set(node for node in self.script_obj if isinstance(node, Where))
 
     def dump(self) -> str:
@@ -142,7 +142,7 @@ def try_load_yaml(yaml_doc, loader, line_offset=0):
     except yaml.MarkedYAMLError as e:
         # MarkedYAMLError is an error with a 'Mark' pointing to the location of the error; this helper function applies
         # our line offset to the provided mark if it is present.
-        def adjust_mark_loc(mark: yaml.Mark | None) -> yaml.Mark | None:
+        def adjust_mark_loc(mark: Optional[yaml.Mark]) -> Optional[yaml.Mark]:
             if mark is None:
                 return None
             return yaml.Mark(
