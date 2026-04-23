@@ -24,3 +24,15 @@ define <vscale x 4 x float> @fneg_scalable(float %x) {
   %v = fneg <vscale x 4 x float> %x.insert
   ret <vscale x 4 x float> %v
 }
+
+define <vscale x 4 x float> @fneg_scalable_fast(float %x) {
+; CHECK-LABEL: define <vscale x 4 x float> @fneg_scalable_fast(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = fneg fast float [[X]]
+; CHECK-NEXT:    [[V:%.*]] = insertelement <vscale x 4 x float> poison, float [[V_SCALAR]], i64 0
+; CHECK-NEXT:    ret <vscale x 4 x float> [[V]]
+;
+  %x.insert = insertelement <vscale x 4 x float> poison, float %x, i32 0
+  %v = fneg fast <vscale x 4 x float> %x.insert
+  ret <vscale x 4 x float> %v
+}

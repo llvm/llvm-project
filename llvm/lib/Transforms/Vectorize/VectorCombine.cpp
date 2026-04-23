@@ -159,7 +159,9 @@ private:
   Value *createBinaryOp(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
                         BinaryOperator *OldI);
   Value *createUnaryOp(Instruction::UnaryOps Opcode, Value *Operand,
-                       Instruction &OldI);
+                       UnaryOperator *OldI);
+  Value *createCmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                   CmpInst *OldI);
 
   void replaceValue(Instruction &Old, Value &New, bool Erase = true) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -1287,11 +1289,11 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
 }
 
 Value *VectorCombine::createUnaryOp(Instruction::UnaryOps Opcode,
-                                    Value *Operand, Instruction &OldI) {
+                                    Value *Operand, UnaryOperator *OldI) {
   switch (Opcode) {
   case Instruction::FNeg:
-    return Builder.CreateFNegFMF(Operand, &OldI,
-                                 OldI.getName() + ".scalar.fneg");
+    return Builder.CreateFNegFMF(Operand, OldI,
+                                 OldI->getName() + ".scalar.fneg");
   case Instruction::UnaryOpsEnd:
     llvm_unreachable("Invalid unary opcode");
   }
@@ -1350,6 +1352,14 @@ Value *VectorCombine::createBinaryOp(Instruction::BinaryOps Opcode, Value *LHS,
     llvm_unreachable("Invalid binary opcode");
   }
   llvm_unreachable("Invalid binary opcode");
+}
+
+Value *VectorCombine::createCmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                                CmpInst *OldI) {
+  if (FCmpInst *FC = dyn_cast<FCmpInst>(OldI))
+    return Builder.CreateFCmpFMF(Pred, LHS, RHS, FC);
+
+  return Builder.CreateCmp(Pred, LHS, RHS);
 }
 
 /// Match a vector op/compare/intrinsic with at least one
@@ -1505,9 +1515,9 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
 
   Value *Scalar;
   if (CI)
-    Scalar = Builder.CreateCmp(CI->getPredicate(), ScalarOps[0], ScalarOps[1]);
+    Scalar = createCmp(CI->getPredicate(), ScalarOps[0], ScalarOps[1], CI);
   else if (UO)
-    Scalar = createUnaryOp(UO->getOpcode(), ScalarOps[0], I);
+    Scalar = createUnaryOp(UO->getOpcode(), ScalarOps[0], UO);
   else if (BO)
     Scalar = createBinaryOp(BO->getOpcode(), ScalarOps[0], ScalarOps[1], BO);
   else
