@@ -1131,12 +1131,13 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
       if (IVUsedInOriginalCmp) {
         ICmpInst::Predicate Pred = OrigCmp->getPredicate();
 
-        // Don't keep flags if the predicate sign was changed by SimplifyIndvar.
-        // The samesign flag indicates the predicate was originally signed but
-        // was canonicalized to unsigned (e.g., slt -> samesign ult).
+        // If the original comparison was signed, SCEV proved NSW is safe.
+        KeepNSW = ICmpInst::isSigned(Pred);
+        // Don't keep nuw flag if the predicate sign was changed by
+        // SimplifyIndvar. The samesign flag indicates the predicate was
+        // originally signed but was canonicalized to unsigned (e.g., slt ->
+        // samesign ult).
         if (!OrigCmp->hasSameSign()) {
-          // If the original comparison was signed, SCEV proved NSW is safe.
-          KeepNSW = ICmpInst::isSigned(Pred);
           // If the original comparison was unsigned, SCEV proved NUW is safe.
           KeepNUW = ICmpInst::isUnsigned(Pred);
         }
