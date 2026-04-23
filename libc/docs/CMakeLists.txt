@@ -50,6 +50,7 @@ if (SPHINX_FOUND)
       fcntl
       fenv
       float
+      ftw
       glob
       inttypes
       locale

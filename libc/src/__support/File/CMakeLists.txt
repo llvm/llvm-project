@@ -35,6 +35,15 @@ add_object_library(
     libc.src.__support.threads.mutex
 )
 
+add_header_library(
+  scoped_dir
+  HDRS
+    scoped_dir.h
+  DEPENDS
+    .dir
+    libc.src.__support.macros.config
+)
+
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   return()
 endif()

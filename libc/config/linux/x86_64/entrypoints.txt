@@ -33,6 +33,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
+    # ftw.h entrypoints
+    libc.src.ftw.ftw
+    libc.src.ftw.nftw
+
     # poll.h entrypoints
     libc.src.poll.poll
 

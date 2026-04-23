@@ -58,6 +58,15 @@ add_proxy_header_library(
 
 add_header_library(fcntl_overlay HDRS fcntl_overlay.h)
 add_proxy_header_library(
+  ftw_macros
+  HDRS
+    ftw_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.ftw
+    libc.include.llvm-libc-macros.ftw_macros
+)
+
+add_proxy_header_library(
   fcntl_macros
   HDRS
     fcntl_macros.h

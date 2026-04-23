@@ -67,6 +67,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  ftw_macros
+  HDR
+    ftw-macros.h
+)
+
+add_macro_header(
   fcntl_macros
   HDR
     fcntl-macros.h
