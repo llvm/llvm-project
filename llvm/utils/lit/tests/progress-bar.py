@@ -12,7 +12,7 @@
 # CHECK-NEXT: FAIL: progress-bar :: test-3.txt (3 of 4)
 # CHECK-NEXT: Testing:
 # CHECK-NEXT: FAIL: progress-bar :: test-4.txt (4 of 4)
-# CHECK-NEXT: Testing:
+# CHECK-NEXT: Testing:  0.. 10.. 20.. 30.. 40.. 50.. 60.. 70.. 80.. 90..
 # CHECK-NEXT: ********************
 # CHECK-NEXT: Failed Tests (4):
 # CHECK-NEXT:   progress-bar :: test-1.txt
