@@ -12,6 +12,11 @@
 ; RUN:   -mtriple powerpc64-ibm-aix-xcoff -mattr=+no-inline-glue < %s | \
 ; RUN:   FileCheck --check-prefix=MIR64 %s
 
+; RUN: not llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-unknown-linux \
+; RUN:   -mattr=+no-inline-glue 2>&1 < %s | FileCheck --check-prefix=ERROR %s
+
+; ERROR: no-inline-glue feature is only supported on AIX
+
 @a = dso_local global i32 55, align 4
 @d = dso_local local_unnamed_addr global double 3.141590e+00, align 8
 @fp = dso_local local_unnamed_addr global ptr null, align 8
