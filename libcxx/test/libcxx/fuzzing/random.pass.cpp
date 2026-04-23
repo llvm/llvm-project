@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11
 
-// Missing lgamma_r
-// XFAIL: LLVM-LIBC-FIXME
-
 #include <cassert>
 #include <cmath>
 #include <cstddef>
