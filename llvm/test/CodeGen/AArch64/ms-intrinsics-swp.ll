@@ -81,3 +81,39 @@ define i64 @test_swpa64(ptr %p, i64 %v) {
   %r = call i64 @llvm.aarch64.swpa64(ptr %p, i64 %v)
   ret i64 %r
 }
+
+define i32 @test_swpl8(ptr %p, i32 %v) {
+; CHECK-LABEL: test_swpl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    swplb w1, w0, [x0]
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.swpl8(ptr %p, i32 %v)
+  ret i32 %r
+}
+
+define i32 @test_swpl16(ptr %p, i32 %v) {
+; CHECK-LABEL: test_swpl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    swplh w1, w0, [x0]
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.swpl16(ptr %p, i32 %v)
+  ret i32 %r
+}
+
+define i32 @test_swpl32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_swpl32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    swpl w1, w0, [x0]
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.swpl32(ptr %p, i32 %v)
+  ret i32 %r
+}
+
+define i64 @test_swpl64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_swpl64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    swpl x1, x0, [x0]
+; CHECK-NEXT:    ret
+  %r = call i64 @llvm.aarch64.swpl64(ptr %p, i64 %v)
+  ret i64 %r
+}
