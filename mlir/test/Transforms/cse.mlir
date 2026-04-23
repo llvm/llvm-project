@@ -477,8 +477,8 @@ func.func @failing_issue_59135(%arg0: tensor<2x2xi1>, %arg1: f32, %arg2 : tensor
   return %9, %15 : tensor<2xi1>, tensor<2xi1>
 }
 // CHECK-LABEL: func @failing_issue_59135
-//       CHECK:   %[[OP:.+]] = test.cse_of_single_block_op
 //       CHECK:   %[[TRUE:.+]] = arith.constant true
+//       CHECK:   %[[OP:.+]] = test.cse_of_single_block_op
 //       CHECK:     test.region_yield %[[TRUE]]
 //       CHECK:   return %[[OP]], %[[OP]]
 
