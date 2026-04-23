@@ -34,6 +34,23 @@ def int_aarch64_stlxp : Intrinsic<[llvm_i32_ty],
 
 def int_aarch64_clrex : Intrinsic<[], [llvm_i32_ty]>;
 
+// CAS intrinsics — emit CAS* (no acquire/release) directly, regardless of the
+// LSE target feature. CAS{H,b} comparand/value use i32; CAS{X}uses i64.
+// IntrWillReturn is intentionally omitted: on a target without LSE the encoding
+// is UNDEFINED and may trap, so these calls are not guaranteed to return.
+def int_aarch64_cas8  : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_cas16 : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_cas32 : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_cas64 : Intrinsic<[llvm_i64_ty],
+                                  [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+                                  [IntrNoFree]>;
+
 def int_aarch64_sdiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
                                 LLVMMatchType<0>], [IntrNoMem]>;
 def int_aarch64_udiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,

@@ -567,6 +567,25 @@ let Predicates = [HasLSFE] in {
   defm : LDBFPOPregister_patterns<"LDBFMIN",   "atomic_load_fminimum">;
 }
 
+// Unconditional patterns for the __cas* MSVC builtins to emit CAS* regardless
+// of the LSE subtarget feature.  cas{b,h} use only the low bits of the
+// comparison register, so the zero extension masking emitted by CodeGen
+// (zext i8/i16 -> i32 -> 'and w,w,#mask') is redundant.
+def : Pat<(i32 (int_aarch64_cas8  GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 255)),   (and GPR32:$Rt, (i32 255)))),
+          (CASB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_cas8  GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_cas16 GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 65535)), (and GPR32:$Rt, (i32 65535)))),
+          (CASH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_cas16 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_cas32 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASW_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_cas64 GPR64sp:$Rn, GPR64:$Rs, GPR64:$Rt)),
+          (CASX_cg GPR64:$Rs, GPR64:$Rt, GPR64sp:$Rn)>;
+
 // v8.9a/v9.4a FEAT_LRCPC patterns
 let Predicates = [HasRCPC3, HasNEON] in {
   // LDAP1 loads

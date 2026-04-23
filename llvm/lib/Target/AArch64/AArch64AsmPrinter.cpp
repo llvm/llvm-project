@@ -3137,6 +3137,25 @@ void AArch64AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 #endif
 }
 
+// The codegen-only CAS* "_cg" instructions are emitted by the MSVC __cas*
+// intrinsics regardless of the active -march, so they carry no LSE predicate.
+// When we emit textual assembly (-S/-save-temps) the assembler would otherwise
+// reject them, so bracket each with a .arch_extension directive enabling the
+// required feature. Returns the extension name ("lse") and the feature
+// controlling it, or an empty name for any other opcode.
+static std::pair<StringRef, unsigned>
+getCodeGenOnlyAtomicArchExtension(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return {StringRef(), 0};
+  case AArch64::CASB_cg:
+  case AArch64::CASH_cg:
+  case AArch64::CASW_cg:
+  case AArch64::CASX_cg:
+    return {"lse", AArch64::FeatureLSE};
+  }
+}
+
 void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   AArch64_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
 
@@ -3818,10 +3837,24 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
     return;
 
+  // Codegen-only CAS*/SWP*/LDAPR* instructions are emitted without an LSE/RCPC
+  // predicate. When producing assembly, enable the needed extension around the
+  // instruction so the assembler accepts it. Skip this if the active subtarget
+  // already has the feature, otherwise the trailing "no" directive would
+  // wrongly disable it for the rest of the function.
+  auto [ArchExt, ArchExtFeature] =
+      getCodeGenOnlyAtomicArchExtension(MI->getOpcode());
+  bool ToggleArchExt = !ArchExt.empty() && !STI->hasFeature(ArchExtFeature);
+  if (ToggleArchExt)
+    TS->emitDirectiveArchExtension(ArchExt);
+
   // Finally, do the automated lowerings for everything else.
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
   EmitToStreamer(*OutStreamer, TmpInst);
+
+  if (ToggleArchExt)
+    TS->emitDirectiveArchExtension((Twine("no") + ArchExt).str());
 }
 
 void AArch64AsmPrinter::recordIfImportCall(
