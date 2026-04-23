@@ -13,7 +13,6 @@
 
 // mbrtoc16 not defined.
 // XFAIL: LIBCXX-PICOLIBC-FIXME
-// XFAIL: LLVM-LIBC-FIXME
 
 // <uchar.h>
 

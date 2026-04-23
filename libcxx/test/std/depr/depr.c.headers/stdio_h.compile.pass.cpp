@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Missing some functions/macros.
-// XFAIL: LLVM-LIBC-FIXME
-
 // test <stdio.h>
 
 #include <stdio.h>
