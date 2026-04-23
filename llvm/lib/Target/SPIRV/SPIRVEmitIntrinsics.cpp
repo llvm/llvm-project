@@ -1718,11 +1718,15 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
 
-  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
   LLVMContext &Ctx = CurrF->getContext();
-
-  Constant *TyC = UndefValue::get(IA->getFunctionType());
-  MDString *ConstraintString = MDString::get(Ctx, IA->getConstraintString());
+  // TODO: this does not retain elementtype info for memory constraints, which
+  //       in turn means that we lower them into pointers to i8, rather than
+  //       pointers to elementtype; this can be fixed during reverse translation
+  //       but we should correct it here, possibly by tweaking the function
+  //       type to take TypedPointerType args.
+  Constant *TyC = UndefValue::get(SPIRV::getOriginalFunctionType(Call));
+  MDString *ConstraintString =
+      MDString::get(Ctx, SPIRV::getOriginalAsmConstraints(Call));
   SmallVector<Value *> Args = {
       buildMD(TyC),
       MetadataAsValue::get(Ctx, MDNode::get(Ctx, ConstraintString))};
@@ -2604,6 +2608,28 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
     B.CreateIntrinsic(Intrinsic::spv_assign_fpmaxerror_decoration,
                       {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
+  }
+  if (I->getModule()->getTargetTriple().getVendor() == Triple::AMD &&
+      isa<AtomicRMWInst>(I)) {
+    // If present, we encode AMDGPU atomic metadata as UserSemantic string
+    // decorations, which will be parsed during reverse translation.
+    auto &Ctx = B.getContext();
+    auto *US = ConstantAsMetadata::get(
+        ConstantInt::get(B.getInt32Ty(), SPIRV::Decoration::UserSemantic));
+
+    SmallVector<Metadata *> MDs;
+    if (I->hasMetadata("amdgpu.no.fine.grained.memory"))
+      MDs.push_back(MDNode::get(
+          Ctx, {US, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
+    if (I->hasMetadata("amdgpu.no.remote.memory"))
+      MDs.push_back(MDNode::get(
+          Ctx, {US, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
+    if (I->hasMetadata("amdgpu.ignore.denormal.mode"))
+      MDs.push_back(MDNode::get(
+          Ctx, {US, MDString::get(Ctx, "amdgpu.ignore.denormal.mode")}));
+    if (!MDs.empty())
+      B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
+                        {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
   }
 }
 
