@@ -59,7 +59,6 @@ constexpr bool test() {
   std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
   using Iter = std::vector<int>::iterator;
-  using Diff = Iter::difference_type;
 
   auto begin    = vec.begin();
   auto end      = vec.end();
