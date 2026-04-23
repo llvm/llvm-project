@@ -298,20 +298,19 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 }
 
 void CSEDriver::pruneDeadOps(Operation *root, ScopedMapTy &knownValues) {
-  SmallVector<Operation *> worklist;
-  worklist.push_back(root);
+  // We use `SetVector` to prevent already inserted ops from being added to the
+  // `worklist` repeatedly, avoiding secondary access to erased operations.
+  llvm::SetVector<Operation *> worklist;
+  worklist.insert(root);
   while (!worklist.empty()) {
     Operation *op = worklist.front();
     worklist.erase(worklist.begin());
     if (!isOpTriviallyDead(op))
       continue;
 
-    // We use a set to filter operands, ensuring the returned operands are
-    // unique.
-    for (Value arg : llvm::SmallDenseSet<Value>(op->getOperands().begin(),
-                                                op->getOperands().end()))
+    for (Value arg : op->getOperands())
       if (Operation *argOp = arg.getDefiningOp())
-        worklist.push_back(argOp);
+        worklist.insert(argOp);
 
     // Since the root op is not inserted into the ScopedHashMap, do not undo
     // its previous insertion.
