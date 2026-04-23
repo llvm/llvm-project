@@ -24,7 +24,6 @@
 
 #include "hexagon_types.h"
 #include "lib_func_attrib.h"
-#pragma once
 #include <ripple_hvx.h>
 #ifdef __cplusplus
 extern "C" {

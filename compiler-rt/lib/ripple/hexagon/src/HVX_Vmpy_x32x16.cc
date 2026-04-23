@@ -23,7 +23,6 @@
 #include <hexagon_protos.h>
 #include <hexagon_types.h>
 #include <ripple/zip.h>
-#pragma once
 #include <ripple_hvx.h>
 #ifdef __cplusplus
 extern "C" {

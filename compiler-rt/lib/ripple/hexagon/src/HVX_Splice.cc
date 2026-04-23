@@ -12,20 +12,21 @@
 #include <hexagon_protos.h>
 #include <ripple_hvx.h>
 
-// _______________________________ splice / lsplice ______________________________
+// _______________________________ splice / lsplice
+// ______________________________
 
 extern "C" {
 
-#define __decl_hvx_splice(N, T, SHIFT) \
-  __attribute__((used, always_inline, weak)) v##N##T \
-  ripple_pure_hvx_splice_##T(v##N##T lo, v##N##T hi, size_t start) { \
-    return Q6_V_valign_VVR(hi, lo, (start) << SHIFT); \
+#define __decl_hvx_splice(N, T, SHIFT)                                         \
+  RIPPLE_INTRIN_INLINE                                                         \
+  v##N##T ripple_pure_hvx_splice_##T(v##N##T lo, v##N##T hi, int start) {      \
+    return Q6_V_valign_VVR(hi, lo, start << (SHIFT));                          \
   }
 
-#define __decl_hvx_lsplice(N, T, SHIFT) \
-  __attribute__((used, always_inline, weak)) v##N##T \
-  ripple_pure_hvx_lsplice_##T(v##N##T lo, v##N##T hi, size_t start) { \
-    return Q6_V_vlalign_VVR(hi, lo, (start) << SHIFT); \
+#define __decl_hvx_lsplice(N, T, SHIFT)                                        \
+  RIPPLE_INTRIN_INLINE                                                         \
+  v##N##T ripple_pure_hvx_lsplice_##T(v##N##T lo, v##N##T hi, int start) {     \
+    return Q6_V_vlalign_VVR(hi, lo, start << (SHIFT));                         \
   }
 
 __decl_hvx_splice(128, i8, 0);
