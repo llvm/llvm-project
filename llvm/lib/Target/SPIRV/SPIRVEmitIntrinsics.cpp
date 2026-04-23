@@ -1718,11 +1718,15 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
 
-  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
   LLVMContext &Ctx = CurrF->getContext();
-
-  Constant *TyC = UndefValue::get(IA->getFunctionType());
-  MDString *ConstraintString = MDString::get(Ctx, IA->getConstraintString());
+  // TODO: this does not retain elementtype info for memory constraints, which
+  //       in turn means that we lower them into pointers to i8, rather than
+  //       pointers to elementtype; this can be fixed during reverse translation
+  //       but we should correct it here, possibly by tweaking the function
+  //       type to take TypedPointerType args.
+  Constant *TyC = UndefValue::get(SPIRV::getOriginalFunctionType(Call));
+  MDString *ConstraintString =
+      MDString::get(Ctx, SPIRV::getOriginalAsmConstraints(Call));
   SmallVector<Value *> Args = {
       buildMD(TyC),
       MetadataAsValue::get(Ctx, MDNode::get(Ctx, ConstraintString))};
