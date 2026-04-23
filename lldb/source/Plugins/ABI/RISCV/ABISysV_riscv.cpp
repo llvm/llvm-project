@@ -91,7 +91,7 @@ static const std::array<RegisterInfo, 33> g_register_infos = {
      DEFINE_GENERIC_REGISTER_STUB(ra, nullptr, LLDB_REGNUM_GENERIC_RA),
      DEFINE_GENERIC_REGISTER_STUB(sp, nullptr, LLDB_REGNUM_GENERIC_SP),
      DEFINE_REGISTER_STUB(gp, nullptr),
-     DEFINE_REGISTER_STUB(tp, nullptr),
+     DEFINE_GENERIC_REGISTER_STUB(tp, nullptr, LLDB_REGNUM_GENERIC_TP),
      DEFINE_REGISTER_STUB(t0, nullptr),
      DEFINE_REGISTER_STUB(t1, nullptr),
      DEFINE_REGISTER_STUB(t2, nullptr),
@@ -642,19 +642,14 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
                                           value, ConstString(""));
   }
   // Floating point return type.
-  else if (type_flags & eTypeIsFloat) {
-    uint32_t float_count = 0;
-    bool is_complex = false;
-
-    if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
-        float_count == 1 && !is_complex) {
-      const uint32_t arch_fp_flags =
-          arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
-      return_valobj_sp = GetValObjFromFPRegs(
-          thread, reg_ctx, machine, arch_fp_flags, type_flags, byte_size);
-      return return_valobj_sp;
-    }
+  else if (compiler_type.IsRealFloatingPointType()) {
+    const uint32_t arch_fp_flags =
+        arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
+    return_valobj_sp = GetValObjFromFPRegs(
+        thread, reg_ctx, machine, arch_fp_flags, type_flags, byte_size);
+    return return_valobj_sp;
   }
+
   // Unsupported return type.
   return return_valobj_sp;
 }
@@ -736,6 +731,8 @@ UnwindPlanSP ABISysV_riscv::CreateFunctionEntryUnwindPlan() {
   plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("riscv function-entry unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+
   return plan_sp;
 }
 
@@ -762,6 +759,8 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   plan_sp->SetSourceName("riscv default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+
   return plan_sp;
 }
 
@@ -799,6 +798,8 @@ bool ABISysV_riscv::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
           .Cases({"f8", "f9", "f18", "f19", "f20", "f21", "f22", "f23"},
                  is_hw_fp)
           .Cases({"f24", "f25", "f26", "f27"}, is_hw_fp)
+          // vlenb is constant and needed for vector unwinding.
+          .Case("vlenb", true)
           .Default(false);
 
   return is_callee_saved;
@@ -816,9 +817,10 @@ void ABISysV_riscv::Terminate() {
 static uint32_t GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Cases("ra", "x1", LLDB_REGNUM_GENERIC_RA)
-      .Cases("sp", "x2", LLDB_REGNUM_GENERIC_SP)
-      .Cases("fp", "s0", LLDB_REGNUM_GENERIC_FP)
+      .Cases({"ra", "x1"}, LLDB_REGNUM_GENERIC_RA)
+      .Cases({"sp", "x2"}, LLDB_REGNUM_GENERIC_SP)
+      .Cases({"fp", "s0"}, LLDB_REGNUM_GENERIC_FP)
+      .Cases({"tp", "x4"}, LLDB_REGNUM_GENERIC_TP)
       .Case("a0", LLDB_REGNUM_GENERIC_ARG1)
       .Case("a1", LLDB_REGNUM_GENERIC_ARG2)
       .Case("a2", LLDB_REGNUM_GENERIC_ARG3)

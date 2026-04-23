@@ -101,7 +101,7 @@ std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
   return findAttributeInfo(DIE, AbbrevDecl, *Index);
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static void printLE64(const std::string &S) {
   for (uint32_t I = 0, Size = S.size(); I < Size; ++I) {
     errs() << Twine::utohexstr(S[I]);
@@ -1174,7 +1174,7 @@ static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,
                                          MCDwarfLineStr &LineStr,
                                          BinaryContext &BC) {
   DataExtractor StrData(LineStrSection.getContents(),
-                        BC.DwCtx->isLittleEndian(), 0);
+                        BC.DwCtx->isLittleEndian());
   uint64_t Offset = 0;
   while (StrData.isValidOffset(Offset)) {
     const uint64_t StrOffset = Offset;

@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s modernize-use-nullptr %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-nullptr.NullMacros: 'MY_NULL,NULL'}}"
 
-#define NULL 0
+#include <cstddef>
 
 namespace std {
 

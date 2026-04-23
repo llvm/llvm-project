@@ -377,7 +377,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "    ddddddddddddd> {\n"
                "}");
 
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   Style.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   verifyFormat("@interface eeeeeeeeeeeee () <\n"
                "    eeeeeeeeeeeee,\n"
@@ -411,7 +411,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "+ (id)init;\n"
                "@end");
   Style.ColumnLimit = 40;
-  // BinPackParameters should be BPPS_BinPack by default.
+  // PackParameters.BinPack should be BPPS_BinPack by default.
   verifyFormat("void eeeeeeee(int eeeee, int eeeee,\n"
                "              int eeeee, int eeeee);");
   // ObjCBinPackProtocolList should be BPS_Never by default.
@@ -876,6 +876,32 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
   verifyFormat("aaaaaa = [aa aa:aa\n"
                "             aa:aa];");
 
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  // When the method name and parameters are on their own lines, their positions
+  // only depend on the continuation indentation configuration, not where the
+  // square bracket is. Thus they should not move with the square bracket in the
+  // alignment step.
+  verifyFormat("aaaaaa = [aa aa:aa\n"
+               "             aa:aa];\n"
+               "a      = [a //\n"
+               "    aaaaaaa:aa];");
+  verifyFormat("aaaaaa = [aa aa:aa\n"
+               "             aa:aa];\n"
+               "aaaaa  = [a //\n"
+               "          a:aa\n"
+               "    aaaaaaa:aa];");
+  // When the method name is on the same line as the square bracket, the
+  // positions of the parameters depend on where the square bracket is. Thus
+  // they should move with the square bracket in the alignment step.
+  verifyFormat("aaaaa  = [a aa:aa\n"
+               "            aa:aa];\n"
+               "aaaaaa = [aa aa:aa\n"
+               "             aa:aa];\n"
+               "aaaaa  = [a aa:aa\n"
+               "    aaaaaaaaaa:aa];");
+
+  Style.AlignConsecutiveAssignments.Enabled = false;
+
   // Message receiver taking multiple lines.
   // Non-corner case.
   verifyFormat("[[object block:^{\n"
@@ -949,6 +975,12 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "[aaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "    aaaaaaaaaaaaaaaaa:aaaaaaaa\n"
       "                  aaa:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa];");
+  verifyFormat("[objectName\n"
+               "    respondsToSelector:\n"
+               "        @selector(\n"
+               "            somelonglonglonglongnameeeeeeee:\n"
+               "            loooooooooanotherlonglonglonglongnametopush:\n"
+               "            otherlongnameforlimit:)];");
 
   Style = getChromiumStyle(FormatStyle::LK_ObjC);
   Style.ColumnLimit = 80;

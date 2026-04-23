@@ -365,8 +365,9 @@ def Math_ClampFOp : Math_FloatTernaryOp<"clampf"> {
 
     The semantics of the operation are described by:
     ```
-      clampf(value, min, max) = maxf(minf(value, min), max)
+      clampf(value, min, max) = maxf(minf(value, max), min)
     ```
+    If `min > max` the resulting value is poison.
 
     Example:
 
@@ -994,6 +995,7 @@ def Math_RsqrtOp : Math_FloatUnaryOp<"rsqrt"> {
     %a = math.rsqrt %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

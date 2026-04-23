@@ -1,0 +1,45 @@
+# REQUIRES: lld, target-windows
+
+# Test that LLDB can show variables introduced in C++ 17 structured bindings
+# when compiled with clang-cl.
+
+# RUN: split-file %s %t
+
+# RUN: %build --compiler=clang-cl --arch=64 --std=c++17 --nodefaultlib -o %t.exe -- %t/main.cpp
+# RUN: lldb-test symbols %t.exe | FileCheck %s --check-prefix=SYMBOLS
+# RUN: %lldb -f %t.exe -s %t/commands.input | FileCheck %s --check-prefix=LLDB
+
+#--- main.cpp
+
+struct Foo { int a; int b; };
+
+int main() {
+    Foo f{1, 2};
+
+    auto&[a, b] = f;
+    return a + b; // break here
+}
+
+#--- commands.input
+
+br set -p "break here"
+r
+v f
+v a
+v b
+q
+
+# SYMBOLS:      Function{{.*}}, demangled = main, type =
+# SYMBOLS-NEXT: Block{{.*}}, ranges = 
+# SYMBOLS-DAG:   Variable{{.*}}, name = "f", type = {{.*}} (Foo), scope = local, location =
+# SYMBOLS-DAG:   Variable{{.*}}, name = "a", type = {{.*}} (int), scope = local, location = 0x00000000:
+# SYMBOLS-NEXT:     [{{.*}}): DW_OP_breg{{.*}}, DW_OP_deref, DW_OP_consts +0, DW_OP_plus
+# SYMBOLS-DAG:   Variable{{.*}}, name = "b", type = {{.*}} (int), scope = local, location = 0x00000000:
+# SYMBOLS-NEXT:     [{{.*}}): DW_OP_breg{{.*}}, DW_OP_deref, DW_OP_consts {{[+-][0-9]+}}, DW_OP_plus
+
+# LLDB:      (lldb) v f
+# LLDB-NEXT: (Foo) f = (a = 1, b = 2)
+# LLDB-NEXT: (lldb) v a
+# LLDB-NEXT: (int) a = 1
+# LLDB-NEXT: (lldb) v b
+# LLDB-NEXT: (int) b = 2

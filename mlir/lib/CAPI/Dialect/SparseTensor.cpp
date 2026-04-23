@@ -62,6 +62,10 @@ MlirAttribute mlirSparseTensorEncodingAttrGet(
       crdWidth, unwrap(explicitVal), unwrap(implicitVal)));
 }
 
+MlirStringRef mlirSparseTensorEncodingAttrGetName(void) {
+  return wrap(SparseTensorEncodingAttr::name);
+}
+
 MlirAffineMap mlirSparseTensorEncodingAttrGetDimToLvl(MlirAttribute attr) {
   return wrap(cast<SparseTensorEncodingAttr>(unwrap(attr)).getDimToLvl());
 }

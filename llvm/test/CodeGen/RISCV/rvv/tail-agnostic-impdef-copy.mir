@@ -19,11 +19,7 @@
     ret <vscale x 8 x i64> %load
   }
 
-  ; Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
-  declare <vscale x 8 x i64> @llvm.masked.load.nxv8i64.p0(ptr, i32 immarg, <vscale x 8 x i1>, <vscale x 8 x i64>) #1
-
   attributes #0 = { nounwind "target-features"="+v" }
-  attributes #1 = { argmemonly nofree nosync nounwind readonly willreturn "target-features"="+v" }
 
 ...
 ---
@@ -54,7 +50,7 @@ body:             |
     ; CHECK-NEXT: $v0 = COPY [[COPY]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vrm8nov0 = COPY [[DEF]]
-    ; CHECK-NEXT: [[PseudoVLE64_V_M8_MASK:%[0-9]+]]:vrm8nov0 = PseudoVLE64_V_M8_MASK [[COPY2]], [[COPY1]], $v0, -1, 6 /* e64 */, 1 /* ta, mu */ :: (load (s512) from %ir.a, align 8)
+    ; CHECK-NEXT: [[PseudoVLE64_V_M8_MASK:%[0-9]+]]:vrm8nov0 = PseudoVLE64_V_M8_MASK [[COPY2]], [[COPY1]], $v0, -1 /* vl=VLMAX */, 6 /* e64 */, 1 /* ta, mu */ :: (load (s512) from %ir.a, align 8)
     ; CHECK-NEXT: $v8m8 = COPY [[PseudoVLE64_V_M8_MASK]]
     ; CHECK-NEXT: PseudoRET implicit $v8m8
     %1:vr = COPY $v0

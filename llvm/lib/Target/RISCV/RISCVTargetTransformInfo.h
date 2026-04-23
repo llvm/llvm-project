@@ -58,6 +58,10 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                           TTI::TargetCostKind CostKind) const;
 
+  // Return the cost of generating a PC relative address
+  InstructionCost
+  getStaticDataAddrGenerationCost(const TTI::TargetCostKind CostKind) const;
+
   /// Return the cost of accessing a constant pool entry of the specified
   /// type.
   InstructionCost getConstantPoolLoadCost(Type *Ty,
@@ -104,21 +108,23 @@ public:
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind) const override;
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool supportsScalableVectors() const override {
-    return ST->hasVInstructions();
+    // VLEN=32 support is incomplete.
+    return ST->hasVInstructions() &&
+           (ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock);
   }
   bool enableOrderedReductions() const override { return true; }
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();
   }
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override {
     return ST->hasVInstructions();
   }
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }
@@ -134,7 +140,7 @@ public:
 
   bool preferAlternateOpcodeVectorization() const override;
 
-  bool preferEpilogueVectorization() const override {
+  bool preferEpilogueVectorization(ElementCount Iters) const override {
     // Epilogue vectorization is usually unprofitable - tail folding or
     // a smaller VF would have been better.  This a blunt hammer - we
     // should re-examine this once vectorization is better tuned.
@@ -144,9 +150,11 @@ public:
   bool shouldConsiderVectorizationRegPressure() const override { return true; }
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
-                        TTI::TargetCostKind CostKind) const override;
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override;
+
+  InstructionCost getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                        TTI::TargetCostKind CostKind) const;
 
   InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
@@ -173,10 +181,13 @@ public:
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
-  InstructionCost getScalarizationOverhead(
-      VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const override;
+  InstructionCost
+  getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
+                           bool Insert, bool Extract,
+                           TTI::TargetCostKind CostKind,
+                           bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                           TTI::VectorInstrContext VIC =
+                               TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
@@ -191,22 +202,15 @@ public:
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
 
-  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override;
+  InstructionCost getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                         TTI::TargetCostKind CostKind) const;
 
   InstructionCost
-  getExpandCompressMemoryOpCost(unsigned Opcode, Type *Src, bool VariableMask,
-                                Align Alignment, TTI::TargetCostKind CostKind,
-                                const Instruction *I = nullptr) const override;
+  getExpandCompressMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                TTI::TargetCostKind CostKind) const;
 
-  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override;
+  InstructionCost getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                         TTI::TargetCostKind CostKind) const;
 
   InstructionCost
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const override;
@@ -219,6 +223,11 @@ public:
   InstructionCost
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
                          TTI::TargetCostKind CostKind) const override;
+
+  std::optional<InstructionCost> getCombinedArithmeticInstructionCost(
+      unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
+      ArrayRef<const Value *> Args, const Instruction *CxtI) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
@@ -247,10 +256,11 @@ public:
                                  const Instruction *I = nullptr) const override;
 
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
@@ -286,11 +296,13 @@ public:
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned /*AddressSpace*/) const override {
+                         unsigned /*AddressSpace*/,
+                         TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned /*AddressSpace*/) const override {
+                          unsigned /*AddressSpace*/,
+                          TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
@@ -352,20 +364,61 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment) const override;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override {
-    return TLI->isVScaleKnownToBeAPowerOfTwo();
-  }
-
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const override {
     using VPLegalization = TargetTransformInfo::VPLegalization;
+    static const Intrinsic::ID Supported[] = {
+        Intrinsic::experimental_vp_strided_load,
+        Intrinsic::experimental_vp_strided_store,
+        Intrinsic::experimental_vp_reverse,
+        Intrinsic::experimental_vp_splice,
+        Intrinsic::vp_add,
+        Intrinsic::vp_ashr,
+        Intrinsic::vp_cttz_elts,
+        Intrinsic::vp_fptrunc,
+        Intrinsic::vp_gather,
+        Intrinsic::vp_icmp,
+        Intrinsic::vp_is_fpclass,
+        Intrinsic::vp_load,
+        Intrinsic::vp_load_ff,
+        Intrinsic::vp_lshr,
+        Intrinsic::vp_merge,
+        Intrinsic::vp_mul,
+        Intrinsic::vp_reduce_add,
+        Intrinsic::vp_reduce_and,
+        Intrinsic::vp_reduce_fadd,
+        Intrinsic::vp_reduce_fmax,
+        Intrinsic::vp_reduce_fmaximum,
+        Intrinsic::vp_reduce_fmin,
+        Intrinsic::vp_reduce_fminimum,
+        Intrinsic::vp_reduce_fmul,
+        Intrinsic::vp_reduce_mul,
+        Intrinsic::vp_reduce_or,
+        Intrinsic::vp_reduce_smax,
+        Intrinsic::vp_reduce_smin,
+        Intrinsic::vp_reduce_umax,
+        Intrinsic::vp_reduce_umin,
+        Intrinsic::vp_reduce_xor,
+        Intrinsic::vp_scatter,
+        Intrinsic::vp_sdiv,
+        Intrinsic::vp_select,
+        Intrinsic::vp_sext,
+        Intrinsic::vp_shl,
+        Intrinsic::vp_srem,
+        Intrinsic::vp_store,
+        Intrinsic::vp_sub,
+        Intrinsic::vp_trunc,
+        Intrinsic::vp_udiv,
+        Intrinsic::vp_urem,
+        Intrinsic::vp_zext};
     if (!ST->hasVInstructions() ||
         (PI.getIntrinsicID() == Intrinsic::vp_reduce_mul &&
          cast<VectorType>(PI.getArgOperand(1)->getType())
                  ->getElementType()
-                 ->getIntegerBitWidth() != 1))
+                 ->getIntegerBitWidth() != 1) ||
+        !is_contained(Supported, PI.getIntrinsicID()))
       return VPLegalization(VPLegalization::Discard, VPLegalization::Convert);
     return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
   }
@@ -392,6 +445,7 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FindLast:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:
@@ -495,6 +549,19 @@ public:
 
   TTI::MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
+
+  bool enableSelectOptimize() const override {
+    return ST->enableSelectOptimize();
+  }
+
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) const override;
+
+  bool
+  shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
+                                       const Attribute &Attr) const override;
+
+  std::optional<Instruction *>
+  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
 };
 
 } // end namespace llvm

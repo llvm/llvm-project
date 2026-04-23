@@ -26,8 +26,7 @@ class StreamGDBRemote : public StreamString {
 public:
   StreamGDBRemote();
 
-  StreamGDBRemote(uint32_t flags, uint32_t addr_size,
-                  lldb::ByteOrder byte_order);
+  StreamGDBRemote(uint32_t flags, lldb::ByteOrder byte_order);
 
   ~StreamGDBRemote() override;
 

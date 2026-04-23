@@ -885,3 +885,73 @@ define void @minmax_minmax_xy_maxmin_yx(double %x, double %y, ptr %minnum_res, p
   store double %final_maximumnum, ptr %maximumnum_res
   ret void
 }
+
+;###############################################################
+;#            Constant Expression Vector Tests                 #
+;###############################################################
+; Test that minmax intrinsics with constant expression vectors don't crash
+; when getAggregateElement returns null for certain constant expressions.
+; These tests cover various scenarios where getAggregateElement() fails:
+; - Bitcast from mismatched vector element counts
+; - Bitcast from integer to float vectors
+; - Bitcast from i64 with different element boundaries
+
+; Test with bitcast from <1 x i32> to <2 x half> (element count mismatch)
+define <2 x half> @minmax_bitcast_v2f16_minnum(<2 x half> %x) {
+; CHECK-LABEL: @minmax_bitcast_v2f16_minnum(
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x half> @llvm.minnum.v2f16(<2 x half> [[X:%.*]], <2 x half> bitcast (<1 x i32> splat (i32 1078530011) to <2 x half>))
+; CHECK-NEXT:    ret <2 x half> [[RESULT]]
+;
+  %result = call <2 x half> @llvm.minnum.v2f16(<2 x half> %x, <2 x half> bitcast (<1 x i32> <i32 1078530011> to <2 x half>))
+  ret <2 x half> %result
+}
+
+; Test with bitcast from <2 x i32> to <4 x half> (different element boundaries)
+define <4 x half> @minmax_bitcast_v4f16_maxnum(<4 x half> %x) {
+; CHECK-LABEL: @minmax_bitcast_v4f16_maxnum(
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x half> @llvm.maxnum.v4f16(<4 x half> [[X:%.*]], <4 x half> bitcast (<2 x i32> <i32 1078530011, i32 1073741824> to <4 x half>))
+; CHECK-NEXT:    ret <4 x half> [[RESULT]]
+;
+  %result = call <4 x half> @llvm.maxnum.v4f16(<4 x half> %x, <4 x half> bitcast (<2 x i32> <i32 1078530011, i32 1073741824> to <4 x half>))
+  ret <4 x half> %result
+}
+
+; Test with bitcast from <1 x i64> to <2 x float> (scalar to vector bitcast)
+define <2 x float> @minmax_bitcast_v2f32_minimum(<2 x float> %x) {
+; CHECK-LABEL: @minmax_bitcast_v2f32_minimum(
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X:%.*]], <2 x float> bitcast (<1 x i64> splat (i64 4638564619268087808) to <2 x float>))
+; CHECK-NEXT:    ret <2 x float> [[RESULT]]
+;
+  %result = call <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> bitcast (<1 x i64> <i64 4638564619268087808> to <2 x float>))
+  ret <2 x float> %result
+}
+
+; Test with bitcast from <1 x double> to <4 x half> (type size mismatch)
+define <4 x half> @minmax_bitcast_v4f16_maximum(<4 x half> %x) {
+; CHECK-LABEL: @minmax_bitcast_v4f16_maximum(
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x half> @llvm.maximum.v4f16(<4 x half> [[X:%.*]], <4 x half> bitcast (<1 x double> splat (double 0x400921FB54442D18) to <4 x half>))
+; CHECK-NEXT:    ret <4 x half> [[RESULT]]
+;
+  %result = call <4 x half> @llvm.maximum.v4f16(<4 x half> %x, <4 x half> bitcast (<1 x double> <double 0x400921FB54442D18> to <4 x half>))
+  ret <4 x half> %result
+}
+
+; Test with bitcast from <2 x i16> to <2 x half> (integer to float)
+define <2 x half> @minmax_bitcast_v2f16_minimumnum(<2 x half> %x) {
+; CHECK-LABEL: @minmax_bitcast_v2f16_minimumnum(
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> [[X:%.*]], <2 x half> <half 0xH3F80, half 0xH3F00>)
+; CHECK-NEXT:    ret <2 x half> [[RESULT]]
+;
+  %result = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> %x, <2 x half> bitcast (<2 x i16> <i16 16256, i16 16128> to <2 x half>))
+  ret <2 x half> %result
+}
+
+; Test with bitcast from <4 x i16> to <4 x half> (matching element count but getAggregateElement may fail)
+define <4 x half> @minmax_bitcast_v4f16_maximumnum(<4 x half> %x) {
+; CHECK-LABEL: @minmax_bitcast_v4f16_maximumnum(
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x half> @llvm.maximumnum.v4f16(<4 x half> [[X:%.*]], <4 x half> <half 0xH3C00, half 0xH3F00, half 0xH3F80, half 0xH4000>)
+; CHECK-NEXT:    ret <4 x half> [[RESULT]]
+;
+  %result = call <4 x half> @llvm.maximumnum.v4f16(<4 x half> %x, <4 x half> bitcast (<4 x i16> <i16 15360, i16 16128, i16 16256, i16 16384> to <4 x half>))
+  ret <4 x half> %result
+}

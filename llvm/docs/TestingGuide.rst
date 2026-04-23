@@ -9,7 +9,6 @@ LLVM Testing Infrastructure Guide
    :hidden:
 
    TestSuiteGuide
-   TestSuiteMakefileGuide
 
 Overview
 ========
@@ -327,6 +326,9 @@ assertions:
 
   update_test_checks.py
   opt
+
+  update_llubi_test_checks.py
+  llubi
 
 Precommit workflow for tests
 ----------------------------

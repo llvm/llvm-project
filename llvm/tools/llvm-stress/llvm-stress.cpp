@@ -40,7 +40,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -444,7 +443,8 @@ struct ConstModifier: public Modifier {
       case 4:
       case 5:
       case 6:
-        PT->push_back(ConstantInt::get(Ty, getRandom()));
+        PT->push_back(ConstantInt::get(Ty, getRandom(), /*IsSigned=*/false,
+                                       /*ImplicitTrunc=*/true));
       }
     }
   }
@@ -709,7 +709,7 @@ static void IntroduceControlFlow(Function *F, Random &R) {
     BasicBlock *Next = Curr->splitBasicBlock(Loc, "CF");
     Instr->moveBefore(Curr->getTerminator()->getIterator());
     if (Curr != &F->getEntryBlock()) {
-      BranchInst::Create(Curr, Next, Instr,
+      CondBrInst::Create(Instr, Curr, Next,
                          Curr->getTerminator()->getIterator());
       Curr->getTerminator()->eraseFromParent();
     }

@@ -4,7 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare <vscale x 1 x i1> @llvm.experimental.constrained.fcmp.nxv1f16(<vscale x 1 x half>, <vscale x 1 x half>, metadata, metadata)
 define <vscale x 1 x i1> @fcmp_oeq_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv1f16:
 ; CHECK:       # %bb.0:
@@ -637,7 +636,6 @@ define <vscale x 1 x i1> @fcmp_uno_fv_nxv1f16(<vscale x 1 x half> %va, half %b) 
   ret <vscale x 1 x i1> %1
 }
 
-declare <vscale x 2 x i1> @llvm.experimental.constrained.fcmp.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>, metadata, metadata)
 define <vscale x 2 x i1> @fcmp_oeq_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv2f16:
 ; CHECK:       # %bb.0:
@@ -1270,7 +1268,6 @@ define <vscale x 2 x i1> @fcmp_uno_fv_nxv2f16(<vscale x 2 x half> %va, half %b) 
   ret <vscale x 2 x i1> %1
 }
 
-declare <vscale x 4 x i1> @llvm.experimental.constrained.fcmp.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>, metadata, metadata)
 define <vscale x 4 x i1> @fcmp_oeq_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv4f16:
 ; CHECK:       # %bb.0:
@@ -1903,7 +1900,6 @@ define <vscale x 4 x i1> @fcmp_uno_fv_nxv4f16(<vscale x 4 x half> %va, half %b) 
   ret <vscale x 4 x i1> %1
 }
 
-declare <vscale x 8 x i1> @llvm.experimental.constrained.fcmp.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, metadata, metadata)
 define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv8f16:
 ; CHECK:       # %bb.0:
@@ -2578,7 +2574,6 @@ define <vscale x 8 x i1> @fcmp_uno_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %1
 }
 
-declare <vscale x 16 x i1> @llvm.experimental.constrained.fcmp.nxv16f16(<vscale x 16 x half>, <vscale x 16 x half>, metadata, metadata)
 define <vscale x 16 x i1> @fcmp_oeq_vv_nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv16f16:
 ; CHECK:       # %bb.0:
@@ -3253,7 +3248,6 @@ define <vscale x 16 x i1> @fcmp_uno_fv_nxv16f16(<vscale x 16 x half> %va, half %
   ret <vscale x 16 x i1> %1
 }
 
-declare <vscale x 32 x i1> @llvm.experimental.constrained.fcmp.nxv32f16(<vscale x 32 x half>, <vscale x 32 x half>, metadata, metadata)
 define <vscale x 32 x i1> @fcmp_oeq_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv32f16:
 ; CHECK:       # %bb.0:
@@ -3928,7 +3922,6 @@ define <vscale x 32 x i1> @fcmp_uno_fv_nxv32f16(<vscale x 32 x half> %va, half %
   ret <vscale x 32 x i1> %1
 }
 
-declare <vscale x 1 x i1> @llvm.experimental.constrained.fcmp.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>, metadata, metadata)
 define <vscale x 1 x i1> @fcmp_oeq_vv_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv1f32:
 ; CHECK:       # %bb.0:
@@ -4561,7 +4554,6 @@ define <vscale x 1 x i1> @fcmp_uno_fv_nxv1f32(<vscale x 1 x float> %va, float %b
   ret <vscale x 1 x i1> %1
 }
 
-declare <vscale x 2 x i1> @llvm.experimental.constrained.fcmp.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, metadata, metadata)
 define <vscale x 2 x i1> @fcmp_oeq_vv_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv2f32:
 ; CHECK:       # %bb.0:
@@ -5194,7 +5186,6 @@ define <vscale x 2 x i1> @fcmp_uno_fv_nxv2f32(<vscale x 2 x float> %va, float %b
   ret <vscale x 2 x i1> %1
 }
 
-declare <vscale x 4 x i1> @llvm.experimental.constrained.fcmp.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, metadata, metadata)
 define <vscale x 4 x i1> @fcmp_oeq_vv_nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv4f32:
 ; CHECK:       # %bb.0:
@@ -5869,7 +5860,6 @@ define <vscale x 4 x i1> @fcmp_uno_fv_nxv4f32(<vscale x 4 x float> %va, float %b
   ret <vscale x 4 x i1> %1
 }
 
-declare <vscale x 8 x i1> @llvm.experimental.constrained.fcmp.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float>, metadata, metadata)
 define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv8f32:
 ; CHECK:       # %bb.0:
@@ -6544,7 +6534,6 @@ define <vscale x 8 x i1> @fcmp_uno_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %1
 }
 
-declare <vscale x 16 x i1> @llvm.experimental.constrained.fcmp.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>, metadata, metadata)
 define <vscale x 16 x i1> @fcmp_oeq_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv16f32:
 ; CHECK:       # %bb.0:
@@ -7219,7 +7208,6 @@ define <vscale x 16 x i1> @fcmp_uno_fv_nxv16f32(<vscale x 16 x float> %va, float
   ret <vscale x 16 x i1> %1
 }
 
-declare <vscale x 1 x i1> @llvm.experimental.constrained.fcmp.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, metadata, metadata)
 define <vscale x 1 x i1> @fcmp_oeq_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv1f64:
 ; CHECK:       # %bb.0:
@@ -7852,7 +7840,6 @@ define <vscale x 1 x i1> @fcmp_uno_fv_nxv1f64(<vscale x 1 x double> %va, double 
   ret <vscale x 1 x i1> %1
 }
 
-declare <vscale x 2 x i1> @llvm.experimental.constrained.fcmp.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, metadata, metadata)
 define <vscale x 2 x i1> @fcmp_oeq_vv_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv2f64:
 ; CHECK:       # %bb.0:
@@ -8527,7 +8514,6 @@ define <vscale x 2 x i1> @fcmp_uno_fv_nxv2f64(<vscale x 2 x double> %va, double 
   ret <vscale x 2 x i1> %1
 }
 
-declare <vscale x 4 x i1> @llvm.experimental.constrained.fcmp.nxv4f64(<vscale x 4 x double>, <vscale x 4 x double>, metadata, metadata)
 define <vscale x 4 x i1> @fcmp_oeq_vv_nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv4f64:
 ; CHECK:       # %bb.0:
@@ -9202,7 +9188,6 @@ define <vscale x 4 x i1> @fcmp_uno_fv_nxv4f64(<vscale x 4 x double> %va, double 
   ret <vscale x 4 x i1> %1
 }
 
-declare <vscale x 8 x i1> @llvm.experimental.constrained.fcmp.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>, metadata, metadata)
 define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) nounwind strictfp {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv8f64:
 ; CHECK:       # %bb.0:

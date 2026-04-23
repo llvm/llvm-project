@@ -16,8 +16,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -38,42 +40,66 @@ enum : unsigned {
   BTIMask = BTIC | BTIJ,
 };
 
-class AArch64BranchTargets : public MachineFunctionPass {
+class AArch64BranchTargetsImpl {
 public:
-  static char ID;
-  AArch64BranchTargets() : MachineFunctionPass(ID) {}
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  StringRef getPassName() const override { return AARCH64_BRANCH_TARGETS_NAME; }
+  bool run(MachineFunction &MF);
 
 private:
+  const AArch64Subtarget *Subtarget;
+
   void addBTI(MachineBasicBlock &MBB, bool CouldCall, bool CouldJump,
               bool NeedsWinCFI);
 };
 
+class AArch64BranchTargetsLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  AArch64BranchTargetsLegacy() : MachineFunctionPass(ID) {}
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  StringRef getPassName() const override { return AARCH64_BRANCH_TARGETS_NAME; }
+};
+
 } // end anonymous namespace
 
-char AArch64BranchTargets::ID = 0;
+char AArch64BranchTargetsLegacy::ID = 0;
 
-INITIALIZE_PASS(AArch64BranchTargets, "aarch64-branch-targets",
+INITIALIZE_PASS(AArch64BranchTargetsLegacy, "aarch64-branch-targets",
                 AARCH64_BRANCH_TARGETS_NAME, false, false)
 
-void AArch64BranchTargets::getAnalysisUsage(AnalysisUsage &AU) const {
+void AArch64BranchTargetsLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 FunctionPass *llvm::createAArch64BranchTargetsPass() {
-  return new AArch64BranchTargets();
+  return new AArch64BranchTargetsLegacy();
 }
 
-bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
+bool AArch64BranchTargetsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return AArch64BranchTargetsImpl().run(MF);
+}
+
+PreservedAnalyses
+AArch64BranchTargetsPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = AArch64BranchTargetsImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool AArch64BranchTargetsImpl::run(MachineFunction &MF) {
   if (!MF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
     return false;
 
   LLVM_DEBUG(dbgs() << "********** AArch64 Branch Targets  **********\n"
                     << "********** Function: " << MF.getName() << '\n');
   const Function &F = MF.getFunction();
+
+  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
 
   // LLVM does not consider basic blocks which are the targets of jump tables
   // to be address-taken (the address can't escape anywhere else), but they are
@@ -100,9 +126,8 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
     // a BTI, and pointing the indirect branch at that. For non-ELF targets we
     // can't rely on that, so we assume that `CouldCall` is _always_ true due
     // to the risk of long-branch thunks at link time.
-    if (&MBB == &*MF.begin() &&
-        (!MF.getSubtarget<AArch64Subtarget>().isTargetELF() ||
-         (F.hasAddressTaken() || !F.hasLocalLinkage())))
+    if (&MBB == &*MF.begin() && (!Subtarget->isTargetELF() ||
+                                 (F.hasAddressTaken() || !F.hasLocalLinkage())))
       CouldCall = true;
 
     // If the block itself is address-taken, it could be indirectly branched
@@ -126,22 +151,13 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
   return MadeChange;
 }
 
-void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
-                                  bool CouldJump, bool HasWinCFI) {
+void AArch64BranchTargetsImpl::addBTI(MachineBasicBlock &MBB, bool CouldCall,
+                                      bool CouldJump, bool HasWinCFI) {
   LLVM_DEBUG(dbgs() << "Adding BTI " << (CouldJump ? "j" : "")
                     << (CouldCall ? "c" : "") << " to " << MBB.getName()
                     << "\n");
 
-  const AArch64InstrInfo *TII = static_cast<const AArch64InstrInfo *>(
-      MBB.getParent()->getSubtarget().getInstrInfo());
-
-  unsigned HintNum = 32;
-  if (CouldCall)
-    HintNum |= 2;
-  if (CouldJump)
-    HintNum |= 4;
-  assert(HintNum != 32 && "No target kinds!");
-
+  unsigned HintNum = getBTIHintNum(CouldCall, CouldJump);
   auto MBBI = MBB.begin();
 
   // If the block starts with EH_LABEL(s), skip them first.
@@ -155,12 +171,15 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
        ++MBBI)
     ;
 
-  // SCTLR_EL1.BT[01] is set to 0 by default which means
-  // PACI[AB]SP are implicitly BTI C so no BTI C instruction is needed there.
+  // PACI[AB]SP are implicitly BTI c so insertion of a BTI can be skipped in
+  // this case. Depending on the runtime value of SCTLR_EL1.BT[01], they are not
+  // equivalent to a BTI jc, which still requires an additional BTI.
   if (MBBI != MBB.end() && ((HintNum & BTIMask) == BTIC) &&
       (MBBI->getOpcode() == AArch64::PACIASP ||
        MBBI->getOpcode() == AArch64::PACIBSP))
     return;
+
+  const AArch64InstrInfo *TII = Subtarget->getInstrInfo();
 
   // Insert BTI exactly at the first executable instruction.
   const DebugLoc DL = MBB.findDebugLoc(MBBI);

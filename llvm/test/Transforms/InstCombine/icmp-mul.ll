@@ -1093,8 +1093,7 @@ define i1 @mul_xy_z_assumenozero_ne(i8 %x, i8 %y, i8 %z) {
 
 define i1 @mul_xy_z_assumeodd_eq(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @mul_xy_z_assumeodd_eq(
-; CHECK-NEXT:    [[LB:%.*]] = and i8 [[Z:%.*]], 1
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[LB]], 0
+; CHECK-NEXT:    [[NZ:%.*]] = trunc i8 [[Z:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]

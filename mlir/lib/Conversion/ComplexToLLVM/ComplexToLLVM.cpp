@@ -96,7 +96,8 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<complex::ConstantOp> {
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::oneToOneRewrite(
         op, LLVM::ConstantOp::getOperationName(), adaptor.getOperands(),
-        op->getAttrs(), *getTypeConverter(), rewriter);
+        op->getAttrs(), /*propAttr=*/Attribute{}, *getTypeConverter(),
+        rewriter);
   }
 };
 
@@ -374,7 +375,9 @@ void ConvertComplexToLLVMPass::runOnOperation() {
 namespace {
 /// Implement the interface to convert MemRef to LLVM.
 struct ComplexToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  ComplexToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

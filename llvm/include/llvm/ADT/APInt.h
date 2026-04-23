@@ -77,7 +77,7 @@ inline APInt operator-(APInt);
 ///
 class [[nodiscard]] APInt {
 public:
-  typedef uint64_t WordType;
+  using WordType = uint64_t;
 
   /// Byte size of a word.
   static constexpr unsigned APINT_WORD_SIZE = sizeof(WordType);
@@ -154,6 +154,7 @@ public:
   /// Once all uses of this constructor are migrated to other constructors,
   /// consider marking this overload ""= delete" to prevent calls from being
   /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
+  [[deprecated("Use other constructors of APInt")]]
   LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
 
   /// Construct an APInt from a string representation.
@@ -442,7 +443,7 @@ public:
       assert(BitWidth && "zero width values not allowed");
       return isPowerOf2_64(U.VAL);
     }
-    return countPopulationSlowCase() == 1;
+    return isPowerOf2SlowCase();
   }
 
   /// Check if this APInt's negated value is a power of two greater than zero.
@@ -548,16 +549,22 @@ public:
   /// \returns the low "numBits" bits of this APInt.
   LLVM_ABI APInt getLoBits(unsigned numBits) const;
 
-  /// Determine if two APInts have the same value, after zero-extending
-  /// one of them (if needed!) to ensure that the bit-widths match.
-  static bool isSameValue(const APInt &I1, const APInt &I2) {
+  /// Determine if two APInts have the same value, after zero-extending or
+  /// sign-extending (if \p SignedCompare) one of them (if needed!) to ensure
+  /// that the bit-widths match.
+  static bool isSameValue(const APInt &I1, const APInt &I2,
+                          bool SignedCompare = false) {
     if (I1.getBitWidth() == I2.getBitWidth())
       return I1 == I2;
 
-    if (I1.getBitWidth() > I2.getBitWidth())
-      return I1 == I2.zext(I1.getBitWidth());
+    auto ZExtOrSExt = [SignedCompare](const APInt &I, unsigned BitWidth) {
+      return SignedCompare ? I.sext(BitWidth) : I.zext(BitWidth);
+    };
 
-    return I1.zext(I2.getBitWidth()) == I2;
+    if (I1.getBitWidth() > I2.getBitWidth())
+      return I1 == ZExtOrSExt(I2, I1.getBitWidth());
+
+    return ZExtOrSExt(I1, I2.getBitWidth()) == I2;
   }
 
   /// Overload to compute a hash_code for an APInt value.
@@ -1261,6 +1268,14 @@ public:
     return isSubsetOfSlowCase(RHS);
   }
 
+  /// This operation checks if all bits are set in either this or RHS.
+  bool isInverseOf(const APInt &RHS) const {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord())
+      return (U.VAL ^ RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
+    return isInverseOfSlowCase(RHS);
+  }
+
   /// @}
   /// \name Resizing Operators
   /// @{
@@ -1277,12 +1292,20 @@ public:
   /// the new bitwidth, then return truncated APInt. Else, return max value.
   LLVM_ABI APInt truncUSat(unsigned width) const;
 
-  /// Truncate to new width with signed saturation.
+  /// Truncate to new width with signed saturation to signed result.
   ///
   /// If this APInt, treated as signed integer, can be losslessly truncated to
   /// the new bitwidth, then return truncated APInt. Else, return either
   /// signed min value if the APInt was negative, or signed max value.
   LLVM_ABI APInt truncSSat(unsigned width) const;
+
+  /// Truncate to new width with signed saturation to unsigned result.
+  ///
+  /// If this APInt, treated as signed integer, can be losslessly truncated to
+  /// the new bitwidth, then return truncated APInt. Else, return either
+  /// zero if the APInt was negative, or unsigned max value.
+  /// If \p width matches the current bit width then no changes are made.
+  LLVM_ABI APInt truncSSatU(unsigned width) const;
 
   /// Sign extend to a new width.
   ///
@@ -2070,11 +2093,17 @@ private:
   /// out-of-line slow case for countPopulation
   LLVM_ABI unsigned countPopulationSlowCase() const LLVM_READONLY;
 
+  /// out-of-line slow case for isPowerOf2
+  LLVM_ABI bool isPowerOf2SlowCase() const LLVM_READONLY;
+
   /// out-of-line slow case for intersects.
   LLVM_ABI bool intersectsSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for isSubsetOf.
   LLVM_ABI bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
+
+  /// out-of-line slow case for isInverseOf.
+  LLVM_ABI bool isInverseOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for setBits.
   LLVM_ABI void setBitsSlowCase(unsigned loBit, unsigned hiBit);
@@ -2438,6 +2467,27 @@ LLVM_ABI APInt fshl(const APInt &Hi, const APInt &Lo, const APInt &Shift);
 /// (3) fshr(i8 0, i8 255, i8 8)  = 255 (0b11111111)
 /// (4) fshr(i8 255, i8 0, i8 9)  = fshr(i8 255, i8 0, i8 1) // 9 % 8
 LLVM_ABI APInt fshr(const APInt &Hi, const APInt &Lo, const APInt &Shift);
+
+/// Perform a carry-less multiply, also known as XOR multiplication, and return
+/// low-bits. All arguments and result have the same bitwidth.
+///
+/// Examples:
+/// (1) clmul(i4 1, i4 2)   = 2
+/// (2) clmul(i4 5, i4 6)   = 14
+/// (3) clmul(i4 -4, i4 2)  = -8
+/// (4) clmul(i4 -4, i4 -5) = 4
+LLVM_ABI APInt clmul(const APInt &LHS, const APInt &RHS);
+
+/// Perform a reversed carry-less multiply.
+///
+/// clmulr(a, b) = bitreverse(clmul(bitreverse(a), bitreverse(b)))
+LLVM_ABI APInt clmulr(const APInt &LHS, const APInt &RHS);
+
+/// Perform a carry-less multiply, and return high-bits. All arguments and
+/// result have the same bitwidth.
+///
+/// clmulh(a, b) = clmulr(a, b) >> 1
+LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 
 } // namespace APIntOps
 

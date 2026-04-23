@@ -236,6 +236,8 @@ public:
                 CommonChunk *c = nullptr)
       : DefinedCOFF(DefinedCommonKind, f, n, s), data(c), size(size) {
     this->isExternal = true;
+    if (c)
+      c->live = true;
   }
 
   static bool classof(const Symbol *s) {

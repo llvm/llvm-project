@@ -219,11 +219,16 @@ bool TBAANodeAttr::classof(Attribute attr) {
 MemoryEffectsAttr MemoryEffectsAttr::get(MLIRContext *context,
                                          ArrayRef<ModRefInfo> memInfoArgs) {
   if (memInfoArgs.empty())
-    return MemoryEffectsAttr::get(context, ModRefInfo::ModRef,
-                                  ModRefInfo::ModRef, ModRefInfo::ModRef);
-  if (memInfoArgs.size() == 3)
+    return MemoryEffectsAttr::get(context, /*other=*/ModRefInfo::ModRef,
+                                  /*argMem=*/ModRefInfo::ModRef,
+                                  /*inaccessibleMem=*/ModRefInfo::ModRef,
+                                  /*errnoMem=*/ModRefInfo::ModRef,
+                                  /*targetMem0=*/ModRefInfo::ModRef,
+                                  /*targetMem1=*/ModRefInfo::ModRef);
+  if (memInfoArgs.size() == 6)
     return MemoryEffectsAttr::get(context, memInfoArgs[0], memInfoArgs[1],
-                                  memInfoArgs[2]);
+                                  memInfoArgs[2], memInfoArgs[3],
+                                  memInfoArgs[4], memInfoArgs[5]);
   return {};
 }
 
@@ -233,6 +238,12 @@ bool MemoryEffectsAttr::isReadWrite() {
   if (this->getInaccessibleMem() != ModRefInfo::ModRef)
     return false;
   if (this->getOther() != ModRefInfo::ModRef)
+    return false;
+  if (this->getErrnoMem() != ModRefInfo::ModRef)
+    return false;
+  if (this->getTargetMem0() != ModRefInfo::ModRef)
+    return false;
+  if (this->getTargetMem1() != ModRefInfo::ModRef)
     return false;
   return true;
 }
@@ -317,6 +328,28 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
   return DICompositeTypeAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
                                   0, {}, {}, 0, {}, {}, DIFlags(), 0, 0, {}, {},
                                   {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
+// DICompileUnitAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface DICompileUnitAttr::withRecId(DistinctAttr recId) {
+  return DICompileUnitAttr::get(
+      getContext(), recId, getIsRecSelf(), getId(), getSourceLanguage(),
+      getFile(), getProducer(), getIsOptimized(), getEmissionKind(),
+      getIsDebugInfoForProfiling(), getNameTableKind(), getSplitDebugFilename(),
+      getImportedEntities());
+}
+
+DIRecursiveTypeAttrInterface DICompileUnitAttr::getRecSelf(DistinctAttr recId) {
+
+  return DICompileUnitAttr::get(
+      recId.getContext(), recId, /*isRecSelf=*/true, /*id=*/{},
+      /*sourceLanguage=*/0u, /*file=*/{}, /*producer=*/{},
+      /*isOptimized=*/false, DIEmissionKind::None,
+      /*isDebugInfoForProfiling=*/false, DINameTableKind::Default,
+      /*splitDebugFilename=*/{}, /*importedEntities=*/{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -520,7 +553,17 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (isa<IntegerAttr, StringAttr>(value))
     return success();
 
-  return emitError() << "only integer and string values are currently "
-                        "supported for unknown key '"
+  // Allow non-empty ArrayAttr of StringAttrs to represent MDTuples of
+  // MDStrings (e.g. the "riscv-isa" module flag). Integer values within
+  // MDTuples are not handled here because integer module flags are encoded as
+  // ConstantAsMetadata at the top level (not as MDTuples), so no known use
+  // case requires an array-of-integers representation.
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(value))
+    if (!arrayAttr.empty() &&
+        llvm::all_of(arrayAttr, [](Attribute a) { return isa<StringAttr>(a); }))
+      return success();
+
+  return emitError() << "only integer, string, and string-array values are "
+                        "currently supported for unknown key '"
                      << key << "'";
 }

@@ -90,3 +90,112 @@ for.end626:                                       ; preds = %for.cond616
 if.else629:                                       ; preds = %backtrack
   br label %retry
 }
+
+define void @tre_tnfa_run_backtrack_callbr(i1 %arg) {
+; CHECK-LABEL: @tre_tnfa_run_backtrack_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[RETRY:%.*]] []
+; CHECK:       retry:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG:%.*]])
+; CHECK-NEXT:            to label [[RETRY_TARGET_BACKTRACK:%.*]] [label %retry.target.while.body248]
+; CHECK:       while.body248:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
+; CHECK-NEXT:            to label [[IF_THEN250:%.*]] [label %if.end275]
+; CHECK:       if.then250:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[FOR_COND264:%.*]] []
+; CHECK:       for.cond264:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
+; CHECK-NEXT:            to label [[FOR_BODY267:%.*]] [label %backtrack]
+; CHECK:       for.body267:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[FOR_COND264]] []
+; CHECK:       if.end275:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[FOR_COND342:%.*]] []
+; CHECK:       for.cond342:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
+; CHECK-NEXT:            to label [[FOR_BODY345:%.*]] [label %for.end580]
+; CHECK:       for.body345:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[FOR_COND342]] []
+; CHECK:       for.end580:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[BACKTRACK:%.*]] []
+; CHECK:       backtrack:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
+; CHECK-NEXT:            to label [[IF_THEN595:%.*]] [label %if.else629]
+; CHECK:       if.then595:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[FOR_COND616:%.*]] []
+; CHECK:       for.cond616:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
+; CHECK-NEXT:            to label [[FOR_BODY619:%.*]] [label %for.end626]
+; CHECK:       for.body619:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[FOR_COND616]] []
+; CHECK:       for.end626:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[FOR_END626_TARGET_WHILE_BODY248:%.*]] []
+; CHECK:       if.else629:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[RETRY]] []
+; CHECK:       for.end626.target.while.body248:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       retry.target.backtrack:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       retry.target.while.body248:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_WHILE_BODY248:%.*]] = phi i1 [ true, [[FOR_END626_TARGET_WHILE_BODY248]] ], [ false, [[RETRY_TARGET_BACKTRACK]] ], [ true, [[RETRY_TARGET_WHILE_BODY248:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_WHILE_BODY248]], label [[WHILE_BODY248:%.*]], label [[BACKTRACK]]
+;
+entry:
+  callbr void asm "", ""() to label %retry []
+
+retry:
+  callbr void asm "", "r,!i"(i1 %arg) to label %backtrack [label %while.body248]
+
+while.body248:                                    ; preds = %for.end626, %retry
+  callbr void asm "", "r,!i"(i1 %arg) to label %if.then250 [label %if.end275]
+
+if.then250:                                       ; preds = %while.body248
+  callbr void asm "", ""() to label %for.cond264 []
+
+for.cond264:                                      ; preds = %for.body267, %if.then250
+  callbr void asm "", "r,!i"(i1 %arg) to label %for.body267 [label %backtrack]
+
+for.body267:                                      ; preds = %for.cond264
+  callbr void asm "", ""() to label %for.cond264 []
+
+if.end275:                                        ; preds = %while.body248
+  callbr void asm "", ""() to label %for.cond342 []
+
+for.cond342:                                      ; preds = %for.body345, %if.end275
+  callbr void asm "", "r,!i"(i1 %arg) to label %for.body345 [label %for.end580]
+
+for.body345:                                      ; preds = %for.cond342
+  callbr void asm "", ""() to label %for.cond342 []
+
+for.end580:                                       ; preds = %for.cond342
+  callbr void asm "", ""() to label %backtrack []
+
+backtrack:                                        ; preds = %for.end580, %for.cond264, %retry
+  callbr void asm "", "r,!i"(i1 %arg) to label %if.then595 [label %if.else629]
+
+if.then595:                                       ; preds = %backtrack
+  callbr void asm "", ""() to label %for.cond616 []
+
+for.cond616:                                      ; preds = %for.body619, %if.then595
+  callbr void asm "", "r,!i"(i1 %arg) to label %for.body619 [label %for.end626]
+
+for.body619:                                      ; preds = %for.cond616
+  callbr void asm "", ""() to label %for.cond616 []
+
+for.end626:                                       ; preds = %for.cond616
+  callbr void asm "", ""() to label %while.body248 []
+
+if.else629:                                       ; preds = %backtrack
+  callbr void asm "", ""() to label %retry []
+}

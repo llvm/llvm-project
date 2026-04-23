@@ -28,6 +28,15 @@ void RTDECL(CUFRegisterFunction)(
 void RTDECL(CUFRegisterVariable)(
     void **module, char *varSym, const char *varName, int64_t size);
 
+/// Register a managed variable.
+void RTDECL(CUFRegisterManagedVariable)(
+    void **module, void **varSym, char *varName, int64_t size);
+
+/// Initialize a CUDA module after all variables have been registered.
+/// Triggers the runtime to populate managed variable pointers with
+/// unified memory addresses.
+void RTDECL(CUFInitModule)(void **module);
+
 } // extern "C"
 
 } // namespace Fortran::runtime::cuda

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IdentifierLengthCheck.h"
+#include "../utils/DeclRefExprUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -21,6 +22,7 @@ const char DefaultIgnoredLoopCounterNames[] = "^[ijk_]$";
 const char DefaultIgnoredVariableNames[] = "";
 const char DefaultIgnoredExceptionVariableNames[] = "^[e]$";
 const char DefaultIgnoredParameterNames[] = "^[n]$";
+const unsigned DefaultLineCountThreshold = 0;
 
 const char ErrorMessage[] =
     "%select{variable|exception variable|loop variable|"
@@ -49,7 +51,9 @@ IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
       IgnoredExceptionVariableNames(IgnoredExceptionVariableNamesInput),
       IgnoredParameterNamesInput(
           Options.get("IgnoredParameterNames", DefaultIgnoredParameterNames)),
-      IgnoredParameterNames(IgnoredParameterNamesInput) {}
+      IgnoredParameterNames(IgnoredParameterNamesInput),
+      LineCountThreshold(
+          Options.get("LineCountThreshold", DefaultLineCountThreshold)) {}
 
 void IdentifierLengthCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MinimumVariableNameLength", MinimumVariableNameLength);
@@ -62,6 +66,7 @@ void IdentifierLengthCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoredExceptionVariableNames",
                 IgnoredExceptionVariableNamesInput);
   Options.store(Opts, "IgnoredParameterNames", IgnoredParameterNamesInput);
+  Options.store(Opts, "LineCountThreshold", LineCountThreshold);
 }
 
 void IdentifierLengthCheck::registerMatchers(MatchFinder *Finder) {
@@ -85,16 +90,55 @@ void IdentifierLengthCheck::registerMatchers(MatchFinder *Finder) {
         this);
 }
 
+static std::optional<unsigned> countLinesToLastUse(const VarDecl *Var,
+                                                   const SourceManager *SrcMgr,
+                                                   ASTContext *Ctx) {
+  const auto *ParentScope = llvm::dyn_cast<FunctionDecl>(Var->getDeclContext());
+  if (ParentScope == nullptr)
+    return std::nullopt;
+
+  auto AllRefs =
+      utils::decl_ref_expr::allDeclRefExprs(*Var, *ParentScope, *Ctx);
+
+  auto AllRefLines =
+      llvm::map_range(AllRefs, [&](const DeclRefExpr *RefToVar) -> unsigned {
+        return SrcMgr->getSpellingLineNumber(RefToVar->getLocation());
+      });
+
+  const unsigned DeclLine = SrcMgr->getSpellingLineNumber(Var->getLocation());
+  const unsigned LastUseLine =
+      AllRefLines.empty() ? DeclLine
+                          : std::max(DeclLine, *llvm::max_element(AllRefLines));
+
+  return LastUseLine - DeclLine + 1;
+}
+
+static bool isShortLived(const VarDecl *Var, const SourceManager *SrcMgr,
+                         ASTContext *Ctx, unsigned LineCountThreshold) {
+  if (LineCountThreshold == 0)
+    return false;
+
+  std::optional<unsigned> LineCount = countLinesToLastUse(Var, SrcMgr, Ctx);
+  if (LineCount && LineCount.value() <= LineCountThreshold)
+    return true;
+
+  return false;
+}
+
 void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *StandaloneVar = Result.Nodes.getNodeAs<VarDecl>("standaloneVar");
   if (StandaloneVar) {
     if (!StandaloneVar->getIdentifier())
       return;
 
-    StringRef VarName = StandaloneVar->getName();
+    const StringRef VarName = StandaloneVar->getName();
 
     if (VarName.size() >= MinimumVariableNameLength ||
         IgnoredVariableNames.match(VarName))
+      return;
+
+    if (isShortLived(StandaloneVar, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
       return;
 
     diag(StandaloneVar->getLocation(), ErrorMessage)
@@ -106,9 +150,13 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     if (!ExceptionVarName->getIdentifier())
       return;
 
-    StringRef VarName = ExceptionVarName->getName();
+    const StringRef VarName = ExceptionVarName->getName();
     if (VarName.size() >= MinimumExceptionNameLength ||
         IgnoredExceptionVariableNames.match(VarName))
+      return;
+
+    if (isShortLived(ExceptionVarName, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
       return;
 
     diag(ExceptionVarName->getLocation(), ErrorMessage)
@@ -120,10 +168,14 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     if (!LoopVar->getIdentifier())
       return;
 
-    StringRef VarName = LoopVar->getName();
+    const StringRef VarName = LoopVar->getName();
 
     if (VarName.size() >= MinimumLoopCounterNameLength ||
         IgnoredLoopCounterNames.match(VarName))
+      return;
+
+    if (isShortLived(LoopVar, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
       return;
 
     diag(LoopVar->getLocation(), ErrorMessage)
@@ -135,10 +187,14 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     if (!ParamVar->getIdentifier())
       return;
 
-    StringRef VarName = ParamVar->getName();
+    const StringRef VarName = ParamVar->getName();
 
     if (VarName.size() >= MinimumParameterNameLength ||
         IgnoredParameterNames.match(VarName))
+      return;
+
+    if (isShortLived(ParamVar, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
       return;
 
     diag(ParamVar->getLocation(), ErrorMessage)

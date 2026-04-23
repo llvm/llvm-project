@@ -881,7 +881,7 @@ public class Test
     private static void ComplexLambda(BuildReport protoReport)
     {
         allSelectedScenes =
-            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+            veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds.Where(scene => scene.enabled)
                 .Select(scene => scene.path)
                 .ToArray();
         if (allSelectedScenes.Count == 0)
@@ -899,7 +899,7 @@ public class Test
   verifyFormat(R"(//
 public class Test {
   private static void ComplexLambda(BuildReport protoReport) {
-    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds
                             .Where(scene => scene.enabled)
                             .Select(scene => scene.path)
                             .ToArray();
@@ -925,7 +925,7 @@ public class Test
     private static void MultipleLambdas(BuildReport protoReport)
     {
         allSelectedScenes =
-            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+            veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds.Where(scene => scene.enabled)
                 .Select(scene => scene.path)
                 .ToArray();
         preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
@@ -944,7 +944,7 @@ public class Test
   verifyFormat(R"(//
 public class Test {
   private static void MultipleLambdas(BuildReport protoReport) {
-    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds
                             .Where(scene => scene.enabled)
                             .Select(scene => scene.path)
                             .ToArray();
@@ -1194,7 +1194,7 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   Style.SpaceBeforeSquareBrackets = false;
   Style.SpacesInSquareBrackets = false;
   Style.SpaceBeforeCpp11BracedList = true;
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   Style.SpacesInContainerLiterals = false;
   Style.SpaceAfterCStyleCast = false;
 
@@ -1673,7 +1673,8 @@ TEST_F(FormatTestCSharp, EmptyShortBlock) {
 TEST_F(FormatTestCSharp, ShortFunctions) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_CSharp);
   Style.NamespaceIndentation = FormatStyle::NI_All;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
   verifyFormat("interface Interface {\n"
                "  void f() { return; }\n"
                "};",

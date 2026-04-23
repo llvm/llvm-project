@@ -87,11 +87,15 @@ bool StopInfo::HasTargetRunSinceMe() {
 namespace lldb_private {
 class StopInfoBreakpoint : public StopInfo {
 public:
+  // We use a "breakpoint preserving BreakpointLocationCollection because we
+  // may need to hand out the "breakpoint hit" list as any point, potentially
+  // after the breakpoint has been deleted.  But we still need to refer to them.
   StopInfoBreakpoint(Thread &thread, break_id_t break_id)
       : StopInfo(thread, break_id), m_should_stop(false),
         m_should_stop_is_valid(false), m_should_perform_action(true),
         m_address(LLDB_INVALID_ADDRESS), m_break_id(LLDB_INVALID_BREAK_ID),
-        m_was_all_internal(false), m_was_one_shot(false) {
+        m_was_all_internal(false), m_was_one_shot(false),
+        m_async_stopped_locs(true) {
     StoreBPInfo();
   }
 
@@ -99,7 +103,8 @@ public:
       : StopInfo(thread, break_id), m_should_stop(should_stop),
         m_should_stop_is_valid(true), m_should_perform_action(true),
         m_address(LLDB_INVALID_ADDRESS), m_break_id(LLDB_INVALID_BREAK_ID),
-        m_was_all_internal(false), m_was_one_shot(false) {
+        m_was_all_internal(false), m_was_one_shot(false),
+        m_async_stopped_locs(true) {
     StoreBPInfo();
   }
 
@@ -324,9 +329,7 @@ protected:
 
       if (!thread_sp->IsValid()) {
         // This shouldn't ever happen, but just in case, don't do more harm.
-        if (log) {
-          LLDB_LOGF(log, "PerformAction got called with an invalid thread.");
-        }
+        LLDB_LOGF(log, "PerformAction got called with an invalid thread.");
         m_should_stop = true;
         m_should_stop_is_valid = true;
         return;
@@ -480,13 +483,11 @@ protected:
             // not all of them valid for this thread.  Skip the ones that
             // aren't:
             if (!bp_loc_sp->ValidForThisThread(*thread_sp)) {
-              if (log) {
-                LLDB_LOGF(log,
-                          "Breakpoint %s hit on thread 0x%llx but it was not "
-                          "for this thread, continuing.",
-                          loc_desc.GetData(),
-                          static_cast<unsigned long long>(thread_sp->GetID()));
-              }
+              LLDB_LOGF(log,
+                        "Breakpoint %s hit on thread 0x%llx but it was not "
+                        "for this thread, continuing.",
+                        loc_desc.GetData(),
+                        static_cast<unsigned long long>(thread_sp->GetID()));
               continue;
             }
 
@@ -699,6 +700,10 @@ private:
   lldb::break_id_t m_break_id;
   bool m_was_all_internal;
   bool m_was_one_shot;
+  /// The StopInfoBreakpoint lives after the stop, and could get queried
+  /// at any time so we need to make sure that it keeps the breakpoints for
+  /// each of the locations it records alive while it is around.  That's what
+  /// The BreakpointPreservingLocationCollection does.
   BreakpointLocationCollection m_async_stopped_locs;
 };
 

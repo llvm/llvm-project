@@ -329,6 +329,13 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   if (CodeGenOpts.NewStructPathTBAA && Ty->isArrayType())
     return getTypeInfo(cast<ArrayType>(Ty)->getElementType());
 
+  // Accesses to matrix types are accesses to objects of their element types.
+  if (const auto *MTy = dyn_cast<MatrixType>(Ty)) {
+    assert(isa<ConstantMatrixType>(Ty) &&
+           "only ConstantMatrixType should reach CodeGen");
+    return getTypeInfo(MTy->getElementType());
+  }
+
   // Enum types are distinct types. In C++ they have "underlying types",
   // however they aren't related for TBAA.
   if (const EnumType *ETy = dyn_cast<EnumType>(Ty)) {
@@ -609,8 +616,7 @@ llvm::MDNode *CodeGenTBAA::getValidBaseTypeInfo(QualType QTy) {
   // First calculate the metadata, before recomputing the insertion point, as
   // the helper can recursively call us.
   llvm::MDNode *TypeNode = getBaseTypeInfoHelper(Ty);
-  LLVM_ATTRIBUTE_UNUSED auto inserted =
-      BaseTypeMetadataCache.insert({Ty, TypeNode});
+  [[maybe_unused]] auto inserted = BaseTypeMetadataCache.insert({Ty, TypeNode});
   assert(inserted.second && "BaseType metadata was already inserted");
 
   return TypeNode;

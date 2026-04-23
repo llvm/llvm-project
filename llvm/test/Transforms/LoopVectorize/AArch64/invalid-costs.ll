@@ -16,7 +16,7 @@ define void @replicate_sdiv_conditional(ptr noalias %a, ptr noalias %b, ptr noal
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -26,7 +26,7 @@ define void @replicate_sdiv_conditional(ptr noalias %a, ptr noalias %b, ptr noal
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP6]], i32 4, <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <vscale x 4 x i32> [[WIDE_MASKED_LOAD]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = ashr <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[TMP8]], [[WIDE_LOAD]]

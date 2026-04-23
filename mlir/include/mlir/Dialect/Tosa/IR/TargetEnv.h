@@ -28,19 +28,22 @@ struct TosaLevel {
   int32_t MAX_LOG2_SIZE = 0;
   int32_t MAX_NESTING = 0;
   int32_t MAX_TENSOR_LIST_SIZE = 0;
+  int32_t MAX_SHAPE_LEN = 0;
 
   bool operator==(const TosaLevel &rhs) {
     return MAX_RANK == rhs.MAX_RANK && MAX_KERNEL == rhs.MAX_KERNEL &&
            MAX_STRIDE == rhs.MAX_STRIDE && MAX_SCALE == rhs.MAX_SCALE &&
            MAX_LOG2_SIZE == rhs.MAX_LOG2_SIZE &&
            MAX_NESTING == rhs.MAX_NESTING &&
-           MAX_TENSOR_LIST_SIZE == rhs.MAX_TENSOR_LIST_SIZE;
+           MAX_TENSOR_LIST_SIZE == rhs.MAX_TENSOR_LIST_SIZE &&
+           MAX_SHAPE_LEN == rhs.MAX_SHAPE_LEN;
   }
 };
 
-static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 256, 31, 6, 64};
+static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6,  8192, 8192, 256,
+                                                31, 6,    64,   16};
 static constexpr TosaLevel TOSA_LEVEL_NONE = {32, 2147483647, 2147483647, 2048,
-                                              63, 256,        256};
+                                              63, 256,        256,        64};
 
 TargetEnvAttr lookupTargetEnv(Operation *op);
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
@@ -54,22 +57,41 @@ TargetEnvAttr lookupTargetEnvOrDefault(Operation *op);
 /// and provide utilities around the TOSA specification version.
 class TosaSpecificationVersion {
 public:
-  TosaSpecificationVersion(uint32_t major, uint32_t minor)
-      : majorVersion(major), minorVersion(minor) {}
+  TosaSpecificationVersion() = default;
+
+  TosaSpecificationVersion(uint32_t major, uint32_t minor, bool draft = false)
+      : majorVersion(major), minorVersion(minor), draft(draft) {}
   TosaSpecificationVersion(SpecificationVersion version)
       : TosaSpecificationVersion(fromVersionEnum(version)) {}
 
   bool isBackwardsCompatibleWith(TosaSpecificationVersion baseVersion) const {
-    return this->majorVersion == baseVersion.majorVersion &&
-           this->minorVersion >= baseVersion.minorVersion;
+    if (this->majorVersion != baseVersion.majorVersion)
+      return false;
+    if (this->minorVersion < baseVersion.minorVersion)
+      return false;
+    // An unreleased version is not expected to be backwards compatible with
+    // a corresponding released version. However, an unreleased version is
+    // expected to be backwards compatible with all released versions prior to
+    // it.
+    //
+    // For example:
+    // - 1.1.draft is not expected to be backwards compatible with 1.1
+    // - 1.1.draft is expected to be backwards compatible with 1.0
+    // - 1.1.draft is not expected to be backwards compatible with 1.0.draft
+    if (this->draft && !baseVersion.draft &&
+        this->minorVersion == baseVersion.minorVersion)
+      return false;
+    return true;
   }
 
   uint32_t getMajor() const { return majorVersion; }
   uint32_t getMinor() const { return minorVersion; }
+  bool isDraft() const { return draft; }
 
 private:
   uint32_t majorVersion = 0;
   uint32_t minorVersion = 0;
+  bool draft = false;
 
   static TosaSpecificationVersion
   fromVersionEnum(SpecificationVersion version) {
@@ -77,11 +99,15 @@ private:
     case SpecificationVersion::V_1_0:
       return TosaSpecificationVersion(1, 0);
     case SpecificationVersion::V_1_1_DRAFT:
-      return TosaSpecificationVersion(1, 1);
+      return TosaSpecificationVersion(1, 1, true);
     }
     llvm_unreachable("Unknown TOSA version");
   }
 };
+
+TosaSpecificationVersion getMinVersion(const Profile &profile);
+TosaSpecificationVersion getMinVersion(const Extension &extension);
+TosaSpecificationVersion getMinVersion(const Level &level);
 
 llvm::SmallString<4> stringifyVersion(TosaSpecificationVersion version);
 
@@ -91,22 +117,19 @@ llvm::SmallString<4> stringifyVersion(TosaSpecificationVersion version);
 class TargetEnv {
 public:
   TargetEnv() {}
-  explicit TargetEnv(SpecificationVersion specificationVersion, Level level,
-                     const ArrayRef<Profile> &profiles,
-                     const ArrayRef<Extension> &extensions)
-      : specificationVersion(specificationVersion), level(level) {
-    enabledProfiles.insert_range(profiles);
-    enabledExtensions.insert_range(extensions);
-  }
 
-  explicit TargetEnv(TargetEnvAttr targetAttr)
-      : TargetEnv(targetAttr.getSpecificationVersion(), targetAttr.getLevel(),
-                  targetAttr.getProfiles(), targetAttr.getExtensions()) {}
+  static FailureOr<TargetEnv>
+  createTargetEnvFromAttr(TargetEnvAttr targetAttr, Location targetEnvAttrLoc);
+
+  static LogicalResult verifyTargetInformation(TargetEnvAttr targetAttr,
+                                               Location targetAttrLoc);
 
   void addProfile(Profile p) { enabledProfiles.insert(p); }
   void addExtension(Extension e) { enabledExtensions.insert(e); }
 
-  SpecificationVersion getSpecVersion() const { return specificationVersion; }
+  TosaSpecificationVersion getSpecVersion() const {
+    return specificationVersion;
+  }
 
   TosaLevel getLevel() const {
     if (level == Level::eightK)
@@ -140,7 +163,17 @@ public:
   }
 
 private:
-  SpecificationVersion specificationVersion;
+  // Require target information is verified before constructing, via the use of
+  // `createTargetEnvFromAttr`.
+  explicit TargetEnv(SpecificationVersion specificationVersion, Level level,
+                     const ArrayRef<Profile> &profiles,
+                     const ArrayRef<Extension> &extensions)
+      : specificationVersion(specificationVersion), level(level) {
+    enabledProfiles.insert_range(profiles);
+    enabledExtensions.insert_range(extensions);
+  }
+
+  TosaSpecificationVersion specificationVersion;
   Level level;
   llvm::SmallSet<Profile, 3> enabledProfiles;
   llvm::SmallSet<Extension, 13> enabledExtensions;

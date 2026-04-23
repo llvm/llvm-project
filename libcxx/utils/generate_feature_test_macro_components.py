@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 from builtins import range
@@ -14,7 +14,7 @@ from typing import (
 )
 import functools
 import json
-from libcxx.header_information import module_c_headers, module_headers, header_restrictions, headers_not_available, libcxx_root
+from libcxx.header_information import headers_not_available
 
 
 def get_libcxx_paths():
@@ -197,7 +197,7 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_ref",
             "values": {
                 "c++20": 201806,
-                "c++26": 202411,  # P2835R7: Expose std::atomic_ref 's object address
+                "c++26": 202603,
             },
             "headers": ["atomic"],
         },
@@ -331,8 +331,15 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_concepts",
-            "values": {"c++20": 202002},
+            "values": {"c++20": 202207},
             "headers": ["concepts"],
+        },
+        {
+            "name": "__cpp_lib_constant_wrapper",
+            "values": {
+                "c++26": 202603,
+            },
+            "headers": ["utility"],
         },
         {
             "name": "__cpp_lib_constexpr_algorithms",
@@ -367,6 +374,16 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_dynamic_alloc",
             "values": {"c++20": 201907},
             "headers": ["memory"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_flat_map",
+            "values": {"c++26": 202502},
+            "headers": ["flat_map"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_flat_set",
+            "values": {"c++26": 202502},
+            "headers": ["flat_set"],
         },
         {
             "name": "__cpp_lib_constexpr_forward_list",
@@ -494,8 +511,8 @@ feature_test_macros = [
             "name": "__cpp_lib_destroying_delete",
             "values": {"c++20": 201806},
             "headers": ["new"],
-            "test_suite_guard": "TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
-            "libcxx_guard": "_LIBCPP_STD_VER >= 20 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
+            "test_suite_guard": "defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
+            "libcxx_guard": "defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
         },
         {
             "name": "__cpp_lib_enable_shared_from_this",
@@ -547,12 +564,12 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_flat_map",
-            "values": {"c++23": 202207},
+            "values": {"c++23": 202511},
             "headers": ["flat_map"],
         },
         {
             "name": "__cpp_lib_flat_set",
-            "values": {"c++23": 202207},
+            "values": {"c++23": 202511},
             "headers": ["flat_set"],
         },
         {
@@ -562,6 +579,7 @@ feature_test_macros = [
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
                 # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
+                # "c++26": 202603, P3953R3 Rename std::runtime_format (implemented)
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
             # 202304 P2510R3 Formatting pointers (Implemented)
@@ -709,8 +727,6 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_hardware_interference_size",
             "values": {"c++17": 201703},
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))",
-            "libcxx_guard": "defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)",
             "headers": ["new"],
         },
         {
@@ -754,7 +770,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_integer_sequence",
-            "values": {"c++14": 201304},
+            "values": {
+                "c++14": 201304,
+                "c++26": 202511,  # P1789R3 Library Support for Expansion Statements
+            },
             "headers": ["utility"],
         },
         {
@@ -863,7 +882,8 @@ feature_test_macros = [
                 "c++26": 202306  # P2641R4 Checking if a union alternative is active
             },
             "headers": ["type_traits"],
-            "unimplemented": True,
+            "test_suite_guard": "__has_builtin(__builtin_is_within_lifetime)",
+            "libcxx_guard": "__has_builtin(__builtin_is_within_lifetime)",
         },
         {
             "name": "__cpp_lib_jthread",
@@ -1006,6 +1026,7 @@ feature_test_macros = [
                 "c++17": 201606,
                 "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
                 "c++23": 202110,  # P0798R8 Monadic operations for std::optional + LWG3621 Remove feature-test macro __cpp_lib_monadic_optional
+                "c++26": 202506,  # P2988R12: std::optional<T&>
             },
             "headers": ["optional"],
         },
@@ -1013,6 +1034,8 @@ feature_test_macros = [
             "name": "__cpp_lib_optional_range_support",
             "values": {"c++26": 202406},  # P3168R2 Give std::optional Range Support
             "headers": ["optional"],
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR",
+            "libcxx_guard": "_LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR",
         },
         {
             "name": "__cpp_lib_out_ptr",
@@ -1110,6 +1133,11 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_ranges_enumerate",
+            "values": {"c++23": 202302},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_find_last",
             "values": {"c++23": 202207},
             "headers": ["algorithm"],
@@ -1154,7 +1182,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_zip",
             "values": {"c++23": 202110},
             "headers": ["ranges", "tuple", "utility"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ratio",
@@ -1207,7 +1234,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_saturation_arithmetic",
-            "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
+            "values": {"c++26": 202603},  # P0543R3 Saturation arithmetic
             "headers": ["numeric"],
         },
         {
@@ -1256,7 +1283,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_shift",
-            "values": {"c++20": 201806},
+            "values": {"c++20": 201806, "c++23": 202202},
             "headers": ["algorithm"],
         },
         {

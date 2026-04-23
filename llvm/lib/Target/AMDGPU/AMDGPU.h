@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -19,6 +20,7 @@
 namespace llvm {
 
 class AMDGPUTargetMachine;
+class LazyCallGraph;
 class GCNTargetMachine;
 class TargetMachine;
 
@@ -45,6 +47,8 @@ FunctionPass *createSIWholeQuadModeLegacyPass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
+FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();
+FunctionPass *createAMDGPUNextUseAnalysisPrinterLegacyPass();
 FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
@@ -69,7 +73,7 @@ FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 ModulePass *createAMDGPUPreloadKernelArgumentsLegacyPass(const TargetMachine *);
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
-  AMDGPUSimplifyLibCallsPass() {}
+  AMDGPUSimplifyLibCallsPass() = default;
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
@@ -191,6 +195,12 @@ extern char &SIFixSGPRCopiesLegacyID;
 void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
 
+void initializeAMDGPUNextUseAnalysisLegacyPassPass(PassRegistry &);
+extern char &AMDGPUNextUseAnalysisLegacyID;
+
+void initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(PassRegistry &);
+extern char &AMDGPUNextUseAnalysisPrinterLegacyID;
+
 void initializeSILowerWWMCopiesLegacyPass(PassRegistry &);
 extern char &SILowerWWMCopiesLegacyID;
 
@@ -298,6 +308,15 @@ private:
   bool GlobalOpt;
 };
 
+void initializeAMDGPULowerExecSyncLegacyPass(PassRegistry &);
+extern char &AMDGPULowerExecSyncLegacyPassID;
+ModulePass *createAMDGPULowerExecSyncLegacyPass();
+
+struct AMDGPULowerExecSyncPass : PassInfoMixin<AMDGPULowerExecSyncPass> {
+  AMDGPULowerExecSyncPass() {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 void initializeAMDGPUSwLowerLDSLegacyPass(PassRegistry &);
 extern char &AMDGPUSwLowerLDSLegacyPassID;
 ModulePass *
@@ -358,6 +377,17 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+class AMDGPUAttributorCGSCCPass
+    : public PassInfoMixin<AMDGPUAttributorCGSCCPass> {
+private:
+  GCNTargetMachine &TM;
+
+public:
+  AMDGPUAttributorCGSCCPass(GCNTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+};
+
 class AMDGPUPreloadKernelArgumentsPass
     : public PassInfoMixin<AMDGPUPreloadKernelArgumentsPass> {
   const TargetMachine &TM;
@@ -371,13 +401,13 @@ public:
 class AMDGPUAnnotateUniformValuesPass
     : public PassInfoMixin<AMDGPUAnnotateUniformValuesPass> {
 public:
-  AMDGPUAnnotateUniformValuesPass() {}
+  AMDGPUAnnotateUniformValuesPass() = default;
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 class SIModeRegisterPass : public PassInfoMixin<SIModeRegisterPass> {
 public:
-  SIModeRegisterPass() {}
+  SIModeRegisterPass() = default;
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
 };
 
@@ -519,15 +549,13 @@ extern char &SIPostRABundlerLegacyID;
 void initializeGCNCreateVOPDLegacyPass(PassRegistry &);
 extern char &GCNCreateVOPDID;
 
-void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);
+void initializeAMDGPUUnifyDivergentExitNodesLegacyPass(PassRegistry &);
 extern char &AMDGPUUnifyDivergentExitNodesID;
 
 ImmutablePass *createAMDGPUAAWrapperPass();
 void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
 ImmutablePass *createAMDGPUExternalAAWrapperPass();
 void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
-
-void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
 ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();
 void initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(PassRegistry &);
@@ -562,9 +590,13 @@ public:
 void initializeAMDGPURewriteAGPRCopyMFMALegacyPass(PassRegistry &);
 extern char &AMDGPURewriteAGPRCopyMFMALegacyID;
 
+void initializeAMDGPUUniformIntrinsicCombineLegacyPass(PassRegistry &);
+extern char &AMDGPUUniformIntrinsicCombineLegacyPassID;
+FunctionPass *createAMDGPUUniformIntrinsicCombineLegacyPass();
+
 struct AMDGPUUniformIntrinsicCombinePass
     : public PassInfoMixin<AMDGPUUniformIntrinsicCombinePass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 namespace AMDGPU {

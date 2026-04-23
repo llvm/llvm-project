@@ -23,14 +23,14 @@ define void @expand_v8i16_v8i32(ptr noalias nocapture readonly %a, ptr noalias n
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.vctp16(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2]] = sub i32 [[TMP0]], 8
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[TMP]], i32 4, <8 x i1> [[TMP1]], <8 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 4 [[TMP]], <8 x i1> [[TMP1]], <8 x i16> undef)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[TMP3]], i32 4, <8 x i1> [[TMP1]], <8 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 4 [[TMP3]], <8 x i1> [[TMP1]], <8 x i16> undef)
 ; CHECK-NEXT:    [[EXPAND_1:%.*]] = zext <8 x i16> [[WIDE_MASKED_LOAD]] to <8 x i32>
 ; CHECK-NEXT:    [[EXPAND_2:%.*]] = zext <8 x i16> [[WIDE_MASKED_LOAD2]] to <8 x i32>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <8 x i32> [[EXPAND_2]], [[EXPAND_1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[INDEX]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> [[MUL]], ptr [[TMP6]], i32 4, <8 x i1> [[TMP1]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> [[MUL]], ptr align 4 [[TMP6]], <8 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP15]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP14]], i32 1)
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0
@@ -100,9 +100,9 @@ define void @expand_v8i16_v4i32(ptr readonly %a, ptr readonly %b, ptr %c, ptr %d
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.vctp16(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2]] = sub i32 [[TMP0]], 8
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[TMP]], i32 4, <8 x i1> [[TMP1]], <8 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 4 [[TMP]], <8 x i1> [[TMP1]], <8 x i16> undef)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[TMP3]], i32 4, <8 x i1> [[TMP1]], <8 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 4 [[TMP3]], <8 x i1> [[TMP1]], <8 x i16> undef)
 ; CHECK-NEXT:    [[EXTRACT_2_LOW:%.*]] = shufflevector <8 x i16> [[WIDE_MASKED_LOAD2]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[EXTRACT_2_HIGH:%.*]] = shufflevector <8 x i16> [[WIDE_MASKED_LOAD2]], <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[EXPAND_1:%.*]] = zext <4 x i16> [[EXTRACT_2_LOW]] to <4 x i32>
@@ -114,9 +114,9 @@ define void @expand_v8i16_v4i32(ptr readonly %a, ptr readonly %b, ptr %c, ptr %d
 ; CHECK-NEXT:    [[INDUCTION_STORE:%.*]] = add <4 x i32> [[BROADCAST_SPLAT_STORE]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[STORE_PRED:%.*]] = icmp ule <4 x i32> [[INDUCTION_STORE]], [[BROADCAST_SPLAT11_STORE]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[STORE_IDX]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> [[MUL]], ptr [[TMP6]], i32 4, <4 x i1> [[STORE_PRED]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> [[MUL]], ptr align 4 [[TMP6]], <4 x i1> [[STORE_PRED]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[D]], i32 [[STORE_IDX]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> [[SUB]], ptr [[GEP]], i32 4, <4 x i1> [[STORE_PRED]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> [[SUB]], ptr align 4 [[GEP]], <4 x i1> [[STORE_PRED]])
 ; CHECK-NEXT:    [[STORE_IDX_NEXT]] = add i32 [[STORE_IDX]], 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP15]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP14]], i32 1)
@@ -197,14 +197,14 @@ define void @expand_v4i32_v4i64(ptr noalias nocapture readonly %a, ptr noalias n
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2]] = sub i32 [[TMP0]], 4
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP3]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP3]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[EXPAND_1:%.*]] = zext <4 x i32> [[WIDE_MASKED_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[EXPAND_2:%.*]] = zext <4 x i32> [[WIDE_MASKED_LOAD2]] to <4 x i64>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <4 x i64> [[EXPAND_2]], [[EXPAND_1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[C]], i32 [[INDEX]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[MUL]], ptr [[TMP6]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[MUL]], ptr align 4 [[TMP6]], <4 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP15]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP14]], i32 1)
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0

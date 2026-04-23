@@ -39,6 +39,10 @@ bool collectStatsForObjectFile(object::ObjectFile &Obj, DWARFContext &DICtx,
 bool collectObjectSectionSizes(object::ObjectFile &Obj, DWARFContext &DICtx,
                                const Twine &Filename, raw_ostream &OS);
 
+bool showVariableCoverage(object::ObjectFile &Obj, DWARFContext &DICtx,
+                          object::ObjectFile *BaselineObj,
+                          DWARFContext *BaselineCtx, bool CombineInstances,
+                          raw_ostream &OS);
 } // namespace dwarfdump
 } // namespace llvm
 

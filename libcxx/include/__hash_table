@@ -83,18 +83,6 @@ struct __hash_node_base {
   typedef _NodePtr __node_pointer;
   typedef __node_base_pointer __next_pointer;
 
-// TODO(LLVM 22): Remove this check
-#ifndef _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
-  static_assert(sizeof(__node_base_pointer) == sizeof(__node_pointer) && _LIBCPP_ALIGNOF(__node_base_pointer) ==
-                    _LIBCPP_ALIGNOF(__node_pointer),
-                "It looks like you are using std::__hash_table (an implementation detail for the unordered containers) "
-                "with a fancy pointer type that thas a different representation depending on whether it points to a "
-                "__hash_table base pointer or a __hash_table node pointer (both of which are implementation details of "
-                "the standard library). This means that your ABI is being broken between LLVM 19 and LLVM 20. If you "
-                "don't care about your ABI being broken, define the _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB macro to "
-                "silence this diagnostic.");
-#endif
-
   __next_pointer __next_;
 
   _LIBCPP_HIDE_FROM_ABI __next_pointer __ptr() _NOEXCEPT {
@@ -1037,7 +1025,21 @@ private:
   }
   _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__hash_table&, false_type) _NOEXCEPT {}
 
-  _LIBCPP_HIDE_FROM_ABI void __deallocate_node(__next_pointer __np) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI void __deallocate_node(__node_pointer __nd) _NOEXCEPT {
+    auto& __alloc = __node_alloc();
+    __node_traits::destroy(__alloc, std::addressof(__nd->__get_value()));
+    std::__destroy_at(std::__to_address(__nd));
+    __node_traits::deallocate(__alloc, __nd, 1);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void __deallocate_node_list(__next_pointer __np) _NOEXCEPT {
+    while (__np != nullptr) {
+      __next_pointer __next = __np->__next_;
+      __deallocate_node(__np->__upcast());
+      __np = __next;
+    }
+  }
+
   _LIBCPP_HIDE_FROM_ABI __next_pointer __detach() _NOEXCEPT;
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
@@ -1175,7 +1177,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table() {
   static_assert(is_copy_constructible<hasher>::value, "Hasher must be copy-constructible.");
 #endif
 
-  __deallocate_node(__first_node_.__next_);
+  __deallocate_node_list(__first_node_.__next_);
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1251,7 +1253,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __other)
   // At this point we either have consumed the whole incoming hash table, or we don't have any more nodes to reuse in
   // the destination. Either continue with constructing new nodes, or deallocate the left over nodes.
   if (__own_iter->__next_) {
-    __deallocate_node(__own_iter->__next_);
+    __deallocate_node_list(__own_iter->__next_);
     __own_iter->__next_ = nullptr;
   } else {
     __copy_construct(__other_iter, __own_iter, __current_chash);
@@ -1260,19 +1262,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __other)
   __size_ = __other.size();
 
   return *this;
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate_node(__next_pointer __np) _NOEXCEPT {
-  __node_allocator& __na = __node_alloc();
-  while (__np != nullptr) {
-    __next_pointer __next    = __np->__next_;
-    __node_pointer __real_np = __np->__upcast();
-    __node_traits::destroy(__na, std::addressof(__real_np->__get_value()));
-    std::__destroy_at(std::addressof(*__real_np));
-    __node_traits::deallocate(__na, __real_np, 1);
-    __np = __next;
-  }
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1318,7 +1307,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, 
     max_load_factor() = __u.max_load_factor();
     if (bucket_count() != 0) {
       __next_pointer __cache = __detach();
-      auto __guard           = std::__make_scope_guard([&] { __deallocate_node(__cache); });
+      auto __guard           = std::__make_scope_guard([&] { __deallocate_node_list(__cache); });
       const_iterator __i     = __u.begin();
       while (__cache != nullptr && __u.size() != 0) {
         __assign_value(__cache->__upcast()->__get_value(), std::move(__u.remove(__i++)->__get_value()));
@@ -1353,7 +1342,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __
 
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
-    auto __guard           = std::__make_scope_guard([&] { __deallocate_node(__cache); });
+    auto __guard           = std::__make_scope_guard([&] { __deallocate_node_list(__cache); });
     for (; __cache != nullptr && __first != __last; ++__first) {
       __assign_value(__cache->__upcast()->__get_value(), *__first);
       __next_pointer __next = __cache->__next_;
@@ -1374,7 +1363,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __f
                 "__assign_multi may only be called with the containers value type or the nodes value type");
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
-    auto __guard           = std::__make_scope_guard([&] { __deallocate_node(__cache); });
+    auto __guard           = std::__make_scope_guard([&] { __deallocate_node_list(__cache); });
     for (; __cache != nullptr && __first != __last; ++__first) {
       __assign_value(__cache->__upcast()->__get_value(), *__first);
       __next_pointer __next = __cache->__next_;
@@ -1413,7 +1402,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::end() const _NOEXCEPT {
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void __hash_table<_Tp, _Hash, _Equal, _Alloc>::clear() _NOEXCEPT {
   if (size() > 0) {
-    __deallocate_node(__first_node_.__next_);
+    __deallocate_node_list(__first_node_.__next_);
     __first_node_.__next_ = nullptr;
     size_type __bc        = bucket_count();
     for (size_type __i = 0; __i < __bc; ++__i)
@@ -1873,12 +1862,63 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __p) {
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __first, const_iterator __last) {
-  for (const_iterator __p = __first; __first != __last; __p = __first) {
-    ++__first;
-    erase(__p);
+  if (__first == __last)
+    return iterator(__last.__node_);
+
+  // current node
+  __next_pointer __current = __first.__node_;
+  size_type __bucket_count = bucket_count();
+  size_t __chash           = std::__constrain_hash(__current->__hash(), __bucket_count);
+  // find previous node
+  __next_pointer __before_first = __bucket_list_[__chash];
+  for (; __before_first->__next_ != __current; __before_first = __before_first->__next_)
+    ;
+
+  __next_pointer __last_node = __last.__node_;
+
+  // If __before_first is in the same bucket (i.e. the first element we erase is not the first in the bucket), clear
+  // this bucket first without re-linking it
+  if (__before_first != __first_node_.__ptr() &&
+      std::__constrain_hash(__before_first->__hash(), __bucket_count) == __chash) {
+    while (__current != __last_node) {
+      auto __next = __current->__next_;
+      __deallocate_node(__current->__upcast());
+      __current = __next;
+      --__size_;
+
+      if (__next) {
+        if (auto __next_chash = std::__constrain_hash(__next->__hash(), __bucket_count); __next_chash != __chash) {
+          __bucket_list_[__next_chash] = __before_first;
+          __chash                      = __next_chash;
+          break;
+        }
+      }
+    }
   }
-  __next_pointer __np = __last.__node_;
-  return iterator(__np);
+
+  while (__current != __last_node) {
+    auto __next = __current->__next_;
+    __deallocate_node(__current->__upcast());
+    __current = __next;
+    --__size_;
+
+    // When switching buckets, set the old bucket to be empty and update the next bucket to have __before_first as its
+    // before-first element
+    if (__next) {
+      if (auto __next_chash = std::__constrain_hash(__next->__hash(), __bucket_count); __next_chash != __chash) {
+        __bucket_list_[__chash]      = nullptr;
+        __bucket_list_[__next_chash] = __before_first;
+        __chash                      = __next_chash;
+      }
+    } else { // When __next is a nullptr we've fully erased the last bucket. Update the bucket list accordingly.
+      __bucket_list_[__chash] = nullptr;
+    }
+  }
+
+  // re-link __before_first with __last
+  __before_first->__next_ = __current;
+
+  return iterator(__last.__node_);
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>

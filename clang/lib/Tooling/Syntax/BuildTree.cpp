@@ -77,8 +77,10 @@ static Expr *IgnoreImplicit(Expr *E) {
                          IgnoreCXXFunctionalCastExprWrappingConstructor);
 }
 
-LLVM_ATTRIBUTE_UNUSED
-static bool isImplicitExpr(Expr *E) { return IgnoreImplicit(E) != E; }
+[[maybe_unused]]
+static bool isImplicitExpr(Expr *E) {
+  return IgnoreImplicit(E) != E;
+}
 
 namespace {
 /// Get start location of the Declarator from the TypeLoc.
@@ -732,6 +734,14 @@ public:
         Builder.getTemplateRange(C),
         Builder.findToken(C->getExternKeywordLoc()),
         Builder.findToken(C->getTemplateKeywordLoc()), Declaration, C);
+    return true;
+  }
+
+  // ExplicitInstantiationDecl is an auxiliary AST node that records source
+  // info. The syntax tree is already built by
+  // TraverseClassTemplateSpecializationDecl or by the parser for
+  // function/variable templates, so skip this node.
+  bool TraverseExplicitInstantiationDecl(ExplicitInstantiationDecl *) {
     return true;
   }
 

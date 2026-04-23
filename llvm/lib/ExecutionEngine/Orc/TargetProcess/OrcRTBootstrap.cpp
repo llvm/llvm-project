@@ -22,7 +22,7 @@ namespace orc {
 namespace rt_bootstrap {
 
 template <typename WriteT, typename SPSWriteT>
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 writeUIntsWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSWriteT>)>::handle(
              ArgData, ArgSize,
@@ -33,7 +33,7 @@ writeUIntsWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 writePointersWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSMemoryAccessPointerWrite>)>::
       handle(ArgData, ArgSize,
@@ -45,7 +45,7 @@ writePointersWrapper(const char *ArgData, size_t ArgSize) {
           .release();
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 writeBuffersWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSMemoryAccessBufferWrite>)>::handle(
              ArgData, ArgSize,
@@ -58,7 +58,7 @@ writeBuffersWrapper(const char *ArgData, size_t ArgSize) {
 }
 
 template <typename ReadT>
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 readUIntsWrapper(const char *ArgData, size_t ArgSize) {
   using SPSSig = SPSSequence<ReadT>(SPSSequence<SPSExecutorAddr>);
   return WrapperFunction<SPSSig>::handle(ArgData, ArgSize,
@@ -73,7 +73,7 @@ readUIntsWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 readPointersWrapper(const char *ArgData, size_t ArgSize) {
   using SPSSig = SPSSequence<SPSExecutorAddr>(SPSSequence<SPSExecutorAddr>);
   return WrapperFunction<SPSSig>::handle(
@@ -88,7 +88,7 @@ readPointersWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 readBuffersWrapper(const char *ArgData, size_t ArgSize) {
   using SPSSig =
       SPSSequence<SPSSequence<uint8_t>>(SPSSequence<SPSExecutorAddrRange>);
@@ -108,7 +108,7 @@ readBuffersWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 readStringsWrapper(const char *ArgData, size_t ArgSize) {
   using SPSSig = SPSSequence<SPSString>(SPSSequence<SPSExecutorAddr>);
   return WrapperFunction<SPSSig>::handle(ArgData, ArgSize,
@@ -123,7 +123,7 @@ readStringsWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 runAsMainWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSRunAsMainSignature>::handle(
              ArgData, ArgSize,
@@ -134,7 +134,7 @@ runAsMainWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 runAsVoidFunctionWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSRunAsVoidFunctionSignature>::handle(
              ArgData, ArgSize,
@@ -144,7 +144,7 @@ runAsVoidFunctionWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionBuffer
 runAsIntFunctionWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSRunAsIntFunctionSignature>::handle(
              ArgData, ArgSize,

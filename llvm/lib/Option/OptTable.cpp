@@ -25,7 +25,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -265,8 +264,6 @@ unsigned OptTable::internalFindNearest(
     StringRef Option, std::string &NearestString, unsigned MinimumLength,
     unsigned MaximumDistance,
     std::function<bool(const Info &)> ExcludeOption) const {
-  assert(!Option.empty());
-
   // Consider each [option prefix + option name] pair as a candidate, finding
   // the closest match.
   unsigned BestDistance =
@@ -756,9 +753,8 @@ void OptTable::internalPrintHelp(
   // pairs.
   std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
 
-  auto ActiveSubCommand =
-      std::find_if(SubCommands.begin(), SubCommands.end(),
-                   [&](const auto &C) { return SubCommand == C.Name; });
+  auto ActiveSubCommand = llvm::find_if(
+      SubCommands, [&](const auto &C) { return SubCommand == C.Name; });
   if (!SubCommand.empty()) {
     assert(ActiveSubCommand != SubCommands.end() &&
            "Not a valid registered subcommand.");
@@ -798,8 +794,7 @@ void OptTable::internalPrintHelp(
     unsigned ActiveSubCommandID = ActiveSubCommand - &SubCommands[0];
     // Print if the ActiveSubCommandID is registered with the CandidateInfo
     // Option.
-    return std::find(SubCommandIDs.begin(), SubCommandIDs.end(),
-                     ActiveSubCommandID) != SubCommandIDs.end();
+    return llvm::is_contained(SubCommandIDs, ActiveSubCommandID);
   };
 
   for (unsigned Id = 1, e = getNumOptions() + 1; Id != e; ++Id) {

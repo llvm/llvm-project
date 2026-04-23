@@ -95,24 +95,16 @@ PHIRemoveIncoming::PHIRemoveIncoming(PHINode *PHI, unsigned RemovedIdx)
 }
 
 void PHIRemoveIncoming::revert(Tracker &Tracker) {
-  // Special case: if the PHI is now empty, as we don't need to care about the
-  // order of the incoming values.
+  // Special case: if the removed incoming value is the last.
   unsigned NumIncoming = PHI->getNumIncomingValues();
-  if (NumIncoming == 0) {
+  if (NumIncoming == RemovedIdx) {
     PHI->addIncoming(RemovedV, RemovedBB);
     return;
   }
-  // Shift all incoming values by one starting from the end until `Idx`.
-  // Start by adding a copy of the last incoming values.
-  unsigned LastIdx = NumIncoming - 1;
-  PHI->addIncoming(PHI->getIncomingValue(LastIdx),
-                   PHI->getIncomingBlock(LastIdx));
-  for (unsigned Idx = LastIdx; Idx > RemovedIdx; --Idx) {
-    auto *PrevV = PHI->getIncomingValue(Idx - 1);
-    auto *PrevBB = PHI->getIncomingBlock(Idx - 1);
-    PHI->setIncomingValue(Idx, PrevV);
-    PHI->setIncomingBlock(Idx, PrevBB);
-  }
+  // Move the incoming value currently at `RemovedIdx` to the end, restore the
+  // old incoming value back to `RemovedIdx`.
+  PHI->addIncoming(PHI->getIncomingValue(RemovedIdx),
+                   PHI->getIncomingBlock(RemovedIdx));
   PHI->setIncomingValue(RemovedIdx, RemovedV);
   PHI->setIncomingBlock(RemovedIdx, RemovedBB);
 }

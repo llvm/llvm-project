@@ -62,6 +62,7 @@ public:
     LazyKind,
     SharedFunctionKind,
     SharedDataKind,
+    SharedTagKind,
   };
 
   Kind kind() const { return symbolKind; }
@@ -77,7 +78,8 @@ public:
 
   bool isLazy() const { return symbolKind == LazyKind; }
   bool isShared() const {
-    return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind;
+    return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind ||
+           symbolKind == SharedTagKind;
   }
 
   bool isLocal() const;
@@ -127,7 +129,7 @@ public:
   // or similar.
   bool isNoStrip() const;
 
-  const WasmSignature* getSignature() const;
+  const WasmSignature *getSignature() const;
 
   uint32_t getGOTIndex() const {
     assert(gotIndex != INVALID_INDEX);
@@ -461,7 +463,8 @@ public:
 class TagSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
-    return s->kind() == DefinedTagKind || s->kind() == UndefinedTagKind;
+    return s->kind() == DefinedTagKind || s->kind() == UndefinedTagKind ||
+           s->kind() == SharedTagKind;
   }
 
   // Get/set the tag index
@@ -499,6 +502,15 @@ public:
   }
 
   static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
+};
+
+class SharedTagSymbol : public TagSymbol {
+public:
+  SharedTagSymbol(StringRef name, uint32_t flags, InputFile *f,
+                  const WasmSignature *sig)
+      : TagSymbol(name, SharedTagKind, flags, f, sig) {}
+
+  static bool classof(const Symbol *s) { return s->kind() == SharedTagKind; }
 };
 
 class SharedFunctionSymbol : public FunctionSymbol {
@@ -553,6 +565,7 @@ union SymbolUnion {
   alignas(UndefinedTable) char j[sizeof(UndefinedTable)];
   alignas(SectionSymbol) char k[sizeof(SectionSymbol)];
   alignas(SharedFunctionSymbol) char l[sizeof(SharedFunctionSymbol)];
+  alignas(SharedTagSymbol) char m[sizeof(SharedTagSymbol)];
 };
 
 // It is important to keep the size of SymbolUnion small for performance and
@@ -561,10 +574,10 @@ union SymbolUnion {
 static_assert(sizeof(SymbolUnion) <= 120, "SymbolUnion too large");
 
 void printTraceSymbol(Symbol *sym);
-void printTraceSymbolUndefined(StringRef name, const InputFile* file);
+void printTraceSymbolUndefined(StringRef name, const InputFile *file);
 
 template <typename T, typename... ArgT>
-T *replaceSymbol(Symbol *s, ArgT &&... arg) {
+T *replaceSymbol(Symbol *s, ArgT &&...arg) {
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");

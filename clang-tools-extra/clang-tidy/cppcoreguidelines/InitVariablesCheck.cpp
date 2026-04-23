@@ -10,6 +10,7 @@
 
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
@@ -21,6 +22,9 @@ namespace clang::tidy::cppcoreguidelines {
 
 namespace {
 AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
+AST_MATCHER(Stmt, isObjCForCollectionStmt) {
+  return isa<ObjCForCollectionStmt>(&Node);
+}
 } // namespace
 
 InitVariablesCheck::InitVariablesCheck(StringRef Name,
@@ -37,11 +41,12 @@ void InitVariablesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void InitVariablesCheck::registerMatchers(MatchFinder *Finder) {
-  std::string BadDecl = "badDecl";
+  const std::string BadDecl = "badDecl";
   Finder->addMatcher(
       varDecl(unless(hasInitializer(anything())), unless(isInstantiated()),
               isLocalVarDecl(), unless(isStaticLocal()), isDefinition(),
               unless(hasParent(cxxCatchStmt())),
+              unless(hasParent(declStmt(hasParent(isObjCForCollectionStmt())))),
               optionally(hasParent(declStmt(hasParent(
                   cxxForRangeStmt(hasLoopVariable(varDecl().bind(BadDecl))))))),
               unless(equalsBoundNode(BadDecl)))
@@ -82,20 +87,20 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
   if (MatchedDecl->getEndLoc().isMacroID())
     return;
 
-  QualType TypePtr = MatchedDecl->getType();
+  const QualType TypePtr = MatchedDecl->getType();
   std::optional<const char *> InitializationString;
   bool AddMathInclude = false;
 
-  if (TypePtr->isEnumeralType())
+  if (TypePtr->isEnumeralType()) {
     InitializationString = nullptr;
-  else if (TypePtr->isBooleanType())
+  } else if (TypePtr->isBooleanType()) {
     InitializationString = " = false";
-  else if (TypePtr->isIntegerType())
+  } else if (TypePtr->isIntegerType()) {
     InitializationString = " = 0";
-  else if (TypePtr->isFloatingType()) {
+  } else if (TypePtr->isFloatingType()) {
     InitializationString = " = NAN";
     AddMathInclude = true;
-  } else if (TypePtr->isAnyPointerType()) {
+  } else if (TypePtr->isAnyPointerType() || TypePtr->isMemberPointerType()) {
     if (getLangOpts().CPlusPlus11)
       InitializationString = " = nullptr";
     else

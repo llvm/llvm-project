@@ -1,13 +1,16 @@
+.. _implementation_standard:
+
 Convention for implementing entrypoints
 =======================================
 
-LLVM-libc entrypoints are defined in the entrypoints document. In this document,
-we explain how the entrypoints are implemented. The source layout document
-explains that, within the high level ``src`` directory, there exists one
-directory for every public header file provided by LLVM-libc. The
-implementations of entrypoints live in the directory for the header they belong
-to. Some entrypoints are platform specific, and so their implementations are in
-a subdirectory with the name of the platform (e.g. ``stdio/linux/remove.cpp``).
+The implementations of LLVM-libc entrypoints live in the ``src/`` directory,
+organized by the public header they belong to. Some entrypoints are platform-
+specific, and so their implementations are in a subdirectory with the name of
+the platform (e.g., ``stdio/linux/remove.cpp``).
+
+For a complete overview of what an entrypoint is and how it is managed in the
+build system, see the :ref:`entrypoints` documentation.
+
 
 Implementation of entrypoints can span multiple ``.cpp`` and ``.h`` files, but
 there will be at least one header file with name of the form
@@ -34,9 +37,9 @@ example. The ``isalpha`` function will be declared in an internal header file
 
     #endif LLVM_LIBC_SRC_CTYPE_ISALPHA_H
 
-Notice that the ``isalpha`` function declaration is nested inside the namespace
-``LIBC_NAMESPACE_DECL``. All implementation constructs in LLVM-libc are declared
-within the namespace ``LIBC_NAMESPACE_DECL``.
+All LLVM-libc implementation constructs must be enclosed in the
+``LIBC_NAMESPACE_DECL`` namespace. See :ref:`code_style` for the full technical
+rationale and macro definitions.
 
 ``.cpp`` File Structure
 -----------------------

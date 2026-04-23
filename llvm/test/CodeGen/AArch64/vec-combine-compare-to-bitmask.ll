@@ -3,10 +3,7 @@
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+neon -aarch64-enable-collect-loh=false -global-isel -global-isel-abort=2 -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for convert_to_bitmask2
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for clang_builtins_undef_concat_convert_to_bitmask4
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_2xi32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_8xi2
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for no_direct_convert_for_bad_concat
 
 ; Basic tests from input vector to bitmask
 ; IR generated from clang for:
@@ -199,15 +196,49 @@ define i8 @convert_to_bitmask2(<2 x i64> %vec) {
 
 ; Clang's __builtin_convertvector adds an undef vector concat for vectors with <8 elements.
 define i8 @clang_builtins_undef_concat_convert_to_bitmask4(<4 x i32> %vec) {
-; CHECK-LABEL: clang_builtins_undef_concat_convert_to_bitmask4:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    adrp x8, lCPI4_0@PAGE
-; CHECK-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-NEXT:    ldr q1, [x8, lCPI4_0@PAGEOFF]
-; CHECK-NEXT:    bic.16b v0, v1, v0
-; CHECK-NEXT:    addv.4s s0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: clang_builtins_undef_concat_convert_to_bitmask4:
+; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    adrp x8, lCPI4_0@PAGE
+; CHECK-SD-NEXT:    cmeq.4s v0, v0, #0
+; CHECK-SD-NEXT:    ldr q1, [x8, lCPI4_0@PAGEOFF]
+; CHECK-SD-NEXT:    bic.16b v0, v1, v0
+; CHECK-SD-NEXT:    addv.4s s0, v0
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: clang_builtins_undef_concat_convert_to_bitmask4:
+; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    sub sp, sp, #16
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    cmtst.4s v0, v0, v0
+; CHECK-GI-NEXT:    xtn.4h v0, v0
+; CHECK-GI-NEXT:    uzp1.8b v0, v0, v0
+; CHECK-GI-NEXT:    umov.b w8, v0[1]
+; CHECK-GI-NEXT:    umov.b w9, v0[0]
+; CHECK-GI-NEXT:    umov.b w10, v0[2]
+; CHECK-GI-NEXT:    umov.b w11, v0[3]
+; CHECK-GI-NEXT:    and w8, w8, #0x1
+; CHECK-GI-NEXT:    bfi w9, w8, #1, #31
+; CHECK-GI-NEXT:    and w8, w10, #0x1
+; CHECK-GI-NEXT:    umov.b w10, v0[4]
+; CHECK-GI-NEXT:    orr w8, w9, w8, lsl #2
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov.b w11, v0[5]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
+; CHECK-GI-NEXT:    and w9, w10, #0x1
+; CHECK-GI-NEXT:    umov.b w10, v0[6]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov.b w11, v0[7]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
+; CHECK-GI-NEXT:    and w9, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
+; CHECK-GI-NEXT:    strb w8, [sp, #15]
+; CHECK-GI-NEXT:    and w0, w8, #0xff
+; CHECK-GI-NEXT:    add sp, sp, #16
+; CHECK-GI-NEXT:    ret
 
 
   %cmp_result = icmp ne <4 x i32> %vec, zeroinitializer
@@ -374,36 +405,35 @@ define i4 @convert_to_bitmask_with_unknown_type_in_long_chain(<4 x i32> %vec1, <
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    mov w8, #1 ; =0x1
-; CHECK-GI-NEXT:    mov w9, #0 ; =0x0
+; CHECK-GI-NEXT:    movi d2, #0000000000000000
 ; CHECK-GI-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    fmov s4, w9
+; CHECK-GI-NEXT:    fmov s3, w8
 ; CHECK-GI-NEXT:    cmeq.4s v1, v1, #0
-; CHECK-GI-NEXT:    mov.16b v3, v2
-; CHECK-GI-NEXT:    mov.16b v5, v4
-; CHECK-GI-NEXT:    mov.h v4[1], w8
-; CHECK-GI-NEXT:    bic.16b v0, v1, v0
-; CHECK-GI-NEXT:    mov.16b v1, v2
+; CHECK-GI-NEXT:    mov.16b v4, v3
+; CHECK-GI-NEXT:    mov.16b v5, v2
 ; CHECK-GI-NEXT:    mov.h v2[1], w8
+; CHECK-GI-NEXT:    bic.16b v0, v1, v0
+; CHECK-GI-NEXT:    mov.16b v1, v3
 ; CHECK-GI-NEXT:    mov.h v3[1], w8
+; CHECK-GI-NEXT:    mov.h v4[1], w8
 ; CHECK-GI-NEXT:    mov.h v5[1], w8
 ; CHECK-GI-NEXT:    mov.h v1[1], w8
-; CHECK-GI-NEXT:    mov.h v4[2], w8
-; CHECK-GI-NEXT:    xtn.4h v0, v0
 ; CHECK-GI-NEXT:    mov.h v2[2], w8
-; CHECK-GI-NEXT:    mov.h v3[2], w9
-; CHECK-GI-NEXT:    mov.h v5[2], w9
-; CHECK-GI-NEXT:    mov.h v1[2], w9
-; CHECK-GI-NEXT:    mov.h v4[3], w9
-; CHECK-GI-NEXT:    mov.h v2[3], w9
-; CHECK-GI-NEXT:    mov.h v3[3], w9
+; CHECK-GI-NEXT:    xtn.4h v0, v0
+; CHECK-GI-NEXT:    mov.h v3[2], w8
+; CHECK-GI-NEXT:    mov.h v4[2], wzr
+; CHECK-GI-NEXT:    mov.h v5[2], wzr
+; CHECK-GI-NEXT:    mov.h v1[2], wzr
+; CHECK-GI-NEXT:    mov.h v2[3], wzr
+; CHECK-GI-NEXT:    mov.h v3[3], wzr
+; CHECK-GI-NEXT:    mov.h v4[3], wzr
 ; CHECK-GI-NEXT:    mov.h v5[3], w8
 ; CHECK-GI-NEXT:    mov.h v1[3], w8
-; CHECK-GI-NEXT:    orr.8b v0, v0, v3
-; CHECK-GI-NEXT:    eor.8b v3, v0, v5
-; CHECK-GI-NEXT:    eor.8b v0, v4, v0
-; CHECK-GI-NEXT:    and.8b v1, v3, v1
-; CHECK-GI-NEXT:    orr.8b v0, v2, v0
+; CHECK-GI-NEXT:    orr.8b v0, v0, v4
+; CHECK-GI-NEXT:    eor.8b v4, v0, v5
+; CHECK-GI-NEXT:    eor.8b v0, v2, v0
+; CHECK-GI-NEXT:    and.8b v1, v4, v1
+; CHECK-GI-NEXT:    orr.8b v0, v3, v0
 ; CHECK-GI-NEXT:    orr.8b v0, v1, v0
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    mov.s w8, v0[1]
@@ -559,9 +589,10 @@ define i16 @convert_to_bitmask_without_knowing_type(<16 x i1> %vec) {
 define i2 @convert_to_bitmask_2xi32(<2 x i32> %vec) {
 ; CHECK-LABEL: convert_to_bitmask_2xi32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    adrp x8, lCPI11_0@PAGE
+; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    cmeq.2s v0, v0, #0
-; CHECK-NEXT:    ldr d1, [x8, lCPI11_0@PAGEOFF]
+; CHECK-NEXT:    movk x8, #2, lsl #32
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    bic.8b v0, v1, v0
 ; CHECK-NEXT:    addp.2s v0, v0, v0
 ; CHECK-NEXT:    fmov w0, s0
@@ -588,12 +619,11 @@ define i4 @convert_to_bitmask_4xi8(<4 x i8> %vec) {
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    mov w8, #0 ; =0x0
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    uzp1.8b v0, v0, v0
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov.b v1[1], w8
-; CHECK-GI-NEXT:    mov.b v1[2], w8
-; CHECK-GI-NEXT:    mov.b v1[3], w8
+; CHECK-GI-NEXT:    mov.b v1[1], wzr
+; CHECK-GI-NEXT:    mov.b v1[2], wzr
+; CHECK-GI-NEXT:    mov.b v1[3], wzr
 ; CHECK-GI-NEXT:    cmeq.8b v0, v0, v1
 ; CHECK-GI-NEXT:    mvn.8b v0, v0
 ; CHECK-GI-NEXT:    umov.b w8, v0[1]
@@ -617,17 +647,50 @@ define i4 @convert_to_bitmask_4xi8(<4 x i8> %vec) {
 }
 
 define i8 @convert_to_bitmask_8xi2(<8 x i2> %vec) {
-; CHECK-LABEL: convert_to_bitmask_8xi2:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8b v1, #3
-; CHECK-NEXT:    adrp x8, lCPI13_0@PAGE
-; CHECK-NEXT:    and.8b v0, v0, v1
-; CHECK-NEXT:    ldr d1, [x8, lCPI13_0@PAGEOFF]
-; CHECK-NEXT:    cmeq.8b v0, v0, #0
-; CHECK-NEXT:    bic.8b v0, v1, v0
-; CHECK-NEXT:    addv.8b b0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: convert_to_bitmask_8xi2:
+; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    movi.8b v1, #3
+; CHECK-SD-NEXT:    adrp x8, lCPI13_0@PAGE
+; CHECK-SD-NEXT:    and.8b v0, v0, v1
+; CHECK-SD-NEXT:    ldr d1, [x8, lCPI13_0@PAGEOFF]
+; CHECK-SD-NEXT:    cmeq.8b v0, v0, #0
+; CHECK-SD-NEXT:    bic.8b v0, v1, v0
+; CHECK-SD-NEXT:    addv.8b b0, v0
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: convert_to_bitmask_8xi2:
+; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    sub sp, sp, #16
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    movi.8b v1, #3
+; CHECK-GI-NEXT:    cmtst.8b v0, v0, v1
+; CHECK-GI-NEXT:    umov.b w8, v0[1]
+; CHECK-GI-NEXT:    umov.b w9, v0[0]
+; CHECK-GI-NEXT:    umov.b w10, v0[2]
+; CHECK-GI-NEXT:    umov.b w11, v0[3]
+; CHECK-GI-NEXT:    and w8, w8, #0x1
+; CHECK-GI-NEXT:    bfi w9, w8, #1, #31
+; CHECK-GI-NEXT:    and w8, w10, #0x1
+; CHECK-GI-NEXT:    umov.b w10, v0[4]
+; CHECK-GI-NEXT:    orr w8, w9, w8, lsl #2
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov.b w11, v0[5]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
+; CHECK-GI-NEXT:    and w9, w10, #0x1
+; CHECK-GI-NEXT:    umov.b w10, v0[6]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov.b w11, v0[7]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
+; CHECK-GI-NEXT:    and w9, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
+; CHECK-GI-NEXT:    strb w8, [sp, #15]
+; CHECK-GI-NEXT:    and w0, w8, #0xff
+; CHECK-GI-NEXT:    add sp, sp, #16
+; CHECK-GI-NEXT:    ret
 
   %cmp_result = icmp ne <8 x i2> %vec, zeroinitializer
   %bitmask = bitcast <8 x i1> %cmp_result to i8
@@ -776,26 +839,61 @@ define i4 @convert_legalized_illegal_element_size(<4 x i22> %vec) {
 
 ; This may still be converted as a v8i8 after the vector concat (but not as v4iX).
 define i8 @no_direct_convert_for_bad_concat(<4 x i32> %vec) {
-; CHECK-LABEL: no_direct_convert_for_bad_concat:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmtst.4s v0, v0, v0
-; CHECK-NEXT:    adrp x8, lCPI17_0@PAGE
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    umov.h w9, v0[0]
-; CHECK-NEXT:    mov.b v1[4], w9
-; CHECK-NEXT:    umov.h w9, v0[1]
-; CHECK-NEXT:    mov.b v1[5], w9
-; CHECK-NEXT:    umov.h w9, v0[2]
-; CHECK-NEXT:    mov.b v1[6], w9
-; CHECK-NEXT:    umov.h w9, v0[3]
-; CHECK-NEXT:    mov.b v1[7], w9
-; CHECK-NEXT:    shl.8b v0, v1, #7
-; CHECK-NEXT:    ldr d1, [x8, lCPI17_0@PAGEOFF]
-; CHECK-NEXT:    cmlt.8b v0, v0, #0
-; CHECK-NEXT:    and.8b v0, v0, v1
-; CHECK-NEXT:    addv.8b b0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: no_direct_convert_for_bad_concat:
+; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    cmtst.4s v0, v0, v0
+; CHECK-SD-NEXT:    adrp x8, lCPI17_0@PAGE
+; CHECK-SD-NEXT:    xtn.4h v0, v0
+; CHECK-SD-NEXT:    umov.h w9, v0[0]
+; CHECK-SD-NEXT:    mov.b v1[4], w9
+; CHECK-SD-NEXT:    umov.h w9, v0[1]
+; CHECK-SD-NEXT:    mov.b v1[5], w9
+; CHECK-SD-NEXT:    umov.h w9, v0[2]
+; CHECK-SD-NEXT:    mov.b v1[6], w9
+; CHECK-SD-NEXT:    umov.h w9, v0[3]
+; CHECK-SD-NEXT:    mov.b v1[7], w9
+; CHECK-SD-NEXT:    shl.8b v0, v1, #7
+; CHECK-SD-NEXT:    ldr d1, [x8, lCPI17_0@PAGEOFF]
+; CHECK-SD-NEXT:    cmlt.8b v0, v0, #0
+; CHECK-SD-NEXT:    and.8b v0, v0, v1
+; CHECK-SD-NEXT:    addv.8b b0, v0
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: no_direct_convert_for_bad_concat:
+; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    sub sp, sp, #16
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    cmtst.4s v0, v0, v0
+; CHECK-GI-NEXT:    xtn.4h v0, v0
+; CHECK-GI-NEXT:    uzp1.8b v0, v0, v0
+; CHECK-GI-NEXT:    mov.s v0[1], v0[0]
+; CHECK-GI-NEXT:    umov.b w8, v0[1]
+; CHECK-GI-NEXT:    umov.b w9, v0[0]
+; CHECK-GI-NEXT:    umov.b w10, v0[2]
+; CHECK-GI-NEXT:    umov.b w11, v0[3]
+; CHECK-GI-NEXT:    and w8, w8, #0x1
+; CHECK-GI-NEXT:    bfi w9, w8, #1, #31
+; CHECK-GI-NEXT:    and w8, w10, #0x1
+; CHECK-GI-NEXT:    umov.b w10, v0[4]
+; CHECK-GI-NEXT:    orr w8, w9, w8, lsl #2
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov.b w11, v0[5]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
+; CHECK-GI-NEXT:    and w9, w10, #0x1
+; CHECK-GI-NEXT:    umov.b w10, v0[6]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov.b w11, v0[7]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
+; CHECK-GI-NEXT:    and w9, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
+; CHECK-GI-NEXT:    strb w8, [sp, #15]
+; CHECK-GI-NEXT:    and w0, w8, #0xff
+; CHECK-GI-NEXT:    add sp, sp, #16
+; CHECK-GI-NEXT:    ret
 
   %cmp_result = icmp ne <4 x i32> %vec, zeroinitializer
   %vector_pad = shufflevector <4 x i1> poison, <4 x i1> %cmp_result, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 4, i32 5, i32 6, i32 7>
@@ -896,16 +994,13 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-SD-NEXT:    shl.16b v0, v0, #7
 ; CHECK-SD-NEXT:    adrp x8, lCPI20_0@PAGE
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI20_0@PAGEOFF]
-; CHECK-SD-NEXT:    add x8, sp, #14
 ; CHECK-SD-NEXT:    cmlt.16b v0, v0, #0
 ; CHECK-SD-NEXT:    and.16b v0, v0, v1
 ; CHECK-SD-NEXT:    ext.16b v1, v0, v0, #8
 ; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
 ; CHECK-SD-NEXT:    addv.8h h0, v0
-; CHECK-SD-NEXT:    str h0, [sp, #14]
-; CHECK-SD-NEXT:    ld1.b { v0 }[0], [x8]
-; CHECK-SD-NEXT:    orr x8, x8, #0x1
-; CHECK-SD-NEXT:    ld1.b { v0 }[4], [x8]
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret

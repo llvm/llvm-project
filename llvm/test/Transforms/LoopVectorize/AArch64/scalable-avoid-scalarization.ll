@@ -20,15 +20,14 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[IDX]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[IDX]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[DOTSPLATINSERT]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = mul <vscale x 2 x i32> [[TMP8]], splat (i32 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i32> [[DOTSPLAT]], [[TMP10]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 2 x i32> [[DOTSPLAT]], [[TMP8]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <vscale x 2 x i32> [[DOTSPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -37,19 +36,19 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[IDX]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[A:%.*]], <vscale x 2 x i32> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i64 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[B:%.*]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <vscale x 2 x double> [[WIDE_LOAD]], ptr [[TMP18]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[VEC_IND]], [[DOTSPLAT2]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 2 x i32> [[VEC_IND]], [[DOTSPLAT2]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP22:%.*]] = mul nuw i32 [[TMP21]], 2
-; CHECK-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP22]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i32 [[TMP23]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i32 [[TMP12]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], 1
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i32 [[TMP14]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[L_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -72,7 +71,7 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 L.entry:
   br label %L.LoopBody
 
-L.LoopBody:                                       ; preds = %L.LoopBody, %L.entry
+L.LoopBody:
   %indvar = phi i32 [ %indvar.next, %L.LoopBody ], [ %idx, %L.entry ]
   %indvar.next = add nsw i32 %indvar, 1
   %0 = getelementptr i64, ptr %a, i32 %indvar
@@ -82,7 +81,7 @@ L.LoopBody:                                       ; preds = %L.LoopBody, %L.entr
   %2 = icmp slt i32 %indvar.next, %n
   br i1 %2, label %L.LoopBody, label %L.exit
 
-L.exit:                                       ; preds = %L.LoopBody
+L.exit:
   store i64 1, ptr %0, align 8
   ret void
 }
