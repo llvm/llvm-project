@@ -477,6 +477,163 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
   }
 };
 
+struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
+  using UnrollPattern<xegpu::DpasMxOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::DpasMxOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    LLVM_DEBUG(llvm::dbgs() << "UnrollDpasMxOp: original op: " << op << "\n");
+
+    // expecting every operands is a 2D Vector
+    if (llvm::any_of(op->getOperandTypes(), [&](Type type) {
+          auto vecTy = dyn_cast<VectorType>(type);
+          return !vecTy || vecTy.getRank() != 2;
+        }))
+      return failure();
+
+    // A vector of 3 elements should be returned, representing M, K, N
+    // respectively.
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape || targetShape->size() != 3)
+      return failure();
+    auto M = (*targetShape)[0];
+    auto K = (*targetShape)[1];
+    auto N = (*targetShape)[2];
+    auto S = (*targetShape)[3];
+
+    LLVM_DEBUG(llvm::dbgs() << "  targetShape: M=" << M << ", K=" << K
+                            << ", N=" << N << ", S=" << S << "\n");
+
+    int64_t aBlockSize[2] = {M, K};
+    int64_t bBlockSize[2] = {K, N};
+    int64_t cBlockSize[2] = {M, N};
+    int64_t aScaleBlockSize[2] = {M, S};
+    int64_t bScaleBlockSize[2] = {S, N};
+
+    LLVM_DEBUG(llvm::dbgs() << "  aBlockSize: [" << M << ", " << K << "]\n");
+    LLVM_DEBUG(llvm::dbgs() << "  bBlockSize: [" << K << ", " << N << "]\n");
+    LLVM_DEBUG(llvm::dbgs() << "  cBlockSize: [" << M << ", " << N << "]\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "  aScaleBlockSize: [" << M << ", " << K / 32 << "]\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "  bScaleBlockSize: [" << K / 32 << ", " << N << "]\n");
+
+    auto packWrapper = [&](TypedValue<VectorType> val,
+                           ArrayRef<int64_t> blockSize) {
+      VectorType type = val.getType();
+      std::optional<SmallVector<int64_t>> grids =
+          computeShapeRatio(type.getShape(), blockSize);
+      assert(grids && "Expecting grids to be computed.");
+      auto numNewOps = computeProduct(*grids);
+      if (numNewOps == 1)
+        return SmallVector<Value>({val});
+      VectorType newVecTy = type.cloneWith(blockSize, type.getElementType());
+      SmallVector<Type> convertedTypes(numNewOps, newVecTy);
+      SmallVector<Value> values =
+          pack(val, convertedTypes, blockSize, loc, rewriter);
+      return values;
+    };
+
+    auto a = op.getA();
+    auto b = op.getB();
+    auto c = op.getAcc();
+    auto ascale = dyn_cast<TypedValue<VectorType>>(op.getScaleA());
+    auto bscale = dyn_cast<TypedValue<VectorType>>(op.getScaleB());
+
+    auto aShape = a.getType().getShape();
+    auto bShape = b.getType().getShape();
+
+    SmallVector<Value> aVals, bVals, cVals, aScaleVals, bScaleVals;
+    aVals = packWrapper(a, aBlockSize);
+    bVals = packWrapper(b, bBlockSize);
+
+    if (c)
+      cVals = packWrapper(c, cBlockSize);
+    if (ascale)
+      aScaleVals = packWrapper(ascale, aScaleBlockSize);
+    if (bscale)
+      bScaleVals = packWrapper(bscale, bScaleBlockSize);
+
+    LLVM_DEBUG(llvm::dbgs() << "  aVals size: " << aVals.size() << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "  bVals size: " << bVals.size() << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "  cVals size: " << cVals.size() << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "  aScaleVals size: " << aScaleVals.size() << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "  bScaleVals size: " << bScaleVals.size() << "\n");
+
+    // Skip the operation if every operand has an invalid blocking size (empty)
+    // or if the original shape matches the blocking size (size == 1).
+    // auto ranges = c ? SmallVector<ValueRange>({aVals, bVals, cVals})
+    //                 : SmallVector<ValueRange>({aVals, bVals});
+    // if (llvm::any_of(ranges, [](auto &v) { return v.size() == 0; }) ||
+    //     llvm::all_of(ranges, [](auto &v) { return v.size() == 1; }))
+    //   return failure();
+
+    VectorType resultTy = op.getResult().getType();
+    auto vecTy = VectorType::get(cBlockSize, resultTy.getElementType());
+
+    int64_t mIters = aShape[0] / M;
+    int64_t kIters = aShape[1] / K;
+    int64_t nIters = bShape[1] / N;
+
+    LLVM_DEBUG(llvm::dbgs() << "  mIters=" << mIters << ", kIters=" << kIters
+                            << ", nIters=" << nIters << "\n");
+
+    SmallVector<Value> newOps;
+    xegpu::DpasMxOp newDpasMxOp;
+    for (int64_t i = 0; i < mIters; ++i) {
+      for (int64_t j = 0; j < nIters; ++j) {
+        Value tmpC;
+        if (c)
+          tmpC = cVals[i * nIters + j]; // init with acc
+
+        for (int64_t k = 0; k < kIters; ++k) {
+          Value aVec = aVals[i * kIters + k];
+          Value bVec = bVals[k * nIters + j];
+
+          LLVM_DEBUG(llvm::dbgs() << "  [i=" << i << ", j=" << j << ", k=" << k
+                                  << "] aVec: " << aVec.getType()
+                                  << ", bVec: " << bVec.getType() << "\n");
+
+          SmallVector<Value> operands({aVec, bVec});
+          if (tmpC) {
+            operands.push_back(tmpC);
+            LLVM_DEBUG(llvm::dbgs() << "    tmpC: " << tmpC.getType() << "\n");
+          }
+          if (ascale) {
+            Value aScaleVec = aScaleVals[i * kIters + k];
+            operands.push_back(aScaleVec);
+            LLVM_DEBUG(llvm::dbgs()
+                       << "    aScaleVec: " << aScaleVec.getType() << "\n");
+          }
+          if (bscale) {
+            Value bScaleVec = bScaleVals[k * nIters + j];
+            operands.push_back(bScaleVec);
+            LLVM_DEBUG(llvm::dbgs()
+                       << "    bScaleVec: " << bScaleVec.getType() << "\n");
+          }
+          LLVM_DEBUG(llvm::dbgs() << "    total operands: " << operands.size()
+                                  << ", resTy: " << vecTy << "\n");
+          newDpasMxOp = xegpu::DpasMxOp::create(
+              rewriter, loc, vecTy, operands,
+              xegpu::dropInstDataOnAttrs(op->getAttrs()));
+          LLVM_DEBUG(llvm::dbgs() << "    created: " << newDpasMxOp << "\n");
+        }
+        newOps.push_back(newDpasMxOp);
+      }
+    }
+
+    LLVM_DEBUG(llvm::dbgs()
+               << "  total new DpasMxOps: " << newOps.size() << "\n");
+
+    Value castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
+    rewriter.replaceOp(op, castOp);
+    return success();
+  }
+};
+
 struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
   using UnrollPattern<xegpu::LoadGatherOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::LoadGatherOp op,
@@ -973,11 +1130,10 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
-  patterns
-      .add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
-           UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp, UnrollLoadGatherOp,
-           UnrollStoreScatterOp, UnrollPrefetchOp, UnrollLoadMatrixOp,
-           UnrollStoreMatrixOp, UnrollLoadGatherOpWithOffset,
-           UnrollStoreScatterOpWithOffsets, UnrollConvertLayoutOp>(
-          patterns.getContext(), options);
+  patterns.add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
+               UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp, UnrollDpasMxOp,
+               UnrollLoadGatherOp, UnrollStoreScatterOp, UnrollPrefetchOp,
+               UnrollLoadMatrixOp, UnrollStoreMatrixOp,
+               UnrollLoadGatherOpWithOffset, UnrollStoreScatterOpWithOffsets,
+               UnrollConvertLayoutOp>(patterns.getContext(), options);
 }

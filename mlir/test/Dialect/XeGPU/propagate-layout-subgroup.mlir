@@ -350,3 +350,63 @@ gpu.module @test {
     gpu.return
   }
 }
+
+// -----
+#ld_bpack = #xegpu.layout<sg_layout = [8, 8], sg_data = [256, 16], inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+#b = #xegpu.layout<sg_layout = [8, 8], sg_data = [512, 16], inst_data = [64, 16], lane_layout = [1, 16], lane_data = [4, 1]>
+
+gpu.module @test {
+  // CHECK-LABEL: b_load_manipulate_store
+  gpu.func @b_load_manipulate_store(%arg0: memref<2048x1024xui8>) {
+    // Construct 2D offsets for loading B (256x128) from memref<2048x1024xui8>
+    %b_row_step = vector.step : vector<256xindex>
+    %b_col_step = vector.step : vector<128xindex>
+    %b_row_step_2d = vector.shape_cast %b_row_step : vector<256xindex> to vector<256x1xindex>
+    %b_row_indices = vector.broadcast %b_row_step_2d : vector<256x1xindex> to vector<256x128xindex>
+    %c1024_vec = arith.constant dense<1024> : vector<256x128xindex>
+    %b_row_offsets = arith.muli %b_row_indices, %c1024_vec : vector<256x128xindex>
+    %b_col_offsets = vector.broadcast %b_col_step : vector<128xindex> to vector<256x128xindex>
+    %b_offsets = arith.addi %b_row_offsets, %b_col_offsets : vector<256x128xindex>
+    %b_mask = arith.constant dense<true> : vector<256x128xi1>
+
+    // Construct 2D offsets for storing B (512x128) back
+    %b_st_row_step = vector.step : vector<512xindex>
+    %b_st_col_step = vector.step : vector<128xindex>
+    %b_st_row_step_2d = vector.shape_cast %b_st_row_step : vector<512xindex> to vector<512x1xindex>
+    %b_st_row_indices = vector.broadcast %b_st_row_step_2d : vector<512x1xindex> to vector<512x128xindex>
+    %c2048_vec = arith.constant dense<2048> : vector<512x128xindex>
+    %b_st_row_offsets = arith.muli %b_st_row_indices, %c2048_vec : vector<512x128xindex>
+    %b_st_col_step_2d = vector.shape_cast %b_st_col_step : vector<128xindex> to vector<1x128xindex>
+    %b_st_col_offsets = vector.broadcast %b_st_col_step_2d : vector<1x128xindex> to vector<512x128xindex>
+    %b_st_offsets = arith.addi %b_st_row_offsets, %b_st_col_offsets : vector<512x128xindex>
+    %b_st_mask = arith.constant dense<true> : vector<512x128xi1>
+
+    // Extract pointer
+    %ptr_b_idx = memref.extract_aligned_pointer_as_index %arg0 : memref<2048x1024xui8> -> index
+    %ptr_b = arith.index_cast %ptr_b_idx : index to i64
+
+    // Load packed B (256x128 ui8 = 512x128 fp4 column-major packed)
+    // CHECK: xegpu.load %{{.*}}[%{{.*}}], %{{.*}} <{layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [256, 16], inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+    %b_packed = xegpu.load %ptr_b[%b_offsets], %b_mask <{layout = #ld_bpack}>
+        : i64, vector<256x128xindex>, vector<256x128xi1> -> vector<256x128xui8>
+
+    // Bitcast to fp4: 256x128 uint8 -> 256x256 fp4 (each uint8 holds 2 fp4 values)
+    %b_bitcast = vector.bitcast %b_packed : vector<256x128xui8> to vector<256x256xf4E2M1FN>
+
+    // De-interleave: extract even and odd columns
+    %b_even, %b_odd = vector.deinterleave %b_bitcast : vector<256x256xf4E2M1FN> -> vector<256x128xf4E2M1FN>
+
+    // Reconstruct 512x128 by interleaving even/odd rows
+    %b_even_t = vector.transpose %b_even, [1, 0] : vector<256x128xf4E2M1FN> to vector<128x256xf4E2M1FN>
+    %b_odd_t = vector.transpose %b_odd, [1, 0] : vector<256x128xf4E2M1FN> to vector<128x256xf4E2M1FN>
+    %b_interleaved = vector.interleave %b_even_t, %b_odd_t : vector<128x256xf4E2M1FN> -> vector<128x512xf4E2M1FN>
+    %b_loaded = vector.transpose %b_interleaved, [1, 0] : vector<128x512xf4E2M1FN> to vector<512x128xf4E2M1FN>
+
+    // Store B back to same memory location
+    // CHECK: xegpu.store %{{.*}}, %{{.*}}[%{{.*}}], %{{.*}} <{layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [512, 16], inst_data = [64, 16], lane_layout = [1, 16], lane_data = [4, 1]>}>
+    xegpu.store %b_loaded, %ptr_b[%b_st_offsets], %b_st_mask <{layout = #b}>
+        : vector<512x128xf4E2M1FN>, i64, vector<512x128xindex>, vector<512x128xi1>
+
+    gpu.return
+  }
+}

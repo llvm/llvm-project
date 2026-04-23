@@ -163,29 +163,166 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   if (isa<xegpu::StoreScatterOp>(op))
     return getTileShape(op->getOpOperand(0));
 
-  if (isa<xegpu::DpasOp>(op)) {
-    std::optional<SmallVector<int64_t>> aTile =
-        getTileShape(op->getOpOperand(0));
-    std::optional<SmallVector<int64_t>> bTile =
-        getTileShape(op->getOpOperand(1));
+  // Helper lambda to validate and get A/B tiles
+  auto validateABTiles = [&](Operation *op)
+      -> std::optional<std::pair<SmallVector<int64_t>, SmallVector<int64_t>>> {
+    std::optional<SmallVector<int64_t>> aTile = getTileShape(op->getOpOperand(0));
+    std::optional<SmallVector<int64_t>> bTile = getTileShape(op->getOpOperand(1));
+
+    LLVM_DEBUG(llvm::dbgs() << "  aTile: "
+                            << (aTile ? llvm::join(llvm::map_range(*aTile,
+                                   [](int64_t v) { return std::to_string(v); }), "x")
+                                      : "nullopt")
+                            << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "  bTile: "
+                            << (bTile ? llvm::join(llvm::map_range(*bTile,
+                                   [](int64_t v) { return std::to_string(v); }), "x")
+                                      : "nullopt")
+                            << "\n");
 
     if (!aTile || aTile->size() != 2 || !bTile || bTile->size() != 2)
       return std::nullopt;
 
     // semantic check for A and B
-    if ((*aTile)[1] != (*bTile)[0])
+    if ((*aTile)[1] != (*bTile)[0]) {
+      LLVM_DEBUG(llvm::dbgs() << "  A/B semantic check failed: aTile[1]="
+                              << (*aTile)[1] << " != bTile[0]=" << (*bTile)[0]
+                              << "\n");
+      return std::nullopt;
+    }
+
+    return std::make_pair(*aTile, *bTile);
+  };
+
+  // Helper lambda to validate C tile
+  auto validateCTile = [&](Operation *op, unsigned cOperandIdx,
+                           const SmallVector<int64_t> &aTile,
+                           const SmallVector<int64_t> &bTile) -> bool {
+    if (op->getNumOperands() <= cOperandIdx)
+      return true;
+
+    std::optional<SmallVector<int64_t>> cTile =
+        getTileShape(op->getOpOperand(cOperandIdx));
+    int64_t expectedCTile[2] = {aTile[0], bTile[1]};
+    LLVM_DEBUG(llvm::dbgs() << "  cTile: "
+                            << (cTile ? llvm::join(llvm::map_range(*cTile,
+                                   [](int64_t v) { return std::to_string(v); }), "x")
+                                      : "nullopt")
+                            << ", expected: " << expectedCTile[0] << "x"
+                            << expectedCTile[1] << "\n");
+    if (!cTile || !llvm::equal(*cTile, expectedCTile))
+      return false;
+    return true;
+  };
+
+  // Helper lambda to validate scale A/B tiles for DpasMxOp
+  auto validateABScaleTiles = [&](Operation *op, unsigned scaleAOperandIdx,
+                                  unsigned scaleBOperandIdx,
+                                  const SmallVector<int64_t> &aTile,
+                                  const SmallVector<int64_t> &bTile)
+      -> std::optional<int64_t> {
+    std::optional<SmallVector<int64_t>> aScaleTile =
+        getTileShape(op->getOpOperand(scaleAOperandIdx));
+    std::optional<SmallVector<int64_t>> bScaleTile =
+        getTileShape(op->getOpOperand(scaleBOperandIdx));
+
+    LLVM_DEBUG(llvm::dbgs() << "  aScaleTile: "
+                            << (aScaleTile ? llvm::join(llvm::map_range(*aScaleTile,
+                                   [](int64_t v) { return std::to_string(v); }), "x")
+                                          : "nullopt")
+                            << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "  bScaleTile: "
+                            << (bScaleTile ? llvm::join(llvm::map_range(*bScaleTile,
+                                   [](int64_t v) { return std::to_string(v); }), "x")
+                                          : "nullopt")
+                            << "\n");
+
+    if (!aScaleTile || aScaleTile->size() != 2 ||
+        !bScaleTile || bScaleTile->size() != 2)
       return std::nullopt;
 
+    // Validate scale tile dimensions
+    assert((*aScaleTile)[0] == aTile[0] &&
+           "aScaleTile[0] must equal aTile[0]");
+    assert((*bScaleTile)[1] == bTile[1] &&
+           "bScaleTile[1] must equal bTile[1]");
+
+    if ((*aScaleTile)[1] != (*bScaleTile)[0]) {
+      LLVM_DEBUG(llvm::dbgs() << "  scale A/B semantic check failed: aScaleTile[1]="
+                              << (*aScaleTile)[1] << " != bScaleTile[0]="
+                              << (*bScaleTile)[0] << "\n");
+      return std::nullopt;
+    }
+
+    // Return the K scale factor
+    return (*aScaleTile)[1];
+  };
+
+  if (isa<xegpu::DpasOp>(op)) {
+    LLVM_DEBUG(llvm::dbgs() << "getTileShape for DpasOp: " << *op << "\n");
+
+    auto abTiles = validateABTiles(op);
+    if (!abTiles)
+      return std::nullopt;
+
+    auto [aTile, bTile] = *abTiles;
+
     // semantic check for C
-    if (op->getNumOperands() == 3) {
-      std::optional<SmallVector<int64_t>> cTile =
-          getTileShape(op->getOpOperand(2));
-      int64_t expectedCTile[2] = {(*aTile)[0], (*bTile)[1]};
-      if (!cTile || !llvm::equal(*cTile, expectedCTile))
+    if (!validateCTile(op, 2, aTile, bTile))
+      return std::nullopt;
+
+    LLVM_DEBUG(llvm::dbgs() << "  result: [" << aTile[0] << ", "
+                            << aTile[1] << ", " << bTile[1] << "]\n");
+    return SmallVector<int64_t>({aTile[0], aTile[1], bTile[1]});
+  }
+
+  if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
+    LLVM_DEBUG(llvm::dbgs() << "getTileShape for DpasMxOp: " << *op << "\n");
+
+    auto abTiles = validateABTiles(op);
+    if (!abTiles)
+      return std::nullopt;
+
+    auto [aTile, bTile] = *abTiles;
+
+    // Get operand indices using AttrSizedOperandSegments
+    auto segmentSizesAttr = dpasMxOp->getAttrOfType<DenseI32ArrayAttr>(
+        dpasMxOp.getOperandSegmentSizesAttrName());
+    if (!segmentSizesAttr)
+      return std::nullopt;
+
+    auto segmentSizes = segmentSizesAttr.asArrayRef();
+    unsigned aSize = segmentSizes[0];
+    unsigned bSize = segmentSizes[1];
+    unsigned accSize = segmentSizes[2];
+    unsigned scaleASize = segmentSizes[3];
+    unsigned scaleBSize = segmentSizes[4];
+
+    // Validate C tile if present
+    if (accSize > 0) {
+      unsigned accOperandIdx = aSize + bSize;
+      if (!validateCTile(op, accOperandIdx, aTile, bTile))
         return std::nullopt;
     }
 
-    return SmallVector<int64_t>({(*aTile)[0], (*aTile)[1], (*bTile)[1]});
+    // Validate scale tiles if present
+    int64_t kScaleFactor = 1;
+    if (scaleASize > 0 && scaleBSize > 0) {
+      unsigned scaleAOperandIdx = aSize + bSize + accSize;
+      unsigned scaleBOperandIdx = scaleAOperandIdx + scaleASize;
+
+      auto scaleFactor = validateABScaleTiles(op, scaleAOperandIdx,
+                                               scaleBOperandIdx, aTile, bTile);
+      if (!scaleFactor)
+        return std::nullopt;
+
+      kScaleFactor = *scaleFactor;
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "  result: [" << aTile[0] << ", "
+                            << aTile[1] << ", " << bTile[1] << ", "
+                            << kScaleFactor << "]\n");
+    return SmallVector<int64_t>({aTile[0], aTile[1], bTile[1], kScaleFactor});
   }
 
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
@@ -195,7 +332,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     return getTileShape(op->getOpOperand(0));
 
   if (isa<vector::TransposeOp, vector::BroadcastOp, vector::StepOp,
-          vector::ShapeCastOp, vector::ConstantMaskOp, vector::CreateMaskOp>(
+          vector::ShapeCastOp, vector::ConstantMaskOp, vector::CreateMaskOp,
+          vector::BitCastOp, vector::InterleaveOp, vector::DeinterleaveOp>(
           op))
     return getTileShape(op->getOpResult(0));
 
