@@ -9,11 +9,9 @@
 // CHECK: call void {{.*}} [ "convergencectrl"(token [[loop_token]]) ]
 // CHECK: br i1 {{%.*}} label {{%.*}} label %[[loop_entry]]
 
-RWBuffer<float> b[2];
 static RWBuffer<float> s[2];
 
 [numthreads(1,1,1)]
 void main() {
-  s = b;
   s[0][0] = 1.0;
 }
