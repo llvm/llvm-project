@@ -21,6 +21,7 @@ float test_float(float p0) {
 
 // CHECK: define {{.*}}test_vector_uint{{.*}}(<4 x i32> {{.*}} [[VAL:%.*]]){{.*}} 
 // CHECK: bitcast <4 x i32> [[VAL]] to <4 x float>
+
 float4 test_vector_uint(uint4 p0) {
   return asfloat(p0);
 }
