@@ -5427,7 +5427,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // If the call returns a temporary with struct return, create a temporary
   // alloca to hold the result, unless one is given to us.
   Address SRetPtr = Address::invalid();
-  Address SRetAlloca = Address::invalid(); // Original alloca for lifetime markers
+  // Original alloca for lifetime markers
+  Address SRetAlloca = Address::invalid();
   bool NeedSRetLifetimeEnd = false;
   if (RetAI.isIndirect() || RetAI.isInAlloca() || RetAI.isCoerceAndExpand()) {
     // For virtual function pointer thunks and musttail calls, we must always
