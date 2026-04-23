@@ -72,8 +72,6 @@ public:
   HostOpFilteringPass() = default;
 
   void runOnOperation() override {
-    MLIRContext *context = &getContext();
-    OpBuilder opBuilder(context);
     auto op = dyn_cast<omp::OffloadModuleInterface>(getOperation());
     if (!op || !op.getIsTargetDevice())
       return;
