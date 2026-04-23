@@ -14072,11 +14072,6 @@ TEST_F(FormatTest, HandlesIncludeDirectives) {
   Style.AlwaysBreakBeforeMultilineStrings = true;
   Style.ColumnLimit = 0;
   verifyFormat("#import \"abc.h\"", Style);
-
-  // But 'import' might also be a regular C++ namespace.
-  verifyFormat("import::SomeFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "                     aaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
-  verifyFormat("import::Bar foo(val ? 2 : 1);");
 }
 
 //===----------------------------------------------------------------------===//
@@ -24630,8 +24625,22 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("module", Style);
   verifyFormat("export", Style);
 
+  Style.ColumnLimit = 10;
+  verifyFormat("import Foo.Bar;", Style);
+  verifyFormat("export import Foo.Bar;", Style);
+  verifyFormat("export module Foo.Bar;", Style);
+  verifyFormat("import Foo.Bar:Baz;", Style);
+  verifyFormat("export import Foo.Bar:Baz;", Style);
+  verifyFormat("export module Foo.Bar:Baz;", Style);
+
+  // Somewhat gracefully handle import in pre C++20 code.
   verifyFormat("import /* not keyword */ = val ? 2 : 1;");
   verifyFormat("_world->import<engine_module>();");
+
+  // But 'import' might also be a regular C++ namespace.
+  verifyFormat("import::SomeFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "                     aaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+  verifyFormat("import::Bar foo(val ? 2 : 1);");
 }
 
 TEST_F(FormatTest, CoroutineForCoawait) {

@@ -116,6 +116,25 @@ public:
     return First && First->is(tok::comment) && !First->getNextNonComment();
   }
 
+  bool isCppModuleLine(const AdditionalKeywords &Keywords) const {
+    if (!First)
+      return false;
+    if (startsWith(tok::kw_export, Keywords.kw_module) ||
+        startsWith(tok::kw_export, Keywords.kw_import)) {
+      return true;
+    }
+
+    if (First->isNoneOf(Keywords.kw_module, Keywords.kw_import))
+      return false;
+
+    // Pre C++20 code using import (or module) as identifier e.g. for a
+    // namespace.
+    if (auto Next = First->getNextNonComment())
+      return Next->isNoneOf(tok::coloncolon, tok::period, tok::star);
+
+    return false;
+  }
+
   /// \c true if this line starts with the given tokens in order, ignoring
   /// comments.
   template <typename... Ts> bool startsWith(Ts... Tokens) const {

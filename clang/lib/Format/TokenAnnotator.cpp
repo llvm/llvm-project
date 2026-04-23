@@ -1392,10 +1392,8 @@ private:
         }
         break;
       }
-      if (Line.First->isOneOf(Keywords.kw_module, Keywords.kw_import) ||
-          Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
-          Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
-        Tok->setType(TT_ModulePartitionColon);
+      if (Line.isCppModuleLine(Keywords)) {
+        Tok->setFinalizedType(TT_ModulePartitionColon);
       } else if (Line.First->is(tok::kw_asm)) {
         Tok->setType(TT_InlineASMColon);
       } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
@@ -2004,6 +2002,13 @@ public:
       auto Type = parsePreprocessorDirective();
       if (Type != LT_Invalid)
         return Type;
+    }
+
+    if (IsCpp && Line.isCppModuleLine(Keywords)) {
+      while (CurrentToken)
+        if (!consumeToken())
+          return LT_Invalid;
+      return LT_ImportStatement;
     }
 
     // Directly allow to 'import <string-literal>' to support protocol buffer

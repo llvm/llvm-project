@@ -1361,11 +1361,8 @@ bool UnwrappedLineParser::parseModuleImport() {
 
   nextToken();
   while (!eof()) {
-    if (FormatTok->is(tok::colon)) {
-      FormatTok->setFinalizedType(TT_ModulePartitionColon);
-    }
     // Handle import <foo/bar.h> as we would an include statement.
-    else if (FormatTok->is(tok::less)) {
+    if (FormatTok->is(tok::less)) {
       nextToken();
       while (FormatTok->isNoneOf(tok::semi, tok::greater) && !eof()) {
         // Mark tokens up to the trailing line comments as implicit string
