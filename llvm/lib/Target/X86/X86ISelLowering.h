@@ -110,6 +110,7 @@ namespace llvm {
 
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
+    bool requiresStrictFPForBundledFPOps() const override { return true; }
 
     void markLibCallAttributes(MachineFunction *MF, unsigned CC,
                                ArgListTy &Args) const override;

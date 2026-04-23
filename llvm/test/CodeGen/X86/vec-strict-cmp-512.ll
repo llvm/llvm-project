@@ -34,7 +34,7 @@ define <16 x i32> @test_v16f32_ogt_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpgt_oqps 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpgtps 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -42,7 +42,7 @@ define <16 x i32> @test_v16f32_ogt_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ;
 ; X64-LABEL: test_v16f32_ogt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmplt_oqps %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpltps %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f32(
@@ -59,7 +59,7 @@ define <16 x i32> @test_v16f32_oge_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpge_oqps 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpgeps 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -67,7 +67,7 @@ define <16 x i32> @test_v16f32_oge_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ;
 ; X64-LABEL: test_v16f32_oge_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmple_oqps %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpleps %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f32(
@@ -84,7 +84,7 @@ define <16 x i32> @test_v16f32_olt_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmplt_oqps 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpltps 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -92,7 +92,7 @@ define <16 x i32> @test_v16f32_olt_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ;
 ; X64-LABEL: test_v16f32_olt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmplt_oqps %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpltps %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f32(
@@ -109,7 +109,7 @@ define <16 x i32> @test_v16f32_ole_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmple_oqps 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpleps 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -117,7 +117,7 @@ define <16 x i32> @test_v16f32_ole_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ;
 ; X64-LABEL: test_v16f32_ole_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmple_oqps %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpleps %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f32(
@@ -209,7 +209,7 @@ define <16 x i32> @test_v16f32_ugt_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpnle_uqps 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpnleps 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -217,7 +217,7 @@ define <16 x i32> @test_v16f32_ugt_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ;
 ; X64-LABEL: test_v16f32_ugt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnle_uqps %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpnleps %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f32(
@@ -234,7 +234,7 @@ define <16 x i32> @test_v16f32_uge_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpnlt_uqps 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpnltps 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -242,7 +242,7 @@ define <16 x i32> @test_v16f32_uge_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ;
 ; X64-LABEL: test_v16f32_uge_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnlt_uqps %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpnltps %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f32(
@@ -259,7 +259,7 @@ define <16 x i32> @test_v16f32_ult_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpnge_uqps 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpngeps 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -267,7 +267,7 @@ define <16 x i32> @test_v16f32_ult_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ;
 ; X64-LABEL: test_v16f32_ult_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnle_uqps %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpnleps %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f32(
@@ -284,7 +284,7 @@ define <16 x i32> @test_v16f32_ule_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpngt_uqps 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpngtps 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -292,7 +292,7 @@ define <16 x i32> @test_v16f32_ule_q(<16 x i32> %a, <16 x i32> %b, <16 x float> 
 ;
 ; X64-LABEL: test_v16f32_ule_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnlt_uqps %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpnltps %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f32(
@@ -384,7 +384,7 @@ define <8 x i64> @test_v8f64_ogt_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpgt_oqpd 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpgtpd 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -392,7 +392,7 @@ define <8 x i64> @test_v8f64_ogt_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ;
 ; X64-LABEL: test_v8f64_ogt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmplt_oqpd %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpltpd %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f64(
@@ -409,7 +409,7 @@ define <8 x i64> @test_v8f64_oge_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpge_oqpd 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpgepd 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -417,7 +417,7 @@ define <8 x i64> @test_v8f64_oge_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ;
 ; X64-LABEL: test_v8f64_oge_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmple_oqpd %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmplepd %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f64(
@@ -434,7 +434,7 @@ define <8 x i64> @test_v8f64_olt_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmplt_oqpd 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpltpd 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -442,7 +442,7 @@ define <8 x i64> @test_v8f64_olt_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ;
 ; X64-LABEL: test_v8f64_olt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmplt_oqpd %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpltpd %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f64(
@@ -459,7 +459,7 @@ define <8 x i64> @test_v8f64_ole_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmple_oqpd 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmplepd 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -467,7 +467,7 @@ define <8 x i64> @test_v8f64_ole_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ;
 ; X64-LABEL: test_v8f64_ole_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmple_oqpd %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmplepd %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f64(
@@ -559,7 +559,7 @@ define <8 x i64> @test_v8f64_ugt_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpnle_uqpd 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpnlepd 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -567,7 +567,7 @@ define <8 x i64> @test_v8f64_ugt_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ;
 ; X64-LABEL: test_v8f64_ugt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnle_uqpd %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpnlepd %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f64(
@@ -584,7 +584,7 @@ define <8 x i64> @test_v8f64_uge_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpnlt_uqpd 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpnltpd 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -592,7 +592,7 @@ define <8 x i64> @test_v8f64_uge_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ;
 ; X64-LABEL: test_v8f64_uge_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnlt_uqpd %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpnltpd %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f64(
@@ -609,7 +609,7 @@ define <8 x i64> @test_v8f64_ult_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpnge_uqpd 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpngepd 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -617,7 +617,7 @@ define <8 x i64> @test_v8f64_ult_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ;
 ; X64-LABEL: test_v8f64_ult_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnle_uqpd %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpnlepd %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f64(
@@ -634,7 +634,7 @@ define <8 x i64> @test_v8f64_ule_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpngt_uqpd 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpngtpd 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -642,7 +642,7 @@ define <8 x i64> @test_v8f64_ule_q(<8 x i64> %a, <8 x i64> %b, <8 x double> %f1,
 ;
 ; X64-LABEL: test_v8f64_ule_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnlt_uqpd %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpnltpd %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f64(

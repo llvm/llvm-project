@@ -321,7 +321,7 @@ class SPIRVEmitIntrinsics
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
-  void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
+  void useRoundingMode(IntrinsicInst *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
@@ -1740,13 +1740,11 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
 }
 
 // Use a tip about rounding mode to create a decoration.
-void SPIRVEmitIntrinsics::useRoundingMode(ConstrainedFPIntrinsic *FPI,
+void SPIRVEmitIntrinsics::useRoundingMode(IntrinsicInst *FPI,
                                           IRBuilder<> &B) {
-  std::optional<RoundingMode> RM = FPI->getRoundingMode();
-  if (!RM.has_value())
-    return;
+  RoundingMode RM = FPI->getRoundingMode();
   unsigned RoundingModeDeco = std::numeric_limits<unsigned>::max();
-  switch (RM.value()) {
+  switch (RM) {
   default:
     // ignore unknown rounding modes
     break;
@@ -3319,7 +3317,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (Postpone && !GR->findAssignPtrTypeInstr(I))
       insertAssignPtrTypeIntrs(I, B, true);
 
-    if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I))
+    if (auto *FPI = dyn_cast<IntrinsicInst>(I);
+        FPI && FPI->getOperandBundle(LLVMContext::OB_fp_control).has_value())
       useRoundingMode(FPI, B);
   }
 

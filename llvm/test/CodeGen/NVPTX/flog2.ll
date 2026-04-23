@@ -156,7 +156,7 @@ define bfloat @log2_bf16_ftz_test(bfloat %in) #0 {
 ; CHECK-NEXT:    bfe.u32 %r4, %r3, 16, 1;
 ; CHECK-NEXT:    add.s32 %r5, %r4, %r3;
 ; CHECK-NEXT:    add.s32 %r6, %r5, 32767;
-; CHECK-NEXT:    setp.nan.ftz.f32 %p1, %r3, %r3;
+; CHECK-NEXT:    setp.nan.f32 %p1, %r3, %r3;
 ; CHECK-NEXT:    or.b32 %r7, %r3, 4194304;
 ; CHECK-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
 ; CHECK-NEXT:    shr.u32 %r9, %r8, 16;

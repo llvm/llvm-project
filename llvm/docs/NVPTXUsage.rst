@@ -4100,6 +4100,131 @@ The following sets the ftz flag to 1.
 module we link with.  See the `LangRef <LangRef.html#module-flags-metadata>`
 for details.)
 
+.. _nvptx-fp-env:
+
+Floating-Point Environment Control
+===================================
+
+The NVPTX backend supports per-call floating-point environment control via the
+``fp.control`` and ``fp.except`` operand bundles on the
+:ref:`FP arithmetic intrinsics <fpintrin>` (``llvm.fadd``, ``llvm.fsub``,
+``llvm.fmul``, ``llvm.fdiv``, ``llvm.frem``, ``llvm.fneg``, ``llvm.fcmp``,
+``llvm.fcmps``).  See :ref:`Floating-point Operand Bundles <ob_fp>` in the
+Language Reference for full bundle semantics.
+
+.. _nvptx-fp-rounding:
+
+Rounding Mode Mapping
+---------------------
+
+The ``fp.control`` bundle's rounding-mode token maps to PTX rounding-mode
+instruction suffixes as follows:
+
+.. table:: NVPTX Rounding Mode Mapping
+   :widths: 20 20 60
+
+   +------------------+--------------------+----------------------------------------------+
+   | ``fp.control``   | PTX suffix         | Description                                  |
+   +==================+====================+==============================================+
+   | ``"rte"``        | ``.rn``            | Round to nearest, ties to even               |
+   +------------------+--------------------+----------------------------------------------+
+   | ``"rtz"``        | ``.rz``            | Round toward zero                            |
+   +------------------+--------------------+----------------------------------------------+
+   | ``"rtp"``        | ``.rp``            | Round toward positive infinity               |
+   +------------------+--------------------+----------------------------------------------+
+   | ``"rtn"``        | ``.rm``            | Round toward negative infinity               |
+   +------------------+--------------------+----------------------------------------------+
+   | ``"rmm"``        | — (unsupported)    | Round to nearest, ties to away from zero.    |
+   |                  |                    | PTX has no equivalent; using this value      |
+   |                  |                    | triggers an internal assertion.              |
+   +------------------+--------------------+----------------------------------------------+
+   | ``"dyn"``        | (no suffix)        | Dynamic rounding mode.  PTX does not expose   |
+   |                  |                    | a per-thread rounding control register; the  |
+   |                  |                    | token is ignored and the operation uses the  |
+   |                  |                    | default rounding mode.                       |
+   +------------------+--------------------+----------------------------------------------+
+   | *(absent)*       | (no suffix)        | Default rounding mode for the operation       |
+   |                  |                    | (target and type dependent; typically ``.rn``|
+   |                  |                    | for f32/f64 arithmetic).                     |
+   +------------------+--------------------+----------------------------------------------+
+
+Example — force round-to-zero for a single multiply::
+
+   %r = call float @llvm.fmul.f32(float %a, float %b)
+       [ "fp.control"(metadata !"rtz") ]
+
+.. _nvptx-fp-denorm:
+
+Denormal (FTZ) Mode Mapping
+----------------------------
+
+The ``fp.control`` bundle's denormal-mode tokens control whether subnormal
+values are flushed to zero, mapping to the PTX ``.ftz`` instruction modifier:
+
+.. table:: NVPTX Denormal Mode Mapping
+   :widths: 30 15 55
+
+   +---------------------------------+---------------+----------------------------------------------+
+   | ``fp.control`` token            | PTX modifier  | Effect                                       |
+   +=================================+===============+==============================================+
+   | ``"denorm.f32.in=zero"`` and/or | ``.ftz``      | Subnormal f32 inputs are flushed to ±0       |
+   | ``"denorm.f32.out=zero"``       |               | before/after the operation.                  |
+   +---------------------------------+---------------+----------------------------------------------+
+   | ``"denorm.f32.in=ieee"`` and    | *(no .ftz)*   | Subnormal f32 values are preserved (IEEE     |
+   | ``"denorm.f32.out=ieee"``       |               | 754 semantics).                              |
+   +---------------------------------+---------------+----------------------------------------------+
+   | ``"denorm.in=zero"`` /          | ``.ftz``      | Applied to all floating-point types in the   |
+   | ``"denorm.out=zero"``           |               | operation (f32 and wider).                   |
+   +---------------------------------+---------------+----------------------------------------------+
+   | ``"denorm.in=ieee"`` /          | *(no .ftz)*   | IEEE subnormal semantics for all types.      |
+   | ``"denorm.out=ieee"``           |               |                                              |
+   +---------------------------------+---------------+----------------------------------------------+
+   | *(absent)*                      | (inherited)   | Falls back to the module-level               |
+   |                                 |               | ``nvvm-reflect-ftz`` setting (see            |
+   |                                 |               | :ref:`Reflection Parameters <libdevice>`).   |
+   +---------------------------------+---------------+----------------------------------------------+
+
+Per-call denormal-mode tokens take precedence over the module-level
+``nvvm-reflect-ftz`` flag.  When a call carries an explicit ``fp.control``
+denormal token the backend uses the per-call setting and ignores the module
+flag for that instruction.
+
+Example — flush f32 subnormals to zero for a single add::
+
+   %r = call float @llvm.fadd.f32(float %a, float %b)
+       [ "fp.control"(metadata !"denorm.f32.in=zero denorm.f32.out=zero") ]
+
+.. _nvptx-fp-except:
+
+Exception Behavior
+------------------
+
+The ``fp.except`` bundle controls how the backend treats floating-point
+exception flags for a given call:
+
+``"ignore"``
+  The operation's exception flags may be discarded.  The backend is free to
+  reorder, combine, or eliminate the operation relative to other floating-point
+  operations.  This is the default when no ``fp.except`` bundle is present.
+
+``"maytrap"``
+  The operation may raise an exception, but the caller does not read the
+  exception flags.  The backend must not eliminate the operation but may
+  reorder it relative to other ``"maytrap"`` operations.
+
+``"strict"``
+  The operation must execute in program order relative to all other
+  ``"strict"`` operations.  Exception flags are observable; the backend must
+  not reorder or combine this operation with other floating-point operations.
+
+.. note::
+
+   PTX does not provide an explicit per-instruction exception-masking
+   mechanism.  The ``fp.except`` bundle primarily affects the LLVM optimizer's
+   treatment of the call (DCE eligibility, CSE, reordering) rather than
+   emitting different PTX instructions.  ``"strict"`` operations are treated
+   as having side effects and are never reordered by the optimizer.
+
 Executing PTX
 =============
 

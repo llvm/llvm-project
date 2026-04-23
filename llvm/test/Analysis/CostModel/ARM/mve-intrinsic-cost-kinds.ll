@@ -78,8 +78,8 @@ define void @log2(float %a, <16 x float> %va) {
 
 define void @constrained_fadd(float %a, <16 x float> %va) strictfp {
 ; CHECK-LABEL: 'constrained_fadd'
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s = call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.ignore")
-; CHECK-NEXT:  Cost Model: Found costs of 48 for: %t = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %va, <16 x float> %va, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s1 = call float @llvm.fadd.f32(float %a, float %a) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:  Cost Model: Found costs of 48 for: %t2 = call <16 x float> @llvm.fadd.v16f32(<16 x float> %va, <16 x float> %va) [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %s = call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.ignore")

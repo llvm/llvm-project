@@ -944,36 +944,54 @@ define <2 x half> @no_fold_v2f16_select_user_fsub_into_fneg_modifier_dynamic(i1 
 }
 
 define float @fold_f32_strict_fsub_into_fneg_modifier_ieee(float %v0, float %v1) #3 {
-; CHECK-LABEL: fold_f32_strict_fsub_into_fneg_modifier_ieee:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; CHECK-NEXT:    v_mul_f32_e32 v0, v0, v1
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-LABEL: fold_f32_strict_fsub_into_fneg_modifier_ieee:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: fold_f32_strict_fsub_into_fneg_modifier_ieee:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %v0, metadata !"round.dynamic", metadata !"fpexcept.strict")
   %mul = call float @llvm.experimental.constrained.fmul.f32(float %sub, float %v1, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %mul
 }
 
 define float @fold_f32_strict_fsub_into_fneg_modifier_daz(float %v0, float %v1) #4 {
-; CHECK-LABEL: fold_f32_strict_fsub_into_fneg_modifier_daz:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; CHECK-NEXT:    v_mul_f32_e32 v0, v0, v1
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-LABEL: fold_f32_strict_fsub_into_fneg_modifier_daz:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: fold_f32_strict_fsub_into_fneg_modifier_daz:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %v0, metadata !"round.dynamic", metadata !"fpexcept.strict")
   %mul = call float @llvm.experimental.constrained.fmul.f32(float %sub, float %v1, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %mul
 }
 
 define float @fold_f32_strict_fsub_into_fneg_modifier_dynamic(float %v0, float %v1) #5 {
-; CHECK-LABEL: fold_f32_strict_fsub_into_fneg_modifier_dynamic:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; CHECK-NEXT:    v_mul_f32_e32 v0, v0, v1
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-LABEL: fold_f32_strict_fsub_into_fneg_modifier_dynamic:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: fold_f32_strict_fsub_into_fneg_modifier_dynamic:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %v0, metadata !"round.dynamic", metadata !"fpexcept.strict")
   %mul = call float @llvm.experimental.constrained.fmul.f32(float %sub, float %v1, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %mul

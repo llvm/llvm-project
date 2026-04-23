@@ -6036,7 +6036,8 @@ define double @trig_preop_strip_copysign(double %mag, double %sign, i32 %idx) {
 
 define double @trig_preop_strip_fabs_strictfp(double %val, i32 %idx) strictfp {
 ; CHECK-LABEL: @trig_preop_strip_fabs_strictfp(
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[VAL:%.*]], i32 [[IDX:%.*]]) #[[ATTR20]]
+; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[VAL:%.*]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[VAL]], i32 [[IDX:%.*]]) #[[ATTR20]]
 ; CHECK-NEXT:    ret double [[RESULT]]
 ;
   %fabs = call double @llvm.fabs.f64(double %val)

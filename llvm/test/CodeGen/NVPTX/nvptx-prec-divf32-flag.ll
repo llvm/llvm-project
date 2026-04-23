@@ -6,6 +6,8 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
+declare float @llvm.fdiv.f32(float, float)
+
 define float @div_ftz(float %a, float %b) denormal_fpenv(float: preservesign) {
 ; APPROX-LABEL: div_ftz(
 ; APPROX:       {
@@ -90,4 +92,121 @@ define float @div(float %a, float %b) {
 ; IEEE-NEXT:    ret;
   %val = fdiv float %a, %b
   ret float %val
+}
+
+; Test alternative rounding modes via fp.control operand bundle.
+; APPROX and FULL ignore the rounding mode (CSE collapses to one div);
+; IEEE levels honor it and keep all three.
+define float @div_rounding_modes(float %a, float %b) {
+; APPROX-LABEL: div_rounding_modes(
+; APPROX:       {
+; APPROX-NEXT:    .reg .b32 %r<6>;
+; APPROX-EMPTY:
+; APPROX-NEXT:  // %bb.0:
+; APPROX-NEXT:    ld.param.b32 %r1, [div_rounding_modes_param_0];
+; APPROX-NEXT:    ld.param.b32 %r2, [div_rounding_modes_param_1];
+; APPROX-NEXT:    div.approx.f32 %r3, %r1, %r2;
+; APPROX-NEXT:    add.rn.f32 %r4, %r3, %r3;
+; APPROX-NEXT:    add.rn.f32 %r5, %r4, %r3;
+; APPROX-NEXT:    st.param.b32 [func_retval0], %r5;
+; APPROX-NEXT:    ret;
+;
+; FULL-LABEL: div_rounding_modes(
+; FULL:       {
+; FULL-NEXT:    .reg .b32 %r<6>;
+; FULL-EMPTY:
+; FULL-NEXT:  // %bb.0:
+; FULL-NEXT:    ld.param.b32 %r1, [div_rounding_modes_param_0];
+; FULL-NEXT:    ld.param.b32 %r2, [div_rounding_modes_param_1];
+; FULL-NEXT:    div.full.f32 %r3, %r1, %r2;
+; FULL-NEXT:    add.rn.f32 %r4, %r3, %r3;
+; FULL-NEXT:    add.rn.f32 %r5, %r4, %r3;
+; FULL-NEXT:    st.param.b32 [func_retval0], %r5;
+; FULL-NEXT:    ret;
+;
+; IEEE-LABEL: div_rounding_modes(
+; IEEE:       {
+; IEEE-NEXT:    .reg .b32 %r<8>;
+; IEEE-EMPTY:
+; IEEE-NEXT:  // %bb.0:
+; IEEE-NEXT:    ld.param.b32 %r1, [div_rounding_modes_param_0];
+; IEEE-NEXT:    ld.param.b32 %r2, [div_rounding_modes_param_1];
+; IEEE-NEXT:    div.rz.f32 %r3, %r1, %r2;
+; IEEE-NEXT:    div.rp.f32 %r4, %r1, %r2;
+; IEEE-NEXT:    div.rm.f32 %r5, %r1, %r2;
+; IEEE-NEXT:    add.rn.f32 %r6, %r3, %r4;
+; IEEE-NEXT:    add.rn.f32 %r7, %r6, %r5;
+; IEEE-NEXT:    st.param.b32 [func_retval0], %r7;
+; IEEE-NEXT:    ret;
+  %rtz = call float @llvm.fdiv.f32(float %a, float %b) [ "fp.control"(metadata !"rtz") ]
+  %rtp = call float @llvm.fdiv.f32(float %a, float %b) [ "fp.control"(metadata !"rtp") ]
+  %rtn = call float @llvm.fdiv.f32(float %a, float %b) [ "fp.control"(metadata !"rtn") ]
+  %t1 = fadd float %rtz, %rtp
+  %t2 = fadd float %t1, %rtn
+  ret float %t2
+}
+
+; FTZ from function attribute combined with alternative rounding modes from bundles.
+define float @div_rounding_modes_ftz(float %a, float %b) denormal_fpenv(float: preservesign) {
+; APPROX-LABEL: div_rounding_modes_ftz(
+; APPROX:       {
+; APPROX-NEXT:    .reg .b32 %r<6>;
+; APPROX-EMPTY:
+; APPROX-NEXT:  // %bb.0:
+; APPROX-NEXT:    ld.param.b32 %r1, [div_rounding_modes_ftz_param_0];
+; APPROX-NEXT:    ld.param.b32 %r2, [div_rounding_modes_ftz_param_1];
+; APPROX-NEXT:    div.approx.ftz.f32 %r3, %r1, %r2;
+; APPROX-NEXT:    add.rn.ftz.f32 %r4, %r3, %r3;
+; APPROX-NEXT:    add.rn.ftz.f32 %r5, %r4, %r3;
+; APPROX-NEXT:    st.param.b32 [func_retval0], %r5;
+; APPROX-NEXT:    ret;
+;
+; FULL-LABEL: div_rounding_modes_ftz(
+; FULL:       {
+; FULL-NEXT:    .reg .b32 %r<6>;
+; FULL-EMPTY:
+; FULL-NEXT:  // %bb.0:
+; FULL-NEXT:    ld.param.b32 %r1, [div_rounding_modes_ftz_param_0];
+; FULL-NEXT:    ld.param.b32 %r2, [div_rounding_modes_ftz_param_1];
+; FULL-NEXT:    div.full.ftz.f32 %r3, %r1, %r2;
+; FULL-NEXT:    add.rn.ftz.f32 %r4, %r3, %r3;
+; FULL-NEXT:    add.rn.ftz.f32 %r5, %r4, %r3;
+; FULL-NEXT:    st.param.b32 [func_retval0], %r5;
+; FULL-NEXT:    ret;
+;
+; FTZ-LABEL: div_rounding_modes_ftz(
+; FTZ:       {
+; FTZ-NEXT:    .reg .b32 %r<8>;
+; FTZ-EMPTY:
+; FTZ-NEXT:  // %bb.0:
+; FTZ-NEXT:    ld.param.b32 %r1, [div_rounding_modes_ftz_param_0];
+; FTZ-NEXT:    ld.param.b32 %r2, [div_rounding_modes_ftz_param_1];
+; FTZ-NEXT:    div.rz.ftz.f32 %r3, %r1, %r2;
+; FTZ-NEXT:    div.rp.ftz.f32 %r4, %r1, %r2;
+; FTZ-NEXT:    div.rm.ftz.f32 %r5, %r1, %r2;
+; FTZ-NEXT:    add.rn.ftz.f32 %r6, %r3, %r4;
+; FTZ-NEXT:    add.rn.ftz.f32 %r7, %r6, %r5;
+; FTZ-NEXT:    st.param.b32 [func_retval0], %r7;
+; FTZ-NEXT:    ret;
+;
+; NOFTZ-LABEL: div_rounding_modes_ftz(
+; NOFTZ:       {
+; NOFTZ-NEXT:    .reg .b32 %r<8>;
+; NOFTZ-EMPTY:
+; NOFTZ-NEXT:  // %bb.0:
+; NOFTZ-NEXT:    ld.param.b32 %r1, [div_rounding_modes_ftz_param_0];
+; NOFTZ-NEXT:    ld.param.b32 %r2, [div_rounding_modes_ftz_param_1];
+; NOFTZ-NEXT:    div.rz.f32 %r3, %r1, %r2;
+; NOFTZ-NEXT:    div.rp.f32 %r4, %r1, %r2;
+; NOFTZ-NEXT:    div.rm.f32 %r5, %r1, %r2;
+; NOFTZ-NEXT:    add.rn.ftz.f32 %r6, %r3, %r4;
+; NOFTZ-NEXT:    add.rn.ftz.f32 %r7, %r6, %r5;
+; NOFTZ-NEXT:    st.param.b32 [func_retval0], %r7;
+; NOFTZ-NEXT:    ret;
+  %rtz = call float @llvm.fdiv.f32(float %a, float %b) [ "fp.control"(metadata !"rtz") ]
+  %rtp = call float @llvm.fdiv.f32(float %a, float %b) [ "fp.control"(metadata !"rtp") ]
+  %rtn = call float @llvm.fdiv.f32(float %a, float %b) [ "fp.control"(metadata !"rtn") ]
+  %t1 = fadd float %rtz, %rtp
+  %t2 = fadd float %t1, %rtn
+  ret float %t2
 }

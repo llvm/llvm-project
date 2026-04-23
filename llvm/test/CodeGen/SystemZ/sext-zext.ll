@@ -34,10 +34,9 @@ define i32 @sext_of_not_fsetccs(double %x) strictfp {
 ; CHECK-LABEL: sext_of_not_fsetccs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ltdbr %f0, %f0
-; CHECK-NEXT:    ipm %r0
-; CHECK-NEXT:    afi %r0, 1879048192
-; CHECK-NEXT:    srl %r0, 31
-; CHECK-NEXT:    lcr %r2, %r0
+; CHECK-NEXT:    ipm %r2
+; CHECK-NEXT:    afi %r2, 1879048192
+; CHECK-NEXT:    sra %r2, 31
 ; CHECK-NEXT:    br %r14
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %x, double 0.000000e+00, metadata !"oeq", metadata !"fpexcept.ignore")
   %xor = xor i1 %cmp, 1

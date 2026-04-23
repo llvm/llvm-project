@@ -178,6 +178,26 @@ void NVPTXInstPrinter::printFTZFlag(const MCInst *MI, int OpNum,
     O << ".ftz";
 }
 
+void NVPTXInstPrinter::printRNDFlag(const MCInst *MI, int OpNum,
+                                    const MCSubtargetInfo &, raw_ostream &O) {
+  switch (MI->getOperand(OpNum).getImm()) {
+  case NVPTX::RoundingMode::RN:
+    O << ".rn";
+    break;
+  case NVPTX::RoundingMode::RZ:
+    O << ".rz";
+    break;
+  case NVPTX::RoundingMode::RTN:
+    O << ".rm";
+    break;
+  case NVPTX::RoundingMode::RTP:
+    O << ".rp";
+    break;
+  default:
+    llvm_unreachable("Invalid RNDFlag value");
+  }
+}
+
 void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum,
                                     const MCSubtargetInfo &, raw_ostream &O,
                                     StringRef Modifier) {

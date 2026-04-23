@@ -380,13 +380,13 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_oeq_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_oeq_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -405,13 +405,13 @@ define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ogt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ogt_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ogt_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -458,13 +458,13 @@ define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_olt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_olt_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_olt_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -539,13 +539,13 @@ define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ord_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isel r3, r4, r3, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ord_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isel r3, r4, r3, un
 ; P9-NEXT:    blr
 ;
@@ -620,13 +620,13 @@ define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_uge_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_uge_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -673,13 +673,13 @@ define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ule_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ule_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -698,13 +698,13 @@ define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_une_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_une_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -723,13 +723,13 @@ define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_uno_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isel r3, r3, r4, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_uno_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isel r3, r3, r4, un
 ; P9-NEXT:    blr
 ;
@@ -2658,34 +2658,31 @@ define i32 @fcmps_une_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmp_olt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_olt_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    fcmpu cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    crandc 4*cr5+gt, lt, eq
-; P8-NEXT:    fcmpu cr1, f2, f4
-; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
-; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    fcmpu cr1, f1, f3
+; P8-NEXT:    crand 4*cr5+lt, 4*cr1+eq, lt
+; P8-NEXT:    crnor 4*cr5+lt, 4*cr1+lt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: fcmp_olt_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    fcmpu cr0, f2, f4
+; P9-NEXT:    fcmpu cr1, f1, f3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
-; P9-NEXT:    crandc 4*cr5+gt, lt, eq
-; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    crand 4*cr5+lt, 4*cr1+eq, lt
+; P9-NEXT:    crnor 4*cr5+lt, 4*cr1+lt, 4*cr5+lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmp_olt_ppcf128:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fcmpu cr0, f1, f3
+; NOVSX-NEXT:    fcmpu cr0, f2, f4
 ; NOVSX-NEXT:    li r3, 1
-; NOVSX-NEXT:    crandc 4*cr5+gt, lt, eq
-; NOVSX-NEXT:    fcmpu cr1, f2, f4
-; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
-; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    fcmpu cr1, f1, f3
+; NOVSX-NEXT:    crand 4*cr5+lt, 4*cr1+eq, lt
+; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr1+lt, 4*cr5+lt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.ppcf128(ppc_fp128 %a, ppc_fp128 %b, metadata !"olt", metadata !"fpexcept.strict") #0
@@ -2700,10 +2697,8 @@ define i32 @fcmp_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crnor 4*cr5+lt, un, gt
 ; P8-NEXT:    fcmpu cr0, f1, f3
-; P8-NEXT:    crnor 4*cr5+gt, un, gt
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    crnor 4*cr5+lt, lt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
@@ -2713,10 +2708,8 @@ define i32 @fcmp_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crnor 4*cr5+lt, un, gt
 ; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    crnor 4*cr5+gt, un, gt
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    crnor 4*cr5+lt, lt, 4*cr5+lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
@@ -2726,10 +2719,8 @@ define i32 @fcmp_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; NOVSX-NEXT:    li r3, 1
 ; NOVSX-NEXT:    crnor 4*cr5+lt, un, gt
 ; NOVSX-NEXT:    fcmpu cr0, f1, f3
-; NOVSX-NEXT:    crnor 4*cr5+gt, un, gt
 ; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; NOVSX-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    crnor 4*cr5+lt, lt, 4*cr5+lt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.ppcf128(ppc_fp128 %a, ppc_fp128 %b, metadata !"ole", metadata !"fpexcept.strict") #0
@@ -2740,34 +2731,31 @@ define i32 @fcmp_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ogt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ogt_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    fcmpu cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    crandc 4*cr5+gt, gt, eq
-; P8-NEXT:    fcmpu cr1, f2, f4
-; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+gt
-; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    fcmpu cr1, f1, f3
+; P8-NEXT:    crand 4*cr5+lt, 4*cr1+eq, gt
+; P8-NEXT:    crnor 4*cr5+lt, 4*cr1+gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: fcmp_ogt_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    fcmpu cr0, f2, f4
+; P9-NEXT:    fcmpu cr1, f1, f3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+gt
-; P9-NEXT:    crandc 4*cr5+gt, gt, eq
-; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    crand 4*cr5+lt, 4*cr1+eq, gt
+; P9-NEXT:    crnor 4*cr5+lt, 4*cr1+gt, 4*cr5+lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmp_ogt_ppcf128:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fcmpu cr0, f1, f3
+; NOVSX-NEXT:    fcmpu cr0, f2, f4
 ; NOVSX-NEXT:    li r3, 1
-; NOVSX-NEXT:    crandc 4*cr5+gt, gt, eq
-; NOVSX-NEXT:    fcmpu cr1, f2, f4
-; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr1+gt
-; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    fcmpu cr1, f1, f3
+; NOVSX-NEXT:    crand 4*cr5+lt, 4*cr1+eq, gt
+; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr1+gt, 4*cr5+lt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.ppcf128(ppc_fp128 %a, ppc_fp128 %b, metadata !"ogt", metadata !"fpexcept.strict") #0
@@ -2782,10 +2770,8 @@ define i32 @fcmp_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crnor 4*cr5+lt, un, lt
 ; P8-NEXT:    fcmpu cr0, f1, f3
-; P8-NEXT:    crnor 4*cr5+gt, un, lt
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    crnor 4*cr5+lt, gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
@@ -2795,10 +2781,8 @@ define i32 @fcmp_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crnor 4*cr5+lt, un, lt
 ; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    crnor 4*cr5+gt, un, lt
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    crnor 4*cr5+lt, gt, 4*cr5+lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
@@ -2808,10 +2792,8 @@ define i32 @fcmp_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; NOVSX-NEXT:    li r3, 1
 ; NOVSX-NEXT:    crnor 4*cr5+lt, un, lt
 ; NOVSX-NEXT:    fcmpu cr0, f1, f3
-; NOVSX-NEXT:    crnor 4*cr5+gt, un, lt
 ; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; NOVSX-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    crnor 4*cr5+lt, gt, 4*cr5+lt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.ppcf128(ppc_fp128 %a, ppc_fp128 %b, metadata !"oge", metadata !"fpexcept.strict") #0
@@ -2822,34 +2804,28 @@ define i32 @fcmp_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_oeq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_oeq_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    fcmpu cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    crandc 4*cr5+gt, eq, eq
-; P8-NEXT:    fcmpu cr1, f2, f4
-; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
-; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    fcmpu cr1, f1, f3
+; P8-NEXT:    crnand 4*cr5+lt, 4*cr1+eq, eq
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: fcmp_oeq_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    fcmpu cr0, f2, f4
+; P9-NEXT:    fcmpu cr1, f1, f3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
-; P9-NEXT:    crandc 4*cr5+gt, eq, eq
-; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    crnand 4*cr5+lt, 4*cr1+eq, eq
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmp_oeq_ppcf128:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fcmpu cr0, f1, f3
+; NOVSX-NEXT:    fcmpu cr0, f2, f4
 ; NOVSX-NEXT:    li r3, 1
-; NOVSX-NEXT:    crandc 4*cr5+gt, eq, eq
-; NOVSX-NEXT:    fcmpu cr1, f2, f4
-; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
-; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    fcmpu cr1, f1, f3
+; NOVSX-NEXT:    crnand 4*cr5+lt, 4*cr1+eq, eq
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.ppcf128(ppc_fp128 %a, ppc_fp128 %b, metadata !"oeq", metadata !"fpexcept.strict") #0
@@ -2860,40 +2836,37 @@ define i32 @fcmp_oeq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_one_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_one_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f2, f4
+; P8-NEXT:    fcmpu cr1, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    crnor 4*cr5+lt, un, eq
+; P8-NEXT:    crnor 4*cr5+gt, 4*cr1+un, 4*cr1+eq
 ; P8-NEXT:    fcmpu cr0, f1, f3
-; P8-NEXT:    crnor 4*cr5+gt, un, eq
-; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    crnor 4*cr5+lt, un, eq
+; P8-NEXT:    crand 4*cr5+gt, eq, 4*cr5+gt
+; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: fcmp_one_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f2, f4
-; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, eq
+; P9-NEXT:    fcmpu cr1, f2, f4
 ; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    crnor 4*cr5+gt, un, eq
-; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    li r3, 1
+; P9-NEXT:    crnor 4*cr5+gt, 4*cr1+un, 4*cr1+eq
+; P9-NEXT:    crnor 4*cr5+lt, un, eq
+; P9-NEXT:    crand 4*cr5+gt, eq, 4*cr5+gt
+; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmp_one_ppcf128:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fcmpu cr0, f2, f4
+; NOVSX-NEXT:    fcmpu cr1, f2, f4
 ; NOVSX-NEXT:    li r3, 1
-; NOVSX-NEXT:    crnor 4*cr5+lt, un, eq
+; NOVSX-NEXT:    crnor 4*cr5+gt, 4*cr1+un, 4*cr1+eq
 ; NOVSX-NEXT:    fcmpu cr0, f1, f3
-; NOVSX-NEXT:    crnor 4*cr5+gt, un, eq
-; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; NOVSX-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    crnor 4*cr5+lt, un, eq
+; NOVSX-NEXT:    crand 4*cr5+gt, eq, 4*cr5+gt
+; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.ppcf128(ppc_fp128 %a, ppc_fp128 %b, metadata !"one", metadata !"fpexcept.strict") #0
@@ -2904,40 +2877,37 @@ define i32 @fcmp_one_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ult_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ult_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
-; P8-NEXT:    li r3, 1
-; P8-NEXT:    cror 4*cr5+gt, lt, un
 ; P8-NEXT:    fcmpu cr1, f2, f4
-; P8-NEXT:    cror 4*cr5+lt, 4*cr1+lt, 4*cr1+un
-; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    li r3, 1
+; P8-NEXT:    cror 4*cr5+gt, 4*cr1+lt, 4*cr1+un
+; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    cror 4*cr5+lt, lt, un
+; P8-NEXT:    crand 4*cr5+gt, eq, 4*cr5+gt
+; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: fcmp_ult_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
 ; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    fcmpu cr0, f1, f3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    cror 4*cr5+lt, 4*cr1+lt, 4*cr1+un
-; P9-NEXT:    cror 4*cr5+gt, lt, un
-; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+gt, 4*cr1+lt, 4*cr1+un
+; P9-NEXT:    cror 4*cr5+lt, lt, un
+; P9-NEXT:    crand 4*cr5+gt, eq, 4*cr5+gt
+; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmp_ult_ppcf128:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fcmpu cr0, f1, f3
-; NOVSX-NEXT:    li r3, 1
-; NOVSX-NEXT:    cror 4*cr5+gt, lt, un
 ; NOVSX-NEXT:    fcmpu cr1, f2, f4
-; NOVSX-NEXT:    cror 4*cr5+lt, 4*cr1+lt, 4*cr1+un
-; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; NOVSX-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    li r3, 1
+; NOVSX-NEXT:    cror 4*cr5+gt, 4*cr1+lt, 4*cr1+un
+; NOVSX-NEXT:    fcmpu cr0, f1, f3
+; NOVSX-NEXT:    cror 4*cr5+lt, lt, un
+; NOVSX-NEXT:    crand 4*cr5+gt, eq, 4*cr5+gt
+; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.ppcf128(ppc_fp128 %a, ppc_fp128 %b, metadata !"ult", metadata !"fpexcept.strict") #0
@@ -2952,7 +2922,7 @@ define i32 @fcmp_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    fcmpu cr1, f1, f3
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, gt
-; P8-NEXT:    crnor 4*cr5+gt, 4*cr1+gt, 4*cr1+eq
+; P8-NEXT:    cror 4*cr5+gt, 4*cr1+lt, 4*cr1+un
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
@@ -2963,7 +2933,7 @@ define i32 @fcmp_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P9-NEXT:    fcmpu cr1, f1, f3
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, gt
-; P9-NEXT:    crnor 4*cr5+gt, 4*cr1+gt, 4*cr1+eq
+; P9-NEXT:    cror 4*cr5+gt, 4*cr1+lt, 4*cr1+un
 ; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -2974,7 +2944,7 @@ define i32 @fcmp_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; NOVSX-NEXT:    li r3, 1
 ; NOVSX-NEXT:    fcmpu cr1, f1, f3
 ; NOVSX-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, gt
-; NOVSX-NEXT:    crnor 4*cr5+gt, 4*cr1+gt, 4*cr1+eq
+; NOVSX-NEXT:    cror 4*cr5+gt, 4*cr1+lt, 4*cr1+un
 ; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
@@ -2986,40 +2956,37 @@ define i32 @fcmp_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ugt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ugt_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
-; P8-NEXT:    li r3, 1
-; P8-NEXT:    cror 4*cr5+gt, gt, un
 ; P8-NEXT:    fcmpu cr1, f2, f4
-; P8-NEXT:    cror 4*cr5+lt, 4*cr1+gt, 4*cr1+un
-; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    li r3, 1
+; P8-NEXT:    cror 4*cr5+gt, 4*cr1+gt, 4*cr1+un
+; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    cror 4*cr5+lt, gt, un
+; P8-NEXT:    crand 4*cr5+gt, eq, 4*cr5+gt
+; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: fcmp_ugt_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
 ; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    fcmpu cr0, f1, f3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    cror 4*cr5+lt, 4*cr1+gt, 4*cr1+un
-; P9-NEXT:    cror 4*cr5+gt, gt, un
-; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+gt, 4*cr1+gt, 4*cr1+un
+; P9-NEXT:    cror 4*cr5+lt, gt, un
+; P9-NEXT:    crand 4*cr5+gt, eq, 4*cr5+gt
+; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmp_ugt_ppcf128:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fcmpu cr0, f1, f3
-; NOVSX-NEXT:    li r3, 1
-; NOVSX-NEXT:    cror 4*cr5+gt, gt, un
 ; NOVSX-NEXT:    fcmpu cr1, f2, f4
-; NOVSX-NEXT:    cror 4*cr5+lt, 4*cr1+gt, 4*cr1+un
-; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; NOVSX-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    li r3, 1
+; NOVSX-NEXT:    cror 4*cr5+gt, 4*cr1+gt, 4*cr1+un
+; NOVSX-NEXT:    fcmpu cr0, f1, f3
+; NOVSX-NEXT:    cror 4*cr5+lt, gt, un
+; NOVSX-NEXT:    crand 4*cr5+gt, eq, 4*cr5+gt
+; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.ppcf128(ppc_fp128 %a, ppc_fp128 %b, metadata !"ugt", metadata !"fpexcept.strict") #0
@@ -3034,7 +3001,7 @@ define i32 @fcmp_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    fcmpu cr1, f1, f3
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, lt
-; P8-NEXT:    crnor 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
+; P8-NEXT:    cror 4*cr5+gt, 4*cr1+gt, 4*cr1+un
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
@@ -3045,7 +3012,7 @@ define i32 @fcmp_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P9-NEXT:    fcmpu cr1, f1, f3
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, lt
-; P9-NEXT:    crnor 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
+; P9-NEXT:    cror 4*cr5+gt, 4*cr1+gt, 4*cr1+un
 ; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -3056,7 +3023,7 @@ define i32 @fcmp_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; NOVSX-NEXT:    li r3, 1
 ; NOVSX-NEXT:    fcmpu cr1, f1, f3
 ; NOVSX-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, lt
-; NOVSX-NEXT:    crnor 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
+; NOVSX-NEXT:    cror 4*cr5+gt, 4*cr1+gt, 4*cr1+un
 ; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
@@ -3068,40 +3035,34 @@ define i32 @fcmp_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ueq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ueq_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    fcmpu cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    cror 4*cr5+gt, eq, un
-; P8-NEXT:    fcmpu cr1, f2, f4
-; P8-NEXT:    cror 4*cr5+lt, 4*cr1+eq, 4*cr1+un
+; P8-NEXT:    cror 4*cr5+lt, eq, un
+; P8-NEXT:    fcmpu cr0, f1, f3
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    crnor 4*cr5+lt, un, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: fcmp_ueq_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    fcmpu cr0, f2, f4
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    cror 4*cr5+lt, 4*cr1+eq, 4*cr1+un
-; P9-NEXT:    cror 4*cr5+gt, eq, un
+; P9-NEXT:    cror 4*cr5+lt, eq, un
+; P9-NEXT:    fcmpu cr0, f1, f3
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; P9-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr5+lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmp_ueq_ppcf128:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fcmpu cr0, f1, f3
+; NOVSX-NEXT:    fcmpu cr0, f2, f4
 ; NOVSX-NEXT:    li r3, 1
-; NOVSX-NEXT:    cror 4*cr5+gt, eq, un
-; NOVSX-NEXT:    fcmpu cr1, f2, f4
-; NOVSX-NEXT:    cror 4*cr5+lt, 4*cr1+eq, 4*cr1+un
+; NOVSX-NEXT:    cror 4*cr5+lt, eq, un
+; NOVSX-NEXT:    fcmpu cr0, f1, f3
 ; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
-; NOVSX-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
-; NOVSX-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    crnor 4*cr5+lt, un, 4*cr5+lt
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; NOVSX-NEXT:    blr
   %cmp = call i1 @llvm.experimental.constrained.fcmp.ppcf128(ppc_fp128 %a, ppc_fp128 %b, metadata !"ueq", metadata !"fpexcept.strict") #0

@@ -2724,6 +2724,15 @@ public:
     return MF->getDenormalMode(VT.getFltSemantics());
   }
 
+  /// Returns the effective denormal mode for an FP SDNode, dispatching on
+  /// opcode to identify the relevant input/output FP types. For f32 types the
+  /// F32-specific flags take priority over the general flags. The Input field
+  /// is DenormalMode::Invalid for nodes with integer inputs (e.g. SINT_TO_FP,
+  /// SETCC); the Output field is DenormalMode::Invalid for nodes with integer
+  /// outputs (e.g. FP_TO_SINT). For target-specific opcodes, delegates to
+  /// TLI.getDenormalModeForTargetNode().
+  LLVM_ABI DenormalMode getDenormalMode(const SDNode *N) const;
+
   LLVM_ABI bool shouldOptForSize() const;
 
   /// Get the (commutative) neutral element for the given opcode, if it exists.

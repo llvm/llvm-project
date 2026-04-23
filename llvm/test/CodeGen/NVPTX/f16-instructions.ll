@@ -13,12 +13,12 @@
 ; ## Full FP16 with FTZ
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
-; RUN:          -denormal-fp-math-f32=preserve-sign -mattr=+ptx60             \
+; RUN:          -denormal-fp-math=preserve-sign -mattr=+ptx60             \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-F16-FTZ %s
 ; RUN: %if ptxas-sm_53 && ptxas-isa-6.0 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
-; RUN:          -denormal-fp-math-f32=preserve-sign -mattr=+ptx60             \
+; RUN:          -denormal-fp-math=preserve-sign -mattr=+ptx60             \
 ; RUN:   | %ptxas-verify -arch=sm_53                                          \
 ; RUN: %}
 ; ## FP16 support explicitly disabled.

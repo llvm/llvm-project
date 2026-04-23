@@ -2469,9 +2469,6 @@ public:
     case Intrinsic::fmuladd:
       ISD = ISD::FMA;
       break;
-    case Intrinsic::experimental_constrained_fmuladd:
-      ISD = ISD::STRICT_FMA;
-      break;
     // FIXME: We should return 0 whenever getIntrinsicCost == TCC_Free.
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
@@ -2809,14 +2806,6 @@ public:
                                              CostKind) +
              thisT()->getArithmeticInstrCost(BinaryOperator::FAdd, RetTy,
                                              CostKind);
-    }
-    case Intrinsic::experimental_constrained_fmuladd: {
-      IntrinsicCostAttributes FMulAttrs(
-        Intrinsic::experimental_constrained_fmul, RetTy, Tys);
-      IntrinsicCostAttributes FAddAttrs(
-        Intrinsic::experimental_constrained_fadd, RetTy, Tys);
-      return thisT()->getIntrinsicInstrCost(FMulAttrs, CostKind) +
-             thisT()->getIntrinsicInstrCost(FAddAttrs, CostKind);
     }
     case Intrinsic::smin:
     case Intrinsic::smax:

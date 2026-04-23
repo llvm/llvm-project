@@ -2428,21 +2428,30 @@ SDValue NVPTXTargetLowering::LowerFROUND64(SDValue Op,
 
 static SDValue PromoteBinOpToF32(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  EVT NVT = MVT::f32;
-  if (VT.isVector()) {
-    NVT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
-  }
+  EVT NVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
   SDLoc DL(N);
+  SDNodeFlags Flags = N->getFlags();
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
   SDValue Tmp0 = DAG.getFPExtendOrRound(N->getOperand(0), DL, NVT);
   SDValue Tmp1 = DAG.getFPExtendOrRound(N->getOperand(1), DL, NVT);
-  SDValue Res = DAG.getNode(N->getOpcode(), DL, NVT, Tmp0, Tmp1, N->getFlags());
+  SDValue Res = DAG.getNode(N->getOpcode(), DL, NVT, Tmp0, Tmp1);
   return DAG.getFPExtendOrRound(Res, DL, VT);
 }
 
 SDValue NVPTXTargetLowering::PromoteBinOpIfF32FTZ(SDValue Op,
                                                   SelectionDAG &DAG) const {
-  if (useF32FTZ(DAG.getMachineFunction())) {
-    return PromoteBinOpToF32(Op.getNode(), DAG);
+  SDNode *N = Op.getNode();
+  SDNodeFlags Flags = N->getFlags();
+  auto F32InMode = Flags.getF32InputDenormMode();
+  auto F32OutMode = Flags.getF32OutputDenormMode();
+  if (F32InMode == DenormalMode::PreserveSign &&
+      F32OutMode == DenormalMode::PreserveSign) {
+    // Propagate F32 denorm mode into the type-specific fields so that the
+    // promoted f32 node carries the correct .ftz annotation from getFTZFlag.
+    Flags.setInputDenormMode(F32InMode);
+    Flags.setOutputDenormMode(F32OutMode);
+    N->setFlags(Flags);
+    return PromoteBinOpToF32(N, DAG);
   }
   return Op;
 }
@@ -7694,6 +7703,55 @@ static void computeKnownBitsForLoadV(const SDValue Op, KnownBits &Known) {
   assert(Known.getBitWidth() == DestVT.getSizeInBits());
   auto ElementBitWidth = NVPTXDAGToDAGISel::getFromTypeWidthForLoad(LD);
   Known.Zero.setHighBits(Known.getBitWidth() - ElementBitWidth);
+}
+
+bool NVPTXTargetLowering::isSupportedRoundingMode(RoundingMode RM) const {
+  switch (RM) {
+  case RoundingMode::NearestTiesToEven:
+  case RoundingMode::TowardZero:
+  case RoundingMode::TowardPositive:
+  case RoundingMode::TowardNegative:
+  case RoundingMode::Dynamic: // treated as default (no PTX rounding suffix)
+    return true;
+  default:
+    return false;
+  }
+}
+
+DenormalMode NVPTXTargetLowering::getDenormalModeForTargetNode(
+    const SDNode *N, const SelectionDAG &DAG) const {
+  const SDNodeFlags F = N->getFlags();
+  // Helper: effective denorm mode kind for a given FP type, giving f32-specific
+  // flags priority when FPType is f32.
+  auto Eff = [&](MVT FPType) -> DenormalMode::DenormalModeKind {
+    if (FPType == MVT::f32 && F.getF32InputDenormMode() != DenormalMode::Dynamic)
+      return F.getF32InputDenormMode();
+    return F.getInputDenormMode();
+  };
+  switch (N->getOpcode()) {
+  case NVPTXISD::FMAXNUM3:
+  case NVPTXISD::FMINNUM3:
+  case NVPTXISD::FMAXIMUM3:
+  case NVPTXISD::FMINIMUM3: {
+    // Ternary FP min/max: all inputs and output are the same FP type.
+    // Flags are propagated from the original ISD node by PerformFMinMaxCombine.
+    MVT FPType = N->getValueType(0).getScalarType().getSimpleVT();
+    DenormalMode::DenormalModeKind K = Eff(FPType);
+    return {K, K};
+  }
+  case NVPTXISD::SETP_F16X2:
+  case NVPTXISD::SETP_BF16X2: {
+    // These nodes are created without explicit flags; read raw flags directly.
+    DenormalMode::DenormalModeKind Kind =
+        (F.getInputDenormMode() == DenormalMode::PreserveSign ||
+         F.getF32InputDenormMode() == DenormalMode::PreserveSign)
+            ? DenormalMode::PreserveSign
+            : DenormalMode::Dynamic;
+    return {Kind, Kind};
+  }
+  default:
+    llvm_unreachable("unhandled target-specific node");
+  }
 }
 
 void NVPTXTargetLowering::computeKnownBitsForTargetNode(

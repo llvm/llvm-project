@@ -195,8 +195,8 @@ define float @v_constained_fma_f32_fpexcept_ignore_flags(float %x, float %y, flo
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[STRICT_FMA:%[0-9]+]]:_(s32) = nsz nofpexcept G_STRICT_FMA [[COPY]], [[COPY1]], [[COPY2]]
-  ; CHECK-NEXT:   $vgpr0 = COPY [[STRICT_FMA]](s32)
+  ; CHECK-NEXT:   [[FMA:%[0-9]+]]:_(s32) = nsz G_FMA [[COPY]], [[COPY1]], [[COPY2]]
+  ; CHECK-NEXT:   $vgpr0 = COPY [[FMA]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %val = call nsz float @llvm.experimental.constrained.fma.f32(float %x, float %y, float %z, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %val
@@ -208,8 +208,8 @@ define float @v_constained_sqrt_f32_fpexcept_strict(float %x) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[STRICT_FSQRT:%[0-9]+]]:_(s32) = G_STRICT_FSQRT [[COPY]]
-  ; CHECK-NEXT:   $vgpr0 = COPY [[STRICT_FSQRT]](s32)
+  ; CHECK-NEXT:   [[FSQRT:%[0-9]+]]:_(s32) = G_FSQRT [[COPY]]
+  ; CHECK-NEXT:   $vgpr0 = COPY [[FSQRT]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.experimental.constrained.sqrt.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %val

@@ -281,6 +281,14 @@ enum class DivPrecisionLevel : unsigned {
   IEEE754_NoFTZ = 3,
 };
 
+// Rounding mode encoding for RNDFlag operand.
+enum RoundingMode {
+  RN = 0,   // Round to nearest, ties to even (default)
+  RZ = 1,   // Round toward zero
+  RTN = 2,  // Round toward negative infinity (PTX: .rm)
+  RTP = 3,  // Round toward positive infinity (PTX: .rp)
+};
+
 } // namespace NVPTX
 void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 } // namespace llvm

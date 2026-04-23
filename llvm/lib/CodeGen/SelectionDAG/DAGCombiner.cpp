@@ -1225,6 +1225,13 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
   return false;
 }
 
+/// Return true if two flag sets have the same FP environment (rounding mode,
+/// denorm modes from operand bundles). Nodes with different FP envs must not
+/// be combined in ways that reorder their FP computations.
+static bool sameFPEnv(SDNodeFlags A, SDNodeFlags B) {
+  return A.getFPEnv() == B.getFPEnv();
+}
+
 /// Helper for DAGCombiner::reassociateOps. Try to reassociate (Opc N0, N1) if
 /// \p N0 is the same kind of operation as \p Opc.
 SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
@@ -1233,6 +1240,12 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
   EVT VT = N0.getValueType();
 
   if (N0.getOpcode() != Opc)
+    return SDValue();
+
+  // For FP, the inner node must be in the same FP environment as the outer
+  // operation; otherwise reordering computations changes the result.
+  if (N0.getValueType().isFloatingPoint() &&
+      !sameFPEnv(N0->getFlags(), Flags))
     return SDValue();
 
   SDValue N00 = N0.getOperand(0);
@@ -1357,7 +1370,9 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
       N0.getOperand(0).getValueType() == N1.getOperand(0).getValueType() &&
       N0->hasOneUse() && N1->hasOneUse() &&
       TLI.isOperationLegalOrCustom(Opc, N0.getOperand(0).getValueType()) &&
-      TLI.shouldReassociateReduction(RedOpc, N0.getOperand(0).getValueType())) {
+      TLI.shouldReassociateReduction(RedOpc, N0.getOperand(0).getValueType()) &&
+      sameFPEnv(N0->getFlags(), Flags) &&
+      sameFPEnv(N1->getFlags(), Flags)) {
     SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
     return DAG.getNode(RedOpc, DL, VT,
                        DAG.getNode(Opc, DL, N0.getOperand(0).getValueType(),
@@ -1387,7 +1402,11 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
         (!N0->getFlags().hasAllowReassociation() ||
          !N1->getFlags().hasAllowReassociation() ||
          !RedA->getFlags().hasAllowReassociation() ||
-         !RedB->getFlags().hasAllowReassociation()))
+         !RedB->getFlags().hasAllowReassociation() ||
+         !sameFPEnv(N0->getFlags(), Flags) ||
+         !sameFPEnv(N1->getFlags(), Flags) ||
+         !sameFPEnv(RedA->getFlags(), Flags) ||
+         !sameFPEnv(RedB->getFlags(), Flags)))
       return SDValue();
     SelectionDAG::FlagInserter FlagsInserter(
         DAG, Flags & N0->getFlags() & N1->getFlags() & RedA->getFlags() &
@@ -10255,7 +10274,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
       default:
         llvm_unreachable("Unhandled SetCC Equivalent!");
       case ISD::SETCC:
-        return DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC);
+        return DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC, SDValue(), false,
+                            N0->getFlags());
       case ISD::SELECT_CC:
         return DAG.getSelectCC(SDLoc(N0), LHS, RHS, N0.getOperand(2),
                                N0.getOperand(3), NotCC);
@@ -18535,7 +18555,8 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       AllowNewConst) {
     // fadd (fadd x, c1), c2 -> fadd x, c1 + c2
     if (N1CFP && N0.getOpcode() == ISD::FADD &&
-        DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(1))) {
+        DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(1)) &&
+        sameFPEnv(N0->getFlags(), Flags)) {
       SDValue NewC = DAG.getNode(ISD::FADD, DL, VT, N0.getOperand(1), N1);
       return DAG.getNode(ISD::FADD, DL, VT, N0.getOperand(0), NewC);
     }
@@ -18544,7 +18565,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     // This transform is not safe in general because we are reducing the number
     // of rounding steps.
     if (TLI.isOperationLegalOrCustom(ISD::FMUL, VT) && !N0CFP && !N1CFP) {
-      if (N0.getOpcode() == ISD::FMUL) {
+      if (N0.getOpcode() == ISD::FMUL && sameFPEnv(N0->getFlags(), Flags)) {
         bool CFP00 = DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(0));
         bool CFP01 = DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(1));
 
@@ -18565,7 +18586,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
         }
       }
 
-      if (N1.getOpcode() == ISD::FMUL) {
+      if (N1.getOpcode() == ISD::FMUL && sameFPEnv(N1->getFlags(), Flags)) {
         bool CFP10 = DAG.isConstantFPBuildVectorOrConstantFP(N1.getOperand(0));
         bool CFP11 = DAG.isConstantFPBuildVectorOrConstantFP(N1.getOperand(1));
 
@@ -18586,7 +18607,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
         }
       }
 
-      if (N0.getOpcode() == ISD::FADD) {
+      if (N0.getOpcode() == ISD::FADD && sameFPEnv(N0->getFlags(), Flags)) {
         bool CFP00 = DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(0));
         // (fadd (fadd x, x), x) -> (fmul x, 3.0)
         if (!CFP00 && N0.getOperand(0) == N0.getOperand(1) &&
@@ -18596,7 +18617,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
         }
       }
 
-      if (N1.getOpcode() == ISD::FADD) {
+      if (N1.getOpcode() == ISD::FADD && sameFPEnv(N1->getFlags(), Flags)) {
         bool CFP10 = DAG.isConstantFPBuildVectorOrConstantFP(N1.getOperand(0));
         // (fadd x, (fadd x, x)) -> (fmul x, 3.0)
         if (!CFP10 && N1.getOperand(0) == N1.getOperand(1) &&
@@ -18610,7 +18631,9 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       if (N0.getOpcode() == ISD::FADD && N1.getOpcode() == ISD::FADD &&
           N0.getOperand(0) == N0.getOperand(1) &&
           N1.getOperand(0) == N1.getOperand(1) &&
-          N0.getOperand(0) == N1.getOperand(0)) {
+          N0.getOperand(0) == N1.getOperand(0) &&
+          sameFPEnv(N0->getFlags(), Flags) &&
+          sameFPEnv(N1->getFlags(), Flags)) {
         return DAG.getNode(ISD::FMUL, DL, VT, N0.getOperand(0),
                            DAG.getConstantFP(4.0, DL, VT));
       }
@@ -18717,7 +18740,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   }
 
   if (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros() &&
-      N1.getOpcode() == ISD::FADD) {
+      N1.getOpcode() == ISD::FADD && sameFPEnv(N1->getFlags(), Flags)) {
     // X - (X + Y) -> -Y
     if (N0 == N1->getOperand(0))
       return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(1));
@@ -18880,7 +18903,8 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   if (Flags.hasAllowReassociation()) {
     // fmul (fmul X, C1), C2 -> fmul X, C1 * C2
     if (DAG.isConstantFPBuildVectorOrConstantFP(N1) &&
-        N0.getOpcode() == ISD::FMUL) {
+        N0.getOpcode() == ISD::FMUL &&
+        sameFPEnv(N0->getFlags(), Flags)) {
       SDValue N00 = N0.getOperand(0);
       SDValue N01 = N0.getOperand(1);
       // Avoid an infinite loop by making sure that N00 is not a constant
@@ -18895,7 +18919,8 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
     // Match a special-case: we convert X * 2.0 into fadd.
     // fmul (fadd X, X), C -> fmul X, 2.0 * C
     if (N0.getOpcode() == ISD::FADD && N0.hasOneUse() &&
-        N0.getOperand(0) == N0.getOperand(1)) {
+        N0.getOperand(0) == N0.getOperand(1) &&
+        sameFPEnv(N0->getFlags(), Flags)) {
       const SDValue Two = DAG.getConstantFP(2.0, DL, VT);
       SDValue MulConsts = DAG.getNode(ISD::FMUL, DL, VT, Two, N1);
       return DAG.getNode(ISD::FMUL, DL, VT, N0.getOperand(0), MulConsts);

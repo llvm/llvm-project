@@ -143,6 +143,7 @@ public:
                  const LibcallLoweringInfo *libcallLowering) const override;
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+  bool requiresStrictFPForBundledFPOps() const override { return true; }
 
   bool isFPImmLegalAsFMov(const APFloat &Imm, EVT VT) const;
 

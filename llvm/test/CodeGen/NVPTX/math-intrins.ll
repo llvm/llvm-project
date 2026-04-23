@@ -182,10 +182,10 @@ define float @round_float_ftz(float %a) #1 {
 ; CHECK-NEXT:    add.rn.ftz.f32 %r4, %r1, %r3;
 ; CHECK-NEXT:    cvt.rzi.ftz.f32.f32 %r5, %r4;
 ; CHECK-NEXT:    abs.ftz.f32 %r6, %r1;
-; CHECK-NEXT:    setp.gt.ftz.f32 %p1, %r6, 0f4B000000;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r6, 0f4B000000;
 ; CHECK-NEXT:    selp.f32 %r7, %r1, %r5, %p1;
 ; CHECK-NEXT:    cvt.rzi.ftz.f32.f32 %r8, %r1;
-; CHECK-NEXT:    setp.lt.ftz.f32 %p2, %r6, 0f3F000000;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r6, 0f3F000000;
 ; CHECK-NEXT:    selp.f32 %r9, %r8, %r7, %p2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
@@ -815,14 +815,14 @@ define float @minimum_float_ftz(float %a, float %b) #1 {
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [minimum_float_ftz_param_0];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r2, [minimum_float_ftz_param_1];
-; CHECK-NOF16-NEXT:    setp.nan.ftz.f32 %p1, %r1, %r2;
+; CHECK-NOF16-NEXT:    setp.nan.f32 %p1, %r1, %r2;
 ; CHECK-NOF16-NEXT:    min.ftz.f32 %r3, %r1, %r2;
 ; CHECK-NOF16-NEXT:    selp.f32 %r4, 0f7FC00000, %r3, %p1;
 ; CHECK-NOF16-NEXT:    setp.eq.b32 %p2, %r1, -2147483648;
 ; CHECK-NOF16-NEXT:    selp.f32 %r5, %r1, %r4, %p2;
 ; CHECK-NOF16-NEXT:    setp.eq.b32 %p3, %r2, -2147483648;
 ; CHECK-NOF16-NEXT:    selp.f32 %r6, %r2, %r5, %p3;
-; CHECK-NOF16-NEXT:    setp.eq.ftz.f32 %p4, %r4, 0f00000000;
+; CHECK-NOF16-NEXT:    setp.eq.f32 %p4, %r4, 0f00000000;
 ; CHECK-NOF16-NEXT:    selp.f32 %r7, %r6, %r4, %p4;
 ; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r7;
 ; CHECK-NOF16-NEXT:    ret;
@@ -1342,14 +1342,14 @@ define float @maximum_float_ftz(float %a, float %b) #1 {
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [maximum_float_ftz_param_0];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r2, [maximum_float_ftz_param_1];
-; CHECK-NOF16-NEXT:    setp.nan.ftz.f32 %p1, %r1, %r2;
+; CHECK-NOF16-NEXT:    setp.nan.f32 %p1, %r1, %r2;
 ; CHECK-NOF16-NEXT:    max.ftz.f32 %r3, %r1, %r2;
 ; CHECK-NOF16-NEXT:    selp.f32 %r4, 0f7FC00000, %r3, %p1;
 ; CHECK-NOF16-NEXT:    setp.eq.b32 %p2, %r1, 0;
 ; CHECK-NOF16-NEXT:    selp.f32 %r5, %r1, %r4, %p2;
 ; CHECK-NOF16-NEXT:    setp.eq.b32 %p3, %r2, 0;
 ; CHECK-NOF16-NEXT:    selp.f32 %r6, %r2, %r5, %p3;
-; CHECK-NOF16-NEXT:    setp.eq.ftz.f32 %p4, %r4, 0f00000000;
+; CHECK-NOF16-NEXT:    setp.eq.f32 %p4, %r4, 0f00000000;
 ; CHECK-NOF16-NEXT:    selp.f32 %r7, %r6, %r4, %p4;
 ; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r7;
 ; CHECK-NOF16-NEXT:    ret;

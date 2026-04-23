@@ -70,12 +70,126 @@ def NoFTZ : PatLeaf<(i1 0)>;
 
 def getFTZFlag : SDNodeXForm<imm, [{
   (void)N;
-  return CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, SDLoc(), MVT::i1);
+  auto *Sel = cast<NVPTXDAGToDAGISel>(this);
+  auto *FPN = Sel->CurrentSelectNode;
+  assert(FPN && "getFTZFlag called outside of node selection");
+  DenormalMode DM = CurDAG->getDenormalMode(FPN);
+  // Emit .ftz when all FP sides agree: a DenormalMode::Invalid side means the
+  // operand is integer-typed (no denormal concept) and is compatible with FTZ.
+  bool HasFTZ =
+      (DM.Input  == DenormalMode::PreserveSign || DM.Input  == DenormalMode::Invalid) &&
+      (DM.Output == DenormalMode::PreserveSign || DM.Output == DenormalMode::Invalid) &&
+      (DM.Input  == DenormalMode::PreserveSign || DM.Output == DenormalMode::PreserveSign);
+  return CurDAG->getTargetConstant(HasFTZ ? 1 : 0, SDLoc(), MVT::i1);
 }]>;
 
 def FTZFlag : OperandWithDefaultOps<i1, (ops (getFTZFlag (i1 0)))> {
   let PrintMethod = "printFTZFlag";
 }
+
+def getRNDFlag : SDNodeXForm<imm, [{
+  (void)N;
+  auto *Sel = cast<NVPTXDAGToDAGISel>(this);
+  auto *FPN = Sel->CurrentSelectNode;
+  assert(FPN && "getRNDFlag called outside of node selection");
+  int RN = NVPTX::RoundingMode::RN;
+  if (FPN->getFlags().hasExplicitRM()) {
+    switch (FPN->getFlags().getRoundingMode()) {
+      case RoundingMode::TowardZero:
+        RN = NVPTX::RoundingMode::RZ;
+        break;
+      case RoundingMode::NearestTiesToEven:
+        RN = NVPTX::RoundingMode::RN;
+        break;
+      case RoundingMode::TowardPositive:
+        RN = NVPTX::RoundingMode::RTP;
+        break;
+      case RoundingMode::TowardNegative:
+        RN = NVPTX::RoundingMode::RTN;
+        break;
+      default:
+        llvm_unreachable("Unexpected RoundingMode");
+    }
+  }
+  return CurDAG->getTargetConstant(RN, SDLoc(), MVT::i32);
+}]>;
+
+def RNDFlag : OperandWithDefaultOps<i1, (ops (getRNDFlag (i1 0)))> {
+  let PrintMethod = "printRNDFlag";
+}
+
+// SDNodeXForm that combines rounding mode + FTZ into a single PTXCvtMode
+// integer for use in cvt instruction patterns for fptrunc/ISD::FP_ROUND.
+// Used for fpround f64->f32: applies FTZ when the node's denorm mode is
+// PreserveSign (from either function attribute or fp.control bundle).
+// NOTE: Do NOT use this for fpround f32->f16; PTX cvt.f16.f32 does not support
+// the .ftz modifier (it only supports .rn and .rz via the frnd2 form).
+def getCvtRndFtzFromFlags : SDNodeXForm<imm, [{
+  (void)N;
+  auto *Sel = cast<NVPTXDAGToDAGISel>(this);
+  auto *FPN = Sel->CurrentSelectNode;
+  assert(FPN && "getCvtRndFtzFromFlags called outside of node selection");
+  int CvtMode = NVPTX::PTXCvtMode::RN; // default
+  const SDNodeFlags Flags = FPN->getFlags();
+  if (Flags.hasExplicitRM()) {
+    switch (Flags.getRoundingMode()) {
+      case RoundingMode::TowardZero:
+        CvtMode = NVPTX::PTXCvtMode::RZ; break;
+      case RoundingMode::NearestTiesToEven:
+        CvtMode = NVPTX::PTXCvtMode::RN; break;
+      case RoundingMode::TowardPositive:
+        CvtMode = NVPTX::PTXCvtMode::RP; break;
+      case RoundingMode::TowardNegative:
+        CvtMode = NVPTX::PTXCvtMode::RM; break;
+      default:
+        llvm_unreachable("Unexpected RoundingMode");
+    }
+  }
+  DenormalMode DM = CurDAG->getDenormalMode(FPN);
+  if ((DM.Input  == DenormalMode::PreserveSign || DM.Input  == DenormalMode::Invalid) &&
+      (DM.Output == DenormalMode::PreserveSign || DM.Output == DenormalMode::Invalid) &&
+      (DM.Input  == DenormalMode::PreserveSign || DM.Output == DenormalMode::PreserveSign))
+    CvtMode |= NVPTX::PTXCvtMode::FTZ_FLAG;
+  return CurDAG->getTargetConstant(CvtMode, SDLoc(), MVT::i32);
+}]>;
+
+// SDNodeXForm that ORs a base PTXCvtMode immediate with FTZ_FLAG when the
+// current node's f32 denorm mode is PreserveSign.  Used for conversion patterns
+// where the rounding mode is fixed (i.e. no per-instruction rounding) but FTZ
+// must still be derived from per-instruction SDNodeFlags.
+def getCvtFtzFromFlags : SDNodeXForm<imm, [{
+  auto *Sel = cast<NVPTXDAGToDAGISel>(this);
+  auto *FPN = Sel->CurrentSelectNode;
+  assert(FPN && "getCvtFtzFromFlags called outside of node selection");
+  int64_t Mode = N->getSExtValue();
+  DenormalMode DM = CurDAG->getDenormalMode(FPN);
+  if (DM.Input == DenormalMode::PreserveSign ||
+      DM.Output == DenormalMode::PreserveSign)
+    Mode |= NVPTX::PTXCvtMode::FTZ_FLAG;
+  return CurDAG->getTargetConstant(Mode, SDLoc(), MVT::i32);
+}]>;
+
+// SDNodeXForm that reads the rounding mode from SDNodeFlags but never sets FTZ.
+// Used for fpround f32->f16: PTX cvt.f16.f32 supports .rn and .rz (frnd2 form)
+// but has no .ftz modifier — the instruction syntax simply does not allow it.
+def getCvtRndFromFlags : SDNodeXForm<imm, [{
+  (void)N;
+  auto *Sel = cast<NVPTXDAGToDAGISel>(this);
+  auto *FPN = Sel->CurrentSelectNode;
+  assert(FPN && "getCvtRndFromFlags called outside of node selection");
+  const SDNodeFlags Flags = FPN->getFlags();
+  if (!Flags.hasExplicitRM())
+    return CurDAG->getTargetConstant(NVPTX::PTXCvtMode::RN, SDLoc(), MVT::i32);
+  int CvtMode;
+  switch (Flags.getRoundingMode()) {
+    case RoundingMode::TowardZero:        CvtMode = NVPTX::PTXCvtMode::RZ; break;
+    case RoundingMode::NearestTiesToEven: CvtMode = NVPTX::PTXCvtMode::RN; break;
+    case RoundingMode::TowardPositive:    CvtMode = NVPTX::PTXCvtMode::RP; break;
+    case RoundingMode::TowardNegative:    CvtMode = NVPTX::PTXCvtMode::RM; break;
+    default: llvm_unreachable("Unexpected RoundingMode");
+  }
+  return CurDAG->getTargetConstant(CvtMode, SDLoc(), MVT::i32);
+}]>;
 
 // Compare modes
 // These must match the enum in NVPTX.h
@@ -195,6 +309,7 @@ def RI1  : Operand<i1>;
 def RI16 : Operand<Any>;
 def RI32 : Operand<Any>;
 def RI64 : Operand<Any>;
+
 
 // Utility class to wrap up information about a register and DAG type for more
 // convenient iteration and parameterization
@@ -319,9 +434,6 @@ multiclass ADD_SUB_INT_CARRY<string op_str, SDNode op_node, bit commutative> {
 }
 
 // Template for minimum/maximum instructions.
-//
-// Also defines ftz (flush subnormal inputs and results to sign-preserving
-// zero) variants for fp32 functions.
 multiclass FMINIMUMMAXIMUM<string OpcStr, bit NaN, SDPatternOperator OpNode> {
   defvar nan_str = !if(NaN, ".NaN", "");
   if !not(NaN) then {
@@ -356,7 +468,6 @@ multiclass FMINIMUMMAXIMUM<string OpcStr, bit NaN, SDPatternOperator OpNode> {
                OpcStr # "$ftz" # nan_str # ".f16",
                [(set f16:$dst, (OpNode f16:$a, f16:$b))]>,
                Requires<[useFP16Math]>;
-
    def _f16x2_rr :
      BasicFlagsNVPTXInst<(outs B32:$dst),
                (ins B32:$a, B32:$b),
@@ -417,62 +528,68 @@ multiclass FMINIMUMMAXIMUM3<string OpcStr, bit NaN, SDNode OpNode> {
 // This multiclass should be used for nodes that can be folded to make fma ops.
 // In this case, we use the ".rn" variant when FMA is disabled, as this behaves
 // just like the non ".rn" op, but prevents ptxas from creating FMAs.
-multiclass F3<string op_str, SDPatternOperator op_pat> {
+multiclass F3<string op_str, SDPatternOperator op_pat, bit with_rnd = false> {
+  defvar rnd_op = !if(with_rnd, (ins RNDFlag:$rnd), (ins));
+  defvar rnd_str = !if(with_rnd, "$rnd", "");
   def f64rr :
-    BasicNVPTXInst<(outs B64:$dst),
+    BasicFlagsNVPTXInst<(outs B64:$dst),
               (ins B64:$a, B64:$b),
-              op_str # ".f64",
+              rnd_op,
+              op_str # rnd_str # ".f64",
               [(set f64:$dst, (op_pat f64:$a, f64:$b))]>;
   def f64ri :
-    BasicNVPTXInst<(outs B64:$dst),
+    BasicFlagsNVPTXInst<(outs B64:$dst),
               (ins B64:$a, f64imm:$b),
-              op_str # ".f64",
+              rnd_op,
+              op_str # rnd_str # ".f64",
               [(set f64:$dst, (op_pat f64:$a, fpimm:$b))]>;
   def f32rr :
     BasicFlagsNVPTXInst<(outs B32:$dst),
               (ins B32:$a, B32:$b),
-              (ins FTZFlag:$ftz),
-              op_str # "$ftz.f32",
+              !con(rnd_op, (ins FTZFlag:$ftz)),
+              op_str # rnd_str # "$ftz.f32",
               [(set f32:$dst, (op_pat f32:$a, f32:$b))]>;
   def f32ri :
     BasicFlagsNVPTXInst<(outs B32:$dst),
               (ins B32:$a, f32imm:$b),
-              (ins FTZFlag:$ftz),
-              op_str # "$ftz.f32",
+              !con(rnd_op, (ins FTZFlag:$ftz)),
+              op_str # rnd_str # "$ftz.f32",
               [(set f32:$dst, (op_pat f32:$a, fpimm:$b))]>;
 
   def f16rr :
     BasicFlagsNVPTXInst<(outs B16:$dst),
               (ins B16:$a, B16:$b),
-              (ins FTZFlag:$ftz),
-              op_str # "$ftz.f16",
+              !con(rnd_op, (ins FTZFlag:$ftz)),
+              op_str # rnd_str # "$ftz.f16",
               [(set f16:$dst, (op_pat f16:$a, f16:$b))]>,
               Requires<[useFP16Math]>;
   def f32x2rr :
     BasicFlagsNVPTXInst<(outs B64:$dst),
               (ins B64:$a, B64:$b),
-              (ins FTZFlag:$ftz),
-              op_str # "$ftz.f32x2",
+              !con(rnd_op, (ins FTZFlag:$ftz)),
+              op_str # rnd_str # "$ftz.f32x2",
               [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
               Requires<[hasF32x2Instructions]>;
   def f16x2rr :
     BasicFlagsNVPTXInst<(outs B32:$dst),
               (ins B32:$a, B32:$b),
-              (ins FTZFlag:$ftz),
-              op_str # "$ftz.f16x2",
+              !con(rnd_op, (ins FTZFlag:$ftz)),
+              op_str # rnd_str # "$ftz.f16x2",
               [(set v2f16:$dst, (op_pat v2f16:$a, v2f16:$b))]>,
               Requires<[useFP16Math]>;
   def bf16rr :
-    BasicNVPTXInst<(outs B16:$dst),
+    BasicFlagsNVPTXInst<(outs B16:$dst),
               (ins B16:$a, B16:$b),
-              op_str # ".bf16",
+              rnd_op,
+              op_str # rnd_str # ".bf16",
               [(set bf16:$dst, (op_pat bf16:$a, bf16:$b))]>,
               Requires<[hasBF16Math]>;
 
   def bf16x2rr :
-    BasicNVPTXInst<(outs B32:$dst),
+    BasicFlagsNVPTXInst<(outs B32:$dst),
               (ins B32:$a, B32:$b),
-              op_str # ".bf16x2",
+              rnd_op,
+              op_str # rnd_str # ".bf16x2",
               [(set v2bf16:$dst, (op_pat v2bf16:$a, v2bf16:$b))]>,
               Requires<[hasBF16Math]>;
 }
@@ -485,19 +602,22 @@ class BinOpAllowsFMA<SDPatternOperator operator>
 
 multiclass F3_fma_component<string op_str, SDNode op_node> {
   defm "" : F3<op_str, BinOpAllowsFMA<op_node>>;
-  defm _rn : F3<op_str # ".rn", op_node>;
+  defm _rn : F3<op_str, op_node, with_rnd = true>;
 }
 
-// Template for operations which take two f32 or f64 operands.  Provides three
-// instructions: <OpcStr>.f64, <OpcStr>.f32, and <OpcStr>.ftz.f32 (flush
-// subnormal inputs and results to zero).
-multiclass F2<string OpcStr, SDNode OpNode> {
-   def f64 : BasicNVPTXInst<(outs B64:$dst), (ins B64:$a),
-                           OpcStr # ".f64",
+// Template for operations which take two f32 or f64 operands.  Provides
+// instructions: <OpcStr>[.rnd].f64, <OpcStr>[.rnd].ftz.f32.
+// Set with_rnd=true for ops that support non-default rounding modes (e.g. sqrt).
+multiclass F2<string OpcStr, SDNode OpNode, bit with_rnd = false> {
+  defvar rnd_op = !if(with_rnd, (ins RNDFlag:$rnd), (ins));
+  defvar rnd_str = !if(with_rnd, "$rnd", "");
+   def f64 : BasicFlagsNVPTXInst<(outs B64:$dst), (ins B64:$a),
+                           rnd_op,
+                           OpcStr # rnd_str # ".f64",
                            [(set f64:$dst, (OpNode f64:$a))]>;
    def f32 : BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$a),
-                           (ins FTZFlag:$ftz),
-                           OpcStr # "$ftz.f32",
+                           !con(rnd_op, (ins FTZFlag:$ftz)),
+                           OpcStr # rnd_str # "$ftz.f32",
                            [(set f32:$dst, (OpNode f32:$a))]>;
 }
 
@@ -1081,6 +1201,7 @@ defm FADD : F3_fma_component<"add", fadd>;
 defm FSUB : F3_fma_component<"sub", fsub>;
 defm FMUL : F3_fma_component<"mul", fmul>;
 
+
 def fminnum_or_fminimumnum : PatFrags<(ops node:$a, node:$b),
                                      [(fminnum node:$a, node:$b),
                                       (fminimumnum node:$a, node:$b)]>;
@@ -1112,7 +1233,8 @@ defm FNEG  : F2<"neg", fneg>;
 defm FABS_H: F2_Support_Half<"abs", fabs>;
 defm FNEG_H: F2_Support_Half<"neg", fneg>;
 
-defm FSQRT : F2<"sqrt.rn", fsqrt>;
+defm FSQRT : F2<"sqrt", fsqrt, with_rnd = true>;
+
 
 //
 // F16 NEG
@@ -1159,14 +1281,14 @@ def FRCP64r :
                  "rcp.rn.f64",
                  [(set f64:$dst, (fdiv fpimm_1, f64:$b))]>;
 def FDIV64rr :
-  BasicNVPTXInst<(outs B64:$dst),
-                 (ins B64:$a, B64:$b),
-                 "div.rn.f64",
+  BasicFlagsNVPTXInst<(outs B64:$dst),
+                 (ins B64:$a, B64:$b), (ins RNDFlag:$rnd),
+                 "div$rnd.f64",
                  [(set f64:$dst, (fdiv f64:$a, f64:$b))]>;
 def FDIV64ri :
-  BasicNVPTXInst<(outs B64:$dst),
-                 (ins B64:$a, f64imm:$b),
-                 "div.rn.f64",
+  BasicFlagsNVPTXInst<(outs B64:$dst),
+                 (ins B64:$a, f64imm:$b), (ins RNDFlag:$rnd),
+                 "div$rnd.f64",
                  [(set f64:$dst, (fdiv f64:$a, fpimm:$b))]>;
 
 // fdiv will be converted to rcp
@@ -1250,61 +1372,64 @@ def FRCP32r_prec :
 //
 def FDIV32rr_prec :
   BasicFlagsNVPTXInst<(outs B32:$dst),
-                 (ins B32:$a, B32:$b), (ins FTZFlag:$ftz),
-                 "div.rn$ftz.f32",
+                 (ins B32:$a, B32:$b), (ins RNDFlag:$rnd, FTZFlag:$ftz),
+                 "div$rnd$ftz.f32",
                  [(set f32:$dst, (fdiv_ftz f32:$a, f32:$b))]>;
 def FDIV32ri_prec :
   BasicFlagsNVPTXInst<(outs B32:$dst),
-                 (ins B32:$a, f32imm:$b), (ins FTZFlag:$ftz),
-                 "div.rn$ftz.f32",
+                 (ins B32:$a, f32imm:$b), (ins RNDFlag:$rnd, FTZFlag:$ftz),
+                 "div$rnd$ftz.f32",
                  [(set f32:$dst, (fdiv_ftz f32:$a, fpimm:$b))]>;
 
 def : Pat<(fdiv fpimm_1, f32:$b), (FRCP32r_prec $b, NoFTZ)>;
-def : Pat<(fdiv f32:$a, f32:$b), (FDIV32rr_prec $a, $b, NoFTZ)>;
-def : Pat<(fdiv f32:$a, fpimm:$b), (FDIV32ri_prec $a, fpimm:$b, NoFTZ)>;
+def : Pat<(fdiv f32:$a, f32:$b), (FDIV32rr_prec $a, $b, (getRNDFlag (i32 0)), NoFTZ)>;
+def : Pat<(fdiv f32:$a, fpimm:$b), (FDIV32ri_prec $a, fpimm:$b, (getRNDFlag (i32 0)), NoFTZ)>;
 
 //
 // FMA
 //
 
-multiclass FMA<RegTyInfo t, bit allow_ftz = true, list<Predicate> preds = []> {
+multiclass FMA<RegTyInfo t, bit allow_ftz = true, bit with_rnd = false, list<Predicate> preds = []> {
+  defvar rnd_op = !if(with_rnd, (ins RNDFlag:$rnd), (ins));
+  defvar rnd_str = !if(with_rnd, "$rnd", ".rn");
   defvar flag_str = !if(allow_ftz, "$ftz", "");
   defvar flag_ops = !if(allow_ftz, (ins FTZFlag:$ftz), (ins));
-  defvar op_str = "fma.rn" # flag_str # "." # t.PtxType;
+  defvar op_str = "fma" # rnd_str # flag_str # "." # t.PtxType;
 
   let Predicates = preds in {
     def rrr : BasicFlagsNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.RC:$b, t.RC:$c),
-                        flag_ops, op_str,
+                        !con(rnd_op, flag_ops), op_str,
                         [(set t.Ty:$dst, (fma t.Ty:$a, t.Ty:$b, t.Ty:$c))]>;
 
     if t.SupportsImm then {
       def rri : BasicFlagsNVPTXInst<(outs t.RC:$dst),
                           (ins t.RC:$a, t.RC:$b, t.Imm:$c),
-                          flag_ops, op_str,
+                          !con(rnd_op, flag_ops), op_str,
                           [(set t.Ty:$dst, (fma t.Ty:$a, t.Ty:$b, fpimm:$c))]>;
       def rir : BasicFlagsNVPTXInst<(outs t.RC:$dst),
                           (ins t.RC:$a, t.Imm:$b, t.RC:$c),
-                          flag_ops, op_str,
+                          !con(rnd_op, flag_ops), op_str,
                           [(set t.Ty:$dst, (fma t.Ty:$a, fpimm:$b, t.Ty:$c))]>;
       def rii : BasicFlagsNVPTXInst<(outs t.RC:$dst),
                           (ins t.RC:$a, t.Imm:$b, t.Imm:$c),
-                          flag_ops, op_str,
+                          !con(rnd_op, flag_ops), op_str,
                           [(set t.Ty:$dst, (fma t.Ty:$a, fpimm:$b, fpimm:$c))]>;
       def iir : BasicFlagsNVPTXInst<(outs t.RC:$dst),
                           (ins t.Imm:$a, t.Imm:$b, t.RC:$c),
-                          flag_ops, op_str,
+                          !con(rnd_op, flag_ops), op_str,
                           [(set t.Ty:$dst, (fma fpimm:$a, fpimm:$b, t.Ty:$c))]>;
     }
   }
 }
 
-defm FMA_F16    : FMA<F16RT,    allow_ftz = true, preds = [useFP16Math]>;
-defm FMA_F16x2  : FMA<F16X2RT,  allow_ftz = true, preds = [useFP16Math]>;
-defm FMA_BF16   : FMA<BF16RT,   allow_ftz = false, preds = [hasBF16Math]>;
-defm FMA_BF16x2 : FMA<BF16X2RT, allow_ftz = false, preds = [hasBF16Math]>;
-defm FMA_F32    : FMA<F32RT,    allow_ftz = true>;
-defm FMA_F32x2  : FMA<F32X2RT,  allow_ftz = true, preds = [hasF32x2Instructions]>;
-defm FMA_F64    : FMA<F64RT,    allow_ftz = false>;
+defm FMA_F16    : FMA<F16RT,    allow_ftz = true,  with_rnd = false, preds = [useFP16Math]>;
+defm FMA_F16x2  : FMA<F16X2RT,  allow_ftz = true,  with_rnd = false, preds = [useFP16Math]>;
+defm FMA_BF16   : FMA<BF16RT,   allow_ftz = false, with_rnd = false, preds = [hasBF16Math]>;
+defm FMA_BF16x2 : FMA<BF16X2RT, allow_ftz = false, with_rnd = false, preds = [hasBF16Math]>;
+defm FMA_F32    : FMA<F32RT,    allow_ftz = true,  with_rnd = true>;
+defm FMA_F32x2  : FMA<F32X2RT,  allow_ftz = true,  with_rnd = true, preds = [hasF32x2Instructions]>;
+defm FMA_F64    : FMA<F64RT,    allow_ftz = false, with_rnd = true>;
+
 
 // sin/cos/tanh
 
@@ -2121,26 +2246,16 @@ def : Pat<(i16 (fp_to_uint bf16:$a)), (CVT_u16_bf16 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint bf16:$a)), (CVT_u32_bf16 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_uint bf16:$a)), (CVT_u64_bf16 $a, CvtRZI)>;
 // f32 -> sint
-let Predicates = [doF32FTZ] in {
-  def : Pat<(i16 (fp_to_sint f32:$a)), (CVT_s16_f32 $a, CvtRZI_FTZ)>;
-  def : Pat<(i32 (fp_to_sint f32:$a)), (CVT_s32_f32 $a, CvtRZI_FTZ)>;
-  def : Pat<(i64 (fp_to_sint f32:$a)), (CVT_s64_f32 $a, CvtRZI_FTZ)>;
-}
 def : Pat<(i1  (fp_to_sint f32:$a)), (SETP_i32ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_sint f32:$a)), (CVT_s16_f32 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_sint f32:$a)), (CVT_s32_f32 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_sint f32:$a)), (CVT_s64_f32 $a, CvtRZI)>;
+def : Pat<(i16 (fp_to_sint f32:$a)), (CVT_s16_f32 $a, (getCvtFtzFromFlags CvtRZI))>;
+def : Pat<(i32 (fp_to_sint f32:$a)), (CVT_s32_f32 $a, (getCvtFtzFromFlags CvtRZI))>;
+def : Pat<(i64 (fp_to_sint f32:$a)), (CVT_s64_f32 $a, (getCvtFtzFromFlags CvtRZI))>;
 
 // f32 -> uint
-let Predicates = [doF32FTZ] in {
-  def : Pat<(i16 (fp_to_uint f32:$a)), (CVT_u16_f32 $a, CvtRZI_FTZ)>;
-  def : Pat<(i32 (fp_to_uint f32:$a)), (CVT_u32_f32 $a, CvtRZI_FTZ)>;
-  def : Pat<(i64 (fp_to_uint f32:$a)), (CVT_u64_f32 $a, CvtRZI_FTZ)>;
-}
 def : Pat<(i1  (fp_to_uint f32:$a)), (SETP_i32ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_uint f32:$a)), (CVT_u16_f32 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_uint f32:$a)), (CVT_u32_f32 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_uint f32:$a)), (CVT_u64_f32 $a, CvtRZI)>;
+def : Pat<(i16 (fp_to_uint f32:$a)), (CVT_u16_f32 $a, (getCvtFtzFromFlags CvtRZI))>;
+def : Pat<(i32 (fp_to_uint f32:$a)), (CVT_u32_f32 $a, (getCvtFtzFromFlags CvtRZI))>;
+def : Pat<(i64 (fp_to_uint f32:$a)), (CVT_u64_f32 $a, (getCvtFtzFromFlags CvtRZI))>;
 
 // f64 -> sint
 def : Pat<(i1  (fp_to_sint f64:$a)), (SETP_i64ri $a, 0, CmpEQ)>;
@@ -2381,30 +2496,31 @@ let hasSideEffects = false in {
   }
 }
 
-// fpround f32 -> f16
-def : Pat<(f16 (fpround f32:$a)), (CVT_f16_f32 $a, CvtRN)>;
+// fpround f32 -> f16: use SDNodeFlags for rounding mode only (no FTZ —
+// PTX cvt.f16.f32 uses the frnd2 form which has no .ftz modifier).
+def : Pat<(f16 (fpround f32:$a)), (CVT_f16_f32 $a, (getCvtRndFromFlags (i32 0)))>;
 
-// fpround f32 -> bf16
-def : Pat<(bf16 (fpround f32:$a)), (CVT_bf16_f32 $a, CvtRN)>, 
+// fpround f32 -> bf16: bf16 doesn't support rounding modes, keep CvtRN
+def : Pat<(bf16 (fpround f32:$a)), (CVT_bf16_f32 $a, CvtRN)>,
       Requires<[hasPTX<70>, hasSM<80>]>;
 
 // fpround f64 -> f16
 def : Pat<(f16 (fpround f64:$a)), (CVT_f16_f64 $a, CvtRN)>;
 
 // fpround f64 -> bf16
-def : Pat<(bf16 (fpround f64:$a)), (CVT_bf16_f64 $a, CvtRN)>, 
+def : Pat<(bf16 (fpround f64:$a)), (CVT_bf16_f64 $a, CvtRN)>,
       Requires<[hasPTX<78>, hasSM<90>]>;
 
-// fpround f64 -> f32
-def : Pat<(f32 (fpround f64:$a)), (CVT_f32_f64 $a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f32 (fpround f64:$a)), (CVT_f32_f64 $a, CvtRN)>;
+// fpround f64 -> f32: use SDNodeFlags for rounding mode and FTZ
+def : Pat<(f32 (fpround f64:$a)), (CVT_f32_f64 $a, (getCvtRndFtzFromFlags (i32 0)))>;
 
 // fpextend f16 -> f32
-def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE)>;
+def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, (getCvtFtzFromFlags CvtNONE))>;
 // fpextend bf16 -> f32
-def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ, hasPTX<78>, hasSM<90>]>;
-def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE)>, Requires<[hasPTX<71>, hasSM<80>]>;
+def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, (getCvtFtzFromFlags CvtNONE))>,
+      Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE)>,
+      Requires<[hasPTX<71>, hasSM<80>]>;
 
 // fpextend f16 -> f64
 def : Pat<(f64 (fpextend f16:$a)), (CVT_f64_f16 $a, CvtNONE)>;
@@ -2413,33 +2529,31 @@ def : Pat<(f64 (fpextend f16:$a)), (CVT_f64_f16 $a, CvtNONE)>;
 def : Pat<(f64 (fpextend bf16:$a)), (CVT_f64_bf16 $a, CvtNONE)>, Requires<[hasPTX<78>, hasSM<90>]>;
 
 // fpextend f32 -> f64
-def : Pat<(f64 (fpextend f32:$a)), (CVT_f64_f32 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f64 (fpextend f32:$a)), (CVT_f64_f32 $a, CvtNONE)>;
+def : Pat<(f64 (fpextend f32:$a)), (CVT_f64_f32 $a, (getCvtFtzFromFlags CvtNONE))>;
 
 def retglue : SDNode<"NVPTXISD::RET_GLUE", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue]>;
 
 // fceil, ffloor, froundeven, ftrunc.
 
-multiclass CVT_ROUND<SDNode OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
+multiclass CVT_ROUND<SDNode OpNode, PatLeaf Mode> {
   def : Pat<(OpNode  f16:$a), (CVT_f16_f16 $a, Mode)>;
   def : Pat<(OpNode bf16:$a), (CVT_bf16_bf16 $a, Mode)>;
-  def : Pat<(OpNode  f32:$a), (CVT_f32_f32 $a, ModeFTZ)>, Requires<[doF32FTZ]>;
-  def : Pat<(OpNode  f32:$a), (CVT_f32_f32 $a, Mode)>, Requires<[doNoF32FTZ]>;
+  def : Pat<(OpNode  f32:$a), (CVT_f32_f32 $a, (getCvtFtzFromFlags Mode))>;
   def : Pat<(OpNode  f64:$a), (CVT_f64_f64 $a, Mode)>;
 }
 
-defm : CVT_ROUND<fceil, CvtRPI, CvtRPI_FTZ>;
-defm : CVT_ROUND<ffloor, CvtRMI, CvtRMI_FTZ>;
-defm : CVT_ROUND<froundeven, CvtRNI, CvtRNI_FTZ>;
-defm : CVT_ROUND<ftrunc, CvtRZI, CvtRZI_FTZ>;
+defm : CVT_ROUND<fceil, CvtRPI>;
+defm : CVT_ROUND<ffloor, CvtRMI>;
+defm : CVT_ROUND<froundeven, CvtRNI>;
+defm : CVT_ROUND<ftrunc, CvtRZI>;
 
 // nearbyint and rint are implemented as rounding to nearest even.  This isn't
 // strictly correct, because it causes us to ignore the rounding mode.  But it
 // matches what CUDA's "libm" does.
 
-defm : CVT_ROUND<fnearbyint, CvtRNI, CvtRNI_FTZ>;
-defm : CVT_ROUND<frint, CvtRNI, CvtRNI_FTZ>;
+defm : CVT_ROUND<fnearbyint, CvtRNI>;
+defm : CVT_ROUND<frint, CvtRNI>;
 
 //-----------------------------------
 // Control-flow

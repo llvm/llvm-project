@@ -34,7 +34,7 @@ define <32 x i16> @test_v32f16_ogt_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpgt_oqph 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpgtph 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -42,7 +42,7 @@ define <32 x i16> @test_v32f16_ogt_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ;
 ; X64-LABEL: test_v32f16_ogt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmplt_oqph %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpltph %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <32 x i1> @llvm.experimental.constrained.fcmp.v32f16(
@@ -59,7 +59,7 @@ define <32 x i16> @test_v32f16_oge_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpge_oqph 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpgeph 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -67,7 +67,7 @@ define <32 x i16> @test_v32f16_oge_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ;
 ; X64-LABEL: test_v32f16_oge_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmple_oqph %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpleph %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <32 x i1> @llvm.experimental.constrained.fcmp.v32f16(
@@ -84,7 +84,7 @@ define <32 x i16> @test_v32f16_olt_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmplt_oqph 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpltph 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -92,7 +92,7 @@ define <32 x i16> @test_v32f16_olt_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ;
 ; X64-LABEL: test_v32f16_olt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmplt_oqph %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpltph %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <32 x i1> @llvm.experimental.constrained.fcmp.v32f16(
@@ -109,7 +109,7 @@ define <32 x i16> @test_v32f16_ole_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmple_oqph 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpleph 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -117,7 +117,7 @@ define <32 x i16> @test_v32f16_ole_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ;
 ; X64-LABEL: test_v32f16_ole_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmple_oqph %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpleph %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <32 x i1> @llvm.experimental.constrained.fcmp.v32f16(
@@ -209,7 +209,7 @@ define <32 x i16> @test_v32f16_ugt_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpnle_uqph 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpnleph 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -217,7 +217,7 @@ define <32 x i16> @test_v32f16_ugt_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ;
 ; X64-LABEL: test_v32f16_ugt_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnle_uqph %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpnleph %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <32 x i1> @llvm.experimental.constrained.fcmp.v32f16(
@@ -234,7 +234,7 @@ define <32 x i16> @test_v32f16_uge_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpnlt_uqph 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpnltph 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -242,7 +242,7 @@ define <32 x i16> @test_v32f16_uge_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ;
 ; X64-LABEL: test_v32f16_uge_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnlt_uqph %zmm3, %zmm2, %k1
+; X64-NEXT:    vcmpnltph %zmm3, %zmm2, %k1
 ; X64-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <32 x i1> @llvm.experimental.constrained.fcmp.v32f16(
@@ -259,7 +259,7 @@ define <32 x i16> @test_v32f16_ult_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpnge_uqph 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpngeph 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -267,7 +267,7 @@ define <32 x i16> @test_v32f16_ult_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ;
 ; X64-LABEL: test_v32f16_ult_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnle_uqph %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpnleph %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <32 x i1> @llvm.experimental.constrained.fcmp.v32f16(
@@ -284,7 +284,7 @@ define <32 x i16> @test_v32f16_ule_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vcmpngt_uqph 8(%ebp), %zmm2, %k1
+; X86-NEXT:    vcmpngtph 8(%ebp), %zmm2, %k1
 ; X86-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -292,7 +292,7 @@ define <32 x i16> @test_v32f16_ule_q(<32 x i16> %a, <32 x i16> %b, <32 x half> %
 ;
 ; X64-LABEL: test_v32f16_ule_q:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpnlt_uqph %zmm2, %zmm3, %k1
+; X64-NEXT:    vcmpnltph %zmm2, %zmm3, %k1
 ; X64-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
   %cond = call <32 x i1> @llvm.experimental.constrained.fcmp.v32f16(

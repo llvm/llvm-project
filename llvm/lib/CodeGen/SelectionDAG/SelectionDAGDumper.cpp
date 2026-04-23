@@ -35,6 +35,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -751,6 +752,55 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
   if (getFlags().hasNoConvergent())
     OS << " noconvergent";
+
+  // Print FP environment flags (denorm modes and rounding mode).
+  // Guard behind an opcode check: the SelectionDAG FlagInserter propagates
+  // the function-default FP env to ALL nodes (including integer ones and
+  // register copies), so we must only print these flags for nodes that
+  // actually perform FP operations.
+  if (ISD::isFPOpcode(getOpcode())) {
+    using DMK = DenormalMode::DenormalModeKind;
+    auto denormKindStr = [](DMK K) -> StringRef {
+      switch (K) {
+      case DMK::IEEE:         return "ieee";
+      case DMK::PreserveSign: return "zero";
+      case DMK::PositiveZero: return "pzero";
+      case DMK::Dynamic:      return "dyn";
+      default:                return "?";
+      }
+    };
+
+    // General (non-f32) denorm: print when non-trivially set.
+    // Skip when both are Dynamic (not set) or both are IEEE (the default —
+    // FlagInserter propagates IEEE to every FP node in a normal function,
+    // so printing it would be extremely noisy and break many dump tests).
+    DMK InD  = getFlags().getInputDenormMode();
+    DMK OutD = getFlags().getOutputDenormMode();
+    if ((InD != DMK::Dynamic || OutD != DMK::Dynamic) &&
+        !(InD == DMK::IEEE && OutD == DMK::IEEE)) {
+      OS << " ";
+      if (InD == OutD)
+        OS << denormKindStr(InD);
+      else
+        OS << denormKindStr(InD) << ":" << denormKindStr(OutD);
+    }
+
+    // F32-specific denorm: print only when the f32 pair differs from general.
+    DMK F32InD  = getFlags().getF32InputDenormMode();
+    DMK F32OutD = getFlags().getF32OutputDenormMode();
+    if (F32InD != InD || F32OutD != OutD) {
+      OS << " ";
+      if (F32InD == F32OutD)
+        OS << denormKindStr(F32InD) << ".f32";
+      else
+        OS << denormKindStr(F32InD) << ".f32:" << denormKindStr(F32OutD) << ".f32";
+    }
+
+    // Explicit rounding mode (from fp.control bundle).
+    if (getFlags().hasExplicitRM())
+      if (auto RM = convertRoundingModeToBundle(getFlags().getRoundingMode()))
+        OS << " " << *RM;
+  }
 
   if (const MachineSDNode *MN = dyn_cast<MachineSDNode>(this)) {
     if (!MN->memoperands_empty()) {

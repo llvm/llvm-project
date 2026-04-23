@@ -9,61 +9,12 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for mul_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for div_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for frem_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fma_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptosi_i32_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptoui_i32_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptosi_i64_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptoui_i64_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f16_i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f16_i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f16_i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f16_i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f16_i128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f16_i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrt_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for powi_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sin_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cos_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tan_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for asin_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for acos_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan2_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sinh_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cosh_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tanh_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pow_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log10_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log2_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp2_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for rint_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for nearbyint_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lrint_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for llrint_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for maxnum_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for minnum_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ceil_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for floor_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lround_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for llround_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for round_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for roundeven_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for trunc_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ldexp_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_olt_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ole_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ogt_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_oge_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_oeq_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_one_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ult_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ule_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ugt_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_uge_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ueq_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_une_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmps_olt_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmps_ole_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmps_ogt_f16
@@ -77,7 +28,6 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmps_ueq_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmps_une_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptrunc_f16_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fpext_f32_f16
 
 ; Check that constrained fp intrinsics are correctly lowered.
 
@@ -478,8 +428,8 @@ define half @atan2_f16(half %x, half %y) #0 {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    fcvt s1, h1
 ; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcvt s1, h1
 ; CHECK-NEXT:    bl atan2f
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -539,8 +489,8 @@ define half @pow_f16(half %x, half %y) #0 {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    fcvt s1, h1
 ; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcvt s1, h1
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -852,8 +802,8 @@ define half @ldexp_f16(half %x, i32 %y) #0 {
 define i32 @fcmp_olt_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_olt_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, mi
 ; CHECK-NOFP16-NEXT:    ret
@@ -871,8 +821,8 @@ define i32 @fcmp_olt_f16(half %a, half %b) #0 {
 define i32 @fcmp_ole_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_ole_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, ls
 ; CHECK-NOFP16-NEXT:    ret
@@ -890,8 +840,8 @@ define i32 @fcmp_ole_f16(half %a, half %b) #0 {
 define i32 @fcmp_ogt_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_ogt_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, gt
 ; CHECK-NOFP16-NEXT:    ret
@@ -909,8 +859,8 @@ define i32 @fcmp_ogt_f16(half %a, half %b) #0 {
 define i32 @fcmp_oge_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_oge_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, ge
 ; CHECK-NOFP16-NEXT:    ret
@@ -928,8 +878,8 @@ define i32 @fcmp_oge_f16(half %a, half %b) #0 {
 define i32 @fcmp_oeq_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_oeq_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, eq
 ; CHECK-NOFP16-NEXT:    ret
@@ -947,8 +897,8 @@ define i32 @fcmp_oeq_f16(half %a, half %b) #0 {
 define i32 @fcmp_one_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_one_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w8, mi
 ; CHECK-NOFP16-NEXT:    csinc w0, w8, wzr, le
@@ -968,8 +918,8 @@ define i32 @fcmp_one_f16(half %a, half %b) #0 {
 define i32 @fcmp_ult_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_ult_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, lt
 ; CHECK-NOFP16-NEXT:    ret
@@ -987,8 +937,8 @@ define i32 @fcmp_ult_f16(half %a, half %b) #0 {
 define i32 @fcmp_ule_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_ule_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, le
 ; CHECK-NOFP16-NEXT:    ret
@@ -1006,8 +956,8 @@ define i32 @fcmp_ule_f16(half %a, half %b) #0 {
 define i32 @fcmp_ugt_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_ugt_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, hi
 ; CHECK-NOFP16-NEXT:    ret
@@ -1025,8 +975,8 @@ define i32 @fcmp_ugt_f16(half %a, half %b) #0 {
 define i32 @fcmp_uge_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_uge_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, pl
 ; CHECK-NOFP16-NEXT:    ret
@@ -1044,8 +994,8 @@ define i32 @fcmp_uge_f16(half %a, half %b) #0 {
 define i32 @fcmp_ueq_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_ueq_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w8, eq
 ; CHECK-NOFP16-NEXT:    csinc w0, w8, wzr, vc
@@ -1065,8 +1015,8 @@ define i32 @fcmp_ueq_f16(half %a, half %b) #0 {
 define i32 @fcmp_une_f16(half %a, half %b) #0 {
 ; CHECK-NOFP16-LABEL: fcmp_une_f16:
 ; CHECK-NOFP16:       // %bb.0:
-; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-NOFP16-NEXT:    cset w0, ne
 ; CHECK-NOFP16-NEXT:    ret

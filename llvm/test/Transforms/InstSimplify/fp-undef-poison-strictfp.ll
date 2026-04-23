@@ -9,8 +9,7 @@
 
 define float @fadd_undef_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fadd_undef_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -18,7 +17,7 @@ define float @fadd_undef_op0_strict(float %x) #0 {
 
 define float @fadd_undef_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fadd_undef_op0_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fadd.f32(float undef, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -27,7 +26,7 @@ define float @fadd_undef_op0_maytrap(float %x) #0 {
 
 define float @fadd_undef_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fadd_undef_op0_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float undef, float [[X:%.*]], metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fadd.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float undef, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -36,7 +35,8 @@ define float @fadd_undef_op0_upward(float %x) #0 {
 
 define float @fadd_undef_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fadd_undef_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float undef, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -44,7 +44,6 @@ define float @fadd_undef_op0_defaultfp(float %x) #0 {
 
 define float @fadd_poison_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fadd_poison_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float poison, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -53,7 +52,8 @@ define float @fadd_poison_op0_strict(float %x) #0 {
 
 define float @fadd_poison_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fadd_poison_op0_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float poison, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -61,7 +61,8 @@ define float @fadd_poison_op0_maytrap(float %x) #0 {
 
 define float @fadd_poison_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fadd_poison_op0_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float poison, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -69,7 +70,8 @@ define float @fadd_poison_op0_upward(float %x) #0 {
 
 define float @fadd_poison_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fadd_poison_op0_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float poison, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -77,8 +79,7 @@ define float @fadd_poison_op0_defaultfp(float %x) #0 {
 
 define float @fadd_undef_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fadd_undef_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -86,7 +87,7 @@ define float @fadd_undef_op1_strict(float %x) #0 {
 
 define float @fadd_undef_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fadd_undef_op1_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fadd.f32(float [[X:%.*]], float undef) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -95,7 +96,7 @@ define float @fadd_undef_op1_maytrap(float %x) #0 {
 
 define float @fadd_undef_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fadd_undef_op1_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fadd.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -104,7 +105,8 @@ define float @fadd_undef_op1_upward(float %x) #0 {
 
 define float @fadd_undef_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fadd_undef_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float undef, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -112,7 +114,6 @@ define float @fadd_undef_op1_defaultfp(float %x) #0 {
 
 define float @fadd_poison_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fadd_poison_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -121,7 +122,8 @@ define float @fadd_poison_op1_strict(float %x) #0 {
 
 define float @fadd_poison_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fadd_poison_op1_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float [[X:%.*]], float poison) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -129,7 +131,8 @@ define float @fadd_poison_op1_maytrap(float %x) #0 {
 
 define float @fadd_poison_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fadd_poison_op1_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float poison, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -137,7 +140,8 @@ define float @fadd_poison_op1_upward(float %x) #0 {
 
 define float @fadd_poison_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fadd_poison_op1_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fadd.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float poison, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -149,8 +153,7 @@ define float @fadd_poison_op1_defaultfp(float %x) #0 {
 
 define float @fsub_undef_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fsub_undef_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -158,7 +161,7 @@ define float @fsub_undef_op0_strict(float %x) #0 {
 
 define float @fsub_undef_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fsub_undef_op0_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fsub.f32(float undef, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -167,7 +170,7 @@ define float @fsub_undef_op0_maytrap(float %x) #0 {
 
 define float @fsub_undef_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fsub_undef_op0_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float undef, float [[X:%.*]], metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fsub.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float undef, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -176,7 +179,8 @@ define float @fsub_undef_op0_upward(float %x) #0 {
 
 define float @fsub_undef_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fsub_undef_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float undef, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -184,7 +188,6 @@ define float @fsub_undef_op0_defaultfp(float %x) #0 {
 
 define float @fsub_poison_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fsub_poison_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float poison, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -193,7 +196,8 @@ define float @fsub_poison_op0_strict(float %x) #0 {
 
 define float @fsub_poison_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fsub_poison_op0_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float poison, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -201,7 +205,8 @@ define float @fsub_poison_op0_maytrap(float %x) #0 {
 
 define float @fsub_poison_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fsub_poison_op0_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float poison, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -209,7 +214,8 @@ define float @fsub_poison_op0_upward(float %x) #0 {
 
 define float @fsub_poison_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fsub_poison_op0_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float poison, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -217,8 +223,7 @@ define float @fsub_poison_op0_defaultfp(float %x) #0 {
 
 define float @fsub_undef_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fsub_undef_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -226,7 +231,7 @@ define float @fsub_undef_op1_strict(float %x) #0 {
 
 define float @fsub_undef_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fsub_undef_op1_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float undef) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -235,7 +240,7 @@ define float @fsub_undef_op1_maytrap(float %x) #0 {
 
 define float @fsub_undef_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fsub_undef_op1_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -244,7 +249,8 @@ define float @fsub_undef_op1_upward(float %x) #0 {
 
 define float @fsub_undef_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fsub_undef_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float undef, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -252,7 +258,6 @@ define float @fsub_undef_op1_defaultfp(float %x) #0 {
 
 define float @fsub_poison_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fsub_poison_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -261,7 +266,8 @@ define float @fsub_poison_op1_strict(float %x) #0 {
 
 define float @fsub_poison_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fsub_poison_op1_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float poison) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -269,7 +275,8 @@ define float @fsub_poison_op1_maytrap(float %x) #0 {
 
 define float @fsub_poison_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fsub_poison_op1_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float poison, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -277,7 +284,8 @@ define float @fsub_poison_op1_upward(float %x) #0 {
 
 define float @fsub_poison_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fsub_poison_op1_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float poison, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -289,8 +297,7 @@ define float @fsub_poison_op1_defaultfp(float %x) #0 {
 
 define float @fmul_undef_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fmul_undef_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -298,7 +305,7 @@ define float @fmul_undef_op0_strict(float %x) #0 {
 
 define float @fmul_undef_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fmul_undef_op0_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fmul.f32(float undef, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -307,7 +314,7 @@ define float @fmul_undef_op0_maytrap(float %x) #0 {
 
 define float @fmul_undef_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fmul_undef_op0_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float undef, float [[X:%.*]], metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fmul.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float undef, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -316,7 +323,8 @@ define float @fmul_undef_op0_upward(float %x) #0 {
 
 define float @fmul_undef_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fmul_undef_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float undef, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -324,16 +332,16 @@ define float @fmul_undef_op0_defaultfp(float %x) #0 {
 
 define float @fmul_poison_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fmul_poison_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float poison, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
-define float @fmul_poison_op0_maytrap(float %x) #0 { 
+define float @fmul_poison_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fmul_poison_op0_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float poison, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -341,7 +349,8 @@ define float @fmul_poison_op0_maytrap(float %x) #0 {
 
 define float @fmul_poison_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fmul_poison_op0_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float poison, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -349,7 +358,8 @@ define float @fmul_poison_op0_upward(float %x) #0 {
 
 define float @fmul_poison_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fmul_poison_op0_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float poison, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -357,8 +367,7 @@ define float @fmul_poison_op0_defaultfp(float %x) #0 {
 
 define float @fmul_undef_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fmul_undef_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -366,7 +375,7 @@ define float @fmul_undef_op1_strict(float %x) #0 {
 
 define float @fmul_undef_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fmul_undef_op1_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fmul.f32(float [[X:%.*]], float undef) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -375,7 +384,7 @@ define float @fmul_undef_op1_maytrap(float %x) #0 {
 
 define float @fmul_undef_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fmul_undef_op1_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fmul.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -384,7 +393,8 @@ define float @fmul_undef_op1_upward(float %x) #0 {
 
 define float @fmul_undef_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fmul_undef_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float undef, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -392,7 +402,6 @@ define float @fmul_undef_op1_defaultfp(float %x) #0 {
 
 define float @fmul_poison_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fmul_poison_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -401,7 +410,8 @@ define float @fmul_poison_op1_strict(float %x) #0 {
 
 define float @fmul_poison_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fmul_poison_op1_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float [[X:%.*]], float poison) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -409,7 +419,8 @@ define float @fmul_poison_op1_maytrap(float %x) #0 {
 
 define float @fmul_poison_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fmul_poison_op1_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float poison, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -417,7 +428,8 @@ define float @fmul_poison_op1_upward(float %x) #0 {
 
 define float @fmul_poison_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fmul_poison_op1_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fmul.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float poison, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -429,8 +441,7 @@ define float @fmul_poison_op1_defaultfp(float %x) #0 {
 
 define float @fdiv_undef_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fdiv_undef_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -438,7 +449,7 @@ define float @fdiv_undef_op0_strict(float %x) #0 {
 
 define float @fdiv_undef_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fdiv_undef_op0_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fdiv.f32(float undef, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -447,7 +458,7 @@ define float @fdiv_undef_op0_maytrap(float %x) #0 {
 
 define float @fdiv_undef_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fdiv_undef_op0_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float undef, float [[X:%.*]], metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fdiv.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float undef, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -456,7 +467,8 @@ define float @fdiv_undef_op0_upward(float %x) #0 {
 
 define float @fdiv_undef_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fdiv_undef_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float undef, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -464,7 +476,6 @@ define float @fdiv_undef_op0_defaultfp(float %x) #0 {
 
 define float @fdiv_poison_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fdiv_poison_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float poison, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -473,7 +484,8 @@ define float @fdiv_poison_op0_strict(float %x) #0 {
 
 define float @fdiv_poison_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fdiv_poison_op0_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float poison, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -481,7 +493,8 @@ define float @fdiv_poison_op0_maytrap(float %x) #0 {
 
 define float @fdiv_poison_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fdiv_poison_op0_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float poison, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -489,7 +502,8 @@ define float @fdiv_poison_op0_upward(float %x) #0 {
 
 define float @fdiv_poison_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fdiv_poison_op0_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float poison, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -497,8 +511,7 @@ define float @fdiv_poison_op0_defaultfp(float %x) #0 {
 
 define float @fdiv_undef_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fdiv_undef_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -506,7 +519,7 @@ define float @fdiv_undef_op1_strict(float %x) #0 {
 
 define float @fdiv_undef_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fdiv_undef_op1_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fdiv.f32(float [[X:%.*]], float undef) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -515,7 +528,7 @@ define float @fdiv_undef_op1_maytrap(float %x) #0 {
 
 define float @fdiv_undef_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fdiv_undef_op1_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[X:%.*]], float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fdiv.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -524,7 +537,8 @@ define float @fdiv_undef_op1_upward(float %x) #0 {
 
 define float @fdiv_undef_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fdiv_undef_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float undef, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -532,7 +546,6 @@ define float @fdiv_undef_op1_defaultfp(float %x) #0 {
 
 define float @fdiv_poison_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fdiv_poison_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[X:%.*]], float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -541,7 +554,8 @@ define float @fdiv_poison_op1_strict(float %x) #0 {
 
 define float @fdiv_poison_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fdiv_poison_op1_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float [[X:%.*]], float poison) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -549,7 +563,8 @@ define float @fdiv_poison_op1_maytrap(float %x) #0 {
 
 define float @fdiv_poison_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fdiv_poison_op1_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float poison, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -557,7 +572,8 @@ define float @fdiv_poison_op1_upward(float %x) #0 {
 
 define float @fdiv_poison_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fdiv_poison_op1_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fdiv.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float poison, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -569,8 +585,7 @@ define float @fdiv_poison_op1_defaultfp(float %x) #0 {
 
 define float @frem_undef_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @frem_undef_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -578,7 +593,7 @@ define float @frem_undef_op0_strict(float %x) #0 {
 
 define float @frem_undef_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @frem_undef_op0_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float undef, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.frem.f32(float undef, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float undef, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -587,7 +602,7 @@ define float @frem_undef_op0_maytrap(float %x) #0 {
 
 define float @frem_undef_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @frem_undef_op0_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float undef, float [[X:%.*]], metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.frem.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float undef, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -596,7 +611,8 @@ define float @frem_undef_op0_upward(float %x) #0 {
 
 define float @frem_undef_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @frem_undef_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float undef, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float undef, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -604,7 +620,6 @@ define float @frem_undef_op0_defaultfp(float %x) #0 {
 
 define float @frem_poison_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @frem_poison_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float poison, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -613,7 +628,8 @@ define float @frem_poison_op0_strict(float %x) #0 {
 
 define float @frem_poison_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @frem_poison_op0_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float poison, float [[X:%.*]]) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -621,7 +637,8 @@ define float @frem_poison_op0_maytrap(float %x) #0 {
 
 define float @frem_poison_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @frem_poison_op0_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float poison, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -629,7 +646,8 @@ define float @frem_poison_op0_upward(float %x) #0 {
 
 define float @frem_poison_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @frem_poison_op0_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float poison, float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float poison, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -637,8 +655,7 @@ define float @frem_poison_op0_defaultfp(float %x) #0 {
 
 define float @frem_undef_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @frem_undef_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -646,7 +663,7 @@ define float @frem_undef_op1_strict(float %x) #0 {
 
 define float @frem_undef_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @frem_undef_op1_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float [[X:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.frem.f32(float [[X:%.*]], float undef) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -655,7 +672,7 @@ define float @frem_undef_op1_maytrap(float %x) #0 {
 
 define float @frem_undef_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @frem_undef_op1_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float [[X:%.*]], float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.frem.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -664,7 +681,8 @@ define float @frem_undef_op1_upward(float %x) #0 {
 
 define float @frem_undef_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @frem_undef_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float [[X:%.*]], float undef) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float undef, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -672,7 +690,6 @@ define float @frem_undef_op1_defaultfp(float %x) #0 {
 
 define float @frem_poison_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @frem_poison_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float [[X:%.*]], float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -681,7 +698,8 @@ define float @frem_poison_op1_strict(float %x) #0 {
 
 define float @frem_poison_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @frem_poison_op1_maytrap(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float [[X:%.*]], float poison) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float poison, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -689,7 +707,8 @@ define float @frem_poison_op1_maytrap(float %x) #0 {
 
 define float @frem_poison_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @frem_poison_op1_upward(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float poison, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -697,7 +716,8 @@ define float @frem_poison_op1_upward(float %x) #0 {
 
 define float @frem_poison_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @frem_poison_op1_defaultfp(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.frem.f32(float [[X:%.*]], float poison) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %r = call float @llvm.experimental.constrained.frem.f32(float %x, float poison, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -709,8 +729,8 @@ define float @frem_poison_op1_defaultfp(float %x) #0 {
 
 define float @fma_undef_op0_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float undef, float [[X:%.*]], float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float undef, float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float undef, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -718,8 +738,8 @@ define float @fma_undef_op0_strict(float %x, float %y) #0 {
 
 define float @fma_undef_op0_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op0_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float undef, float [[X:%.*]], float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.maytrap")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float undef, float [[X:%.*]], float [[Y:%.*]]) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float undef, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -727,8 +747,8 @@ define float @fma_undef_op0_maytrap(float %x, float %y) #0 {
 
 define float @fma_undef_op0_upward(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op0_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float undef, float [[X:%.*]], float [[Y:%.*]], metadata !"round.upward", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float undef, float [[X:%.*]], float [[Y:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float undef, float %x, float %y, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -736,6 +756,7 @@ define float @fma_undef_op0_upward(float %x, float %y) #0 {
 
 define float @fma_undef_op0_defaultfp(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op0_defaultfp(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float undef, float [[X:%.*]], float [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float undef, float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -744,7 +765,7 @@ define float @fma_undef_op0_defaultfp(float %x, float %y) #0 {
 
 define float @fma_poison_op0_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float poison, float [[X:%.*]], float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float poison, float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float poison, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -753,6 +774,7 @@ define float @fma_poison_op0_strict(float %x, float %y) #0 {
 
 define float @fma_poison_op0_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op0_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float poison, float [[X:%.*]], float [[Y:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float poison, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -761,6 +783,7 @@ define float @fma_poison_op0_maytrap(float %x, float %y) #0 {
 
 define float @fma_poison_op0_upward(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op0_upward(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float poison, float [[X:%.*]], float [[Y:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float poison, float %x, float %y, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -769,6 +792,7 @@ define float @fma_poison_op0_upward(float %x, float %y) #0 {
 
 define float @fma_poison_op0_defaultfp(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op0_defaultfp(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float poison, float [[X:%.*]], float [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float poison, float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -777,8 +801,8 @@ define float @fma_poison_op0_defaultfp(float %x, float %y) #0 {
 
 define float @fma_undef_op1_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float undef, float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float undef, float [[Y:%.*]])
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float undef, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -786,8 +810,8 @@ define float @fma_undef_op1_strict(float %x, float %y) #0 {
 
 define float @fma_undef_op1_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op1_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float undef, float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.maytrap")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float undef, float [[Y:%.*]]) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float undef, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -795,8 +819,8 @@ define float @fma_undef_op1_maytrap(float %x, float %y) #0 {
 
 define float @fma_undef_op1_upward(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op1_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float undef, float [[Y:%.*]], metadata !"round.upward", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float undef, float [[Y:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float undef, float %y, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -804,6 +828,7 @@ define float @fma_undef_op1_upward(float %x, float %y) #0 {
 
 define float @fma_undef_op1_defaultfp(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op1_defaultfp(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float undef, float [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float undef, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -812,7 +837,7 @@ define float @fma_undef_op1_defaultfp(float %x, float %y) #0 {
 
 define float @fma_poison_op1_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float poison, float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float poison, float [[Y:%.*]])
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float poison, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -821,6 +846,7 @@ define float @fma_poison_op1_strict(float %x, float %y) #0 {
 
 define float @fma_poison_op1_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op1_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float poison, float [[Y:%.*]]) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float poison, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -829,6 +855,7 @@ define float @fma_poison_op1_maytrap(float %x, float %y) #0 {
 
 define float @fma_poison_op1_upward(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op1_upward(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float poison, float [[Y:%.*]]) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float poison, float %y, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -837,6 +864,7 @@ define float @fma_poison_op1_upward(float %x, float %y) #0 {
 
 define float @fma_poison_op1_defaultfp(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op1_defaultfp(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float poison, float [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float poison, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -845,8 +873,8 @@ define float @fma_poison_op1_defaultfp(float %x, float %y) #0 {
 
 define float @fma_undef_op2_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op2_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float [[Y:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float undef)
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float undef, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
@@ -854,8 +882,8 @@ define float @fma_undef_op2_strict(float %x, float %y) #0 {
 
 define float @fma_undef_op2_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op2_maytrap(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float [[Y:%.*]], float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float undef) [ "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
@@ -863,8 +891,8 @@ define float @fma_undef_op2_maytrap(float %x, float %y) #0 {
 
 define float @fma_undef_op2_upward(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op2_upward(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float [[Y:%.*]], float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float undef) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float undef, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
@@ -872,6 +900,7 @@ define float @fma_undef_op2_upward(float %x, float %y) #0 {
 
 define float @fma_undef_op2_defaultfp(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_undef_op2_defaultfp(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float undef) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float undef, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -880,7 +909,7 @@ define float @fma_undef_op2_defaultfp(float %x, float %y) #0 {
 
 define float @fma_poison_op2_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op2_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float [[Y:%.*]], float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float poison)
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -889,6 +918,7 @@ define float @fma_poison_op2_strict(float %x, float %y) #0 {
 
 define float @fma_poison_op2_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op2_maytrap(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float poison) [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float poison, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -897,6 +927,7 @@ define float @fma_poison_op2_maytrap(float %x, float %y) #0 {
 
 define float @fma_poison_op2_upward(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op2_upward(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float poison) [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float poison, metadata !"round.upward", metadata !"fpexcept.ignore")
@@ -905,6 +936,7 @@ define float @fma_poison_op2_upward(float %x, float %y) #0 {
 
 define float @fma_poison_op2_defaultfp(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_poison_op2_defaultfp(
+; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float poison) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float poison
 ;
   %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float poison, metadata !"round.tonearest", metadata !"fpexcept.ignore")

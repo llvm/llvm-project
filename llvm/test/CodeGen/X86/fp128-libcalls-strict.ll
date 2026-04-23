@@ -27,17 +27,11 @@ define fp128 @add(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; ANDROID-LABEL: add:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq __addtf3@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp __addtf3@PLT # TAILCALL
 ;
 ; GNU-LABEL: add:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq __addtf3@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp __addtf3@PLT # TAILCALL
 ;
 ; X86-LABEL: add:
 ; X86:       # %bb.0: # %entry
@@ -123,10 +117,10 @@ define fp128 @add(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -149,17 +143,11 @@ define fp128 @sub(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; ANDROID-LABEL: sub:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq __subtf3@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp __subtf3@PLT # TAILCALL
 ;
 ; GNU-LABEL: sub:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq __subtf3@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp __subtf3@PLT # TAILCALL
 ;
 ; X86-LABEL: sub:
 ; X86:       # %bb.0: # %entry
@@ -245,10 +233,10 @@ define fp128 @sub(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -271,17 +259,11 @@ define fp128 @mul(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; ANDROID-LABEL: mul:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq __multf3@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp __multf3@PLT # TAILCALL
 ;
 ; GNU-LABEL: mul:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq __multf3@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp __multf3@PLT # TAILCALL
 ;
 ; X86-LABEL: mul:
 ; X86:       # %bb.0: # %entry
@@ -367,10 +349,10 @@ define fp128 @mul(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -393,17 +375,11 @@ define fp128 @div(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; ANDROID-LABEL: div:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq __divtf3@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp __divtf3@PLT # TAILCALL
 ;
 ; GNU-LABEL: div:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq __divtf3@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp __divtf3@PLT # TAILCALL
 ;
 ; X86-LABEL: div:
 ; X86:       # %bb.0: # %entry
@@ -489,10 +465,10 @@ define fp128 @div(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -508,17 +484,11 @@ entry:
 define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; ANDROID-LABEL: fma:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq fmal@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp fmal@PLT # TAILCALL
 ;
 ; GNU-LABEL: fma:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq fmaf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp fmaf128@PLT # TAILCALL
 ;
 ; X86-LABEL: fma:
 ; X86:       # %bb.0: # %entry
@@ -623,10 +593,10 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -642,17 +612,11 @@ entry:
 define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: frem:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq fmodl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp fmodl@PLT # TAILCALL
 ;
 ; GNU-LABEL: frem:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq fmodf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp fmodf128@PLT # TAILCALL
 ;
 ; X86-LABEL: frem:
 ; X86:       # %bb.0: # %entry
@@ -738,10 +702,10 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -757,17 +721,11 @@ entry:
 define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: ceil:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq ceill@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp ceill@PLT # TAILCALL
 ;
 ; GNU-LABEL: ceil:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq ceilf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp ceilf128@PLT # TAILCALL
 ;
 ; X86-LABEL: ceil:
 ; X86:       # %bb.0: # %entry
@@ -829,10 +787,10 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -847,17 +805,11 @@ entry:
 define fp128 @acos(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: acos:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq acosl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp acosl@PLT # TAILCALL
 ;
 ; GNU-LABEL: acos:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq acosf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp acosf128@PLT # TAILCALL
 ;
 ; X86-LABEL: acos:
 ; X86:       # %bb.0: # %entry
@@ -919,10 +871,10 @@ define fp128 @acos(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -937,17 +889,11 @@ entry:
 define fp128 @cos(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: cos:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq cosl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp cosl@PLT # TAILCALL
 ;
 ; GNU-LABEL: cos:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq cosf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp cosf128@PLT # TAILCALL
 ;
 ; X86-LABEL: cos:
 ; X86:       # %bb.0: # %entry
@@ -1009,10 +955,10 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1027,17 +973,11 @@ entry:
 define fp128 @cosh(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: cosh:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq coshl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp coshl@PLT # TAILCALL
 ;
 ; GNU-LABEL: cosh:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq coshf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp coshf128@PLT # TAILCALL
 ;
 ; X86-LABEL: cosh:
 ; X86:       # %bb.0: # %entry
@@ -1099,10 +1039,10 @@ define fp128 @cosh(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1117,17 +1057,11 @@ entry:
 define fp128 @exp(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: exp:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq expl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp expl@PLT # TAILCALL
 ;
 ; GNU-LABEL: exp:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq expf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp expf128@PLT # TAILCALL
 ;
 ; X86-LABEL: exp:
 ; X86:       # %bb.0: # %entry
@@ -1189,10 +1123,10 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1207,17 +1141,11 @@ entry:
 define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: exp2:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq exp2l@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp exp2l@PLT # TAILCALL
 ;
 ; GNU-LABEL: exp2:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq exp2f128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp exp2f128@PLT # TAILCALL
 ;
 ; X86-LABEL: exp2:
 ; X86:       # %bb.0: # %entry
@@ -1279,10 +1207,10 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1297,17 +1225,11 @@ entry:
 define fp128 @floor(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: floor:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq floorl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp floorl@PLT # TAILCALL
 ;
 ; GNU-LABEL: floor:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq floorf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp floorf128@PLT # TAILCALL
 ;
 ; X86-LABEL: floor:
 ; X86:       # %bb.0: # %entry
@@ -1369,10 +1291,10 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1387,17 +1309,11 @@ entry:
 define fp128 @log(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: log:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq logl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp logl@PLT # TAILCALL
 ;
 ; GNU-LABEL: log:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq logf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp logf128@PLT # TAILCALL
 ;
 ; X86-LABEL: log:
 ; X86:       # %bb.0: # %entry
@@ -1459,10 +1375,10 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1477,17 +1393,11 @@ entry:
 define fp128 @log10(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: log10:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq log10l@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp log10l@PLT # TAILCALL
 ;
 ; GNU-LABEL: log10:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq log10f128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp log10f128@PLT # TAILCALL
 ;
 ; X86-LABEL: log10:
 ; X86:       # %bb.0: # %entry
@@ -1549,10 +1459,10 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1567,17 +1477,11 @@ entry:
 define fp128 @log2(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: log2:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq log2l@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp log2l@PLT # TAILCALL
 ;
 ; GNU-LABEL: log2:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq log2f128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp log2f128@PLT # TAILCALL
 ;
 ; X86-LABEL: log2:
 ; X86:       # %bb.0: # %entry
@@ -1639,10 +1543,10 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1657,17 +1561,11 @@ entry:
 define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: maxnum:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq fmaxl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp fmaxl@PLT # TAILCALL
 ;
 ; GNU-LABEL: maxnum:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq fmaxf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp fmaxf128@PLT # TAILCALL
 ;
 ; X86-LABEL: maxnum:
 ; X86:       # %bb.0: # %entry
@@ -1753,10 +1651,10 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1772,17 +1670,11 @@ entry:
 define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: minnum:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq fminl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp fminl@PLT # TAILCALL
 ;
 ; GNU-LABEL: minnum:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq fminf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp fminf128@PLT # TAILCALL
 ;
 ; X86-LABEL: minnum:
 ; X86:       # %bb.0: # %entry
@@ -1868,10 +1760,10 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1887,17 +1779,11 @@ entry:
 define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: nearbyint:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq nearbyintl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp nearbyintl@PLT # TAILCALL
 ;
 ; GNU-LABEL: nearbyint:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq nearbyintf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp nearbyintf128@PLT # TAILCALL
 ;
 ; X86-LABEL: nearbyint:
 ; X86:       # %bb.0: # %entry
@@ -1959,10 +1845,10 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -1977,17 +1863,11 @@ entry:
 define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: pow:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq powl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp powl@PLT # TAILCALL
 ;
 ; GNU-LABEL: pow:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq powf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp powf128@PLT # TAILCALL
 ;
 ; X86-LABEL: pow:
 ; X86:       # %bb.0: # %entry
@@ -2073,10 +1953,10 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2099,17 +1979,11 @@ define fp128 @powi(fp128 %x, i32 %y) nounwind strictfp {
 ;
 ; ANDROID-LABEL: powi:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq __powitf2@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp __powitf2@PLT # TAILCALL
 ;
 ; GNU-LABEL: powi:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq __powitf2@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp __powitf2@PLT # TAILCALL
 ;
 ; X86-LABEL: powi:
 ; X86:       # %bb.0: # %entry
@@ -2178,10 +2052,10 @@ define fp128 @powi(fp128 %x, i32 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2197,17 +2071,11 @@ entry:
 define fp128 @rint(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: rint:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq rintl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp rintl@PLT # TAILCALL
 ;
 ; GNU-LABEL: rint:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq rintf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp rintf128@PLT # TAILCALL
 ;
 ; X86-LABEL: rint:
 ; X86:       # %bb.0: # %entry
@@ -2269,10 +2137,10 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2287,17 +2155,11 @@ entry:
 define fp128 @round(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: round:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq roundl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp roundl@PLT # TAILCALL
 ;
 ; GNU-LABEL: round:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq roundf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp roundf128@PLT # TAILCALL
 ;
 ; X86-LABEL: round:
 ; X86:       # %bb.0: # %entry
@@ -2359,10 +2221,10 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2377,17 +2239,11 @@ entry:
 define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: roundeven:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq roundevenl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp roundevenl@PLT # TAILCALL
 ;
 ; GNU-LABEL: roundeven:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq roundevenf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp roundevenf128@PLT # TAILCALL
 ;
 ; X86-LABEL: roundeven:
 ; X86:       # %bb.0: # %entry
@@ -2449,10 +2305,10 @@ define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2467,17 +2323,11 @@ entry:
 define fp128 @asin(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: asin:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq asinl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp asinl@PLT # TAILCALL
 ;
 ; GNU-LABEL: asin:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq asinf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp asinf128@PLT # TAILCALL
 ;
 ; X86-LABEL: asin:
 ; X86:       # %bb.0: # %entry
@@ -2539,10 +2389,10 @@ define fp128 @asin(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2557,17 +2407,11 @@ entry:
 define fp128 @sin(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: sin:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq sinl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp sinl@PLT # TAILCALL
 ;
 ; GNU-LABEL: sin:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq sinf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp sinf128@PLT # TAILCALL
 ;
 ; X86-LABEL: sin:
 ; X86:       # %bb.0: # %entry
@@ -2629,10 +2473,10 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2647,17 +2491,11 @@ entry:
 define fp128 @sinh(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: sinh:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq sinhl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp sinhl@PLT # TAILCALL
 ;
 ; GNU-LABEL: sinh:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq sinhf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp sinhf128@PLT # TAILCALL
 ;
 ; X86-LABEL: sinh:
 ; X86:       # %bb.0: # %entry
@@ -2719,10 +2557,10 @@ define fp128 @sinh(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2737,17 +2575,11 @@ entry:
 define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: sqrt:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq sqrtl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp sqrtl@PLT # TAILCALL
 ;
 ; GNU-LABEL: sqrt:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq sqrtf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp sqrtf128@PLT # TAILCALL
 ;
 ; X86-LABEL: sqrt:
 ; X86:       # %bb.0: # %entry
@@ -2809,10 +2641,10 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2827,17 +2659,11 @@ entry:
 define fp128 @atan(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: atan:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq atanl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp atanl@PLT # TAILCALL
 ;
 ; GNU-LABEL: atan:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq atanf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp atanf128@PLT # TAILCALL
 ;
 ; X86-LABEL: atan:
 ; X86:       # %bb.0: # %entry
@@ -2899,10 +2725,10 @@ define fp128 @atan(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -2917,17 +2743,11 @@ entry:
 define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: atan2:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq atan2l@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp atan2l@PLT # TAILCALL
 ;
 ; GNU-LABEL: atan2:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq atan2f128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp atan2f128@PLT # TAILCALL
 ;
 ; X86-LABEL: atan2:
 ; X86:       # %bb.0: # %entry
@@ -3013,10 +2833,10 @@ define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -3032,17 +2852,11 @@ entry:
 define fp128 @tan(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: tan:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq tanl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp tanl@PLT # TAILCALL
 ;
 ; GNU-LABEL: tan:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq tanf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp tanf128@PLT # TAILCALL
 ;
 ; X86-LABEL: tan:
 ; X86:       # %bb.0: # %entry
@@ -3104,10 +2918,10 @@ define fp128 @tan(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -3122,17 +2936,11 @@ entry:
 define fp128 @tanh(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: tanh:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq tanhl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp tanhl@PLT # TAILCALL
 ;
 ; GNU-LABEL: tanh:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq tanhf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp tanhf128@PLT # TAILCALL
 ;
 ; X86-LABEL: tanh:
 ; X86:       # %bb.0: # %entry
@@ -3194,10 +3002,10 @@ define fp128 @tanh(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -3212,17 +3020,11 @@ entry:
 define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: trunc:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq truncl@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp truncl@PLT # TAILCALL
 ;
 ; GNU-LABEL: trunc:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq truncf128@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp truncf128@PLT # TAILCALL
 ;
 ; X86-LABEL: trunc:
 ; X86:       # %bb.0: # %entry
@@ -3284,10 +3086,10 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl %edx, 8(%esi)
 ; WIN-X86-NEXT:    movl %ecx, 4(%esi)
+; WIN-X86-NEXT:    movl %eax, (%esi)
 ; WIN-X86-NEXT:    movl %esi, %eax
 ; WIN-X86-NEXT:    leal -8(%ebp), %esp
 ; WIN-X86-NEXT:    popl %esi
@@ -3302,17 +3104,11 @@ entry:
 define i32 @lrint(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: lrint:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq lrintl@PLT
-; ANDROID-NEXT:    popq %rcx
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp lrintl@PLT # TAILCALL
 ;
 ; GNU-LABEL: lrint:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq lrintf128@PLT
-; GNU-NEXT:    popq %rcx
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp lrintf128@PLT # TAILCALL
 ;
 ; X86-LABEL: lrint:
 ; X86:       # %bb.0: # %entry
@@ -3358,17 +3154,11 @@ entry:
 define i64 @llrint(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: llrint:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq llrintl@PLT
-; ANDROID-NEXT:    popq %rcx
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp llrintl@PLT # TAILCALL
 ;
 ; GNU-LABEL: llrint:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq llrintf128@PLT
-; GNU-NEXT:    popq %rcx
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp llrintf128@PLT # TAILCALL
 ;
 ; X86-LABEL: llrint:
 ; X86:       # %bb.0: # %entry
@@ -3414,17 +3204,11 @@ entry:
 define i32 @lround(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: lround:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq lroundl@PLT
-; ANDROID-NEXT:    popq %rcx
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp lroundl@PLT # TAILCALL
 ;
 ; GNU-LABEL: lround:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq lroundf128@PLT
-; GNU-NEXT:    popq %rcx
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp lroundf128@PLT # TAILCALL
 ;
 ; X86-LABEL: lround:
 ; X86:       # %bb.0: # %entry
@@ -3470,17 +3254,11 @@ entry:
 define i64 @llround(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: llround:
 ; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq llroundl@PLT
-; ANDROID-NEXT:    popq %rcx
-; ANDROID-NEXT:    retq
+; ANDROID-NEXT:    jmp llroundl@PLT # TAILCALL
 ;
 ; GNU-LABEL: llround:
 ; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq llroundf128@PLT
-; GNU-NEXT:    popq %rcx
-; GNU-NEXT:    retq
+; GNU-NEXT:    jmp llroundf128@PLT # TAILCALL
 ;
 ; X86-LABEL: llround:
 ; X86:       # %bb.0: # %entry
