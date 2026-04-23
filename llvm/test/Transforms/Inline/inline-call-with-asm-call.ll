@@ -24,7 +24,7 @@ define void @caller(i32 %a, i1 %b) #0 {
 ;; destination section and two assembly instructions in the outlined "other"
 ;; section.
 define void @callee(i32 %a, i1 %b) {
-  call void asm sideeffect "s_nop 1\0A\09.pushsection other\0A\09s_nop 2\0A\09s_nop 3\0A\09.popsection\0A\09s_nop 4\0A\09.align 32", ""()
+  call void asm sideeffect "s_nop 1 # some comment \0A.pushsection other\0A s_nop 2 \0A s_nop 3 \0A.popsection\0A s_nop 4\0A label:\0A", ""()
   ret void
 }
 ; CHECK: define void @callee
