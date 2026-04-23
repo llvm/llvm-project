@@ -116,7 +116,7 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, CmsgDetails) {
   ASSERT_LT(buf, reinterpret_cast<char *>(cmsg2));
   ASSERT_LT(reinterpret_cast<char *>(cmsg2), buf + sizeof(buf));
 
-  // POSIX allows explicitly does not specify whether CMSG_NXTHDR returns the
+  // POSIX explicitly does not specify whether CMSG_NXTHDR returns the
   // next header if its data array would extend beyond the end of the buffer.
   // Our implementation does.
   cmsg2->cmsg_len = sizeof(struct cmsghdr) + 1;
