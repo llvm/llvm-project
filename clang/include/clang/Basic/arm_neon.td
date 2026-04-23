@@ -1906,9 +1906,9 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "d
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16f32dot,neon" in {
   def VDOT_F16 : SInst<"vdot", "..<<", "fQf">;
   def VDOT_LANE_F16 : SInst<"vdot_lane", "..<(<q)I", "fQf",
-                           [ImmCheck<3, ImmCheckLaneIndex, 0>]>;
+                           [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
   def VDOT_LANEQ_F16 : SInst<"vdot_laneq", "..<(<Q)I", "fQf",
-                            [ImmCheck<3, ImmCheckLaneIndex, 0>]>;
+                            [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
 }
 
 // v8.2-A FP16 fused multiply-add long instructions.
