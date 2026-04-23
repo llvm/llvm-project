@@ -86,6 +86,19 @@ Address CIRGenFunction::createCleanupActiveFlag() {
   return active;
 }
 
+void CIRGenFunction::initFullExprCleanup() {
+  initFullExprCleanupWithFlag(createCleanupActiveFlag());
+}
+
+void CIRGenFunction::initFullExprCleanupWithFlag(Address activeFlag) {
+  EHCleanupScope &cleanup = cast<EHCleanupScope>(*ehStack.begin());
+  assert(!cleanup.hasActiveFlag() && "cleanup already has active flag?");
+  cleanup.setActiveFlag(activeFlag);
+
+  cleanup.setTestFlagInNormalCleanup(cleanup.isNormalCleanup());
+  cleanup.setTestFlagInEHCleanup(cleanup.isEHCleanup());
+}
+
 CIRGenFunction::FullExprCleanupScope::FullExprCleanupScope(CIRGenFunction &cgf,
                                                            const Expr *subExpr)
     : cgf(cgf), cleanups(cgf), scope(nullptr),
@@ -361,11 +374,8 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
   assert((scope.isNormalCleanup() || scope.isEHCleanup()) &&
          "cleanup block is neither normal nor EH?");
 
-  if (scope.isNormalCleanup())
-    scope.setTestFlagInNormalCleanup();
-
-  if (scope.isEHCleanup())
-    scope.setTestFlagInEHCleanup();
+  scope.setTestFlagInNormalCleanup(scope.isNormalCleanup());
+  scope.setTestFlagInEHCleanup(scope.isEHCleanup());
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
@@ -528,7 +538,7 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
       builder.createFlagStore(loc, false, activeFlag.getPointer());
 
       scope.setActiveFlag(activeFlag);
-      scope.setTestFlagInNormalCleanup();
+      scope.setTestFlagInNormalCleanup(true);
     } else {
       // If the cleanup was pushed on the stack as normal+eh, downgrade it to
       // eh-only.

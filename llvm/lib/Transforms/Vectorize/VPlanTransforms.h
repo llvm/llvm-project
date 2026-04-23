@@ -310,10 +310,9 @@ struct VPlanTransforms {
       const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
   /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
-  /// replaces all uses except the canonical IV increment of
-  /// VPCanonicalIVPHIRecipe with a VPCurrentIterationPHIRecipe.
-  /// VPCanonicalIVPHIRecipe is only used to control the loop after
-  /// this transformation.
+  /// replaces all uses of the canonical IV except for the canonical IV
+  /// increment with a VPCurrentIterationPHIRecipe. The canonical IV is only
+  /// used to control the loop after this transformation.
   static void
   addExplicitVectorLength(VPlan &Plan,
                           const std::optional<unsigned> &MaxEVLSafeElements);
@@ -334,7 +333,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed);
+      VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
@@ -428,11 +427,12 @@ struct VPlanTransforms {
 
   /// Materialize vector trip count computations to a set of VPInstructions.
   /// \p Step is used as the step value for the trip count computation.
-  static void materializeVectorTripCount(VPlan &Plan,
-                                         VPBasicBlock *VectorPHVPBB,
-                                         bool TailByMasking,
-                                         bool RequiresScalarEpilogue,
-                                         VPValue *Step);
+  /// \p MaxRuntimeStep is the maximum possible runtime value of Step, used to
+  /// prove the trip count is divisible by the step for scalable VFs.
+  static void materializeVectorTripCount(
+      VPlan &Plan, VPBasicBlock *VectorPHVPBB, bool TailByMasking,
+      bool RequiresScalarEpilogue, VPValue *Step,
+      std::optional<uint64_t> MaxRuntimeStep = std::nullopt);
 
   /// Materialize the backedge-taken count to be computed explicitly using
   /// VPInstructions.

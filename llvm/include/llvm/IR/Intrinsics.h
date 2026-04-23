@@ -83,6 +83,11 @@ namespace Intrinsic {
   /// Returns true if the intrinsic can be overloaded.
   LLVM_ABI bool isOverloaded(ID id);
 
+  /// Returns true if the intrinsic is trivially scalarizable.
+  /// This means that the intrinsic's argument types are all scalars for the
+  /// scalar form and all vectors for the vector form.
+  LLVM_ABI bool isTriviallyScalarizable(ID id);
+
   /// Returns true if the intrinsic has pretty printed immediate arguments.
   LLVM_ABI bool hasPrettyPrintedArgs(ID id);
 
