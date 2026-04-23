@@ -51,6 +51,24 @@ entry:
   ret float %call
 }
 
+; CHECK-LABEL: minimum
+; CHECK: sfmin
+; CHECK: sfcmp.uo
+define float @minimum(float %x, float %y) #0 {
+entry:
+  %call = tail call float @llvm.minimum.f32(float %x, float %y) #1
+  ret float %call
+}
+
+; CHECK-LABEL: maximum
+; CHECK: sfmax
+; CHECK: sfcmp.uo
+define float @maximum(float %x, float %y) #0 {
+entry:
+  %call = tail call float @llvm.maximum.f32(float %x, float %y) #1
+  ret float %call
+}
+
 
 declare float @fminf(float, float) #0
 declare float @fmaxf(float, float) #0

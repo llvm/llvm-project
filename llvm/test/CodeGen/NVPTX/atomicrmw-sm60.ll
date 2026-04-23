@@ -1836,30 +1836,24 @@ define float @fmax_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 define float @fminimum_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) {
 ; SM60-LABEL: fminimum_acq_rel_float_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<6>;
-; SM60-NEXT:    .reg .b32 %r<9>;
+; SM60-NEXT:    .reg .pred %p<3>;
+; SM60-NEXT:    .reg .b32 %r<6>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b32 %r2, [fminimum_acq_rel_float_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [fminimum_acq_rel_float_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r8, [%rd1];
-; SM60-NEXT:    setp.eq.b32 %p3, %r2, -2147483648;
+; SM60-NEXT:    ld.global.b32 %r5, [%rd1];
 ; SM60-NEXT:  $L__BB64_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r8, %r2;
-; SM60-NEXT:    min.f32 %r3, %r8, %r2;
+; SM60-NEXT:    setp.nan.f32 %p1, %r5, %r2;
+; SM60-NEXT:    min.f32 %r3, %r5, %r2;
 ; SM60-NEXT:    selp.f32 %r4, 0f7FC00000, %r3, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r8, -2147483648;
-; SM60-NEXT:    selp.f32 %r5, %r8, %r4, %p2;
-; SM60-NEXT:    selp.f32 %r6, %r2, %r5, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r4, 0f00000000;
-; SM60-NEXT:    selp.f32 %r7, %r6, %r4, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r8, %r7;
-; SM60-NEXT:    setp.ne.b32 %p5, %r1, %r8;
-; SM60-NEXT:    mov.b32 %r8, %r1;
-; SM60-NEXT:    @%p5 bra $L__BB64_1;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r5, %r4;
+; SM60-NEXT:    setp.ne.b32 %p2, %r1, %r5;
+; SM60-NEXT:    mov.b32 %r5, %r1;
+; SM60-NEXT:    @%p2 bra $L__BB64_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -1871,30 +1865,24 @@ define float @fminimum_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %v
 define float @fmaximum_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) {
 ; SM60-LABEL: fmaximum_acq_rel_float_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<6>;
-; SM60-NEXT:    .reg .b32 %r<9>;
+; SM60-NEXT:    .reg .pred %p<3>;
+; SM60-NEXT:    .reg .b32 %r<6>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b32 %r2, [fmaximum_acq_rel_float_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [fmaximum_acq_rel_float_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r8, [%rd1];
-; SM60-NEXT:    setp.eq.b32 %p3, %r2, 0;
+; SM60-NEXT:    ld.global.b32 %r5, [%rd1];
 ; SM60-NEXT:  $L__BB65_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r8, %r2;
-; SM60-NEXT:    max.f32 %r3, %r8, %r2;
+; SM60-NEXT:    setp.nan.f32 %p1, %r5, %r2;
+; SM60-NEXT:    max.f32 %r3, %r5, %r2;
 ; SM60-NEXT:    selp.f32 %r4, 0f7FC00000, %r3, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r8, 0;
-; SM60-NEXT:    selp.f32 %r5, %r8, %r4, %p2;
-; SM60-NEXT:    selp.f32 %r6, %r2, %r5, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r4, 0f00000000;
-; SM60-NEXT:    selp.f32 %r7, %r6, %r4, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r8, %r7;
-; SM60-NEXT:    setp.ne.b32 %p5, %r1, %r8;
-; SM60-NEXT:    mov.b32 %r8, %r1;
-; SM60-NEXT:    @%p5 bra $L__BB65_1;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r5, %r4;
+; SM60-NEXT:    setp.ne.b32 %p2, %r1, %r5;
+; SM60-NEXT:    mov.b32 %r5, %r1;
+; SM60-NEXT:    @%p2 bra $L__BB65_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -1999,29 +1987,23 @@ define double @fmax_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %va
 define double @fminimum_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %val) {
 ; SM60-LABEL: fminimum_acq_rel_double_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<6>;
-; SM60-NEXT:    .reg .b64 %rd<10>;
+; SM60-NEXT:    .reg .pred %p<3>;
+; SM60-NEXT:    .reg .b64 %rd<7>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd3, [fminimum_acq_rel_double_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [fminimum_acq_rel_double_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd9, [%rd2];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd3, -9223372036854775808;
+; SM60-NEXT:    ld.global.b64 %rd6, [%rd2];
 ; SM60-NEXT:  $L__BB70_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p1, %rd9, %rd3;
-; SM60-NEXT:    min.f64 %rd4, %rd9, %rd3;
+; SM60-NEXT:    setp.nan.f64 %p1, %rd6, %rd3;
+; SM60-NEXT:    min.f64 %rd4, %rd6, %rd3;
 ; SM60-NEXT:    selp.f64 %rd5, 0d7FF8000000000000, %rd4, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd9, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd6, %rd9, %rd5, %p2;
-; SM60-NEXT:    selp.f64 %rd7, %rd3, %rd6, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd5, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd8, %rd7, %rd5, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd1, [%rd2], %rd9, %rd8;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd1, %rd9;
-; SM60-NEXT:    mov.b64 %rd9, %rd1;
-; SM60-NEXT:    @%p5 bra $L__BB70_1;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd1, [%rd2], %rd6, %rd5;
+; SM60-NEXT:    setp.ne.b64 %p2, %rd1, %rd6;
+; SM60-NEXT:    mov.b64 %rd6, %rd1;
+; SM60-NEXT:    @%p2 bra $L__BB70_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd1;
@@ -2033,29 +2015,23 @@ define double @fminimum_acq_rel_double_global_cta(ptr addrspace(1) %addr, double
 define double @fmaximum_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %val) {
 ; SM60-LABEL: fmaximum_acq_rel_double_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<6>;
-; SM60-NEXT:    .reg .b64 %rd<10>;
+; SM60-NEXT:    .reg .pred %p<3>;
+; SM60-NEXT:    .reg .b64 %rd<7>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd3, [fmaximum_acq_rel_double_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [fmaximum_acq_rel_double_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd9, [%rd2];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd3, 0;
+; SM60-NEXT:    ld.global.b64 %rd6, [%rd2];
 ; SM60-NEXT:  $L__BB71_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p1, %rd9, %rd3;
-; SM60-NEXT:    max.f64 %rd4, %rd9, %rd3;
+; SM60-NEXT:    setp.nan.f64 %p1, %rd6, %rd3;
+; SM60-NEXT:    max.f64 %rd4, %rd6, %rd3;
 ; SM60-NEXT:    selp.f64 %rd5, 0d7FF8000000000000, %rd4, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd9, 0;
-; SM60-NEXT:    selp.f64 %rd6, %rd9, %rd5, %p2;
-; SM60-NEXT:    selp.f64 %rd7, %rd3, %rd6, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd5, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd8, %rd7, %rd5, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd1, [%rd2], %rd9, %rd8;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd1, %rd9;
-; SM60-NEXT:    mov.b64 %rd9, %rd1;
-; SM60-NEXT:    @%p5 bra $L__BB71_1;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd1, [%rd2], %rd6, %rd5;
+; SM60-NEXT:    setp.ne.b64 %p2, %rd1, %rd6;
+; SM60-NEXT:    mov.b64 %rd6, %rd1;
+; SM60-NEXT:    @%p2 bra $L__BB71_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd1;
