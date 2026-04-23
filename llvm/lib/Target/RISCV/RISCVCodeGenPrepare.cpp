@@ -276,8 +276,7 @@ static Value *buildMulTree(IRBuilder<> &Builder, ElementCount PieceEC,
 
   SmallVector<Value *, 8> Pieces(NumPieces);
   for (unsigned i = 0; i < NumPieces; i++)
-    Pieces[i] =
-        Builder.CreateExtractVector(PieceTy, Vec, (uint64_t)(i * PieceElts));
+    Pieces[i] = Builder.CreateExtractVector(PieceTy, Vec, i * PieceElts);
 
   while (Pieces.size() > 1) {
     for (unsigned i = 0; i < Pieces.size() / 2; i++)
