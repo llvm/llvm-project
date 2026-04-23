@@ -248,8 +248,8 @@ define i64 @test_bswap64_shift40(i64 %a0) {
 ; X64-LABEL: test_bswap64_shift40:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    bswapq %rax
-; X64-NEXT:    shrq $40, %rax
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    shrl $8, %eax
 ; X64-NEXT:    retq
   %s = shl i64 %a0, 40
   %b = call i64 @llvm.bswap.i64(i64 %s)
