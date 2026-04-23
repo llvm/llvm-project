@@ -45,7 +45,8 @@ jobs:
           'frozen-cxx03-headers',
           'generic-cxx03',
           'generic-cxx26',
-          'generic-modules'
+          'generic-modules',
+          'generic-llvm-libc',
         ]
         cc: [  'clang-23' ]
         cxx: [ 'clang++-23' ]
@@ -91,7 +92,6 @@ jobs:
           'generic-cxx17',
           'generic-cxx20',
           'generic-cxx23',
-          'generic-llvm-libc',
         ]
         cc: [ 'clang-23' ]
         cxx: [ 'clang++-23' ]
