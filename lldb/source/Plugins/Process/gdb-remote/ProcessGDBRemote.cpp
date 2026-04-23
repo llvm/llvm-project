@@ -5926,7 +5926,7 @@ public:
         (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
     if (process) {
       for (size_t i = 0; i < argc; ++i) {
-        const char *packet_cstr = command.GetArgumentAtIndex(0);
+        const char *packet_cstr = command.GetArgumentAtIndex(i);
         StringExtractorGDBRemote response;
         process->GetGDBRemote().SendPacketAndWaitForResponse(
             packet_cstr, response, process->GetInterruptTimeout());
