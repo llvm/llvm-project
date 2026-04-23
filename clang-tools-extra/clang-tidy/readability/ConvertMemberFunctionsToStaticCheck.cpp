@@ -65,8 +65,11 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
     }
 
     bool VisitUnresolvedMemberExpr(const UnresolvedMemberExpr *E) {
-      Used = true;
-      return false;
+      if (E->isImplicitAccess()) {
+        Used = true;
+        return false;
+      }
+      return true; // Continue traversal.
     }
 
     // If we enter a class declaration, don't traverse into it as any usages of
