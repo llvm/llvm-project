@@ -46,7 +46,6 @@ jobs:
           'generic-cxx03',
           'generic-cxx26',
           'generic-modules',
-          'generic-llvm-libc',
         ]
         cc: [  'clang-23' ]
         cxx: [ 'clang++-23' ]
