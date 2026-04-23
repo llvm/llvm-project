@@ -184,8 +184,8 @@ exit:
 }
 
 ; Hoisting the store is actually valid here, as it dominates the load.
-define void @neg_ref(ptr %loc) {
-; CHECK-LABEL: define void @neg_ref(
+define void @ref(ptr %loc) {
+; CHECK-LABEL: define void @ref(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
@@ -583,7 +583,6 @@ exit:
 
 declare void @readonly() readonly
 
-; TODO: can legally hoist since value read by call is known
 define void @test_dominated_readonly(ptr %loc) {
 ; CHECK-LABEL: define void @test_dominated_readonly(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
