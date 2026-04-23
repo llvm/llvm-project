@@ -3907,6 +3907,34 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
   return Merged.getValue(1);
 }
 
+// Reconstruct a subtract-with-borrow chain from its canonicalized icmp form:
+//   carry_out = or(icmp ult A, B, and(icmp eq A, B, carry_in))
+// InstCombine collapses chained usub.with.overflow intrinsics into this
+// shape, losing the direct USUBO_CARRY that the backend can chain through
+// sbb/sbcs. Fixes llvm#106118.
+static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
+                                            const TargetLowering &TLI) {
+  SDValue A, B, CarryIn;
+  if (!sd_match(N, m_Or(m_SetCC(m_Value(A), m_Value(B),
+                                m_SpecificCondCode(ISD::SETULT)),
+                        m_And(m_c_SetCC(m_Deferred(A), m_Deferred(B),
+                                        m_SpecificCondCode(ISD::SETEQ)),
+                              m_Value(CarryIn)))))
+    return SDValue();
+
+  // Require USUBO_CARRY on the post-legalization type; for oversize integers
+  // (e.g. i128) type legalization then expands one USUBO_CARRY into a chain
+  // of register-width USUBO_CARRYs, which is exactly what we want.
+  EVT IntVT = A.getValueType();
+  if (!TLI.isOperationLegalOrCustom(
+          ISD::USUBO_CARRY, TLI.getTypeToTransformTo(*DAG.getContext(), IntVT)))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDVTList VTs = DAG.getVTList(IntVT, N->getValueType(0));
+  return DAG.getNode(ISD::USUBO_CARRY, DL, VTs, A, B, CarryIn).getValue(1);
+}
+
 SDValue DAGCombiner::visitUADDO_CARRYLike(SDValue N0, SDValue N1,
                                           SDValue CarryIn, SDNode *N) {
   // fold (uaddo_carry (xor a, -1), b, c) -> (usubo_carry b, a, !c) and flip
@@ -8742,6 +8770,9 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     return Combined;
 
   if (SDValue Combined = combineCarryDiamond(DAG, TLI, N0, N1, N))
+    return Combined;
+
+  if (SDValue Combined = combineOrOfSetCCToUSUBOCarry(N, DAG, TLI))
     return Combined;
 
   // Recognize halfword bswaps as (bswap + rotl 16) or (bswap + shl 16)

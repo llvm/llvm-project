@@ -127,10 +127,8 @@ define i1 @subcarry_ult_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
 ; CHECK-LABEL: subcarry_ult_2x64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp x1, x3
-; CHECK-NEXT:    csel w8, wzr, w8, ne
-; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    sbcs xzr, x1, x3
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %b0 = icmp ult i64 %x0, %y0
   %b1 = icmp ult i64 %x1, %y1
@@ -145,8 +143,7 @@ define i1 @subcarry_ult_2x64_commuted_eq(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nou
 ; CHECK-LABEL: subcarry_ult_2x64_commuted_eq:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    ccmp x3, x1, #0, lo
-; CHECK-NEXT:    ccmp x1, x3, #0, ne
+; CHECK-NEXT:    sbcs xzr, x1, x3
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %b0 = icmp ult i64 %x0, %y0
@@ -161,13 +158,9 @@ define i1 @subcarry_ult_3x64(i64 %x0, i64 %x1, i64 %x2, i64 %y0, i64 %y1, i64 %y
 ; CHECK-LABEL: subcarry_ult_3x64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, x3
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp x1, x4
-; CHECK-NEXT:    csel w8, wzr, w8, ne
-; CHECK-NEXT:    csinc w8, w8, wzr, hs
-; CHECK-NEXT:    cmp x2, x5
-; CHECK-NEXT:    csel w8, wzr, w8, ne
-; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    sbcs xzr, x1, x4
+; CHECK-NEXT:    sbcs xzr, x2, x5
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %b0 = icmp ult i64 %x0, %y0
   %b1 = icmp ult i64 %x1, %y1
@@ -185,16 +178,11 @@ define i1 @subcarry_ult_3x64(i64 %x0, i64 %x1, i64 %x2, i64 %y0, i64 %y1, i64 %y
 define i1 @subcarry_ult_2x128(i128 %x0, i128 %x1, i128 %y0, i128 %y1) nounwind {
 ; CHECK-LABEL: subcarry_ult_2x128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp x3, x7
-; CHECK-NEXT:    csel w8, wzr, w8, ne
 ; CHECK-NEXT:    cmp x0, x4
 ; CHECK-NEXT:    sbcs xzr, x1, x5
-; CHECK-NEXT:    csel w8, wzr, w8, hs
-; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    sbcs xzr, x2, x6
 ; CHECK-NEXT:    sbcs xzr, x3, x7
-; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %b0 = icmp ult i128 %x0, %y0
   %b1 = icmp ult i128 %x1, %y1

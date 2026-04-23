@@ -1360,41 +1360,23 @@ define i1 @subcarry_ult_2x64_2(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
 ; X64-LABEL: subcarry_ult_2x64_2:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    cmpq %rdx, %rdi
-; X64-NEXT:    setb %dl
-; X64-NEXT:    cmpq %rcx, %rsi
-; X64-NEXT:    setb %cl
-; X64-NEXT:    sete %al
-; X64-NEXT:    andb %dl, %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    sbbq %rcx, %rsi
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: subcarry_ult_2x64_2:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    setb %bl
-; X86-NEXT:    cmpl %ecx, %eax
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    sbbl %esi, %edi
-; X86-NEXT:    setb %bh
-; X86-NEXT:    xorl %esi, %edx
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    orl %edx, %eax
-; X86-NEXT:    sete %al
-; X86-NEXT:    andb %bl, %al
-; X86-NEXT:    orb %bh, %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    setb %al
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 entry:
   %0 = icmp ult i64 %x0, %y0
@@ -1442,21 +1424,11 @@ entry:
 define i1 @subcarry_ult_2x128(i128 %x0, i128 %x1, i128 %y0, i128 %y1) nounwind {
 ; X64-LABEL: subcarry_ult_2x128:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; X64-NEXT:    cmpq %r8, %rdi
 ; X64-NEXT:    sbbq %r9, %rsi
-; X64-NEXT:    setb %sil
-; X64-NEXT:    cmpq %r10, %rdx
-; X64-NEXT:    movq %rcx, %rdi
-; X64-NEXT:    sbbq %rax, %rdi
-; X64-NEXT:    setb %dil
-; X64-NEXT:    xorq %rax, %rcx
-; X64-NEXT:    xorq %r10, %rdx
-; X64-NEXT:    orq %rcx, %rdx
-; X64-NEXT:    sete %al
-; X64-NEXT:    andb %sil, %al
-; X64-NEXT:    orb %dil, %al
+; X64-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
+; X64-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: subcarry_ult_2x128:
