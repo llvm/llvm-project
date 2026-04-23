@@ -69,6 +69,18 @@ define internal void @init_memset(ptr %p) {
   ret void
 }
 
+; Trivially cheap — stores a non-constant argument value.
+define internal void @init_arg(ptr %p, i32 %v) {
+  store i32 %v, ptr %p
+  ret void
+}
+
+; Trivially cheap — stores a non-zero i64 at a slot later loaded as ptr.
+define internal void @init_i64_nonzero(ptr %p) {
+  store i64 42, ptr %p
+  ret void
+}
+
 declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
 
 ; After inlining @init_i32: store 0 → %p.
@@ -104,4 +116,97 @@ entry:
   %x = load ptr, ptr %p
   call void @recursive_callee(ptr %x)
   ret void
+}
+
+; Negative: available value is non-constant (the function argument).
+; No forwarding, keeps @callee as a call.
+define i32 @caller_non_constant(i32 %v) {
+; CHECK-LABEL: define i32 @caller_non_constant(
+; CHECK-SAME: i32 [[V:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 [[V]], ptr [[P]], align 4
+; CHECK-NEXT:    [[MODE:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[MODE]], 0
+; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FAST_I:.*]], label %[[SLOW_I:.*]]
+; CHECK:       [[FAST_I]]:
+; CHECK-NEXT:    [[V_I:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[CALLEE_EXIT:.*]]
+; CHECK:       [[SLOW_I]]:
+; CHECK-NEXT:    [[A1_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[A2_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X1_I:%.*]] = add i32 [[A1_I]], [[A2_I]]
+; CHECK-NEXT:    [[A3_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X2_I:%.*]] = add i32 [[X1_I]], [[A3_I]]
+; CHECK-NEXT:    [[A4_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X3_I:%.*]] = add i32 [[X2_I]], [[A4_I]]
+; CHECK-NEXT:    [[A5_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X4_I:%.*]] = add i32 [[X3_I]], [[A5_I]]
+; CHECK-NEXT:    br label %[[CALLEE_EXIT]]
+; CHECK:       [[CALLEE_EXIT]]:
+; CHECK-NEXT:    [[R1:%.*]] = phi i32 [ [[V_I]], %[[FAST_I]] ], [ [[X4_I]], %[[SLOW_I]] ]
+; CHECK-NEXT:    ret i32 [[R1]]
+;
+entry:
+  %p = alloca i32
+  call void @init_arg(ptr %p, i32 %v)
+  %mode = load i32, ptr %p
+  %r = call i32 @callee(i32 %mode, ptr %p)
+  ret i32 %r
+}
+
+; Negative: available value has a type different from the load's and is not
+; a null value (store i64 42, load ptr).
+; The type-mismatch blocks forwarding of a non-zero integer as a pointer.
+define void @caller_type_mismatch() {
+; CHECK-LABEL: define void @caller_type_mismatch() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store i64 42, ptr [[P]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    call void @recursive_callee(ptr [[X]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p = alloca ptr
+  call void @init_i64_nonzero(ptr %p)
+  %x = load ptr, ptr %p
+  call void @recursive_callee(ptr %x)
+  ret void
+}
+
+; Negative: volatile load must not be forwarded. @callee stays uninlined since
+; %mode cannot be resolved to a constant.
+define i32 @caller_volatile_load() {
+; CHECK-LABEL: define i32 @caller_volatile_load() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    [[MODE:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[MODE]], 0
+; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FAST_I:.*]], label %[[SLOW_I:.*]]
+; CHECK:       [[FAST_I]]:
+; CHECK-NEXT:    [[V_I:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[CALLEE_EXIT:.*]]
+; CHECK:       [[SLOW_I]]:
+; CHECK-NEXT:    [[A1_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[A2_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X1_I:%.*]] = add i32 [[A1_I]], [[A2_I]]
+; CHECK-NEXT:    [[A3_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X2_I:%.*]] = add i32 [[X1_I]], [[A3_I]]
+; CHECK-NEXT:    [[A4_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X3_I:%.*]] = add i32 [[X2_I]], [[A4_I]]
+; CHECK-NEXT:    [[A5_I:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X4_I:%.*]] = add i32 [[X3_I]], [[A5_I]]
+; CHECK-NEXT:    br label %[[CALLEE_EXIT]]
+; CHECK:       [[CALLEE_EXIT]]:
+; CHECK-NEXT:    [[R1:%.*]] = phi i32 [ [[V_I]], %[[FAST_I]] ], [ [[X4_I]], %[[SLOW_I]] ]
+; CHECK-NEXT:    ret i32 [[R1]]
+;
+entry:
+  %p = alloca i32
+  call void @init_i32(ptr %p)
+  %mode = load volatile i32, ptr %p
+  %r = call i32 @callee(i32 %mode, ptr %p)
+  ret i32 %r
 }
