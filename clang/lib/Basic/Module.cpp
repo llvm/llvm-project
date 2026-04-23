@@ -53,6 +53,7 @@ Module::Module(ModuleConstructorTag, StringRef Name,
     NoUndeclaredIncludes = Parent->NoUndeclaredIncludes;
     ModuleMapIsPrivate = Parent->ModuleMapIsPrivate;
 
+    Parent->SubModuleIndex[Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 }
@@ -348,10 +349,6 @@ void Module::markUnavailable(bool Unimportable) {
 }
 
 Module *Module::findSubmodule(StringRef Name) const {
-  // Add new submodules into the index.
-  for (unsigned I = SubModuleIndex.size(), E = SubModules.size(); I != E; ++I)
-    SubModuleIndex[SubModules[I]->Name] = I;
-
   if (auto It = SubModuleIndex.find(Name); It != SubModuleIndex.end())
     return SubModules[It->second];
 
