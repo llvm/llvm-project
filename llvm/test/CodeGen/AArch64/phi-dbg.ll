@@ -28,8 +28,8 @@ bb2:
   call void @llvm.dbg.value(metadata i32 12, i64 0, metadata !15, metadata !13), !dbg !16
   br label %bb3, !dbg !20
 
-; CHECK: bb.2.bb2:
 ; CHECK:  [[REG0:%[0-9]+]]:gpr32 = MOVi32imm 12
+; CHECK: bb.2.bb2:
 ; CHECK:  [[PHIREG:%[0-9]+]]:gpr32 = COPY [[REG0]]
 
 bb3:

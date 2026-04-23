@@ -3634,6 +3634,9 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
               Say("Left-hand side of intrinsic assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
             } else if (evaluate::IsCoarray(*lastWhole)) {
               Say("Left-hand side of intrinsic assignment may not be polymorphic if it is a coarray"_err_en_US);
+            } else if (context_.langOptions().NoReallocateLHS) {
+              Warn(common::UsageWarning::IgnoredNoReallocateLHS,
+                  "-fno-realloc-lhs is ignored for assignment to polymorphic allocatable"_warn_en_US);
             }
           }
           if (auto *derived{GetDerivedTypeSpec(*dyType)}) {
