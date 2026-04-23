@@ -2976,51 +2976,6 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
 }
 
 //===----------------------------------------------------------------------===//
-// LocalInitOp
-//===----------------------------------------------------------------------===//
-
-def CIR_LocalInitOp : CIR_Op<"local_init", [
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments
-]> {
-  let summary = "initialize a static or thread local object";
-  let description = [{
-    The 'cir.local_init' operation has no result, but is responsible for
-    containing the regions to initialize and destroy the static local
-    variable. This will be handled during lowering-prepare to include the
-    guard variables correctly for the variable.
-
-    Example:
-    ```
-    cir.local_init static_local @GlobalName ctor {
-      %4 = cir.get_global static_local @GlobalName : !cir.ptr<!rec_CtorDtor>
-      %5 = cir.call @_Z5get_iv() : () -> !s32i
-      cir.call @_ZN8CtorDtorC1Ei(%4, %5) : !cir.ptr<!rec_CtorDtor>
-      cir.yield
-    }, dtor {
-      %4 = cir.get_global static_local @_ZZ3foovE8localCD2 :
-                                                  !cir.ptr<!rec_CtorDtor>
-      cir.call @_ZN8CtorDtorD1Ev(%4) : (!cir.ptr<!rec_CtorDtor>) -> ()
-      cir.yield
-    }
-  }];
-  let arguments = (ins FlatSymbolRefAttr:$globalName, UnitAttr:$tls,
-                       UnitAttr:$static_local);
-  let regions = (region MaxSizedRegion<1>:$ctorRegion,
-                        MaxSizedRegion<1>:$dtorRegion);
-
-  let assemblyFormat = [{
-    (`thread_local` $tls^)?
-    (`static_local` $static_local^)?
-    $globalName attr-dict
-    (`ctor` $ctorRegion^)?
-    (`dtor` $dtorRegion^)?
-  }];
-
-  let hasLLVMLowering = false;
-  let hasVerifier = 1;
-}
-
-//===----------------------------------------------------------------------===//
 // VTableAddrPointOp
 //===----------------------------------------------------------------------===//
 
@@ -3846,6 +3801,67 @@ def CIR_FuncOp : CIR_Op<"func", [
                          OpAdaptor adaptor,
                          mlir::ConversionPatternRewriter &rewriter) const;
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// LocalInitOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LocalInitOp : CIR_Op<"local_init", [
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments,
+  ParentOneOf<["cir::FuncOp"]>,
+  HasAtMostOneOfAttrs<["tls", "static_local"]>
+]> {
+  let summary = "initialize a static or thread local object";
+  let description = [{
+    The 'cir.local_init' operation has no result, but is responsible for
+    containing the regions to initialize and destroy the static local
+    variable. This will be handled during lowering-prepare to include the
+    guard variables correctly for the variable.
+
+    Example:
+    ```
+    cir.local_init static_local @GlobalName ctor {
+      %4 = cir.get_global static_local @GlobalName : !cir.ptr<!rec_CtorDtor>
+      %5 = cir.call @_Z5get_iv() : () -> !s32i
+      cir.call @_ZN8CtorDtorC1Ei(%4, %5) : !cir.ptr<!rec_CtorDtor>
+      cir.yield
+    }, dtor {
+      %4 = cir.get_global static_local @_ZZ3foovE8localCD2 :
+                                                  !cir.ptr<!rec_CtorDtor>
+      cir.call @_ZN8CtorDtorD1Ev(%4) : (!cir.ptr<!rec_CtorDtor>) -> ()
+      cir.yield
+    }
+  }];
+  let arguments = (ins
+    FlatSymbolRefAttr : $globalName,
+    UnitAttr : $tls,
+    UnitAttr : $static_local
+  );
+  let regions = (region
+      MaxSizedRegion<1>:$ctorRegion,
+      MaxSizedRegion<1>:$dtorRegion
+  );
+
+  let assemblyFormat = [{
+    (`thread_local` $tls^)?
+    (`static_local` $static_local^)?
+    $globalName attr-dict
+    (`ctor` $ctorRegion^)?
+    (`dtor` $dtorRegion^)?
+  }];
+
+  let extraClassDeclaration = [{
+  /// Look up the cir.global this op references. Returns null if the symbol
+  /// is absent or is not a cir.global, callers that run after verification
+  /// can assume non-null.
+  cir::GlobalOp getReferencedGlobal(mlir::SymbolTableCollection &tables) {
+    return llvm::dyn_cast_or_null<cir::GlobalOp>(
+        tables.lookupNearestSymbolFrom(*this, getGlobalNameAttr()));
+}
+}];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//

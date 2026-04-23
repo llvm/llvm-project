@@ -83,7 +83,7 @@ struct LoweringPreparePass
   LoweringPreparePass() = default;
   void runOnOperation() override;
 
-  void runOnOp(mlir::Operation *op);
+  void runOnOp(mlir::Operation *op, mlir::SymbolTableCollection &symbolTables);
   void lowerCastOp(cir::CastOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
@@ -94,7 +94,8 @@ struct LoweringPreparePass
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
   void lowerStoreOfConstAggregate(cir::StoreOp op);
-  void lowerLocalInitOp(cir::LocalInitOp op);
+  void lowerLocalInitOp(cir::LocalInitOp op,
+                        mlir::SymbolTableCollection &symbolTables);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -258,13 +259,12 @@ struct LoweringPreparePass
 
     // Create a runtime helper function:
     //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
-    cir::VoidType voidTy = builder.getVoidTy();
-    auto voidPtrTy = cir::PointerType::get(voidTy);
-    auto voidFnTy = cir::FuncType::get({voidPtrTy}, voidTy);
-    auto voidFnPtrTy = cir::PointerType::get(voidFnTy);
-    auto handlePtrTy = cir::PointerType::get(handle.getSymType());
+    cir::PointerType voidPtrTy = builder.getVoidPtrTy();
+    cir::PointerType voidFnPtrTy = builder.getVoidFnPtrTy({voidPtrTy});
+    cir::PointerType handlePtrTy = builder.getPointerTo(handle.getSymType());
     auto fnAtExitType =
-        cir::FuncType::get({voidFnPtrTy, voidPtrTy, handlePtrTy}, voidTy);
+        builder.getVoidFnTy({voidFnPtrTy, voidPtrTy, handlePtrTy});
+
     llvm::StringLiteral nameAtExit = "__cxa_atexit";
     cir::FuncOp fnAtExit = buildRuntimeFunction(builder, nameAtExit,
                                                 global.getLoc(), fnAtExitType);
@@ -344,8 +344,8 @@ struct LoweringPreparePass
       // Emit the initializer and add a global destructor if appropriate.
       mlir::Block *insertBlock = builder.getInsertionBlock();
       if (!ctorRegion.empty()) {
-        if (!ctorRegion.hasOneBlock())
-          globalOp->emitError("NYI: ctor region with multiple blocks");
+        assert(ctorRegion.hasOneBlock() &&
+               "MaxSizedRegion<1> should enforce this");
 
         mlir::Block &block = ctorRegion.front();
         insertBlock->getOperations().splice(
@@ -354,8 +354,8 @@ struct LoweringPreparePass
       }
 
       if (!dtorRegion.empty()) {
-        if (!dtorRegion.hasOneBlock())
-          globalOp->emitError("NYI: dtor region with multiple blocks");
+        assert(dtorRegion.hasOneBlock() &&
+               "MaxSizedRegion<1> should enforce this");
 
         emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion,
                                     *insertBlock);
@@ -1287,10 +1287,10 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   builder.getInsertionBlock()->push_back(ret);
 }
 
-void LoweringPreparePass::lowerLocalInitOp(cir::LocalInitOp initOp) {
+void LoweringPreparePass::lowerLocalInitOp(
+    cir::LocalInitOp initOp, mlir::SymbolTableCollection &symbolTables) {
   if (!initOp.getStaticLocal()) {
     initOp->emitError("NYI: Non-static-local in lower-init-local op");
-    initOp.erase();
     return;
   }
 
@@ -1300,9 +1300,8 @@ void LoweringPreparePass::lowerLocalInitOp(cir::LocalInitOp initOp) {
     return;
   }
 
-  auto globalOp =
-      mlir::cast<cir::GlobalOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
-          initOp, initOp.getGlobalNameAttr()));
+  cir::GlobalOp globalOp = initOp.getReferencedGlobal(symbolTables);
+  assert(globalOp && "No global-op found?");
 
   handleStaticLocal(globalOp, initOp);
 
@@ -1751,7 +1750,8 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
     constOp.erase();
 }
 
-void LoweringPreparePass::runOnOp(mlir::Operation *op) {
+void LoweringPreparePass::runOnOp(mlir::Operation *op,
+                                  mlir::SymbolTableCollection &symbolTables) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
@@ -1785,7 +1785,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   } else if (auto threeWayCmp = dyn_cast<cir::CmpThreeWayOp>(op)) {
     lowerThreeWayCmpOp(threeWayCmp);
   } else if (auto initOp = dyn_cast<cir::LocalInitOp>(op)) {
-    lowerLocalInitOp(initOp);
+    lowerLocalInitOp(initOp, symbolTables);
   }
 }
 
@@ -2167,6 +2167,7 @@ void LoweringPreparePass::runOnOperation() {
     mlirModule = cast<::mlir::ModuleOp>(op);
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
+  mlir::SymbolTableCollection symbolTables;
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
@@ -2178,7 +2179,7 @@ void LoweringPreparePass::runOnOperation() {
   });
 
   for (mlir::Operation *o : opsToTransform)
-    runOnOp(o);
+    runOnOp(o, symbolTables);
 
   buildCXXGlobalInitFunc();
   if (astCtx->getLangOpts().CUDA && !astCtx->getLangOpts().CUDAIsDevice)

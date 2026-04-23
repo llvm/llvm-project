@@ -375,28 +375,12 @@ LogicalResult cir::BreakOp::verify() {
 // LocalInitOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult cir::LocalInitOp::verify() {
-  if (!getOperation()->getParentOfType<FuncOp>())
-    return emitOpError("must be inside of a function");
-
-  if (getStaticLocal() && getTls())
-    return emitOpError("cannot be both static and thread local");
-
-  if (!getStaticLocal() && !getTls())
-    return emitOpError("must be one of static and thread local");
-
-  return success();
-}
-
 LogicalResult
 cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  mlir::Operation *op =
-      symbolTable.lookupNearestSymbolFrom(*this, getGlobalNameAttr());
-  if (op == nullptr || !isa<GlobalOp>(op))
+  cir::GlobalOp global = getReferencedGlobal(symbolTable);
+  if (!global)
     return emitOpError("'")
            << getGlobalName() << "' does not reference a valid cir.global";
-
-  auto global = cast<GlobalOp>(op);
 
   if (getTls() && !global.getTlsModel())
     return emitOpError("access to global not marked thread local");
