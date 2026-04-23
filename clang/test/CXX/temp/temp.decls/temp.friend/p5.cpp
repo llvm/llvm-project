@@ -39,23 +39,26 @@ namespace test2 {
   template <class T> struct A;
 
   class C {
-    static void foo(); // #C_foo
+    static void foo(); // #test2-C-foo
     template <class T> friend void A<T>::g();
   };
 
   template <class T> struct A {
-    void f() { C::foo(); } // expected-error {{'foo' is a private member of 'test2::C'}} \
-                           // expected-note@#C_foo {{implicitly declared private here}}
+    void f() { C::foo(); }
+    // expected-error@-1 {{'foo' is a private member of 'test2::C'}}
+    //   expected-note@#test2-C-foo {{implicitly declared private here}}
   };
 
   template <class T> struct A<T*> {
-    void f() { C::foo(); } // expected-error {{'foo' is a private member of 'test2::C'}} \
-                           // expected-note@#C_foo {{implicitly declared private here}}
+    void f() { C::foo(); }
+    // expected-error@-1 {{'foo' is a private member of 'test2::C'}}
+    //   expected-note@#test2-C-foo {{implicitly declared private here}}
   };
 
   template <> struct A<char> {
-    void f() { C::foo(); } // expected-error {{'foo' is a private member of 'test2::C'}} \
-                           // expected-note@#C_foo {{implicitly declared private here}}
+    void f() { C::foo(); }
+    // expected-error@-1 {{'foo' is a private member of 'test2::C'}}
+    //   expected-note@#test2-C-foo {{implicitly declared private here}}
   };
 }
 
@@ -132,7 +135,8 @@ namespace test7 {
   };
 
   struct C {
-    template <class T> friend void A<T>::D::g(); // expected-error {{friend declaration does not name a member of a class template specialization}}
+    template <class T> friend void A<T>::D::g();
+    // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
   };
 }
 
@@ -150,7 +154,7 @@ namespace test8 {
   };
 
   class C {
-    int n; // expected-note {{implicitly declared private here}}
+    int n; // #test8-C-n
     template <class T> friend int *A<T *>::h();
   };
 
@@ -160,7 +164,9 @@ namespace test8 {
 
   int A<int>::h() {
     C c;
-    c.n = 0; // expected-error {{'n' is a private member of 'test8::C'}}
+    c.n = 0;
+    // expected-error@-1 {{'n' is a private member of 'test8::C'}}
+    //   expected-note@#test8-C-n {{implicitly declared private here}}
     return 0;
   }
 
@@ -213,7 +219,7 @@ namespace test9 {
 namespace test10 {
   template <class T> struct A;
   class C {
-    static void foo(); // expected-note {{implicitly declared private here}}
+    static void foo(); // #test10-C-foo
     template <class T> friend void A<T>::f();
   };
 
@@ -223,7 +229,9 @@ namespace test10 {
 
   template <> struct A<int> {
     int f() {
-      C::foo(); // expected-error {{'foo' is a private member of 'test10::C'}}
+      C::foo();
+      // expected-error@-1 {{'foo' is a private member of 'test10::C'}}
+      //   expected-note@#test10-C-foo {{implicitly declared private here}}
       return 0;
     }
   };
