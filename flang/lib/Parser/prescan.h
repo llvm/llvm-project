@@ -273,7 +273,7 @@ private:
   bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
-  int freeFormColumnLimit_{1000000};
+  int freeFormColumnLimit_{10000};
   Encoding encoding_{Encoding::UTF_8};
   int parenthesisNesting_{0};
   int prescannerNesting_{0};
