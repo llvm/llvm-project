@@ -874,7 +874,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       // scalarizeInstruction() will fail if the recipe dictates that it
       // setOperand(1), because ExtractValue's indices are read-only.
       // Since VPWidenIntOrFpInductionRecipe is only an optimization, skip it
-      // in the case of ExtractValue to be on the safe case.
+      // in the case of ExtractValue to be on the safe side.
       if (isa<VPWidenIntOrFpInductionRecipe>(&Phi) &&
           match(Def,
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
