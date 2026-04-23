@@ -13,5 +13,4 @@ static RWBuffer<float> s[2];
 
 [numthreads(1,1,1)]
 void main() {
-  s[0][0] = 1.0;
 }
