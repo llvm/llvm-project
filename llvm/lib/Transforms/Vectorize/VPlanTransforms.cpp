@@ -874,7 +874,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       // ExtractValue's indices() as part of the recipe's operands. This makes
       // it incompatible with conversion to VPReplicateRecipe, because
       // VPReplicateRecipe's scalarizeInstruction() will attempt to set each
-      // operand of the ExtractValueInst, but the indices can not be set via
+      // operand of the ExtractValueInst, but the indices cannot be set via
       // setOperand().
       if (match(Def,
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
