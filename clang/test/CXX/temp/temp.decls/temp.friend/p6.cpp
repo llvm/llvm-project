@@ -7,18 +7,21 @@ template <class T> struct B {
 
 void t1() {
   struct S {
-    template <class T> friend void f(); // expected-error {{templates can only be declared in namespace or class scope}}
+    template <class T> friend void f();
+    // expected-error@-1 {{templates can only be declared in namespace or class scope}}
   };
 }
 
 void t2() {
   struct S {
-    template <class T> friend struct A; // expected-error {{templates cannot be declared inside of a local class}}
+    template <class T> friend struct A;
+    // expected-error@-1 {{templates cannot be declared inside of a local class}}
   };
 }
 
 void t3() {
   struct S {
-    template <class T> friend void B<T>::f(); // expected-error {{templates cannot be declared inside of a local class}}
+    template <class T> friend void B<T>::f();
+    // expected-error@-1 {{templates cannot be declared inside of a local class}}
   };
 }
