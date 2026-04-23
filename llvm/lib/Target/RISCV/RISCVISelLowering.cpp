@@ -25472,54 +25472,6 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
   TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
-bool RISCVTargetLowering::LowerAsmOperandForConstraint(
-    Value *Val, StringRef Constraint, std::vector<MachineOperand> &Ops,
-    MachineIRBuilder &MIRBuilder) const {
-  if (Constraint.size() != 1)
-    return false;
-
-  switch (Constraint[0]) {
-  case 'I': // 12-bit signed immediate operand.
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
-      unsigned ConstBitWidth = CI->getBitWidth();
-      if (ConstBitWidth <= 12) {
-        bool IsBool = ConstBitWidth == 1;
-        int64_t ExtVal = IsBool ? CI->getZExtValue() : CI->getSExtValue();
-        Ops.push_back(MachineOperand::CreateImm(ExtVal));
-        return true;
-      }
-    }
-    return false;
-  case 'J': // Integer zero operand.
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
-      if (CI->isZero()) {
-        Ops.push_back(MachineOperand::CreateImm(0));
-        return true;
-      }
-    }
-    return false;
-  case 'K': // 5-bit unsigned immediate operand.
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
-      unsigned ConstBitWidth = CI->getBitWidth();
-      if (ConstBitWidth <= 5) {
-        bool IsBool = ConstBitWidth == 1;
-        int64_t ExtVal = IsBool ? CI->getZExtValue() : CI->getSExtValue();
-        Ops.push_back(MachineOperand::CreateImm(ExtVal));
-        return true;
-      }
-    }
-    return false;
-  case 'S': // Alias for s.
-    if (const auto *GV = dyn_cast<GlobalValue>(Val)) {
-      Ops.push_back(MachineOperand::CreateGA(GV, /*Offset=*/0));
-      return true;
-    }
-    return false;
-  default:
-    return false;
-  }
-}
-
 Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {

@@ -188,11 +188,6 @@ public:
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
-  bool
-  LowerAsmOperandForConstraint(Value *Val, StringRef Constraint,
-                               std::vector<MachineOperand> &Ops,
-                               MachineIRBuilder &MIRBuilder) const override;
-
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;

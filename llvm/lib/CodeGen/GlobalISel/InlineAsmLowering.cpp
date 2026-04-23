@@ -664,10 +664,6 @@ bool InlineAsmLowering::lowerAsmOperandForConstraint(
   if (Constraint.size() > 1)
     return false;
 
-  // Firts let the target try to handle the constraint.
-  if (TLI->LowerAsmOperandForConstraint(Val, Constraint, Ops, MIRBuilder))
-    return true;
-
   char ConstraintLetter = Constraint[0];
   switch (ConstraintLetter) {
   default:

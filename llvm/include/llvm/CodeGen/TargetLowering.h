@@ -5385,15 +5385,6 @@ public:
                                             std::vector<SDValue> &Ops,
                                             SelectionDAG &DAG) const;
 
-  /// GlobalISel - Allow targets to lower target-specific operands into the Ops
-  /// vector befor generic lowering occures.
-  virtual bool
-  LowerAsmOperandForConstraint(Value *Val, StringRef Constraint,
-                               std::vector<MachineOperand> &Ops,
-                               MachineIRBuilder &MIRBuilder) const {
-    return false;
-  }
-
   // Lower custom output constraints. If invalid, return SDValue().
   virtual SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Glue,
                                               const SDLoc &DL,
