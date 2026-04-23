@@ -3854,15 +3854,8 @@ volatile operation may not be changed. Different address spaces may
 have different trapping behavior when dereferencing an invalid
 pointer.
 
-The compiler may assume execution will continue after a volatile operation,
-so operations which modify memory or may have undefined behavior can be
-hoisted past a volatile operation.
-
-As an exception to the preceding rule, the compiler may not assume execution
-will continue after a volatile store operation. This restriction is necessary
-to support the somewhat common pattern in C of intentionally storing to an
-invalid pointer to crash the program. In the future, it might make sense to
-allow frontends to control this behavior.
+Volatile operations are permitted to trap. The compiler may not assume
+that execution will continue after a volatile operation.
 
 IR-level volatile loads and stores cannot safely be optimized into ``llvm.memcpy``
 or ``llvm.memmove`` intrinsics even when those intrinsics are flagged volatile.
@@ -5506,6 +5499,14 @@ instructions to emit), a list of operand constraints (stored as a string), a
 flag that indicates whether or not the inline asm expression has side effects,
 and a flag indicating whether the function containing the asm needs to align its
 stack conservatively.
+
+The compiler may not assume that the actual code executed at runtime matches the
+contents of the template string. Correctness-critical analyses must base their
+results only on the list of operand constraints and the flags -- not the
+contents of the template string. This ensures correct behavior if the assembly
+code emitted by this expression is altered later, e.g. via self-modifying code,
+as long as the code keeps upholding the requirements of the operand constraints
+and the flags.
 
 The template string supports argument substitution of the operands using "``$``"
 followed by a number, to indicate substitution of the given register/memory

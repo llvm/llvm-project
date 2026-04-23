@@ -919,7 +919,7 @@ static bool canEmitSpuriousReferenceToVariable(CIRGenFunction &cgf,
   // We can emit a spurious reference only if the linkage implies that we'll
   // be emitting a non-interposable symbol that will be retained until link
   // time.
-  switch (cgf.cgm.getCIRLinkageVarDefinition(vd, /*IsConstant=*/false)) {
+  switch (cgf.cgm.getCIRLinkageVarDefinition(vd)) {
   case cir::GlobalLinkageKind::ExternalLinkage:
   case cir::GlobalLinkageKind::LinkOnceODRLinkage:
   case cir::GlobalLinkageKind::WeakODRLinkage:
@@ -1508,15 +1508,17 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_ToUnion:
     return emitAggExprToLValue(e);
 
-  case CK_NonAtomicToAtomic:
-  case CK_AtomicToNonAtomic:
-  case CK_ObjCObjectLValueCast:
-  case CK_VectorSplat:
   case CK_ConstructorConversion:
   case CK_UserDefinedConversion:
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
-  case CK_LValueToRValue: {
+  case CK_LValueToRValue:
+    return emitLValue(e->getSubExpr());
+
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
+  case CK_ObjCObjectLValueCast:
+  case CK_VectorSplat: {
     cgm.errorNYI(e->getSourceRange(),
                  std::string("emitCastLValue for unhandled cast kind: ") +
                      e->getCastKindName());
