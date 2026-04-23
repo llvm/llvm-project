@@ -5406,11 +5406,13 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       return true;
     }
     if (auto *CInt = dyn_cast<ConstantInt>(Cst)) {
-      Mask = CInt->getValue();
+      Mask = APInt::getSplat(CInt->getType()->getPrimitiveSizeInBits(),
+                             CInt->getValue());
       return true;
     }
     if (auto *CFP = dyn_cast<ConstantFP>(Cst)) {
-      Mask = CFP->getValueAPF().bitcastToAPInt();
+      Mask = APInt::getSplat(CFP->getType()->getPrimitiveSizeInBits(),
+                             CFP->getValueAPF().bitcastToAPInt());
       return true;
     }
     if (auto *CDS = dyn_cast<ConstantDataSequential>(Cst)) {
@@ -39401,6 +39403,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Known.setAllZero();
     break;
   }
+  case X86ISD::VZEXT_LOAD: {
+    // Upper elements are known zero.
+    auto *LN = cast<MemIntrinsicSDNode>(Op);
+    if (!DemandedElts[0] &&
+        LN->getMemoryVT().getSizeInBits() == VT.getScalarSizeInBits())
+      Known.setAllZero();
+    break;
+  }
   case X86ISD::VBROADCAST_LOAD: {
     APInt UndefElts;
     SmallVector<APInt, 16> EltBits;
@@ -45761,6 +45771,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::GlobalBaseReg:
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
+  // SETCC/SETCC_CARRY always produces a well-defined result based on
+  // EFLAGS/carry flag.
+  case X86ISD::SETCC:
+  case X86ISD::SETCC_CARRY:
     return true;
   case X86ISD::PACKSS:
   case X86ISD::PACKUS: {

@@ -754,7 +754,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     return foldInlineAsmMemOperand(MI, Ops, FI, *this);
   } else {
     // Ask the target to do the actual folding.
-    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, CopyMI, LIS, VRM);
+    NewMI = foldMemoryOperandImpl(MF, MI, Ops, FI, CopyMI, LIS, VRM);
   }
 
   if (NewMI) {
@@ -833,7 +833,7 @@ TargetInstrInfo::foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
     return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
-    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, CopyMI, LIS, VRM);
+    NewMI = foldMemoryOperandImpl(MF, MI, Ops, LoadMI, CopyMI, LIS, VRM);
   }
 
   if (!NewMI)

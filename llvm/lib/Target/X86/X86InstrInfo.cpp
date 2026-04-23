@@ -7658,10 +7658,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   return nullptr;
 }
 
-MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
-    LiveIntervals *LIS, VirtRegMap *VRM) const {
+MachineInstr *
+X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                    ArrayRef<unsigned> Ops, int FrameIndex,
+                                    MachineInstr *&CopyMI, LiveIntervals *LIS,
+                                    VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   // Check switch flag
   if (NoFusing)
     return nullptr;
@@ -8173,10 +8175,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
   return false;
 }
 
-MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    MachineInstr *&CopyMI, LiveIntervals *LIS, VirtRegMap *VRM) const {
+MachineInstr *
+X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                    ArrayRef<unsigned> Ops,
+                                    MachineInstr &LoadMI, MachineInstr *&CopyMI,
+                                    LiveIntervals *LIS, VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
 
   // If LoadMI is a masked load, check MI having the same mask.
   const MCInstrDesc &MCID = get(LoadMI.getOpcode());
@@ -8228,8 +8232,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (isLoadFromStackSlot(LoadMI, FrameIndex)) {
     if (isNonFoldablePartialRegisterLoad(LoadMI, MI, MF))
       return nullptr;
-    return foldMemoryOperandImpl(MF, MI, Ops, InsertPt, FrameIndex, CopyMI, LIS,
-                                 VRM);
+    return foldMemoryOperandImpl(MF, MI, Ops, FrameIndex, CopyMI, LIS, VRM);
   }
 
   // Check switch flag

@@ -293,14 +293,12 @@ public:
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex, MachineInstr *&CopyMI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
                                       MachineInstr &LoadMI,
                                       MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,

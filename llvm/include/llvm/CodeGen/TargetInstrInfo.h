@@ -1443,11 +1443,10 @@ protected:
   /// Target-independent code in foldMemoryOperand will
   /// take care of adding a MachineMemOperand to the newly created instruction.
   /// The instruction and any auxiliary instructions necessary will be inserted
-  /// at InsertPt.
+  /// at MI.
   virtual MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
+                        ArrayRef<unsigned> Ops, int FrameIndex,
                         MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr,
                         VirtRegMap *VRM = nullptr) const {
     return nullptr;
@@ -1457,12 +1456,12 @@ protected:
   /// Target-independent code in foldMemoryOperand will
   /// take care of adding a MachineMemOperand to the newly created instruction.
   /// The instruction and any auxiliary instructions necessary will be inserted
-  /// at InsertPt.
-  virtual MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr,
-      VirtRegMap *VRM = nullptr) const {
+  /// at MI.
+  virtual MachineInstr *
+  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                        ArrayRef<unsigned> Ops, MachineInstr &LoadMI,
+                        MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr,
+                        VirtRegMap *VRM = nullptr) const {
     return nullptr;
   }
 
