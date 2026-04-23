@@ -5631,8 +5631,6 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
   // MVT for a general purpose register.
   const MVT RegVT = Subtarget.getScalarIntVT();
 
-  const TargetMachine &TM = Subtarget.getTargetMachine();
-
   // First operand is always the chain.
   Ops.push_back(Chain);
 
@@ -5715,8 +5713,6 @@ SDValue PPCTargetLowering::FinishCall(
     SDValue Chain, SDValue CallSeqStart, SDValue &Callee, int SPDiff,
     unsigned NumBytes, const SmallVectorImpl<ISD::InputArg> &Ins,
     SmallVectorImpl<SDValue> &InVals, const CallBase *CB) const {
-
-  const auto &TM = getTargetMachine();
 
   if ((Subtarget.is64BitELFABI() && !Subtarget.isUsingPCRelativeCalls()) ||
       Subtarget.isAIXABI())
@@ -7780,8 +7776,6 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   if (!MemOpChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains);
-
-  const auto &TM = getTargetMachine();
 
   // For indirect calls, we need to save the TOC base to the stack for
   // restoration after the call.
