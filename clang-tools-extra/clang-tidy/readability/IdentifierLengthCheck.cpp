@@ -20,7 +20,7 @@ const unsigned DefaultMinimumLoopCounterNameLength = 2;
 const unsigned DefaultMinimumExceptionNameLength = 2;
 const unsigned DefaultMinimumParameterNameLength = 3;
 const char DefaultIgnoredVariableNames[] = "";
-const char DefaultIgnoredBindingNames[] = "_";
+const char DefaultIgnoredBindingNames[] = "^[_]$";
 const char DefaultIgnoredLoopCounterNames[] = "^[ijk_]$";
 const char DefaultIgnoredExceptionVariableNames[] = "^[e]$";
 const char DefaultIgnoredParameterNames[] = "^[n]$";
@@ -102,7 +102,7 @@ void IdentifierLengthCheck::registerMatchers(MatchFinder *Finder) {
         this);
 }
 
-static std::optional<unsigned> countLinesToLastUse(const VarDecl *Var,
+static std::optional<unsigned> countLinesToLastUse(const ValueDecl *Var,
                                                    const SourceManager *SrcMgr,
                                                    ASTContext *Ctx) {
   const auto *ParentScope = llvm::dyn_cast<FunctionDecl>(Var->getDeclContext());
@@ -125,7 +125,7 @@ static std::optional<unsigned> countLinesToLastUse(const VarDecl *Var,
   return LastUseLine - DeclLine + 1;
 }
 
-static bool isShortLived(const VarDecl *Var, const SourceManager *SrcMgr,
+static bool isShortLived(const ValueDecl *Var, const SourceManager *SrcMgr,
                          ASTContext *Ctx, unsigned LineCountThreshold) {
   if (LineCountThreshold == 0)
     return false;
@@ -138,7 +138,7 @@ static bool isShortLived(const VarDecl *Var, const SourceManager *SrcMgr,
 }
 
 void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *StandaloneVar = Result.Nodes.getNodeAs<VarDecl>("standaloneVar");
+  const auto *StandaloneVar = Result.Nodes.getNodeAs<ValueDecl>("standaloneVar");
   if (StandaloneVar) {
     if (!StandaloneVar->getIdentifier())
       return;
@@ -157,7 +157,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         << 0 << StandaloneVar << MinimumVariableNameLength;
   }
 
-  const auto *BindingVar = Result.Nodes.getNodeAs<BindingDecl>("bindingVar");
+  const auto *BindingVar = Result.Nodes.getNodeAs<ValueDecl>("bindingVar");
   if (BindingVar) {
     if (!BindingVar->getIdentifier())
       return;
@@ -168,15 +168,15 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredBindingNames.match(VarName))
       return;
 
-    // if (isShortLived(BindingVar, Result.SourceManager, Result.Context,
-    //                  LineCountThreshold))
-    //   return;
+    if (isShortLived(BindingVar, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
+      return;
 
     diag(BindingVar->getLocation(), ErrorMessage)
         << 1 << BindingVar << MinimumBindingNameLength;
   }
 
-  auto *ExceptionVarName = Result.Nodes.getNodeAs<VarDecl>("exceptionVar");
+  auto *ExceptionVarName = Result.Nodes.getNodeAs<ValueDecl>("exceptionVar");
   if (ExceptionVarName) {
     if (!ExceptionVarName->getIdentifier())
       return;
@@ -194,7 +194,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         << 2 << ExceptionVarName << MinimumExceptionNameLength;
   }
 
-  const auto *LoopVar = Result.Nodes.getNodeAs<VarDecl>("loopVar");
+  const auto *LoopVar = Result.Nodes.getNodeAs<ValueDecl>("loopVar");
   if (LoopVar) {
     if (!LoopVar->getIdentifier())
       return;
@@ -213,7 +213,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         << 3 << LoopVar << MinimumLoopCounterNameLength;
   }
 
-  const auto *ParamVar = Result.Nodes.getNodeAs<VarDecl>("paramVar");
+  const auto *ParamVar = Result.Nodes.getNodeAs<ValueDecl>("paramVar");
   if (ParamVar) {
     if (!ParamVar->getIdentifier())
       return;
