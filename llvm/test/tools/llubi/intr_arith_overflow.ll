@@ -2,35 +2,47 @@
 ; RUN: llubi --verbose < %s 2>&1 | FileCheck %s
 
 define void @main() {
+    call {i32, i1} @llvm.sadd.with.overflow.i32(i32 poison, i32 20)
     call {i32, i1} @llvm.sadd.with.overflow.i32(i32 10, i32 20)
     call {i32, i1} @llvm.sadd.with.overflow.i32(i32 -2147483647, i32 -20)
+    call {i32, i1} @llvm.uadd.with.overflow.i32(i32 10, i32 poison)
     call {i32, i1} @llvm.uadd.with.overflow.i32(i32 10, i32 20)
     call {i32, i1} @llvm.uadd.with.overflow.i32(i32 4294967295, i32 20)
 
+    call {i32, i1} @llvm.ssub.with.overflow.i32(i32 poison, i32 20)
     call {i32, i1} @llvm.ssub.with.overflow.i32(i32 10, i32 20)
     call {i32, i1} @llvm.ssub.with.overflow.i32(i32 -2147483647, i32 20)
+    call {i32, i1} @llvm.usub.with.overflow.i32(i32 20, i32 poison)
     call {i32, i1} @llvm.usub.with.overflow.i32(i32 20, i32 10)
     call {i32, i1} @llvm.usub.with.overflow.i32(i32 0, i32 20)
 
+    call {i32, i1} @llvm.smul.with.overflow.i32(i32 poison, i32 20)
     call {i32, i1} @llvm.smul.with.overflow.i32(i32 10, i32 20)
     call {i32, i1} @llvm.smul.with.overflow.i32(i32 -4000000, i32 4000000)
+    call {i32, i1} @llvm.umul.with.overflow.i32(i32 20, i32 poison)
     call {i32, i1} @llvm.umul.with.overflow.i32(i32 20, i32 10)
     call {i32, i1} @llvm.umul.with.overflow.i32(i32 4000000, i32 4000000)
 
     ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %1 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 10, i32 20) => { i32 30, F }
-; CHECK-NEXT:   %2 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 -2147483647, i32 -20) => { i32 2147483629, T }
-; CHECK-NEXT:   %3 = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 10, i32 20) => { i32 30, F }
-; CHECK-NEXT:   %4 = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 -1, i32 20) => { i32 19, T }
-; CHECK-NEXT:   %5 = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 10, i32 20) => { i32 -10, F }
-; CHECK-NEXT:   %6 = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 -2147483647, i32 20) => { i32 2147483629, T }
-; CHECK-NEXT:   %7 = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 20, i32 10) => { i32 10, F }
-; CHECK-NEXT:   %8 = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 0, i32 20) => { i32 -20, T }
-; CHECK-NEXT:   %9 = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 10, i32 20) => { i32 200, F }
-; CHECK-NEXT:   %10 = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 -4000000, i32 4000000) => { i32 -1246822400, T }
-; CHECK-NEXT:   %11 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 20, i32 10) => { i32 200, F }
-; CHECK-NEXT:   %12 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 4000000, i32 4000000) => { i32 1246822400, T }
+; CHECK-NEXT:   %1 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 poison, i32 20) => poison
+; CHECK-NEXT:   %2 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 10, i32 20) => { i32 30, F }
+; CHECK-NEXT:   %3 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 -2147483647, i32 -20) => { i32 2147483629, T }
+; CHECK-NEXT:   %4 = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 10, i32 poison) => poison
+; CHECK-NEXT:   %5 = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 10, i32 20) => { i32 30, F }
+; CHECK-NEXT:   %6 = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 -1, i32 20) => { i32 19, T }
+; CHECK-NEXT:   %7 = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 poison, i32 20) => poison
+; CHECK-NEXT:   %8 = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 10, i32 20) => { i32 -10, F }
+; CHECK-NEXT:   %9 = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 -2147483647, i32 20) => { i32 2147483629, T }
+; CHECK-NEXT:   %10 = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 20, i32 poison) => poison
+; CHECK-NEXT:   %11 = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 20, i32 10) => { i32 10, F }
+; CHECK-NEXT:   %12 = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 0, i32 20) => { i32 -20, T }
+; CHECK-NEXT:   %13 = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 poison, i32 20) => poison
+; CHECK-NEXT:   %14 = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 10, i32 20) => { i32 200, F }
+; CHECK-NEXT:   %15 = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 -4000000, i32 4000000) => { i32 -1246822400, T }
+; CHECK-NEXT:   %16 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 20, i32 poison) => poison
+; CHECK-NEXT:   %17 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 20, i32 10) => { i32 200, F }
+; CHECK-NEXT:   %18 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 4000000, i32 4000000) => { i32 1246822400, T }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

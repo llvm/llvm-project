@@ -2,35 +2,49 @@
 ; RUN: llubi --verbose < %s 2>&1 | FileCheck %s
 
 define void @main() {
+    call i32 @llvm.abs.i32(i32 poison, i1 false)
     call i32 @llvm.abs.i32(i32 -42, i1 false)
     call i32 @llvm.abs.i32(i32 -2147483648, i1 true)
 
     call i32 @llvm.smin.i32(i32 -10, i32 -20)
+    call i32 @llvm.smin.i32(i32 poison, i32 -20)
     call i32 @llvm.umin.i32(i32 10, i32 20)
+    call i32 @llvm.umin.i32(i32 10, i32 poison)
     call i32 @llvm.smax.i32(i32 -10, i32 -20)
+    call i32 @llvm.smax.i32(i32 poison, i32 -20)
     call i32 @llvm.umax.i32(i32 10, i32 20)
+    call i32 @llvm.umax.i32(i32 10, i32 poison)
 
     call i2 @llvm.scmp.i32(i32 10, i32 20)
     call i2 @llvm.scmp.i32(i32 -10, i32 -20)
     call i2 @llvm.scmp.i32(i32 10, i32 10)
+    call i2 @llvm.scmp.i32(i32 poison, i32 10)
     call i2 @llvm.ucmp.i32(i32 10, i32 20)
     call i2 @llvm.ucmp.i32(i32 20, i32 10)
     call i2 @llvm.ucmp.i32(i32 10, i32 10)
+    call i2 @llvm.ucmp.i32(i32 10, i32 poison)
 
     ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %1 = call i32 @llvm.abs.i32(i32 -42, i1 false) => i32 42
-; CHECK-NEXT:   %2 = call i32 @llvm.abs.i32(i32 -2147483648, i1 true) => poison
-; CHECK-NEXT:   %3 = call i32 @llvm.smin.i32(i32 -10, i32 -20) => i32 -20
-; CHECK-NEXT:   %4 = call i32 @llvm.umin.i32(i32 10, i32 20) => i32 10
-; CHECK-NEXT:   %5 = call i32 @llvm.smax.i32(i32 -10, i32 -20) => i32 -10
-; CHECK-NEXT:   %6 = call i32 @llvm.umax.i32(i32 10, i32 20) => i32 20
-; CHECK-NEXT:   %7 = call i2 @llvm.scmp.i2.i32(i32 10, i32 20) => i2 -1
-; CHECK-NEXT:   %8 = call i2 @llvm.scmp.i2.i32(i32 -10, i32 -20) => i2 1
-; CHECK-NEXT:   %9 = call i2 @llvm.scmp.i2.i32(i32 10, i32 10) => i2 0
-; CHECK-NEXT:   %10 = call i2 @llvm.ucmp.i2.i32(i32 10, i32 20) => i2 -1
-; CHECK-NEXT:   %11 = call i2 @llvm.ucmp.i2.i32(i32 20, i32 10) => i2 1
-; CHECK-NEXT:   %12 = call i2 @llvm.ucmp.i2.i32(i32 10, i32 10) => i2 0
+; CHECK-NEXT:   %1 = call i32 @llvm.abs.i32(i32 poison, i1 false) => poison
+; CHECK-NEXT:   %2 = call i32 @llvm.abs.i32(i32 -42, i1 false) => i32 42
+; CHECK-NEXT:   %3 = call i32 @llvm.abs.i32(i32 -2147483648, i1 true) => poison
+; CHECK-NEXT:   %4 = call i32 @llvm.smin.i32(i32 -10, i32 -20) => i32 -20
+; CHECK-NEXT:   %5 = call i32 @llvm.smin.i32(i32 poison, i32 -20) => poison
+; CHECK-NEXT:   %6 = call i32 @llvm.umin.i32(i32 10, i32 20) => i32 10
+; CHECK-NEXT:   %7 = call i32 @llvm.umin.i32(i32 10, i32 poison) => poison
+; CHECK-NEXT:   %8 = call i32 @llvm.smax.i32(i32 -10, i32 -20) => i32 -10
+; CHECK-NEXT:   %9 = call i32 @llvm.smax.i32(i32 poison, i32 -20) => poison
+; CHECK-NEXT:   %10 = call i32 @llvm.umax.i32(i32 10, i32 20) => i32 20
+; CHECK-NEXT:   %11 = call i32 @llvm.umax.i32(i32 10, i32 poison) => poison
+; CHECK-NEXT:   %12 = call i2 @llvm.scmp.i2.i32(i32 10, i32 20) => i2 -1
+; CHECK-NEXT:   %13 = call i2 @llvm.scmp.i2.i32(i32 -10, i32 -20) => i2 1
+; CHECK-NEXT:   %14 = call i2 @llvm.scmp.i2.i32(i32 10, i32 10) => i2 0
+; CHECK-NEXT:   %15 = call i2 @llvm.scmp.i2.i32(i32 poison, i32 10) => poison
+; CHECK-NEXT:   %16 = call i2 @llvm.ucmp.i2.i32(i32 10, i32 20) => i2 -1
+; CHECK-NEXT:   %17 = call i2 @llvm.ucmp.i2.i32(i32 20, i32 10) => i2 1
+; CHECK-NEXT:   %18 = call i2 @llvm.ucmp.i2.i32(i32 10, i32 10) => i2 0
+; CHECK-NEXT:   %19 = call i2 @llvm.ucmp.i2.i32(i32 10, i32 poison) => poison
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

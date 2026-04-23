@@ -2,35 +2,51 @@
 ; RUN: llubi --verbose < %s 2>&1 | FileCheck %s
 
 define void @main() {
+    call i32 @llvm.sadd.sat.i32(i32 poison, i32 20)
     call i32 @llvm.sadd.sat.i32(i32 10, i32 20)
     call i32 @llvm.sadd.sat.i32(i32 -2147483647, i32 -20)
+    call i32 @llvm.uadd.sat.i32(i32 10, i32 poison)
     call i32 @llvm.uadd.sat.i32(i32 10, i32 20)
     call i32 @llvm.uadd.sat.i32(i32 4294967295, i32 20)
 
+    call i32 @llvm.ssub.sat.i32(i32 poison, i32 20)
     call i32 @llvm.ssub.sat.i32(i32 10, i32 20)
     call i32 @llvm.ssub.sat.i32(i32 -2147483647, i32 20)
+    call i32 @llvm.usub.sat.i32(i32 20, i32 poison)
     call i32 @llvm.usub.sat.i32(i32 20, i32 10)
     call i32 @llvm.usub.sat.i32(i32 0, i32 20)
 
+    call i32 @llvm.sshl.sat.i32(i32 poison, i32 2)
     call i32 @llvm.sshl.sat.i32(i32 10, i32 2)
-    call i32 @llvm.sshl.sat.i32(i32 10, i32 40)
+    call i32 @llvm.sshl.sat.i32(i32 10, i32 31)
+    call i32 @llvm.sshl.sat.i32(i32 10, i32 32)
+    call i32 @llvm.ushl.sat.i32(i32 10, i32 poison)
     call i32 @llvm.ushl.sat.i32(i32 10, i32 2)
-    call i32 @llvm.ushl.sat.i32(i32 10, i32 40)
+    call i32 @llvm.ushl.sat.i32(i32 10, i32 31)
+    call i32 @llvm.ushl.sat.i32(i32 10, i32 32)
 
     ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %1 = call i32 @llvm.sadd.sat.i32(i32 10, i32 20) => i32 30
-; CHECK-NEXT:   %2 = call i32 @llvm.sadd.sat.i32(i32 -2147483647, i32 -20) => i32 -2147483648
-; CHECK-NEXT:   %3 = call i32 @llvm.uadd.sat.i32(i32 10, i32 20) => i32 30
-; CHECK-NEXT:   %4 = call i32 @llvm.uadd.sat.i32(i32 -1, i32 20) => i32 -1
-; CHECK-NEXT:   %5 = call i32 @llvm.ssub.sat.i32(i32 10, i32 20) => i32 -10
-; CHECK-NEXT:   %6 = call i32 @llvm.ssub.sat.i32(i32 -2147483647, i32 20) => i32 -2147483648
-; CHECK-NEXT:   %7 = call i32 @llvm.usub.sat.i32(i32 20, i32 10) => i32 10
-; CHECK-NEXT:   %8 = call i32 @llvm.usub.sat.i32(i32 0, i32 20) => i32 0
-; CHECK-NEXT:   %9 = call i32 @llvm.sshl.sat.i32(i32 10, i32 2) => i32 40
-; CHECK-NEXT:   %10 = call i32 @llvm.sshl.sat.i32(i32 10, i32 40) => i32 2147483647
-; CHECK-NEXT:   %11 = call i32 @llvm.ushl.sat.i32(i32 10, i32 2) => i32 40
-; CHECK-NEXT:   %12 = call i32 @llvm.ushl.sat.i32(i32 10, i32 40) => i32 -1
+; CHECK-NEXT:   %1 = call i32 @llvm.sadd.sat.i32(i32 poison, i32 20) => poison
+; CHECK-NEXT:   %2 = call i32 @llvm.sadd.sat.i32(i32 10, i32 20) => i32 30
+; CHECK-NEXT:   %3 = call i32 @llvm.sadd.sat.i32(i32 -2147483647, i32 -20) => i32 -2147483648
+; CHECK-NEXT:   %4 = call i32 @llvm.uadd.sat.i32(i32 10, i32 poison) => poison
+; CHECK-NEXT:   %5 = call i32 @llvm.uadd.sat.i32(i32 10, i32 20) => i32 30
+; CHECK-NEXT:   %6 = call i32 @llvm.uadd.sat.i32(i32 -1, i32 20) => i32 -1
+; CHECK-NEXT:   %7 = call i32 @llvm.ssub.sat.i32(i32 poison, i32 20) => poison
+; CHECK-NEXT:   %8 = call i32 @llvm.ssub.sat.i32(i32 10, i32 20) => i32 -10
+; CHECK-NEXT:   %9 = call i32 @llvm.ssub.sat.i32(i32 -2147483647, i32 20) => i32 -2147483648
+; CHECK-NEXT:   %10 = call i32 @llvm.usub.sat.i32(i32 20, i32 poison) => poison
+; CHECK-NEXT:   %11 = call i32 @llvm.usub.sat.i32(i32 20, i32 10) => i32 10
+; CHECK-NEXT:   %12 = call i32 @llvm.usub.sat.i32(i32 0, i32 20) => i32 0
+; CHECK-NEXT:   %13 = call i32 @llvm.sshl.sat.i32(i32 poison, i32 2) => poison
+; CHECK-NEXT:   %14 = call i32 @llvm.sshl.sat.i32(i32 10, i32 2) => i32 40
+; CHECK-NEXT:   %15 = call i32 @llvm.sshl.sat.i32(i32 10, i32 31) => i32 2147483647
+; CHECK-NEXT:   %16 = call i32 @llvm.sshl.sat.i32(i32 10, i32 32) => poison
+; CHECK-NEXT:   %17 = call i32 @llvm.ushl.sat.i32(i32 10, i32 poison) => poison
+; CHECK-NEXT:   %18 = call i32 @llvm.ushl.sat.i32(i32 10, i32 2) => i32 40
+; CHECK-NEXT:   %19 = call i32 @llvm.ushl.sat.i32(i32 10, i32 31) => i32 -1
+; CHECK-NEXT:   %20 = call i32 @llvm.ushl.sat.i32(i32 10, i32 32) => poison
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

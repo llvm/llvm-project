@@ -440,13 +440,13 @@ public:
       ++CurrentFrame->PC;
   }
 
-  AnyValue callIntrinsic(CallBase &CB) {
+  AnyValue callIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
     Intrinsic::ID IID = CB.getIntrinsicID();
     Type *RetTy = CB.getType();
 
     switch (IID) {
     case Intrinsic::assume:
-      switch (getValue(CB.getArgOperand(0)).asBoolean()) {
+      switch (Args[0].asBoolean()) {
       case BooleanKind::True:
         break;
       case BooleanKind::False:
@@ -458,10 +458,10 @@ public:
       return AnyValue();
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end: {
-      auto *Ptr = CB.getArgOperand(0);
-      if (isa<PoisonValue>(Ptr))
+      auto Ptr = Args[0];
+      if (Ptr.isPoison())
         return AnyValue();
-      auto *MO = getValue(Ptr).asPointer().getMemoryObject();
+      auto *MO = Ptr.asPointer().getMemoryObject();
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
       if (IID == Intrinsic::lifetime_start) {
@@ -475,14 +475,18 @@ public:
     case Intrinsic::ssa_copy:
     case Intrinsic::expect:
     case Intrinsic::expect_with_probability:
-      return getValue(CB.getArgOperand(0));
+      return Args[0];
     case Intrinsic::donothing:
       return AnyValue();
-    case Intrinsic::vscale:
-      return APInt(RetTy->getScalarSizeInBits(), Ctx.getVScale());
+    case Intrinsic::vscale: {
+      const unsigned BitWidth = RetTy->getScalarSizeInBits();
+      const APInt VScale(64, Ctx.getVScale());
+      if (!VScale.isIntN(BitWidth))
+        return AnyValue::poison();
+      return VScale.zextOrTrunc(BitWidth);
+    }
     case Intrinsic::abs: {
-      const bool IsIntMinPoison =
-          getBooleanNonPoison(getValue(CB.getArgOperand(1)).asBoolean());
+      const bool IsIntMinPoison = getBooleanNonPoison(Args[1].asBoolean());
       return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
         if (IsIntMinPoison && Operand.isMinSignedValue())
           return AnyValue::poison();
@@ -515,7 +519,7 @@ public:
     }
     case Intrinsic::scmp:
     case Intrinsic::ucmp: {
-      std::uint32_t BitWidth = RetTy->getScalarSizeInBits();
+      const unsigned BitWidth = RetTy->getScalarSizeInBits();
       return visitIntBinOpWithResult(
           CB, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
             if (LHS == RHS)
@@ -544,8 +548,7 @@ public:
     }
     case Intrinsic::ctlz:
     case Intrinsic::cttz: {
-      const bool IsZeroPoison =
-          getBooleanNonPoison(getValue(CB.getArgOperand(1)).asBoolean());
+      const bool IsZeroPoison = getBooleanNonPoison(Args[1].asBoolean());
       return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
         if (IsZeroPoison && Operand.isZero())
           return AnyValue::poison();
@@ -560,12 +563,14 @@ public:
           CB,
           [IID](const APInt &Op1, const APInt &Op2,
                 const APInt &Op3) -> AnyValue {
-            const std::uint32_t BitWidth = Op1.getBitWidth();
-            const std::uint32_t ShiftAmount = Op3.urem(BitWidth);
+            const unsigned BitWidth = Op1.getBitWidth();
+            const std::uint64_t ShiftAmount = Op3.urem(BitWidth);
             const bool IsFShr = IID == Intrinsic::fshr;
-            const std::uint32_t LShrAmount =
+            if (ShiftAmount == 0)
+              return IsFShr ? Op2 : Op1;
+            const std::uint64_t LShrAmount =
                 IsFShr ? ShiftAmount : BitWidth - ShiftAmount;
-            const std::uint32_t ShlAmount =
+            const std::uint64_t ShlAmount =
                 !IsFShr ? ShiftAmount : BitWidth - ShiftAmount;
             return Op1.shl(ShlAmount) | Op2.lshr(LShrAmount);
           });
@@ -628,10 +633,16 @@ public:
               return LHS.ssub_sat(RHS);
             case Intrinsic::usub_sat:
               return LHS.usub_sat(RHS);
-            case Intrinsic::sshl_sat:
+            case Intrinsic::sshl_sat: {
+              if (RHS.uge(LHS.getBitWidth()))
+                return AnyValue::poison();
               return LHS.sshl_sat(RHS);
-            case Intrinsic::ushl_sat:
+            }
+            case Intrinsic::ushl_sat: {
+              if (RHS.uge(LHS.getBitWidth()))
+                return AnyValue::poison();
               return LHS.ushl_sat(RHS);
+            }
             default:
               llvm_unreachable("Unexpected intrinsic ID");
             }
@@ -715,7 +726,7 @@ public:
         "Expected the callee function type to match the call site signature.");
     CurrentFrame->ResolvedCallee = Callee;
     if (Callee->isIntrinsic()) {
-      CurrentFrame->CalleeRetVal = callIntrinsic(CB);
+      CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
       returnFromCallee();
       return;
     } else if (Callee->isDeclaration()) {
