@@ -47,7 +47,7 @@
 
 #define PTHREAD_COND_INITIALIZER                                               \
   {                                                                            \
-      /* .__waiter_queue = */ {NULL, NULL},                                    \
+      /* .__waiter_queue = */ {{NULL, NULL}},                                  \
       /* .__futex = */ 0,                                                      \
       /* .__is_shared = */ 0,                                                  \
       /* .__is_realtime = */ 1,                                                \
