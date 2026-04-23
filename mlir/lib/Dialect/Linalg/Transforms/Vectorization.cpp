@@ -1898,19 +1898,26 @@ vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
     return failure();
   }
 
-  if (!isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(conv)) {
-    LDBG() << "Not a 1D depth-wise WC conv, dynamic shapes are not supported";
+  // Dynamic shapes are supported only for 1D depthwise convolutions on the
+  // canonical NWC / WC layouts (i.e. the channel dim is already trailing on
+  // LHS/RES; no pre-transpose is needed). Non-canonical layouts (NCW/CW)
+  // reach the depthwise vectorizer through a pre-transpose that cannot
+  // carry a `vector.mask`, so they require fully-static shapes.
+  FailureOr<Conv1DConfig> maybeConfig = classifyAs1DConv(conv);
+  if (failed(maybeConfig) || !maybeConfig->isDepthwise) {
+    LDBG() << "Not a 1D depthwise conv; dynamic shapes are not supported";
     return failure();
   }
 
-  // Support dynamic shapes in 1D depthwise convolution, but only in the
-  // _channel_ dimension.
+  // Only the trailing dim (channel for canonical layouts) may be dynamic.
+  // This rejects non-canonical layouts with a dynamic channel in the middle
+  // as a byproduct, since the middle dim shows up in `drop_back(1)`.
   Value lhs = conv.getDpsInputOperand(0)->get();
   ArrayRef<int64_t> lhsShape = cast<ShapedType>(lhs.getType()).getShape();
   auto shapeWithoutCh = lhsShape.drop_back(1);
   if (ShapedType::isDynamicShape(shapeWithoutCh)) {
     LDBG() << "Dynamically-shaped op vectorization precondition failed: only "
-              "channel dim can be dynamic";
+              "the trailing (channel) dim can be dynamic";
     return failure();
   }
 
@@ -3718,127 +3725,122 @@ public:
         ->getResult(0);
   }
 
-  /// Generate a vector implementation for:
-  /// ```
-  ///   Op def: (     n,     w,     c,    kw)
-  ///    Iters: ({Par(), Par(), Par(), Red()})
-  ///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
-  /// ```
+  /// Unified depthwise 1D convolution vectorizer.
+  ///
+  /// Handles all classified depthwise layouts:
+  ///   * canonical batched     <N, W, C> / <Kw, C> / <N, W, C>
+  ///   * non-canonical batched (e.g. NCW_CW)
+  ///   * canonical batchless   <W, C> / <Kw, C> / <W, C>
+  ///   * non-canonical batchless (e.g. CW/CW)
+  ///
+  /// Pipeline (with steps 2, 3, and 6 skipped when not required by the
+  /// layout):
+  ///   1. Read operands in their tensor-native layout (optionally masked).
+  ///   2. `vector.transpose` each operand to canonical NWC (if
+  ///      `perms` is non-identity).
+  ///   3. `vector.shape_cast` lhs/res to a unit leading dim (if the layout
+  ///      is batchless), so the kernel always sees 3D NWC vectors.
+  ///   4. Run `depthwise1DKernel`.
+  ///   5. Inverse-`shape_cast` / inverse-`transpose` the result.
+  ///   6. `vector.transfer_write` (optionally masked) back into the result.
+  ///
+  /// Masking and scalable vectors require the channel dim to be the trailing
+  /// vector dim of the read/write, which rules out layouts that need a
+  /// `vector.transpose` to reach canonical NWC (e.g. NCW). Batchless
+  /// canonical layouts (e.g. WC) already have the channel trailing, and the
+  /// unit-N `vector.shape_cast` wrapping the kernel preserves the
+  /// scalable-dim count, so they are supported. Layouts that need a
+  /// pre-transpose require fully-static shapes.
+  ///
   /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
   /// > 1.
   FailureOr<Operation *> depthwiseConv(uint64_t channelDimVecSize,
                                        bool channelDimScalableFlag,
                                        bool flatten) {
-    bool scalableChDim = false;
-    bool useMasking = false;
-    int64_t nSize, wSize, cSize, kwSize;
-    // kernel{kw, c}
-    bindShapeDims(rhsShapedType, kwSize, cSize);
-    if (ShapedType::isDynamic(cSize)) {
+    LinalgOp linalgOp = cast<LinalgOp>(op);
+    Conv1DPerms perms = computeCanonicalPerms(linalgOp, config);
+    const bool hasPerms = !perms.allIdentity();
+    const bool isBatchless = config.layout == ConvLayoutKind::Batchless;
+
+    // Decide on masking / scalable up-front so we can gate the other
+    // preconditions on the canonical-batched-layout invariant.
+    const bool useMasking =
+        ShapedType::isDynamic(rhsShapedType.getShape().back());
+    // Scalable vectors require both a dynamic channel dim and the caller-
+    // supplied scalable flag.
+    const bool scalableChDim = useMasking && channelDimScalableFlag;
+    if (useMasking) {
       assert(channelDimVecSize != 0 && "Channel dim vec size must be > 0");
-      cSize = channelDimVecSize;
-      // Scalable vectors are only used when both conditions are met:
-      //  1. channel dim is dynamic
-      //  2. channelDimScalableFlag is set
-      scalableChDim = channelDimScalableFlag;
-      useMasking = true;
+      assert(!flatten && "Unsupported flattened conv with dynamic shapes");
     }
 
-    assert(!(useMasking && flatten) &&
-           "Unsupported flattened conv with dynamic shapes");
+    // Masking / scalable put the scalable flag on the trailing vector dim, so
+    // they only apply when the channel is already trailing (canonical
+    // batched NWC or batchless canonical WC). Layouts that need a
+    // pre-transpose put a different dim in the trailing position, breaking
+    // that assumption.
+    if (useMasking && hasPerms)
+      return rewriter.notifyMatchFailure(
+          op, "masking/scalable depthwise conv requires the channel dim to "
+              "be the trailing vector dim (no pre-transpose)");
 
-    // out{n, w, c}
-    bindShapeDims(resShapedType, nSize, wSize);
+    // Pre-transpose layouts build their vector types from the static tensor
+    // shape.
+    if (hasPerms &&
+        (!lhsShapedType.hasStaticShape() || !rhsShapedType.hasStaticShape() ||
+         !resShapedType.hasStaticShape()))
+      return rewriter.notifyMatchFailure(
+          op, "depthwise conv with a pre-transpose requires static shapes");
 
+    // Canonical loop sizes. For the masked path `sizes.c` is dynamic (`?`);
+    // override with the caller-supplied vector size.
+    Conv1DSizes sizes = computeConvSizes(linalgOp);
+    if (useMasking)
+      sizes.c = channelDimVecSize;
+    Conv1DShapes canon = computeCanonicalShapes(sizes);
+    Conv1DShapes read = computeReadShapes(canon, perms);
     Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
 
-    // w is unrolled (i.e. wSizeStep == 1) iff strideW > 1.
-    // When strideW == 1, we can batch the contiguous loads and avoid
-    // unrolling
-    int64_t wSizeStep = strideW == 1 ? wSize : 1;
+    // Step 1: read each operand in its tensor-native layout, optionally
+    // wrapped in a channel-dim `vector.mask` on the canonical batched path.
+    Value lhsVec = readOperand(lhsShaped, lhsShapedType, read.lhs, zero,
+                               scalableChDim, useMasking);
+    Value rhsVec = readOperand(rhsShaped, rhsShapedType, read.rhs, zero,
+                               scalableChDim, useMasking);
+    Value resVec = readOperand(resShaped, resShapedType, read.res, zero,
+                               scalableChDim, useMasking);
 
-    Type lhsEltType = lhsShapedType.getElementType();
-    Type rhsEltType = rhsShapedType.getElementType();
-    Type resEltType = resShapedType.getElementType();
-    VectorType lhsType = VectorType::get(
-        {nSize,
-         // iw = ow * sw + kw *  dw - 1
-         //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
-         ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
-         cSize},
-        lhsEltType, /*scalableDims=*/{false, false, scalableChDim});
-    VectorType rhsType =
-        VectorType::get({kwSize, cSize}, rhsEltType,
-                        /*scalableDims=*/{false, scalableChDim});
-    VectorType resType =
-        VectorType::get({nSize, wSize, cSize}, resEltType,
-                        /*scalableDims=*/{false, false, scalableChDim});
+    // Step 2: pre-transpose to canonical NWC / <Kw, C> / NWC form. No-op on
+    // identity perms.
+    lhsVec = transposeToCanonical(lhsVec, perms.lhs);
+    rhsVec = transposeToCanonical(rhsVec, perms.rhs);
+    resVec = transposeToCanonical(resVec, perms.res);
 
-    // Masks the input xfer Op along the channel dim, iff the corresponding
-    // scalable flag is set.
-    auto maybeMaskXferOp = [&](ArrayRef<int64_t> maskShape,
-                               ArrayRef<bool> scalableDims,
-                               Operation *opToMask) {
-      if (!useMasking)
-        return opToMask;
-      auto maskType =
-          VectorType::get(maskShape, rewriter.getI1Type(), scalableDims);
-
-      SmallVector<bool> inBounds(maskShape.size(), true);
-      auto xferOp = cast<VectorTransferOpInterface>(opToMask);
-      xferOp->setAttr(xferOp.getInBoundsAttrName(),
-                      rewriter.getBoolArrayAttr(inBounds));
-
-      SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
-          cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);
-
-      Value maskOp =
-          vector::CreateMaskOp::create(rewriter, loc, maskType, mixedDims);
-
-      return mlir::vector::maskOperation(rewriter, opToMask, maskOp);
-    };
-
-    // Read lhs slice of size {n, w * strideW + kw * dilationW, c} @ [0, 0,
-    // 0].
-    Value lhs = vector::TransferReadOp::create(
-        rewriter, loc, lhsType, lhsShaped, ValueRange{zero, zero, zero},
-        /*padding=*/arith::getZeroConstant(rewriter, loc, lhsEltType));
-    auto *maybeMaskedLhs = maybeMaskXferOp(
-        lhsType.getShape(), lhsType.getScalableDims(), lhs.getDefiningOp());
-
-    // Read rhs slice of size {kw, c} @ [0, 0].
-    Value rhs = vector::TransferReadOp::create(
-        rewriter, loc, rhsType, rhsShaped, ValueRange{zero, zero},
-        /*padding=*/arith::getZeroConstant(rewriter, loc, rhsEltType));
-    auto *maybeMaskedRhs = maybeMaskXferOp(
-        rhsType.getShape(), rhsType.getScalableDims(), rhs.getDefiningOp());
-
-    // Read res slice of size {n, w, c} @ [0, 0, 0].
-    Value res = vector::TransferReadOp::create(
-        rewriter, loc, resType, resShaped, ValueRange{zero, zero, zero},
-        /*padding=*/arith::getZeroConstant(rewriter, loc, resEltType));
-    auto *maybeMaskedRes = maybeMaskXferOp(
-        resType.getShape(), resType.getScalableDims(), res.getDefiningOp());
-
-    FailureOr<Value> kernelRes = depthwise1DKernel(
-        maybeMaskedLhs->getResult(0), maybeMaskedRhs->getResult(0),
-        maybeMaskedRes->getResult(0), nSize, wSize, cSize, kwSize, wSizeStep,
-        flatten);
-    if (failed(kernelRes)) {
-      // Best-effort: erase the original transfer_reads we created above.
-      // (Mask wrapper ops, if any, will be handled by the failed-pattern
-      // rollback in the parent rewrite driver.)
-      for (Value v : {res, rhs, lhs, zero})
-        if (v)
-          rewriter.eraseOp(v.getDefiningOp());
-      return failure();
+    // Step 3: batchless layouts shape-cast a unit leading dim so operands
+    // satisfy the kernel's 3D-vector contract.
+    if (isBatchless) {
+      lhsVec = expandUnitLeadingDim(lhsVec);
+      resVec = expandUnitLeadingDim(resVec);
     }
 
-    Operation *resOut = vector::TransferWriteOp::create(
-        rewriter, loc, *kernelRes, resShaped, ValueRange{zero, zero, zero});
-    return maybeMaskXferOp(resType.getShape(), resType.getScalableDims(),
-                           resOut);
+    // Step 4: core depthwise compute on canonical 3D NWC vectors.
+    int64_t leadingN = isBatchless ? 1 : sizes.n;
+    int64_t wSizeStep = strideW == 1 ? sizes.w : 1;
+    FailureOr<Value> kernelRes =
+        depthwise1DKernel(lhsVec, rhsVec, resVec, leadingN, sizes.w, sizes.c,
+                          sizes.kw, wSizeStep, flatten);
+    if (failed(kernelRes))
+      return failure();
+
+    // Step 5: inverse shape_cast to drop the unit leading dim for batchless.
+    Value out = *kernelRes;
+    if (isBatchless)
+      out = collapseUnitLeadingDim(out);
+
+    // Step 6: inverse-transpose and write back (optionally masked).
+    return writeAndPostTranspose(out, read.res, perms.res, scalableChDim,
+                                 useMasking);
   }
 
   /// Vector-level depthwise compute kernel: extracts kw x w tiles from the
@@ -3852,7 +3854,7 @@ public:
   ///   - `nSize` equals `lhs.getShape()[0]` and `res.getShape()[0]`.
   /// Callers whose operand layout does not have a batch dim (batchless) must
   /// `vector.shape_cast` to unit `N = 1` before invoking the kernel and
-  /// collapse the result back afterwards (see `depthwiseConvViaTranspose`).
+  /// collapse the result back afterwards (see `depthwiseConv`).
   ///
   /// On MulAcc failure the kernel erases only the IR it created; the caller
   /// is responsible for cleaning up its own pre-kernel IR.
@@ -3951,83 +3953,6 @@ public:
     return out;
   }
 
-  /// Depthwise convolution for layouts not handled by the masked/scalable
-  /// `depthwiseConv()` path: read the operands in their original layout,
-  /// transpose the loaded vectors to canonical NWC, run the kernel, then
-  /// inverse-transpose the result and write it back. Also handles the
-  /// batchless canonical case (no transposes, but the kernel's 3D contract
-  /// still requires a unit-N shape_cast around the call). Static shapes only
-  /// (no masking, no scalable vectors).
-  FailureOr<Operation *> depthwiseConvViaTranspose(const Conv1DPerms &perms,
-                                                   bool flatten) {
-    LinalgOp linalgOp = cast<LinalgOp>(op);
-    Conv1DSizes sizes = computeConvSizes(linalgOp);
-    Conv1DShapes canon = computeCanonicalShapes(sizes);
-    Conv1DShapes read = computeReadShapes(canon, perms);
-
-    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
-    Type lhsEltType = lhsShapedType.getElementType();
-    Type rhsEltType = rhsShapedType.getElementType();
-    Type resEltType = resShapedType.getElementType();
-    SmallVector<Value> lhsIdx(read.lhs.size(), zero);
-    SmallVector<Value> rhsIdx(read.rhs.size(), zero);
-    SmallVector<Value> resIdx(read.res.size(), zero);
-
-    Value lhs = vector::TransferReadOp::create(
-        rewriter, loc, VectorType::get(read.lhs, lhsEltType), lhsShaped, lhsIdx,
-        arith::getZeroConstant(rewriter, loc, lhsEltType));
-    Value rhs = vector::TransferReadOp::create(
-        rewriter, loc, VectorType::get(read.rhs, rhsEltType), rhsShaped, rhsIdx,
-        arith::getZeroConstant(rewriter, loc, rhsEltType));
-    Value res = vector::TransferReadOp::create(
-        rewriter, loc, VectorType::get(read.res, resEltType), resShaped, resIdx,
-        arith::getZeroConstant(rewriter, loc, resEltType));
-
-    if (!perms.lhs.empty())
-      lhs = vector::TransposeOp::create(rewriter, loc, lhs, perms.lhs);
-    if (!perms.rhs.empty())
-      rhs = vector::TransposeOp::create(rewriter, loc, rhs, perms.rhs);
-    if (!perms.res.empty())
-      res = vector::TransposeOp::create(rewriter, loc, res, perms.res);
-
-    bool batchless = config.layout == ConvLayoutKind::Batchless;
-    auto expandLeading = [&](Value v) -> Value {
-      auto vTy = cast<VectorType>(v.getType());
-      SmallVector<int64_t> shape3D = {1};
-      llvm::append_range(shape3D, vTy.getShape());
-      return vector::ShapeCastOp::create(
-          rewriter, loc, VectorType::get(shape3D, vTy.getElementType()), v);
-    };
-    auto collapseLeading = [&](Value v) -> Value {
-      auto vTy = cast<VectorType>(v.getType());
-      assert(vTy.getShape().front() == 1 &&
-             "expected unit leading dim to collapse");
-      SmallVector<int64_t> shape2D(vTy.getShape().begin() + 1,
-                                   vTy.getShape().end());
-      return vector::ShapeCastOp::create(
-          rewriter, loc, VectorType::get(shape2D, vTy.getElementType()), v);
-    };
-
-    if (batchless) {
-      lhs = expandLeading(lhs);
-      res = expandLeading(res);
-    }
-
-    int64_t leadingN = batchless ? 1 : sizes.n;
-    int64_t wSizeStep = strideW == 1 ? sizes.w : 1;
-    FailureOr<Value> kernelRes =
-        depthwise1DKernel(lhs, rhs, res, leadingN, sizes.w, sizes.c, sizes.kw,
-                          wSizeStep, flatten);
-    if (failed(kernelRes))
-      return failure();
-
-    Value kernelVec = *kernelRes;
-    if (batchless)
-      kernelVec = collapseLeading(kernelVec);
-
-    return writeAndPostTranspose(kernelVec, read.res, perms.res);
-  }
-
   /// Lower:
   ///   *  lhs{n, w, c} * rhs{c} -> res{n, w, c} (flatten = false)
   ///   *  lhs{n, w * c} * rhs{c} -> res{n, w * c} (flatten = true)
@@ -4099,52 +4024,25 @@ public:
   // generate() pipeline helpers
   //===--------------------------------------------------------------------===//
 
-  /// Handle depthwise convolution. For canonical (NWC) layout, delegate to
-  /// the existing depthwiseConv() which supports masking/scalable channel
-  /// dim. For non-canonical layouts (e.g. NcwCw), pre-transpose at the
-  /// vector boundaries and run the canonical kernel; this path requires
-  /// fully-static shapes (no masking).
+  /// Entry point for depthwise convolution. Extracts the channel-dim
+  /// vector-size hint (only meaningful on the masked canonical path) from
+  /// the caller-supplied vector sizes and hands off to the unified
+  /// `depthwiseConv`.
   FailureOr<Operation *> handleDepthwise(ArrayRef<int64_t> inputVecSizes,
                                          ArrayRef<bool> inputScalableVecDims,
                                          bool flatten1DDepthwiseConv) {
-    LinalgOp linalgOp = cast<LinalgOp>(op);
-    Conv1DPerms perms = computeCanonicalPerms(linalgOp, config);
-
-    // The masked/scalable path (`depthwiseConv()`) builds 3D <N, W, C> vector
-    // types directly from the op's loop ranges and assumes the operand
-    // vectors are already in canonical NWC with a real batch dim. It is thus
-    // only valid when the layout is Batched *and* the tensor dims already
-    // appear in canonical order (identity permutations). All other cases
-    // (non-canonical batched, batchless canonical, batchless non-canonical)
-    // go through `depthwiseConvViaTranspose`, which performs any needed
-    // canonicalization via `vector.transpose` and handles batchless layouts
-    // by shape-casting to a unit leading dim around the kernel.
-    bool canUseMaskedPath =
-        perms.allIdentity() && config.layout == ConvLayoutKind::Batched;
-
-    if (canUseMaskedPath) {
-      int64_t vecChDimSize = 0;
-      bool vecChScalableFlag = false;
-      if (!inputVecSizes.empty()) {
-        DenseMap<unsigned, unsigned> loopToRes =
-            buildLoopToTensorDimMap(linalgOp.getIndexingMapsArray()[2]);
-        unsigned chTensorDim = loopToRes[dims().depth[0]];
-        vecChDimSize = inputVecSizes[chTensorDim];
-        vecChScalableFlag = inputScalableVecDims[chTensorDim];
-      }
-      return depthwiseConv(vecChDimSize, vecChScalableFlag,
-                           flatten1DDepthwiseConv);
+    int64_t vecChDimSize = 0;
+    bool vecChScalableFlag = false;
+    if (!inputVecSizes.empty()) {
+      LinalgOp linalgOp = cast<LinalgOp>(op);
+      DenseMap<unsigned, unsigned> loopToRes =
+          buildLoopToTensorDimMap(linalgOp.getIndexingMapsArray()[2]);
+      unsigned chTensorDim = loopToRes[dims().depth[0]];
+      vecChDimSize = inputVecSizes[chTensorDim];
+      vecChScalableFlag = inputScalableVecDims[chTensorDim];
     }
-
-    // `depthwiseConvViaTranspose` builds vector types from the static tensor
-    // shapes; dynamic operands would require threading masks through the
-    // transposes/shape_casts which is not yet implemented.
-    if (!lhsShapedType.hasStaticShape() || !rhsShapedType.hasStaticShape() ||
-        !resShapedType.hasStaticShape())
-      return rewriter.notifyMatchFailure(
-          op, "depthwise conv outside the canonical batched NWC layout "
-              "requires static shapes");
-    return depthwiseConvViaTranspose(perms, flatten1DDepthwiseConv);
+    return depthwiseConv(vecChDimSize, vecChScalableFlag,
+                         flatten1DDepthwiseConv);
   }
 
   /// Extract canonical loop sizes from ConvolutionDimensions.
@@ -4232,41 +4130,106 @@ public:
                         inverseApply(canonical.res, perms.res)};
   }
 
+  /// Wrap `opToMask` (a `vector.transfer_read` or `vector.transfer_write`)
+  /// in a `vector.mask` against a channel-dim mask; no-op when `useMask` is
+  /// false. `useMask` is only meaningful on layouts where the channel dim
+  /// is the trailing vector dim (canonical batched NWC).
+  Operation *maybeMaskXferOp(ArrayRef<int64_t> maskShape,
+                             ArrayRef<bool> scalableDims, Operation *opToMask,
+                             bool useMask) {
+    if (!useMask)
+      return opToMask;
+    auto maskType =
+        VectorType::get(maskShape, rewriter.getI1Type(), scalableDims);
+    SmallVector<bool> inBounds(maskShape.size(), true);
+    auto xferOp = cast<VectorTransferOpInterface>(opToMask);
+    xferOp->setAttr(xferOp.getInBoundsAttrName(),
+                    rewriter.getBoolArrayAttr(inBounds));
+    SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
+        cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);
+    Value maskOp =
+        vector::CreateMaskOp::create(rewriter, loc, maskType, mixedDims);
+    return mlir::vector::maskOperation(rewriter, opToMask, maskOp);
+  }
+
+  /// Read a single operand in its tensor-native layout, optionally wrapping
+  /// the `transfer_read` in a channel-dim `vector.mask`.
+  ///
+  /// `scalableTrailing` marks the trailing vector dim as scalable (only
+  /// valid with `useMask`, and only on the canonical batched layout).
+  /// `indexZero` is shared across all operands by the caller so
+  /// `transfer_read` indices fold to the same SSA value without relying
+  /// on a CSE pass.
+  Value readOperand(Value shaped, ShapedType shapedType,
+                    ArrayRef<int64_t> readShape, Value indexZero,
+                    bool scalableTrailing = false, bool useMask = false) {
+    Type eltType = shapedType.getElementType();
+    SmallVector<bool> scalableDims(readShape.size(), false);
+    if (scalableTrailing)
+      scalableDims.back() = true;
+    auto vecType = VectorType::get(readShape, eltType, scalableDims);
+    SmallVector<Value> indices(readShape.size(), indexZero);
+    auto read = vector::TransferReadOp::create(
+        rewriter, loc, vecType, shaped, indices,
+        arith::getZeroConstant(rewriter, loc, eltType));
+    Operation *maybeMasked =
+        maybeMaskXferOp(readShape, scalableDims, read.getOperation(), useMask);
+    return maybeMasked->getResult(0);
+  }
+
+  /// `vector.transpose` to canonical NWC form; no-op on identity `perm`.
+  Value transposeToCanonical(Value v, ArrayRef<int64_t> perm) {
+    if (perm.empty())
+      return v;
+    return vector::TransposeOp::create(rewriter, loc, v, perm);
+  }
+
+  /// Insert a unit leading dim via `vector.shape_cast` so batchless
+  /// operand vectors satisfy the 3D `depthwise1DKernel` contract. The
+  /// leading dim is non-scalable; trailing scalable flags are preserved.
+  Value expandUnitLeadingDim(Value v) {
+    auto vTy = cast<VectorType>(v.getType());
+    SmallVector<int64_t> shape = {1};
+    llvm::append_range(shape, vTy.getShape());
+    SmallVector<bool> scalable = {false};
+    llvm::append_range(scalable, vTy.getScalableDims());
+    return vector::ShapeCastOp::create(
+        rewriter, loc, VectorType::get(shape, vTy.getElementType(), scalable),
+        v);
+  }
+
+  /// Inverse of `expandUnitLeadingDim` for the kernel result. The leading
+  /// dim (which must be a non-scalable unit) is dropped; trailing scalable
+  /// flags are preserved.
+  Value collapseUnitLeadingDim(Value v) {
+    auto vTy = cast<VectorType>(v.getType());
+    assert(vTy.getShape().front() == 1 &&
+           "collapseUnitLeadingDim: expected unit leading dim");
+    assert(!vTy.getScalableDims().front() &&
+           "collapseUnitLeadingDim: leading dim must be non-scalable");
+    SmallVector<int64_t> shape(vTy.getShape().begin() + 1,
+                               vTy.getShape().end());
+    SmallVector<bool> scalable(vTy.getScalableDims().begin() + 1,
+                               vTy.getScalableDims().end());
+    return vector::ShapeCastOp::create(
+        rewriter, loc, VectorType::get(shape, vTy.getElementType(), scalable),
+        v);
+  }
+
   /// Read operand tensors and pre-transpose to canonical NWC form. `rhs` is
   /// nullptr for pooling.
   Conv1DOperandVecs readAndTranspose(const Conv1DShapes &readShapes,
                                      const Conv1DPerms &perms) {
     Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
-    Type lhsEltType = lhsShapedType.getElementType();
-    Type rhsEltType = rhsShapedType.getElementType();
-    Type resEltType = resShapedType.getElementType();
-
-    SmallVector<Value> lhsIndices(readShapes.lhs.size(), zero);
-    SmallVector<Value> rhsIndices(readShapes.rhs.size(), zero);
-    SmallVector<Value> resIndices(readShapes.res.size(), zero);
-
     Conv1DOperandVecs vecs;
-    vecs.lhs = vector::TransferReadOp::create(
-        rewriter, loc, VectorType::get(readShapes.lhs, lhsEltType), lhsShaped,
-        lhsIndices, arith::getZeroConstant(rewriter, loc, lhsEltType));
+    vecs.lhs = readOperand(lhsShaped, lhsShapedType, readShapes.lhs, zero);
     if (convKind() == ConvOperationKind::Conv)
-      vecs.rhs = vector::TransferReadOp::create(
-          rewriter, loc, VectorType::get(readShapes.rhs, rhsEltType), rhsShaped,
-          rhsIndices, arith::getZeroConstant(rewriter, loc, rhsEltType));
-    vecs.res = vector::TransferReadOp::create(
-        rewriter, loc, VectorType::get(readShapes.res, resEltType), resShaped,
-        resIndices, arith::getZeroConstant(rewriter, loc, resEltType));
-
-    if (!perms.lhs.empty())
-      vecs.lhs =
-          vector::TransposeOp::create(rewriter, loc, vecs.lhs, perms.lhs);
-    if (!perms.rhs.empty() && vecs.rhs)
-      vecs.rhs =
-          vector::TransposeOp::create(rewriter, loc, vecs.rhs, perms.rhs);
-    if (!perms.res.empty())
-      vecs.res =
-          vector::TransposeOp::create(rewriter, loc, vecs.res, perms.res);
-
+      vecs.rhs = readOperand(rhsShaped, rhsShapedType, readShapes.rhs, zero);
+    vecs.res = readOperand(resShaped, resShapedType, readShapes.res, zero);
+    vecs.lhs = transposeToCanonical(vecs.lhs, perms.lhs);
+    if (vecs.rhs)
+      vecs.rhs = transposeToCanonical(vecs.rhs, perms.rhs);
+    vecs.res = transposeToCanonical(vecs.res, perms.res);
     return vecs;
   }
 
@@ -4318,19 +4281,25 @@ public:
                                   resVals, config.layout);
   }
 
-  /// Post-transpose the result back to the original layout and write it.
+  /// Post-transpose the result back to the original layout and write it,
+  /// optionally wrapping the `transfer_write` in a channel-dim `vector.mask`.
   FailureOr<Operation *> writeAndPostTranspose(Value res,
                                                ArrayRef<int64_t> writeShape,
-                                               ArrayRef<int64_t> resPerm) {
+                                               ArrayRef<int64_t> resPerm,
+                                               bool scalableTrailing = false,
+                                               bool useMask = false) {
     if (!resPerm.empty()) {
       SmallVector<int64_t> invResPerm = invertPermutationVector(resPerm);
       res = vector::TransposeOp::create(rewriter, loc, res, invResPerm);
     }
     Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
     SmallVector<Value> resIndices(writeShape.size(), zero);
-    return vector::TransferWriteOp::create(rewriter, loc, res, resShaped,
-                                           resIndices)
-        .getOperation();
+    Operation *write = vector::TransferWriteOp::create(rewriter, loc, res,
+                                                       resShaped, resIndices);
+    SmallVector<bool> scalableDims(writeShape.size(), false);
+    if (scalableTrailing)
+      scalableDims.back() = true;
+    return maybeMaskXferOp(writeShape, scalableDims, write, useMask);
   }
 
   /// Generic entry point that handles any 1D convolution/pooling layout.
