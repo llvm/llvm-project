@@ -15,14 +15,14 @@
 
 namespace clang::tidy::utils::decl_ref_expr {
 
-/// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Stmt``.
+/// Returns set of all ``DeclRefExprs`` to ``ValueDecl`` within ``Stmt``.
 llvm::SmallPtrSet<const DeclRefExpr *, 16>
-allDeclRefExprs(const ValueDecl &VarDecl, const Stmt &Stmt,
+allDeclRefExprs(const ValueDecl &ValueDecl, const Stmt &Stmt,
                 ASTContext &Context);
 
-/// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Decl``.
+/// Returns set of all ``DeclRefExprs`` to ``ValueDecl`` within ``Decl``.
 llvm::SmallPtrSet<const DeclRefExpr *, 16>
-allDeclRefExprs(const ValueDecl &VarDecl, const Decl &Decl,
+allDeclRefExprs(const ValueDecl &ValueDecl, const Decl &Decl,
                 ASTContext &Context);
 
 /// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Stmt`` where

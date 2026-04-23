@@ -366,23 +366,24 @@ bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
   return isSetDifferenceEmpty(AllDeclRefs, ConstReferenceDeclRefs);
 }
 
-SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &VarDecl,
+SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
                                                      const Stmt &Stmt,
                                                      ASTContext &Context) {
   auto Matches = match(
-      findAll(declRefExpr(to(valueDecl(equalsNode(&VarDecl)))).bind("declRef")),
+      findAll(
+          declRefExpr(to(valueDecl(equalsNode(&ValueDecl)))).bind("declRef")),
       Stmt, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   return DeclRefs;
 }
 
-SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &VarDecl,
+SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
                                                      const Decl &Decl,
                                                      ASTContext &Context) {
   auto Matches = match(
       decl(forEachDescendant(
-          declRefExpr(to(valueDecl(equalsNode(&VarDecl)))).bind("declRef"))),
+          declRefExpr(to(valueDecl(equalsNode(&ValueDecl)))).bind("declRef"))),
       Decl, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
