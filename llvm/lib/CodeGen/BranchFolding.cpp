@@ -1559,10 +1559,10 @@ ReoptimizeBlock:
     if (TII->isUnconditionalTailCall(TailCall)) {
       SmallVector<MachineBasicBlock *> PredsChanged;
       for (auto *Pred : MBB->predecessors()) {
-        bool PredHasHotSuccessor = false;
-        for (MachineBasicBlock *const PredSucc : Pred->successors()) {
-          PredHasHotSuccessor |= MBPI.isEdgeHot(Pred, PredSucc);
-        bool PredHasHotSuccessor = llvm::any_of(Pred->successors(), [&](auto *PredSucc) { return MBPI.isEdgeHot(Pred, PredSucc); });
+        bool PredHasHotSuccessor =
+            llvm::any_of(Pred->successors(), [&](auto *PredSucc) {
+              return MBPI.isEdgeHot(Pred, PredSucc);
+            });
 
         MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
         SmallVector<MachineOperand, 4> PredCond;
