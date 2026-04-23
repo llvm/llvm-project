@@ -678,6 +678,12 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
                    MI.getOperand(2).getImm() ==
                        SPIRV::InstructionSet::
                            NonSemantic_Shader_DebugInfo_100) {
+          // TODO: This branch is dead. SPIRVNonSemanticDebugHandler emits NSDI
+          // instructions directly as MCInsts at print time; no
+          // MachineInstructions with the NSDI ext set are created anymore.
+          // Remove this block and
+          // MB_NonSemanticGlobalDI once per-function NSDI emission is confirmed
+          // not to need MIR routing.
           MachineOperand Ins = MI.getOperand(3);
           namespace NS = SPIRV::NonSemanticExtInst;
           static constexpr int64_t GlobalNonSemanticDITy[] = {
@@ -1014,6 +1020,8 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         static_cast<SPIRV::LinkageType::LinkageType>(LinkageOp);
     if (LnkType == SPIRV::LinkageType::LinkOnceODR)
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_linkonce_odr);
+    else if (LnkType == SPIRV::LinkageType::Weak)
+      Reqs.addExtension(SPIRV::Extension::SPV_AMD_weak_linkage);
   } else if (Dec == SPIRV::Decoration::CacheControlLoadINTEL ||
              Dec == SPIRV::Decoration::CacheControlStoreINTEL) {
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_cache_controls);

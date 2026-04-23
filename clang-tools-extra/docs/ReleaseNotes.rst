@@ -503,6 +503,11 @@ Changes in existing checks
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
 
+- Improved :doc:`readability-identifier-length
+  <clang-tidy/checks/readability/identifier-length>` check by adding a new
+  option, named `LineCountThreshold`, to silence warnings for short-lived
+  variables, based on distance between declaration and last use.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
 
@@ -558,6 +563,11 @@ Changes in existing checks
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
+
+- Improved :doc:`readability-use-anyofallof
+  <clang-tidy/checks/readability/use-anyofallof>` check by emitting a diagnostic
+  note to suggest materializing the temporary range when iterating over temporary
+  range expressions or initializer lists, as reusing them directly could be unsafe.
 
 Removed checks
 ^^^^^^^^^^^^^^

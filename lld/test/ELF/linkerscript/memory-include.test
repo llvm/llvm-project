@@ -1,20 +1,35 @@
 # REQUIRES: x86
+## Test INCLUDE inside MEMORY { ... }.
 
-# RUN: echo '.section .text,"ax"; .global _start; nop' > %t.s
-# RUN: echo '.section .data,"aw"; .quad 0' >> %t.s
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t.s -o %t.o
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 
-# RUN: rm -rf %t.dir && mkdir -p %t.dir
-# RUN: echo "RAM2 (rwx): ORIGIN = 0x3000, LENGTH = 0x100" > %t.dir/inc.script
-# RUN: ld.lld -o %t.elf --script %s %t.o -L %t.dir
-# RUN: llvm-objdump --section-headers %t.elf | FileCheck %s
+# RUN: ld.lld -T a.lds a.o -o out
+# RUN: llvm-objdump --section-headers out | FileCheck %s
 # CHECK: .data         00000008 0000000000002000 DATA
 # CHECK: .data2        00000008 0000000000003000 DATA
 
+## An empty INCLUDE between two region declarations is accepted.
+# RUN: ld.lld -T empty.lds a.o -o empty
+# RUN: llvm-readelf -Sl empty | FileCheck %s --check-prefix=EMPTY
+# EMPTY:      .text PROGBITS 0000000000001000 {{.*}} AX
+# EMPTY-NEXT: .data PROGBITS 0000000000002000 {{.*}} WA
+# EMPTY:      LOAD {{.*}} 0x0000000000001000 0x0000000000001000 {{.*}} R E
+# EMPTY-NEXT: LOAD {{.*}} 0x0000000000002000 0x0000000000002000 {{.*}} RW
+
+#--- a.s
+.section .text,"ax"
+.global _start
+_start: nop
+
+.section .data,"aw"
+.quad 0
+
+#--- a.lds
 MEMORY {
   ROM (rwx): ORIGIN = 0x1000, LENGTH = 0x100
   RAM (rwx): ORIGIN = 0x2000, LENGTH = 0x100
-  INCLUDE "inc.script"
+  INCLUDE "inc.lds"
 }
 
 SECTIONS {
@@ -22,3 +37,20 @@ SECTIONS {
   .data : { *(.data*) } > RAM
   .data2 : { QUAD(0) } > RAM2
 }
+
+#--- inc.lds
+RAM2 (rwx): ORIGIN = 0x3000, LENGTH = 0x100
+
+#--- empty.lds
+MEMORY {
+  ROM (rx): ORIGIN = 0x1000, LENGTH = 0x100
+  INCLUDE "inc-empty.lds"
+  RAM (rw): ORIGIN = 0x2000, LENGTH = 0x100
+}
+
+SECTIONS {
+  .text : { *(.text*) } > ROM
+  .data : { *(.data*) } > RAM
+}
+
+#--- inc-empty.lds
