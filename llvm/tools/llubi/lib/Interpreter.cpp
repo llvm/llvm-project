@@ -171,12 +171,12 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           ScalarFn) {
     const AnyValue &LHS = getValue(CB.getOperand(0));
     const AnyValue &RHS = getValue(CB.getOperand(1));
-    if (!LHS.isAggregate())
-      return visitIntBinOpWithResult(
-          CB, [&](const APInt &ScalarLHS, const APInt &ScalarRHS) -> AnyValue {
-            auto [Res, Overflow] = ScalarFn(ScalarLHS, ScalarRHS);
-            return std::vector{AnyValue(Res), AnyValue::boolean(Overflow)};
-          });
+    if (!LHS.isAggregate()) {
+      if (LHS.isPoison() || RHS.isPoison())
+        return std::vector{AnyValue::poison(), AnyValue::poison()};
+      auto [Res, Overflow] = ScalarFn(LHS.asInteger(), RHS.asInteger());
+      return std::vector{AnyValue(Res), AnyValue::boolean(Overflow)};
+    }
 
     auto &LHSVec = LHS.asAggregate();
     auto &RHSVec = RHS.asAggregate();
@@ -598,13 +598,13 @@ public:
           [IID](const APInt &Op1, const APInt &Op2,
                 const APInt &Op3) -> AnyValue {
             const unsigned BitWidth = Op1.getBitWidth();
-            const std::uint64_t ShiftAmount = Op3.urem(BitWidth);
+            const uint64_t ShiftAmount = Op3.urem(BitWidth);
             const bool IsFShr = IID == Intrinsic::fshr;
             if (ShiftAmount == 0)
               return IsFShr ? Op2 : Op1;
-            const std::uint64_t LShrAmount =
+            const uint64_t LShrAmount =
                 IsFShr ? ShiftAmount : BitWidth - ShiftAmount;
-            const std::uint64_t ShlAmount =
+            const uint64_t ShlAmount =
                 !IsFShr ? ShiftAmount : BitWidth - ShiftAmount;
             return Op1.shl(ShlAmount) | Op2.lshr(LShrAmount);
           });
