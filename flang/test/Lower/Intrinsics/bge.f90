@@ -239,3 +239,13 @@ subroutine bge_boz_wide(a, c)
   ! CHECK: %[[RES:.*]] = fir.convert %[[CMP]] : (i1) -> !fir.logical<4>
   ! CHECK: hlfir.assign %[[RES]] to %{{.*}}
 end subroutine bge_boz_wide
+
+! Test BOZ literal for both arguments (folded at compile time)
+! CHECK-LABEL: func.func @_QPbge_boz_both(
+subroutine bge_boz_both(c)
+  logical :: c
+  c = bge(z'FF', z'FE')
+  ! CHECK: %[[R:.*]] = arith.constant true
+  ! CHECK: %[[V:.*]] = fir.convert %[[R]] : (i1) -> !fir.logical<4>
+  ! CHECK: hlfir.assign %[[V]] to %{{.*}}
+end subroutine bge_boz_both
