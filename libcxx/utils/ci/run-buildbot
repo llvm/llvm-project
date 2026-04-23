@@ -451,6 +451,10 @@ generic-hardening-mode-debug)
 generic-llvm-libc)
     clean
 
+    # Install rsync, which is needed for installing the linux kernel headers.
+    apt-get update
+    apt-get install -y rsync
+
     # Install kernel headers from a known-good Linux kernel version to ensure
     # the test is hermetic.
     export LINUX_VERSION=7.0.1
