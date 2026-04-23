@@ -576,3 +576,31 @@ entry:
   %0 = call <2 x i1> @llvm.loop.dependence.war.mask.v2i1.i64(i64 %a, i64 %b, i64 4)
   ret <2 x i1> %0
 }
+
+define <16 x i1> @war_mask_i16(i16 %a, i16 %b) {
+; CHECK-LABEL: war_mask_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    and w9, w1, #0xffff
+; CHECK-NEXT:    whilewr p0.b, x8, x9
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1.i16(i16 %a, i16 %b, i16 1)
+  ret <16 x i1> %0
+}
+
+define <16 x i1> @raw_mask_i16(i16 %a, i16 %b) {
+; CHECK-LABEL: raw_mask_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    and w9, w1, #0xffff
+; CHECK-NEXT:    whilerw p0.b, x8, x9
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <16 x i1> @llvm.loop.dependence.raw.mask.v16i1.i16(i16 %a, i16 %b, i16 1)
+  ret <16 x i1> %0
+}
