@@ -181,7 +181,7 @@ void OptionGroupValueObjectDisplay::OptionParsingStarting(
     auto max_depth_config = target_sp->GetMaximumDepthOfChildrenToDisplay();
     max_depth = std::get<uint32_t>(max_depth_config);
     max_depth_is_default = std::get<bool>(max_depth_config);
-    print_braces = target_sp->GetPrintBraces();
+    print_braces = target_sp->GetDebugger().GetPrintBraces();
   } else {
     // If we don't have any targets, then dynamic values won't do us much good.
     use_dynamic = lldb::eNoDynamicValues;

@@ -101,9 +101,6 @@ let Definition = "target", Path = "target" in {
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
     DefaultUnsignedValue<5>,
     Desc<"Maximum depth to expand children.">;
-  def PrintBraces: Property<"print-braces", "Boolean">,
-    DefaultTrue,
-    Desc<"Print curly braces around structures when displaying variable values.">;
   def MaxSummaryLength: Property<"max-string-summary-length", "UInt64">,
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of characters to show when using %s in summary strings.">;

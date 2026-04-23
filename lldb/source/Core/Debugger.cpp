@@ -723,6 +723,12 @@ bool Debugger::GetAutoOneLineSummaries() const {
       idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
+bool Debugger::GetPrintBraces() const {
+  const uint32_t idx = ePropertyPrintBraces;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value != 0);
+}
+
 bool Debugger::GetEscapeNonPrintables() const {
   const uint32_t idx = ePropertyEscapeNonPrintables;
   return GetPropertyAtIndexAs<bool>(

@@ -5004,12 +5004,6 @@ TargetProperties::GetMaximumDepthOfChildrenToDisplay() const {
   return {option_value->GetCurrentValue(), is_default};
 }
 
-bool TargetProperties::GetPrintBraces() const {
-  const uint32_t idx = ePropertyPrintBraces;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_target_properties[idx].default_uint_value != 0);
-}
-
 uint32_t TargetProperties::GetMaximumSizeOfStringSummary() const {
   const uint32_t idx = ePropertyMaxSummaryLength;
   return GetPropertyAtIndexAs<uint64_t>(
