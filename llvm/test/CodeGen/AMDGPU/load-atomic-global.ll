@@ -26,23 +26,25 @@ define amdgpu_cs void @atomic_load_f32x2_global_monotonic_agent(ptr addrspace(1)
   ret void
 }
 
-define amdgpu_cs void @atomic_load_f32x2_flat_monotonic_agent(ptr addrspace(0) %p, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_load_f32x2_flat_monotonic_agent:
+define amdgpu_cs void @atomic_load_f32x2_global_seq_cst_agent(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; SDAG-LABEL: atomic_load_f32x2_global_seq_cst_agent:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
+; SDAG-NEXT:    s_wait_loadcnt 0x0
+; SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; SDAG-NEXT:    v_add_f32_e32 v0, v0, v1
 ; SDAG-NEXT:    global_store_b32 v[2:3], v0, off
 ; SDAG-NEXT:    s_endpgm
 ;
-; GISEL-LABEL: atomic_load_f32x2_flat_monotonic_agent:
+; GISEL-LABEL: atomic_load_f32x2_global_seq_cst_agent:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GISEL-NEXT:    global_store_b32 v[2:3], v0, off
 ; GISEL-NEXT:    s_endpgm
-  %a0 = load atomic <2 x float>, ptr addrspace(0) %p syncscope("agent") monotonic, align 8
+  %a0 = load atomic <2 x float>, ptr addrspace(1) %p syncscope("agent") seq_cst, align 8
   %num1 = extractelement <2 x float> %a0, i32 0
   %num2 = extractelement <2 x float> %a0, i32 1
   %res = fadd float %num1, %num2
@@ -71,88 +73,6 @@ define amdgpu_cs void @atomic_load_f32x2_global_monotonic_wavefront(ptr addrspac
   %num2 = extractelement <2 x float> %a0, i32 1
   %res = fadd float %num1, %num2
   store float %res, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_load_f32x2_global_seq_cst_agent(ptr addrspace(1) %p, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_load_f32x2_global_seq_cst_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
-; SDAG-NEXT:    s_wait_loadcnt 0x0
-; SDAG-NEXT:    global_inv scope:SCOPE_DEV
-; SDAG-NEXT:    v_add_f32_e32 v0, v0, v1
-; SDAG-NEXT:    global_store_b32 v[2:3], v0, off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_load_f32x2_global_seq_cst_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    global_inv scope:SCOPE_DEV
-; GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GISEL-NEXT:    global_store_b32 v[2:3], v0, off
-; GISEL-NEXT:    s_endpgm
-  %a0 = load atomic <2 x float>, ptr addrspace(1) %p syncscope("agent") seq_cst, align 8
-  %num1 = extractelement <2 x float> %a0, i32 0
-  %num2 = extractelement <2 x float> %a0, i32 1
-  %res = fadd float %num1, %num2
-  store float %res, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f32x2_global_monotonic_agent(<2 x float> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_f32x2_global_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f32x2_global_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x float> %in, ptr addrspace(1) %out syncscope("agent") monotonic, align 8
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f32x2_flat_monotonic_agent(<2 x float> %in, ptr addrspace(0) %out) {
-; SDAG-LABEL: atomic_store_f32x2_flat_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f32x2_flat_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x float> %in, ptr addrspace(0) %out syncscope("agent") monotonic, align 8
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f32x2_global_seq_cst_agent(<2 x float> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_f32x2_global_seq_cst_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f32x2_global_seq_cst_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x float> %in, ptr addrspace(1) %out syncscope("agent") seq_cst, align 8
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f32x2_global_seq_cst_wavefront(<2 x float> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_f32x2_global_seq_cst_wavefront:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f32x2_global_seq_cst_wavefront:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x float> %in, ptr addrspace(1) %out syncscope("wavefront") seq_cst, align 8
   ret void
 }
 
@@ -236,88 +156,6 @@ define amdgpu_cs void @atomic_load_f16x2_global_monotonic_wavefront(ptr addrspac
   ret void
 }
 
-define amdgpu_cs void @atomic_load_f16x2_flat_monotonic_agent(ptr addrspace(0) %p, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_load_f16x2_flat_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
-; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; SDAG-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
-; SDAG-NEXT:    global_store_b16 v[2:3], v0, off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_load_f16x2_flat_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
-; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
-; GISEL-NEXT:    global_store_b16 v[2:3], v0, off
-; GISEL-NEXT:    s_endpgm
-  %a0 = load atomic <2 x half>, ptr addrspace(0) %p syncscope("agent") monotonic, align 4
-  %num1 = extractelement <2 x half> %a0, i32 0
-  %num2 = extractelement <2 x half> %a0, i32 1
-  %res = fadd half %num1, %num2
-  store half %res, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f16x2_global_monotonic_agent(<2 x half> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_f16x2_global_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f16x2_global_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x half> %in, ptr addrspace(1) %out syncscope("agent") monotonic, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f16x2_global_seq_cst_agent(<2 x half> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_f16x2_global_seq_cst_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f16x2_global_seq_cst_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x half> %in, ptr addrspace(1) %out syncscope("agent") seq_cst, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f16x2_global_monotonic_wavefront(<2 x half> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_f16x2_global_monotonic_wavefront:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b32 v[1:2], v0, off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f16x2_global_monotonic_wavefront:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b32 v[1:2], v0, off
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x half> %in, ptr addrspace(1) %out syncscope("wavefront") monotonic, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f16x2_flat_monotonic_agent(<2 x half> %in, ptr addrspace(0) %out) {
-; SDAG-LABEL: atomic_store_f16x2_flat_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_store_b32 v[1:2], v0 scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f16x2_flat_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_store_b32 v[1:2], v0 scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x half> %in, ptr addrspace(0) %out syncscope("agent") monotonic, align 4
-  ret void
-}
-
 define amdgpu_cs void @atomic_load_i16x2_global_monotonic_agent(ptr addrspace(1) %p, ptr addrspace(1) %out) {
 ; SDAG-LABEL: atomic_load_i16x2_global_monotonic_agent:
 ; SDAG:       ; %bb.0:
@@ -398,88 +236,6 @@ define amdgpu_cs void @atomic_load_i16x2_global_monotonic_wavefront(ptr addrspac
   ret void
 }
 
-define amdgpu_cs void @atomic_load_i16x2_flat_monotonic_agent(ptr addrspace(0) %p, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_load_i16x2_flat_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
-; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; SDAG-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
-; SDAG-NEXT:    global_store_b16 v[2:3], v0, off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_load_i16x2_flat_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
-; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
-; GISEL-NEXT:    global_store_b16 v[2:3], v0, off
-; GISEL-NEXT:    s_endpgm
-  %a = load atomic <2 x i16>, ptr addrspace(0) %p syncscope("agent") monotonic, align 4
-  %e0 = extractelement <2 x i16> %a, i32 0
-  %e1 = extractelement <2 x i16> %a, i32 1
-  %sum = add i16 %e0, %e1
-  store i16 %sum, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_i16x2_global_monotonic_agent(<2 x i16> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_i16x2_global_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_i16x2_global_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x i16> %in, ptr addrspace(1) %out syncscope("agent") monotonic, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_i16x2_global_seq_cst_agent(<2 x i16> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_i16x2_global_seq_cst_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_i16x2_global_seq_cst_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x i16> %in, ptr addrspace(1) %out syncscope("agent") seq_cst, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_i16x2_global_monotonic_wavefront(<2 x i16> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_i16x2_global_monotonic_wavefront:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b32 v[1:2], v0, off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_i16x2_global_monotonic_wavefront:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b32 v[1:2], v0, off
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x i16> %in, ptr addrspace(1) %out syncscope("wavefront") monotonic, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_i16x2_flat_monotonic_agent(<2 x i16> %in, ptr addrspace(0) %out) {
-; SDAG-LABEL: atomic_store_i16x2_flat_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_store_b32 v[1:2], v0 scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_i16x2_flat_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_store_b32 v[1:2], v0 scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <2 x i16> %in, ptr addrspace(0) %out syncscope("agent") monotonic, align 4
-  ret void
-}
-
 define amdgpu_cs void @atomic_load_f16x4_global_monotonic_agent(ptr addrspace(1) %p, ptr addrspace(1) %out) {
 ; SDAG-LABEL: atomic_load_f16x4_global_monotonic_agent:
 ; SDAG:       ; %bb.0:
@@ -516,7 +272,6 @@ define amdgpu_cs void @atomic_load_f16x4_global_monotonic_agent(ptr addrspace(1)
   store half %res, ptr addrspace(1) %out, align 4
   ret void
 }
-
 
 define amdgpu_cs void @atomic_load_f16x4_global_seq_cst_agent(ptr addrspace(1) %p, ptr addrspace(1) %out) {
 ; SDAG-LABEL: atomic_load_f16x4_global_seq_cst_agent:
@@ -591,99 +346,6 @@ define amdgpu_cs void @atomic_load_f16x4_global_monotonic_wavefront(ptr addrspac
   %mul = fmul half %num3, %num4
   %res = fadd half %add, %mul
   store half %res, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_load_f16x4_flat_monotonic_agent(ptr addrspace(0) %p, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_load_f16x4_flat_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; SDAG-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
-; SDAG-NEXT:    v_mul_f16_e32 v0.h, v1.l, v1.h
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
-; SDAG-NEXT:    global_store_b16 v[2:3], v0, off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_load_f16x4_flat_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GISEL-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-NEXT:    v_add_f16_e32 v0.l, v0.l, v4.l
-; GISEL-NEXT:    v_mul_f16_e32 v0.h, v1.l, v5.l
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
-; GISEL-NEXT:    global_store_b16 v[2:3], v0, off
-; GISEL-NEXT:    s_endpgm
-  %a0 = load atomic <4 x half>, ptr addrspace(0) %p syncscope("agent") monotonic, align 8
-  %num1 = extractelement <4 x half> %a0, i32 0
-  %num2 = extractelement <4 x half> %a0, i32 1
-  %num3 = extractelement <4 x half> %a0, i32 2
-  %num4 = extractelement <4 x half> %a0, i32 3
-  %add = fadd half %num1, %num2
-  %mul = fmul half %num3, %num4
-  %res = fadd half %add, %mul
-  store half %res, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f16x4_global_monotonic_agent(<4 x half> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_f16x4_global_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f16x4_global_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <4 x half> %in, ptr addrspace(1) %out syncscope("agent") monotonic, align 8
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f16x4_global_seq_cst_agent(<4 x half> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_f16x4_global_seq_cst_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f16x4_global_seq_cst_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <4 x half> %in, ptr addrspace(1) %out syncscope("agent") seq_cst, align 8
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f16x4_global_monotonic_wavefront(<4 x half> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_f16x4_global_monotonic_wavefront:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f16x4_global_monotonic_wavefront:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GISEL-NEXT:    s_endpgm
-  store atomic <4 x half> %in, ptr addrspace(1) %out syncscope("wavefront") monotonic, align 8
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_f16x4_flat_monotonic_agent(<4 x half> %in, ptr addrspace(0) %out) {
-; SDAG-LABEL: atomic_store_f16x4_flat_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_f16x4_flat_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <4 x half> %in, ptr addrspace(0) %out syncscope("agent") monotonic, align 8
   ret void
 }
 
@@ -788,95 +450,5 @@ define amdgpu_cs void @atomic_load_i16x4_global_monotonic_wavefront(ptr addrspac
   %mul = mul i16 %num3, %num4
   %res = add i16 %add, %mul
   store i16 %res, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_load_i16x4_flat_monotonic_agent(ptr addrspace(0) %p, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_load_i16x4_flat_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; SDAG-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-NEXT:    v_mad_u16 v0.l, v1.l, v1.h, v0.l
-; SDAG-NEXT:    global_store_b16 v[2:3], v0, off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_load_i16x4_flat_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GISEL-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_add_nc_u16 v0.l, v0.l, v4.l
-; GISEL-NEXT:    v_mad_u16 v0.l, v1.l, v5.l, v0.l
-; GISEL-NEXT:    global_store_b16 v[2:3], v0, off
-; GISEL-NEXT:    s_endpgm
-  %a0 = load atomic <4 x i16>, ptr addrspace(0) %p syncscope("agent") monotonic, align 8
-  %num1 = extractelement <4 x i16> %a0, i32 0
-  %num2 = extractelement <4 x i16> %a0, i32 1
-  %num3 = extractelement <4 x i16> %a0, i32 2
-  %num4 = extractelement <4 x i16> %a0, i32 3
-  %add = add i16 %num1, %num2
-  %mul = mul i16 %num3, %num4
-  %res = add i16 %add, %mul
-  store i16 %res, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_i16x4_global_monotonic_agent(<4 x i16> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_i16x4_global_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_i16x4_global_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <4 x i16> %in, ptr addrspace(1) %out syncscope("agent") monotonic, align 8
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_i16x4_global_seq_cst_agent(<4 x i16> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_i16x4_global_seq_cst_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_i16x4_global_seq_cst_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <4 x i16> %in, ptr addrspace(1) %out syncscope("agent") seq_cst, align 8
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_i16x4_global_monotonic_wavefront(<4 x i16> %in, ptr addrspace(1) %out) {
-; SDAG-LABEL: atomic_store_i16x4_global_monotonic_wavefront:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_i16x4_global_monotonic_wavefront:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GISEL-NEXT:    s_endpgm
-  store atomic <4 x i16> %in, ptr addrspace(1) %out syncscope("wavefront") monotonic, align 8
-  ret void
-}
-
-define amdgpu_cs void @atomic_store_i16x4_flat_monotonic_agent(<4 x i16> %in, ptr addrspace(0) %out) {
-; SDAG-LABEL: atomic_store_i16x4_flat_monotonic_agent:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_DEV
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: atomic_store_i16x4_flat_monotonic_agent:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_DEV
-; GISEL-NEXT:    s_endpgm
-  store atomic <4 x i16> %in, ptr addrspace(0) %out syncscope("agent") monotonic, align 8
   ret void
 }
