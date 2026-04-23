@@ -3688,7 +3688,8 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
   // Traverse all the recipes in the VPlan and collect the poison-generating
   // recipes in the backward slice starting at the address of a VPWidenRecipe or
   // VPInterleaveRecipe.
-  auto Iter = vp_depth_first_deep(Plan.getEntry());
+  auto Iter =
+      vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntryBasicBlock());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &Recipe : *VPBB) {
       if (auto *WidenRec = dyn_cast<VPWidenMemoryRecipe>(&Recipe)) {
