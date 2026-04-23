@@ -477,11 +477,10 @@ define void @vnsrl_64_i64(ptr %in, ptr %out) {
 ; ZVZIP:       # %bb.0: # %entry
 ; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vle64.v v8, (a0)
-; ZVZIP-NEXT:    vmv.v.i v0, 1
-; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vi v9, v8, 2
-; ZVZIP-NEXT:    vslidedown.vi v9, v8, 1, v0.t
-; ZVZIP-NEXT:    vse64.v v9, (a1)
+; ZVZIP-NEXT:    vpairo.vv v10, v8, v9
+; ZVZIP-NEXT:    vse64.v v10, (a1)
 ; ZVZIP-NEXT:    ret
 entry:
   %0 = load <4 x i64>, ptr %in, align 8
@@ -567,11 +566,10 @@ define void @vnsrl_64_double(ptr %in, ptr %out) {
 ; ZVZIP:       # %bb.0: # %entry
 ; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vle64.v v8, (a0)
-; ZVZIP-NEXT:    vmv.v.i v0, 1
-; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vi v9, v8, 2
-; ZVZIP-NEXT:    vslidedown.vi v9, v8, 1, v0.t
-; ZVZIP-NEXT:    vse64.v v9, (a1)
+; ZVZIP-NEXT:    vpairo.vv v10, v8, v9
+; ZVZIP-NEXT:    vse64.v v10, (a1)
 ; ZVZIP-NEXT:    ret
 entry:
   %0 = load <4 x double>, ptr %in, align 8
@@ -1343,12 +1341,11 @@ define void @vnsrl_32_i32_two_source(ptr %in0, ptr %in1, ptr %out) {
 ;
 ; ZVZIP-LABEL: vnsrl_32_i32_two_source:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; ZVZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; ZVZIP-NEXT:    vle32.v v8, (a0)
 ; ZVZIP-NEXT:    vle32.v v9, (a1)
-; ZVZIP-NEXT:    vmv.v.i v0, 1
-; ZVZIP-NEXT:    vslidedown.vi v9, v8, 1, v0.t
-; ZVZIP-NEXT:    vse32.v v9, (a2)
+; ZVZIP-NEXT:    vpairo.vv v10, v8, v9
+; ZVZIP-NEXT:    vse32.v v10, (a2)
 ; ZVZIP-NEXT:    ret
 entry:
   %0 = load <2 x i32>, ptr %in0, align 4
@@ -1434,12 +1431,11 @@ define void @vnsrl_32_float_two_source(ptr %in0, ptr %in1, ptr %out) {
 ;
 ; ZVZIP-LABEL: vnsrl_32_float_two_source:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; ZVZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; ZVZIP-NEXT:    vle32.v v8, (a0)
 ; ZVZIP-NEXT:    vle32.v v9, (a1)
-; ZVZIP-NEXT:    vmv.v.i v0, 1
-; ZVZIP-NEXT:    vslidedown.vi v9, v8, 1, v0.t
-; ZVZIP-NEXT:    vse32.v v9, (a2)
+; ZVZIP-NEXT:    vpairo.vv v10, v8, v9
+; ZVZIP-NEXT:    vse32.v v10, (a2)
 ; ZVZIP-NEXT:    ret
 entry:
   %0 = load <2 x float>, ptr %in0, align 4
@@ -1525,12 +1521,11 @@ define void @vnsrl_64_i64_two_source(ptr %in0, ptr %in1, ptr %out) {
 ;
 ; ZVZIP-LABEL: vnsrl_64_i64_two_source:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vle64.v v8, (a0)
 ; ZVZIP-NEXT:    vle64.v v9, (a1)
-; ZVZIP-NEXT:    vmv.v.i v0, 1
-; ZVZIP-NEXT:    vslidedown.vi v9, v8, 1, v0.t
-; ZVZIP-NEXT:    vse64.v v9, (a2)
+; ZVZIP-NEXT:    vpairo.vv v10, v8, v9
+; ZVZIP-NEXT:    vse64.v v10, (a2)
 ; ZVZIP-NEXT:    ret
 entry:
   %0 = load <2 x i64>, ptr %in0, align 8
@@ -1613,12 +1608,11 @@ define void @vnsrl_64_double_two_source(ptr %in0, ptr %in1, ptr %out) {
 ;
 ; ZVZIP-LABEL: vnsrl_64_double_two_source:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vle64.v v8, (a0)
 ; ZVZIP-NEXT:    vle64.v v9, (a1)
-; ZVZIP-NEXT:    vmv.v.i v0, 1
-; ZVZIP-NEXT:    vslidedown.vi v9, v8, 1, v0.t
-; ZVZIP-NEXT:    vse64.v v9, (a2)
+; ZVZIP-NEXT:    vpairo.vv v10, v8, v9
+; ZVZIP-NEXT:    vse64.v v10, (a2)
 ; ZVZIP-NEXT:    ret
 entry:
   %0 = load <2 x double>, ptr %in0, align 8
