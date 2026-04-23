@@ -15,6 +15,9 @@
 
 namespace llvm {
 
+class raw_ostream;
+class raw_fd_ostream;
+
 enum class ChangePrinter {
   None,
   Verbose,
@@ -80,6 +83,40 @@ std::error_code cleanUpTempFiles(ArrayRef<std::string> FileName);
 std::string doSystemDiff(StringRef Before, StringRef After,
                          StringRef OldLineFormat, StringRef NewLineFormat,
                          StringRef UnchangedLineFormat);
+
+// If not empty, print IR to files in this directory rather than written to
+// stderr.
+StringRef irDumpDirectory();
+inline bool shouldUseIRDumpDirectory() { return !irDumpDirectory().empty(); }
+
+// Generate the filename to use when dumping IR to files.
+enum class IRDumpFileSuffixType { Before, After, Invalidated };
+std::string irDumpFilename(StringRef Kind, StringRef PassName,
+                           std::optional<unsigned> PassNumber,
+                           IRDumpFileSuffixType SuffixType);
+
+// Helper class to manage dumping IR to files vs stderr.
+class IRDumpStream {
+  raw_fd_ostream *fstream;
+  raw_ostream &fallback;
+
+public:
+  // Build a banner appropriate for passing to the IRDumpStream constructor
+  // below.
+  //
+  // FIXME: Use structured data rather than a string.
+  static std::string buildBanner(llvm::StringRef PassName,
+                                 llvm::StringRef PassID,
+                                 IRDumpFileSuffixType SuffixType);
+
+  // If dumping to files, this will open a file with the appropriate
+  // pathname. 'Kind' and 'Banner' are used to generate the filename used.
+  IRDumpStream(StringRef Kind, StringRef Banner, raw_ostream &fallback);
+  ~IRDumpStream();
+
+  // If dumping to files, returns the file output stream, otherwise 'fallback'.
+  raw_ostream &os();
+};
 
 } // namespace llvm
 

@@ -46,9 +46,10 @@ struct MachineFunctionPrinterPass : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (!isFunctionInPrintList(MF.getName()))
       return false;
-    OS << "# " << Banner << ":\n";
+    IRDumpStream dmp("machine-function", Banner, OS);
+    dmp.os() << "# " << Banner << ":\n";
     auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
-    MF.print(OS, SIWrapper ? &SIWrapper->getSI() : nullptr);
+    MF.print(dmp.os(), SIWrapper ? &SIWrapper->getSI() : nullptr);
     return false;
   }
 };

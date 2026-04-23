@@ -128,13 +128,6 @@ static cl::list<unsigned> PrintAfterPassNumber(
     cl::desc("Print IR after the passes with specified numbers as "
              "reported by print-pass-numbers"));
 
-static cl::opt<std::string> IRDumpDirectory(
-    "ir-dump-directory",
-    cl::desc("If specified, IR printed using the "
-             "-print-[before|after]{-all} options will be dumped into "
-             "files in this directory rather than written to stderr"),
-    cl::Hidden, cl::value_desc("filename"));
-
 static cl::opt<bool>
     DroppedVarStats("dropped-variable-stats", cl::Hidden,
                     cl::desc("Dump dropped debug variables stats"),
@@ -788,28 +781,10 @@ static std::string getIRFileDisplayName(Any IR) {
   return Result;
 }
 
-StringRef PrintIRInstrumentation::getFileSuffix(IRDumpFileSuffixType Type) {
-  static constexpr std::array FileSuffixes = {"-before.ll", "-after.ll",
-                                              "-invalidated.ll"};
-  return FileSuffixes[static_cast<size_t>(Type)];
-}
-
 std::string PrintIRInstrumentation::fetchDumpFilename(
     StringRef PassName, StringRef IRFileDisplayName, unsigned PassNumber,
     IRDumpFileSuffixType SuffixType) {
-  assert(!IRDumpDirectory.empty() &&
-         "The flag -ir-dump-directory must be passed to dump IR to files");
-
-  SmallString<64> Filename;
-  raw_svector_ostream FilenameStream(Filename);
-  FilenameStream << PassNumber;
-  FilenameStream << '-' << IRFileDisplayName << '-';
-  FilenameStream << PassName;
-  FilenameStream << getFileSuffix(SuffixType);
-
-  SmallString<128> ResultPath;
-  sys::path::append(ResultPath, IRDumpDirectory, Filename);
-  return std::string(ResultPath);
+  return irDumpFilename(IRFileDisplayName, PassName, PassNumber, SuffixType);
 }
 
 void PrintIRInstrumentation::pushPassRunDescriptor(StringRef PassID, Any IR,
@@ -880,7 +855,7 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
     unwrapAndPrint(Stream, IR);
   };
 
-  if (!IRDumpDirectory.empty()) {
+  if (shouldUseIRDumpDirectory()) {
     std::string DumpIRFilename =
         fetchDumpFilename(PassID, getIRFileDisplayName(IR), CurrentPassNumber,
                           IRDumpFileSuffixType::Before);
@@ -915,7 +890,7 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
     unwrapAndPrint(Stream, IR);
   };
 
-  if (!IRDumpDirectory.empty()) {
+  if (shouldUseIRDumpDirectory()) {
     std::string DumpIRFilename =
         fetchDumpFilename(PassID, getIRFileDisplayName(IR), CurrentPassNumber,
                           IRDumpFileSuffixType::After);
@@ -953,7 +928,7 @@ void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
     printIR(Stream, M);
   };
 
-  if (!IRDumpDirectory.empty()) {
+  if (shouldUseIRDumpDirectory()) {
     std::string DumpIRFilename =
         fetchDumpFilename(PassID, IRFileDisplayName, PassNumber,
                           IRDumpFileSuffixType::Invalidated);

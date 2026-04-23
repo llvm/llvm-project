@@ -736,10 +736,10 @@ void PMTopLevelManager::schedulePass(Pass *P) {
   }
 
   if (PI && !PI->isAnalysis() && shouldPrintBeforePass(PI->getPassArgument())) {
-    Pass *PP =
-        P->createPrinterPass(dbgs(), ("*** IR Dump Before " + P->getPassName() +
-                                      " (" + PI->getPassArgument() + ") ***")
-                                         .str());
+    Pass *PP = P->createPrinterPass(
+        dbgs(),
+        IRDumpStream::buildBanner(P->getPassName(), PI->getPassArgument(),
+                                  IRDumpFileSuffixType::Before));
     PP->assignPassManager(activeStack, getTopLevelPassManagerType());
   }
 
@@ -747,10 +747,10 @@ void PMTopLevelManager::schedulePass(Pass *P) {
   P->assignPassManager(activeStack, getTopLevelPassManagerType());
 
   if (PI && !PI->isAnalysis() && shouldPrintAfterPass(PI->getPassArgument())) {
-    Pass *PP =
-        P->createPrinterPass(dbgs(), ("*** IR Dump After " + P->getPassName() +
-                                      " (" + PI->getPassArgument() + ") ***")
-                                         .str());
+    Pass *PP = P->createPrinterPass(
+        dbgs(),
+        IRDumpStream::buildBanner(P->getPassName(), PI->getPassArgument(),
+                                  IRDumpFileSuffixType::After));
     PP->assignPassManager(activeStack, getTopLevelPassManagerType());
   }
 }
