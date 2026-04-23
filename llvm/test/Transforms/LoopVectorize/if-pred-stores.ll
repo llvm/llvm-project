@@ -79,20 +79,20 @@ define i32 @test(ptr nocapture %f) #0 {
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[F:%.*]], i64 [[INDEX]]
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; VEC-NEXT:    [[TMP3:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], splat (i32 100)
-; VEC-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
+; VEC-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
 ; VEC-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC:       pred.store.if:
-; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
+; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 0
 ; VEC-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], 20
 ; VEC-NEXT:    store i32 [[TMP8]], ptr [[TMP1]], align 4
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC:       pred.store.continue:
-; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
+; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP3]], i64 1
 ; VEC-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if1:
 ; VEC-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[TMP10]]
-; VEC-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
+; VEC-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 1
 ; VEC-NEXT:    [[TMP13:%.*]] = add nsw i32 [[TMP12]], 20
 ; VEC-NEXT:    store i32 [[TMP13]], ptr [[TMP11]], align 4
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -303,11 +303,11 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 4
 ; VEC-NEXT:    br i1 [[COND_2:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if:
-; VEC-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
+; VEC-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 0
 ; VEC-NEXT:    store i32 [[TMP11]], ptr [[TMP7]], align 4
 ; VEC-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; VEC-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [768 x i32], ptr [[PTR]], i64 0, i64 [[TMP12]]
-; VEC-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
+; VEC-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 1
 ; VEC-NEXT:    store i32 [[TMP14]], ptr [[TMP13]], align 4
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.continue2:
@@ -440,11 +440,11 @@ define void @minimal_bit_widths(ptr %p, i1 %c) {
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP1]], align 1
 ; VEC-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if:
-; VEC-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 0
+; VEC-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i64 0
 ; VEC-NEXT:    store i8 [[TMP4]], ptr [[TMP1]], align 1
 ; VEC-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP5]]
-; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 1
+; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i64 1
 ; VEC-NEXT:    store i8 [[TMP7]], ptr [[TMP6]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.continue2:
@@ -547,11 +547,11 @@ define void @minimal_bit_widths_with_aliasing_store(i1 %c, ptr %ptr) {
 ; VEC-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP2]], align 1
 ; VEC-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if:
-; VEC-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 0
+; VEC-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i64 0
 ; VEC-NEXT:    store i8 [[TMP5]], ptr [[TMP2]], align 1
 ; VEC-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP7]]
-; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 1
+; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i64 1
 ; VEC-NEXT:    store i8 [[TMP9]], ptr [[TMP8]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.continue2:
@@ -832,10 +832,10 @@ define void @sinkable_predicated_store(ptr %A, ptr %B) {
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META8:![0-9]+]]
 ; VEC-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
 ; VEC-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
-; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
-; VEC-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META8]]
-; VEC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP6]], i32 1
-; VEC-NEXT:    store i32 [[TMP8]], ptr [[TMP3]], align 4, !alias.scope [[META11]], !noalias [[META8]]
+; VEC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP6]], i64 0
+; VEC-NEXT:    store i32 [[TMP8]], ptr [[TMP2]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META8]]
+; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i64 1
+; VEC-NEXT:    store i32 [[TMP7]], ptr [[TMP3]], align 4, !alias.scope [[META11]], !noalias [[META8]]
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VEC-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]

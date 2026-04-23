@@ -180,6 +180,10 @@
 #    error "__cpp_lib_concepts should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_algorithms
 #    error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
 #  endif
@@ -668,6 +672,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -1098,6 +1106,10 @@
 
 #  ifdef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_algorithms
@@ -1624,6 +1636,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -2120,6 +2136,10 @@
 
 #  ifdef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_algorithms
@@ -2745,6 +2765,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -3367,6 +3391,10 @@
 #  endif
 #  if __cpp_lib_concepts != 202207L
 #    error "__cpp_lib_concepts should have the value 202207L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -4133,6 +4161,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -4830,6 +4862,10 @@
 #  endif
 #  if __cpp_lib_concepts != 202207L
 #    error "__cpp_lib_concepts should have the value 202207L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -5713,6 +5749,13 @@
 #    error "__cpp_lib_ranges_contains should have the value 202207L in c++23"
 #  endif
 
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++23"
+#  endif
+
 #  ifndef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should be defined in c++23"
 #  endif
@@ -6515,6 +6558,13 @@
 #  endif
 #  if __cpp_lib_concepts != 202207L
 #    error "__cpp_lib_concepts should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should be defined in c++26"
+#  endif
+#  if __cpp_lib_constant_wrapper != 202603L
+#    error "__cpp_lib_constant_wrapper should have the value 202603L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -7633,6 +7683,13 @@
 #  endif
 #  if __cpp_lib_ranges_contains != 202207L
 #    error "__cpp_lib_ranges_contains should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_find_last

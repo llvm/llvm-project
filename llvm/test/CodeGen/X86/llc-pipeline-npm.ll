@@ -58,6 +58,7 @@
 ; O0-NEXT: xray-instrumentation
 ; O0-NEXT: patchable-function
 ; O0-NEXT: x86-indirect-branch-tracking
+; O0-NEXT: x86-insert-vzeroupper
 ; O0-NEXT: x86-compress-evex
 ; O0-NEXT: x86-insert-x87-wait
 ; O0-NEXT: FuncletLayoutPass
@@ -172,6 +173,7 @@
 ; O2-NEXT: patchable-function
 ; O2-NEXT: BreakFalseDepsPass
 ; O2-NEXT: x86-indirect-branch-tracking
+; O2-NEXT: x86-insert-vzeroupper
 ; O2-NEXT: x86-fixup-bw-insts
 ; O2-NEXT: x86-fixup-leas
 ; O2-NEXT: x86-fixup-inst-tuning
@@ -242,6 +244,7 @@
 ; O0-WINDOWS-NEXT: xray-instrumentation
 ; O0-WINDOWS-NEXT: patchable-function
 ; O0-WINDOWS-NEXT: x86-indirect-branch-tracking
+; O0-WINDOWS-NEXT: x86-insert-vzeroupper
 ; O0-WINDOWS-NEXT: x86-compress-evex
 ; O0-WINDOWS-NEXT: x86-insert-x87-wait
 ; O0-WINDOWS-NEXT: FuncletLayoutPass
@@ -359,6 +362,7 @@
 ; O3-WINDOWS-NEXT: patchable-function
 ; O3-WINDOWS-NEXT: BreakFalseDepsPass
 ; O3-WINDOWS-NEXT: x86-indirect-branch-tracking
+; O3-WINDOWS-NEXT: x86-insert-vzeroupper
 ; O3-WINDOWS-NEXT: x86-fixup-bw-insts
 ; O3-WINDOWS-NEXT: x86-fixup-leas
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
