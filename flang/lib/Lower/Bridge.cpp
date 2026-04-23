@@ -2871,6 +2871,11 @@ private:
                     mlir::LLVM::AccessGroupAttr::get(builder->getContext()));
                 has_attrs = true;
               },
+              [&](const Fortran::parser::CompilerDirective::Simd &simd) {
+                disableVecAttr =
+                    mlir::BoolAttr::get(builder->getContext(), false);
+                has_attrs = true;
+              },
               [&](const auto &) {}},
           dir->u);
     }
@@ -3630,6 +3635,9 @@ private:
               }
             },
             [&](const Fortran::parser::CompilerDirective::IVDep &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::Simd &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
