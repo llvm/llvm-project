@@ -30,7 +30,8 @@ public:
   ocsd_etmv4_cfg Cfg{};
   uint8_t TraceID;
 
-  ETMTraceConfig(const Triple &TargetTriple, uint8_t TraceID) : TraceID(TraceID) {
+  ETMTraceConfig(const Triple &TargetTriple, uint8_t TraceID)
+      : TraceID(TraceID) {
     ocsd_arch_version_t ArchVer = ARCH_UNKNOWN;
     if (TargetTriple.isArmMClass()) {
       unsigned ArchVersion = ARM::parseArchVersion(TargetTriple.getArchName());
@@ -141,7 +142,8 @@ class ETMDecoderImpl : public ETMDecoder {
 public:
   uint8_t TraceID;
 
-  ETMDecoderImpl(const object::Binary &Binary, const Triple &Triple, uint8_t TraceID)
+  ETMDecoderImpl(const object::Binary &Binary, const Triple &Triple,
+                 uint8_t TraceID)
       : Binary(Binary), TargetTriple(Triple), TraceID(TraceID) {}
 
   ~ETMDecoderImpl() override {
@@ -224,7 +226,8 @@ public:
 } // namespace
 
 Expected<std::unique_ptr<ETMDecoder>>
-ETMDecoder::create(const object::Binary &Binary, const Triple &Triple, uint8_t TraceID) {
+ETMDecoder::create(const object::Binary &Binary, const Triple &Triple,
+                   uint8_t TraceID) {
   auto Decoder = std::make_unique<ETMDecoderImpl>(Binary, Triple, TraceID);
   if (Error E = Decoder->initialize())
     return std::move(E);
@@ -238,8 +241,8 @@ ETMDecoder::create(const object::Binary &Binary, const Triple &Triple, uint8_t T
 namespace llvm {
 
 Expected<std::unique_ptr<ETMDecoder>>
-ETMDecoder::create(const object::Binary & /*Binary*/,
-                   const Triple & /*Triple*/, uint8_t /*TraceID*/) {
+ETMDecoder::create(const object::Binary & /*Binary*/, const Triple & /*Triple*/,
+                   uint8_t /*TraceID*/) {
   return createStringError(inconvertibleErrorCode(), "OpenCSD not enabled.");
 }
 
