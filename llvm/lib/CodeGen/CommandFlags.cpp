@@ -635,6 +635,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.LoopAlignment = getAlignLoops();
   Options.JMCInstrument = getJMCInstrument();
   Options.XCOFFReadOnlyPointers = getXCOFFReadOnlyPointers();
+
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
   Options.ThreadModel = getThreadModel();
