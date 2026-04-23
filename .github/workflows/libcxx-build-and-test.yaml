@@ -90,7 +90,8 @@ jobs:
           'generic-cxx14',
           'generic-cxx17',
           'generic-cxx20',
-          'generic-cxx23'
+          'generic-cxx23',
+          'generic-llvm-libc',
         ]
         cc: [ 'clang-23' ]
         cxx: [ 'clang++-23' ]
