@@ -10,9 +10,12 @@ class TestPtrAuthExpressions(TestBase):
     SHARED_BUILD_TESTCASE = False
 
     def build_arm64e(self):
-        self.build(
-            dictionary={"TRIPLE": configuration.triple.replace("arm64", "arm64e")}
-        )
+        if "arm64e" in configuration.triple:
+            self.build()
+        else:
+            self.build(
+                dictionary={"TRIPLE": configuration.triple.replace("arm64", "arm64e")}
+            )
 
     @skipUnlessArm64eSupported
     def test_static_function_pointer(self):
