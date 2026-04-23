@@ -1,0 +1,36 @@
+## Verify that `update_test_checks.py --dry-run` prints a unified diff to
+## stdout and does not modify the test file on disk.
+
+## Case 1: running --dry-run on a file that is already up-to-date with UTC
+## must produce no diff on stdout and must leave the file unchanged.
+# RUN: cp -f %S/Inputs/basic.ll.expected %t.ll
+# RUN: %update_test_checks --dry-run %t.ll > %t.diff
+# RUN: diff -u %t.ll %S/Inputs/basic.ll.expected
+# RUN: count 0 < %t.diff
+
+## Case 2: running --dry-run on a file with a stale CHECK line must emit a
+## non-empty unified diff on stdout, must leave the file unchanged on
+## disk, and must not record --dry-run / UTC_ARGS into the diff (i.e. the
+## flag must not leak into the in-file footer).
+# RUN: cp -f %S/Inputs/basic.ll.expected %t.ll
+# RUN: sed -i.bak -e 's/ret i32 0/ret i32 WRONG/' %t.ll && rm -f %t.ll.bak
+# RUN: %update_test_checks --dry-run %t.ll > %t.diff
+# RUN: FileCheck --input-file=%t.diff %s --check-prefix=DIFF
+# RUN: not grep -q UTC_ARGS %t.diff
+# RUN: FileCheck --input-file=%t.ll %s --check-prefix=STALE
+
+## Case 3: the short flag -n behaves identically to --dry-run.
+# RUN: cp -f %S/Inputs/basic.ll.expected %t.ll
+# RUN: %update_test_checks -n %t.ll > %t.diff
+# RUN: diff -u %t.ll %S/Inputs/basic.ll.expected
+# RUN: count 0 < %t.diff
+
+## The diff emitted in case 2 must show exactly the correction UTC would
+## apply: replacing the stale `ret i32 WRONG` check with `ret i32 0`.
+# DIFF: @@
+# DIFF: -; CHECK-NEXT:    ret i32 WRONG
+# DIFF: +; CHECK-NEXT:    ret i32 0
+
+## The on-disk file in case 2 must still contain the stale check; UTC must
+## not have written anything.
+# STALE: ret i32 WRONG

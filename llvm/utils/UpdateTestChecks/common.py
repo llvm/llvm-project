@@ -2738,6 +2738,7 @@ def get_autogennote_suffix(parser, args):
             "force_update",
             "reset_variable_names",
             "llvm_mc_binary",
+            "dry_run",
         ):
             continue
         value = getattr(args, action.dest)
