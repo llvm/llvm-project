@@ -1433,7 +1433,6 @@ void is_standard_layout()
   static_assert(__is_standard_layout(CppStructStandardAr));
   static_assert(__is_standard_layout(Vector));
   static_assert(__is_standard_layout(VectorExt));
-  static_assert(__is_standard_layout(VectorExt));
 
   typedef CppStructNonStandardByBase CppStructNonStandardByBaseAr[4];
 
@@ -2914,7 +2913,7 @@ void is_trivial()
   static_assert(__is_trivial(DerivesHasProt));
   static_assert(__is_trivial(Vector));
   static_assert(__is_trivial(VectorExt));
-  
+
   static_assert(!__is_trivial(HasCons));
   static_assert(!__is_trivial(HasCopyAssign));
   static_assert(!__is_trivial(HasMoveAssign));
