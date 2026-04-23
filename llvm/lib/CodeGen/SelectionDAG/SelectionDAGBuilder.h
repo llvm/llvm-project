@@ -741,6 +741,7 @@ private:
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
 
+private:
   std::pair<bool, bool> getTargetIntrinsicCallProperties(const CallBase &I);
   SmallVector<SDValue, 8> getTargetIntrinsicOperands(
       const CallBase &I, bool HasChain, bool OnlyLoad,
@@ -827,8 +828,9 @@ struct RegsForValue {
   /// code marker, matching input operand index (if applicable), and includes
   /// the number of values added into it.
   void AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
-                            unsigned MatchingIdx, const SDLoc &dl,
-                            SelectionDAG &DAG, std::vector<SDValue> &Ops) const;
+                            unsigned MatchingIdx, bool MayFoldRegister,
+                            const SDLoc &dl, SelectionDAG &DAG,
+                            std::vector<SDValue> &Ops) const;
 
   /// Check if the total RegCount is greater than one.
   bool occupiesMultipleRegs() const {

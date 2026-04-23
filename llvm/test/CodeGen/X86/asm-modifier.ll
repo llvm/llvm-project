@@ -89,11 +89,11 @@ define void @test_q() {
 ; CHECK-LABEL: test_q:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    #TEST 0
+; CHECK-NEXT:    #TEST %{{[re]}}ax
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  call void asm sideeffect "#TEST ${0:q}", "=*imr"( ptr elementtype( i64) null )
+  %0 = call i64 asm sideeffect "#TEST ${0:q}", "=imr"()
   ret void
 }
 

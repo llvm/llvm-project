@@ -2883,13 +2883,23 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     if (!Constraints.empty())
       Constraints += ',';
 
-    // If this is a register output, then make the inline asm return it
-    // by-value.  If this is a memory result, return the value by-reference.
+    // - If this is a register output, then make the inline asm return it
+    //   by-value.
+    // - If this is a memory output, return the value by reference.
+    // - If this is a register and memory output, treat it like a register
+    //   output at -O[1-3]. This allows the optimizing register allocators to
+    //   choose a register, while the fast register allocator defaults to
+    //   memory.
     QualType QTy = OutExpr->getType();
     const bool IsScalarOrAggregate = hasScalarEvaluationKind(QTy) ||
                                      hasAggregateEvaluationKind(QTy);
-    if (!Info.allowsMemory() && IsScalarOrAggregate) {
+    const bool RegisterMemoryConstraints =
+        CGM.getCodeGenOpts().OptimizationLevel != 0 &&
+        llvm::is_contained(OutputConstraint, 'r') &&
+        llvm::is_contained(OutputConstraint, 'm');
 
+    if (IsScalarOrAggregate &&
+        (!Info.allowsMemory() || RegisterMemoryConstraints)) {
       Constraints += "=" + OutputConstraint;
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
