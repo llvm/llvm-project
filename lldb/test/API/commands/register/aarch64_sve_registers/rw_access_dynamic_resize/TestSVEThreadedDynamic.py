@@ -15,6 +15,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class Mode(Enum):
     SVE = 0
     SSVE = 1

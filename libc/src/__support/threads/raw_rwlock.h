@@ -24,12 +24,7 @@
 #define LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT 100
 #endif
 
-#ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
-#define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
-#warning "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY is not defined, defaulting to 1"
-#endif
-
-#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #include "src/__support/time/monotonicity.h"
 #endif
 
@@ -99,16 +94,16 @@ public:
   }
 
   template <Role role>
-  LIBC_INLINE long wait(FutexWordType expected,
-                        cpp::optional<Futex::Timeout> timeout,
-                        bool is_pshared) {
+  LIBC_INLINE ErrorOr<int> wait(FutexWordType expected,
+                                cpp::optional<Futex::Timeout> timeout,
+                                bool is_pshared) {
     if constexpr (role == Role::Reader)
       return reader_serialization.wait(expected, timeout, is_pshared);
     else
       return writer_serialization.wait(expected, timeout, is_pshared);
   }
 
-  template <Role role> LIBC_INLINE long notify(bool is_pshared) {
+  template <Role role> LIBC_INLINE ErrorOr<int> notify(bool is_pshared) {
     if constexpr (role == Role::Reader)
       return reader_serialization.notify_all(is_pshared);
     else
@@ -361,7 +356,7 @@ private:
   LIBC_INLINE LockResult
   lock_slow(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-#if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
+#ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
     // Phase 2: convert the timeout if necessary.
     if (timeout)
       ensure_monotonicity(*timeout);
@@ -403,9 +398,10 @@ private:
       // Phase 6: do futex wait until the lock is available or timeout is
       // reached.
       bool timeout_flag = false;
-      if (!old.can_acquire<role>(get_preference()))
-        timeout_flag = (queue.wait<role>(serial_number, timeout, is_pshared) ==
-                        -ETIMEDOUT);
+      if (!old.can_acquire<role>(get_preference())) {
+        auto result = queue.wait<role>(serial_number, timeout, is_pshared);
+        timeout_flag = (!result.has_value() && timeout.has_value());
+      }
 
       // Phase 7: unregister ourselves as a pending reader/writer.
       {

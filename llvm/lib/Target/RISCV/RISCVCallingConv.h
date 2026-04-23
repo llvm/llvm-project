@@ -15,25 +15,11 @@
 
 namespace llvm {
 
-/// RISCVCCAssignFn - This target-specific function extends the default
-/// CCValAssign with additional information used to lower RISC-V calling
-/// conventions.
-typedef bool RISCVCCAssignFn(unsigned ValNo, MVT ValVT, MVT LocVT,
-                             CCValAssign::LocInfo LocInfo,
-                             ISD::ArgFlagsTy ArgFlags, CCState &State,
-                             bool IsRet, Type *OrigTy);
+/// This is used for assigining arguments to locations when making calls.
+CCAssignFn CC_RISCV;
 
-bool CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
-              CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-              CCState &State, bool IsRet, Type *OrigTy);
-
-bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                     CCState &State, bool IsRet, Type *OrigTy);
-
-bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                  CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                  Type *OrigTy, CCState &State);
+/// This is used for assigning return values to locations when making calls.
+CCAssignFn RetCC_RISCV;
 
 namespace RISCV {
 

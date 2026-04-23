@@ -364,10 +364,10 @@ void OmpStructureChecker::CheckNestedConstruct(
         auto &msg{context_.Say(beginSource, MsgRequiresCanonical, "sequence")};
         whyNot.AttachTo(msg);
       }
-      if (auto requiredCount{GetRequiredCount(needRange.value)}) {
+      if (auto requiredCount{GetMinimumSequenceCount(needRange.value)}) {
         if (*requiredCount > 0 && haveLength.value < *requiredCount) {
           auto &msg{context_.Say(beginSource,
-              "This construct requires a sequence of %" PRId64
+              "This construct requires a sequence of at least %" PRId64
               " loops, but the loop sequence has a length of %" PRId64
               ""_err_en_US,
               *requiredCount, *haveLength.value)};
