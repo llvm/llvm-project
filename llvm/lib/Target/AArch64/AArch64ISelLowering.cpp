@@ -11753,12 +11753,6 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerCTTZ(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  assert(VT.isScalableVector() || VT == MVT::v8i8 || VT == MVT::v16i8 ||
-         VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v2i32 ||
-         VT == MVT::v4i32 ||
-         useSVEForFixedLengthVectorVT(
-             VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()));
-
   SDLoc DL(Op);
   SDValue RBIT = DAG.getNode(ISD::BITREVERSE, DL, VT, Op.getOperand(0));
   return DAG.getNode(ISD::CTLZ, DL, VT, RBIT);
