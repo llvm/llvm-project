@@ -1,12 +1,25 @@
+# Link against ROCm's HSA runtime. Tests under TestCases/AMDGPU run only when
+# lit finds a ROCm install (see lit.local.cfg.py): $ROCM_PATH or /opt/rocm,
+# with include/hsa/hsa.h and libhsa-runtime64. Compiler-rt must be built with
+# SANITIZER_AMDGPU enabled. The suite uses the dynamic ASan runtime only.
+
 import glob
 import os
-
 
 def getRoot(config):
     if not config.parent:
         return config
     return getRoot(config.parent)
 
+def walk_config_attr(cfg, name):
+    """Return the first defined attribute `name` walking cfg -> parents."""
+    while cfg is not None:
+        if hasattr(cfg, name):
+            val = getattr(cfg, name)
+            if val is not None:
+                return val
+        cfg = cfg.parent
+    return None
 
 def rocm_lib_dir(rocm_root):
     """Return lib or lib64 under rocm_root that provides libhsa-runtime64."""
@@ -18,7 +31,6 @@ def rocm_lib_dir(rocm_root):
             return libdir
     return None
 
-
 def rocm_is_available(rocm_root):
     if not rocm_root or not os.path.isdir(rocm_root):
         return False
@@ -27,13 +39,16 @@ def rocm_is_available(rocm_root):
         return False
     return rocm_lib_dir(rocm_root) is not None
 
-
 root = getRoot(config)
-
 # AMDGPU ASan tests are only run with the dynamic ASan runtime (-shared-libasan).
 if "asan-static-runtime" in root.available_features:
     config.unsupported = True
 elif root.target_os != "Linux":
+    config.unsupported = True
+elif walk_config_attr(config, "bits") == "32" or walk_config_attr(
+    config, "target_arch"
+) in ("i386", "i686"):
+    # ROCm libhsa-runtime64.so is 64-bit only (link fails: incompatible with elf32-i386).
     config.unsupported = True
 else:
     rocm_root = os.environ.get("ROCM_PATH", "/opt/rocm")
