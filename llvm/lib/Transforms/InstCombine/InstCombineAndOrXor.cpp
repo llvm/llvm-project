@@ -3157,7 +3157,8 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
     Value *NewLower = Builder.CreateZExt(Lo, Ty);
     Value *NewUpper = Builder.CreateZExt(Hi, Ty);
     NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
-    Value *BinOp = Builder.CreateOr(NewLower, NewUpper);
+    Value *BinOp =
+        Builder.CreateOr(NewLower, NewUpper, "", /*IsDisjoint=*/true);
     return Builder.CreateIntrinsic(id, Ty, BinOp);
   };
 
@@ -4441,8 +4442,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
     bool IsDisjointOuter = cast<PossiblyDisjointInst>(I).isDisjoint();
     bool IsDisjointInner = cast<PossiblyDisjointInst>(Op0)->isDisjoint();
-    Value *Inner = Builder.CreateOr(A, Op1);
-    cast<PossiblyDisjointInst>(Inner)->setIsDisjoint(IsDisjointOuter);
+    Value *Inner = Builder.CreateOr(A, Op1, "", /*IsDisjoint=*/IsDisjointOuter);
     Inner->takeName(Op0);
     return IsDisjointOuter && IsDisjointInner
                ? BinaryOperator::CreateDisjointOr(Inner, CI)

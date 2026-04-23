@@ -933,7 +933,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     // If wrapping is not allowed, then the addition must set the sign bit:
     // X + (signmask) --> X | signmask
     if (Add.hasNoSignedWrap() || Add.hasNoUnsignedWrap())
-      return BinaryOperator::CreateOr(Op0, Op1);
+      return BinaryOperator::CreateDisjointOr(Op0, Op1);
 
     // If wrapping is allowed, then the addition flips the sign bit of LHS:
     // X + (signmask) --> X ^ signmask
@@ -1921,8 +1921,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       match(RHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(B)))) &&
       haveNoCommonBitsSet(A, B, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(
-        I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
-                                   {Builder.CreateOr(A, B)}));
+        I, Builder.CreateIntrinsic(
+               Intrinsic::ctpop, {I.getType()},
+               {Builder.CreateOr(A, B, "", /*IsDisjoint=*/true)}));
 
   // Fold the log2_ceil idiom:
   // zext(ctpop(A) >u/!= 1) + (ctlz(A, true) ^ (BW - 1))
