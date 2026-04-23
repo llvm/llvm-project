@@ -92,9 +92,5 @@ void __rtsan::PrintErrorSummary(const DiagnosticsInfo &info,
                                 const BufferedStackTrace &stack) {
   ScopedErrorReportLock::CheckLocked();
 
-  // If we don't explicitly specify the tool name here, UBSan can
-  // report our error summaries with "UndefinedBehaviorSanitizer" prefix
-  // depending on initialization.
-  const char *realtimeSanitizerName = "RealtimeSanitizer";
-  ReportErrorSummary(GetErrorTypeStr(info), &stack, realtimeSanitizerName);
+  ReportErrorSummary(GetErrorTypeStr(info), &stack);
 }

@@ -20,6 +20,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "ubsan/ubsan_init.h"
 
 using namespace __rtsan;
 using namespace __sanitizer;
@@ -87,6 +88,10 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
   InitializePlatformEarly();
 
   InitializeInterceptors();
+
+#if RTSAN_CONTAINS_UBSAN
+  __ubsan::InitAsPlugin();
+#endif
 
   InitializeSuppressions();
 
