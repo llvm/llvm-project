@@ -345,10 +345,12 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
 }
 
 bool ValuePointsToCode(lldb::SBValue v) {
-  if (!v.GetType().GetPointeeType().IsFunctionType())
+  lldb::SBType type = v.GetType();
+  if (!type.GetPointeeType().IsFunctionType())
     return false;
 
-  lldb::addr_t addr = v.GetValueAsAddress();
+  lldb::SBError error;
+  lldb::addr_t addr = v.GetData().GetAddress(error, 0);
   lldb::SBLineEntry line_entry =
       v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
 
