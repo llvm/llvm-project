@@ -62161,9 +62161,7 @@ static SDValue combineAndOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
     if (!AndOp->hasOneUse() && !splatIsConst)
       return SDValue();
 
-    if (!(splatIsConst || DAG.isSplatValue(SplatOp, /*AllowUndefs=*/false) ||
-          SplatOp.getOpcode() == X86ISD::VBROADCAST ||
-          SplatOp.getOpcode() == X86ISD::VBROADCAST_LOAD) ||
+    if (!(splatIsConst || DAG.isSplatValue(SplatOp, /*AllowUndefs=*/false)) ||
         SplatOp.getScalarValueSizeInBits() != 8)
       return SDValue();
 
