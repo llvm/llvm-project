@@ -1188,10 +1188,10 @@ This environment variable determines if the stack traces of allocations and
 deallocations are tracked to aid in error reporting, e.g., in case of
 double-free.
 
-OFFLOAD_TRACK_KERNEL_LAUNCH_TRACES
-""""""""""""""""""""""""""""""""""
+OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES
+""""""""""""""""""""""""""""""""""""""
 
-This environment variable determines how manytstack traces of kernel launches
+This environment variable determines how many stack traces of kernel launches
 are tracked to aid in error reporting, e.g., what asynchronous kernel failed.
 
 .. _libomptarget_plugin:
