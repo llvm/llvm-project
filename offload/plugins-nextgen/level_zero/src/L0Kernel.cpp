@@ -15,6 +15,8 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 
+#include "llvm/ADT/ScopeExit.h"
+
 namespace llvm::omp::target::plugin {
 
 bool KernelPropertiesTy::reuseGroupParams(const int32_t NumTeamsIn,
@@ -54,6 +56,7 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   CALL_ZE_RET_ERROR(zeKernelGetProperties, zeKernel, &KP);
   KernelPR.SIMDWidth = KP.maxSubgroupSize;
   KernelPR.Width = KP.maxSubgroupSize;
+  KernelPR.NumKernelArgs = KP.numKernelArgs;
 
   if (KP.pNext)
     KernelPR.Width = KPrefGRPSize.preferredMultiple;
@@ -62,6 +65,17 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
     KernelPR.Width = (std::max)(KernelPR.Width, 2 * KernelPR.SIMDWidth);
   }
   KernelPR.MaxThreadGroupSize = KP.maxSubgroupSize * KP.maxNumSubgroups;
+
+  // Query and cache argument sizes if extension is available.
+  auto &Context = l0Device.getL0Context();
+  if (KernelPR.NumKernelArgs > 0 && Context.zexKernelGetArgumentSize) {
+    KernelPR.ArgSizes = std::make_unique<uint32_t[]>(KernelPR.NumKernelArgs);
+    for (uint32_t I = 0; I < KernelPR.NumKernelArgs; I++) {
+      CALL_ZE_RET_ERROR(Context.zexKernelGetArgumentSize, zeKernel, I,
+                        &KernelPR.ArgSizes[I]);
+    }
+  }
+
   return Plugin::success();
 }
 
@@ -69,6 +83,10 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   const auto *KernelName = getName();
 
   auto Module = Program.findModuleFromKernelName(KernelName);
+  if (!Module)
+    return Plugin::error(ErrorCode::NOT_FOUND,
+                         "kernel '%s' not found in the program", KernelName);
+
   ze_kernel_desc_t KernelDesc = {ZE_STRUCTURE_TYPE_KERNEL_DESC, nullptr, 0,
                                  KernelName};
   CALL_ZE_RET_ERROR(zeKernelCreate, Module, &KernelDesc, &zeKernel);
@@ -282,9 +300,17 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Kernel depends on %zu data copying events.\n", NumWaitEvents);
-  CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                    &KEnv.GroupCounts, Event, NumWaitEvents, WaitEvents);
-  KEnv.KernelPR.Mtx.unlock();
+  Error AllErrors = Error::success();
+
+  CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendLaunchKernel, CmdList,
+                      zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
+                      WaitEvents);
+  KEnv.Lock.unlock();
+  if (AllErrors) {
+    if (auto Err = l0Device.releaseEvent(Event))
+      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+    return AllErrors;
+  }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
 
@@ -292,9 +318,12 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
     AsyncQueue->WaitEvents.push_back(Event);
     AsyncQueue->KernelEvent = Event;
   } else {
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, L0DefaultTimeout);
+    CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
+                        L0DefaultTimeout);
     if (auto Err = l0Device.releaseEvent(Event))
-      return Err;
+      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+    if (AllErrors)
+      return AllErrors;
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
@@ -324,14 +353,18 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
   ze_event_handle_t Event = nullptr;
   CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
                     &KEnv.GroupCounts, Event, 0, nullptr);
-  KEnv.KernelPR.Mtx.unlock();
+  KEnv.Lock.unlock();
   CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+
+  // Ensure command list is reset even on errors after this point.
+  llvm::scope_exit ResetOnExit(
+      [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
+
   CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
                         CmdQueue, 1, &CmdList, nullptr);
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
   CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-  CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   if (Event) {
     if (auto Err = l0Device.releaseEvent(Event))
       return Err;
@@ -347,35 +380,40 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
                                   uint32_t NumThreads[3],
                                   uint32_t NumBlocks[3]) const {
 
-  if (KernelEnvironment.Configuration.ExecMode != OMP_TGT_EXEC_MODE_BARE) {
-    // For non-bare mode, the groups are already set in the launch.
-    KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
-    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), NumThreads[0],
-                      NumThreads[1], NumThreads[2]);
-    return Plugin::success();
-  }
-
-  int32_t NumTeams = NumBlocks[0];
-  int32_t ThreadLimit = NumThreads[0];
-  if (NumTeams < 0)
-    NumTeams = 0;
-  if (ThreadLimit < 0)
-    ThreadLimit = 0;
+  bool HasUserDefinedGroups = NumThreads[0] != 0 && NumThreads[1] != 0 &&
+                              NumThreads[2] != 0 && NumBlocks[0] != 0 &&
+                              NumBlocks[1] != 0 && NumBlocks[2] != 0;
 
   uint32_t GroupSizes[3];
-  auto DeviceId = l0Device.getDeviceId();
-  auto &KernelPR = KEnv.KernelPR;
-  // Check if we can reuse previous group parameters.
-  bool GroupParamsReused =
-      KernelPR.reuseGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+  bool CanReuseParams = false;
 
-  if (!GroupParamsReused) {
-    if (auto Err =
-            getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes, KEnv))
-      return Err;
-    KernelPR.cacheGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+  if (HasUserDefinedGroups) {
+    KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
+    GroupSizes[0] = NumThreads[0];
+    GroupSizes[1] = NumThreads[1];
+    GroupSizes[2] = NumThreads[2];
+  } else {
+    int32_t NumTeams = NumBlocks[0];
+    int32_t ThreadLimit = NumThreads[0];
+    if (NumTeams < 0)
+      NumTeams = 0;
+    if (ThreadLimit < 0)
+      ThreadLimit = 0;
+
+    auto &KernelPR = KEnv.KernelPR;
+    // Check if we can reuse previous group parameters.
+    CanReuseParams =
+        KernelPR.reuseGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+
+    if (!CanReuseParams) {
+      if (auto Err =
+              getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes, KEnv))
+        return Err;
+      KernelPR.cacheGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
+    }
   }
 
+  auto DeviceId = l0Device.getDeviceId();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n", GroupSizes[0],
        GroupSizes[1], GroupSizes[2]);
@@ -384,7 +422,7 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
        KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
        KEnv.GroupCounts.groupCountZ);
 
-  if (!GroupParamsReused) {
+  if (!CanReuseParams) {
     CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), GroupSizes[0],
                       GroupSizes[1], GroupSizes[2]);
   }
@@ -425,7 +463,6 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   auto zeKernel = getZeKernel();
   auto DeviceId = l0Device.getDeviceId();
-  int32_t NumArgs = KernelArgs.NumArgs;
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId, "Launching kernel " DPxMOD "...\n",
        DPxPTR(zeKernel));
 
@@ -445,22 +482,30 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   L0LaunchEnvTy KEnv(IsAsync, AsyncQueue, KernelPR);
 
   // Protect from kernel preparation to submission as kernels are shared.
-  KernelPR.Mtx.lock();
+  KEnv.Lock.lock();
 
   if (auto Err = setKernelGroups(l0Device, KEnv, NumThreads, NumBlocks))
     return Err;
 
   // Set kernel arguments.
-  for (int32_t I = 0; I < NumArgs; I++) {
-    // Scope code to ease integration with downstream custom code.
-    {
-      void *Arg = (static_cast<void **>(LaunchParams.Data))[I];
-      CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, sizeof(Arg),
-                        Arg == nullptr ? nullptr : &Arg);
+  uint32_t NumKernelArgs = KernelPR.NumKernelArgs;
+  if (NumKernelArgs > 0) {
+    if (!KernelPR.ArgSizes)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "level zero plugin requires kernel argument sizes.");
+    // Use sizes from kernel properties.
+    // TODO: This is temporary workaround it will not work if there is
+    // padding/alignment between arguments.
+    char *Arg = static_cast<char *>(LaunchParams.Data);
+    for (uint32_t I = 0; I < NumKernelArgs; I++) {
+      uint32_t ArgSize = KernelPR.ArgSizes[I];
+      CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, ArgSize, Arg);
+
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "Kernel Pointer argument %" PRId32 " (value: " DPxMOD
+           "Kernel Pointer argument %" PRIu32 " (value: " DPxMOD
            ") was set successfully for device %s.\n",
            I, DPxPTR(Arg), IdStr);
+      Arg += ArgSize;
     }
   }
 

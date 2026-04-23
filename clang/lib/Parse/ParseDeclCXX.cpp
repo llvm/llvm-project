@@ -1082,7 +1082,6 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
             PP.RevertCachedTokens(2);
             ConsumeToken(); // the semi.
             EndLoc = ConsumeAnyToken();
-            assert(Tok.is(tok::semi));
           } else {
             EndLoc = Tok.getLocation();
           }
@@ -1695,8 +1694,12 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   PreserveAtomicIdentifierInfoRAII AtomicTokenGuard(
       Tok, ShouldChangeAtomicToIdentifier);
 
+  // We use a temporary scope when parsing the name specifier for a
+  // declaration with additional invalid type specifiers.
+  CXXScopeSpec InvalidDeclScope;
+  CXXScopeSpec &SS =
+      DS.hasTypeSpecifier() ? InvalidDeclScope : DS.getTypeSpecScope();
   // Parse the (optional) nested-name-specifier.
-  CXXScopeSpec &SS = DS.getTypeSpecScope();
   if (getLangOpts().CPlusPlus) {
     // "FOO : BAR" is not a potential typo for "FOO::BAR".  In this context it
     // is a base-specifier-list.
@@ -3245,7 +3248,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   }
 
   if (ExpectSemi &&
-      ExpectAndConsume(tok::semi, diag::err_expected_semi_decl_list)) {
+      ExpectAndConsume(tok::semi, diag::err_expected_semi_decl_list) &&
+      !isLikelyAtStartOfNewDeclaration()) {
     // Skip to end of block or statement.
     SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
     // If we stopped at a ';', eat it.

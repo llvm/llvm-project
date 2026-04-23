@@ -12,10 +12,12 @@
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace fir {
 
@@ -137,6 +139,60 @@ struct AliasAnalysis {
       bool isData{false};
     };
 
+    /// Represents a step in the access path from a root variable to the
+    /// memory location being queried. Built during the backward walk in
+    /// getSource() and stored in forward (root-to-leaf) order.
+    struct PathStep {
+      enum class Kind {
+        /// Named component access, e.g. x%field.
+        Component,
+        /// Loading a POINTER box (fir.load of !fir.box<!fir.ptr<...>>).
+        /// The resulting address depends on pointer association at runtime.
+        PointerDeref,
+        /// Loading an ALLOCATABLE box (fir.load of !fir.box<!fir.heap<...>>).
+        AllocDeref,
+      };
+      Kind kind;
+      /// For Component steps: the field name from hlfir.designate's component
+      /// attribute or fir.coordinate_of's field_indices (mapped through the
+      /// record type). Null for non-Component steps.
+      mlir::StringAttr component;
+
+      bool operator==(const PathStep &o) const {
+        return kind == o.kind && component == o.component;
+      }
+      bool operator!=(const PathStep &o) const { return !(*this == o); }
+    };
+
+    /// The access path from the root variable to the queried memory location.
+    /// For example, given:
+    ///   type(outer) :: x   ! outer has component "in" of type inner
+    ///                      ! inner has pointer component "p"
+    /// the target address of x%in%p (i.e. the data x%in%p points to) is:
+    ///   [{Component,"in"}, {Component,"p"}, {PointerDeref}]
+    /// where PointerDeref represents loading the pointer descriptor and
+    /// extracting the target address (fir.load + fir.box_addr in the IR).
+    /// This enables disambiguation of accesses to different components of
+    /// the same derived-type variable and tracks pointer dereferences for
+    /// pointer/target aliasing (Fortran 2018 8.5.7, 15.5.2.13).
+    struct AccessPath {
+      llvm::SmallVector<PathStep, 4> steps;
+
+      /// Whether the path is approximate (e.g. contains array indexing or
+      /// went through PackArrayOp). An approximate path cannot yield
+      /// MustAlias.
+      bool isApproximate{false};
+
+      /// Return true if any step is a PointerDeref.
+      bool hasPointerDeref() const {
+        return llvm::any_of(steps, [](const PathStep &s) {
+          return s.kind == PathStep::Kind::PointerDeref;
+        });
+      }
+
+      void print(llvm::raw_ostream &os) const;
+    };
+
     SourceOrigin origin;
 
     /// Kind of the memory source.
@@ -148,6 +204,8 @@ struct AliasAnalysis {
     /// Have we lost precision following the source such that
     /// even an exact match cannot be MustAlias?
     bool approximateSource;
+    /// The structured access path from the root variable.
+    AccessPath accessPath;
     /// Source object is used in an internal procedure via host association.
     bool isCapturedInInternalProcedure{false};
 

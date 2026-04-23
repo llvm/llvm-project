@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s --check-prefixes=COMMON,DEFAULT
-; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilogue=predicate-dont-vectorize -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
-; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
+; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -tail-folding-policy=must-fold-tail -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
+; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -tail-folding-policy=prefer-fold-tail -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
 ; RUN: opt < %s -passes=loop-vectorize -tail-predication=enabled -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-ENABLE-TP
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -13,11 +13,11 @@ target triple = "thumbv8.1m.main-arm-unknown-eabihf"
 ;      *c++ = *a++ + *b++;
 ;  }
 ;
-define dso_local void @sgt_loopguard(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+define void @sgt_loopguard(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
 ; COMMON-LABEL: @sgt_loopguard(
 ; COMMON:       vector.body:
 
-; CHECK-TF:     %[[VIVELEM0:.*]] = extractelement <16 x i32> %vec.iv, i32 0
+; CHECK-TF:     %[[VIVELEM0:.*]] = extractelement <16 x i32> %vec.iv, i64 0
 ; CHECK-TF:     %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %[[VIVELEM0]], i32 %N)
 ; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask
 ; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask
@@ -54,7 +54,7 @@ while.end:
 
 ; No loop-guard: we need one for this to be valid.
 ;
-define dso_local void @sgt_no_loopguard(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+define void @sgt_no_loopguard(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
 ; COMMON-LABEL: @sgt_no_loopguard(
 ; COMMON:       vector.body:
 ; CHECK-TF:     masked.load
@@ -86,7 +86,7 @@ while.end:
   ret void
 }
 
-define dso_local void @sgt_extra_use_cmp(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+define void @sgt_extra_use_cmp(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
 ; COMMON-LABEL: @sgt_extra_use_cmp(
 ; COMMON:       vector.body:
 ; CHECK-TF:     masked.load
@@ -120,7 +120,7 @@ while.end:
   ret void
 }
 
-define dso_local void @sgt_const_tripcount(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+define void @sgt_const_tripcount(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
 ; COMMON-LABEL: @sgt_const_tripcount(
 ; COMMON:       vector.body:
 ; CHECK-TF:     masked.load
@@ -156,7 +156,7 @@ while.end:
   ret void
 }
 
-define dso_local void @sgt_no_guard_0_startval(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+define void @sgt_no_guard_0_startval(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
 ; COMMON-LABEL: @sgt_no_guard_0_startval(
 ; COMMON-NOT:   vector.body:
 entry:
@@ -185,7 +185,7 @@ while.end:
   ret void
 }
 
-define dso_local void @sgt_step_minus_two(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+define void @sgt_step_minus_two(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
 ; COMMON-LABEL:  @sgt_step_minus_two(
 ; COMMON:        vector.body:
 ; CHECK-TF:      masked.load
@@ -221,7 +221,7 @@ while.end:
   ret void
 }
 
-define dso_local void @sgt_step_not_constant(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N, i32 %S) local_unnamed_addr #0 {
+define void @sgt_step_not_constant(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N, i32 %S) #0 {
 ; COMMON-LABEL: @sgt_step_not_constant(
 ; COMMON-NOT:   vector.body:
 entry:
@@ -254,7 +254,7 @@ while.end:
   ret void
 }
 
-define dso_local void @icmp_eq(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) #0 {
+define void @icmp_eq(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) #0 {
 ; COMMON-LABEL: @icmp_eq
 ; COMMON:       vector.body:
 entry:
@@ -295,7 +295,7 @@ while.end:
 ;      c[i] = a[i] + b[i];
 ;  }
 ;
-define dso_local void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
 ; COMMON-LABEL: @sgt_for_loop(
 ; COMMON:       vector.body:
 ; CHECK-PREFER: masked.load
@@ -334,7 +334,7 @@ for.end:
   ret void
 }
 
-define dso_local void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
 ; COMMON-LABEL: @sgt_for_loop_i64(
 ; COMMON:       vector.body:
 ;
@@ -389,7 +389,7 @@ for.body:
 ; transform this because the inner loop because isGuarded returns
 ; false for the inner-loop.
 ;
-define dso_local void @sgt_nested_loop(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
+define void @sgt_nested_loop(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
 ; COMMON-LABEL: @sgt_nested_loop(
 ; DEFAULT-NOT:  vector.body:
 ; CHECK-TF-NOT: masked.load
@@ -419,7 +419,7 @@ for.body:
   %add = add nuw nsw i32 %i.022, 1
   br label %for.body4
 
-for.body4:                                        ; preds = %for.body, %for.body4
+for.body4:
   %j.020 = phi i32 [ %add, %for.body ], [ %dec, %for.body4 ]
   %arrayidx = getelementptr inbounds i8, ptr %a, i32 %j.020
   %0 = load i8, ptr %arrayidx, align 1

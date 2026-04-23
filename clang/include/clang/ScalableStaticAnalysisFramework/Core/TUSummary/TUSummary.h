@@ -33,7 +33,8 @@ class TUSummary {
       Data;
 
 public:
-  TUSummary(BuildNamespace TUNamespace) : TUNamespace(std::move(TUNamespace)) {}
+  explicit TUSummary(BuildNamespace TUNamespace)
+      : TUNamespace(std::move(TUNamespace)) {}
 
   friend class SerializationFormat;
   friend class TestFixture;

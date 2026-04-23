@@ -806,8 +806,8 @@ TEST_F(OpenACCUtilsLoopTest,
 
   b.setInsertionPointAfter(funcOp);
   IRMapping mapping;
-  scf::ExecuteRegionOp exeRegionOp = wrapMultiBlockRegionWithSCFExecuteRegion(
-      region, mapping, loc, b, /*convertFuncReturn=*/true);
+  scf::ExecuteRegionOp exeRegionOp =
+      wrapMultiBlockRegionWithSCFExecuteRegion(region, mapping, loc, b);
 
   ASSERT_TRUE(exeRegionOp);
 
@@ -873,8 +873,8 @@ TEST_F(OpenACCUtilsLoopTest,
 
   b.setInsertionPointAfter(funcOp);
   IRMapping mapping;
-  scf::ExecuteRegionOp exeRegionOp = wrapMultiBlockRegionWithSCFExecuteRegion(
-      region, mapping, loc, b, /*convertFuncReturn=*/true);
+  scf::ExecuteRegionOp exeRegionOp =
+      wrapMultiBlockRegionWithSCFExecuteRegion(region, mapping, loc, b);
 
   ASSERT_TRUE(exeRegionOp);
 

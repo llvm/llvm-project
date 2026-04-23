@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compilexx-and-run-generic
 // RUN: %libomptarget-compileoptxx-and-run-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <cassert>
 

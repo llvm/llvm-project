@@ -956,16 +956,18 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::DenseMap<const DeclaratorDecl *, std::pair<llvm::Value *, llvm::Type *>>
-      OutputSemantic;
+  SmallVector<std::pair<llvm::Value *, llvm::Type *>> OutputSemantic;
 
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
     if (Param.hasStructRetAttr()) {
       SRetOffset = 1;
       llvm::Type *VarType = Param.getParamStructRetType();
-      llvm::Value *Var = B.CreateAlloca(VarType);
-      OutputSemantic.try_emplace(FD, std::make_pair(Var, VarType));
+      llvm::Value *Var =
+          CGM.getLangOpts().EmitLogicalPointer
+              ? cast<Instruction>(B.CreateStructuredAlloca(VarType))
+              : cast<Instruction>(B.CreateAlloca(VarType));
+      OutputSemantic.push_back(std::make_pair(Var, VarType));
       Args.push_back(Var);
       continue;
     }
@@ -987,7 +989,11 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       if (!SemanticValue)
         return;
       if (Param.hasByValAttr()) {
-        llvm::Value *Var = B.CreateAlloca(Param.getParamByValType());
+        llvm::Value *Var =
+            CGM.getLangOpts().EmitLogicalPointer
+                ? cast<Instruction>(
+                      B.CreateStructuredAlloca(Param.getParamByValType()))
+                : cast<Instruction>(B.CreateAlloca(Param.getParamByValType()));
         B.CreateStore(SemanticValue, Var);
         SemanticValue = Var;
       }
@@ -1002,17 +1008,17 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   if (Fn->getReturnType() != CGM.VoidTy)
     // Element type is unused, so set to dummy value (NULL).
-    OutputSemantic.try_emplace(FD, std::make_pair(CI, nullptr));
+    OutputSemantic.push_back(std::make_pair(CI, nullptr));
 
-  for (auto &[Decl, SourcePair] : OutputSemantic) {
+  for (auto &SourcePair : OutputSemantic) {
     llvm::Value *Source = SourcePair.first;
     llvm::Type *ElementType = SourcePair.second;
     AllocaInst *AI = dyn_cast<AllocaInst>(Source);
     llvm::Value *SourceValue = AI ? B.CreateLoad(ElementType, Source) : Source;
 
-    auto AttrBegin = Decl->specific_attr_begin<HLSLAppliedSemanticAttr>();
-    auto AttrEnd = Decl->specific_attr_end<HLSLAppliedSemanticAttr>();
-    handleSemanticStore(B, FD, SourceValue, Decl, AttrBegin, AttrEnd);
+    auto AttrBegin = FD->specific_attr_begin<HLSLAppliedSemanticAttr>();
+    auto AttrEnd = FD->specific_attr_end<HLSLAppliedSemanticAttr>();
+    handleSemanticStore(B, FD, SourceValue, FD, AttrBegin, AttrEnd);
   }
 
   B.CreateRetVoid();
@@ -1162,6 +1168,8 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>())
+    addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
+  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinOutputAttr>())
     addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
 }
 
@@ -1430,7 +1438,7 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
   Indices.push_back(Idx);
   Indices.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 0));
 
-  if (CGF.getLangOpts().EmitStructuredGEP) {
+  if (CGF.getLangOpts().EmitLogicalPointer) {
     // The fact that we emit an array-to-pointer decay might be an oversight,
     // but for now, we simply ignore it (see #179951).
     const CastExpr *CE = cast<CastExpr>(E->getBase());
@@ -1645,7 +1653,7 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   CharUnits Align = CharUnits::fromQuantity(
       CGF.CGM.getDataLayout().getABITypeAlign(FieldLLVMTy));
 
-  Value *Ptr = CGF.getLangOpts().EmitStructuredGEP
+  Value *Ptr = CGF.getLangOpts().EmitLogicalPointer
                    ? CGF.Builder.CreateStructuredGEP(
                          LayoutTy, Base.getPointer(CGF),
                          llvm::ConstantInt::get(CGM.IntTy, FieldIdx))

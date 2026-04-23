@@ -943,6 +943,7 @@ void ASTContext::cleanup() {
     Value.second->~PerModuleInitializers();
   ModuleInitializers.clear();
 
+  TUDecl = nullptr;
   XRayFilter.reset();
   NoSanitizeL.reset();
 }
@@ -1426,7 +1427,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   }
 
   if (Target.getTriple().isAMDGPU() ||
-      (AuxTarget && AuxTarget->getTriple().isAMDGPU())) {
+      (Target.getTriple().isSPIRV() &&
+       Target.getTriple().getVendor() == llvm::Triple::AMD) ||
+      (AuxTarget &&
+       (AuxTarget->getTriple().isAMDGPU() ||
+        ((AuxTarget->getTriple().isSPIRV() &&
+          AuxTarget->getTriple().getVendor() == llvm::Triple::AMD))))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AMDGPUTypes.def"
@@ -1489,6 +1495,21 @@ void ASTContext::eraseDeclAttrs(const Decl *D) {
     Pos->second->~AttrVec();
     DeclAttrs.erase(Pos);
   }
+}
+
+ArrayRef<ExplicitInstantiationDecl *>
+ASTContext::getExplicitInstantiationDecls(const NamedDecl *Spec) const {
+  auto It =
+      ExplicitInstantiations.find(cast<NamedDecl>(Spec->getCanonicalDecl()));
+  if (It != ExplicitInstantiations.end())
+    return It->second;
+  return {};
+}
+
+void ASTContext::addExplicitInstantiationDecl(const NamedDecl *Spec,
+                                              ExplicitInstantiationDecl *EID) {
+  ExplicitInstantiations[cast<NamedDecl>(Spec->getCanonicalDecl())].push_back(
+      EID);
 }
 
 // FIXME: Remove ?
@@ -7300,8 +7321,8 @@ ASTContext::getNameForTemplate(TemplateName Name,
   llvm_unreachable("bad template name kind!");
 }
 
-static const TemplateArgument *
-getDefaultTemplateArgumentOrNone(const NamedDecl *P) {
+const TemplateArgument *
+ASTContext::getDefaultTemplateArgumentOrNone(const NamedDecl *P) const {
   auto handleParam = [](auto *TP) -> const TemplateArgument * {
     if (!TP->hasDefaultArgument())
       return nullptr;
@@ -12739,6 +12760,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.AMDGPUBufferRsrcTy;
       break;
     }
+    case 'c': {
+      Type = Context.AMDGPUFeaturePredicateTy;
+      break;
+    }
     case 't': {
       Type = Context.AMDGPUTextureTy;
       break;
@@ -13366,10 +13391,7 @@ VTableContextBase *ASTContext::getVTableContext() {
     if (ABI.isMicrosoft())
       VTContext.reset(new MicrosoftVTableContext(*this));
     else {
-      auto ComponentLayout = getLangOpts().RelativeCXXABIVTables
-                                 ? ItaniumVTableContext::Relative
-                                 : ItaniumVTableContext::Pointer;
-      VTContext.reset(new ItaniumVTableContext(*this, ComponentLayout));
+      VTContext.reset(new ItaniumVTableContext(*this));
     }
   }
   return VTContext.get();

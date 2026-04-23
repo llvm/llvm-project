@@ -299,6 +299,42 @@ func.func @vector_shape_cast_expand_non_unit_dims(%arg0: memref<1024xf16>, %arg1
 
 // -----
 gpu.module @test {
+// CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size(
+// CHECK: %[[ReduceVal:.*]] = vector.multi_reduction <add>, %[[Val:.*]], %[[CST:.*]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 1]>, dims = [1, 2]>} [1, 2] : vector<1x16x1xf16> to vector<1xf16>
+func.func @vector_2d_reduction_with_fractional_subgroup_size(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
+    %cst = arith.constant dense<true> : vector<16xi1>
+    %0 = vector.step : vector<16xindex>
+    %1 = xegpu.load %arg0[%0], %cst  : memref<1024xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
+    %2 = vector.shape_cast %1 : vector<16xf16> to vector<1x16x1xf16>
+    %cst_0 = arith.constant dense<0.000000e+00> : vector<1xf16>
+    %4 = vector.multi_reduction <add>, %2, %cst_0 [1, 2] : vector<1x16x1xf16> to vector<1xf16>
+    %cst_2 = arith.constant dense<true> : vector<1xi1>
+    %cst_3 = arith.constant dense<1> : vector<1xindex>
+    xegpu.store %4, %arg1[%cst_3], %cst_2 <{layout = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16]>, dims = [1, 2]>}> : vector<1xf16>, memref<16xf16>, vector<1xindex>, vector<1xi1>
+    return
+  }
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4x1(
+// CHECK: %[[ReduceVal:.*]] = vector.multi_reduction <add>, %[[Val:.*]], %[[CST:.*]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 4]>, dims = [1, 2]>} [1, 2] : vector<1x16x4xf16> to vector<1xf16>
+func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4x1(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
+    %cst = arith.constant dense<true> : vector<64xi1>
+    %0 = vector.step : vector<64xindex>
+    %1 = xegpu.load %arg0[%0], %cst  : memref<1024xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
+    %2 = vector.shape_cast %1 : vector<64xf16> to vector<1x16x4xf16>
+    %cst_0 = arith.constant dense<0.000000e+00> : vector<1xf16>
+    %4 = vector.multi_reduction <add>, %2, %cst_0 [1, 2] : vector<1x16x4xf16> to vector<1xf16>
+    %cst_2 = arith.constant dense<true> : vector<1xi1>
+    %cst_3 = arith.constant dense<1> : vector<1xindex>
+    xegpu.store %4, %arg1[%cst_3], %cst_2 <{layout = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16]>, dims = [1, 2]>}> : vector<1xf16>, memref<16xf16>, vector<1xindex>, vector<1xi1>
+    return
+  }
+}
+
+// -----
+gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_and_merge(
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [32]>} dense<true> : vector<256xi1>
 // CHECK: %[[STEP:.*]] = vector.step {layout_result_0 = #xegpu.layout<inst_data = [32]>} : vector<256xindex>

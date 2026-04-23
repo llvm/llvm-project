@@ -66,7 +66,7 @@ void test3(void) {
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>M</string>
-// CHECK-NEXT:   <key>expansion</key><string>F1
+// CHECK-NEXT:   <key>expansion</key><string>F1 (&amp;X )</string>
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 
@@ -89,7 +89,7 @@ void test4(void) {
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>M</string>
-// CHECK-NEXT:   <key>expansion</key><string>F2
+// CHECK-NEXT:   <key>expansion</key><string>F2 (&amp;X )</string>
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 

@@ -52,6 +52,12 @@ static const MachineMemOperand::Flags MOLastUse =
 static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
+struct V2PhysSCopyInfo {
+  // Operands that need to replaced by waterfall
+  SmallVector<MachineOperand *> MOs;
+  // Target physical registers replacing the MOs
+  SmallVector<Register> SGPRs;
+};
 /// Mark the MMO of accesses to memory locations that are
 /// never written to by other threads.
 static const MachineMemOperand::Flags MOThreadPrivate =
@@ -332,9 +338,10 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
@@ -935,6 +942,24 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VOP3P;
   }
 
+  bool isVOP3PMix(const MachineInstr &MI) const {
+    return isVOP3PMix(MI.getOpcode());
+  }
+
+  bool isVOP3PMix(uint16_t Opcode) const {
+    switch (Opcode) {
+    case AMDGPU::V_FMA_MIXHI_F16:
+    case AMDGPU::V_FMA_MIXLO_F16:
+    case AMDGPU::V_FMA_MIX_F32:
+    case AMDGPU::V_MAD_MIXHI_F16:
+    case AMDGPU::V_MAD_MIXLO_F16:
+    case AMDGPU::V_MAD_MIX_F32:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   static bool isVINTRP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::VINTRP;
   }
@@ -1198,6 +1223,7 @@ public:
     case AMDGPU::S_WAIT_EXPCNT:
     case AMDGPU::S_WAIT_DSCNT:
     case AMDGPU::S_WAIT_KMCNT:
+    case AMDGPU::S_WAIT_XCNT:
     case AMDGPU::S_WAIT_IDLE:
       return true;
     default:
@@ -1500,8 +1526,17 @@ public:
   /// updated.
   void moveToVALU(SIInstrWorklist &Worklist, MachineDominatorTree *MDT) const;
 
-  void moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
-                      MachineInstr &Inst) const;
+  void
+  moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
+                 MachineInstr &Inst,
+                 DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+                 DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const;
+  /// Wrapper function for generating waterfall for instruction \p MI
+  /// This function take into consideration of related pre & succ instructions
+  /// (e.g. calling process) into consideratioin
+  void createWaterFallForSiCall(MachineInstr *MI, MachineDominatorTree *MDT,
+                                ArrayRef<MachineOperand *> ScalarOps,
+                                ArrayRef<Register> PhySGPRs = {}) const;
 
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
@@ -1554,13 +1589,28 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  Register isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
-  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isStackAccess(const MachineInstr &MI, int &FrameIndex,
+                         TypeSize &MemBytes) const;
+  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
+                             TypeSize &MemBytes) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
-                               int &FrameIndex) const override;
+                               int &FrameIndex) const override {
+    TypeSize MemBytes = TypeSize::getZero();
+    return isLoadFromStackSlot(MI, FrameIndex, MemBytes);
+  }
+
+  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
+                               TypeSize &MemBytes) const override;
+
   Register isStoreToStackSlot(const MachineInstr &MI,
-                              int &FrameIndex) const override;
+                              int &FrameIndex) const override {
+    TypeSize MemBytes = TypeSize::getZero();
+    return isStoreToStackSlot(MI, FrameIndex, MemBytes);
+  }
+
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+                              TypeSize &MemBytes) const override;
 
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
@@ -1663,9 +1713,8 @@ public:
   void fixImplicitOperands(MachineInstr &MI) const;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
@@ -1675,17 +1724,25 @@ public:
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
-  InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const final;
+  ValueUniformity getValueUniformity(const MachineInstr &MI) const final;
 
-  InstructionUniformity
-  getGenericInstructionUniformity(const MachineInstr &MI) const;
+  ValueUniformity getGenericValueUniformity(const MachineInstr &MI) const;
 
   const MIRFormatter *getMIRFormatter() const override;
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
+
+  void createReadFirstLaneFromCopyToPhysReg(MachineRegisterInfo &MRI,
+                                            Register DstReg,
+                                            MachineInstr &Inst) const;
+
+  void handleCopyToPhysHelper(
+      SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
+      MachineRegisterInfo &MRI,
+      DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+      DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const;
 
   // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.
@@ -1829,7 +1886,7 @@ namespace AMDGPU {
 } // end namespace AMDGPU
 
 namespace AMDGPU {
-enum AsmComments {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // For sgpr to vgpr spill instructions
   SGPR_SPILL = MachineInstr::TAsmComments
 };

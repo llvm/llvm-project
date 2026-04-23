@@ -14,8 +14,6 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1:       vector.ph:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT1:%.*]], [[VECTOR_BODY]] ]
@@ -29,12 +27,11 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = mul <vscale x 16 x i32> [[TMP4]], [[TMP5]]
 ; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP6]])
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT1]] = add nuw i64 [[INDEX1]], [[TMP1]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT1]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT1]], 1024
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-INTERLEAVE1:       middle.block:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]])
-; CHECK-INTERLEAVE1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @dotp(
@@ -45,8 +42,6 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP4]], 1
-; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT1:%.*]], [[VECTOR_BODY]] ]
@@ -69,13 +64,12 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = mul <vscale x 16 x i32> [[TMP13]], [[TMP14]]
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE5]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI1]], <vscale x 16 x i32> [[TMP15]])
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT1]] = add nuw i64 [[INDEX1]], [[TMP1]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT1]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT1]], 1024
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
 ; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[BIN_RDX]])
-; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-INTERLEAVED-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
 ; CHECK-MAXBW-LABEL: define i32 @dotp(
@@ -85,8 +79,6 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
-; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -100,18 +92,17 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = mul <vscale x 16 x i32> [[TMP4]], [[TMP5]]
 ; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP6]])
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-MAXBW-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-MAXBW-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-MAXBW-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-MAXBW:       middle.block:
 ; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]])
-; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-MAXBW-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -126,7 +117,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -242,7 +233,7 @@ define i64 @not_dotp_i8_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = phi ptr [ %a, %entry ], [ %gep.a.next, %for.body ]
@@ -259,7 +250,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i64 %add
 }
 
@@ -381,7 +372,7 @@ define i64 @not_dotp_i16_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = phi ptr [ %a, %entry ], [ %gep.a.next, %for.body ]
@@ -398,7 +389,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i64 %add
 }
 
@@ -739,7 +730,7 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -754,7 +745,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -781,7 +772,7 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1:       middle.block:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i32> [[VECTOR_RECUR]], <16 x i32> [[TMP4]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = add <16 x i32> [[TMP4]], [[TMP9]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = extractelement <16 x i32> [[TMP6]], i32 15
+; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = extractelement <16 x i32> [[TMP6]], i64 15
 ; CHECK-INTERLEAVE1-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK-INTERLEAVE1:       for.exit:
 ; CHECK-INTERLEAVE1-NEXT:    ret i32 [[TMP8]]
@@ -814,7 +805,7 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED:       middle.block:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i32> [[TMP8]], <16 x i32> [[TMP9]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = add <16 x i32> [[TMP9]], [[TMP14]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = extractelement <16 x i32> [[TMP11]], i32 15
+; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = extractelement <16 x i32> [[TMP11]], i64 15
 ; CHECK-INTERLEAVED-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK-INTERLEAVED:       for.exit:
 ; CHECK-INTERLEAVED-NEXT:    ret i32 [[TMP13]]
@@ -841,7 +832,7 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW:       middle.block:
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i32> [[VECTOR_RECUR]], <16 x i32> [[TMP4]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = add <16 x i32> [[TMP4]], [[TMP9]]
-; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = extractelement <16 x i32> [[TMP6]], i32 15
+; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = extractelement <16 x i32> [[TMP6]], i64 15
 ; CHECK-MAXBW-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK-MAXBW:       for.exit:
 ; CHECK-MAXBW-NEXT:    ret i32 [[TMP8]]
@@ -849,7 +840,7 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %mul, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -864,7 +855,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -876,8 +867,6 @@ define i32 @not_dotp_not_phi(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1:       vector.ph:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
-; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -886,19 +875,18 @@ define i32 @not_dotp_not_phi(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 16 x i8>, ptr [[TMP13]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-INTERLEAVE1:       middle.block:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP5:%.*]] = zext <vscale x 16 x i8> [[WIDE_LOAD]] to <vscale x 16 x i32>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = zext <vscale x 16 x i8> [[WIDE_LOAD1]] to <vscale x 16 x i32>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = mul <vscale x 16 x i32> [[TMP6]], [[TMP5]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = add <vscale x 16 x i32> [[TMP7]], [[TMP6]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-INTERLEAVE1-NEXT:    [[TMP24:%.*]] = mul nuw i32 [[TMP23]], 16
-; CHECK-INTERLEAVE1-NEXT:    [[TMP25:%.*]] = sub i32 [[TMP24]], 1
-; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 16 x i32> [[TMP8]], i32 [[TMP25]]
-; CHECK-INTERLEAVE1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-INTERLEAVE1-NEXT:    [[TMP12:%.*]] = mul nuw i32 [[TMP9]], 16
+; CHECK-INTERLEAVE1-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP12]], 1
+; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 16 x i32> [[TMP8]], i32 [[TMP11]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @not_dotp_not_phi(
@@ -909,8 +897,6 @@ define i32 @not_dotp_not_phi(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP2]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 1
-; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -921,19 +907,18 @@ define i32 @not_dotp_not_phi(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP1]]
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 16 x i8>, ptr [[TMP6]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = zext <vscale x 16 x i8> [[WIDE_LOAD]] to <vscale x 16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = zext <vscale x 16 x i8> [[WIDE_LOAD1]] to <vscale x 16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = mul <vscale x 16 x i32> [[TMP15]], [[TMP11]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = add <vscale x 16 x i32> [[TMP17]], [[TMP15]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP27:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-INTERLEAVED-NEXT:    [[TMP28:%.*]] = mul nuw i32 [[TMP27]], 16
-; CHECK-INTERLEAVED-NEXT:    [[TMP29:%.*]] = sub i32 [[TMP28]], 1
-; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 16 x i32> [[TMP21]], i32 [[TMP29]]
-; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = mul nuw i32 [[TMP12]], 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], 1
+; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 16 x i32> [[TMP21]], i32 [[TMP14]]
+; CHECK-INTERLEAVED-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
 ; CHECK-MAXBW-LABEL: define i32 @not_dotp_not_phi(
@@ -943,8 +928,6 @@ define i32 @not_dotp_not_phi(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
-; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -953,25 +936,24 @@ define i32 @not_dotp_not_phi(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 16 x i8>, ptr [[TMP15]], align 1
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-MAXBW-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-MAXBW-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-MAXBW-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-MAXBW:       middle.block:
 ; CHECK-MAXBW-NEXT:    [[TMP5:%.*]] = zext <vscale x 16 x i8> [[WIDE_LOAD]] to <vscale x 16 x i32>
 ; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = zext <vscale x 16 x i8> [[WIDE_LOAD1]] to <vscale x 16 x i32>
 ; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = mul <vscale x 16 x i32> [[TMP6]], [[TMP5]]
 ; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = add <vscale x 16 x i32> [[TMP7]], [[TMP6]]
-; CHECK-MAXBW-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-MAXBW-NEXT:    [[TMP24:%.*]] = mul nuw i32 [[TMP23]], 16
-; CHECK-MAXBW-NEXT:    [[TMP25:%.*]] = sub i32 [[TMP24]], 1
-; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 16 x i32> [[TMP8]], i32 [[TMP25]]
-; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-MAXBW-NEXT:    [[TMP12:%.*]] = mul nuw i32 [[TMP9]], 16
+; CHECK-MAXBW-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP12]], 1
+; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 16 x i32> [[TMP8]], i32 [[TMP11]]
+; CHECK-MAXBW-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -986,7 +968,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -1233,7 +1215,7 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                    ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum3 = phi i32 [ 0, %entry ], [ %add.a3, %for.body ]
   %accum2 = phi i32 [ 0, %entry ], [ %add.a2, %for.body ]
@@ -1278,7 +1260,7 @@ for.body:                                    ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %num_in
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                        ; preds = %for.body
+exit:
   %result0 = add nsw i32 %add.a0, %add.a1
   %result1 = add nsw i32 %add.a2, %add.a3
   %result = add nsw i32 %result0, %result1
@@ -1310,7 +1292,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP19]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP12]])
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; CHECK-INTERLEAVE1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
-; CHECK-INTERLEAVE1-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; CHECK-INTERLEAVE1-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP21:%.*]] = xor i1 [[TMP20]], true
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-INTERLEAVE1:       middle.block:
@@ -1343,7 +1325,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP19]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP12]])
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; CHECK-INTERLEAVED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = xor i1 [[TMP20]], true
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
@@ -1376,7 +1358,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP18]])
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; CHECK-MAXBW-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
-; CHECK-MAXBW-NEXT:    [[TMP19:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; CHECK-MAXBW-NEXT:    [[TMP19:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-MAXBW-NEXT:    [[TMP20:%.*]] = xor i1 [[TMP19]], true
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-MAXBW:       middle.block:
@@ -1388,7 +1370,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds i8, ptr %a, i64 %iv
@@ -1403,7 +1385,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !7
 
-exit:                        ; preds = %for.body
+exit:
   ret i32 %add
 }
 
@@ -1415,8 +1397,6 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1:       vector.ph:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1430,7 +1410,7 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP14:%.*]] = mul <vscale x 8 x i32> [[TMP5]], [[TMP4]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP7]] = add <vscale x 8 x i32> [[TMP14]], [[VEC_PHI]]
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-INTERLEAVE1:       middle.block:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP7]])
@@ -1438,8 +1418,7 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP11:%.*]] = mul nuw i32 [[TMP10]], 8
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP12:%.*]] = sub i32 [[TMP11]], 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 8 x i32> [[TMP5]], i32 [[TMP12]]
-; CHECK-INTERLEAVE1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @not_dotp_extend_user(
@@ -1450,8 +1429,6 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP4]], 1
-; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1474,17 +1451,16 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP16]] = add <vscale x 8 x i32> [[TMP14]], [[VEC_PHI]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17]] = add <vscale x 8 x i32> [[TMP15]], [[VEC_PHI1]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
 ; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 8 x i32> [[TMP17]], [[TMP16]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[BIN_RDX]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = mul nuw i32 [[TMP20]], 8
-; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = sub i32 [[TMP21]], 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 8 x i32> [[TMP13]], i32 [[TMP22]]
-; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = mul nuw i32 [[TMP21]], 8
+; CHECK-INTERLEAVED-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP22]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 8 x i32> [[TMP13]], i32 [[TMP23]]
+; CHECK-INTERLEAVED-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
 ; CHECK-MAXBW-LABEL: define i32 @not_dotp_extend_user(
@@ -1494,8 +1470,6 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
-; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1509,22 +1483,21 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[TMP22:%.*]] = mul <vscale x 8 x i32> [[TMP20]], [[TMP13]]
 ; CHECK-MAXBW-NEXT:    [[TMP24]] = add <vscale x 8 x i32> [[TMP22]], [[VEC_PHI1]]
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-MAXBW-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-MAXBW-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-MAXBW-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-MAXBW:       middle.block:
 ; CHECK-MAXBW-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP24]])
-; CHECK-MAXBW-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-MAXBW-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 8
-; CHECK-MAXBW-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP18]], 1
-; CHECK-MAXBW-NEXT:    [[TMP21:%.*]] = extractelement <vscale x 8 x i32> [[TMP20]], i32 [[TMP19]]
-; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-MAXBW-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-MAXBW-NEXT:    [[TMP11:%.*]] = mul nuw i32 [[TMP10]], 8
+; CHECK-MAXBW-NEXT:    [[TMP12:%.*]] = sub i32 [[TMP11]], 1
+; CHECK-MAXBW-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 8 x i32> [[TMP20]], i32 [[TMP12]]
+; CHECK-MAXBW-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -1539,7 +1512,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   %result = add i32 %add, %ext.b
   ret i32 %result
 }
@@ -1661,7 +1634,7 @@ define i64 @dotp_cost_disagreement(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
   %sum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %i.iv
@@ -1676,7 +1649,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %i.iv.next, 41
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret i64 %add
 }
 
@@ -1818,14 +1791,14 @@ entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %for.preheader, label %exit
 
-for.preheader:                   ; preds = %entry
+for.preheader:
   %load.a = load i8, ptr inttoptr (i64 0 to ptr), align 1
   %load.a1 = load i8, ptr inttoptr (i64 1 to ptr), align 1
   %a.ext = sext i8 %load.a to i32
   %a.ext1 = sext i8 %load.a1 to i32
   br label %for.body
 
-for.body:                             ; preds = %for.preheader, %for.body
+for.body:
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %for.preheader ]
   %ptr = phi ptr [ %scevgep, %for.body ], [ %matrix, %for.preheader ]
   %accum = phi i32 [ %add.1, %for.body ], [ 0, %for.preheader ]
@@ -1844,12 +1817,12 @@ for.body:                             ; preds = %for.preheader, %for.body
   %exitcond.not = icmp eq i32 %iv.next, %n
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                       ; preds = %for.body
+for.exit:
   %add.1.lcssa = phi i32 [ %add.1, %for.body ]
   %add.float = sitofp i32 %add.1.lcssa to float
   br label %exit
 
-exit:                                ; preds = %for.exit, %entry
+exit:
   %result = phi float [ 0.000000e+00, %entry ], [ %add.float, %for.exit ]
   store float %result, ptr %matrix, align 4
   ret void
@@ -1963,11 +1936,11 @@ entry:
   %cmp = icmp eq i64 %n, 0
   br i1 %cmp, label %exit, label %for.ph
 
-for.ph:                                   ; preds = %entry
+for.ph:
   %ext.b = zext i16 %b to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %iv = phi i64 [ 0, %for.ph ], [ %iv.next, %for.body ]
   %accum = phi i64 [ 0, %for.ph ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds nuw i16, ptr %a, i64 %iv
@@ -1979,7 +1952,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp.1 = icmp eq i64 %iv.next, %n
   br i1 %cmp.1, label %exit, label %for.body
 
-exit:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+exit:
   %result = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %result
 }
@@ -2092,11 +2065,11 @@ entry:
   %cmp = icmp eq i64 %n, 0
   br i1 %cmp, label %exit, label %for.ph
 
-for.ph:                                   ; preds = %entry
+for.ph:
   %ext.b = zext i16 %b to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %iv = phi i64 [ 0, %for.ph ], [ %iv.next, %for.body ]
   %accum = phi i64 [ 0, %for.ph ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds nuw i16, ptr %a, i64 %iv
@@ -2108,13 +2081,13 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp.1 = icmp eq i64 %iv.next, %n
   br i1 %cmp.1, label %exit, label %for.body
 
-exit:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+exit:
   %result = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %result
 }
 
-define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
-; CHECK-INTERLEAVE1-LABEL: define dso_local i32 @not_dotp_vscale1(
+define i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
+; CHECK-INTERLEAVE1-LABEL: define i32 @not_dotp_vscale1(
 ; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[N:%.*]], i64 [[COST:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
@@ -2155,7 +2128,7 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
-; CHECK-INTERLEAVED-LABEL: define dso_local i32 @not_dotp_vscale1(
+; CHECK-INTERLEAVED-LABEL: define i32 @not_dotp_vscale1(
 ; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[N:%.*]], i64 [[COST:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
@@ -2207,7 +2180,7 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
-; CHECK-MAXBW-LABEL: define dso_local i32 @not_dotp_vscale1(
+; CHECK-MAXBW-LABEL: define i32 @not_dotp_vscale1(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[N:%.*]], i64 [[COST:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
@@ -2252,7 +2225,7 @@ entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %for.body, label %exit
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
   %accum = phi i64 [ %add, %for.body ], [ %cost, %entry ]
   %a.ptr = phi ptr [ %a.gep, %for.body ], [ %a, %entry ]
@@ -2269,15 +2242,15 @@ for.body:                                         ; preds = %for.body.preheader,
   %cmp.2 = icmp eq i32 %iv.next, %n
   br i1 %cmp.2, label %exit, label %for.body
 
-exit:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+exit:
   %cost.result = phi i64 [ %cost, %entry ], [ %add, %for.body ]
   %result = trunc i64 %cost.result to i32
   ret i32 %result
 }
 
 
-define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 {
-; CHECK-INTERLEAVE1-LABEL: define dso_local void @not_dotp_high_register_pressure(
+define void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 {
+; CHECK-INTERLEAVE1-LABEL: define void @not_dotp_high_register_pressure(
 ; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[SUM:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    [[CMP100:%.*]] = icmp sgt i32 [[N]], 0
@@ -2377,7 +2350,7 @@ define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum,
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
-; CHECK-INTERLEAVED-LABEL: define dso_local void @not_dotp_high_register_pressure(
+; CHECK-INTERLEAVED-LABEL: define void @not_dotp_high_register_pressure(
 ; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[SUM:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    [[CMP100:%.*]] = icmp sgt i32 [[N]], 0
@@ -2477,7 +2450,7 @@ define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum,
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
-; CHECK-MAXBW-LABEL: define dso_local void @not_dotp_high_register_pressure(
+; CHECK-MAXBW-LABEL: define void @not_dotp_high_register_pressure(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[SUM:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[CMP100:%.*]] = icmp sgt i32 [[N]], 0
@@ -2581,7 +2554,7 @@ entry:
   %cmp100 = icmp sgt i32 %n, 0
   br i1 %cmp100, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %arrayidx13 = getelementptr inbounds nuw i8, ptr %sum, i64 4
   %gep.b.12 = getelementptr inbounds nuw i8, ptr %sum, i64 8
   %arrayidx31 = getelementptr inbounds nuw i8, ptr %sum, i64 12
@@ -2600,7 +2573,7 @@ for.body.lr.ph:                                   ; preds = %entry
   %wide.trip.count = zext nneg i32 %n to i64
   br label %for.body
 
-for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
+for.cond.for.cond.cleanup_crit_edge:
   %add.lcssa = phi i32 [ %add.1, %for.body ]
   %add.2.lcssa = phi i32 [ %add.2, %for.body ]
   %add.3.lcssa = phi i32 [ %add.3, %for.body ]
@@ -2619,10 +2592,10 @@ for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
   store i32 %add.8.lcssa, ptr %arrayidx67, align 4
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.for.cond.cleanup_crit_edge, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %0 = phi i32 [ %arrayidx67.promoted, %for.body.lr.ph ], [ %add.8, %for.body ]
   %1 = phi i32 [ %arrayidx58.promoted, %for.body.lr.ph ], [ %add.7, %for.body ]

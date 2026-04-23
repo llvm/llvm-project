@@ -21,6 +21,5 @@ static_library("hicpp") {
   sources = [
     "HICPPTidyModule.cpp",
     "MultiwayPathsCoveredCheck.cpp",
-    "SignedBitwiseCheck.cpp",
   ]
 }

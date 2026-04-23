@@ -68,6 +68,25 @@ BASE_OPTIONAL(const bool, ExactUsableSize, true)
 BASE_OPTIONAL(const bool, EnableZeroOnDealloc, false)
 #endif
 
+// Abort if there is a mismatch between the function type that allocates memory
+// and the function type that deallocates memory.
+// These conditions will abort with an error message:
+//   new/any C free operation
+//   any C allocation operation/any delete operation
+//   new/delete[]
+//   new[]/delete
+//   aligned alloc/free_sized
+//   non-aligned alloc/free_aligned_sized
+BASE_OPTIONAL(const bool, AbortOnDeallocTypeMismatch, true)
+
+// Abort if there is free function that takes a size value but that size
+// does not match the allocation size.
+BASE_OPTIONAL(const bool, AbortOnDeallocSizeMismatch, true)
+
+// Abort if there is free function that takes an alignment value but that
+// alignment does not match the allocation alignment.
+BASE_OPTIONAL(const bool, AbortOnDeallocAlignmentMismatch, true)
+
 // PRIMARY_REQUIRED_TYPE(NAME)
 //
 // SizeClassMap to use with the Primary.

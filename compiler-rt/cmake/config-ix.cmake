@@ -153,7 +153,11 @@ check_cxx_compiler_flag(-Wno-pedantic COMPILER_RT_HAS_WNO_PEDANTIC)
 check_cxx_compiler_flag(-Wno-format COMPILER_RT_HAS_WNO_FORMAT)
 check_cxx_compiler_flag(-Wno-format-pedantic COMPILER_RT_HAS_WNO_FORMAT_PEDANTIC)
 
-check_cxx_compiler_flag("/experimental:external /external:W0" COMPILER_RT_HAS_EXTERNAL_FLAG)
+if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  check_cxx_compiler_flag("/experimental:external /external:W0" COMPILER_RT_HAS_EXTERNAL_FLAG)
+else()
+  set(COMPILER_RT_HAS_EXTERNAL_FLAG FALSE)
+endif()
 
 check_cxx_compiler_flag(/W4 COMPILER_RT_HAS_W4_FLAG)
 check_cxx_compiler_flag(/WX COMPILER_RT_HAS_WX_FLAG)
@@ -221,6 +225,10 @@ if(COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
   string(APPEND VERS_OPTION " ${VERS_COMPAT_OPTION}")
 endif()
 llvm_check_compiler_linker_flag(C "${VERS_OPTION}" COMPILER_RT_HAS_VERSION_SCRIPT)
+
+if(APPLE)
+  llvm_check_compiler_linker_flag(C "-Wl,-mac_public_arm64e" COMPILER_RT_HAS_MAC_PUBLIC_ARM64E)
+endif()
 
 if(ANDROID)
   llvm_check_compiler_linker_flag(C "-Wl,-z,global" COMPILER_RT_HAS_Z_GLOBAL)
@@ -705,7 +713,7 @@ else()
   filter_available_targets(LSAN_COMMON_SUPPORTED_ARCH
     ${SANITIZER_COMMON_SUPPORTED_ARCH})
   filter_available_targets(UBSAN_COMMON_SUPPORTED_ARCH
-    ${SANITIZER_COMMON_SUPPORTED_ARCH})
+    ${ALL_UBSAN_SUPPORTED_ARCH})
   filter_available_targets(ASAN_SUPPORTED_ARCH ${ALL_ASAN_SUPPORTED_ARCH})
   filter_available_targets(RTSAN_SUPPORTED_ARCH ${ALL_RTSAN_SUPPORTED_ARCH})
   filter_available_targets(FUZZER_SUPPORTED_ARCH ${ALL_FUZZER_SUPPORTED_ARCH})
@@ -891,8 +899,9 @@ else()
   set(COMPILER_RT_HAS_UBSAN FALSE)
 endif()
 
-if (COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Linux|FreeBSD|NetBSD|Android|Darwin|SunOS")
+if (UBSAN_SUPPORTED_ARCH AND
+    (OS_NAME MATCHES "Linux|FreeBSD|NetBSD|Android|Darwin|SunOS" OR
+     "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx"))
   set(COMPILER_RT_HAS_UBSAN_MINIMAL TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN_MINIMAL FALSE)

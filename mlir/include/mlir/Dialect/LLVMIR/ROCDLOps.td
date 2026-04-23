@@ -131,6 +131,8 @@ def ROCDL_Dialect : Dialect {
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
     /// The address space value that represents shared memory.
     static constexpr unsigned kSharedMemoryAddressSpace = 3;
+    /// The address space value that represents constant memory.
+    static constexpr unsigned kConstantMemoryAddressSpace = 4;
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];
@@ -344,7 +346,7 @@ def ROCDL_DsBpermuteOp : ROCDL_ConcreteNonMemIntrOp<"ds_bpermute", [], 1>,
 
     Each lane reads the value of `src` from the lane whose byte address is
     given by `index` (i.e. lane id = `index / 4`).
-    
+
     This is “backward” (pull) in contrast to `ds_permute_b32`, which is
     “forward” (push/scatter).
 
@@ -571,6 +573,8 @@ def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 
   Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$memberCnt)> {
   let description = [{
     Available on gfx1250+.
+
+    If `memberCnt` is 0, the member count is retained from a previous initialization.
 
     Example:
     ```mlir
@@ -1252,12 +1256,10 @@ class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
   }];
 }
 
-class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> : ROCDL_IntrOp<mnemonic,
-    [0], [1, 5], [], 1, 0, 0, 0, [0, 2, 4, 6, 7], ["signA", "signB","modC","reuseA","reuseB"]>,
+class ROCDL_WMMA_ModsC_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> : ROCDL_IntrOp<mnemonic,
+    [0], [0, 3], [], 1, 0, 0, 0, [2, 4, 5], ["modC","reuseA","reuseB"]>,
   Arguments<(ins
-             DefaultValuedAttr<I1Attr, "0">:$signA,
              LLVM_ScalarOrVectorOf<AB>:$a,
-             DefaultValuedAttr<I1Attr, "0">:$signB,
              LLVM_ScalarOrVectorOf<AB>:$b,
              DefaultValuedAttr<I16Attr, "0">:$modC,
              LLVM_ScalarOrVectorOf<C>:$c,
@@ -1392,12 +1394,12 @@ def ROCDL_wmma_f32_16x16x16_bf8_bf8 : ROCDL_WMMA_IntrOp<"wmma.f32.16x16x16.bf8_b
 def ROCDL_wmma_f32_16x16x16_bf8_fp8 : ROCDL_WMMA_IntrOp<"wmma.f32.16x16x16.bf8_fp8", AnyInteger, F32>;
 def ROCDL_wmma_i32_16x16x32_iu4 : ROCDL_WMMA_IU_IntrOp<"wmma.i32.16x16x32.iu4", AnyInteger, AnyInteger>;
 // Available from gfx1250
-def ROCDL_wmma_f32_16x16x4_f32 : ROCDL_WMMA_ModsAll_Reuse_IntrOp<"wmma.f32.16x16x4.f32", F32, F32>;
-def ROCDL_wmma_f32_16x16x32_bf16 : ROCDL_WMMA_ModsAll_Reuse_IntrOp<"wmma.f32.16x16x32.bf16", BF16, F32>;
-def ROCDL_wmma_f32_16x16x32_f16 : ROCDL_WMMA_ModsAll_Reuse_IntrOp<"wmma.f32.16x16x32.f16", F16, F32>;
-def ROCDL_wmma_f16_16x16x32_f16 : ROCDL_WMMA_ModsAll_Reuse_IntrOp<"wmma.f16.16x16x32.f16", F16, F16>;
-def ROCDL_wmma_bf16_16x16x32_bf16 : ROCDL_WMMA_ModsAll_Reuse_IntrOp<"wmma.bf16.16x16x32.bf16", BF16, BF16>;
-def ROCDL_wmma_bf16f32_16x16x32_bf16 : ROCDL_WMMA_ModsAll_Diff_IntrOp<"wmma.bf16f32.16x16x32.bf16", BF16, /*Type C=*/F32, /*Type D=*/BF16>;
+def ROCDL_wmma_f32_16x16x4_f32 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x4.f32", F32, F32>;
+def ROCDL_wmma_f32_16x16x32_bf16 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x32.bf16", BF16, F32>;
+def ROCDL_wmma_f32_16x16x32_f16 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x32.f16", F16, F32>;
+def ROCDL_wmma_f16_16x16x32_f16 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x32.f16", F16, F16>;
+def ROCDL_wmma_bf16_16x16x32_bf16 : ROCDL_WMMA_ModsC_IntrOp<"wmma.bf16.16x16x32.bf16", BF16, BF16>;
+def ROCDL_wmma_bf16f32_16x16x32_bf16 : ROCDL_WMMA_ModsC_Diff_IntrOp<"wmma.bf16f32.16x16x32.bf16", BF16, /*Type C=*/F32, /*Type D=*/BF16>;
 def ROCDL_wmma_f32_16x16x64_fp8_fp8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x64.fp8_fp8", AnyInteger, F32>;
 def ROCDL_wmma_f32_16x16x64_fp8_bf8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x64.fp8_bf8", AnyInteger, F32>;
 def ROCDL_wmma_f32_16x16x64_bf8_fp8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x64.bf8_fp8", AnyInteger, F32>;
@@ -1421,6 +1423,125 @@ def ROCDL_wmma_scale_f32_16x16x128_f8f6f4   : ROCDL_WMMA_Scale_IntrOp<"wmma.scal
 def ROCDL_wmma_scale16_f32_16x16x128_f8f6f4 : ROCDL_WMMA_Scale_IntrOp<"wmma.scale16.f32.16x16x128.f8f6f4", AnyInteger, F32, I64>;
 def ROCDL_wmma_scale_f32_32x16x128_f4       : ROCDL_WMMA_Scale_F4_IntrOp<"wmma.scale.f32.32x16x128.f4", AnyInteger, F32, I32>;
 def ROCDL_wmma_scale16_f32_32x16x128_f4     : ROCDL_WMMA_Scale_F4_IntrOp<"wmma.scale16.f32.32x16x128.f4", AnyInteger, F32, I64>;
+
+
+//===---------------------------------------------------------------------===//
+// Dot product intrinsics (v_dot*)
+class ROCDL_Dot_IntrOp<string mnemonic, ROCDL_NamedType A, ROCDL_NamedType B,
+                       ROCDL_NamedType C> :
+    ROCDL_ConcreteNonMemIntrOp<mnemonic, [Pure], 1, [3], ["clamp"]>,
+  Arguments<(ins A:$a, B:$b, C:$c,
+                 DefaultValuedAttr<I1Attr, "0">:$clamp)> {
+  let results = (outs C:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Packed intra-lane dot-product with optional result clamping (`clamp`).
+    Computes `res = sum_i a[i]*b[i] + c`, where `a` and `b` hold packed
+    4/8/16-bit data (for `dot2`,`dot4`,`dot8`).
+
+    Example:
+    ```mlir
+    %r = rocdl.}] # mnemonic # [{ %a, %b, %c {clamp = true} :
+         (}] # A.typeName # [{, }] # B.typeName # [{, }] # C.typeName # [{) -> }]
+         # C.typeName # [{
+    ```
+  }];
+}
+
+class ROCDL_Dot_NoClamp_IntrOp<string mnemonic, ROCDL_NamedType A,
+                               ROCDL_NamedType B, ROCDL_NamedType C> :
+    ROCDL_ConcreteNonMemIntrOp<mnemonic, [Pure], 1, [], []>,
+  Arguments<(ins A:$a, B:$b, C:$c)> {
+  let results = (outs C:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Packed intra-lane dot-product with no clamp control.
+    Computes `res = sum_i a[i]*b[i] + c`. Covers the full-f16/bf16
+    accumulator forms (`fdot2.f16.f16`, `fdot2.bf16.bf16`) and the
+    FP8/BF8 `dot4.f32.*` variants, whose hardware instructions have no
+    CLAMP bit in their modifier word.
+
+    Example:
+    ```mlir
+    %r = rocdl.}] # mnemonic # [{ %a, %b, %c : (}] # A.typeName # [{, }]
+         # B.typeName # [{, }] # C.typeName # [{) -> }] # C.typeName # [{
+    ```
+  }];
+}
+
+class ROCDL_Sudot_IntrOp<string mnemonic> :
+    ROCDL_ConcreteNonMemIntrOp<mnemonic, [Pure], 1, [0, 2, 5],
+                               ["signA", "signB", "clamp"]>,
+  Arguments<(ins DefaultValuedAttr<I1Attr, "0">:$signA,
+                 I32:$a,
+                 DefaultValuedAttr<I1Attr, "0">:$signB,
+                 I32:$b,
+                 I32:$c,
+                 DefaultValuedAttr<I1Attr, "0">:$clamp)> {
+  let results = (outs I32:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Mixed-signedness packed dot-product with per-operand sign controls.
+    Computes `res = sum_i a[i]*b[i] + c`. Each lane of `a` is treated as
+    signed when `signA = true`; when `signA = false`, the unsigned lane
+    value is zero-extended into a wider signed integer. `signB` controls
+    the same for `b`. `clamp` controls result clamping.
+
+    These ops correspond to RDNA's unified mixed-sign `v_dot4_i32_iu8`
+    and `v_dot8_i32_iu4` instructions (gfx11+). 
+
+    Example:
+    ```mlir
+    %r = rocdl.}] # mnemonic # [{ %a, %b, %c
+           {signA = true, signB = false, clamp = true} :
+         (i32, i32, i32) -> i32
+    ```
+  }];
+}
+
+// Available from gfx906.
+def ROCDL_fdot2 : ROCDL_Dot_IntrOp<"fdot2",
+    ROCDL_V2F16Type, ROCDL_V2F16Type, ROCDL_Scalar<F32>>;
+def ROCDL_sdot2 : ROCDL_Dot_IntrOp<"sdot2",
+    ROCDL_V2I16Type, ROCDL_V2I16Type, ROCDL_Scalar<I32>>;
+def ROCDL_udot2 : ROCDL_Dot_IntrOp<"udot2",
+    ROCDL_V2I16Type, ROCDL_V2I16Type, ROCDL_Scalar<I32>>;
+def ROCDL_sdot4 : ROCDL_Dot_IntrOp<"sdot4",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+def ROCDL_udot4 : ROCDL_Dot_IntrOp<"udot4",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+def ROCDL_sdot8 : ROCDL_Dot_IntrOp<"sdot8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+def ROCDL_udot8 : ROCDL_Dot_IntrOp<"udot8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+
+// Available from gfx11.
+def ROCDL_fdot2_f16_f16   : ROCDL_Dot_NoClamp_IntrOp<"fdot2.f16.f16",
+    ROCDL_V2F16Type,  ROCDL_V2F16Type,  ROCDL_Scalar<F16>>;
+def ROCDL_fdot2_bf16_bf16 : ROCDL_Dot_NoClamp_IntrOp<"fdot2.bf16.bf16",
+    ROCDL_V2BF16Type, ROCDL_V2BF16Type, ROCDL_Scalar<BF16>>;
+def ROCDL_sudot4 : ROCDL_Sudot_IntrOp<"sudot4">;
+def ROCDL_sudot8 : ROCDL_Sudot_IntrOp<"sudot8">;
+
+// Available from gfx11 and gfx950.
+def ROCDL_fdot2_f32_bf16 : ROCDL_Dot_IntrOp<"fdot2.f32.bf16",
+    ROCDL_V2BF16Type, ROCDL_V2BF16Type, ROCDL_Scalar<F32>>;
+
+// Available from gfx12.
+def ROCDL_dot4_f32_fp8_fp8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.fp8.fp8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
+def ROCDL_dot4_f32_fp8_bf8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.fp8.bf8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
+def ROCDL_dot4_f32_bf8_fp8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.bf8.fp8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
+def ROCDL_dot4_f32_bf8_bf8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.bf8.bf8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
 
 
 //===---------------------------------------------------------------------===//

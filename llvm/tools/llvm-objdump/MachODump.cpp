@@ -2675,8 +2675,9 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
     return;
   }
   // No architecture flags were specified so if this contains a slice that
-  // matches the host architecture dump only that.
-  if (!ArchAll) {
+  // matches the host architecture dump only that. For otool -a dump all
+  // architectures to match classic otool behaviour.
+  if (!ArchAll && !(IsOtool && ArchiveHeaders)) {
     for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
                                                 E = UB->end_objects();
           I != E; ++I) {
@@ -2765,9 +2766,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
         }
         if (MachOObjectFile *O =
                 dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
-          if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(O))
-            ProcessMachO(Filename, MachOOF, MachOOF->getFileName(),
-                          ArchitectureName);
+          ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
         }
       }
       if (Err)

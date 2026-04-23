@@ -1750,6 +1750,16 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {{"seconds", AnyInt, Rank::scalar, Optionality::required,
             common::Intent::In}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"split",
+        {{"string", SameCharNoLen, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"set", SameCharNoLen, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"pos", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::InOut},
+            {"back", AnyLogical, Rank::scalar, Optionality::optional,
+                common::Intent::In}},
+        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"tokenize",
         {{"string", SameCharNoLen, Rank::scalar, Optionality::required,
              common::Intent::In},
@@ -3802,6 +3812,21 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
       return HandleC_Devloc(arguments, context);
     } else if (call.name == "null") {
       return HandleNull(arguments, context);
+    } else if (call.name == "allocated") {
+      if (context.languageFeatures().IsEnabled(
+              common::LanguageFeature::AllocatedForAssociated) &&
+          arguments.size() == 1 && arguments[0].has_value()) {
+        auto &arg{*arguments[0]};
+        if (const Expr<SomeType> *expr{arg.UnwrapExpr()};
+            expr && IsObjectPointer(*expr)) {
+          context.Warn(common::LanguageFeature::AllocatedForAssociated,
+              arg.sourceLocation(),
+              "Argument of ALLOCATED() should be an allocatable, but is instead an object pointer"_warn_en_US);
+          // Treat ALLOCATED(ptr) as ASSOCIATED(ptr)
+          CallCharacteristics newCall{"associated"};
+          return Probe(newCall, arguments, context);
+        }
+      }
     }
   }
 

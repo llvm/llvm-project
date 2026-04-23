@@ -38,7 +38,7 @@ public:
   KnownBits() = default;
 
   /// Create a known bits object of BitWidth bits initialized to unknown.
-  KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
+  explicit KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
 
   /// Get the bit width of this value.
   unsigned getBitWidth() const {
@@ -51,9 +51,7 @@ public:
   bool hasConflict() const { return Zero.intersects(One); }
 
   /// Returns true if we know the value of all bits.
-  bool isConstant() const {
-    return Zero.popcount() + One.popcount() == getBitWidth();
-  }
+  bool isConstant() const { return Zero.isInverseOf(One); }
 
   /// Returns the value when all bits have a known value. This just returns One
   /// with a protective assertion.
@@ -361,7 +359,16 @@ public:
 
   /// Compute knownbits resulting from addition of LHS and RHS.
   static KnownBits add(const KnownBits &LHS, const KnownBits &RHS,
-                       bool NSW = false, bool NUW = false) {
+                       bool NSW = false, bool NUW = false,
+                       bool SelfAdd = false) {
+    // ADD(X,X) is equivalent to SHL(X,1), the low bit is always zero.
+    if (SelfAdd) {
+      // Shift amount bitwidth is independent of src bitwidth (and we're
+      // just shifting by one so don't have any bounds issues).
+      assert(LHS == RHS && "Expected matching knownbits");
+      KnownBits Amt = KnownBits::makeConstant(APInt(8, 1));
+      return KnownBits::shl(LHS, Amt, NUW, NSW, /*ShAmtNonZero=*/true);
+    }
     return computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
   }
 
