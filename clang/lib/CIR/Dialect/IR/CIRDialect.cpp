@@ -2538,13 +2538,22 @@ mlir::LogicalResult cir::FuncOp::verify() {
 
   if (!isDeclaration() && getCoroutine()) {
     bool foundAwait = false;
+    int coroBodyCount = 0;
     this->walk([&](Operation *op) {
       if (auto await = dyn_cast<AwaitOp>(op)) {
         foundAwait = true;
-        return;
+      } else if (isa<CoroBodyOp>(op)) {
+        coroBodyCount++;
+        if (coroBodyCount > 1) {
+          return mlir::WalkResult::interrupt();
+        }
       }
+      return mlir::WalkResult::advance();
     });
     if (!foundAwait)
+      return emitOpError()
+             << "coroutine body must use at least one cir.await op";
+    if (coroBodyCount > 1)
       return emitOpError()
              << "coroutine body must use at least one cir.await op";
   }

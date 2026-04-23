@@ -778,3 +778,67 @@ folly::coro::Task<int> implicit_yield_terminator(int x) {
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   }
+
+struct HasDtor {
+  ~ HasDtor();
+};
+
+folly::coro::Task<int> co_return_with_dtor(int flag) {
+  HasDtor local;
+  if (flag)
+    co_return 1;        // local dtor must run here
+  co_return 2;
+}
+
+// CIR: cir.func coroutine {{.*}} @_Z19co_return_with_dtori
+
+// CIR: %[[LOCAL:.*]] = cir.alloca !rec_HasDtor, !cir.ptr<!rec_HasDtor>, ["local"]
+// CIR: cir.cleanup.scope {
+// CIR:   cir.await(init, ready : {
+// CIR:   }, suspend : {
+// CIR:   }, resume : {
+// CIR:   },)
+
+// CIR:   cir.coro.body {
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.scope {
+// CIR:         %[[CAST_FLAG:.*]] = cir.cast int_to_bool %[[FLAG:.*]]
+// CIR:         cir.if %[[CAST_FLAG]] {
+// CIR:           %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR:           cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[promise:.*]], %[[ONE]])
+// CIR:           cir.co_return
+// CIR:         }
+// CIR:       }
+// CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
+// CIR:       cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[promise]], %[[TWO]])
+// CIR:       cir.co_return
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN7HasDtorD1Ev(%[[LOCAL]])
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }
+
+// CIR:   cir.await(final, ready : {
+// CIR:   }, suspend : {
+// CIR:   }, resume : {
+// CIR:   },)
+// CIR:   cir.yield
+// CIR: } cleanup normal {
+// CIR:   cir.yield
+// CIR: }
+
+// OGCG: define {{.*}} void @_Z19co_return_with_dtori
+// OGCG:   %[[LOCAL:.*]] = alloca %struct.HasDtor
+// OGCG: coro.init:
+// OGCG: init.suspend:
+// OGCG: init.ready:
+// OGCG: if.then:
+// OGCG:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}} %[[promise:.*]], {{.*}} 1)
+// OGCG:   br label %cleanup4
+// OGCG: if.end:
+// OGCG:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}} %[[promise]], {{.*}} 2)
+// OGCG:   br label %cleanup4
+// OGCG: cleanup4:
+// OGCG:   call void @_ZN7HasDtorD1Ev({{.*}} %[[LOCAL]])
+// OGCG:   br label %coro.final
