@@ -39,7 +39,7 @@ class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
   let mnemonic = typeMnemonic;
 }
 
-def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
+def isSharedPred : CPred<"XeGPUDialect::isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
 class StaticShared1DMemRefOf<list<Type> allowedTypes> :
   ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
      "reside in share memory and statically 1d shaped " # MemRefOf<allowedTypes>.summary # " ",

@@ -344,3 +344,49 @@ gpu.func @store_to_subview(%vec: vector<8xf16>,
 // STORE-SCATTER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
 // STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8xf16>, i64, vector<8xindex>, vector<8xi1>
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_2D_vector_addrspace3(%vec: vector<8x16xf32>,
+    %source: memref<16x32xf32, 3>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset, %offset]
+    {in_bounds = [true, true]}
+    : vector<8x16xf32>, memref<16x32xf32, 3>
+  gpu.return
+}
+
+// STORE-ND-LABEL: @store_2D_vector_addrspace3
+// STORE-ND-SAME: %[[VEC:.+]]: vector<8x16xf32>
+// STORE-ND-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
+// STORE-ND-SAME: %[[OFFSET:.+]]: index
+// STORE-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
+// STORE-ND: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>, !xegpu.mem_desc<16x32xf32>, index, index
+// STORE-ND: gpu.return
+
+// STORE-SCATTER-LABEL: @store_2D_vector_addrspace3
+// STORE-SCATTER-SAME: %[[VEC:.+]]: vector<8x16xf32>
+// STORE-SCATTER-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
+// STORE-SCATTER-SAME: %[[OFFSET:.+]]: index
+// STORE-SCATTER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
+// STORE-SCATTER: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>, !xegpu.mem_desc<16x32xf32>, index, index
+// STORE-SCATTER: gpu.return
+
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_1D_vector_addrspace3_unsupported(%vec: vector<8xf32>,
+    %source: memref<32xf32, 3>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset]
+    {in_bounds = [true]}
+    : vector<8xf32>, memref<32xf32, 3>
+  gpu.return
+}
+
+// STORE-ND-LABEL: @store_1D_vector_addrspace3_unsupported
+// STORE-ND: vector.transfer_write
+
+// STORE-SCATTER-LABEL: @store_1D_vector_addrspace3_unsupported
+// STORE-SCATTER: vector.transfer_write
+
+}
