@@ -1683,9 +1683,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
           // Don't promote f16 vector operations to f32 if f32 vector type is
           // not legal.
-          // TODO: could split the f16 vector into two vectors and do promotion.
-          if (!isTypeLegal(F32VecVT))
+          // Custom lower maximum LMUL case to split to 2 half LMUL operations.
+          // TODO: Support more operations.
+          if (!isTypeLegal(F32VecVT)) {
+            setOperationAction(ISD::SETCC, VT, Custom);
             continue;
+          }
           setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
           setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
           continue;
@@ -1711,11 +1714,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
           MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
-          // Don't promote f16 vector operations to f32 if f32 vector type is
+          // Don't promote bf16 vector operations to f32 if f32 vector type is
           // not legal.
-          // TODO: could split the f16 vector into two vectors and do promotion.
-          if (!isTypeLegal(F32VecVT))
+          // Custom lower maximum LMUL case to split to 2 half LMUL operations.
+          // TODO: Support more operations.
+          if (!isTypeLegal(F32VecVT)) {
+            setOperationAction(ISD::SETCC, VT, Custom);
             continue;
+          }
 
           if (Subtarget.hasVInstructionsBF16())
             setOperationPromotedToType(ZvfbfaPromoteOps, VT, F32VecVT);
@@ -7620,15 +7626,22 @@ static unsigned getRISCVVLOp(SDValue Op) {
 }
 
 static bool isPromotedOpNeedingSplit(SDValue Op,
-                                     const RISCVSubtarget &Subtarget) {
-  return (Op.getValueType() == MVT::nxv32f16 &&
-          (Subtarget.hasVInstructionsF16Minimal() &&
-           !Subtarget.hasVInstructionsF16())) ||
-         (Op.getValueType() == MVT::nxv32bf16 &&
-          Subtarget.hasVInstructionsBF16Minimal() &&
-          (!Subtarget.hasVInstructionsBF16() ||
-           (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
-            !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode()))));
+                                     const RISCVSubtarget &Subtarget,
+                                     const TargetLowering &TLI) {
+  MVT OpVT = Op.getSimpleValueType();
+  if (!OpVT.isVector())
+    return false;
+  MVT EltVT = OpVT.getVectorElementType();
+  if (!(EltVT == MVT::f16 && Subtarget.hasVInstructionsF16Minimal() &&
+        !Subtarget.hasVInstructionsF16()) &&
+      !(EltVT == MVT::bf16 && Subtarget.hasVInstructionsBF16Minimal() &&
+        (!Subtarget.hasVInstructionsBF16() ||
+         (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
+          !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode())))))
+    return false;
+  // Need to split when the same width f32 vector type isn't legal.
+  return !TLI.isTypeLegal(
+      MVT::getVectorVT(MVT::f32, OpVT.getVectorElementCount()));
 }
 
 static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
@@ -8043,7 +8056,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerFMAXIMUM_FMINIMUM(Op, DAG, Subtarget);
   case ISD::FP_EXTEND:
@@ -8327,7 +8340,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::LRINT:
@@ -8384,7 +8397,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMINIMUM:
   case ISD::VP_REDUCE_FMAXIMUM:
-    if (isPromotedOpNeedingSplit(Op.getOperand(1), Subtarget))
+    if (isPromotedOpNeedingSplit(Op.getOperand(1), Subtarget, *this))
       return SplitVectorReductionOp(Op, DAG);
     return lowerVPREDUCE(Op, DAG);
   case ISD::VP_REDUCE_AND:
@@ -8778,7 +8791,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return SDValue();
     }
 
-    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget))
+    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget, *this))
       return SplitVectorOp(Op, DAG);
 
     return lowerToScalableOp(Op, DAG);
@@ -8878,7 +8891,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FMAXNUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     [[fallthrough]];
   case ISD::AVGFLOORS:
@@ -8941,7 +8954,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FCOPYSIGN:
     if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
       return lowerFCOPYSIGN(Op, DAG, Subtarget);
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerToScalableOp(Op, DAG);
   case ISD::STRICT_FADD:
@@ -8950,7 +8963,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FDIV:
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FMA:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitStrictFPVectorOp(Op, DAG);
     return lowerToScalableOp(Op, DAG);
   case ISD::STRICT_FSETCC:
@@ -9007,7 +9020,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerLogicVPOp(Op, DAG);
   case ISD::VP_FNEG:
   case ISD::VP_FMA:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVPOp(Op, DAG);
     [[fallthrough]];
   case ISD::VP_SRA:
@@ -9027,7 +9040,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FP_ROUND:
     return lowerVectorFPExtendOrRoundLike(Op, DAG);
   case ISD::VP_SETCC:
-    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget))
+    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget, *this))
       return SplitVPOp(Op, DAG);
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPSetCCMaskOp(Op, DAG);
