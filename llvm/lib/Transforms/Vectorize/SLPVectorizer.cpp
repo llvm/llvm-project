@@ -23886,15 +23886,24 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         EI.UserTE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
         EI.UserTE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
     if (IsNonSchedulableWithParentPhiNode) {
-      SmallSet<std::pair<Value *, Value *>, 4> Values;
-      for (const auto [Idx, V] :
-           enumerate(EI.UserTE->UserTreeIndex.UserTE->Scalars)) {
+      ArrayRef<Value *> PhiScalars = EI.UserTE->UserTreeIndex.UserTE->Scalars;
+      for (const auto [Idx, V] : enumerate(PhiScalars)) {
         Value *Op = EI.UserTE->UserTreeIndex.UserTE->getOperand(
             EI.UserTE->UserTreeIndex.EdgeIdx)[Idx];
         auto *I = dyn_cast<Instruction>(Op);
         if (!I || !isCommutative(I))
           continue;
-        if (!Values.insert(std::make_pair(V, Op)).second)
+        // Bail out only when I has a user that is an instruction outside the
+        // grandparent PHI's Scalars. Multiple uses that all land in the same
+        // vectorized PHI are tracked by the existing dependency machinery;
+        // uses outside it (e.g. a scalar PHI in a different block) break the
+        // scheduler's dep accounting for non-schedulable copyable bundles.
+        if (I->hasOneUse())
+          continue;
+        if (any_of(I->users(), [&](User *U) {
+              auto *UI = dyn_cast<Instruction>(U);
+              return UI && !is_contained(PhiScalars, UI);
+            }))
           return std::nullopt;
       }
     } else {
@@ -24756,6 +24765,17 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
     if (!Bundles.empty()) {
       for (ScheduleBundle *Bundle : Bundles) {
         Bundle->setSchedulingPriority(Idx++);
+        if (const TreeEntry *TE = Bundle->getTreeEntry();
+            TE && Bundle->hasValidDependencies() && TE->UserTreeIndex &&
+            TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+            TE->UserTreeIndex.UserTE->doesNotNeedToSchedule() &&
+            any_of(TE->UserTreeIndex.UserTE->Scalars, [&](Value *V) {
+              return TE->UserTreeIndex.UserTE->isExpandedBinOp(V);
+            })) {
+          for (ScheduleEntity *SE : Bundle->getBundle())
+            if (auto *SD = dyn_cast<ScheduleData>(SE))
+              SD->clearDirectDependencies();
+        }
         if (!Bundle->hasValidDependencies()) {
           SmallPtrSet<Value *, 4> ExpandedOps;
           BS->calculateDependencies(*Bundle, /*InsertInReadyList=*/false, this,
@@ -24834,6 +24854,19 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
         if (PickedInst->getNextNode() != LastScheduledInst)
           PickedInst->moveAfter(LastScheduledInst->getPrevNode());
         LastScheduledInst = PickedInst;
+      }
+      if (Bundle->getTreeEntry()->hasCopyableElements()) {
+        Instruction *MainOp = Bundle->getTreeEntry()->getMainOp();
+        for (Value *V : Bundle->getTreeEntry()->Scalars) {
+          auto *I = dyn_cast<Instruction>(V);
+          if (!I)
+            continue;
+          if (!I->hasOneUse() && Bundle->getTreeEntry()->isCopyableElement(I) &&
+              I->getParent() == MainOp->getParent() &&
+              doesNotNeedToBeScheduled(I) &&
+              !Bundle->getTreeEntry()->getOperations().isNonSchedulable(I))
+            I->moveBeforePreserving(LastScheduledInst->getIterator());
+        }
       }
       EntryToLastInstruction.try_emplace(Bundle->getTreeEntry(),
                                          LastScheduledInst);

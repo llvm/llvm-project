@@ -3349,6 +3349,17 @@ struct AAWillReturnImpl : public AAWillReturn {
                                            UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
+    auto CheckForVolatile = [&](Instruction &I) {
+      // Volatile operations are not willreturn.
+      return !I.isVolatile();
+    };
+    if (!A.checkForAllInstructions(CheckForVolatile, *this,
+                                   {Instruction::Load, Instruction::Store,
+                                    Instruction::AtomicCmpXchg,
+                                    Instruction::AtomicRMW},
+                                   UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
     return ChangeStatus::UNCHANGED;
   }
 
@@ -4145,6 +4156,9 @@ struct AAIsDeadValueImpl : public AAIsDead {
   /// Determine if \p I is assumed to be side-effect free.
   bool isAssumedSideEffectFree(Attributor &A, Instruction *I) {
     if (!I || wouldInstructionBeTriviallyDead(I))
+      return true;
+
+    if (!I->isTerminator() && !I->mayHaveSideEffects())
       return true;
 
     auto *CB = dyn_cast<CallBase>(I);
