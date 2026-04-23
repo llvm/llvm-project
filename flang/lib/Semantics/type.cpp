@@ -18,6 +18,7 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::semantics {
@@ -199,6 +200,8 @@ void DerivedTypeSpec::ReevaluateParameters(SemanticsContext &context) {
   EvaluateParameters(context);
 }
 
+void DerivedTypeSpec::PrepareForScopeClone() { scope_ = nullptr; }
+
 void DerivedTypeSpec::AddParamValue(SourceName name, ParamValue &&value) {
   CHECK(cooked_);
   auto pair{parameters_.insert(std::make_pair(name, std::move(value)))};
@@ -282,13 +285,22 @@ bool DerivedTypeSpec::MatchesOrExtends(const DerivedTypeSpec &that) const {
   return MatchKindParams(*typeSymbol, *this, that);
 }
 
+static const DeclTypeSpec *CloneDerivedTypeForUseDeviceImpl(
+    Scope &containingScope, SemanticsContext &context,
+    const DerivedTypeSpec &sourceDts, DeclTypeSpec::Category category,
+    llvm::ArrayRef<SourceName> path);
+
 class InstantiateHelper {
 public:
   InstantiateHelper(Scope &scope) : scope_{scope} {}
   // Instantiate components from fromScope into scope_
   void InstantiateComponents(const Scope &);
+  void SetUseDevicePath(llvm::ArrayRef<SourceName> path) {
+    useDevicePath_ = path;
+  }
 
 private:
+  llvm::ArrayRef<SourceName> useDevicePath_{};
   SemanticsContext &context() const { return scope_.context(); }
   evaluate::FoldingContext &foldingContext() {
     return context().foldingContext();
@@ -568,6 +580,14 @@ const DeclTypeSpec *InstantiateHelper::InstantiateType(const Symbol &symbol) {
   if (!type) {
     return nullptr; // error has occurred
   } else if (const DerivedTypeSpec * spec{type->AsDerived()}) {
+    if (!useDevicePath_.empty() && symbol.name() == useDevicePath_[0] &&
+        useDevicePath_.size() > 1) {
+      if (const DeclTypeSpec *cloned{
+              CloneDerivedTypeForUseDeviceImpl(scope_, context(), *spec,
+                  type->category(), useDevicePath_.drop_front())}) {
+        return cloned;
+      }
+    }
     return &FindOrInstantiateDerivedType(scope_,
         CreateDerivedTypeSpec(*spec, symbol.test(Symbol::Flag::ParentComp)),
         type->category());
@@ -686,6 +706,50 @@ DerivedTypeSpec InstantiateHelper::CreateDerivedTypeSpec(
     }
   }
   return result;
+}
+
+static const DeclTypeSpec *CloneDerivedTypeForUseDeviceImpl(
+    Scope &containingScope, SemanticsContext &context,
+    const DerivedTypeSpec &sourceDts, DeclTypeSpec::Category category,
+    llvm::ArrayRef<SourceName> path) {
+  if (path.empty()) {
+    return nullptr;
+  }
+  DerivedTypeSpec newDts{sourceDts};
+  newDts.PrepareForScopeClone();
+  DeclTypeSpec &newDecl{
+      containingScope.MakeDerivedType(category, std::move(newDts))};
+  DerivedTypeSpec &dtsRef{newDecl.derivedTypeSpec()};
+  Scope &newScope{containingScope.MakeScope(Scope::Kind::DerivedType)};
+  dtsRef.ReplaceScope(newScope);
+  newScope.set_derivedTypeSpec(dtsRef);
+
+  InstantiateHelper helper{newScope};
+  helper.SetUseDevicePath(path);
+  helper.InstantiateComponents(*sourceDts.GetScope());
+
+  if (path.size() == 1) {
+    if (Symbol * comp{newScope.FindComponent(path[0])}) {
+      if (auto *details{comp->detailsIf<ObjectEntityDetails>()}) {
+        details->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
+    }
+  }
+  return &newDecl;
+}
+
+const DeclTypeSpec *CloneDerivedTypeForUseDevice(Scope &containingScope,
+    SemanticsContext &context, const DeclTypeSpec &origType,
+    llvm::ArrayRef<SourceName> path) {
+  if (path.empty()) {
+    return nullptr;
+  }
+  const DerivedTypeSpec *spec{origType.AsDerived()};
+  if (!spec) {
+    return nullptr;
+  }
+  return CloneDerivedTypeForUseDeviceImpl(
+      containingScope, context, *spec, origType.category(), path);
 }
 
 std::string DerivedTypeSpec::VectorTypeAsFortran() const {
