@@ -45,10 +45,10 @@ template <typename Iter>
 constexpr bool test_non_forward_operator_increment(Iter zero_begin, Iter three_begin, Iter end) {
   using Base = BasicTestView<Iter, Iter>;
 
-  auto base          = Base(zero_begin, end);
-  auto base_offset   = Base(three_begin, end);
-  auto sv            = std::ranges::stride_view(base, 3);
-  auto sv_offset     = std::ranges::stride_view(base_offset, 3);
+  auto base        = Base(zero_begin, end);
+  auto base_offset = Base(three_begin, end);
+  auto sv          = std::ranges::stride_view(base, 3);
+  auto sv_offset   = std::ranges::stride_view(base_offset, 3);
 
   auto it        = sv.begin();
   auto it_offset = sv_offset.begin();
@@ -128,7 +128,7 @@ constexpr bool test_forward_operator_increment(Iter begin, Iter end) {
   ++it_to_end; // 9
   ++it_to_end; // End
 
-  auto it_to_end2 = it; // With a stride of 3, so ++ moves 3 indexes.
+  auto it_to_end2 = it;           // With a stride of 3, so ++ moves 3 indexes.
   it_to_end2      = ++it_to_end2; // 3
   it_to_end2      = ++it_to_end2; // 6
   it_to_end2      = ++it_to_end2; // 9

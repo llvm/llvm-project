@@ -53,10 +53,8 @@ constexpr bool test() {
   static_assert(std::same_as<decltype(sv_view_move), std::ranges::stride_view<BaseView>>);
 
   // Verify deduced types for ranges: lvalue -> ref_view, rvalue -> owning_view.
-  static_assert(
-      std::same_as<decltype(sv_range), std::ranges::stride_view<std::ranges::ref_view<BaseRange>> >);
-  static_assert(
-      std::same_as<decltype(sv_range_move), std::ranges::stride_view<std::ranges::owning_view<BaseRange>> >);
+  static_assert(std::same_as<decltype(sv_range), std::ranges::stride_view<std::ranges::ref_view<BaseRange>> >);
+  static_assert(std::same_as<decltype(sv_range_move), std::ranges::stride_view<std::ranges::owning_view<BaseRange>> >);
 
   // Verify begin() produces the first element.
   assert(*sv_range.begin() == 1);

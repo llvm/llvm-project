@@ -348,7 +348,7 @@ export namespace std {
       using std::ranges::views::stride;
     }
 
-#if 0
+#  if 0
     using std::ranges::cartesian_product_view;
 
     namespace views {

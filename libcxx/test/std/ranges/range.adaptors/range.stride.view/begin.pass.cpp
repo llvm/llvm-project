@@ -62,23 +62,23 @@ constexpr bool test() {
   {
     // Verify begin() produces the first element with stride 1.
     int data[] = {10, 20, 30, 40, 50};
-    auto v  = BasicTestView<int*, int*>{data, data + 5};
-    auto sv = std::ranges::stride_view(v, 1);
+    auto v     = BasicTestView<int*, int*>{data, data + 5};
+    auto sv    = std::ranges::stride_view(v, 1);
     assert(*sv.begin() == 10);
   }
   {
     // Verify begin() produces the first element with stride 3.
     int data[] = {10, 20, 30, 40, 50};
-    auto v  = BasicTestView<int*, int*>{data, data + 5};
-    auto sv = std::ranges::stride_view(v, 3);
+    auto v     = BasicTestView<int*, int*>{data, data + 5};
+    auto sv    = std::ranges::stride_view(v, 3);
     assert(*sv.begin() == 10);
   }
   {
     // Verify iterating from begin with stride 2 produces correct elements.
     int data[] = {1, 2, 3, 4, 5};
-    auto v  = BasicTestView<int*, int*>{data, data + 5};
-    auto sv = std::ranges::stride_view(v, 2);
-    auto it = sv.begin();
+    auto v     = BasicTestView<int*, int*>{data, data + 5};
+    auto sv    = std::ranges::stride_view(v, 2);
+    auto it    = sv.begin();
     assert(*it == 1);
     ++it;
     assert(*it == 3);
@@ -89,10 +89,10 @@ constexpr bool test() {
   }
   {
     // Verify begin on forward range.
-    int data[] = {100, 200, 300};
+    int data[]    = {100, 200, 300};
     using FwdView = BasicTestView<forward_iterator<int*>, forward_iterator<int*>>;
-    auto v  = FwdView{forward_iterator(data), forward_iterator(data + 3)};
-    auto sv = std::ranges::stride_view(v, 2);
+    auto v        = FwdView{forward_iterator(data), forward_iterator(data + 3)};
+    auto sv       = std::ranges::stride_view(v, 2);
     assert(*sv.begin() == 100);
     auto it = sv.begin();
     ++it;

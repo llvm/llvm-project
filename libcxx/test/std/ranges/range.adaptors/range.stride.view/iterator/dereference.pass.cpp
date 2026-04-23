@@ -19,10 +19,10 @@
 constexpr bool test() {
   {
     // Dereference with stride 1.
-    int arr[] = {10, 20, 30};
+    int arr[]  = {10, 20, 30};
     using Base = BasicTestView<int*, int*>;
-    auto sv   = std::ranges::stride_view(Base(arr, arr + 3), 1);
-    auto it   = sv.begin();
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 3), 1);
+    auto it    = sv.begin();
 
     assert(*it == 10);
     ++it;
@@ -32,10 +32,10 @@ constexpr bool test() {
   }
   {
     // Dereference with stride 2.
-    int arr[] = {10, 20, 30, 40, 50};
+    int arr[]  = {10, 20, 30, 40, 50};
     using Base = BasicTestView<int*, int*>;
-    auto sv   = std::ranges::stride_view(Base(arr, arr + 5), 2);
-    auto it   = sv.begin();
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 5), 2);
+    auto it    = sv.begin();
 
     assert(*it == 10);
     ++it;
@@ -45,19 +45,19 @@ constexpr bool test() {
   }
   {
     // Dereference with stride larger than range.
-    int arr[] = {42, 99};
+    int arr[]  = {42, 99};
     using Base = BasicTestView<int*, int*>;
-    auto sv   = std::ranges::stride_view(Base(arr, arr + 2), 5);
-    auto it   = sv.begin();
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 2), 5);
+    auto it    = sv.begin();
 
     assert(*it == 42);
   }
   {
     // Dereference returns a reference that can be assigned through.
-    int arr[] = {1, 2, 3, 4, 5};
+    int arr[]  = {1, 2, 3, 4, 5};
     using Base = BasicTestView<int*, int*>;
-    auto sv   = std::ranges::stride_view(Base(arr, arr + 5), 2);
-    auto it   = sv.begin();
+    auto sv    = std::ranges::stride_view(Base(arr, arr + 5), 2);
+    auto it    = sv.begin();
 
     *it = 100;
     assert(arr[0] == 100);
@@ -67,10 +67,10 @@ constexpr bool test() {
   }
   {
     // Dereference on a forward range with stride 3.
-    int arr[] = {5, 10, 15, 20, 25, 30};
+    int arr[]  = {5, 10, 15, 20, 25, 30};
     using Base = BasicTestView<forward_iterator<int*>, forward_iterator<int*>>;
-    auto sv   = std::ranges::stride_view(Base(forward_iterator(arr), forward_iterator(arr + 6)), 3);
-    auto it   = sv.begin();
+    auto sv    = std::ranges::stride_view(Base(forward_iterator(arr), forward_iterator(arr + 6)), 3);
+    auto it    = sv.begin();
     assert(*it == 5);
     ++it;
     assert(*it == 20);

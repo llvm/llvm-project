@@ -36,8 +36,9 @@ int main(int, char**) {
   {
     int range[] = {1, 2, 3};
     using View  = MinimalView<cpp17_input_iterator<int*>>;
-    auto view   = std::ranges::views::stride(View(cpp17_input_iterator(range), sentinel_wrapper(cpp17_input_iterator(range + 3))), 3);
-    auto it     = view.begin();
+    auto view   = std::ranges::views::stride(
+        View(cpp17_input_iterator(range), sentinel_wrapper(cpp17_input_iterator(range + 3))), 3);
+    auto it = view.begin();
     ++it;
     TEST_LIBCPP_ASSERT_FAILURE(it++, "Cannot increment an iterator already at the end.");
     TEST_LIBCPP_ASSERT_FAILURE(++it, "Cannot increment an iterator already at the end.");

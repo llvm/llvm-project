@@ -77,27 +77,31 @@ constexpr bool test() {
     // Note: sized because it is possible to get a difference between its
     // beginning and its end.
     const int data[] = {1, 2, 3};
-    auto v  = BasicTestView<const int*, const int*>{data, data + 3};
-    auto sv = std::ranges::stride_view(v, 1);
+    auto v           = BasicTestView<const int*, const int*>{data, data + 3};
+    auto sv          = std::ranges::stride_view(v, 1);
     static_assert(!std::is_same_v<std::default_sentinel_t, decltype(sv.end())>);
 
     // Verify actual end behavior: iterating reaches end.
     auto it = sv.begin();
-    ++it; ++it; ++it;
+    ++it;
+    ++it;
+    ++it;
     assert(it == sv.end());
   }
   {
     // ForwardTestView is not sized and not bidirectional, but it is common.
     // Note: It is not sized because BasicTestView has no member function named size (by default)
     // and nor is it possible to get a difference between its beginning and its end.
-    int data[] = {1, 2, 3};
+    int data[]            = {1, 2, 3};
     using ForwardTestView = BasicTestView<forward_iterator<int*>, forward_iterator<int*>>;
-    auto v  = ForwardTestView{forward_iterator(data), forward_iterator(data + 3)};
-    auto sv = std::ranges::stride_view(v, 1);
+    auto v                = ForwardTestView{forward_iterator(data), forward_iterator(data + 3)};
+    auto sv               = std::ranges::stride_view(v, 1);
     static_assert(!std::is_same_v<std::default_sentinel_t, decltype(sv.end())>);
 
     auto it = sv.begin();
-    ++it; ++it; ++it;
+    ++it;
+    ++it;
+    ++it;
     assert(it == sv.end());
   }
   {
@@ -129,8 +133,8 @@ constexpr bool test() {
   {
     // Verify stride > 1 with end(): iterating produces correct elements and terminates.
     int data[] = {10, 20, 30, 40, 50};
-    auto v  = BasicTestView<int*, int*>{data, data + 5};
-    auto sv = std::ranges::stride_view(v, 2);
+    auto v     = BasicTestView<int*, int*>{data, data + 5};
+    auto sv    = std::ranges::stride_view(v, 2);
 
     auto it = sv.begin();
     assert(*it == 10);
@@ -144,8 +148,8 @@ constexpr bool test() {
   {
     // Verify end() with stride that doesn't evenly divide the range.
     int data[] = {1, 2, 3, 4, 5, 6, 7};
-    auto v  = BasicTestView<int*, int*>{data, data + 7};
-    auto sv = std::ranges::stride_view(v, 3);
+    auto v     = BasicTestView<int*, int*>{data, data + 7};
+    auto sv    = std::ranges::stride_view(v, 3);
 
     auto it = sv.begin();
     assert(*it == 1);
@@ -162,9 +166,9 @@ constexpr bool test() {
     // With the bug, end() const would incorrectly check common_range<_View> (false), skip the second
     // branch, and return default_sentinel. With the fix, it checks common_range<const _View> (true)
     // and returns an iterator.
-    int data[] = {1, 2, 3, 4, 5};
-    auto v     = CommonForwardOnlyWhenConst(data, 5);
-    auto sv    = std::ranges::stride_view(std::move(v), 2);
+    int data[]      = {1, 2, 3, 4, 5};
+    auto v          = CommonForwardOnlyWhenConst(data, 5);
+    auto sv         = std::ranges::stride_view(std::move(v), 2);
     const auto& csv = sv;
 
     // The key assertion: end() on the const stride_view must NOT return default_sentinel_t.

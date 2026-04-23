@@ -19,9 +19,8 @@
 #include "test_iterators.h"
 
 template <class T>
-concept CanPlus =
-    std::is_same_v<T&, decltype(std::declval<T>() += std::declval<typename T::difference_type>())> &&
-    requires(T& t, typename T::difference_type u) { t += u; };
+concept CanPlus = std::is_same_v<T&, decltype(std::declval<T>() += std::declval<typename T::difference_type>())> &&
+                  requires(T& t, typename T::difference_type u) { t += u; };
 
 // Make sure that we cannot use += on a stride view iterator
 // over an input view.(sized sentinel)
@@ -70,8 +69,8 @@ constexpr bool test() {
   static_assert(std::ranges::random_access_range<Base>);
 
   // += with stride 1: advancing by distance matches starting at begin + distance.
-  auto base       = Base(begin, end);
-  auto sv         = std::ranges::stride_view(base, 1);
+  auto base = Base(begin, end);
+  auto sv   = std::ranges::stride_view(base, 1);
 
   auto base_offset = Base(begin + distance, end);
   auto sv_offset   = std::ranges::stride_view(base_offset, 1);
@@ -84,9 +83,9 @@ constexpr bool test() {
   assert(*it_after == *it_offset);
 
   // += past the end, then -= back: the remainder is handled correctly.
-  auto big_step      = (end - 1) - begin;
-  auto sv_big_step   = std::ranges::stride_view(base, big_step);
-  it                 = sv_big_step.begin();
+  auto big_step    = (end - 1) - begin;
+  auto sv_big_step = std::ranges::stride_view(base, big_step);
+  it               = sv_big_step.begin();
 
   // This += should move us into a position where the stride doesn't evenly divide the range.
   // Do a -= 1 here to confirm that the remainder is taken into account.

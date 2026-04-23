@@ -22,9 +22,8 @@
 #include "test_iterators.h"
 
 template <class T>
-concept CanMinus =
-    std::is_same_v<typename T::difference_type, decltype(std::declval<T>() - std::declval<T>())> &&
-    requires(T& t) { t - t; };
+concept CanMinus = std::is_same_v<typename T::difference_type, decltype(std::declval<T>() - std::declval<T>())> &&
+                   requires(T& t) { t - t; };
 
 template <class T>
 concept CanSentinelMinus =
@@ -38,29 +37,29 @@ template <class T>
 concept CanDifferenceMinus = std::is_same_v<T, decltype(std::declval<T>() - 1)> && requires(T& t) { t - 1; };
 
 // Input view: has sentinel minus but not iter-iter minus or difference minus.
-using InputView                      = BasicTestView<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>;
-using StrideViewOverInputViewIter    = std::ranges::iterator_t<std::ranges::stride_view<InputView>>;
+using InputView = BasicTestView<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>;
+using StrideViewOverInputViewIter = std::ranges::iterator_t<std::ranges::stride_view<InputView>>;
 static_assert(!CanMinus<StrideViewOverInputViewIter>);
 static_assert(!CanDifferenceMinus<StrideViewOverInputViewIter>);
 static_assert(CanSentinelMinus<StrideViewOverInputViewIter>);
 
 // Forward view: has sentinel minus but not iter-iter minus or difference minus.
-using ForwardView                    = BasicTestView<forward_iterator<int*>, sized_sentinel<forward_iterator<int*>>>;
-using StrideViewOverForwardViewIter  = std::ranges::iterator_t<std::ranges::stride_view<ForwardView>>;
+using ForwardView                   = BasicTestView<forward_iterator<int*>, sized_sentinel<forward_iterator<int*>>>;
+using StrideViewOverForwardViewIter = std::ranges::iterator_t<std::ranges::stride_view<ForwardView>>;
 static_assert(!CanMinus<StrideViewOverForwardViewIter>);
 static_assert(!CanDifferenceMinus<StrideViewOverForwardViewIter>);
 static_assert(CanSentinelMinus<StrideViewOverForwardViewIter>);
 
 // Bidirectional view: has sentinel minus but not iter-iter minus or difference minus.
-using BidirView                      = BasicTestView<bidirectional_iterator<int*>, sized_sentinel<bidirectional_iterator<int*>>>;
-using StrideViewOverBidirViewIter    = std::ranges::iterator_t<std::ranges::stride_view<BidirView>>;
+using BidirView = BasicTestView<bidirectional_iterator<int*>, sized_sentinel<bidirectional_iterator<int*>>>;
+using StrideViewOverBidirViewIter = std::ranges::iterator_t<std::ranges::stride_view<BidirView>>;
 static_assert(!CanMinus<StrideViewOverBidirViewIter>);
 static_assert(!CanDifferenceMinus<StrideViewOverBidirViewIter>);
 static_assert(CanSentinelMinus<StrideViewOverBidirViewIter>);
 
 // Random access view: has iter-iter minus and difference minus, but no sentinel minus (non-sized sentinel).
-using RAView                         = BasicTestView<random_access_iterator<int*>>;
-using StrideViewOverRAViewIter       = std::ranges::iterator_t<std::ranges::stride_view<RAView>>;
+using RAView                   = BasicTestView<random_access_iterator<int*>>;
+using StrideViewOverRAViewIter = std::ranges::iterator_t<std::ranges::stride_view<RAView>>;
 static_assert(CanMinus<StrideViewOverRAViewIter>);
 static_assert(CanDifferenceMinus<StrideViewOverRAViewIter>);
 static_assert(!CanSentinelMinus<StrideViewOverRAViewIter>);
@@ -70,10 +69,10 @@ template <typename Iter>
 constexpr bool test_non_forward_minus(Iter zero_begin, Iter one_begin, Iter end) {
   using Base = BasicTestView<Iter, Iter>;
 
-  auto base_zero   = Base(zero_begin, end);
-  auto base_one    = Base(one_begin, end);
-  auto sv_zero     = std::ranges::stride_view(base_zero, 3);
-  auto sv_one      = std::ranges::stride_view(base_one, 3);
+  auto base_zero = Base(zero_begin, end);
+  auto base_one  = Base(one_begin, end);
+  auto sv_zero   = std::ranges::stride_view(base_zero, 3);
+  auto sv_one    = std::ranges::stride_view(base_one, 3);
 
   auto begin0 = sv_zero.begin();
   auto mid0   = begin0;
@@ -110,10 +109,10 @@ template <std::forward_iterator Iter>
 constexpr bool test_forward_minus(Iter begin, Iter end) {
   using Base = BasicTestView<Iter, Iter>;
 
-  auto base_zero   = Base(begin, end);
-  auto base_one    = Base(begin + 1, end);
-  auto sv_zero     = std::ranges::stride_view(base_zero, 3);
-  auto sv_one      = std::ranges::stride_view(base_one, 3);
+  auto base_zero = Base(begin, end);
+  auto base_one  = Base(begin + 1, end);
+  auto sv_zero   = std::ranges::stride_view(base_zero, 3);
+  auto sv_one    = std::ranges::stride_view(base_one, 3);
 
   auto begin0 = sv_zero.begin();
   auto mid0   = begin0;
@@ -143,7 +142,7 @@ constexpr bool test_forward_minus(Iter begin, Iter end) {
 
 constexpr bool test_difference_minus() {
   // operator-(iterator, difference_type) -- only for random access ranges.
-  int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  int arr[]  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   using Base = BasicTestView<int*, int*>;
 
   auto base = Base(arr, arr + 10);
