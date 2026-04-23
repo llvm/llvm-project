@@ -191,6 +191,34 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
+add_entrypoint_object(
+  pthread_cond_destroy
+  SRCS
+    pthread_cond_destroy.cpp
+  HDRS
+    pthread_cond_destroy.h
+  DEPENDS
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  pthread_cond_init
+  SRCS
+    pthread_cond_init.cpp
+    HDRS
+      pthread_cond_init.h
+    DEPENDS
+      libc.hdr.errno_macros
+      libc.hdr.time_macros
+      libc.include.llvm-libc-macros.pthread_macros
+      libc.include.llvm-libc-types.pthread_cond_t
+      libc.include.llvm-libc-types.pthread_condattr_t
+      libc.src.__support.CPP.new
+      libc.src.__support.macros.null_check
+      libc.src.__support.threads.CndVar
+  )
+
 add_header_library(
   pthread_mutexattr
   HDRS
