@@ -7260,8 +7260,7 @@ public:
                                SourceLocation TemplateKWLoc, UnqualifiedId &Id,
                                bool HasTrailingLParen, bool IsAddressOfOperand,
                                CorrectionCandidateCallback *CCC = nullptr,
-                               bool IsInlineAsmIdentifier = false,
-                               Token *KeywordReplacement = nullptr);
+                               bool IsInlineAsmIdentifier = false);
 
   /// Decomposes the given name into a DeclarationNameInfo, its location, and
   /// possibly a list of template arguments.
