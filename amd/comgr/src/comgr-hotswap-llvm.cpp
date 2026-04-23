@@ -145,17 +145,25 @@ static SmallVector<MCInst, 2> parseAsmToMCInsts(StringRef AsmStr,
                                                 const LLVMState &S) {
   S.Ctx->reset();
 
+  // Register the buffer with the context's inline SourceMgr so that
+  // MCContext::diagnose() can resolve source locations on the error path.
+  // A bare local SourceMgr would be invisible to MCContext, and the asm
+  // parser hits MCContext::diagnose() (via SourceMgr::PrintMessage) when
+  // it encounters bad input -- without a registered SourceMgr that path
+  // aborts at `Either SourceMgr should be available` in MCContext.cpp.
+  S.Ctx->initInlineSourceManager();
+  SourceMgr *SrcMgr = S.Ctx->getInlineSourceManager();
+
   std::string FullAsm = (".text\n" + AsmStr).str();
   std::unique_ptr<MemoryBuffer> Buf =
       MemoryBuffer::getMemBuffer(FullAsm, "", false);
-  SourceMgr SrcMgr;
-  SrcMgr.AddNewSourceBuffer(std::move(Buf), SMLoc());
+  SrcMgr->AddNewSourceBuffer(std::move(Buf), SMLoc());
 
   InstCapturingStreamer Streamer(*S.Ctx);
 
   MCTargetOptions McOpts;
   std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(SrcMgr, *S.Ctx, Streamer, *S.MAI));
+      createMCAsmParser(*SrcMgr, *S.Ctx, Streamer, *S.MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
       S.Target->createMCAsmParser(*S.STI, *Parser, *S.MCII, McOpts));
   if (!TAP) {
