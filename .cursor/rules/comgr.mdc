@@ -1,0 +1,14 @@
+---
+description: Comgr (amd/comgr) project conventions
+globs: ["amd/comgr/**"]
+alwaysApply: false
+---
+
+# Comgr Project Conventions
+
+When working in `amd/comgr/`, follow the conventions defined in
+@amd/comgr/AGENT_CONVENTIONS.md
+
+That file is the single source of truth — read it before making
+changes. The same conventions are also surfaced to Claude Code users
+via `amd/comgr/CLAUDE.md`.
