@@ -38,7 +38,7 @@ define <4 x i16> @test_reconstructshuffle(<16 x i8> %a, <16 x i8> %b) nounwind {
   ret <4 x i16> %tmp4
 }
 
-; a shufflevector of even elements can become xtn on little-endian, but not on big-endian.
+; a shufflevector of even elements can become just xtn on little-endian, but not on big-endian.
 define <8 x i8> @xtn_shuffle_even_v16i8(<16 x i8> %a) {
 ; CHECKLE-LABEL: xtn_shuffle_even_v16i8:
 ; CHECKLE:       // %bb.0:
@@ -56,7 +56,7 @@ define <8 x i8> @xtn_shuffle_even_v16i8(<16 x i8> %a) {
   ret <8 x i8> %r
 }
 
-; a shufflevector of even elements can become xtn on little-endian, but not on big-endian.
+; a shufflevector of even elements can become just xtn on little-endian, but not on big-endian.
 define <4 x i16> @xtn_shuffle_even_v8i16(<8 x i16> %a) {
 ; CHECKLE-LABEL: xtn_shuffle_even_v8i16:
 ; CHECKLE:       // %bb.0:
@@ -74,7 +74,7 @@ define <4 x i16> @xtn_shuffle_even_v8i16(<8 x i16> %a) {
   ret <4 x i16> %r
 }
 
-; a shufflevector of even elements can become xtn on little-endian, but not on big-endian.
+; a shufflevector of even elements can become just xtn on little-endian, but not on big-endian.
 define <4 x i32> @xtn_shuffle_uzp1_poison_v4i32(<4 x i32> %a) {
 ; CHECKLE-LABEL: xtn_shuffle_uzp1_poison_v4i32:
 ; CHECKLE:       // %bb.0:
