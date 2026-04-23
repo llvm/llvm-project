@@ -2800,7 +2800,8 @@ def HexagonSystemLibrary
     __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
     __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard)>;
+    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard,
+    DefaultSafeStackGlobals)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
