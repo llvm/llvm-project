@@ -47,8 +47,6 @@ typedef int VectorExt __attribute__((ext_vector_type(4)));
 
 typedef float __attribute__((matrix_type(2, 3))) fm2x3;
 typedef int   __attribute__((matrix_type(4, 4))) im4x4;
-
-
 using ComplexFloat = _Complex float;
 using ComplexInt = _Complex int;
 
