@@ -2008,6 +2008,14 @@ void ToolChain::TranslateXarchArgs(
     AllocatedArgs->push_back(A);
 }
 
+/// Match any triple recognized arch aliases.
+static bool isXArchCompatibleTripleArch(const llvm::Triple &TT,
+                                        StringRef XArchVal) {
+  llvm::Triple ParsedTriple(XArchVal);
+  return TT.getArch() == ParsedTriple.getArch() &&
+         TT.getSubArch() == ParsedTriple.getSubArch();
+}
+
 llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
     const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
     Action::OffloadKind OFK,
@@ -2028,9 +2036,8 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
     } else if (A->getOption().matches(options::OPT_Xarch__)) {
       StringRef Val = A->getValue();
       NeedTrans = Val == getArchName() ||
-                  (!BoundArch.empty() && A->getValue() == BoundArch) ||
-                  // Match any triple recognized arch aliases.
-                  Triple.getArch() == llvm::Triple::parseArch(Val);
+                  (!BoundArch.empty() && Val == BoundArch) ||
+                  isXArchCompatibleTripleArch(Triple, Val);
       Skip = !NeedTrans;
     }
     if (NeedTrans || Skip)
