@@ -1251,6 +1251,36 @@ bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   return false;
 }
 
+// rel.expr was set during scanRelocations to encode whether relaxation will be
+// applied (e.g. R_RELAX_GOT_PC vs R_GOT_PC). We reuse those same checks here.
+static void trackRelaxStats(Ctx &ctx, const Relocation &rel) {
+  bool relaxed;
+  switch (rel.type) {
+  case R_X86_64_GOTPCRELX:
+  case R_X86_64_REX_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
+    relaxed = rel.expr != R_GOT_PC;
+    break;
+  case R_X86_64_GOTPC32_TLSDESC:
+  case R_X86_64_CODE_4_GOTPC32_TLSDESC:
+  case R_X86_64_TLSGD:
+    relaxed = rel.expr == R_TPREL || rel.expr == R_GOT_PC;
+    break;
+  case R_X86_64_TLSLD:
+  case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
+  case R_X86_64_CODE_6_GOTTPOFF:
+    relaxed = rel.expr == R_TPREL;
+    break;
+  default:
+    return;
+  }
+  auto &entry = ctx.relaxStats[rel.type];
+  entry.total.fetch_add(1, std::memory_order_relaxed);
+  if (relaxed)
+    entry.relaxed.fetch_add(1, std::memory_order_relaxed);
+}
+
 void X86_64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   for (const Relocation &rel : sec.relocs()) {
@@ -1259,6 +1289,8 @@ void X86_64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
     relocate(loc, rel, val);
+    if (!ctx.arg.printRelaxStats.empty())
+      trackRelaxStats(ctx, rel);
   }
   if (sec.jumpInstrMod) {
     applyJumpInstrMod(buf + sec.jumpInstrMod->offset,

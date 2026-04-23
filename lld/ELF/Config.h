@@ -241,6 +241,7 @@ struct Config {
   llvm::StringRef optStatsFilename;
   llvm::StringRef progName;
   llvm::StringRef printArchiveStats;
+  llvm::StringRef printRelaxStats;
   llvm::StringRef printSymbolOrder;
   llvm::StringRef soName;
   llvm::StringRef sysroot;
@@ -735,6 +736,13 @@ struct Ctx : CommonLinkerContext {
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
   std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
+
+  struct RelaxStatEntry {
+    std::atomic<uint64_t> total{0};
+    std::atomic<uint64_t> relaxed{0};
+  };
+  static constexpr unsigned relaxStatsMaxType = 2048;
+  std::unique_ptr<RelaxStatEntry[]> relaxStats;
 };
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and

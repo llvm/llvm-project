@@ -57,6 +57,7 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -1590,6 +1591,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
   ctx.arg.printMemoryUsage = args.hasArg(OPT_print_memory_usage);
   ctx.arg.printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
+  ctx.arg.printRelaxStats = args.getLastArgValue(OPT_print_relax_stats);
+  if (!ctx.arg.printRelaxStats.empty())
+    ctx.relaxStats.reset(new Ctx::RelaxStatEntry[Ctx::relaxStatsMaxType]());
   ctx.arg.printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
   ctx.arg.rejectMismatch = !args.hasArg(OPT_no_warn_mismatch);
   ctx.arg.relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
@@ -2489,6 +2493,39 @@ static void writeArchiveStats(Ctx &ctx) {
     // If the archive occurs multiple times, other instances have a count of 0.
     v = 0;
   }
+}
+
+static void writeRelaxStats(Ctx &ctx) {
+  if (ctx.arg.printRelaxStats.empty() || !ctx.relaxStats)
+    return;
+
+  std::error_code ec;
+  raw_fd_ostream os = ctx.openAuxiliaryFile(ctx.arg.printRelaxStats, ec);
+  if (ec) {
+    ErrAlways(ctx) << "--print-relax-stats=: cannot open "
+                   << ctx.arg.printRelaxStats << ": " << ec.message();
+    return;
+  }
+
+  llvm::json::OStream j(os, 2);
+  j.object([&] {
+    j.attributeObject("relaxations", [&] {
+      for (unsigned i = 0; i < Ctx::relaxStatsMaxType; ++i) {
+        uint64_t total =
+            ctx.relaxStats[i].total.load(std::memory_order_relaxed);
+        if (total == 0)
+          continue;
+        uint64_t relaxed =
+            ctx.relaxStats[i].relaxed.load(std::memory_order_relaxed);
+        j.attributeObject(toStr(ctx, RelType(i)), [&] {
+          j.attribute("total", int64_t(total));
+          j.attribute("relaxed", int64_t(relaxed));
+          j.attribute("pct_relaxed", relaxed * 100.0 / total);
+        });
+      }
+    });
+  });
+  os << '\n';
 }
 
 static void writeWhyExtract(Ctx &ctx) {
@@ -3605,4 +3642,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Write the result to the file.
   writeResult<ELFT>(ctx);
+
+  writeRelaxStats(ctx);
 }
