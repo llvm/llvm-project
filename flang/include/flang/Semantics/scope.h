@@ -260,6 +260,17 @@ public:
 
   void add_importName(const SourceName &);
 
+  // When a module name appears in a PUBLIC or PRIVATE <access-stmt>, all
+  // entities accessed from that module inherit the accessibility attribute.
+  std::optional<Attr> GetModuleAccessibility(const Symbol &module) const {
+    auto it = useModuleAccessibility_.find(&module);
+    return it != useModuleAccessibility_.end() ? std::optional{it->second}
+                                               : std::nullopt;
+  }
+  bool SetModuleAccessibility(const Symbol &module, Attr access) {
+    return useModuleAccessibility_.emplace(&module, access).second;
+  }
+
   // These members pertain to instantiations of parameterized derived types.
   const DerivedTypeSpec *derivedTypeSpec() const { return derivedTypeSpec_; }
   DerivedTypeSpec *derivedTypeSpec() { return derivedTypeSpec_; }
@@ -330,6 +341,9 @@ private:
   const DeclTypeSpec &MakeLengthlessType(DeclTypeSpec &&);
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Scope &);
+
+  // <access-stmt> Map for explicit PUBLIC/PRIVATE module USE
+  std::map<const Symbol *, Attr> useModuleAccessibility_;
 };
 
 // Inline so that it can be called from Evaluate without a link-time dependency.
