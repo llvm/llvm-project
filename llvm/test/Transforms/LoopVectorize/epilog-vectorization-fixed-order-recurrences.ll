@@ -46,7 +46,7 @@ define void @dead_for(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i64> [[WIDE_LOAD5]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i64> [[WIDE_LOAD5]], i64 3
 ; CHECK-NEXT:    [[CMP_N8:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N8]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
@@ -193,8 +193,8 @@ define i64 @for_phi_not_used_in_loop_and_live_out(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI7:%.*]] = extractelement <4 x i64> [[WIDE_LOAD5]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT8:%.*]] = extractelement <4 x i64> [[WIDE_LOAD5]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI7:%.*]] = extractelement <4 x i64> [[WIDE_LOAD5]], i64 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT8:%.*]] = extractelement <4 x i64> [[WIDE_LOAD5]], i64 3
 ; CHECK-NEXT:    [[CMP_N9:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N9]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:

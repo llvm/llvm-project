@@ -3512,35 +3512,38 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
   return any_of(
       Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
       [](VPRecipeBase &R) {
-        // Fixed-order recurrences need special handling and are currently
-        // unsupported.
-        if (isa<VPFirstOrderRecurrencePHIRecipe>(R))
+        switch (R.getVPRecipeID()) {
+        case VPRecipeBase::VPFirstOrderRecurrencePHISC:
+          // TODO: Add support for fixed-order recurrences.
           return true;
-        if (auto *WidenInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-          return !WidenInd->getPHINode();
-        auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
-        if (!RedPhi)
+        case VPRecipeBase::VPWidenIntOrFpInductionSC:
+          return !cast<VPWidenIntOrFpInductionRecipe>(&R)->getPHINode();
+        case VPRecipeBase::VPReductionPHISC: {
+          auto *RedPhi = cast<VPReductionPHIRecipe>(&R);
+          // TODO: Support FMinNum/FMaxNum, FindLast reductions, and reductions
+          // without underlying values.
+          RecurKind Kind = RedPhi->getRecurrenceKind();
+          if (RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind) ||
+              RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) ||
+              !RedPhi->getUnderlyingValue())
+            return true;
+          // TODO: Add support for FindIV reductions with sunk expressions: the
+          // resume value from the main loop is in expression domain (e.g.,
+          // mul(ReducedIV, 3)), but the epilogue tracks raw IV values. A sunk
+          // expression is identified by a non-VPInstruction user of
+          // ComputeReductionResult.
+          if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
+            auto *RdxResult = vputils::findComputeReductionResult(RedPhi);
+            assert(RdxResult &&
+                   "FindIV reduction must have ComputeReductionResult");
+            return any_of(RdxResult->users(),
+                          std::not_fn(IsaPred<VPInstruction>));
+          }
           return false;
-        // FMinNum/FMaxNum, FindLast reductions, and reductions without
-        // underlying value need special handling and are currently unsupported.
-        RecurKind Kind = RedPhi->getRecurrenceKind();
-        if (RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind) ||
-            RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) ||
-            !RedPhi->getUnderlyingValue())
-          return true;
-        // FindIV reductions with sunk expressions are not yet supported for
-        // epilogue vectorization: the resume value from the main loop is in
-        // expression domain (e.g., mul(ReducedIV, 3)), but the epilogue tracks
-        // raw IV values. A sunk expression is identified by a non-VPInstruction
-        // user of ComputeReductionResult.
-        if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
-          auto *RdxResult = vputils::findComputeReductionResult(RedPhi);
-          assert(RdxResult &&
-                 "FindIV reduction must have ComputeReductionResult");
-          return any_of(RdxResult->users(),
-                        std::not_fn(IsaPred<VPInstruction>));
         }
-        return false;
+        default:
+          return false;
+        };
       });
 }
 
