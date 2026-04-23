@@ -504,7 +504,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 
     // C1 << (C2 - X) -> (C1 << C2) >> X
     // C1 >> (C2 - X) -> (C1 >> C2) << X
-    // X must be >=0 (checked by NUWSub).
+    // X must be u<= C2 (checked by NUWSub).
     // Also match (X ^ C2) if equivalent to (C2 - X).
     uint64_t C2;
     Value *X;
@@ -519,9 +519,17 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
           return BinaryOperator::CreateExactAShr(
               ConstantInt::get(Ty, AC->shl(C2)), X);
       } else if (AC->countr_zero() >= C2) {
-        APInt C =
-            I.getOpcode() == Instruction::LShr ? AC->lshr(C2) : AC->ashr(C2);
-        return BinaryOperator::CreateShl(ConstantInt::get(Ty, C), X);
+        if (AC->isSignBitClear()) {
+          auto *Shl = BinaryOperator::CreateNUWShl(
+              ConstantInt::get(Ty, AC->lshr(C2)), X);
+          Shl->setHasNoSignedWrap();
+          return Shl;
+        }
+        if (I.getOpcode() == Instruction::LShr)
+          return BinaryOperator::CreateNUWShl(
+              ConstantInt::get(Ty, AC->lshr(C2)), X);
+        return BinaryOperator::CreateNSWShl(ConstantInt::get(Ty, AC->ashr(C2)),
+                                            X);
       }
     }
   }
