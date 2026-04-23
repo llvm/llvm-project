@@ -157,6 +157,10 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_quad_read_across_y : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
   def int_spv_sign : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_any_ty], [IntrNoMem]>;
   def int_spv_radians : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
+  def int_spv_all_memory_barrier : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+  def int_spv_all_memory_barrier_with_group_sync : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+  def int_spv_device_memory_barrier : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+  def int_spv_device_memory_barrier_with_group_sync : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
   def int_spv_group_memory_barrier : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
   def int_spv_group_memory_barrier_with_group_sync : ClangBuiltin<"__builtin_spirv_group_barrier">,
     DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
