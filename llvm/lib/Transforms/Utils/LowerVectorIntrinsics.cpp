@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "lower-vector-intrinsics"
 
@@ -48,6 +50,60 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   Vec->addIncoming(NewVec, LoopBB);
 
   Value *One = ConstantInt::get(Int64Ty, 1U);
+  Value *NextLoopIndex = LoopBuilder.CreateAdd(LoopIndex, One);
+  LoopIndex->addIncoming(NextLoopIndex, LoopBB);
+
+  Value *ExitCond =
+      LoopBuilder.CreateICmp(CmpInst::ICMP_EQ, NextLoopIndex, LoopEnd);
+  LoopBuilder.CreateCondBr(ExitCond, PostLoopBB, LoopBB);
+
+  CI->replaceAllUsesWith(NewVec);
+  CI->eraseFromParent();
+  return true;
+}
+
+bool llvm::lowerBinaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
+  Type *Arg0Ty = CI->getArgOperand(0)->getType();
+  VectorType *VecTy = cast<VectorType>(Arg0Ty);
+  VectorType *Vec1Ty = cast<VectorType>(CI->getArgOperand(1)->getType());
+
+  BasicBlock *PreLoopBB = CI->getParent();
+  BasicBlock *PostLoopBB = nullptr;
+  Function *ParentFunc = PreLoopBB->getParent();
+  LLVMContext &Ctx = PreLoopBB->getContext();
+  Type *IdxTy = M.getDataLayout().getIntPtrType(Ctx);
+
+  PostLoopBB = PreLoopBB->splitBasicBlock(CI);
+  BasicBlock *LoopBB = BasicBlock::Create(Ctx, "", ParentFunc, PostLoopBB);
+  PreLoopBB->getTerminator()->setSuccessor(0, LoopBB);
+
+  // Loop preheader
+  IRBuilder<> PreLoopBuilder(PreLoopBB->getTerminator());
+  Value *LoopEnd =
+      PreLoopBuilder.CreateElementCount(IdxTy, VecTy->getElementCount());
+
+  // Loop body
+  IRBuilder<> LoopBuilder(LoopBB);
+
+  PHINode *LoopIndex = LoopBuilder.CreatePHI(IdxTy, 2);
+  LoopIndex->addIncoming(ConstantInt::get(IdxTy, 0U), PreLoopBB);
+  PHINode *Vec = LoopBuilder.CreatePHI(VecTy, 2);
+  Vec->addIncoming(CI->getArgOperand(0), PreLoopBB);
+
+  Value *Elem0 = LoopBuilder.CreateExtractElement(Vec, LoopIndex);
+  Value *Elem1 =
+      LoopBuilder.CreateExtractElement(CI->getArgOperand(1), LoopIndex);
+
+  SmallVector<Type *, 2> ScalarArgTys = {VecTy->getElementType()};
+  if (Vec1Ty->getElementType() != VecTy->getElementType())
+    ScalarArgTys.push_back(Vec1Ty->getElementType());
+  Function *ScalarFn =
+      Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(), ScalarArgTys);
+  Value *Res = LoopBuilder.CreateCall(ScalarFn, {Elem0, Elem1});
+  Value *NewVec = LoopBuilder.CreateInsertElement(Vec, Res, LoopIndex);
+  Vec->addIncoming(NewVec, LoopBB);
+
+  Value *One = ConstantInt::get(IdxTy, 1U);
   Value *NextLoopIndex = LoopBuilder.CreateAdd(LoopIndex, One);
   LoopIndex->addIncoming(NextLoopIndex, LoopBB);
 
