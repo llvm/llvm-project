@@ -1082,7 +1082,6 @@ private:
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
-  UnorderedSymbolSet privateDataSharingAttributeObjects_; // on one directive
   UnorderedSymbolSet stmtFunctionExprSymbols_;
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, std::optional<DirContext>>>
@@ -1099,13 +1098,6 @@ private:
     ExecutionPart,
   };
   std::vector<PartKind> partStack_;
-
-  void AddPrivateDataSharingAttributeObjects(SymbolRef object) {
-    privateDataSharingAttributeObjects_.insert(object);
-  }
-  void ClearPrivateDataSharingAttributeObjects() {
-    privateDataSharingAttributeObjects_.clear();
-  }
 
   // Predetermined DSA rules
   void PrivatizeAssociatedLoopIndex(const parser::OpenMPLoopConstruct &);
@@ -1164,6 +1156,28 @@ private:
     symbol.flags() |= flags;
   }
 };
+
+void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
+    Scope *topScope) {
+  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
+    AccAttributeVisitor{context, topScope}.Walk(node);
+  }
+}
+
+void ResolveOmpParts(
+    SemanticsContext &context, const parser::ProgramUnit &node) {
+  if (context.IsEnabled(common::LanguageFeature::OpenMP)) {
+    OmpAttributeVisitor{context}.Walk(node);
+    if (!context.AnyFatalError()) {
+      // The data-sharing attribute of the loop iteration variable for a
+      // sequential loop (2.15.1.1) can only be determined when visiting
+      // the corresponding DoConstruct, a second walk is to adjust the
+      // symbols for all the data-refs of that loop iteration variable
+      // prior to the DoConstruct.
+      OmpAttributeVisitor{context}.Walk(node);
+    }
+  }
+}
 
 template <typename T>
 bool DirectiveAttributeVisitor<T>::HasDataSharingAttributeObject(
@@ -1993,7 +2007,6 @@ bool OmpAttributeVisitor::Pre(const parser::OmpBlockConstruct &x) {
   llvm::omp::Directive dirId{dirSpec.DirId()};
   PushContext(dirSpec.source, dirId);
   ClearDataSharingAttributeObjects();
-  ClearPrivateDataSharingAttributeObjects();
   return true;
 }
 
@@ -3123,31 +3136,6 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
         name.ToString());
   } else {
     AddDataSharingAttributeObject(target->GetUltimate());
-    if (privateDataSharingAttributeFlags.test(ompFlag)) {
-      AddPrivateDataSharingAttributeObjects(*target);
-    }
-  }
-}
-
-void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
-    Scope *topScope) {
-  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
-    AccAttributeVisitor{context, topScope}.Walk(node);
-  }
-}
-
-void ResolveOmpParts(
-    SemanticsContext &context, const parser::ProgramUnit &node) {
-  if (context.IsEnabled(common::LanguageFeature::OpenMP)) {
-    OmpAttributeVisitor{context}.Walk(node);
-    if (!context.AnyFatalError()) {
-      // The data-sharing attribute of the loop iteration variable for a
-      // sequential loop (2.15.1.1) can only be determined when visiting
-      // the corresponding DoConstruct, a second walk is to adjust the
-      // symbols for all the data-refs of that loop iteration variable
-      // prior to the DoConstruct.
-      OmpAttributeVisitor{context}.Walk(node);
-    }
   }
 }
 
