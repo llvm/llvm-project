@@ -34,6 +34,10 @@ public:
   RT_API_ATTRS void HasEorLabel() { flags_ |= hasEor; }
   RT_API_ATTRS void HasIoMsg() { flags_ |= hasIoMsg; }
   RT_API_ATTRS void HasRec() { flags_ |= hasRec; }
+  RT_API_ATTRS void SignalPendingIoStat(int iostat) {
+    if (ioStat_ == IostatOk || ioStat_ == IostatEnd || ioStat_ == IostatEor)
+      ioStat_ = iostat;
+  }
 
   RT_API_ATTRS bool InError() const {
     return ioStat_ != IostatOk || pendingError_ != IostatOk;
