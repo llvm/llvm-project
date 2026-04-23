@@ -112,9 +112,7 @@ __gpu_read_first_lane_u32(uint64_t __lane_mask, uint32_t __x) {
 // Returns a bitmask of threads in the current lane for which \p x is true.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
                                                           bool __x) {
-  // The lane_mask & gives the nvptx semantics when lane_mask is a subset of
-  // the active threads
-  return __lane_mask & __builtin_amdgcn_ballot_w64(__x);
+  return __builtin_amdgcn_ballot_w64(__x);
 }
 
 // Waits for all the threads in the block to converge and issues a fence.

@@ -118,12 +118,10 @@ __gpu_read_first_lane_u32(uint64_t __lane_mask, uint32_t __x) {
 // implementation is incorrect if the target uses more than 64 lanes.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
                                                           bool __x) {
-  // The lane_mask & gives the nvptx semantics when lane_mask is a subset of
-  // the active threads.
   uint32_t [[clang::ext_vector_type(4)]] __mask =
       __builtin_spirv_subgroup_ballot(__x);
-  return __lane_mask & __builtin_bit_cast(uint64_t, __builtin_shufflevector(
-                                                        __mask, __mask, 0, 1));
+  return __builtin_bit_cast(uint64_t,
+                            __builtin_shufflevector(__mask, __mask, 0, 1));
 }
 
 // Waits for all the threads in the block to converge and issues a fence.
