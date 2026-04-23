@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix  %s
 
 
 struct NonPOD { NonPOD(int); };
@@ -44,6 +44,10 @@ struct HasAnonymousUnion {
 
 typedef int Vector __attribute__((vector_size(16)));
 typedef int VectorExt __attribute__((ext_vector_type(4)));
+
+typedef float __attribute__((matrix_type(2, 3))) fm2x3;
+typedef int   __attribute__((matrix_type(4, 4))) im4x4;
+
 
 using ComplexFloat = _Complex float;
 using ComplexInt = _Complex int;
@@ -1359,6 +1363,8 @@ void is_trivially_copyable2()
   static_assert(__is_trivially_copyable(NonTrivialStruct));
   static_assert(__is_trivially_copyable(AllDefaulted));
   static_assert(__is_trivially_copyable(AllDeleted));
+  static_assert(__is_trivially_copyable(fm2x3));
+  static_assert(__is_trivially_copyable(im4x4));
 
   static_assert(!__is_trivially_copyable(void));
   static_assert(!__is_trivially_copyable(SuperNonTrivialStruct));
@@ -1374,6 +1380,7 @@ void is_trivially_copyable2()
   static_assert(!__is_trivially_copyable(AnIncompleteType[1])); // expected-error {{incomplete type}}
   static_assert(!__is_trivially_copyable(void));
   static_assert(!__is_trivially_copyable(const volatile void));
+
 }
 
 struct CStruct {
@@ -1425,6 +1432,7 @@ void is_standard_layout()
   static_assert(__is_standard_layout(CppStructStandard));
   static_assert(__is_standard_layout(CppStructStandardAr));
   static_assert(__is_standard_layout(Vector));
+  static_assert(__is_standard_layout(VectorExt));
   static_assert(__is_standard_layout(VectorExt));
 
   typedef CppStructNonStandardByBase CppStructNonStandardByBaseAr[4];
@@ -2906,7 +2914,9 @@ void is_trivial()
   static_assert(__is_trivial(DerivesHasProt));
   static_assert(__is_trivial(Vector));
   static_assert(__is_trivial(VectorExt));
-
+  
+  
+  static_assert(!__is_trivial(fm2x3));
   static_assert(!__is_trivial(HasCons));
   static_assert(!__is_trivial(HasCopyAssign));
   static_assert(!__is_trivial(HasMoveAssign));
