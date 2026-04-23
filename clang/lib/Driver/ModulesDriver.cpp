@@ -1530,10 +1530,10 @@ static std::string createModuleOutputPath(const Compilation &C,
   return ModuleOutputPath;
 }
 
-/// Adds arguments to output the module produced by \p Node at \p OutputPath.
-static void configureNamedModuleOutputArgs(Compilation &C,
-                                           NamedModuleJobNode &Node,
-                                           StringRef ModuleOutputPath) {
+/// Adds the '-fmodule-output=' argument for the module produced by \p Node.
+static void configureNamedModuleOutputArg(Compilation &C,
+                                          NamedModuleJobNode &Node,
+                                          StringRef ModuleOutputPath) {
   auto &Job = *Node.Job;
   const auto &TCArgs = getToolChainArgs(C, Job);
   auto JobArgs = Job.getArguments();
@@ -1542,8 +1542,8 @@ static void configureNamedModuleOutputArgs(Compilation &C,
   Job.replaceArguments(std::move(JobArgs));
 }
 
-/// Propagates the -fmodule-file mapping for the named module described by \p
-/// Node to each dependent job.
+/// Propagates the '-fmodule-file=' mapping for the named module described by
+/// \p Node to each dependent job.
 static void propagateModuleFileMappingArg(Compilation &C,
                                           NamedModuleJobNode &Node,
                                           StringRef ModuleOutputPath) {
@@ -1580,7 +1580,7 @@ static void fixupNamedModuleCommandLines(Compilation &C,
     const auto ModuleOutputPath = createModuleOutputPath(C, ModuleName);
     C.addTempFile(C.getArgs().MakeArgString(ModuleOutputPath));
 
-    configureNamedModuleOutputArgs(C, *Node, ModuleOutputPath);
+    configureNamedModuleOutputArg(C, *Node, ModuleOutputPath);
     propagateModuleFileMappingArg(C, *Node, ModuleOutputPath);
   }
 }
