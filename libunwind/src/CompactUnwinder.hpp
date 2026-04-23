@@ -334,9 +334,10 @@ int CompactUnwinder_x86_64<A>::stepWithCompactEncodingRBPFrame(
       break;
     default:
       (void)functionStart;
-      _LIBUNWIND_DEBUG_LOG("bad register for RBP frame, encoding=%08X for "
-                           "function starting at 0x%" PRIu64 "X",
-                            compactEncoding, functionStart);
+      _LIBUNWIND_DEBUG_LOG(
+          "bad register for RBP frame, encoding=%08X for "
+          "function starting at 0x%" PRIu64 "X",
+          compactEncoding, functionStart);
       _LIBUNWIND_ABORT("invalid compact unwind encoding");
     }
     savedRegisters += 8;
@@ -453,9 +454,10 @@ int CompactUnwinder_x86_64<A>::stepWithCompactEncodingFrameless(
       registers.setRBP(addressSpace.get64(savedRegisters));
       break;
     default:
-      _LIBUNWIND_DEBUG_LOG("bad register for frameless, encoding=%08X for "
-                           "function starting at 0x%" PRIu64 "X",
-                            encoding, functionStart);
+      _LIBUNWIND_DEBUG_LOG(
+          "bad register for frameless, encoding=%08X for "
+          "function starting at 0x%" PRIu64 "X",
+          encoding, functionStart);
       _LIBUNWIND_ABORT("invalid compact unwind encoding");
     }
     savedRegisters += 8;
