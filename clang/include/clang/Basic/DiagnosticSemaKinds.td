@@ -5749,8 +5749,13 @@ def err_template_arg_not_object_or_func : Error<
   "non-type template argument does not refer to an object or function">;
 def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
+def err_template_arg_not_equivalent_to_its_copy : Error<
+  "non-type template argument is not equivalent to its copy">;
+def note_template_arg_requires_copy : Note<
+  "non-type template argument is required to be copyable">;
 def err_template_arg_invalid : Error<
   "non-type template argument '%0' is invalid">;
+
 def err_pointer_to_member_type : Error<
   "invalid use of pointer to member type after %select{.*|->*}0">;
 def err_pointer_to_member_call_drops_quals : Error<

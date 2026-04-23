@@ -106,30 +106,69 @@ namespace ConvertedConstant {
 }
 
 namespace CopyCounting {
-  // Make sure we don't use the copy constructor when transferring the "same"
-  // template parameter object around.
   struct A { int n; constexpr A(int n = 0) : n(n) {} constexpr A(const A &a) : n(a.n+1) {} };
-  template<A a> struct X {};
+  template<A a> struct X {}; // expected-note {{passing argument to parameter 'a' here}}
   template<A a> constexpr int f(X<a> x) { return a.n; }
 
-  static_assert(f(X<A{}>()) == 0);
+  static_assert(f(X<A{}>()) == 0); // expected-error {{non-type template argument is not equivalent to its copy}}
 
-  template<A a> struct Y { void f(); };
+  template<A a> struct Y { void f(); }; // expected-note {{passing argument to parameter 'a' here}}
   template<A a> void g(Y<a> y) { y.Y<a>::f(); }
-  void h() { constexpr A a; g<a>(Y<a>{}); }
+  void h() { constexpr A a; g<a>(Y<a>{}); }  // expected-error {{non-type template argument is not equivalent to its copy}}
 
-  template<A a> struct Z {
+  template<A a> struct Z { // expected-note 2 {{passing argument to parameter 'a' here}}
     constexpr int f() {
       constexpr A v = a; // this is {a.n+1}
       return Z<v>().f() + 1; // this is Z<{a.n+2}>
     }
   };
-  template<> struct Z<A{20}> {
+  template<> struct Z<A{20}> {  // expected-error {{non-type template argument is not equivalent to its copy}}
     constexpr int f() {
       return 32;
     }
   };
-  static_assert(Z<A{}>().f() == 42);
+  static_assert(Z<A{}>().f() == 42); // expected-error {{non-type template argument is not equivalent to its copy}}
+}
+
+namespace ConditionallyModify {
+struct A {
+  int x;
+  constexpr A(int x) : x(x) {}
+  constexpr A(const A& a) : x(a.x + (a.x > 1)) {}
+};
+template <A a> struct X {}; // expected-note {{passing argument to parameter 'a' here}}
+template struct X<1>;
+template struct X<2>; // expected-error {{non-type template argument is not equivalent to its copy}}
+}
+
+namespace CannotCopy {
+template <typename T, template <T> typename TEMPLATE>
+concept C = (TEMPLATE<{}>{}, true);
+
+struct S1 {
+  constexpr S1() = default; // expected-note {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+  constexpr S1(S1&) = default; // expected-note {{candidate constructor not viable: 1st argument ('const S1') would lose const qualifier}}
+};
+template <S1> struct T1 {}; // expected-note {{passing argument to parameter here}} expected-note {{non-type template argument is required to be copyable}}
+template struct T1<{}>; // expected-error {{no matching constructor for initialization of 'S1'}}
+static_assert(!C<S1, T1>);
+
+struct S2 {
+  constexpr S2() = default; // expected-note {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+  explicit constexpr S2(const S2&) = default; // expected-note {{explicit constructor is not a candidate}}
+};
+template <S2> struct T2 {}; // expected-note {{passing argument to parameter here}} expected-note {{non-type template argument is required to be copyable}}
+template struct T2<{}>; // expected-error {{no matching constructor for initialization of 'S2'}}
+static_assert(!C<S2, T2>);
+
+struct S3 {
+  constexpr S3() = default;
+  S3(const S3&) {} // expected-note {{declared here}}
+};
+template <S3> struct T3 {}; // expected-note {{non-type template argument is required to be copyable}}
+template struct T3<{}>; // expected-error {{non-type template argument is not a constant expression}} \
+                           expected-note {{non-constexpr constructor 'S3' cannot be used in a constant expression}}
+static_assert(!C<S3, T3>);
 }
 
 namespace StableAddress {
