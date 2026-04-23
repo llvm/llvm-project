@@ -1,4 +1,4 @@
-// RUN: fir-opt --inline-elementals %s | FileCheck %s
+// RUN: fir-opt -allow-unregistered-dialect --inline-elementals %s | FileCheck %s
 
 // Test inlining of hlfir.elemental into its hlfir.apply site when the
 // elemental has more than two users.
@@ -43,7 +43,10 @@ func.func @test_safe_loop_inlining(%arg0: !fir.ref<!fir.array<10xf32>>, %i: inde
 // CHECK:     %[[VAL:.*]] = fir.load %[[ADDR]]
 // CHECK-NOT: hlfir.apply
 // CHECK: hlfir.associate %[[ELEM]]
-// CHECK-NOT: hlfir.destroy %[[ELEM]]
+// This verifies that even when an elemental is inlined into an apply site,
+// the destroy operation is preserved because another user (hlfir.associate)
+// still requires the array buffer.
+// CHECK: hlfir.destroy %[[ELEM]]
 
 // Test blocking of incorrect inlining because of alias conflict.
 func.func @test_unsafe_loop_alias_conflict(%arg0: !fir.ref<!fir.array<10xf32>>, %new_val: f32) {
@@ -133,9 +136,11 @@ func.func @test_inlining_use_mask(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: !
 // CHECK:     %[[CMP:.*]] = arith.cmpi eq, %[[LOAD]], %[[REF]]
 // CHECK:     %[[RES:.*]] = fir.convert %[[CMP]]
 // CHECK:     fir.store %[[RES]]
-// CHECK-NOT: hlfir.destroy %[[MASK]]
+// CHECK: hlfir.destroy %[[MASK]]
 
-// Test elemental removal as use_count becomes zero.
+// Check elemental and destroy are successfully removed even when
+// the expression is passed through metadata operations (fir.convert)
+// and used in nested loops.
 func.func @test_inlining_elemental_cleanup(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: !fir.ref<i32>) {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -295,7 +300,7 @@ func.func @test_scalar_apply_inlining_safe(%b: !fir.ref<!fir.array<10xf32>>, %c1
 // CHECK: arith.addf %[[VAL]], %[[VAL]]
 // CHECK-NOT: hlfir.apply
 // CHECK: hlfir.associate %[[ELEM]]
-// CHECK-NOT: hlfir.destroy %[[ELEM]]
+// CHECK: hlfir.destroy %[[ELEM]]
 
 // Check long chains of elementals.
 // subroutine reproducer(a)
@@ -355,9 +360,7 @@ func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
 // CHECK-DAG:     arith.mulf
 // CHECK-DAG:     math.sqrt
 // CHECK:         hlfir.assign
-// The apply site was inlined, so the elemental's lifecycle (destroy) 
-// is removed even though metadata users like no_reassoc remain.
-// CHECK-NOT:     hlfir.destroy %[[TMP1]]
+// CHECK:     hlfir.destroy %[[TMP1]]
 
 // Check that the ordered elemental is not inlined into another:
 // a = b + c + d (where b + c is ordered)
@@ -575,3 +578,445 @@ func.func @test_memory_dependency_with_designate(%arg0: !fir.ref<!fir.array<10xf
 // CHECK: hlfir.elemental
 // CHECK:   hlfir.apply %[[ELEM]]
 // CHECK: hlfir.destroy %[[ELEM]]
+
+// Inlining is blocked because an unknown op uses %arg0.
+func.func @test_unknown_op_fallback(%arg0: !fir.ref<f32>) -> f32 {
+  %c1 = arith.constant 1 : index
+  %f1 = arith.constant 1.0 : f32
+  %shape = fir.shape %c1 : (index) -> !fir.shape<1>
+
+  %elemental = hlfir.elemental %shape : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    "unknown.op"(%arg0) : (!fir.ref<f32>) -> ()
+    %val = fir.load %arg0 : !fir.ref<f32>
+    hlfir.yield_element %val : f32
+  }
+
+  fir.store %f1 to %arg0 : !fir.ref<f32>
+
+  %apply = hlfir.apply %elemental, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %elemental : !hlfir.expr<1xf32>
+  return %apply : f32
+}
+// CHECK-LABEL: func.func @test_unknown_op_fallback
+// CHECK: hlfir.elemental
+// CHECK: hlfir.apply
+
+// Inlining is blocked because the walker found a dependency inside a region.
+func.func @test_nested_dependency(%arg0: !fir.ref<f32>, %cond: i1) -> f32 {
+  %c1 = arith.constant 1 : index
+  %f1 = arith.constant 1.0 : f32
+  %shape = fir.shape %c1 : (index) -> !fir.shape<1>
+
+  %elemental = hlfir.elemental %shape : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %res = fir.if %cond -> f32 {
+      %val = fir.load %arg0 : !fir.ref<f32>
+      fir.result %val : f32
+    } else {
+      %c0 = arith.constant 0.0 : f32
+      fir.result %c0 : f32
+    }
+    hlfir.yield_element %res : f32
+  }
+
+  fir.store %f1 to %arg0 : !fir.ref<f32>
+
+  %apply = hlfir.apply %elemental, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %elemental : !hlfir.expr<1xf32>
+  return %apply : f32
+}
+// CHECK-LABEL: func.func @test_nested_dependency
+// CHECK: hlfir.elemental
+// CHECK: hlfir.apply
+
+// Check if fir.box dependency are captured in fail-safe logic.
+func.func @test_box_dependency(%arg0: !fir.box<!fir.array<?xf32>>) -> f32 {
+  %c1 = arith.constant 1 : index
+  %f0 = arith.constant 0.0 : f32
+  %shape = fir.shape %c1 : (index) -> !fir.shape<1>
+
+  %elemental = hlfir.elemental %shape : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    // 'unknown.op' uses the box. The fail-safe should capture %arg0 dependency.
+    "unknown.op"(%arg0) : (!fir.box<!fir.array<?xf32>>) -> ()
+
+    %addr_in = hlfir.designate %arg0 (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+    %val = fir.load %addr_in : !fir.ref<f32>
+    hlfir.yield_element %val : f32
+  }
+
+  // Inlining blocked as %arg0 was captured.
+  %addr_out = hlfir.designate %arg0 (%c1) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+  fir.store %f0 to %addr_out : !fir.ref<f32>
+
+  %apply = hlfir.apply %elemental, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %elemental : !hlfir.expr<1xf32>
+  return %apply : f32
+}
+// CHECK-LABEL: func.func @test_box_dependency
+// CHECK: hlfir.elemental
+// CHECK: hlfir.apply
+
+// Check if .Default walker correctly enters a region (fir.if) and identifies
+// metadata (fir.convert). It then feeds the result back to the  worklist,
+// allowing analysis to find the nested hlfir.apply.
+func.func @test_nested_metadata_feedback(%arg0: !fir.shape<1>, %cond: i1) -> f32 {
+  %c1 = arith.constant 1 : index
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %c0 = arith.constant 5.0 : f32
+    hlfir.yield_element %c0 : f32
+  }
+
+  %res = fir.if %cond -> f32 {
+    %conv1 = fir.convert %el : (!hlfir.expr<1xf32>) -> !hlfir.expr<1xf32>
+    %conv2 = fir.convert %conv1 : (!hlfir.expr<1xf32>) -> !hlfir.expr<1xf32>
+    %apply = hlfir.apply %conv2, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+    fir.result %apply : f32
+  } else {
+    %f0 = arith.constant 0.0 : f32
+    fir.result %f0 : f32
+  }
+
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %res : f32
+}
+// CHECK-LABEL: func.func @test_nested_metadata_feedback
+// CHECK-NOT: hlfir.elemental
+// CHECK-NOT: hlfir.apply
+// CHECK: %[[VAL:.*]] = arith.constant 5.000000e+00 : f32
+// CHECK: fir.if
+// CHECK:   fir.result %{{.*}} : f32
+// CHECK: else
+// CHECK:   fir.result %{{.*}} : f32
+
+// Check if analysis can find an hlfir.apply nested inside a fir.if
+// when other operations like hlfir.declare are present in the
+// same region. It ensures the .Default walker doesn't get stuck.
+func.func @test_nested_declare_results(%arg0: !fir.shape<1>, %cond: i1) -> f32 {
+  %c1 = arith.constant 1 : index
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %cst = arith.constant 1.0 : f32
+    hlfir.yield_element %cst : f32
+  }
+
+  %res = fir.if %cond -> f32 {
+    // Metadata ops present in the region.
+    %mem = fir.alloca !hlfir.expr<1xf32>
+    %v:2 = hlfir.declare %mem {uniq_name = "test_var"} : (!fir.ref<!hlfir.expr<1xf32>>) -> (!fir.ref<!hlfir.expr<1xf32>>, !fir.ref<!hlfir.expr<1xf32>>)
+
+    // The apply using the elemental.
+    %apply = hlfir.apply %el, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+    fir.result %apply : f32
+  } else {
+    %f0 = arith.constant 0.0 : f32
+    fir.result %f0 : f32
+  }
+
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %res : f32
+}
+// CHECK-LABEL: func.func @test_nested_declare_results
+// CHECK-NOT: hlfir.elemental
+// CHECK-NOT: hlfir.apply
+// CHECK: %[[VAL:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: fir.if
+// CHECK:   fir.result %{{.*}} : f32
+// CHECK: else
+// CHECK:   fir.result %{{.*}} : f32
+
+// Check fail-safe logic in getReadDependencies.
+// The 'test.unknown_read' operation has no memory interface, so the pass
+// should conservatively capture its operand (%mem) as a dependency.
+// No inlining as there is a fir.store to %mem before the apply.
+func.func @test_unspecified_read_fallback(%mem: !fir.ref<f32>) -> f32 {
+  %c1 = arith.constant 1 : index
+  %shape = fir.shape %c1 : (index) -> !fir.shape<1>
+  %el = hlfir.elemental %shape : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    "test.unknown_read"(%mem) : (!fir.ref<f32>) -> ()
+    %val = fir.load %mem : !fir.ref<f32>
+    hlfir.yield_element %val : f32
+  }
+  %f1 = arith.constant 1.0 : f32
+  fir.store %f1 to %mem : !fir.ref<f32>
+  %apply = hlfir.apply %el, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %apply : f32
+}
+// CHECK-LABEL: func.func @test_unspecified_read_fallback
+// CHECK: %[[EL:.*]] = hlfir.elemental
+// CHECK: fir.store
+// CHECK: %[[RES:.*]] = hlfir.apply %[[EL]]
+// CHECK: hlfir.destroy %[[EL]]
+// CHECK: return %[[RES]]
+
+// Checks recursive analysis of the .Default walker. It identifies an
+// hlfir.apply nested inside a fir.if block, skipping the container itself
+// and successfully inlining the elemental body into the nested site.
+func.func @test_minimal_nested(%arg0: !fir.shape<1>, %cond: i1) {
+  %c1 = arith.constant 1 : index
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %c0 = arith.constant 0.0 : f32
+    hlfir.yield_element %c0 : f32
+  }
+
+  fir.if %cond {
+    %apply = hlfir.apply %el, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+    "test.sink"(%apply) : (f32) -> ()
+  }
+
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_minimal_nested
+// CHECK-NOT: hlfir.elemental
+// CHECK-NOT: hlfir.apply
+// CHECK: arith.constant 0.000000e+00 : f32
+// CHECK: "test.sink"
+
+// Check .Default case identify unknown region-based operations as other users.
+// The pass should inline the hlfir.apply but should preserve the
+// hlfir.elemental and hlfir.destroy because the buffer is still required by
+// unknown op.
+func.func @test_unknown_region_consumer(%arg0: !fir.shape<1>) {
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %c0 = arith.constant 0.0 : f32
+    hlfir.yield_element %c0 : f32
+  }
+
+  // An operation with regions that can't be recognized as a metadata/apply op.
+  "unknown.region_op"(%el) ({
+    ^bb0(%arg1: !hlfir.expr<1xf32>):
+      "some.inner.op"() : () -> ()
+  }) : (!hlfir.expr<1xf32>) -> ()
+
+  %c1 = arith.constant 1 : index
+  %apply = hlfir.apply %el, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_unknown_region_consumer
+// CHECK: hlfir.elemental
+// CHECK-NOT: hlfir.apply
+// CHECK: hlfir.destroy
+
+// Check recursive metadata (Walker -> Worklist -> Walker).
+// hlfir.apply nested within multiple layers of control flow (nested fir.if).
+// .Default walker and main worklist can hand off the elemental result across
+// region boundaries many times.
+func.func @test_deep_hybrid_nesting(%arg0: !fir.shape<1>, %cond: i1) -> f32 {
+  %c1 = arith.constant 1 : index
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %c0 = arith.constant 42.0 : f32
+    hlfir.yield_element %c0 : f32
+  }
+
+  %res = fir.if %cond -> f32 {
+    // .Default walker finds this, feeds back to worklist
+    %conv = fir.convert %el : (!hlfir.expr<1xf32>) -> !hlfir.expr<1xf32>
+
+    // Worklist finds this nested if, .Default walker runs again.
+    %inner = fir.if %cond -> f32 {
+       %apply = hlfir.apply %conv, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+       fir.result %apply : f32
+    } else {
+       %f0 = arith.constant 0.0 : f32
+       fir.result %f0 : f32
+    }
+    fir.result %inner : f32
+  } else {
+    %f0 = arith.constant 0.0 : f32
+    fir.result %f0 : f32
+  }
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %res : f32
+}
+// CHECK-LABEL: func.func @test_deep_hybrid_nesting
+// CHECK-NOT: hlfir.elemental
+// CHECK-NOT: hlfir.apply
+// CHECK: arith.constant 4.200000e+01 : f32
+
+// Check conservative fail-safe in getReadDependencies. When an unknown
+// operation is encountered, all of its reference-type operands are captured
+// as dependencies. Inlining is blocked because of any of these captured
+// values.
+func.func @test_multi_operand_fallback(%mem1: !fir.ref<f32>, %mem2: !fir.ref<f32>) -> f32 {
+  %c1 = arith.constant 1 : index
+  %shape = fir.shape %c1 : (index) -> !fir.shape<1>
+
+  %el = hlfir.elemental %shape : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    // Unknown op with two reference operands.
+    "unknown.op"(%mem1, %mem2) : (!fir.ref<f32>, !fir.ref<f32>) -> ()
+    %val = fir.load %mem1 : !fir.ref<f32>
+    hlfir.yield_element %val : f32
+  }
+
+  // Write to the second operand (%mem2).
+  // In case of  correctly captured all operands of the unknown op,
+  // inlining of the elemental should be blocked due to write to %mem2.
+  %f1 = arith.constant 1.0 : f32
+  fir.store %f1 to %mem2 : !fir.ref<f32>
+
+  %apply = hlfir.apply %el, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %apply : f32
+}
+// CHECK-LABEL: func.func @test_multi_operand_fallback
+// CHECK: hlfir.elemental
+// CHECK: hlfir.apply
+
+// Check fir::ResultOp mapping logic in the TypeSwitch - analysis can track
+// the elemental result as it is yielded out of a fir.do_loop, correctly maps
+// iter_arg to the loop result to find hlfir.apply site.
+func.func @test_loop_carried_result(%arg0: !fir.shape<1>, %n: index) -> f32 {
+  %c1 = arith.constant 1 : index
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %cst = arith.constant 7.0 : f32
+    hlfir.yield_element %cst : f32
+  }
+
+  // The elemental result is passed through a loop result.
+  %loop_res = fir.do_loop %i = %c1 to %n step %c1 iter_args(%arg = %el) -> (!hlfir.expr<1xf32>) {
+    fir.result %arg : !hlfir.expr<1xf32>
+  }
+
+  // The apply uses the result of the loop.
+  // TypeSwitch for fir::ResultOp should map %arg back to %loop_res.
+  %apply = hlfir.apply %loop_res, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %apply : f32
+}
+// CHECK-LABEL: func.func @test_loop_carried_result
+// CHECK-NOT: hlfir.elemental
+// CHECK: arith.constant 7.0
+
+// Check if worklist successfully traverses block boundaries.
+// BranchOpInterface logic correctly maps the elemental result to the
+// successor block's argument, allowing the pass to find hlfir.apply in
+// a separate basic block.
+func.func @test_cross_block_dataflow(%arg0: !fir.shape<1>, %cond: i1) -> f32 {
+  %c1 = arith.constant 1 : index
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %cst = arith.constant 3.14 : f32
+    hlfir.yield_element %cst : f32
+  }
+
+  // Value is passed as a block argument to bb1.
+  cf.cond_br %cond, ^bb1(%el : !hlfir.expr<1xf32>), ^bb2
+
+^bb1(%block_arg: !hlfir.expr<1xf32>):
+  // The worklist must map %el to %block_arg via BranchOpInterface
+  %apply = hlfir.apply %block_arg, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %apply : f32
+
+^bb2:
+  %f0 = arith.constant 0.0 : f32
+  return %f0 : f32
+}
+// CHECK-LABEL: func.func @test_cross_block_dataflow
+// CHECK-NOT: hlfir.elemental
+// CHECK-NOT: hlfir.apply
+// CHECK-NOT: hlfir.destroy
+// CHECK: arith.constant 3.14
+
+// This test verifiess following the elemental result through a loop exit.
+// By mapping the fir.result operand to the parent operation's result,
+// the worklist can trace the value from inside the loop to an hlfir.apply
+// site located outside the loop.
+func.func @test_loop_exit_dataflow(%arg0: !fir.shape<1>, %n: index) -> f32 {
+  %c1 = arith.constant 1 : index
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %cst = arith.constant 1.23 : f32
+    hlfir.yield_element %cst : f32
+  }
+
+  // The elemental result exits the loop via fir.result.
+  %loop_res = fir.do_loop %i = %c1 to %n step %c1 iter_args(%arg = %el) -> (!hlfir.expr<1xf32>) {
+    fir.result %arg : !hlfir.expr<1xf32>
+  }
+
+  // The apply site is outside the loop, using the loop's result.
+  %apply = hlfir.apply %loop_res, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %apply : f32
+}
+// CHECK-LABEL: func.func @test_loop_exit_dataflow
+// CHECK-NOT: hlfir.elemental
+// CHECK-NOT: hlfir.apply
+// CHECK-NOT: hlfir.destroy
+// CHECK: arith.constant 1.23
+
+// Check if worklist can follow a result through nested control flow
+// (if inside a loop) and out of the loop result itself.
+func.func @test_complex_nesting_valid(%arg0: !fir.shape<1>, %n: index, %cond: i1) -> f32 {
+  %c1 = arith.constant 1 : index
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %cst = arith.constant 100.0 : f32
+    hlfir.yield_element %cst : f32
+  }
+
+  // Value enters the loop via iter_args.
+  %loop = fir.do_loop %i = %c1 to %n step %c1 iter_args(%arg = %el) -> (!hlfir.expr<1xf32>) {
+    // Nested structured control flow. 
+    %res = fir.if %cond -> !hlfir.expr<1xf32> {
+      fir.result %arg : !hlfir.expr<1xf32>
+    } else {
+      fir.result %arg : !hlfir.expr<1xf32>
+    }
+    fir.result %res : !hlfir.expr<1xf32>
+  }
+
+  // Value exits the loop and is used by apply.
+  %apply = hlfir.apply %loop, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %apply : f32
+}
+// CHECK-LABEL: func.func @test_complex_nesting_valid
+// CHECK-NOT: hlfir.elemental
+// CHECK-NOT: hlfir.apply
+// CHECK-NOT: hlfir.destroy
+// CHECK: arith.constant 1.000000e+02 : f32
+
+// Recursive .Default walker can find an apply site deep within nested regions
+// (if inside a loop).
+func.func @test_deep_nested_discovery(%arg0: !fir.shape<1>, %n: index, %cond: i1) -> f32 {
+  %c1 = arith.constant 1 : index
+  %f0 = arith.constant 0.0 : f32
+  %el = hlfir.elemental %arg0 : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %c100 = arith.constant 100.0 : f32
+    hlfir.yield_element %c100 : f32
+  }
+
+  %res = fir.do_loop %i = %c1 to %n step %c1 iter_args(%arg = %el) -> (!hlfir.expr<1xf32>) {
+    %inner = fir.if %cond -> !hlfir.expr<1xf32> {
+      // The .Default walker on the fir.if finds this.
+      %apply = hlfir.apply %arg, %c1 : (!hlfir.expr<1xf32>, index) -> f32
+      "test.sink"(%apply) : (f32) -> ()
+      fir.result %arg : !hlfir.expr<1xf32>
+    } else {
+      fir.result %arg : !hlfir.expr<1xf32>
+    }
+    fir.result %inner : !hlfir.expr<1xf32>
+  }
+
+  hlfir.destroy %el : !hlfir.expr<1xf32>
+  return %f0 : f32
+}
+// CHECK-LABEL: func.func @test_deep_nested_discovery
+// CHECK-NOT: hlfir.elemental
+// CHECK-NOT: hlfir.apply
+// CHECK-NOT: hlfir.destroy
+// CHECK: arith.constant 1.000000e+02 : f32

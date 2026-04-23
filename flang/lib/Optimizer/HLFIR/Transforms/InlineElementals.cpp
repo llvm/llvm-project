@@ -34,20 +34,40 @@ namespace hlfir {
 } // namespace hlfir
 
 /// Collects all memory values (buffers/references) that the elemental body
-/// reads from.
+/// reads from. Use MemoryEffectOpInterface for a fail-safe implementation.
 static void getReadDependencies(hlfir::ElementalOp elemental,
                                 llvm::SmallVectorImpl<mlir::Value> &deps) {
   elemental.getRegion().walk([&](mlir::Operation *op) {
-    if (auto designate = mlir::dyn_cast<hlfir::DesignateOp>(op))
-      deps.push_back(designate.getMemref());
-    else if (auto load = mlir::dyn_cast<fir::LoadOp>(op))
-      deps.push_back(load.getMemref());
-    // Capture any value defined outside the elemental but used inside it.
+    // Check if the operation explicitly implements memory effects.
+    if (auto memInterface = mlir::dyn_cast<mlir::MemoryEffectOpInterface>(op)) {
+      llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
+      memInterface.getEffects(effects);
+      bool hasUnspecifiedRead = false;
+      for (const auto &effect : effects) {
+        if (mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect())) {
+          if (mlir::Value val = effect.getValue()) {
+            deps.push_back(val);
+          } else {
+            // Read effect on an unspecified resource (e.g., global state).
+            hasUnspecifiedRead = true;
+          }
+        }
+      }
+      // If the op has a read effect but the specific value is unknown,
+      // conservatively capture all potential reference operands.
+      if (!hasUnspecifiedRead)
+        return;
+    }
+
+    // Fail-safe Fallback: For operations without the interface or with
+    // unspecified effects, capture any external reference used inside.
     for (mlir::Value operand : op->getOperands()) {
-      if (operand.getParentRegion() != &elemental.getRegion())
+      if (operand.getParentRegion() != &elemental.getRegion()) {
         if (mlir::isa<fir::ReferenceType, fir::PointerType, fir::HeapType,
-                      fir::BoxType>(operand.getType()))
+                      fir::BoxType>(operand.getType())) {
           deps.push_back(operand);
+        }
+      }
     }
   });
 }
@@ -57,59 +77,51 @@ static void getReadDependencies(hlfir::ElementalOp elemental,
 static bool isConflictingWrite(mlir::Operation *op,
                                const llvm::SmallVectorImpl<mlir::Value> &deps,
                                mlir::AliasAnalysis &aa) {
-  // Operations explicitly marked as having no memory effects are safe.
-  if (mlir::isMemoryEffectFree(op))
-    return false;
+  // Use walk to handle nested regions (fir.if, fir.do_loop, etc.) recursively.
+  mlir::WalkResult result = op->walk([&](mlir::Operation *nestedOp) {
+    // Operations explicitly marked as having no memory effects are safe.
+    if (mlir::isMemoryEffectFree(nestedOp))
+      return mlir::WalkResult::advance();
 
-  // Explicitly allow safe HLFIR/FIR metadata/lifetime operations.
-  // While these may have internal effects (e.g. allocating a descriptor),
-  // they do not modify the user data being read by the elemental.
-  if (mlir::isa<hlfir::DeclareOp, hlfir::AssociateOp, hlfir::EndAssociateOp,
-                fir::AllocaOp, hlfir::NoReassocOp>(op))
-    return false;
+    // Explicitly allow safe HLFIR/FIR metadata/lifetime operations.
+    if (mlir::isa<hlfir::DeclareOp, hlfir::AssociateOp, hlfir::EndAssociateOp,
+                  fir::AllocaOp, hlfir::NoReassocOp>(nestedOp))
+      return mlir::WalkResult::advance();
 
-  // Check for explicit memory effects via the MemoryEffectOpInterface.
-  if (auto memInterface = mlir::dyn_cast<mlir::MemoryEffectOpInterface>(op)) {
-    llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
-    memInterface.getEffects(effects);
+    // Check for explicit memory effects via the interface.
+    if (auto memInterface =
+            mlir::dyn_cast<mlir::MemoryEffectOpInterface>(nestedOp)) {
+      llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
+      memInterface.getEffects(effects);
 
-    for (const auto &effect : effects) {
-      // Analyze effects that modify memory or release resources.
-      if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect()) ||
-          mlir::isa<mlir::MemoryEffects::Free>(effect.getEffect())) {
+      for (const auto &effect : effects) {
+        // Analyze effects that modify memory or release resources.
+        if (mlir::isa<mlir::MemoryEffects::Write, mlir::MemoryEffects::Free>(
+                effect.getEffect())) {
+          mlir::Value accessedValue = effect.getValue();
+          // Fail-safe: Assuming conflict for Unknown resource (e.g. external
+          // call).
+          if (!accessedValue)
+            return mlir::WalkResult::interrupt();
 
-        mlir::Value accessedValue = effect.getValue();
-        // If the effect is on an unknown resource (e.g. external call),
-        // assume a conflict.
-        if (!accessedValue)
-          return true;
-
-        // Perform alias analysis against all read dependencies.
-        for (mlir::Value dep : deps) {
-          if (!aa.alias(accessedValue, dep).isNo())
-            return true;
+          // Perform alias analysis against all read dependencies.
+          for (mlir::Value dep : deps) {
+            if (!aa.alias(accessedValue, dep).isNo())
+              return mlir::WalkResult::interrupt();
+          }
         }
       }
+    } else if (nestedOp->getNumRegions() == 0) {
+      // Conservative Fallback: If an operation doesn't have  interface and
+      // has no regions (e.g. a fir.call), assume it can modify anything.
+      return mlir::WalkResult::interrupt();
     }
-  } else if (op->getNumRegions() == 0) {
-    // Conservative Fallback: If an operation lacks the interface and has no
-    // regions (e.g. a fir.call to an external function), assume it can
-    // potentially modifies any memory.
-    return true;
-  }
 
-  // Recursive Analysis into structured control flow regions.
-  // (e.g. fir.if, fir.do_loop) to find nested conflicting writes.
-  for (mlir::Region &region : op->getRegions()) {
-    for (mlir::Block &block : region) {
-      for (mlir::Operation &nestedOp : block) {
-        if (isConflictingWrite(&nestedOp, deps, aa))
-          return true;
-      }
-    }
-  }
+    return mlir::WalkResult::advance();
+  });
 
-  return false;
+  // Conflict found as walk interrupted.
+  return result.wasInterrupted();
 }
 
 bool isSafeToInline(hlfir::ElementalOp producer, hlfir::ApplyOp applySite,
@@ -162,10 +174,12 @@ getTwoUses(hlfir::ElementalOp elemental, mlir::AliasAnalysis &aliasAnalysis) {
   hlfir::ApplyOp apply;
   hlfir::DestroyOp destroy;
   unsigned applyCount = 0;
+  bool hasOtherUsers = false;
 
   llvm::SmallVector<mlir::Value> worklist;
   worklist.push_back(elemental.getResult());
   llvm::SmallPtrSet<mlir::Value, 16> visited;
+  llvm::SmallPtrSet<mlir::Operation *, 4> uniqueApplies;
 
   while (!worklist.empty()) {
     mlir::Value current = worklist.pop_back_val();
@@ -177,21 +191,28 @@ getTwoUses(hlfir::ElementalOp elemental, mlir::AliasAnalysis &aliasAnalysis) {
 
       mlir::TypeSwitch<mlir::Operation *, void>(user)
           .Case<hlfir::ApplyOp>([&](hlfir::ApplyOp op) {
-            apply = op;
-            applyCount++;
+            // Use raw operation pointer to ensure each apply site is
+            // counted only once.
+            if (uniqueApplies.insert(op.getOperation()).second) {
+              apply = op;
+              applyCount++;
+            }
           })
           .Case<hlfir::DestroyOp>([&](hlfir::DestroyOp op) {
             // Track the mandatory destroy operation for the elemental expr.
             destroy = op;
           })
-          .Case<hlfir::DeclareOp>([&](hlfir::DeclareOp op) {
-            // Follow the dataflow through variable declarations.
-            worklist.push_back(op.getBase());
+          .Case<hlfir::DeclareOp, fir::ConvertOp>([&](mlir::Operation *op) {
+            // Follow the dataflow through all results of the operation.
+            // For hlfir.declare, this catches both the variable and base
+            // results. For fir.convert, this catches the converted result.
+            for (mlir::Value result : op->getResults()) {
+              worklist.push_back(result);
+            }
           })
-          .Case<fir::ConvertOp>([&](fir::ConvertOp op) {
-            // Follow the dataflow through type conversions.
-            worklist.push_back(op.getResult());
-          })
+          // Buffer Consumers - These require the destroy to stay.
+          .Case<hlfir::AssociateOp, hlfir::SumOp, hlfir::AssignOp, fir::CallOp>(
+              [&](mlir::Operation *) { hasOtherUsers = true; })
           .Case<mlir::BranchOpInterface>([&](mlir::BranchOpInterface branch) {
             for (unsigned i = 0; i < branch->getNumSuccessors(); ++i) {
               mlir::SuccessorOperands operands = branch.getSuccessorOperands(i);
@@ -207,30 +228,57 @@ getTwoUses(hlfir::ElementalOp elemental, mlir::AliasAnalysis &aliasAnalysis) {
           })
           .Case<fir::ResultOp>([&](fir::ResultOp op) {
             mlir::Operation *parent = op->getParentOp();
-            if (parent) {
+            // Only forward if the parent is an op that yields values out.
+            if (parent &&
+                mlir::isa<mlir::RegionBranchOpInterface, fir::IfOp,
+                          fir::DoLoopOp, hlfir::ElementalOp>(parent)) {
               for (auto it : llvm::enumerate(op.getOperands())) {
                 if (it.value() == current) {
-                  // 'current' is being yielded. The value outside the loop is
-                  // the i-th result of the parent operation.
+                  // Map the result index to the parent's result index.
                   unsigned i = it.index();
                   if (i < parent->getNumResults()) {
                     worklist.push_back(parent->getResult(i));
                   }
                 }
               }
+            } else {
+              // If it's a terminator for an unknown op.
+              hasOtherUsers = true;
             }
           })
           .Default([&](mlir::Operation *op) {
-            // If the elemental result is used by an operation with regions
-            // (like fir.if or fir.do_loop), the apply site may be nested
-            // inside.
             if (op->getNumRegions() > 0) {
-              op->walk([&](hlfir::ApplyOp nestedApply) {
-                if (nestedApply.getExpr() == current) {
-                  apply = nestedApply;
-                  applyCount++;
+              // Follow the value through metadata ops (declare, convert, etc.)
+              // nested inside regions.
+              op->walk([&](mlir::Operation *innerOp) {
+                for (mlir::Value operand : innerOp->getOperands()) {
+                  if (operand == current) {
+                    if (auto nestedApply =
+                            mlir::dyn_cast<hlfir::ApplyOp>(innerOp)) {
+                      // Use a set to prevent double-counting if walker
+                      // and worklist hit the same apply site.
+                      if (uniqueApplies.insert(nestedApply.getOperation())
+                              .second) {
+                        apply = nestedApply;
+                        applyCount++;
+                      }
+                    } else if (mlir::isa<hlfir::DeclareOp, fir::ConvertOp>(
+                                   innerOp)) {
+                      // Feed internal metadata results back into the worklist.
+                      for (mlir::Value res : innerOp->getResults())
+                        worklist.push_back(res);
+                    } else if (!mlir::isa<hlfir::DestroyOp, fir::ResultOp,
+                                          mlir::BranchOpInterface>(innerOp)) {
+                      // If it's an intrinsic or unknown consumer, it needs the
+                      // buffer.
+                      hasOtherUsers = true;
+                    }
+                  }
                 }
               });
+            } else {
+              // Non-region op not handled by specific Case<> (e.g. hlfir.sum)
+              hasOtherUsers = true;
             }
           });
     }
@@ -254,7 +302,9 @@ getTwoUses(hlfir::ElementalOp elemental, mlir::AliasAnalysis &aliasAnalysis) {
   if (apply.getResult().getType() != yield.getElementValue().getType())
     return std::nullopt;
 
-  return std::pair{apply, destroy};
+  // Only return the destroy op if there's exactly one apply and no other users.
+  bool safeToDelete = (applyCount == 1 && !hasOtherUsers);
+  return std::make_pair(apply, safeToDelete ? destroy : nullptr);
 }
 
 namespace {
@@ -295,11 +345,15 @@ public:
     // remove the old elemental and all of the bookkeeping
     rewriter.replaceOp(apply, {yield.getElementValue()});
     rewriter.eraseOp(yield);
-    rewriter.eraseOp(destroy);
-    // Only erase the elemental if that was its last use.
-    if (elemental->use_empty())
-      rewriter.eraseOp(elemental);
+    // Only erase the destroy and elemental if the analysis shows it's safe.
+    if (hlfir::DestroyOp destroyOp = maybeTuple->second) {
+      // IR has no users left.
+      if (destroyOp->use_empty())
+        rewriter.eraseOp(destroyOp);
 
+      if (elemental.getResult().use_empty())
+        rewriter.eraseOp(elemental);
+    }
     return mlir::success();
   }
 
