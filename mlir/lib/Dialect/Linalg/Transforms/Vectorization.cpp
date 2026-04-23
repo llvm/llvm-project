@@ -3843,8 +3843,16 @@ public:
 
   /// Vector-level depthwise compute kernel: extracts kw x w tiles from the
   /// canonical NWC operand vectors, runs MulAcc, and re-inserts the tiles
-  /// back into the result vector. All inputs must be in canonical NWC form
-  /// (lhs=[n,iw,c], rhs=[kw,c], res=[n,w,c]).
+  /// back into the result vector.
+  ///
+  /// Rank/shape contract (enforced by `assert`):
+  ///   - `lhs` is a 3D vector <nSize, iwSize, cSize>
+  ///   - `res` is a 3D vector <nSize, wSize,  cSize>
+  ///   - `rhs` is a 2D vector <kwSize, cSize>
+  ///   - `nSize` equals `lhs.getShape()[0]` and `res.getShape()[0]`.
+  /// Callers whose operand layout does not have a batch dim (batchless) must
+  /// `vector.shape_cast` to unit `N = 1` before invoking the kernel and
+  /// collapse the result back afterwards (see `depthwiseConvViaTranspose`).
   ///
   /// On MulAcc failure the kernel erases only the IR it created; the caller
   /// is responsible for cleaning up its own pre-kernel IR.
@@ -3852,6 +3860,21 @@ public:
                                      int64_t nSize, int64_t wSize,
                                      int64_t cSize, int64_t kwSize,
                                      int64_t wSizeStep, bool flatten) {
+    auto lhsVecTy = cast<VectorType>(lhs.getType());
+    auto rhsVecTy = cast<VectorType>(rhs.getType());
+    auto resVecTy = cast<VectorType>(res.getType());
+    assert(lhsVecTy.getRank() == 3 && resVecTy.getRank() == 3 &&
+           rhsVecTy.getRank() == 2 &&
+           "depthwise1DKernel expects 3D lhs/res and 2D rhs in canonical NWC");
+    assert(lhsVecTy.getShape()[0] == nSize && resVecTy.getShape()[0] == nSize &&
+           "depthwise1DKernel: nSize must match the leading dim of lhs/res");
+    assert(lhsVecTy.getShape()[2] == cSize && resVecTy.getShape()[2] == cSize &&
+           rhsVecTy.getShape()[1] == cSize &&
+           "depthwise1DKernel: cSize must match the trailing dim of each "
+           "operand");
+    (void)lhsVecTy;
+    (void)rhsVecTy;
+    (void)resVecTy;
     Type lhsEltType = cast<VectorType>(lhs.getType()).getElementType();
     Type resEltType = cast<VectorType>(res.getType()).getElementType();
 
@@ -3928,34 +3951,18 @@ public:
     return out;
   }
 
-  /// Depthwise convolution for non-canonical layouts: read the operands in
-  /// their original layout, transpose the loaded vectors to canonical NWC,
-  /// run the kernel, inverse-transpose the result, and write it back.
-  /// Static shapes only (no masking).
+  /// Depthwise convolution for layouts not handled by the masked/scalable
+  /// `depthwiseConv()` path: read the operands in their original layout,
+  /// transpose the loaded vectors to canonical NWC, run the kernel, then
+  /// inverse-transpose the result and write it back. Also handles the
+  /// batchless canonical case (no transposes, but the kernel's 3D contract
+  /// still requires a unit-N shape_cast around the call). Static shapes only
+  /// (no masking, no scalable vectors).
   FailureOr<Operation *> depthwiseConvViaTranspose(const Conv1DPerms &perms,
                                                    bool flatten) {
-    // Canonical sizes: kernel is [kw, c], result is [n, w, c].
-    int64_t kwSize = 0, cSize = 0, nSize = 0, wSize = 0;
-    {
-      DenseMap<unsigned, unsigned> loopToRhs =
-          buildLoopToTensorDimMap(cast<LinalgOp>(op).getIndexingMapsArray()[1]);
-      DenseMap<unsigned, unsigned> loopToRes =
-          buildLoopToTensorDimMap(cast<LinalgOp>(op).getIndexingMapsArray()[2]);
-      kwSize = rhsShapedType.getShape()[loopToRhs[dims().filterLoop[0]]];
-      cSize = rhsShapedType.getShape()[loopToRhs[dims().depth[0]]];
-      nSize = config.nLikeBatch.empty()
-                  ? 1
-                  : resShapedType.getShape()[loopToRes[config.nLikeBatch[0]]];
-      wSize = resShapedType.getShape()[loopToRes[dims().outputImage[0]]];
-    }
-    int64_t iwSize =
-        ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1;
-
-    Conv1DShapes canon{
-        /*lhs=*/{nSize, iwSize, cSize},
-        /*rhs=*/{kwSize, cSize},
-        /*res=*/{nSize, wSize, cSize},
-    };
+    LinalgOp linalgOp = cast<LinalgOp>(op);
+    Conv1DSizes sizes = computeConvSizes(linalgOp);
+    Conv1DShapes canon = computeCanonicalShapes(sizes);
     Conv1DShapes read = computeReadShapes(canon, perms);
 
     Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
@@ -3983,13 +3990,42 @@ public:
     if (!perms.res.empty())
       res = vector::TransposeOp::create(rewriter, loc, res, perms.res);
 
-    int64_t wSizeStep = strideW == 1 ? wSize : 1;
-    FailureOr<Value> kernelRes = depthwise1DKernel(
-        lhs, rhs, res, nSize, wSize, cSize, kwSize, wSizeStep, flatten);
+    bool batchless = config.layout == ConvLayoutKind::Batchless;
+    auto expandLeading = [&](Value v) -> Value {
+      auto vTy = cast<VectorType>(v.getType());
+      SmallVector<int64_t> shape3D = {1};
+      llvm::append_range(shape3D, vTy.getShape());
+      return vector::ShapeCastOp::create(
+          rewriter, loc, VectorType::get(shape3D, vTy.getElementType()), v);
+    };
+    auto collapseLeading = [&](Value v) -> Value {
+      auto vTy = cast<VectorType>(v.getType());
+      assert(vTy.getShape().front() == 1 &&
+             "expected unit leading dim to collapse");
+      SmallVector<int64_t> shape2D(vTy.getShape().begin() + 1,
+                                   vTy.getShape().end());
+      return vector::ShapeCastOp::create(
+          rewriter, loc, VectorType::get(shape2D, vTy.getElementType()), v);
+    };
+
+    if (batchless) {
+      lhs = expandLeading(lhs);
+      res = expandLeading(res);
+    }
+
+    int64_t leadingN = batchless ? 1 : sizes.n;
+    int64_t wSizeStep = strideW == 1 ? sizes.w : 1;
+    FailureOr<Value> kernelRes =
+        depthwise1DKernel(lhs, rhs, res, leadingN, sizes.w, sizes.c, sizes.kw,
+                          wSizeStep, flatten);
     if (failed(kernelRes))
       return failure();
 
-    return writeAndPostTranspose(*kernelRes, read.res, perms.res);
+    Value kernelVec = *kernelRes;
+    if (batchless)
+      kernelVec = collapseLeading(kernelVec);
+
+    return writeAndPostTranspose(kernelVec, read.res, perms.res);
   }
 
   /// Lower:
@@ -4074,8 +4110,19 @@ public:
     LinalgOp linalgOp = cast<LinalgOp>(op);
     Conv1DPerms perms = computeCanonicalPerms(linalgOp, config);
 
-    if (perms.allIdentity()) {
-      // Canonical NWC: existing path handles masking + scalable dims.
+    // The masked/scalable path (`depthwiseConv()`) builds 3D <N, W, C> vector
+    // types directly from the op's loop ranges and assumes the operand
+    // vectors are already in canonical NWC with a real batch dim. It is thus
+    // only valid when the layout is Batched *and* the tensor dims already
+    // appear in canonical order (identity permutations). All other cases
+    // (non-canonical batched, batchless canonical, batchless non-canonical)
+    // go through `depthwiseConvViaTranspose`, which performs any needed
+    // canonicalization via `vector.transpose` and handles batchless layouts
+    // by shape-casting to a unit leading dim around the kernel.
+    bool canUseMaskedPath =
+        perms.allIdentity() && config.layout == ConvLayoutKind::Batched;
+
+    if (canUseMaskedPath) {
       int64_t vecChDimSize = 0;
       bool vecChScalableFlag = false;
       if (!inputVecSizes.empty()) {
@@ -4089,14 +4136,14 @@ public:
                            flatten1DDepthwiseConv);
     }
 
-    // Non-canonical depthwise: only static shapes are supported because
-    // boundary masking interacts with the post-transpose layout in ways we
-    // don't yet handle.
+    // `depthwiseConvViaTranspose` builds vector types from the static tensor
+    // shapes; dynamic operands would require threading masks through the
+    // transposes/shape_casts which is not yet implemented.
     if (!lhsShapedType.hasStaticShape() || !rhsShapedType.hasStaticShape() ||
         !resShapedType.hasStaticShape())
       return rewriter.notifyMatchFailure(
-          op,
-          "depthwise conv with non-canonical layout requires static shapes");
+          op, "depthwise conv outside the canonical batched NWC layout "
+              "requires static shapes");
     return depthwiseConvViaTranspose(perms, flatten1DDepthwiseConv);
   }
 
@@ -4113,6 +4160,10 @@ public:
       // as both input and output channel size.
       if (!config.cLikeBatch.empty())
         sizes.c = sizes.f = loopRanges[config.cLikeBatch[0]];
+    } else if (config.isDepthwise) {
+      // Depthwise shares a single channel dim across LHS/RHS/RES; sizes.f is
+      // unused on this path.
+      sizes.c = loopRanges[dims().depth[0]];
     } else if (config.layout != ConvLayoutKind::Scalar) {
       sizes.c = loopRanges[dims().inputChannel[0]];
       sizes.f = loopRanges[dims().outputChannel[0]];
@@ -4120,12 +4171,30 @@ public:
     return sizes;
   }
 
-  /// Build the canonical (post-transpose) NWC operand shapes.
+  /// Build the canonical (post-transpose) NWC operand shapes. RHS and RES
+  /// shapes vary by op kind:
+  ///   - pooling:   RHS=<kw>,            RES channel=sizes.c (C-like batch)
+  ///   - depthwise: RHS=<kw, c>,         RES channel=sizes.c
+  ///   - conv:      RHS=<kw, c, f>,      RES channel=sizes.f
   Conv1DShapes computeCanonicalShapes(const Conv1DSizes &sizes) const {
     int64_t iwSize = config.layout == ConvLayoutKind::Scalar
                          ? (sizes.w + sizes.kw - 1)
                          : ((sizes.w - 1) * strideW + 1) +
                                ((sizes.kw - 1) * dilationW + 1) - 1;
+
+    SmallVector<int64_t> rhsShape;
+    int64_t resChannel = 0;
+    if (config.isPooling) {
+      rhsShape = {sizes.kw};
+      resChannel = sizes.c;
+    } else if (config.isDepthwise) {
+      rhsShape = {sizes.kw, sizes.c};
+      resChannel = sizes.c;
+    } else {
+      rhsShape = {sizes.kw, sizes.c, sizes.f};
+      resChannel = sizes.f;
+    }
+
     Conv1DShapes shapes;
     switch (config.layout) {
     case ConvLayoutKind::Scalar:
@@ -4135,17 +4204,13 @@ public:
       break;
     case ConvLayoutKind::Batched:
       shapes.lhs = {sizes.n, iwSize, sizes.c};
-      shapes.rhs = config.isPooling
-                       ? SmallVector<int64_t>{sizes.kw}
-                       : SmallVector<int64_t>{sizes.kw, sizes.c, sizes.f};
-      shapes.res = {sizes.n, sizes.w, sizes.f};
+      shapes.rhs = std::move(rhsShape);
+      shapes.res = {sizes.n, sizes.w, resChannel};
       break;
     case ConvLayoutKind::Batchless:
       shapes.lhs = {iwSize, sizes.c};
-      shapes.rhs = config.isPooling
-                       ? SmallVector<int64_t>{sizes.kw}
-                       : SmallVector<int64_t>{sizes.kw, sizes.c, sizes.f};
-      shapes.res = {sizes.w, sizes.f};
+      shapes.rhs = std::move(rhsShape);
+      shapes.res = {sizes.w, resChannel};
       break;
     }
     return shapes;

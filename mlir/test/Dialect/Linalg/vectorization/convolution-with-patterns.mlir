@@ -885,6 +885,124 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Batchless canonical depthwise 1D: operands are already in <W, C> / <Kw, C>
+// form, so no vector.transpose is needed. The 3D `depthwise1DKernel` contract
+// is satisfied by shape-casting the LHS/RES vectors to a unit leading dim
+// before the kernel and collapsing it back afterwards.
+#bl_canon_lhs = affine_map<(w, c, kw) -> (w + kw, c)>
+#bl_canon_rhs = affine_map<(w, c, kw) -> (kw, c)>
+#bl_canon_res = affine_map<(w, c, kw) -> (w, c)>
+func.func @depthwise_conv1d_wc_wc_tensor(%input: tensor<6x3xf32>,
+                                          %filter: tensor<2x3xf32>,
+                                          %output: tensor<5x3xf32>) -> tensor<5x3xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [#bl_canon_lhs, #bl_canon_rhs, #bl_canon_res],
+    iterator_types = ["parallel", "parallel", "reduction"]
+  } ins(%input, %filter : tensor<6x3xf32>, tensor<2x3xf32>)
+    outs(%output : tensor<5x3xf32>) {
+  ^bb0(%a: f32, %b: f32, %c: f32):
+    %m = arith.mulf %a, %b : f32
+    %r = arith.addf %c, %m : f32
+    linalg.yield %r : f32
+  } -> tensor<5x3xf32>
+  return %0 : tensor<5x3xf32>
+}
+
+// CHECK-LABEL: func.func @depthwise_conv1d_wc_wc_tensor(
+// CHECK-SAME:    %[[INPUT:.+]]: tensor<6x3xf32>, %[[FILTER:.+]]: tensor<2x3xf32>, %[[OUTPUT:.+]]: tensor<5x3xf32>
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[V_INPUT:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]]]{{.*}} : tensor<6x3xf32>, vector<6x3xf32>
+// CHECK-DAG:   %[[V_FILTER:.+]] = vector.transfer_read %[[FILTER]][%[[C0]], %[[C0]]]{{.*}} : tensor<2x3xf32>, vector<2x3xf32>
+// CHECK-DAG:   %[[V_OUTPUT:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]]]{{.*}} : tensor<5x3xf32>, vector<5x3xf32>
+/// Canonical layout: no pre-transposes.
+// CHECK-NOT:   vector.transpose
+/// Expand to <1, W, C> for the depthwise kernel.
+// CHECK:       %[[V_INPUT_3D:.+]] = vector.shape_cast %[[V_INPUT]] : vector<6x3xf32> to vector<1x6x3xf32>
+// CHECK:       %[[V_OUTPUT_3D:.+]] = vector.shape_cast %[[V_OUTPUT]] : vector<5x3xf32> to vector<1x5x3xf32>
+/// kw = 0, 1 input slices carry the unit leading dim.
+// CHECK:       %[[IN_KW0:.+]] = vector.extract_strided_slice %[[V_INPUT_3D]] {offsets = [0, 0, 0], sizes = [1, 5, 3], strides = [1, 1, 1]} : vector<1x6x3xf32> to vector<1x5x3xf32>
+// CHECK:       %[[IN_KW1:.+]] = vector.extract_strided_slice %[[V_INPUT_3D]] {offsets = [0, 1, 0], sizes = [1, 5, 3], strides = [1, 1, 1]} : vector<1x6x3xf32> to vector<1x5x3xf32>
+// CHECK:       %[[FLT_KW0:.+]] = vector.extract %[[V_FILTER]][0] : vector<3xf32> from vector<2x3xf32>
+// CHECK:       %[[FLT_KW1:.+]] = vector.extract %[[V_FILTER]][1] : vector<3xf32> from vector<2x3xf32>
+// CHECK:       %[[B0:.+]] = vector.broadcast %[[FLT_KW0]] : vector<3xf32> to vector<1x5x3xf32>
+// CHECK:       %[[FMA0:.+]] = vector.fma %[[IN_KW0]], %[[B0]], %[[V_OUTPUT_3D]] : vector<1x5x3xf32>
+// CHECK:       %[[B1:.+]] = vector.broadcast %[[FLT_KW1]] : vector<3xf32> to vector<1x5x3xf32>
+// CHECK:       %[[FMA1:.+]] = vector.fma %[[IN_KW1]], %[[B1]], %[[FMA0]] : vector<1x5x3xf32>
+/// Collapse the unit leading dim back to batchless <W, C> and write.
+// CHECK:       %[[V_RES:.+]] = vector.shape_cast %[[FMA1]] : vector<1x5x3xf32> to vector<5x3xf32>
+// CHECK:       vector.transfer_write %[[V_RES]], %[[OUTPUT]][%[[C0]], %[[C0]]]{{.*}} : vector<5x3xf32>, tensor<5x3xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Batchless non-canonical depthwise 1D: input/output are laid out as <C, W>
+// and the filter as <C, Kw>. The vectorizer pre-transposes the read vectors
+// to canonical NWC, shape-casts in a unit leading dim for the depthwise
+// kernel, collapses it back, and post-transposes the result into <C, W>.
+#bl_cw_lhs = affine_map<(w, c, kw) -> (c, w + kw)>
+#bl_cw_rhs = affine_map<(w, c, kw) -> (c, kw)>
+#bl_cw_res = affine_map<(w, c, kw) -> (c, w)>
+func.func @depthwise_conv1d_cw_cw_tensor(%input: tensor<3x6xf32>,
+                                          %filter: tensor<3x2xf32>,
+                                          %output: tensor<3x5xf32>) -> tensor<3x5xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [#bl_cw_lhs, #bl_cw_rhs, #bl_cw_res],
+    iterator_types = ["parallel", "parallel", "reduction"]
+  } ins(%input, %filter : tensor<3x6xf32>, tensor<3x2xf32>)
+    outs(%output : tensor<3x5xf32>) {
+  ^bb0(%a: f32, %b: f32, %c: f32):
+    %m = arith.mulf %a, %b : f32
+    %r = arith.addf %c, %m : f32
+    linalg.yield %r : f32
+  } -> tensor<3x5xf32>
+  return %0 : tensor<3x5xf32>
+}
+
+// CHECK-LABEL: func.func @depthwise_conv1d_cw_cw_tensor(
+// CHECK-SAME:    %[[INPUT:.+]]: tensor<3x6xf32>, %[[FILTER:.+]]: tensor<3x2xf32>, %[[OUTPUT:.+]]: tensor<3x5xf32>
+// CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:   %[[V_INPUT_R:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]]]{{.*}} : tensor<3x6xf32>, vector<3x6xf32>
+// CHECK-DAG:   %[[V_FILTER_R:.+]] = vector.transfer_read %[[FILTER]][%[[C0]], %[[C0]]]{{.*}} : tensor<3x2xf32>, vector<3x2xf32>
+// CHECK-DAG:   %[[V_OUTPUT_R:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]]]{{.*}} : tensor<3x5xf32>, vector<3x5xf32>
+/// Pre-transpose to canonical WC/KwC/WC.
+// CHECK:       %[[V_INPUT:.+]] = vector.transpose %[[V_INPUT_R]], [1, 0] : vector<3x6xf32> to vector<6x3xf32>
+// CHECK:       %[[V_FILTER:.+]] = vector.transpose %[[V_FILTER_R]], [1, 0] : vector<3x2xf32> to vector<2x3xf32>
+// CHECK:       %[[V_OUTPUT:.+]] = vector.transpose %[[V_OUTPUT_R]], [1, 0] : vector<3x5xf32> to vector<5x3xf32>
+/// Expand to <1, W, C> for the depthwise kernel.
+// CHECK:       %[[V_INPUT_3D:.+]] = vector.shape_cast %[[V_INPUT]] : vector<6x3xf32> to vector<1x6x3xf32>
+// CHECK:       %[[V_OUTPUT_3D:.+]] = vector.shape_cast %[[V_OUTPUT]] : vector<5x3xf32> to vector<1x5x3xf32>
+// CHECK:       %[[IN_KW0:.+]] = vector.extract_strided_slice %[[V_INPUT_3D]] {offsets = [0, 0, 0], sizes = [1, 5, 3], strides = [1, 1, 1]} : vector<1x6x3xf32> to vector<1x5x3xf32>
+// CHECK:       %[[IN_KW1:.+]] = vector.extract_strided_slice %[[V_INPUT_3D]] {offsets = [0, 1, 0], sizes = [1, 5, 3], strides = [1, 1, 1]} : vector<1x6x3xf32> to vector<1x5x3xf32>
+// CHECK:       %[[FLT_KW0:.+]] = vector.extract %[[V_FILTER]][0] : vector<3xf32> from vector<2x3xf32>
+// CHECK:       %[[FLT_KW1:.+]] = vector.extract %[[V_FILTER]][1] : vector<3xf32> from vector<2x3xf32>
+// CHECK:       %[[B0:.+]] = vector.broadcast %[[FLT_KW0]] : vector<3xf32> to vector<1x5x3xf32>
+// CHECK:       %[[FMA0:.+]] = vector.fma %[[IN_KW0]], %[[B0]], %[[V_OUTPUT_3D]] : vector<1x5x3xf32>
+// CHECK:       %[[B1:.+]] = vector.broadcast %[[FLT_KW1]] : vector<3xf32> to vector<1x5x3xf32>
+// CHECK:       %[[FMA1:.+]] = vector.fma %[[IN_KW1]], %[[B1]], %[[FMA0]] : vector<1x5x3xf32>
+/// Collapse the unit leading dim and post-transpose back to <C, W>.
+// CHECK:       %[[V_RES_2D:.+]] = vector.shape_cast %[[FMA1]] : vector<1x5x3xf32> to vector<5x3xf32>
+// CHECK:       %[[V_RES:.+]] = vector.transpose %[[V_RES_2D]], [1, 0] : vector<5x3xf32> to vector<3x5xf32>
+// CHECK:       vector.transfer_write %[[V_RES]], %[[OUTPUT]][%[[C0]], %[[C0]]]{{.*}} : vector<3x5xf32>, tensor<3x5xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @conv_1d_nwc_wcf_mixed_type_memref(%input: memref<1x2x3xf16>, %filter: memref<1x3x2xf16>, %output: memref<1x2x2xf32>) {
   linalg.conv_1d_nwc_wcf
   {dilations = dense<1> : vector<1xi64>, strides = dense<1> : vector<1xi64>}
