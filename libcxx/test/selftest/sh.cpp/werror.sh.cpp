@@ -14,6 +14,9 @@
 // TODO: We don't enable -Werror on GCC right now, because too many tests fail.
 // UNSUPPORTED: gcc
 
+// This test only makes sense when the test suite is run with warnings enabled.
+// UNSUPPORTED: !enable-warnings
+
 // RUN: %{build} -Wunused-variable
 // RUN: %{run}
 

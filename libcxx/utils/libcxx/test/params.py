@@ -14,7 +14,9 @@ from libcxx.test.dsl import *
 from libcxx.test.features.compiler import _isClang, _isAppleClang, _isGCC, _isMSVC
 
 
-_warningFlags = [
+# Warnings that we enable when running the test suite with warnings enabled, which is
+# controlled by `--param enable_warnings=True|False`.
+_enabledWarningFlags = [
     "-Werror",
     "-Wall",
     "-Wctad-maybe-unsupported",
@@ -22,30 +24,10 @@ _warningFlags = [
     "-Wshadow",
     "-Wundef",
     "-Wunused-template",
-    "-Wno-unused-command-line-argument",
-    "-Wno-attributes",
-    "-Wno-pessimizing-move",
-    "-Wno-noexcept-type",
-    "-Wno-aligned-allocation-unavailable",
-    "-Wno-atomic-alignment",
-    "-Wno-reserved-module-identifier",
     '-Wdeprecated-copy',
     '-Wdeprecated-copy-dtor',
     "-Wshift-negative-value",
-    # GCC warns about places where we might want to add sized allocation/deallocation
-    # functions, but we know better what we're doing/testing in the test suite.
-    "-Wno-sized-deallocation",
-    # Turn off warnings about user-defined literals with reserved suffixes. Those are
-    # just noise since we are testing the Standard Library itself.
-    "-Wno-literal-suffix",  # GCC
-    "-Wno-user-defined-literals",  # Clang
-    # GCC warns about this when TEST_IS_CONSTANT_EVALUATED is used on a non-constexpr
-    # function. (This mostly happens in C++11 mode.)
-    # TODO(mordante) investigate a solution for this issue.
-    "-Wno-tautological-compare",
-    # -Wstringop-overread and -Wstringop-overflow seem to be a bit buggy currently
-    "-Wno-stringop-overread",
-    "-Wno-stringop-overflow",
+
     # These warnings should be enabled in order to support the MSVC
     # team using the test suite; They enable the warnings below and
     # expect the test suite to be clean.
@@ -53,6 +35,46 @@ _warningFlags = [
     "-Wunused-variable",
     "-Wunused-parameter",
     "-Wunreachable-code",
+
+    # Technically not a warning flag, but might as well be:
+    "-flax-vector-conversions=none",
+]
+
+# Warnings that we always disable when running the test suite. Some of these are warnings that
+# are enabled by default by the compiler, and others would be enabled by the flags above.
+#
+# Since the last warning flag on the command line wins, it is important that these flags be
+# added after the flags above.
+_silencedWarningFlags = [
+    # Some of the flags we use are not used by every compilation step of the test suite. In
+    # particular, we validate flags added to %{link_flags} (such as -lc++experimental) by
+    # trying them out with a compile-only command, which warns that they are unused.
+    "-Wno-unused-command-line-argument",
+
+    "-Wno-attributes",
+    "-Wno-pessimizing-move",
+    "-Wno-noexcept-type",
+    "-Wno-aligned-allocation-unavailable",
+    "-Wno-atomic-alignment",
+    "-Wno-reserved-module-identifier",
+
+    # GCC warns about places where we might want to add sized allocation/deallocation
+    # functions, but we know better what we're doing/testing in the test suite.
+    "-Wno-sized-deallocation",
+
+    # Turn off warnings about user-defined literals with reserved suffixes. Those are
+    # just noise since we are testing the Standard Library itself.
+    "-Wno-literal-suffix",  # GCC
+    "-Wno-user-defined-literals",  # Clang
+
+    # GCC warns about this when TEST_IS_CONSTANT_EVALUATED is used on a non-constexpr
+    # function. (This mostly happens in C++11 mode.)
+    # TODO(mordante) investigate a solution for this issue.
+    "-Wno-tautological-compare",
+    # -Wstringop-overread and -Wstringop-overflow seem to be a bit buggy currently
+    "-Wno-stringop-overread",
+    "-Wno-stringop-overflow",
+
     "-Wno-unused-local-typedef",
 
     # Disable warnings for extensions used in C++03
@@ -61,6 +83,7 @@ _warningFlags = [
 
     # TODO(philnik) This fails with the PSTL.
     "-Wno-unknown-pragmas",
+
     # Don't fail compilation in case the compiler fails to perform the requested
     # loop vectorization.
     "-Wno-pass-failed",
@@ -75,9 +98,6 @@ _warningFlags = [
 
     # We're not annotating all the APIs, since that's a lot of annotations compared to how many we actually care about
     "-Wno-nullability-completeness",
-
-    # Technically not a warning flag, but might as well be:
-    "-flax-vector-conversions=none",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
@@ -294,9 +314,10 @@ DEFAULT_PARAMETERS = [
         type=bool,
         default=True,
         help="Whether to enable warnings when compiling the test suite.",
-        actions=lambda warnings: [] if not warnings else
-            [AddOptionalWarningFlag(w) for w in _warningFlags] +
-            [AddCompileFlag("-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER")],
+        actions=lambda warnings: ([AddCompileFlag("-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER"),
+                                   AddFeature("enable-warnings"),
+                                   *(AddOptionalWarningFlag(w) for w in _enabledWarningFlags)] if warnings else []) + \
+                                   [AddOptionalWarningFlag(w) for w in _silencedWarningFlags],
     ),
     Parameter(
         name="use_sanitizer",
