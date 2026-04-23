@@ -393,11 +393,6 @@ gpu.module @test{
 }
 
 // -----
-
-// Regression test for LayoutAttr::collapseDims with order attributes.
-// Previously caused assertion failure when collapsing dimensions: after erasing
-// elements from origOrder vector, the code used orderAttr.size() instead of
-// origOrder.size() to create indices, causing out-of-bounds access.
 // CHECK-LABEL: gpu.func @shape_cast_collapse_dims_with_order
 gpu.module @test_collapse_dims [#xevm.target<O = 3, chip = "pvc">] {
   gpu.func @shape_cast_collapse_dims_with_order(%arg0: memref<32x32xf32>) {

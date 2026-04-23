@@ -598,8 +598,6 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
     }
     // say we have orderVec = {5, 3, 2, 1, 0}
     // Create indices [0, 1, 2, 3, 4]
-    // After collapsing dims, origOrder size has changed, use it instead of
-    // orderAttr.size()
     SmallVector<size_t> indices =
         llvm::to_vector(llvm::seq<size_t>(0, origOrder.size()));
 
