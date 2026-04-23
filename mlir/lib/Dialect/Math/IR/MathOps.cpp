@@ -793,10 +793,10 @@ OpFoldResult math::FPowIOp::fold(FoldAdaptor adaptor) {
             APFloat::opOK)
           return {};
 
-        switch (APFloat::getSizeInBits(sem)) {
-        case 64:
+        switch (APFloat::SemanticsToEnum(sem)) {
+        case APFloat::S_IEEEdouble:
           return APFloat(pow(base.convertToDouble(), fExp.convertToDouble()));
-        case 32:
+        case APFloat::S_IEEEsingle:
           return APFloat(powf(base.convertToFloat(), fExp.convertToFloat()));
         default:
           return {};
