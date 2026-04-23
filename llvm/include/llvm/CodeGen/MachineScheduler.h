@@ -240,6 +240,17 @@ struct SchedRegion {
       : RegionBegin(B), RegionEnd(E), NumRegionInstrs(N) {}
 };
 
+using MBBRegionsVector = SmallVector<SchedRegion, 16>;
+
+/// Return true if the given instruction should not be included in a scheduling
+/// region.
+LLVM_ABI bool isSchedBoundary(MachineBasicBlock::iterator MI,
+                              MachineBasicBlock *MBB, MachineFunction *MF,
+                              const TargetInstrInfo *TII);
+
+LLVM_ABI void getSchedRegions(MachineBasicBlock *MBB, MBBRegionsVector &Regions,
+                              bool RegionsTopDown);
+
 /// MachineSchedStrategy - Interface to the scheduling algorithm used by
 /// ScheduleDAGMI.
 ///

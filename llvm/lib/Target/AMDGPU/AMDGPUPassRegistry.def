@@ -113,6 +113,7 @@ MACHINE_FUNCTION_ANALYSIS("amdgpu-next-use-analysis", AMDGPUNextUseAnalysisPass(
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("amdgpu-iglp-unpack", AMDGPUIGLPUnpackPass())
 MACHINE_FUNCTION_PASS("amdgpu-insert-delay-alu", AMDGPUInsertDelayAluPass())
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("amdgpu-lower-vgpr-encoding", AMDGPULowerVGPREncodingPass())

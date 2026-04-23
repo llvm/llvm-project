@@ -567,6 +567,9 @@ extern char &GCNNSAReassignID;
 void initializeGCNPreRALongBranchRegLegacyPass(PassRegistry &);
 extern char &GCNPreRALongBranchRegID;
 
+void initializeAMDGPUIGLPUnpackLegacyPass(PassRegistry &);
+extern char &AMDGPUIGLPUnpackID;
+
 void initializeGCNPreRAOptimizationsLegacyPass(PassRegistry &);
 extern char &GCNPreRAOptimizationsID;
 

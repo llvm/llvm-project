@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMFMAIGROUPLP_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUMFMAIGROUPLP_H
 
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include <memory>
 
@@ -24,11 +25,21 @@ enum IGLPStrategyID : int {
   MFMASmallGemmSingleWaveOptID = 1,
   MFMAExpInterleaveID = 2,
   MFMAExpSimpleInterleaveID = 3,
+  MFMAValuSpacingOptID = 4,
 };
 } // namespace AMDGPU
 
 std::unique_ptr<ScheduleDAGMutation>
 createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase);
+
+/// V_PK unpack and related MIR cleanup before the pre-RA scheduler. By default,
+/// a schedule region is transformed only when it contains \c IGLP_OPT with
+/// immediate \c MFMAValuSpacingOptID (4) as well as V_PK ops.
+class AMDGPUIGLPUnpackPass : public PassInfoMixin<AMDGPUIGLPUnpackPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
 } // namespace llvm
 

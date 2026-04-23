@@ -987,14 +987,16 @@ void test_sched_group_barrier()
 // CHECK-LABEL: @test_iglp_opt
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.iglp.opt(i32 0)
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.iglp.opt(i32 1)
+// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.iglp.opt(i32 2)
+// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.iglp.opt(i32 3)
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.iglp.opt(i32 4)
-// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.iglp.opt(i32 15)
 void test_iglp_opt()
 {
   __builtin_amdgcn_iglp_opt(0);
   __builtin_amdgcn_iglp_opt(1);
+  __builtin_amdgcn_iglp_opt(2);
+  __builtin_amdgcn_iglp_opt(3);
   __builtin_amdgcn_iglp_opt(4);
-  __builtin_amdgcn_iglp_opt(15);
 }
 
 // CHECK-LABEL: @test_s_sleep

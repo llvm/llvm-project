@@ -3267,10 +3267,27 @@ void GCNScheduleDAGMILive::setTargetOccupancy(unsigned TargetOccupancy) {
     MFI.limitOccupancy(MinOccupancy);
 }
 
-static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
+/// Scan for IGLP "mutation-only" instructions (SCHED_GROUP_BARRIER or
+/// IGLP_OPT). Returns {any in region, strategy ID if such an instruction is
+/// IGLP_OPT}.
+static std::pair<bool, std::optional<AMDGPU::IGLPStrategyID>>
+hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
   const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG->TII);
-  return any_of(*DAG, [SII](MachineBasicBlock::iterator MI) {
+  auto It = find_if(*DAG, [SII](MachineBasicBlock::iterator MI) {
     return SII->isIGLPMutationOnly(MI->getOpcode());
+  });
+  if (It == DAG->end())
+    return {false, std::nullopt};
+  if (It->getOpcode() == AMDGPU::IGLP_OPT)
+    return {true,
+            static_cast<AMDGPU::IGLPStrategyID>(It->getOperand(0).getImm())};
+  return {true, std::nullopt};
+}
+
+static bool hasSchedBarrier(ScheduleDAGInstrs *DAG) {
+  return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
+    unsigned Opc = MI->getOpcode();
+    return Opc == AMDGPU::SCHED_BARRIER || Opc == AMDGPU::SCHED_GROUP_BARRIER;
   });
 }
 
@@ -3280,8 +3297,20 @@ GCNPostScheduleDAGMILive::GCNPostScheduleDAGMILive(
     : ScheduleDAGMI(C, std::move(S), RemoveKillFlags) {}
 
 void GCNPostScheduleDAGMILive::schedule() {
-  HasIGLPInstrs = hasIGLPInstrs(this);
-  if (HasIGLPInstrs) {
+  auto [HasIGLP, Strategy] = hasIGLPInstrs(this);
+  HasIGLPInstrs = HasIGLP;
+  if (HasIGLP) {
+    // MFMAValuSpacingOpt is a pre-RA strategy whose interleaving is correct
+    // after the initial machine scheduler.  The post-RA scheduler would undo
+    // the reordering, so preserve the pre-RA schedule by skipping here.
+    // When SCHED_[GROUP_]BARRIER coexists with IGLP_OPT, IGroupLP ignores the
+    // IGLP_OPT (they are mutually exclusive), so let post-RA scheduling proceed
+    // normally.
+    if (Strategy && *Strategy == AMDGPU::IGLPStrategyID::MFMAValuSpacingOptID &&
+        !hasSchedBarrier(this)) {
+      HasIGLPInstrs = false;
+      return;
+    }
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
     addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));

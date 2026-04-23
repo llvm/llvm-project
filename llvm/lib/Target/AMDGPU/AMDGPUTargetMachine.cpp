@@ -563,6 +563,11 @@ static cl::opt<bool> EnablePreRAOptimizations(
     cl::desc("Enable Pre-RA optimizations pass"), cl::init(true),
     cl::Hidden);
 
+static cl::opt<bool> EnableAMDGPUIGLPUnpack(
+    "amdgpu-enable-iglp-unpack",
+    cl::desc("Run AMDGPU IGLP unpack pass before pre-RA scheduling"),
+    cl::init(true), cl::Hidden);
+
 static cl::opt<bool> EnablePromoteKernelArguments(
     "amdgpu-enable-promote-kernel-arguments",
     cl::desc("Enable promotion of flat kernel pointer arguments to global"),
@@ -730,6 +735,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNNSAReassignLegacyPass(*PR);
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
+  initializeAMDGPUIGLPUnpackLegacyPass(*PR);
   initializeGCNRewritePartialRegUsesLegacyPass(*PR);
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
@@ -1732,6 +1738,9 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
 
+  if (EnableAMDGPUIGLPUnpack)
+    insertPass(&RenameIndependentSubregsID, &AMDGPUIGLPUnpackID);
+
   if (isPassEnabled(EnablePreRAOptimizations))
     insertPass(&MachineSchedulerID, &GCNPreRAOptimizationsID);
 
@@ -2503,6 +2512,9 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
 
   if (EnableRewritePartialRegUses)
     insertPass<RenameIndependentSubregsPass>(GCNRewritePartialRegUsesPass());
+
+  if (EnableAMDGPUIGLPUnpack)
+    insertPass<RenameIndependentSubregsPass>(AMDGPUIGLPUnpackPass());
 
   if (isPassEnabled(EnablePreRAOptimizations))
     insertPass<MachineSchedulerPass>(GCNPreRAOptimizationsPass());
