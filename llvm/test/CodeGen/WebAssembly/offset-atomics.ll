@@ -1307,9 +1307,9 @@ define i32 @cmpxchg_i8_i32_s_with_folded_offset(ptr %p, i32 %exp, i32 %new) {
 
 ; 32->64 sext rmw gets selected as i32.atomic.rmw.cmpxchg, i64.extend_i32_s
 ; CHECK-LABEL: cmpxchg_i32_i64_s_with_folded_offset:
-; CHECK: i32.wrap_i64 $push1=, $1
-; CHECK-NEXT: i32.wrap_i64 $push0=, $2
-; CHECK-NEXT: i32.atomic.rmw.cmpxchg $push2=, 24($0), $pop1, $pop0{{$}}
+; CHECK: i32.wrap_i64 $push0=, $1
+; CHECK-NEXT: i32.wrap_i64 $push1=, $2
+; CHECK-NEXT: i32.atomic.rmw.cmpxchg $push2=, 24($0), $pop0, $pop1{{$}}
 ; CHECK-NEXT: i64.extend_i32_s $push3=, $pop2{{$}}
 define i64 @cmpxchg_i32_i64_s_with_folded_offset(ptr %p, i64 %exp, i64 %new) {
   %q = ptrtoint ptr %p to i32

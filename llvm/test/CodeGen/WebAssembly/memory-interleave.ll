@@ -2750,15 +2750,10 @@ define hidden void @mac_3d_i8(ptr dead_on_unwind noalias writable writeonly sret
 ; CHECK: loop
 ; CHECK: v128.load
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: v128.load
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extmul_low_i8x16_u
-; CHECK: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i8x16.add
-; CHECK: i8x16.shuffle	2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i8x16.shuffle	2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extmul_low_i8x16_u
 ; CHECK: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i8x16.add
@@ -2767,8 +2762,13 @@ define hidden void @mac_3d_i8(ptr dead_on_unwind noalias writable writeonly sret
 ; CHECK: i16x8.extmul_low_i8x16_u
 ; CHECK: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i8x16.add
-; CHECK: i8x16.shuffle	0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i8x16.shuffle	0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.add
+; CHECK: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extmul_low_i8x16_u
 ; CHECK: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i8x16.add
@@ -2832,16 +2832,16 @@ define hidden void @mac_4d_i8(ptr dead_on_unwind noalias writable writeonly sret
 ; CHECK-LABEL: mac_2d_i64
 ; CHECK: loop
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i64x2.extend_low_i32x4_u
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i64x2.extend_low_i32x4_s
 ; CHECK: i64x2.mul
 ; CHECK: i64x2.add
-; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i64x2.extend_low_i32x4_u
-; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i64x2.extend_low_i32x4_s
 ; CHECK: i64x2.mul
 ; CHECK: i64x2.add
@@ -2894,17 +2894,11 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 ; CHECK: loop
 ; CHECK: v128.load
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i64x2.extend_low_i32x4_u
 ; CHECK: v128.load
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_s
-; CHECK: i64x2.mul
-; CHECK: i64x2.add
-; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i64x2.extend_low_i32x4_u
-; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i64x2.extend_low_i32x4_s
 ; CHECK: i64x2.mul
 ; CHECK: i64x2.add
@@ -2914,9 +2908,15 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 ; CHECK: i64x2.extend_low_i32x4_s
 ; CHECK: i64x2.mul
 ; CHECK: i64x2.add
-; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i64x2.extend_low_i32x4_u
-; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i64x2.extend_low_i32x4_s
 ; CHECK: i64x2.mul
 ; CHECK: i64x2.add

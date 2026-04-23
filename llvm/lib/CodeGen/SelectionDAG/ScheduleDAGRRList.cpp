@@ -2637,6 +2637,13 @@ static bool BURRSort(SUnit *left, SUnit *right, RegReductionPQBase *SPQ) {
       return left->getDepth() < right->getDepth();
   }
 
+  // Prefer source order as tie-breaker to avoid arbitrary reversal of
+  // independent instructions (e.g. sequential stores).
+  unsigned LOrder = SPQ->getNodeOrdering(left);
+  unsigned ROrder = SPQ->getNodeOrdering(right);
+  if (LOrder && ROrder && LOrder != ROrder)
+    return LOrder < ROrder;
+
   assert(left->NodeQueueId && right->NodeQueueId &&
          "NodeQueueId cannot be zero");
   return (left->NodeQueueId > right->NodeQueueId);

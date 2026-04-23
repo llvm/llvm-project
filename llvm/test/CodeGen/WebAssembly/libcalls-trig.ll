@@ -47,18 +47,18 @@ define fp128 @fp128libcalls(fp128 %x) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push20=, __stack_pointer
 ; CHECK-NEXT:    i32.const $push21=, 160
-; CHECK-NEXT:    i32.sub  $push43=, $pop20, $pop21
+; CHECK-NEXT:    i32.sub $push43=, $pop20, $pop21
 ; CHECK-NEXT:    local.tee $push42=, 3, $pop43
 ; CHECK-NEXT:    global.set __stack_pointer, $pop42
 ; CHECK-NEXT:    local.get $push44=, 3
 ; CHECK-NEXT:    i32.const $push40=, 144
-; CHECK-NEXT:    i32.add  $push41=, $pop44, $pop40
+; CHECK-NEXT:    i32.add $push41=, $pop44, $pop40
 ; CHECK-NEXT:    local.get $push46=, 1
 ; CHECK-NEXT:    local.get $push45=, 2
 ; CHECK-NEXT:    call sinl, $pop41, $pop46, $pop45
 ; CHECK-NEXT:    local.get $push47=, 3
 ; CHECK-NEXT:    i32.const $push38=, 128
-; CHECK-NEXT:    i32.add  $push39=, $pop47, $pop38
+; CHECK-NEXT:    i32.add $push39=, $pop47, $pop38
 ; CHECK-NEXT:    local.get $push48=, 3
 ; CHECK-NEXT:    i64.load $push1=, 144($pop48)
 ; CHECK-NEXT:    local.get $push49=, 3
@@ -66,7 +66,7 @@ define fp128 @fp128libcalls(fp128 %x) {
 ; CHECK-NEXT:    call cosl, $pop39, $pop1, $pop0
 ; CHECK-NEXT:    local.get $push50=, 3
 ; CHECK-NEXT:    i32.const $push36=, 112
-; CHECK-NEXT:    i32.add  $push37=, $pop50, $pop36
+; CHECK-NEXT:    i32.add $push37=, $pop50, $pop36
 ; CHECK-NEXT:    local.get $push51=, 3
 ; CHECK-NEXT:    i64.load $push3=, 128($pop51)
 ; CHECK-NEXT:    local.get $push52=, 3
@@ -74,7 +74,7 @@ define fp128 @fp128libcalls(fp128 %x) {
 ; CHECK-NEXT:    call tanl, $pop37, $pop3, $pop2
 ; CHECK-NEXT:    local.get $push53=, 3
 ; CHECK-NEXT:    i32.const $push34=, 96
-; CHECK-NEXT:    i32.add  $push35=, $pop53, $pop34
+; CHECK-NEXT:    i32.add $push35=, $pop53, $pop34
 ; CHECK-NEXT:    local.get $push54=, 3
 ; CHECK-NEXT:    i64.load $push5=, 112($pop54)
 ; CHECK-NEXT:    local.get $push55=, 3
@@ -82,7 +82,7 @@ define fp128 @fp128libcalls(fp128 %x) {
 ; CHECK-NEXT:    call asinl, $pop35, $pop5, $pop4
 ; CHECK-NEXT:    local.get $push56=, 3
 ; CHECK-NEXT:    i32.const $push32=, 80
-; CHECK-NEXT:    i32.add  $push33=, $pop56, $pop32
+; CHECK-NEXT:    i32.add $push33=, $pop56, $pop32
 ; CHECK-NEXT:    local.get $push57=, 3
 ; CHECK-NEXT:    i64.load $push7=, 96($pop57)
 ; CHECK-NEXT:    local.get $push58=, 3
@@ -90,7 +90,7 @@ define fp128 @fp128libcalls(fp128 %x) {
 ; CHECK-NEXT:    call acosl, $pop33, $pop7, $pop6
 ; CHECK-NEXT:    local.get $push59=, 3
 ; CHECK-NEXT:    i32.const $push30=, 64
-; CHECK-NEXT:    i32.add  $push31=, $pop59, $pop30
+; CHECK-NEXT:    i32.add $push31=, $pop59, $pop30
 ; CHECK-NEXT:    local.get $push60=, 3
 ; CHECK-NEXT:    i64.load $push9=, 80($pop60)
 ; CHECK-NEXT:    local.get $push61=, 3
@@ -98,7 +98,7 @@ define fp128 @fp128libcalls(fp128 %x) {
 ; CHECK-NEXT:    call atanl, $pop31, $pop9, $pop8
 ; CHECK-NEXT:    local.get $push62=, 3
 ; CHECK-NEXT:    i32.const $push28=, 48
-; CHECK-NEXT:    i32.add  $push29=, $pop62, $pop28
+; CHECK-NEXT:    i32.add $push29=, $pop62, $pop28
 ; CHECK-NEXT:    local.get $push63=, 3
 ; CHECK-NEXT:    i64.load $push11=, 64($pop63)
 ; CHECK-NEXT:    local.get $push64=, 3
@@ -106,7 +106,7 @@ define fp128 @fp128libcalls(fp128 %x) {
 ; CHECK-NEXT:    call sinhl, $pop29, $pop11, $pop10
 ; CHECK-NEXT:    local.get $push65=, 3
 ; CHECK-NEXT:    i32.const $push26=, 32
-; CHECK-NEXT:    i32.add  $push27=, $pop65, $pop26
+; CHECK-NEXT:    i32.add $push27=, $pop65, $pop26
 ; CHECK-NEXT:    local.get $push66=, 3
 ; CHECK-NEXT:    i64.load $push13=, 48($pop66)
 ; CHECK-NEXT:    local.get $push67=, 3
@@ -114,7 +114,7 @@ define fp128 @fp128libcalls(fp128 %x) {
 ; CHECK-NEXT:    call coshl, $pop27, $pop13, $pop12
 ; CHECK-NEXT:    local.get $push68=, 3
 ; CHECK-NEXT:    i32.const $push24=, 16
-; CHECK-NEXT:    i32.add  $push25=, $pop68, $pop24
+; CHECK-NEXT:    i32.add $push25=, $pop68, $pop24
 ; CHECK-NEXT:    local.get $push69=, 3
 ; CHECK-NEXT:    i64.load $push15=, 32($pop69)
 ; CHECK-NEXT:    local.get $push70=, 3
@@ -138,7 +138,7 @@ define fp128 @fp128libcalls(fp128 %x) {
 ; CHECK-NEXT:    i64.store 0($pop79), $pop19
 ; CHECK-NEXT:    local.get $push80=, 3
 ; CHECK-NEXT:    i32.const $push22=, 160
-; CHECK-NEXT:    i32.add  $push23=, $pop80, $pop22
+; CHECK-NEXT:    i32.add $push23=, $pop80, $pop22
 ; CHECK-NEXT:    global.set __stack_pointer, $pop23
 ; CHECK-NEXT:    return
   ; libm calls

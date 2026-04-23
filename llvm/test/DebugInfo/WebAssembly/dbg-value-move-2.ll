@@ -4,7 +4,8 @@
 ; CHECK: {{.*}}After WebAssembly Register Stackify
 ; CHECK: bb.2.for.body:
 ; CHECK: [[TEEREG:%[0-9]+]]:i32, %{{[0-9]+}}:i32 = TEE_I32 {{.*}} fib2.c:6:7
-; CHECK-NEXT: DBG_VALUE [[TEEREG]]:i32, $noreg, !"a", {{.*}} fib2.c:2:13
+; CHECK-NEXT: %{{[0-9]+}}:i32 = nsw ADD_I32 %{{[0-9]+}}:i32, [[TEEREG]]:i32{{.*}} fib2.c:6:7
+; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !"a", {{.*}} fib2.c:2:13
 
 ; ModuleID = 'fib2.bc'
 ; The test generated via: clang --target=wasm32-unknown-unknown-wasm fib2.c -g -O2

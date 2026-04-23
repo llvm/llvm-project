@@ -16,21 +16,21 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    global.set __stack_pointer
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.store 24
+; CHECK-NEXT:    i32.store 28
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.store 28
+; CHECK-NEXT:    i32.store 24
 ; CHECK-NEXT:    block
 ; CHECK-NEXT:    block
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    br_if 0 # 0: down to label1
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 2
-; CHECK-NEXT:    i32.store 20
-; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.store 24
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.store 20
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 3
 ; CHECK-NEXT:    i32.store 16
@@ -52,11 +52,11 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    br_if 0 # 0: down to label3
 ; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 2
-; CHECK-NEXT:    i32.store 20
-; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.store 24
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.store 20
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 3
 ; CHECK-NEXT:    i32.store 16

@@ -178,24 +178,24 @@ define hidden void @two_dims(ptr nocapture noundef readonly %arg, ptr nocapture 
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB2_2 Depth 2
 ; CHECK-NEXT:    loop # label2:
-; CHECK-NEXT:    local.get $push50=, 2
+; CHECK-NEXT:    local.get $push50=, 0
 ; CHECK-NEXT:    local.get $push49=, 3
 ; CHECK-NEXT:    i32.const $push29=, 2
 ; CHECK-NEXT:    i32.shl $push28=, $pop49, $pop29
 ; CHECK-NEXT:    local.tee $push27=, 4, $pop28
-; CHECK-NEXT:    i32.add $push26=, $pop50, $pop27
-; CHECK-NEXT:    local.tee $push25=, 5, $pop26
-; CHECK-NEXT:    i32.load $push51=, 0($pop25)
-; CHECK-NEXT:    local.set 6, $pop51
+; CHECK-NEXT:    i32.add $push0=, $pop50, $pop27
+; CHECK-NEXT:    i32.load $push51=, 0($pop0)
+; CHECK-NEXT:    local.set 5, $pop51
 ; CHECK-NEXT:    local.get $push53=, 1
 ; CHECK-NEXT:    local.get $push52=, 4
-; CHECK-NEXT:    i32.add $push0=, $pop53, $pop52
-; CHECK-NEXT:    i32.load $push54=, 0($pop0)
-; CHECK-NEXT:    local.set 7, $pop54
-; CHECK-NEXT:    local.get $push56=, 0
+; CHECK-NEXT:    i32.add $push1=, $pop53, $pop52
+; CHECK-NEXT:    i32.load $push54=, 0($pop1)
+; CHECK-NEXT:    local.set 6, $pop54
+; CHECK-NEXT:    local.get $push56=, 2
 ; CHECK-NEXT:    local.get $push55=, 4
-; CHECK-NEXT:    i32.add $push1=, $pop56, $pop55
-; CHECK-NEXT:    i32.load $push57=, 0($pop1)
+; CHECK-NEXT:    i32.add $push26=, $pop56, $pop55
+; CHECK-NEXT:    local.tee $push25=, 7, $pop26
+; CHECK-NEXT:    i32.load $push57=, 0($pop25)
 ; CHECK-NEXT:    local.set 8, $pop57
 ; CHECK-NEXT:    i32.const $push58=, 0
 ; CHECK-NEXT:    local.set 4, $pop58
@@ -203,14 +203,14 @@ define hidden void @two_dims(ptr nocapture noundef readonly %arg, ptr nocapture 
 ; CHECK-NEXT:    # Parent Loop BB2_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    loop # label3:
-; CHECK-NEXT:    local.get $push60=, 7
+; CHECK-NEXT:    local.get $push60=, 6
 ; CHECK-NEXT:    local.get $push59=, 4
 ; CHECK-NEXT:    i32.add $push43=, $pop60, $pop59
 ; CHECK-NEXT:    local.tee $push42=, 9, $pop43
 ; CHECK-NEXT:    i32.const $push41=, 6
 ; CHECK-NEXT:    i32.add $push20=, $pop42, $pop41
 ; CHECK-NEXT:    i32.load16_s $push21=, 0($pop20)
-; CHECK-NEXT:    local.get $push62=, 8
+; CHECK-NEXT:    local.get $push62=, 5
 ; CHECK-NEXT:    local.get $push61=, 4
 ; CHECK-NEXT:    i32.add $push40=, $pop62, $pop61
 ; CHECK-NEXT:    local.tee $push39=, 10, $pop40
@@ -241,12 +241,12 @@ define hidden void @two_dims(ptr nocapture noundef readonly %arg, ptr nocapture 
 ; CHECK-NEXT:    local.get $push68=, 10
 ; CHECK-NEXT:    i32.load16_s $push2=, 0($pop68)
 ; CHECK-NEXT:    i32.add $push4=, $pop3, $pop2
-; CHECK-NEXT:    local.get $push69=, 6
+; CHECK-NEXT:    local.get $push69=, 8
 ; CHECK-NEXT:    i32.add $push5=, $pop4, $pop69
 ; CHECK-NEXT:    i32.add $push11=, $pop10, $pop5
 ; CHECK-NEXT:    i32.add $push17=, $pop16, $pop11
 ; CHECK-NEXT:    i32.add $push70=, $pop22, $pop17
-; CHECK-NEXT:    local.set 6, $pop70
+; CHECK-NEXT:    local.set 8, $pop70
 ; CHECK-NEXT:    local.get $push71=, 4
 ; CHECK-NEXT:    i32.const $push33=, 8
 ; CHECK-NEXT:    i32.add $push32=, $pop71, $pop33
@@ -257,8 +257,8 @@ define hidden void @two_dims(ptr nocapture noundef readonly %arg, ptr nocapture 
 ; CHECK-NEXT:  # %bb.3: # %bb11
 ; CHECK-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; CHECK-NEXT:    end_loop
-; CHECK-NEXT:    local.get $push73=, 5
-; CHECK-NEXT:    local.get $push72=, 6
+; CHECK-NEXT:    local.get $push73=, 7
+; CHECK-NEXT:    local.get $push72=, 8
 ; CHECK-NEXT:    i32.store 0($pop73), $pop72
 ; CHECK-NEXT:    local.get $push74=, 3
 ; CHECK-NEXT:    i32.const $push47=, 1
@@ -374,36 +374,36 @@ define hidden void @runtime(ptr nocapture noundef readonly %arg, ptr nocapture n
 ; CHECK-NEXT:    loop # label6:
 ; CHECK-NEXT:    local.get $push45=, 8
 ; CHECK-NEXT:    local.get $push43=, 3
-; CHECK-NEXT:    f32.load $push4=, 0($pop43)
+; CHECK-NEXT:    f32.load $push3=, 0($pop43)
 ; CHECK-NEXT:    local.get $push44=, 7
-; CHECK-NEXT:    f32.load $push3=, 0($pop44)
-; CHECK-NEXT:    f32.add $push5=, $pop4, $pop3
+; CHECK-NEXT:    f32.load $push4=, 0($pop44)
+; CHECK-NEXT:    f32.add $push5=, $pop3, $pop4
 ; CHECK-NEXT:    f32.store 0($pop45), $pop5
 ; CHECK-NEXT:    local.get $push46=, 8
 ; CHECK-NEXT:    i32.const $push29=, 4
 ; CHECK-NEXT:    i32.add $push11=, $pop46, $pop29
 ; CHECK-NEXT:    local.get $push47=, 3
 ; CHECK-NEXT:    i32.const $push28=, 4
-; CHECK-NEXT:    i32.add $push8=, $pop47, $pop28
-; CHECK-NEXT:    f32.load $push9=, 0($pop8)
+; CHECK-NEXT:    i32.add $push6=, $pop47, $pop28
+; CHECK-NEXT:    f32.load $push7=, 0($pop6)
 ; CHECK-NEXT:    local.get $push48=, 7
 ; CHECK-NEXT:    i32.const $push27=, 4
-; CHECK-NEXT:    i32.add $push6=, $pop48, $pop27
-; CHECK-NEXT:    f32.load $push7=, 0($pop6)
-; CHECK-NEXT:    f32.add $push10=, $pop9, $pop7
+; CHECK-NEXT:    i32.add $push8=, $pop48, $pop27
+; CHECK-NEXT:    f32.load $push9=, 0($pop8)
+; CHECK-NEXT:    f32.add $push10=, $pop7, $pop9
 ; CHECK-NEXT:    f32.store 0($pop11), $pop10
-; CHECK-NEXT:    local.get $push50=, 3
+; CHECK-NEXT:    local.get $push50=, 8
 ; CHECK-NEXT:    i32.const $push26=, 8
 ; CHECK-NEXT:    i32.add $push49=, $pop50, $pop26
-; CHECK-NEXT:    local.set 3, $pop49
+; CHECK-NEXT:    local.set 8, $pop49
 ; CHECK-NEXT:    local.get $push52=, 7
 ; CHECK-NEXT:    i32.const $push25=, 8
 ; CHECK-NEXT:    i32.add $push51=, $pop52, $pop25
 ; CHECK-NEXT:    local.set 7, $pop51
-; CHECK-NEXT:    local.get $push54=, 8
+; CHECK-NEXT:    local.get $push54=, 3
 ; CHECK-NEXT:    i32.const $push24=, 8
 ; CHECK-NEXT:    i32.add $push53=, $pop54, $pop24
-; CHECK-NEXT:    local.set 8, $pop53
+; CHECK-NEXT:    local.set 3, $pop53
 ; CHECK-NEXT:    local.get $push56=, 6
 ; CHECK-NEXT:    local.get $push55=, 5
 ; CHECK-NEXT:    i32.const $push23=, 2
@@ -426,13 +426,13 @@ define hidden void @runtime(ptr nocapture noundef readonly %arg, ptr nocapture n
 ; CHECK-NEXT:    i32.add $push19=, $pop59, $pop30
 ; CHECK-NEXT:    local.get $push61=, 0
 ; CHECK-NEXT:    local.get $push60=, 3
-; CHECK-NEXT:    i32.add $push16=, $pop61, $pop60
-; CHECK-NEXT:    f32.load $push17=, 0($pop16)
+; CHECK-NEXT:    i32.add $push14=, $pop61, $pop60
+; CHECK-NEXT:    f32.load $push15=, 0($pop14)
 ; CHECK-NEXT:    local.get $push63=, 1
 ; CHECK-NEXT:    local.get $push62=, 3
-; CHECK-NEXT:    i32.add $push14=, $pop63, $pop62
-; CHECK-NEXT:    f32.load $push15=, 0($pop14)
-; CHECK-NEXT:    f32.add $push18=, $pop17, $pop15
+; CHECK-NEXT:    i32.add $push16=, $pop63, $pop62
+; CHECK-NEXT:    f32.load $push17=, 0($pop16)
+; CHECK-NEXT:    f32.add $push18=, $pop15, $pop17
 ; CHECK-NEXT:    f32.store 0($pop19), $pop18
 ; CHECK-NEXT:  .LBB3_6: # %bb19
 ; CHECK-NEXT:    end_block # label4:

@@ -7,6 +7,9 @@ target triple = "wasm32"
 ; CHECK-LABEL: bb2053_inner_loop:
 ; CHECK: loop
 ; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: v128.load
 ; CHECK: i32x4.extract_lane	3
 ; CHECK: i32x4.extract_lane	2
 ; CHECK: i32x4.extract_lane	1
@@ -16,25 +19,22 @@ target triple = "wasm32"
 ; CHECK: v128.load8_lane	0, 2
 ; CHECK: v128.load8_lane	0, 3
 ; CHECK: i16x8.extend_low_i8x16_s
-; CHECK: v128.load
-; CHECK: i8x16.shuffle	1, 5, 9, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_s
 ; CHECK: i32x4.extmul_low_i16x8_s
 ; CHECK: i32x4.add
+; CHECK: i8x16.shuffle	2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
 ; CHECK: v128.load8_splat	0
 ; CHECK: v128.load8_lane	0, 1
 ; CHECK: v128.load8_lane	0, 2
 ; CHECK: v128.load8_lane	0, 3
 ; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extmul_low_i16x8_s
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle	1, 5, 9, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extmul_low_i16x8_s
+; CHECK: i32x4.add
 ; CHECK: i8x16.shuffle	3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_s
-; CHECK: i32x4.extmul_low_i16x8_s
-; CHECK: i32x4.add
-; CHECK: i8x16.shuffle	0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_s
-; CHECK: i32x4.extmul_low_i16x8_s
-; CHECK: i32x4.add
-; CHECK: i8x16.shuffle	2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_s
 ; CHECK: i32x4.extmul_low_i16x8_s
 ; CHECK: i32x4.add
@@ -59,82 +59,48 @@ target triple = "wasm32"
 
 ; MAX-BANDWIDTH: loop
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.extract_lane	3
-; MAX-BANDWIDTH: i32x4.extract_lane	2
-; MAX-BANDWIDTH: i32x4.extract_lane	1
-; MAX-BANDWIDTH: i32x4.extract_lane	0
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.extract_lane	3
-; MAX-BANDWIDTH: i32x4.extract_lane	2
-; MAX-BANDWIDTH: i32x4.extract_lane	1
-; MAX-BANDWIDTH: i32x4.extract_lane	0
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.extract_lane	3
-; MAX-BANDWIDTH: i32x4.extract_lane	2
-; MAX-BANDWIDTH: i32x4.extract_lane	1
-; MAX-BANDWIDTH: i32x4.extract_lane	0
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.extract_lane	3
-; MAX-BANDWIDTH: i32x4.extract_lane	2
-; MAX-BANDWIDTH: i32x4.extract_lane	1
-; MAX-BANDWIDTH: i32x4.extract_lane	0
-; MAX-BANDWIDTH: v128.load8_splat	0
-; MAX-BANDWIDTH: v128.load8_lane	0, 1
-; MAX-BANDWIDTH: v128.load8_lane	0, 2
-; MAX-BANDWIDTH: v128.load8_lane	0, 3
-; MAX-BANDWIDTH: v128.load8_lane	0, 4
-; MAX-BANDWIDTH: v128.load8_lane	0, 5
-; MAX-BANDWIDTH: v128.load8_lane	0, 6
-; MAX-BANDWIDTH: v128.load8_lane	0, 7
-; MAX-BANDWIDTH: v128.load8_lane	0, 8
-; MAX-BANDWIDTH: v128.load8_lane	0, 9
-; MAX-BANDWIDTH: v128.load8_lane	0, 10
-; MAX-BANDWIDTH: v128.load8_lane	0, 11
-; MAX-BANDWIDTH: v128.load8_lane	0, 12
-; MAX-BANDWIDTH: v128.load8_lane	0, 13
-; MAX-BANDWIDTH: v128.load8_lane	0, 14
-; MAX-BANDWIDTH: v128.load8_lane	0, 15
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 3, 7, 11, 15, 19, 23, 27, 31
-; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
-; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_s
-; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: v128.load8_splat	0
-; MAX-BANDWIDTH: v128.load8_lane	0, 1
-; MAX-BANDWIDTH: v128.load8_lane	0, 2
-; MAX-BANDWIDTH: v128.load8_lane	0, 3
-; MAX-BANDWIDTH: v128.load8_lane	0, 4
-; MAX-BANDWIDTH: v128.load8_lane	0, 5
-; MAX-BANDWIDTH: v128.load8_lane	0, 6
-; MAX-BANDWIDTH: v128.load8_lane	0, 7
-; MAX-BANDWIDTH: v128.load8_lane	0, 8
-; MAX-BANDWIDTH: v128.load8_lane	0, 9
-; MAX-BANDWIDTH: v128.load8_lane	0, 10
-; MAX-BANDWIDTH: v128.load8_lane	0, 11
-; MAX-BANDWIDTH: v128.load8_lane	0, 12
-; MAX-BANDWIDTH: v128.load8_lane	0, 13
-; MAX-BANDWIDTH: v128.load8_lane	0, 14
-; MAX-BANDWIDTH: v128.load8_lane	0, 15
-; MAX-BANDWIDTH: i8x16.shuffle	1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 9, 13, 17, 21, 25, 29
-; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
-; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_s
-; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i8x16.shuffle	2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 10, 14, 18, 22, 26, 30
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: i32x4.extract_lane	3
+; MAX-BANDWIDTH: i32x4.extract_lane	2
+; MAX-BANDWIDTH: i32x4.extract_lane	1
+; MAX-BANDWIDTH: i32x4.extract_lane	0
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: i32x4.extract_lane	3
+; MAX-BANDWIDTH: i32x4.extract_lane	2
+; MAX-BANDWIDTH: i32x4.extract_lane	1
+; MAX-BANDWIDTH: i32x4.extract_lane	0
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: i32x4.extract_lane	3
+; MAX-BANDWIDTH: i32x4.extract_lane	2
+; MAX-BANDWIDTH: i32x4.extract_lane	1
+; MAX-BANDWIDTH: i32x4.extract_lane	0
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: i32x4.extract_lane	3
+; MAX-BANDWIDTH: i32x4.extract_lane	2
+; MAX-BANDWIDTH: i32x4.extract_lane	1
+; MAX-BANDWIDTH: i32x4.extract_lane	0
+; MAX-BANDWIDTH: v128.load8_splat	0
+; MAX-BANDWIDTH: v128.load8_lane	0, 1
+; MAX-BANDWIDTH: v128.load8_lane	0, 2
+; MAX-BANDWIDTH: v128.load8_lane	0, 3
+; MAX-BANDWIDTH: v128.load8_lane	0, 4
+; MAX-BANDWIDTH: v128.load8_lane	0, 5
+; MAX-BANDWIDTH: v128.load8_lane	0, 6
+; MAX-BANDWIDTH: v128.load8_lane	0, 7
+; MAX-BANDWIDTH: v128.load8_lane	0, 8
+; MAX-BANDWIDTH: v128.load8_lane	0, 9
+; MAX-BANDWIDTH: v128.load8_lane	0, 10
+; MAX-BANDWIDTH: v128.load8_lane	0, 11
+; MAX-BANDWIDTH: v128.load8_lane	0, 12
+; MAX-BANDWIDTH: v128.load8_lane	0, 13
+; MAX-BANDWIDTH: v128.load8_lane	0, 14
+; MAX-BANDWIDTH: v128.load8_lane	0, 15
 ; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
 ; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_s
@@ -142,6 +108,40 @@ target triple = "wasm32"
 ; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 8, 12, 16, 20, 24, 28
+; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; MAX-BANDWIDTH: v128.load8_splat	0
+; MAX-BANDWIDTH: v128.load8_lane	0, 1
+; MAX-BANDWIDTH: v128.load8_lane	0, 2
+; MAX-BANDWIDTH: v128.load8_lane	0, 3
+; MAX-BANDWIDTH: v128.load8_lane	0, 4
+; MAX-BANDWIDTH: v128.load8_lane	0, 5
+; MAX-BANDWIDTH: v128.load8_lane	0, 6
+; MAX-BANDWIDTH: v128.load8_lane	0, 7
+; MAX-BANDWIDTH: v128.load8_lane	0, 8
+; MAX-BANDWIDTH: v128.load8_lane	0, 9
+; MAX-BANDWIDTH: v128.load8_lane	0, 10
+; MAX-BANDWIDTH: v128.load8_lane	0, 11
+; MAX-BANDWIDTH: v128.load8_lane	0, 12
+; MAX-BANDWIDTH: v128.load8_lane	0, 13
+; MAX-BANDWIDTH: v128.load8_lane	0, 14
+; MAX-BANDWIDTH: v128.load8_lane	0, 15
+; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
+; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
+; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_s
+; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 3, 7, 11, 15, 19, 23, 27, 31
+; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
+; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
+; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_s
+; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i8x16.shuffle	1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 9, 13, 17, 21, 25, 29
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
 ; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
@@ -207,74 +207,74 @@ target triple = "wasm32"
 
 ; RELAXED-MAX-BANDWIDTH: loop
 ; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	3
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	2
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	1
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	0
 ; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	3
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	2
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	1
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	0
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	3
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	2
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	1
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	0
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	3
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	2
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	1
-; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	0
-; RELAXED-MAX-BANDWIDTH: v128.load8_splat	0
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 1
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 2
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 3
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 4
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 5
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 6
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 7
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 8
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 9
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 10
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 11
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 12
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 13
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 14
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 15
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 3, 7, 11, 15, 19, 23, 27, 31
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; RELAXED-MAX-BANDWIDTH: v128.load8_splat	0
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 1
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 2
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 3
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 4
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 5
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 6
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 7
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 8
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 9
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 10
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 11
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 12
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 13
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 14
-; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 15
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 9, 13, 17, 21, 25, 29
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
-; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: v128.load
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 10, 14, 18, 22, 26, 30
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	3
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	2
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	1
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	0
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	3
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	2
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	1
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	0
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	3
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	2
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	1
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	0
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	3
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	2
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	1
+; RELAXED-MAX-BANDWIDTH: i32x4.extract_lane	0
+; RELAXED-MAX-BANDWIDTH: v128.load8_splat	0
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 1
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 2
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 3
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 4
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 5
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 6
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 7
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 8
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 9
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 10
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 11
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 12
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 13
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 14
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 15
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 8, 12, 16, 20, 24, 28
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; RELAXED-MAX-BANDWIDTH: v128.load8_splat	0
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 1
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 2
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 3
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 4
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 5
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 6
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 7
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 8
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 9
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 10
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 11
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 12
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 13
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 14
+; RELAXED-MAX-BANDWIDTH: v128.load8_lane	0, 15
+; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
+; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 3, 7, 11, 15, 19, 23, 27, 31
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 9, 13, 17, 21, 25, 29
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
 ; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
 ; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
@@ -382,18 +382,18 @@ bb2053.exit:
 ; CHECK-LABEL: bb41_inner_loop:
 ; CHECK: loop
 ; CHECK: v128.load64_zero
-; CHECK: i8x16.shuffle	1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_s
 ; CHECK: v128.load64_zero
+; CHECK: i8x16.shuffle	0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extmul_low_i16x8_s
+; CHECK: i32x4.add
 ; CHECK: i8x16.shuffle	1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_s
 ; CHECK: i32x4.extmul_low_i16x8_s
 ; CHECK: i32x4.add
-; CHECK: i8x16.shuffle	0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_s
-; CHECK: i32x4.extmul_low_i16x8_s
-; CHECK: i32x4.add
-; CHECK: i8x16.shuffle	0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_s
 ; CHECK: i32x4.extmul_low_i16x8_s
 ; CHECK: i32x4.add
@@ -403,16 +403,9 @@ bb2053.exit:
 ; MAX-BANDWIDTH: loop
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+; MAX-BANDWIDTH: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
-; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
-; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_s
-; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
 ; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
@@ -420,7 +413,14 @@ bb2053.exit:
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; MAX-BANDWIDTH: i8x16.shuffle	1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
+; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
+; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_s
+; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i8x16.shuffle	1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
 ; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
 ; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_s
@@ -437,14 +437,14 @@ bb2053.exit:
 ; RELAXED-MAX-BANDWIDTH: loop
 ; RELAXED-MAX-BANDWIDTH: v128.load
 ; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
 ; RELAXED-MAX-BANDWIDTH: v128.load
 ; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
 ; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
 ; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
 ; RELAXED-MAX-BANDWIDTH: i32x4.relaxed_dot_i8x16_i7x16_add_s
 define hidden { i32, i32, i32, i32 } @bb41_inner_loop(ptr nocapture %lhs, ptr nocapture %rhs, i32 %len, i32 %acc00, i32 %acc01, i32 %acc10, i32 %acc11) local_unnamed_addr {
@@ -495,16 +495,16 @@ bb41.exit:
 ; CHECK: loop
 ; CHECK: v128.load
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle	0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK: v128.load
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
-; CHECK: i32x4.extmul_low_i16x8_s
-; CHECK: i32x4.add
 ; CHECK: i8x16.shuffle	0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK: i32x4.extmul_low_i16x8_s
 ; CHECK: i32x4.add
-; CHECK: i8x16.shuffle	0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extmul_low_i16x8_s
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK: i32x4.extmul_low_i16x8_s
 ; CHECK: i32x4.add
 ; CHECK: i32x4.extmul_low_i16x8_s
@@ -513,27 +513,27 @@ bb41.exit:
 ; MAX-BANDWIDTH: loop
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 4, 5, 12, 13, 20, 21, 28, 29
-; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 4, 5, 12, 13, 20, 21, 28, 29
-; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; MAX-BANDWIDTH: i32x4.dot_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 8, 9, 16, 17, 24, 25
+; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 8, 9, 16, 17, 24, 25
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
 ; MAX-BANDWIDTH: i32x4.dot_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 8, 9, 16, 17, 24, 25
+; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 4, 5, 12, 13, 20, 21, 28, 29
+; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; MAX-BANDWIDTH: i32x4.dot_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 4, 5, 12, 13, 20, 21, 28, 29
 ; MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
 ; MAX-BANDWIDTH: i32x4.dot_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
@@ -543,27 +543,27 @@ bb41.exit:
 ; RELAXED-MAX-BANDWIDTH: loop
 ; RELAXED-MAX-BANDWIDTH: v128.load
 ; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 4, 5, 12, 13, 20, 21, 28, 29
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 4, 5, 12, 13, 20, 21, 28, 29
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; RELAXED-MAX-BANDWIDTH: i32x4.dot_i16x8_s
-; RELAXED-MAX-BANDWIDTH: i32x4.add
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 8, 9, 16, 17, 24, 25
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; RELAXED-MAX-BANDWIDTH: v128.load
+; RELAXED-MAX-BANDWIDTH: v128.load
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 8, 9, 16, 17, 24, 25
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
 ; RELAXED-MAX-BANDWIDTH: i32x4.dot_i16x8_s
 ; RELAXED-MAX-BANDWIDTH: i32x4.add
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 8, 9, 16, 17, 24, 25
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 4, 5, 12, 13, 20, 21, 28, 29
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; RELAXED-MAX-BANDWIDTH: i32x4.dot_i16x8_s
+; RELAXED-MAX-BANDWIDTH: i32x4.add
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 0, 1, 0, 1, 0, 1, 4, 5, 12, 13, 20, 21, 28, 29
 ; RELAXED-MAX-BANDWIDTH: i8x16.shuffle	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
 ; RELAXED-MAX-BANDWIDTH: i32x4.dot_i16x8_s
 ; RELAXED-MAX-BANDWIDTH: i32x4.add
