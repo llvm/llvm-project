@@ -1601,7 +1601,7 @@ TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
   ASTContext &AST = getASTContext();
   DeclContext *Ctx = CurContext;
 
-  while(Ctx->isRequiresExprBody())
+  while (Ctx->isRequiresExprBody())
     Ctx = Ctx->getParent();
 
   Ctx = Ctx->isFileContext() ? Ctx : Ctx->getLexicalParent();
@@ -1614,26 +1614,25 @@ TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
   llvm::SmallVector<TemplateArgument> Args;
   for (NamedDecl *P : D->getTemplateParameters()->asArray()) {
     auto [Depth, Index] = getDepthAndIndex(P);
-    NamedDecl *NewParam =
-        transformTemplateParameter(*this, Ctx, P, MLTAL, Index, Depth? Depth -1 : 0);
+    NamedDecl *NewParam = transformTemplateParameter(
+        *this, Ctx, P, MLTAL, Index, Depth ? Depth - 1 : 0);
     if (!NewParam)
       return nullptr;
     Parameters.push_back(NewParam);
     Args.push_back(SemaRef.Context.getInjectedTemplateArg(NewParam));
   }
 
-  auto *ParamList =
-      TemplateParameterList::Create(AST, SourceLocation(), SourceLocation(),
-                                    Parameters, SourceLocation(),
-                                    /*RequiresClause=*/nullptr);
+  auto *ParamList = TemplateParameterList::Create(
+      AST, SourceLocation(), SourceLocation(), Parameters, SourceLocation(),
+      /*RequiresClause=*/nullptr);
 
   QualType Type = AST.getCanonicalType(AST.getTemplateSpecializationType(
       ElaboratedTypeKeyword::Class, Replacement, Args, {}));
 
   // FIXME: Have a flag to distinguish such special type alias declarations.
-  auto *Alias = TypeAliasDecl::Create(AST, Ctx, Loc, /*IdLoc=*/SourceLocation(),
-                                      /*Id=*/nullptr,
-                                      AST.getTrivialTypeSourceInfo(Type));
+  auto *Alias =
+      TypeAliasDecl::Create(AST, Ctx, Loc, /*IdLoc=*/SourceLocation(),
+                            /*Id=*/nullptr, AST.getTrivialTypeSourceInfo(Type));
   Alias->setImplicit(true);
 
   auto *Template = TypeAliasTemplateDecl::Create(
