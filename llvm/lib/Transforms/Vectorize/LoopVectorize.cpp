@@ -4149,21 +4149,6 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   if (hasUnsupportedHeaderPhiRecipe(MainPlan))
     return false;
 
-  // Phis with uses outside of the loop require special handling and are
-  // currently unsupported.
-  for (const auto &Entry : Legal->getInductionVars()) {
-    // Look for uses of the value of the induction at the last iteration.
-    Value *PostInc =
-        Entry.first->getIncomingValueForBlock(OrigLoop->getLoopLatch());
-    for (User *U : PostInc->users())
-      if (!OrigLoop->contains(cast<Instruction>(U)))
-        return false;
-    // Look for uses of penultimate value of the induction.
-    for (User *U : Entry.first->users())
-      if (!OrigLoop->contains(cast<Instruction>(U)))
-        return false;
-  }
-
   // Epilogue vectorization code has not been auditted to ensure it handles
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
@@ -7034,9 +7019,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // which may be needed for epilogue vectorization.
   VPlanTransforms::removeBranchOnConst(BestVPlan, /*OnlyLatches=*/true);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
+  std::optional<uint64_t> MaxRuntimeStep;
+  if (auto MaxVScale = getMaxVScale(*CM.TheFunction, CM.TTI))
+    MaxRuntimeStep = uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
-      CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF());
+      CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF(),
+      MaxRuntimeStep);
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
