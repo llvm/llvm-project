@@ -372,9 +372,11 @@ void CIRGenModule::emitGlobalDecl(const clang::GlobalDecl &d) {
   // redefinition). Just ignore those cases.
   // TODO: Not sure what to map this to for MLIR
   mlir::Operation *globalValueOp = op;
-  if (auto gv = dyn_cast<cir::GetGlobalOp>(op))
+  if (auto gv = dyn_cast<cir::GetGlobalOp>(op)) {
     globalValueOp =
         mlir::SymbolTable::lookupSymbolIn(getModule(), gv.getNameAttr());
+    assert(globalValueOp && "expected a valid global op");
+  }
 
   if (auto cirGlobalValue =
           dyn_cast<cir::CIRGlobalValueInterface>(globalValueOp))
@@ -914,6 +916,11 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
     }
   }
 
+  // If the old global is being tracked as the most-recently-created global,
+  // update it so that subsequent globals are not inserted after a (now
+  // erased) operation, which would leave them detached from the module.
+  if (lastGlobalOp == oldGV)
+    lastGlobalOp = newGV;
   oldGV.erase();
 }
 
@@ -1305,8 +1312,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   }
 
   // Set CIR's linkage type as appropriate.
-  cir::GlobalLinkageKind linkage =
-      getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
+  cir::GlobalLinkageKind linkage = getCIRLinkageVarDefinition(vd);
 
   // CUDA B.2.1 "The __device__ qualifier declares a variable that resides on
   // the device. [...]"
@@ -1692,16 +1698,14 @@ static bool isVarDeclStrongDefinition(const ASTContext &astContext,
   return false;
 }
 
-cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
-    const DeclaratorDecl *dd, GVALinkage linkage, bool isConstantVariable) {
+cir::GlobalLinkageKind
+CIRGenModule::getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
+                                         GVALinkage linkage) {
   if (linkage == GVA_Internal)
     return cir::GlobalLinkageKind::InternalLinkage;
 
-  if (dd->hasAttr<WeakAttr>()) {
-    if (isConstantVariable)
-      return cir::GlobalLinkageKind::WeakODRLinkage;
+  if (dd->hasAttr<WeakAttr>())
     return cir::GlobalLinkageKind::WeakAnyLinkage;
-  }
 
   if (const auto *fd = dd->getAsFunction())
     if (fd->isMultiVersion() && linkage == GVA_AvailableExternally)
@@ -1827,10 +1831,9 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
 }
 
 cir::GlobalLinkageKind
-CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd, bool isConstant) {
-  assert(!isConstant && "constant variables NYI");
+CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd) {
   GVALinkage linkage = astContext.GetGVALinkageForVariable(vd);
-  return getCIRLinkageForDeclarator(vd, linkage, isConstant);
+  return getCIRLinkageForDeclarator(vd, linkage);
 }
 
 cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl gd) {
@@ -1841,7 +1844,7 @@ cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl gd) {
   if (const auto *dtor = dyn_cast<CXXDestructorDecl>(d))
     return getCXXABI().getCXXDestructorLinkage(linkage, dtor, gd.getDtorType());
 
-  return getCIRLinkageForDeclarator(d, linkage, /*isConstantVariable=*/false);
+  return getCIRLinkageForDeclarator(d, linkage);
 }
 
 static cir::GlobalOp
@@ -2111,6 +2114,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::Concept:
   case Decl::CXXDeductionGuide:
   case Decl::Empty:
+  case Decl::ExplicitInstantiation:
   case Decl::FunctionTemplate:
   case Decl::StaticAssert:
   case Decl::TypeAliasTemplate:
@@ -3460,8 +3464,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   }
 
   // Create a global variable for this lifetime-extended temporary.
-  cir::GlobalLinkageKind linkage =
-      getCIRLinkageVarDefinition(varDecl, /*isConstant=*/false);
+  cir::GlobalLinkageKind linkage = getCIRLinkageVarDefinition(varDecl);
   if (linkage == cir::GlobalLinkageKind::ExternalLinkage) {
     const VarDecl *initVD;
     if (varDecl->isStaticDataMember() && varDecl->getAnyInitializer(initVD) &&
