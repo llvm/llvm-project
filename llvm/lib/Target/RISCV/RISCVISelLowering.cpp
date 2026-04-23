@@ -1679,7 +1679,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           }
           setOperationAction(ISD::FNEG, VT, Expand);
           setOperationAction(ISD::FABS, VT, Expand);
-          setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+          setOperationAction(ISD::FCOPYSIGN, VT, Custom);
           MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
           // Don't promote f16 vector operations to f32 if f32 vector type is
           // not legal.
@@ -1709,6 +1709,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             setOperationAction(ZvfbfaOps, VT, Custom);
             setOperationAction(ZvfbfaVPOps, VT, Custom);
             setCondCodeAction(VFPCCToExpand, VT, Expand);
+          } else {
+            setOperationAction(ISD::FCOPYSIGN, VT, Custom);
           }
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
@@ -7490,6 +7492,28 @@ static SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, CopiedSign);
 }
 
+static SDValue expandVectorFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT IntVT = VT.changeVectorElementTypeToInteger();
+
+  SDValue Mag = DAG.getNode(ISD::BITCAST, DL, IntVT, Op.getOperand(0));
+  SDValue Sign = DAG.getNode(ISD::BITCAST, DL, IntVT, Op.getOperand(1));
+
+  SDValue SignMask = DAG.getConstant(
+      APInt::getSignMask(IntVT.getScalarSizeInBits()), DL, IntVT);
+  SDValue SignBit = DAG.getNode(ISD::AND, DL, IntVT, Sign, SignMask);
+
+  SDValue ClearSignMask = DAG.getConstant(
+      APInt::getSignedMaxValue(IntVT.getScalarSizeInBits()), DL, IntVT);
+  SDValue ClearedSign = DAG.getNode(ISD::AND, DL, IntVT, Mag, ClearSignMask);
+
+  SDValue CopiedSign = DAG.getNode(ISD::OR, DL, IntVT, ClearedSign, SignBit,
+                                   SDNodeFlags::Disjoint);
+
+  return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
+}
+
 /// Get a RISC-V target specified VL op for a given SDNode.
 static unsigned getRISCVVLOp(SDValue Op) {
 #define OP_CASE(NODE)                                                          \
@@ -8951,12 +8975,18 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue CLMUL = DAG.getNode(ISD::CLMUL, DL, I64VecVT, Op0, Op1);
     return DAG.getNode(ISD::TRUNCATE, DL, VT, CLMUL);
   }
-  case ISD::FCOPYSIGN:
+  case ISD::FCOPYSIGN: {
     if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
       return lowerFCOPYSIGN(Op, DAG, Subtarget);
+    MVT EltVT = Op.getSimpleValueType().getVectorElementType();
+    // zvfhmin f16 and zvfbfmin bf16 vectors have no native vfsgnj
+    if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
+        (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16()))
+      return expandVectorFCOPYSIGN(Op, DAG);
     if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerToScalableOp(Op, DAG);
+  }
   case ISD::STRICT_FADD:
   case ISD::STRICT_FSUB:
   case ISD::STRICT_FMUL:
