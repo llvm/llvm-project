@@ -185,7 +185,9 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     InstrItins(getInstrItineraryForCPU(GPU)),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
     TLInfo(TM, *this),
-    FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0) {
+    // Frame index expansion sometimes assumes the low bit of SP is 0
+    FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0,
+                  /*TransAl=*/Align(4)) {
   // clang-format on
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
   EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(this);

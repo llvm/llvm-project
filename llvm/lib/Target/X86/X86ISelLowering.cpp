@@ -45771,6 +45771,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::GlobalBaseReg:
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
+  // SETCC/SETCC_CARRY always produces a well-defined result based on
+  // EFLAGS/carry flag.
+  case X86ISD::SETCC:
+  case X86ISD::SETCC_CARRY:
     return true;
   case X86ISD::PACKSS:
   case X86ISD::PACKUS: {

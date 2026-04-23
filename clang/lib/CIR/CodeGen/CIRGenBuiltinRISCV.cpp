@@ -29,7 +29,7 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   }
 
   StringRef intrinsicName;
-  mlir::Type returnType;
+  mlir::Type returnType = convertType(e->getType());
   llvm::SmallVector<mlir::Value> ops;
 
   // `iceArguments` is a bitmap indicating whether the argument at the i-th bit
@@ -47,7 +47,11 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
 
   // Zbb
   case RISCV::BI__builtin_riscv_orc_b_32:
-  case RISCV::BI__builtin_riscv_orc_b_64:
+  case RISCV::BI__builtin_riscv_orc_b_64: {
+    intrinsicName = "riscv.orc.b";
+    break;
+  }
+
   // Zbc
   case RISCV::BI__builtin_riscv_clmul_32:
   case RISCV::BI__builtin_riscv_clmul_64:
