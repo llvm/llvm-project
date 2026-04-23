@@ -586,6 +586,22 @@ def : Pat<(i32 (int_aarch64_cas32 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
 def : Pat<(i64 (int_aarch64_cas64 GPR64sp:$Rn, GPR64:$Rs, GPR64:$Rt)),
           (CASX_cg GPR64:$Rs, GPR64:$Rt, GPR64sp:$Rn)>;
 
+// Unconditional patterns for the __casa* MSVC builtins (acquire ordering).
+def : Pat<(i32 (int_aarch64_casa8  GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 255)),   (and GPR32:$Rt, (i32 255)))),
+          (CASAB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casa8  GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASAB_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casa16 GPR64sp:$Rn,
+               (and GPR32:$Rs, (i32 65535)), (and GPR32:$Rt, (i32 65535)))),
+          (CASAH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casa16 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASAH_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i32 (int_aarch64_casa32 GPR64sp:$Rn, GPR32:$Rs, GPR32:$Rt)),
+          (CASAW_cg GPR32:$Rs, GPR32:$Rt, GPR64sp:$Rn)>;
+def : Pat<(i64 (int_aarch64_casa64 GPR64sp:$Rn, GPR64:$Rs, GPR64:$Rt)),
+          (CASAX_cg GPR64:$Rs, GPR64:$Rt, GPR64sp:$Rn)>;
+
 // v8.9a/v9.4a FEAT_LRCPC patterns
 let Predicates = [HasRCPC3, HasNEON] in {
   // LDAP1 loads
