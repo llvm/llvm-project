@@ -256,3 +256,91 @@ define <4 x i1> @fneg_vec_unknown_sign(<4 x i32> %vecbits) nounwind {
   %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %neg, i32 60) ; any negative
   ret <4 x i1> %res
 }
+
+define i1 @copysign_nan_mag_is_finite_or_inf(float %y) nounwind {
+; CHECK-LABEL: copysign_nan_mag_is_finite_or_inf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    fsgnj.s fa5, fa5, fa0
+; CHECK-NEXT:    fclass.s a0, fa5
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.copysign.f32(float 0x7FF8000000000000, float %y)
+  %res = call i1 @llvm.is.fpclass.f32(float %r, i32 1020) ; 0x3FC = finite | inf
+  ret i1 %res
+}
+
+define i1 @copysign_zero_mag_isnan(float %y) nounwind {
+; CHECK-LABEL: copysign_zero_mag_isnan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    fsgnj.s fa5, fa5, fa0
+; CHECK-NEXT:    fclass.s a0, fa5
+; CHECK-NEXT:    andi a0, a0, 768
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.copysign.f32(float 0.0, float %y)
+  %res = call i1 @llvm.is.fpclass.f32(float %r, i32 3) ; 0x3 = nan
+  ret i1 %res
+}
+
+define i1 @copysign_inf_mag_isfinite_or_nan(float %y) nounwind {
+; CHECK-LABEL: copysign_inf_mag_isfinite_or_nan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 522240
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    fsgnj.s fa5, fa5, fa0
+; CHECK-NEXT:    fclass.s a0, fa5
+; CHECK-NEXT:    andi a0, a0, 894
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.copysign.f32(float 0x7FF0000000000000, float %y)
+  %res = call i1 @llvm.is.fpclass.f32(float %r, i32 507) ; 0x1FB = finite (0x1F8) | nan (0x3)
+  ret i1 %res
+}
+
+define i1 @copysign_normal_mag_not_normal(float %y) nounwind {
+; CHECK-LABEL: copysign_normal_mag_not_normal:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    fsgnj.s fa5, fa5, fa0
+; CHECK-NEXT:    fclass.s a0, fa5
+; CHECK-NEXT:    andi a0, a0, 957
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.copysign.f32(float 1.0, float %y)
+  %res = call i1 @llvm.is.fpclass.f32(float %r, i32 759) ; 0x2F7 = all classes except +/-normal (0x108)
+  ret i1 %res
+}
+
+; fold-to-true test, not fold now
+define i1 @copysign_normal_mag_is_normal(float %y) nounwind {
+; CHECK-LABEL: copysign_normal_mag_is_normal:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    fsgnj.s fa5, fa5, fa0
+; CHECK-NEXT:    fclass.s a0, fa5
+; CHECK-NEXT:    andi a0, a0, 66
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.copysign.f32(float 1.0, float %y)
+  %res = call i1 @llvm.is.fpclass.f32(float %r, i32 264) ; 0x108 = +/-normal
+  ret i1 %res
+}
+
+define i1 @copysign_unknown_sign_no_fold(float %x, float %y) nounwind {
+; CHECK-LABEL: copysign_unknown_sign_no_fold:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fsgnj.s fa5, fa0, fa1
+; CHECK-NEXT:    fclass.s a0, fa5
+; CHECK-NEXT:    andi a0, a0, 15
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.copysign.f32(float %x, float %y)
+  %res = call i1 @llvm.is.fpclass.f32(float %r, i32 60) ; 0x3C = any negative
+  ret i1 %res
+}
