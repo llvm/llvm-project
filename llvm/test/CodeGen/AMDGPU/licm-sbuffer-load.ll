@@ -2,6 +2,39 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -passes=licm | FileCheck %s
 
 define amdgpu_ps void @licm_s_buffer_load(ptr addrspace(1) nocapture %out, i32 inreg noundef %userdata) {
+; CHECK-LABEL: define amdgpu_ps void @licm_s_buffer_load(
+; CHECK-SAME: ptr addrspace(1) captures(none) [[OUT:%.*]], i32 inreg noundef [[USERDATA:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I:%.*]] = call i64 @llvm.amdgcn.s.getpc()
+; CHECK-NEXT:    [[I1:%.*]] = and i64 [[I]], -4294967296
+; CHECK-NEXT:    [[I2:%.*]] = zext i32 [[USERDATA]] to i64
+; CHECK-NEXT:    [[I3:%.*]] = or disjoint i64 [[I1]], [[I2]]
+; CHECK-NEXT:    [[I4:%.*]] = inttoptr i64 [[I3]] to ptr addrspace(4)
+; CHECK-NEXT:    br label %[[PREHEADER:.*]]
+; CHECK:       [[PREHEADER]]:
+; CHECK-NEXT:    [[DESC:%.*]] = load <4 x i32>, ptr addrspace(4) [[I4]], align 16
+; CHECK-NEXT:    [[VAL_0:%.*]] = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> [[DESC]], i32 16, i32 0), !invariant.load [[META0:![0-9]+]]
+; CHECK-NEXT:    [[COND_0:%.*]] = icmp eq i32 [[VAL_0]], 0
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ 0, %[[PREHEADER]] ], [ [[NEXT_I:%.*]], %[[LOOP_END:.*]] ]
+; CHECK-NEXT:    br i1 [[COND_0]], label %[[BRANCH_A:.*]], label %[[LOOP_END]]
+; CHECK:       [[BRANCH_A]]:
+; CHECK-NEXT:    [[VAL_1:%.*]] = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> [[DESC]], i32 20, i32 0), !invariant.load [[META0]]
+; CHECK-NEXT:    [[COND_1:%.*]] = icmp ne i32 [[VAL_1]], 0
+; CHECK-NEXT:    br i1 [[COND_1]], label %[[BRANCH_B:.*]], label %[[LOOP_END]]
+; CHECK:       [[BRANCH_B]]:
+; CHECK-NEXT:    [[IDX_I64:%.*]] = sext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 [[IDX_I64]]
+; CHECK-NEXT:    store i32 [[VAL_1]], ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    br label %[[LOOP_END]]
+; CHECK:       [[LOOP_END]]:
+; CHECK-NEXT:    [[NEXT_I]] = add nuw nsw i32 [[IDX]], 1
+; CHECK-NEXT:    [[COND_BREAK:%.*]] = icmp eq i32 [[NEXT_I]], 1024
+; CHECK-NEXT:    br i1 [[COND_BREAK]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
 entry:
   %i = call i64 @llvm.amdgcn.s.getpc()
   %i1 = and i64 %i, -4294967296
@@ -41,3 +74,6 @@ exit:
 }
 
 !0 = !{}
+;.
+; CHECK: [[META0]] = !{}
+;.
