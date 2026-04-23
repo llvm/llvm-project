@@ -460,6 +460,8 @@ Improvements to Coverage Mapping
 - [MC/DC] Nested expressions are handled as individual MC/DC expressions.
 - "Single byte coverage" now supports branch coverage and can be used
   together with ``-fcoverage-mcdc``.
+- Consteval member functions are no longer emitted in coverage mappings,
+  matching the existing behavior for free consteval functions. (#GH164448)
 
 Bug Fixes in This Version
 -------------------------
