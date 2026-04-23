@@ -1605,14 +1605,15 @@ TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
     Ctx = Ctx->getParent();
 
   DeclContext *ParentCtx = Ctx;
-  while(isa<FunctionDecl>(ParentCtx))
-   ParentCtx = ParentCtx->isFileContext()
-                    ? ParentCtx : getLambdaAwareParentOfDeclContext(ParentCtx);
+  while (isa<FunctionDecl>(ParentCtx))
+    ParentCtx = ParentCtx->isFileContext()
+                    ? ParentCtx
+                    : getLambdaAwareParentOfDeclContext(ParentCtx);
 
   MultiLevelTemplateArgumentList MLTAL;
   if (NamedDecl *Func = dyn_cast<NamedDecl>(Ctx))
-    MLTAL = SemaRef.getTemplateInstantiationArgs(Func, nullptr, false, std::nullopt
-                                                 , false, nullptr, true);
+    MLTAL = SemaRef.getTemplateInstantiationArgs(
+        Func, nullptr, false, std::nullopt, false, nullptr, true);
 
   llvm::SmallVector<NamedDecl *> Parameters;
   llvm::SmallVector<TemplateArgument> Args;
