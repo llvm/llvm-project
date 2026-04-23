@@ -159,6 +159,17 @@ functions:
     arguments:
       - type: pthread_condattr_t *
       - type: int
+  - name: pthread_cond_broadcast
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *
+  - name: pthread_cond_clockwait
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: pthread_mutex_t *__restrict
+      - type: clockid_t
+      - type: const struct timespec *__restrict
   - name: pthread_cond_destroy
     return_type: int
     arguments:
@@ -168,6 +179,21 @@ functions:
     arguments:
       - type: pthread_cond_t *__restrict
       - type: const pthread_condattr_t *__restrict
+  - name: pthread_cond_signal
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *
+  - name: pthread_cond_timedwait
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: pthread_mutex_t *__restrict
+      - type: const struct timespec *__restrict
+  - name: pthread_cond_wait
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: pthread_mutex_t *__restrict
   - name: pthread_create
     return_type: int
     arguments:

@@ -446,6 +446,7 @@ add_header_macro(
     .llvm-libc-types.__pthread_once_func_t
     .llvm-libc-types.__pthread_start_t
     .llvm-libc-types.__pthread_tss_dtor_t
+    .llvm-libc-types.clockid_t
     .llvm-libc-types.pthread_attr_t
     .llvm-libc-types.pthread_cond_t
     .llvm-libc-types.pthread_condattr_t
@@ -459,8 +460,9 @@ add_header_macro(
     .llvm-libc-types.pthread_rwlockattr_t
     .llvm-libc-types.pthread_spinlock_t
     .llvm-libc-types.pthread_t
+    .llvm-libc-types.struct_timespec
     .llvm_libc_common_h
-)
+  )
 
 if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
   add_header_macro(

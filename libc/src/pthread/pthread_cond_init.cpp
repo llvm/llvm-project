@@ -39,9 +39,30 @@ LLVM_LIBC_FUNCTION(int, pthread_cond_init,
   if (attr)
     condattr = *attr;
 
-  // POSIX.1 does not specify behavior for invalid clock values.
-  bool is_shared = condattr.pshared == PTHREAD_PROCESS_SHARED;
-  bool is_realtime = condattr.clock == CLOCK_REALTIME;
+  bool is_shared;
+  switch (condattr.pshared) {
+  case PTHREAD_PROCESS_PRIVATE:
+    is_shared = false;
+    break;
+  case PTHREAD_PROCESS_SHARED:
+    is_shared = true;
+    break;
+  default:
+    return EINVAL;
+  }
+
+  bool is_realtime;
+  switch (condattr.clock) {
+  case CLOCK_MONOTONIC:
+    is_realtime = false;
+    break;
+  case CLOCK_REALTIME:
+    is_realtime = true;
+    break;
+  default:
+    return EINVAL;
+  }
+
   new (cond) CndVar(is_shared, is_realtime);
   return 0;
 }

@@ -191,6 +191,52 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
+add_header_library(
+  pthread_cond_utils
+  HDRS
+    pthread_cond_utils.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.include.llvm-libc-types.clockid_t
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_mutex_t
+    libc.include.llvm-libc-types.struct_timespec
+    libc.src.__support.CPP.optional
+    libc.src.__support.macros.null_check
+    libc.src.__support.macros.optimization
+    libc.src.__support.threads.CndVar
+    libc.src.__support.threads.mutex
+    libc.src.__support.time.abs_timeout
+)
+
+add_entrypoint_object(
+  pthread_cond_broadcast
+  SRCS
+    pthread_cond_broadcast.cpp
+  HDRS
+    pthread_cond_broadcast.h
+  DEPENDS
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  pthread_cond_clockwait
+  SRCS
+    pthread_cond_clockwait.cpp
+  HDRS
+    pthread_cond_clockwait.h
+  DEPENDS
+    .pthread_cond_utils
+    libc.hdr.errno_macros
+    libc.include.llvm-libc-types.clockid_t
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_mutex_t
+    libc.include.llvm-libc-types.struct_timespec
+)
+
 add_entrypoint_object(
   pthread_cond_destroy
   SRCS
@@ -206,18 +252,56 @@ add_entrypoint_object(
   pthread_cond_init
   SRCS
     pthread_cond_init.cpp
-    HDRS
-      pthread_cond_init.h
-    DEPENDS
-      libc.hdr.errno_macros
-      libc.hdr.time_macros
-      libc.include.llvm-libc-macros.pthread_macros
-      libc.include.llvm-libc-types.pthread_cond_t
-      libc.include.llvm-libc-types.pthread_condattr_t
-      libc.src.__support.CPP.new
-      libc.src.__support.macros.null_check
-      libc.src.__support.threads.CndVar
-  )
+  HDRS
+    pthread_cond_init.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.include.llvm-libc-macros.pthread_macros
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_condattr_t
+    libc.src.__support.CPP.new
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  pthread_cond_signal
+  SRCS
+    pthread_cond_signal.cpp
+  HDRS
+    pthread_cond_signal.h
+  DEPENDS
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  pthread_cond_timedwait
+  SRCS
+    pthread_cond_timedwait.cpp
+  HDRS
+    pthread_cond_timedwait.h
+  DEPENDS
+    .pthread_cond_utils
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_mutex_t
+    libc.include.llvm-libc-types.struct_timespec
+)
+
+add_entrypoint_object(
+  pthread_cond_wait
+  SRCS
+    pthread_cond_wait.cpp
+  HDRS
+    pthread_cond_wait.h
+  DEPENDS
+    .pthread_cond_utils
+    libc.src.__support.CPP.optional
+    libc.include.llvm-libc-types.pthread_cond_t
+    libc.include.llvm-libc-types.pthread_mutex_t
+)
 
 add_header_library(
   pthread_mutexattr
