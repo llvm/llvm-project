@@ -17666,8 +17666,26 @@ SDValue DAGCombiner::visitBUILD_PAIR(SDNode *N) {
 SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   SDValue N0 = N->getOperand(0);
 
-  if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, /*PoisonOnly*/ false))
+  if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, /*PoisonOnly*/ false)) {
+    // Eliminating a freeze over a SETCC-like node can unlock combines on
+    // nodes farther up the use chain — e.g., peephole combines that peek
+    // through intermediate nodes (CMP/AND/ZEXT) to reach a SETCC under the
+    // freeze. Normal worklist propagation only re-adds the direct users,
+    // which is not enough when those intermediate nodes do not themselves
+    // simplify. Re-add a bounded transitive user set.
+    // TODO: Not needed under -combiner-topological-sorting, which already
+    // visits operands before users. Remove when topo order is the default.
+    if (N0.getOpcode() == ISD::SETCC || N0.isTargetOpcode()) {
+      constexpr unsigned Limit = 32;
+      SmallSetVector<SDNode *, Limit> Users(N->users().begin(),
+                                            N->users().end());
+      for (unsigned I = 0; I != Users.size() && Users.size() < Limit; ++I)
+        Users.insert_range(Users[I]->users());
+      for (SDNode *U : Users)
+        AddToWorklist(U);
+    }
     return N0;
+  }
 
   // If we have frozen and unfrozen users of N0, update so everything uses N.
   if (!N0.isUndef() && !N0.hasOneUse()) {
