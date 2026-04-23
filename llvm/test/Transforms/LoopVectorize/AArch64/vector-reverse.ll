@@ -215,8 +215,8 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[TMP33]] = add <4 x i32> [[VEC_PHI13]], [[TMP35]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i16, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i16, ptr [[TMP36]], i64 -3
-; CHECK-NEXT:    [[REVERSE17:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLAT15]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    store <4 x i16> [[REVERSE17]], ptr [[TMP38]], align 2
+; CHECK-NEXT:    [[REVERSE16:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLAT15]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i16> [[REVERSE16]], ptr [[TMP38]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX12]], 4
 ; CHECK-NEXT:    [[TMP39:%.*]] = icmp eq i64 [[INDEX_NEXT18]], [[N_VEC11]]
 ; CHECK-NEXT:    br i1 [[TMP39]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]

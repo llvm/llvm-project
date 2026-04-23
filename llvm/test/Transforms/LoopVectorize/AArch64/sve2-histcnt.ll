@@ -240,10 +240,10 @@ define void @histogram_8bit(ptr noalias %buckets, ptr readonly %indices, i64 %N)
 ; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  iter.check:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP5]], 3
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 4
@@ -275,17 +275,17 @@ define void @histogram_8bit(ptr noalias %buckets, ptr readonly %indices, i64 %N)
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC1]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[TMP11]], 3
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[TMP11]], 2
 ; CHECK-NEXT:    [[DOTNOT1:%.*]] = sub nsw i64 0, [[TMP12]]
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = and i64 [[N]], [[DOTNOT1]]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [4 x i8], ptr [[INDICES]], i64 [[INDEX4]]
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 8 x i32>, ptr [[TMP13]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = zext <vscale x 8 x i32> [[WIDE_LOAD5]] to <vscale x 8 x i64>
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[BUCKETS]], <vscale x 8 x i64> [[TMP14]]
-; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv8p0.i8(<vscale x 8 x ptr> [[TMP15]], i8 1, <vscale x 8 x i1> splat (i1 true))
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 4 x i32>, ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD5]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP14]]
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i8(<vscale x 4 x ptr> [[TMP15]], i8 1, <vscale x 4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX4]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]

@@ -352,9 +352,9 @@ for.cond.cleanup:
 ; CHECK-V1-IC1: [[PROF9]] = !{!"branch_weights", i32 1, i32 31}
 ; CHECK-V1-IC1: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META3]], [[META11:![0-9]+]]}
 ; CHECK-V1-IC1: [[META11]] = !{!"llvm.loop.estimated_trip_count", i32 32}
-; CHECK-V1-IC1: [[PROF12]] = !{!"branch_weights", i32 16, i32 16}
+; CHECK-V1-IC1: [[PROF12]] = !{!"branch_weights", i32 4, i32 28}
 ; CHECK-V1-IC1: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META8]], [[META3]]}
-; CHECK-V1-IC1: [[PROF14]] = !{!"branch_weights", i32 1, i32 15}
+; CHECK-V1-IC1: [[PROF14]] = !{!"branch_weights", i32 1, i32 3}
 ; CHECK-V1-IC1: [[LOOP15]] = distinct !{[[LOOP15]], [[META3]], [[META2]], [[META8]]}
 ; CHECK-V1-IC1: [[LOOP16]] = distinct !{[[LOOP16]], [[META2]], [[META3]]}
 ; CHECK-V1-IC1: [[LOOP17]] = distinct !{[[LOOP17]], [[META3]], [[META2]]}
