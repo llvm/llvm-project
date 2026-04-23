@@ -366,48 +366,48 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
 // Map ISD:CONDCODE value to appropriate CmpMode expected by
 // NVPTXInstPrinter::printCmpMode()
 SDValue NVPTXDAGToDAGISel::getPTXCmpMode(const CondCodeSDNode &CondCode) {
-  using NVPTX::PTXCmpMode::CmpMode;
-  const unsigned PTXCmpMode = [](ISD::CondCode CC) {
+  using namespace NVPTX::PTXCmpMode;
+  const unsigned Mode = [](ISD::CondCode CC) {
     switch (CC) {
     default:
       llvm_unreachable("Unexpected condition code.");
     case ISD::SETOEQ:
     case ISD::SETEQ:
-      return CmpMode::EQ;
+      return EQ;
     case ISD::SETOGT:
     case ISD::SETGT:
-      return CmpMode::GT;
+      return GT;
     case ISD::SETOGE:
     case ISD::SETGE:
-      return CmpMode::GE;
+      return GE;
     case ISD::SETOLT:
     case ISD::SETLT:
-      return CmpMode::LT;
+      return LT;
     case ISD::SETOLE:
     case ISD::SETLE:
-      return CmpMode::LE;
+      return LE;
     case ISD::SETONE:
     case ISD::SETNE:
-      return CmpMode::NE;
+      return NE;
     case ISD::SETO:
-      return CmpMode::NUM;
+      return NUM;
     case ISD::SETUO:
-      return CmpMode::NotANumber;
+      return NotANumber;
     case ISD::SETUEQ:
-      return CmpMode::EQU;
+      return EQU;
     case ISD::SETUGT:
-      return CmpMode::GTU;
+      return GTU;
     case ISD::SETUGE:
-      return CmpMode::GEU;
+      return GEU;
     case ISD::SETULT:
-      return CmpMode::LTU;
+      return LTU;
     case ISD::SETULE:
-      return CmpMode::LEU;
+      return LEU;
     case ISD::SETUNE:
-      return CmpMode::NEU;
+      return NEU;
     }
   }(CondCode.get());
-  return CurDAG->getTargetConstant(PTXCmpMode, SDLoc(), MVT::i32);
+  return CurDAG->getTargetConstant(Mode, SDLoc(), MVT::i32);
 }
 
 bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {

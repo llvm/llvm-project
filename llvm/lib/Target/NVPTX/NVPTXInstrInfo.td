@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 include "NVPTXInstrFormats.td"
+include "llvm/TableGen/SearchableTable.td"
 
 let OperandType = "OPERAND_IMMEDIATE" in {
   def f16imm : Operand<f16>;
@@ -81,10 +82,65 @@ def BranchFlag : OperandWithDefaultOps<i32, (ops (i1 0))> {
   let PrintMethod = "printNegatedPredicate";
 }
 
-// Compare modes
-// These must match the enum in NVPTX.h
-def CmpEQ : PatLeaf<(i32 0)>;
-def CmpNE : PatLeaf<(i32 1)>;
+// SETP compare modes
+
+// Sentinel meaning "no valid inverse for this mode".
+defvar CmpModeInvalidInt = 0xFF;
+
+class CmpModeRec<int val, string name,
+                 int intInv, int fpInv,
+                 string fcmp, string icmp, string ityp> {
+  // Numeric encoding carried by the setp machine operand.
+  bits<8> Value           = val;
+  // Enumerator spelling in NVPTX::PTXCmpMode.
+  string  Name            = name;
+  // Inverse predicate under integer-setp semantics
+  bits<8> IntInverseValue = intInv;
+  // Inverse predicate under scalar-float-setp semantics
+  bits<8> FPInverseValue  = fpInv;
+  // Print mnemonic for float compares.
+  string  FCmpPrintStr    = fcmp;
+  // Print mnemonic for int compares.
+  string  ICmpPrintStr    = icmp;
+  // Signedness suffix for the integer setp instruction name (b/s/u);
+  string  ITypePrintStr   = ityp;
+}
+
+//                                    val  name          intInv             fpInv fcmp     icmp   ityp
+def CmpModeEQ_Rec         : CmpModeRec<0,  "EQ",         1,                 7,    "eq",    "eq",   "b">;
+def CmpModeNE_Rec         : CmpModeRec<1,  "NE",         0,                 6,    "ne",    "ne",   "b">;
+def CmpModeLT_Rec         : CmpModeRec<2,  "LT",         5,                 11,   "lt",    "lt",   "s">;
+def CmpModeLE_Rec         : CmpModeRec<3,  "LE",         4,                 10,   "le",    "le",   "s">;
+def CmpModeGT_Rec         : CmpModeRec<4,  "GT",         3,                 9,    "gt",    "gt",   "s">;
+def CmpModeGE_Rec         : CmpModeRec<5,  "GE",         2,                 8,    "ge",    "ge",   "s">;
+def CmpModeEQU_Rec        : CmpModeRec<6,  "EQU",        CmpModeInvalidInt, 1,    "equ",   "",     "">;
+def CmpModeNEU_Rec        : CmpModeRec<7,  "NEU",        CmpModeInvalidInt, 0,    "neu",   "",     "">;
+def CmpModeLTU_Rec        : CmpModeRec<8,  "LTU",        11,                5,    "ltu",   "lt",   "u">;
+def CmpModeLEU_Rec        : CmpModeRec<9,  "LEU",        10,                4,    "leu",   "le",   "u">;
+def CmpModeGTU_Rec        : CmpModeRec<10, "GTU",        9,                 3,    "gtu",   "gt",   "u">;
+def CmpModeGEU_Rec        : CmpModeRec<11, "GEU",        8,                 2,    "geu",   "ge",   "u">;
+def CmpModeNUM_Rec        : CmpModeRec<12, "NUM",        CmpModeInvalidInt, 13,   "num",   "",     "">;
+def CmpModeNotANumber_Rec : CmpModeRec<13, "NotANumber", CmpModeInvalidInt, 12,   "nan",   "",     "">;
+
+def PTXCmpMode : GenericEnum {
+  let FilterClass    = "CmpModeRec";
+  let NameField      = "Name";
+  let ValueField     = "Value";
+  let UnderlyingType = "unsigned";
+}
+
+def PTXCmpModeTable : GenericTable {
+  let FilterClass    = "CmpModeRec";
+  let CppTypeName    = "CmpModeInfo";
+  let Fields         = ["Value", "Name",
+                        "IntInverseValue", "FPInverseValue",
+                        "FCmpPrintStr", "ICmpPrintStr", "ITypePrintStr"];
+  let PrimaryKey     = ["Value"];
+  let PrimaryKeyName = "lookupCmpModeByValue";
+}
+
+def CmpEQ : PatLeaf<(i32 !cast<int>(CmpModeEQ_Rec.Value))>;
+def CmpNE : PatLeaf<(i32 !cast<int>(CmpModeNE_Rec.Value))>;
 
 def CmpMode : Operand<i32> {
   let PrintMethod = "printCmpMode";

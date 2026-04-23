@@ -255,65 +255,11 @@ static bool isScalarFloatSetp(const MachineInstr &MI) {
 }
 
 static int64_t invertIntegerCmpMode(int64_t Mode) {
-  switch (Mode) {
-  case NVPTX::PTXCmpMode::EQ:
-    return NVPTX::PTXCmpMode::NE;
-  case NVPTX::PTXCmpMode::NE:
-    return NVPTX::PTXCmpMode::EQ;
-  case NVPTX::PTXCmpMode::LT:
-    return NVPTX::PTXCmpMode::GE;
-  case NVPTX::PTXCmpMode::LE:
-    return NVPTX::PTXCmpMode::GT;
-  case NVPTX::PTXCmpMode::GT:
-    return NVPTX::PTXCmpMode::LE;
-  case NVPTX::PTXCmpMode::GE:
-    return NVPTX::PTXCmpMode::LT;
-  case NVPTX::PTXCmpMode::LTU:
-    return NVPTX::PTXCmpMode::GEU;
-  case NVPTX::PTXCmpMode::LEU:
-    return NVPTX::PTXCmpMode::GTU;
-  case NVPTX::PTXCmpMode::GTU:
-    return NVPTX::PTXCmpMode::LEU;
-  case NVPTX::PTXCmpMode::GEU:
-    return NVPTX::PTXCmpMode::LTU;
-  default:
-    llvm_unreachable("Invalid integer comparison mode");
-  }
+  return NVPTX::PTXCmpMode::lookupCmpModeByValue(Mode)->IntInverseValue;
 }
 
 static int64_t invertScalarFloatCmpMode(int64_t Mode) {
-  switch (Mode) {
-  case NVPTX::PTXCmpMode::EQ:
-    return NVPTX::PTXCmpMode::NEU;
-  case NVPTX::PTXCmpMode::NE:
-    return NVPTX::PTXCmpMode::EQU;
-  case NVPTX::PTXCmpMode::EQU:
-    return NVPTX::PTXCmpMode::NE;
-  case NVPTX::PTXCmpMode::NEU:
-    return NVPTX::PTXCmpMode::EQ;
-  case NVPTX::PTXCmpMode::LT:
-    return NVPTX::PTXCmpMode::GEU;
-  case NVPTX::PTXCmpMode::LE:
-    return NVPTX::PTXCmpMode::GTU;
-  case NVPTX::PTXCmpMode::GT:
-    return NVPTX::PTXCmpMode::LEU;
-  case NVPTX::PTXCmpMode::GE:
-    return NVPTX::PTXCmpMode::LTU;
-  case NVPTX::PTXCmpMode::LTU:
-    return NVPTX::PTXCmpMode::GE;
-  case NVPTX::PTXCmpMode::LEU:
-    return NVPTX::PTXCmpMode::GT;
-  case NVPTX::PTXCmpMode::GTU:
-    return NVPTX::PTXCmpMode::LE;
-  case NVPTX::PTXCmpMode::GEU:
-    return NVPTX::PTXCmpMode::LT;
-  case NVPTX::PTXCmpMode::NUM:
-    return NVPTX::PTXCmpMode::NotANumber;
-  case NVPTX::PTXCmpMode::NotANumber:
-    return NVPTX::PTXCmpMode::NUM;
-  default:
-    llvm_unreachable("Invalid scalar float comparison mode");
-  }
+  return NVPTX::PTXCmpMode::lookupCmpModeByValue(Mode)->FPInverseValue;
 }
 
 static void invertScalarCompareInstr(MachineInstr &MI) {

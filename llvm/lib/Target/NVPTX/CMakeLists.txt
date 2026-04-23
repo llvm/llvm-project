@@ -8,6 +8,7 @@ tablegen(LLVM NVPTXGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM NVPTXGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM NVPTXGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM NVPTXGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM NVPTXGenCmpModes.inc -gen-searchable-tables)
 
 add_public_tablegen_target(NVPTXCommonTableGen)
 
