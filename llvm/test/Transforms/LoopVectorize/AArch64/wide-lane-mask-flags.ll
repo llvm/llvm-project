@@ -48,7 +48,7 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-WIDEALM-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-WIDEALM-NEXT:    [[TMP11]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 2)
 ; CHECK-WIDEALM-NEXT:    [[TMP12]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0)
-; CHECK-WIDEALM-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 2 x i1> [[TMP12]], i32 0
+; CHECK-WIDEALM-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 2 x i1> [[TMP12]], i64 0
 ; CHECK-WIDEALM-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
 ; CHECK-WIDEALM-NEXT:    br i1 [[TMP14]], label %[[FOR_END_LOOPEXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-WIDEALM:       [[FOR_END_LOOPEXIT]]:
@@ -85,7 +85,7 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-NO-WIDEALM-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX_NEXT]], [[TMP1]]
 ; CHECK-NO-WIDEALM-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-NO-WIDEALM-NEXT:    [[ACTIVE_LANE_MASK_NEXT4]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP9]], i64 [[N]])
-; CHECK-NO-WIDEALM-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; CHECK-NO-WIDEALM-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NO-WIDEALM-NEXT:    [[TMP11:%.*]] = xor i1 [[TMP10]], true
 ; CHECK-NO-WIDEALM-NEXT:    br i1 [[TMP11]], label %[[FOR_END_LOOPEXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-NO-WIDEALM:       [[FOR_END_LOOPEXIT]]:
