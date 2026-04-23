@@ -5,7 +5,7 @@
 ; Loop fusion should not crash when flushing the DomTreeUpdater due to
 ; missed edge removals when deleting basic blocks.
 
-define void @_QMdiags_on_lat_aux_gridPinit_lat_aux_grid(i1 %cond, i1 %cond1, i1 %0, i1 %1) {
+define void @_QMdiags_on_lat_aux_gridPinit_lat_aux_grid(i1 %cond, i1 %cond1, i1 %0) {
 .critedge:
   br i1 %cond, label %common.ret, label %thread-pre-split
 
@@ -27,7 +27,7 @@ thread-pre-split:                                 ; preds = %.critedge
   br i1 %exitcond1389.not, label %._crit_edge1334, label %.lr.ph1333
 
 ._crit_edge1334:                                  ; preds = %.lr.ph1333, %2
-  br i1 %1, label %.lr.ph1336, label %.loopexit
+  br i1 %0, label %.lr.ph1336, label %.loopexit
 
 .lr.ph1336:                                       ; preds = %.lr.ph1336, %._crit_edge1334
   %indvars.iv1390 = phi i64 [ %indvars.iv.next1391, %.lr.ph1336 ], [ 0, %._crit_edge1334 ]
