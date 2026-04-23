@@ -137,6 +137,21 @@ def int_aarch64_swpl64 : Intrinsic<[llvm_i64_ty],
                                    [llvm_ptr_ty, llvm_i64_ty],
                                    [IntrNoFree, IntrWillReturn]>;
 
+// SWPAL intrinsics — emit SWPAL* (no acquire/release) directly, regardless of the
+// LSE target feature.
+def int_aarch64_swpal8  : Intrinsic<[llvm_i32_ty],
+                                    [llvm_ptr_ty, llvm_i32_ty],
+                                    [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_swpal16 : Intrinsic<[llvm_i32_ty],
+                                    [llvm_ptr_ty, llvm_i32_ty],
+                                    [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_swpal32 : Intrinsic<[llvm_i32_ty],
+                                    [llvm_ptr_ty, llvm_i32_ty],
+                                    [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_swpal64 : Intrinsic<[llvm_i64_ty],
+                                    [llvm_ptr_ty, llvm_i64_ty],
+                                    [IntrNoFree, IntrWillReturn]>;
+
 def int_aarch64_sdiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
                                 LLVMMatchType<0>], [IntrNoMem]>;
 def int_aarch64_udiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
