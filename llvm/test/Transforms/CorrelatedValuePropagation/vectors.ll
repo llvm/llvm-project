@@ -236,12 +236,11 @@ define <16 x i16> @select_and_icmp_vector(<16 x i16> noundef %x) {
 define <2 x i16> @select_and_icmp_nonsplat(<2 x i16> noundef %x) {
 ; CHECK-LABEL: define range(i16 0, 31) <2 x i16> @select_and_icmp_nonsplat(
 ; CHECK-SAME: <2 x i16> noundef [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> [[X]], <i16 7, i16 15>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i16> [[X]], <i16 4, i16 8>
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i16> [[AND]], <2 x i16> <i16 24, i16 30>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i16> [[X]], <2 x i16> <i16 24, i16 30>
 ; CHECK-NEXT:    ret <2 x i16> [[SEL]]
 ;
-  %and = and <2 x i16> %x, <i16 7, i16 15>
+  %and = and <2 x i16> %x, splat (i16 7)
   %cmp = icmp ult <2 x i16> %x, <i16 4, i16 8>
   %sel = select <2 x i1> %cmp, <2 x i16> %and, <2 x i16> <i16 24, i16 30>
   ret <2 x i16> %sel
