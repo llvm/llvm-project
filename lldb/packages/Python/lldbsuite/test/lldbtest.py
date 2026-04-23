@@ -818,6 +818,7 @@ class Base(unittest.TestCase):
             "settings set use-color false",
             # Disable the statusline by default.
             "settings set show-statusline false",
+            "settings set target.check-vo-ownership true",
         ]
 
         # Set any user-overridden settings.
@@ -2551,7 +2552,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 )
 
     def filecheck(
-        self, command, check_file, filecheck_options="", expect_cmd_failure=False
+        self, command, check_file, filecheck_options=None, expect_cmd_failure=False
     ):
         # Run the command.
         self.runCmd(
@@ -2578,7 +2579,10 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             self.assertTrue(False, "No valid FileCheck executable specified")
         filecheck_args = [filecheck_bin, check_file_abs]
         if filecheck_options:
-            filecheck_args.append(filecheck_options)
+            if isinstance(filecheck_options, list):
+                filecheck_args.extend(filecheck_options)
+            else:
+                filecheck_args.append(str(filecheck_options))
         subproc = Popen(
             filecheck_args,
             stdin=PIPE,
@@ -2610,14 +2614,16 @@ FileCheck output:
 
         self.assertEqual(cmd_status, 0)
 
-    def filecheck_log(
-        self, log_file, check_file, filecheck_options="", expect_cmd_failure=False
-    ):
+    def filecheck_log(self, log_file, check_file, filecheck_options=None):
+        input_option = f"-input-file={log_file}"
+        if filecheck_options:
+            filecheck_options = [filecheck_options, input_option]
+        else:
+            filecheck_options = input_option
         return self.filecheck(
-            f"platform shell -h -- cat {log_file}",
+            "script None",
             check_file,
             filecheck_options,
-            expect_cmd_failure,
         )
 
     def expect(
