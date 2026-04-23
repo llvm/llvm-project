@@ -665,8 +665,7 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
                                  /*ObjectHasErrors=*/false,
                                  /*EnteringContext=*/false);
 
-  ExprResult Result =
-      tryParseCXXIdExpression(SS, isAddressOfOperand);
+  ExprResult Result = tryParseCXXIdExpression(SS, isAddressOfOperand);
   assert(!Result.isUnset() && "Typo correction suggested a keyword replacement "
                               "for a previous keyword suggestion");
   return Result;
