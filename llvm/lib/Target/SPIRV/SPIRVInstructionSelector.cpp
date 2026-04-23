@@ -1952,8 +1952,10 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   Register ScopeReg = buildI32Constant(Scope, I);
 
   AtomicOrdering AO = MemOp.getSuccessOrdering();
+  uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(
+      addressSpaceToStorageClass(MemOp.getAddrSpace(), STI)));
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
-  Register MemSemReg = buildI32Constant(MemSem, I);
+  Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
   auto AtomicLoad = MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
@@ -2050,8 +2052,10 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   Register ScopeReg = buildI32Constant(Scope, I);
 
   AtomicOrdering AO = MemOp.getSuccessOrdering();
+  uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(
+      addressSpaceToStorageClass(MemOp.getAddrSpace(), STI)));
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
-  Register MemSemReg = buildI32Constant(MemSem, I);
+  Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
   auto AtomicStore = MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
