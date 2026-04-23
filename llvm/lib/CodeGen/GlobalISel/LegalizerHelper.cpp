@@ -1699,8 +1699,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     } else if (MemSize < NarrowSize) {
       MIRBuilder.buildLoadInstr(LoadMI.getOpcode(), TmpReg, PtrReg, MMO);
     } else if (MemSize > NarrowSize) {
-      // FIXME: Need to split the load.
-      return UnableToLegalize;
+      TmpReg = MRI.createGenericVirtualRegister(MMO.getMemoryType());
+
+      MachineInstr *ExactLoad = MIRBuilder.buildLoad(TmpReg, PtrReg, MMO);
+      GLoadStore &LdSt = cast<GLoadStore>(*ExactLoad);
+      if (reduceLoadStoreWidth(LdSt, 0, NarrowTy) != Legalized)
+        return UnableToLegalize;
     }
 
     if (isa<GZExtLoad>(LoadMI))
