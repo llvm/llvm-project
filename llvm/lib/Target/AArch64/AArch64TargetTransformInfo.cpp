@@ -6047,26 +6047,27 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   bool IsSub = Opcode == Instruction::Sub;
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
+  InstructionCost INegCost = IsSub ? 2 * InputLT.first * TTI::TCC_Basic : 0;
 
   if (AccumLT.second.getScalarType() == MVT::i32 &&
-      InputLT.second.getScalarType() == MVT::i8 && !IsSub) {
+      InputLT.second.getScalarType() == MVT::i8) {
     // i8 -> i32 is natively supported with udot/sdot for both NEON and SVE.
     if (!IsUSDot && IsSupported(true, ST->hasDotProd()))
-      return Cost;
+      return Cost + INegCost;
     // i8 -> i32 usdot requires +i8mm
     if (IsUSDot && IsSupported(ST->hasMatMulInt8(), ST->hasMatMulInt8()))
-      return Cost;
+      return Cost + INegCost;
   }
 
-  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot && !IsSub) {
+  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot) {
     // i16 -> i64 is natively supported for udot/sdot
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
-      return Cost;
+      return Cost + INegCost;
     // i16 -> i32 is natively supported with SVE2p1
     if (AccumLT.second.getScalarType() == MVT::i32 &&
         InputLT.second.getScalarType() == MVT::i16 &&
-        (ST->hasSVE2p1() || ST->hasSME2()))
+        (ST->hasSVE2p1() || ST->hasSME2()) && !IsSub)
       return Cost;
     // i8 -> i64 is supported with an extra level of extends
     if (AccumLT.second.getScalarType() == MVT::i64 &&
@@ -6076,12 +6077,12 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       // that now, a regular reduction would be cheaper because the costs of
       // the extends in the IR are still counted. This can be fixed
       // after https://github.com/llvm/llvm-project/pull/147302 has landed.
-      return Cost;
+      return Cost + INegCost;
     // i8 -> i16 is natively supported with SVE2p3
     if (AccumLT.second.getScalarType() == MVT::i16 &&
         InputLT.second.getScalarType() == MVT::i8 &&
-        (ST->hasSVE2p3() || ST->hasSME2p3()))
-      return Cost;
+        (ST->hasSVE2p3() || ST->hasSME2p3()) && !IsSub)
+      return Cost + INegCost;
   }
 
   // f16 -> f32 is natively supported for fdot using either
@@ -6092,11 +6093,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       InputLT.second.getScalarType() == MVT::f16)
     return Cost;
 
-  // For a ratio of 2, we can use *mlal top/bottom instructions.
-  if (Ratio == 2 && !IsSub) {
+  // For a ratio of 2, we can use *mlal and *mlsl top/bottom instructions.
+  if (Ratio == 2) {
     MVT InVT = InputLT.second.getScalarType();
 
-    // SVE2 [us]mlalb/t and NEON [us]mlal(2)
+    // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2)
     if (IsSupported(ST->hasSVE2(), true) &&
         llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
       return Cost * 2;
@@ -6110,14 +6111,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost * 2;
   }
 
-  InstructionCost ExpandCost = BaseT::getPartialReductionCost(
-      Opcode, InputTypeA, InputTypeB, AccumType, VF, OpAExtend, OpBExtend,
-      BinOp, CostKind, FMF);
-
-  // Slightly lower the cost of a sub reduction so that it can be considered
-  // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
-  // because we don't yet model these operations directly.
-  return ExpandCost.isValid() && IsSub ? ((8 * ExpandCost) / 10) : ExpandCost;
+  return BaseT::getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
+                                        AccumType, VF, OpAExtend, OpBExtend,
+                                        BinOp, CostKind, FMF);
 }
 
 InstructionCost
