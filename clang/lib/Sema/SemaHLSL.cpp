@@ -5729,6 +5729,18 @@ class InitListTransformer {
         Ty->isHLSLAttributedResourceType())
       return castInitializer(E);
 
+    // If this is an aggregate type and a prvalue, create an xvalue temporary
+    // so the member accesses will be xvalues. Wrap it in OpaqueExpr to make
+    // sure codegen will not generate duplicate copies.
+    if (E->isPRValue() && Ty->isAggregateType()) {
+      ExprResult TmpExpr = S.TemporaryMaterializationConversion(E);
+      if (TmpExpr.isInvalid())
+        return false;
+      E = TmpExpr.get();
+      E = new (Ctx) OpaqueValueExpr(E->getBeginLoc(), E->getType(),
+                                    E->getValueKind(), E->getObjectKind(), E);
+    }
+
     if (auto *VecTy = Ty->getAs<VectorType>()) {
       uint64_t Size = VecTy->getNumElements();
 
@@ -5794,11 +5806,6 @@ class InitListTransformer {
     if (auto *RD = Ty->getAsCXXRecordDecl()) {
       llvm::SmallVector<CXXRecordDecl *> RecordDecls;
       RecordDecls.push_back(RD);
-      // If this is a prvalue create an xvalue so the member accesses
-      // will be xvalues.
-      if (E->isPRValue())
-        E = new (Ctx)
-            MaterializeTemporaryExpr(Ty, E, /*BoundToLvalueReference=*/false);
       while (RecordDecls.back()->getNumBases()) {
         CXXRecordDecl *D = RecordDecls.back();
         assert(D->getNumBases() == 1 &&

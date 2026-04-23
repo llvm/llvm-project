@@ -155,12 +155,6 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
-- Clang now diagnoses the use of the same identifier with both internal and
-  external linkage within a translation unit, as made ill-formed by
-  `N3410 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf>`_.
-  This is also diagnosed in older C language modes as the behavior was
-  undefined prior to C2y. (#GH54215)
-
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
@@ -225,6 +219,15 @@ Non-comprehensive list of changes in this release
 
 - Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
 
+- Added a new ``ExplicitInstantiationDecl`` AST node to represent explicit
+  template instantiations (e.g., ``template void foo<int>();`` or
+  ``extern template class S<int>;``). Previously, source location information
+  for explicit instantiation statements was discarded after parsing. The new
+  node preserves the full source range including the ``extern`` and ``template``
+  keywords, qualifiers, template arguments as written, and the declared type,
+  enabling tools such as language servers and refactoring engines to accurately
+  map source locations back to explicit instantiation sites.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
@@ -260,6 +263,10 @@ New Compiler Flags
   shorthand for ``-fwin-cfg-mechanism=dispatch``.
 - New ``-cl`` option ``/d2guardcfgdispatch-`` added to match MSVC. This acts as a
   shorthand for ``-fwin-cfg-mechanism=check``.
+
+- New option ``-f[no-]strict-bool`` added to control whether Clang can assume
+  that ``bool`` values loaded from memory cannot have a bit pattern other
+  than 0 or 1.
 
 Deprecated Compiler Flags
 -------------------------
@@ -514,7 +521,6 @@ Bug Fixes to C++ Support
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
-- Fixed a bug matching constrained out-of-line definitions of class members.
 - Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.

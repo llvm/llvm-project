@@ -1528,7 +1528,7 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 // frame #0: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
 // frame #1: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
 // frame #2: .cfi.jumptable.81 at sanitizer/ubsan_interface.h:0:0
-static SmallVector<llvm::DILocation *>
+static SmallVector<DILocation *>
 createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
   Module &M = *F->getParent();
   DICompileUnit *CU = nullptr;
@@ -1537,7 +1537,7 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
     CU = *CUs.begin();
 
   DIBuilder DIB(M, /*AllowUnresolved=*/true, CU);
-  llvm::DIFile *File = DIB.createFile("ubsan_interface.h", "sanitizer");
+  DIFile *File = DIB.createFile("ubsan_interface.h", "sanitizer");
   if (!CU) {
     // Even with debug info enabled it can be missing if not info yet.
     CU = DIB.createCompileUnit(
@@ -1547,30 +1547,30 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
 
   DISubroutineType *DIFnTy = DIB.createSubroutineType(nullptr);
 
-  llvm::DISubprogram *JTSP = DIB.createFunction(
-      File, F->getName(), StringRef(), File, 0, DIFnTy, 0,
-      DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+  DISubprogram *JTSP = DIB.createFunction(File, F->getName(), StringRef(), File,
+                                          0, DIFnTy, 0, DINode::FlagArtificial,
+                                          DISubprogram::SPFlagDefinition);
   F->setSubprogram(JTSP);
 
-  llvm::DILocation *JTLoc = llvm::DILocation::get(M.getContext(), 0, 0, JTSP);
+  DILocation *JTLoc = DILocation::get(M.getContext(), 0, 0, JTSP);
 
-  llvm::DISubprogram *UbsanSP = DIB.createFunction(
+  DISubprogram *UbsanSP = DIB.createFunction(
       File, "__ubsan_check_cfi_icall_jt", StringRef(), File, 0, DIFnTy, 0,
       DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
-  SmallVector<llvm::DILocation *> Locations;
+  SmallVector<DILocation *> Locations;
   Locations.reserve(Functions.size());
 
   for (auto *Func : Functions) {
     StringRef FuncName = Func->getGlobal()->getName();
     FuncName.consume_back(".cfi");
-    llvm::DISubprogram *JumpSP = DIB.createFunction(
+    DISubprogram *JumpSP = DIB.createFunction(
         File, (FuncName + ".cfi_jt").str(), StringRef(), File, 0, DIFnTy, 0,
         DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
-    llvm::DILocation *EntryLoc = JTLoc;
-    EntryLoc = llvm::DILocation::get(M.getContext(), 0, 0, JumpSP, EntryLoc);
-    EntryLoc = llvm::DILocation::get(M.getContext(), 0, 0, UbsanSP, EntryLoc);
+    DILocation *EntryLoc = JTLoc;
+    EntryLoc = DILocation::get(M.getContext(), 0, 0, JumpSP, EntryLoc);
+    EntryLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP, EntryLoc);
     Locations.push_back(EntryLoc);
   }
 
@@ -1585,7 +1585,7 @@ void LowerTypeTestsModule::createJumpTable(
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
 
-  SmallVector<llvm::DILocation *> Locations;
+  SmallVector<DILocation *> Locations;
   if (M.getDwarfVersion() != 0)
     Locations = createJumpTableDebugInfo(F, Functions);
 
@@ -1597,11 +1597,11 @@ void LowerTypeTestsModule::createJumpTable(
   // to the jump table will not handle exceptions properly
   bool areAllEntriesNounwind = true;
   assert(Locations.empty() || Functions.size() == Locations.size());
-  for (auto [GTM, Loc] : llvm::zip_longest(Functions, Locations)) {
+  for (auto [GTM, Loc] : zip_longest(Functions, Locations)) {
     if (Loc.has_value())
       IRB.SetCurrentDebugLocation(*Loc);
-    if (!llvm::cast<llvm::Function>((*GTM)->getGlobal())
-             ->hasFnAttribute(llvm::Attribute::NoUnwind)) {
+    if (!cast<Function>((*GTM)->getGlobal())
+             ->hasFnAttribute(Attribute::NoUnwind)) {
       areAllEntriesNounwind = false;
     }
     IRB.CreateCall(JumpTableAsm, (*GTM)->getGlobal());
