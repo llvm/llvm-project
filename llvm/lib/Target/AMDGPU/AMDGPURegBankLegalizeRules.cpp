@@ -1236,7 +1236,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniP3}, {{SgprP3}, {SgprP3, Sgpr32}}})
       .Any({{DivP3}, {{VgprP3}, {VgprP3, Vgpr32}}});
 
-  addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
+  addRulesForGOpcs({G_ABS}, Standard)
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}})
+      .Div(S16, {{Vgpr16}, {Vgpr16}, AbsToNegMax})
+      .Uni(S32, {{Sgpr32}, {Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32}, AbsToNegMax})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16}, AbsToS32})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16}, AbsToNegMax});
 
   addRulesForGOpcs({G_BITREVERSE}, Standard)
       .Uni(S32, {{Sgpr32}, {Sgpr32}})
