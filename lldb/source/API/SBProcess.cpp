@@ -104,7 +104,12 @@ const char *SBProcess::GetShortPluginName() {
   return "<Unknown>";
 }
 
-lldb::ProcessSP SBProcess::GetSP() const { return m_opaque_wp.lock(); }
+lldb::ProcessSP SBProcess::GetSP() const {
+  ProcessSP process_sp = m_opaque_wp.lock();
+  if (process_sp && !process_sp->IsValid())
+    process_sp.reset();
+  return process_sp;
+}
 
 void SBProcess::SetSP(const ProcessSP &process_sp) { m_opaque_wp = process_sp; }
 
@@ -121,8 +126,7 @@ bool SBProcess::IsValid() const {
 SBProcess::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
 
-  ProcessSP process_sp(m_opaque_wp.lock());
-  return ((bool)process_sp && process_sp->IsValid());
+  return (bool)GetSP();
 }
 
 bool SBProcess::RemoteLaunch(char const **argv, char const **envp,
@@ -246,6 +250,7 @@ SBTarget SBProcess::GetTarget() const {
     return sb_target;
 
   TargetSP target_sp = process_sp->GetTargetSP();
+  assert(target_sp && "valid SBProcess should have a target");
   if (!target_sp)
     return sb_target;
 
@@ -1278,9 +1283,9 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
   }
 
   TargetSP target_sp = process_sp->GetTargetSP();
+  assert(target_sp && "valid SBProcess should have a target");
   if (!target_sp) {
-    error = Status::FromErrorString(
-        "SBProcess is invalid because its target has been deleted");
+    error = Status::FromErrorString("SBProcess is invalid");
     return error;
   }
 
