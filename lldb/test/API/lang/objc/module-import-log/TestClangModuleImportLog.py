@@ -15,5 +15,5 @@ class TestCase(TestBase):
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.m"))
 
         self.runCmd("expression -lobjc -- @import Foundation")
-        self.filecheck(f"platform shell cat {log}", __file__)
+        self.filecheck_log(log, __file__)
         # CHECK: Importing Clang module Foundation from {{.+}}/Foundation-{{[^/]+}}.pcm
