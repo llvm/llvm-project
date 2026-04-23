@@ -657,8 +657,16 @@ CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                             llvm::PoisonValue::get(B.getInt32Ty())};
 
   llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_load_input;
-  llvm::Value *Value = B.CreateIntrinsic(/*ReturnType=*/Type, IntrinsicID, Args,
-                                         nullptr, VariableName);
+
+  SmallVector<OperandBundleDef, 1> OB;
+  if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
+    llvm::Value *bundleArgs[] = {Token};
+    OB.emplace_back("convergencectrl", bundleArgs);
+  }
+
+  llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+      B.GetInsertBlock()->getModule(), IntrinsicID, {Type});
+  llvm::Value *Value = B.CreateCall(IntrFn, Args, OB, VariableName);
   return Value;
 }
 
@@ -676,7 +684,16 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
                             Source};
 
   llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_store_output;
-  B.CreateIntrinsic(/*ReturnType=*/CGM.VoidTy, IntrinsicID, Args, nullptr);
+
+  SmallVector<OperandBundleDef, 1> OB;
+  if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
+    llvm::Value *bundleArgs[] = {Token};
+    OB.emplace_back("convergencectrl", bundleArgs);
+  }
+
+  llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+      B.GetInsertBlock()->getModule(), IntrinsicID, {Source->getType()});
+  B.CreateCall(IntrFn, Args, OB);
 }
 
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
