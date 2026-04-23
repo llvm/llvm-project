@@ -24,8 +24,8 @@ define fastcc i64 @baz() {
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    mov x7, xzr
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str xzr, [x8]
 ; CHECK-NEXT:    mov x0, x7
 ; CHECK-NEXT:    mov x1, x7
