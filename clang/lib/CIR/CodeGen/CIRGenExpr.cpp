@@ -1248,13 +1248,28 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
          "index was neither LHS nor RHS");
 
   auto emitIdxAfterBase = [&](bool promote) -> mlir::Value {
-    const mlir::Value idx = emitScalarExpr(e->getIdx());
+    mlir::Value idx = emitScalarExpr(e->getIdx());
 
-    // Extend or truncate the index type to 32 or 64-bits.
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(idx.getType());
-    if (promote && ptrTy && ptrTy.isPtrTo<cir::IntType>())
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitArraySubscriptExpr: index type cast");
+    assert(!cir::MissingFeatures::sanitizers());
+
+    // Extend or truncate the index type to pointer-sized integer.
+    if (promote) {
+      // Choose the type we extend or truncate to based on the signedness of the
+      // index type.
+      mlir::Type desiredIdxTy =
+          e->getIdx()->getType()->isSignedIntegerOrEnumerationType()
+              ? ptrDiffTy
+              : uIntPtrTy;
+
+      if (idx.getType() != desiredIdxTy) {
+        cir::CastKind kind = mlir::isa<cir::BoolType>(idx.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral;
+        idx = builder.createOrFold<cir::CastOp>(idx.getLoc(), desiredIdxTy,
+                                                kind, idx);
+      }
+    }
+
     return idx;
   };
 
