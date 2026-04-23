@@ -136,8 +136,12 @@ TargetLowering::ConstraintType
 SPIRVTargetLowering::getConstraintType(StringRef Constraint) const {
   // SPIR-V represents inline assembly via OpAsmINTEL where constraints are
   // passed through as literals defined by client API. Return C_RegisterClass
-  // for any constraint since SPIR-V does not distinguish between register,
-  // immediate, or memory operands at this level.
+  // for non-memory constraints since SPIR-V does not distinguish between
+  // register, immediate, or memory operands at this level. We do have to return
+  // C_Memory for memory constraints as otherwise IRTranslator gets confused
+  // trying to allocate registers for them.
+  if (Constraint == "m")
+    return C_Memory;
   return C_RegisterClass;
 }
 

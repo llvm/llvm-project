@@ -2342,6 +2342,14 @@ static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
     const Fortran::evaluate::SpecificIntrinsic *intrinsic,
     const fir::IntrinsicHandlerEntry &intrinsicEntry,
     CallContext &callContext) {
+  // Delegate intrinsics with custom optional handling to
+  // genCustomIntrinsicRefCore before attempting any HLFIR op lowering. This
+  // ensures consistent dispatch symmetry with genIntrinsicRefCore and
+  // genIntrinsicRef, both of which check for custom optional handling before
+  // reaching the HLFIR intrinsic path.
+  if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+                       callContext.procRef, *intrinsic, callContext.converter))
+    return genCustomIntrinsicRefCore(loweredActuals, intrinsic, callContext);
   // Try lowering transformational intrinsic ops to HLFIR ops if enabled
   // (transformational always have a result type)
   if (useHlfirIntrinsicOps && callContext.resultType) {

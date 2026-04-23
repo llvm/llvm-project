@@ -737,6 +737,14 @@ public:
     return true;
   }
 
+  // ExplicitInstantiationDecl is an auxiliary AST node that records source
+  // info. The syntax tree is already built by
+  // TraverseClassTemplateSpecializationDecl or by the parser for
+  // function/variable templates, so skip this node.
+  bool TraverseExplicitInstantiationDecl(ExplicitInstantiationDecl *) {
+    return true;
+  }
+
   bool WalkUpFromTemplateDecl(TemplateDecl *S) {
     foldTemplateDeclaration(
         Builder.getDeclarationRange(S),

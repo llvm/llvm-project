@@ -104,6 +104,7 @@ add_integration_test(
     cnd_test.cpp
   DEPENDS
     libc.include.threads
+    libc.src.__support.CPP.atomic
     libc.src.threads.cnd_init
     libc.src.threads.cnd_broadcast
     libc.src.threads.cnd_signal

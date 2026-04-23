@@ -251,6 +251,25 @@ func.func @cast_away_contraction_does_not_transpose_leading_unit_dims(%lhs: vect
 }
 
 // -----
+
+// CHECK-DAG: #[[$map_dp0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$map_dp1:.*]] = affine_map<(d0) -> ()>
+
+// CHECK-LABEL: cast_away_contraction_leading_one_dims_to_dot_product
+//  CHECK-NEXT:   %[[R0:.+]] = vector.extract %{{.*}}[0] : vector<64xf32> from vector<1x64xf32>
+//  CHECK-NEXT:   %[[R1:.+]] = vector.extract %{{.*}}[0] : f32 from vector<1xf32>
+//  CHECK-NEXT:   %[[R2:.+]] = vector.contract {indexing_maps = [#[[$map_dp0]], #[[$map_dp0]], #[[$map_dp1]]],
+//  CHECK-SAME:   iterator_types = ["reduction"], kind = #vector.kind<add>}
+//  CHECK-SAME:   %{{.*}}, %[[R0]], %[[R1]] : vector<64xf32>, vector<64xf32> into f32
+//  CHECK-NEXT:   %[[R3:.+]] = vector.broadcast %[[R2]] : f32 to vector<1xf32>
+//  CHECK-NEXT:  return %[[R3]] : vector<1xf32>
+
+func.func @cast_away_contraction_leading_one_dims_to_dot_product(%arg0: vector<64xf32>, %arg1: vector<1x64xf32>, %arg2: vector<1xf32>) -> vector<1xf32> {
+  %0 = vector.contract {indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d1, d0)>, affine_map<(d0, d1) -> (d1)>], iterator_types = ["reduction", "parallel"], kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<64xf32>, vector<1x64xf32> into vector<1xf32>
+  return %0 : vector<1xf32>
+}
+
+// -----
 // CHECK-LABEL: func @cast_away_extract_strided_slice_leading_one_dims
 func.func @cast_away_extract_strided_slice_leading_one_dims(%arg0: vector<1x8x8xf16>) -> vector<1x1x8xf16> {
   // CHECK:     %[[SRC:.+]] = vector.extract %{{.*}}[0] : vector<8x8xf16> from vector<1x8x8xf16>

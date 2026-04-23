@@ -126,8 +126,8 @@ ValueObjectSP GenericBitsetFrontEnd::GetChildAtIndex(uint32_t idx) {
   uint8_t value = !!(chunk->GetValueAsUnsigned(0) & (uint64_t(1) << chunk_idx));
   DataExtractor data(&value, sizeof(value), m_byte_order, m_byte_size);
 
-  m_elements[idx] = CreateValueObjectFromData(llvm::formatv("[{0}]", idx).str(),
-                                              data, ctx, m_bool_type);
+  m_elements[idx] = CreateChildValueObjectFromData(
+      llvm::formatv("[{0}]", idx).str(), data, ctx, m_bool_type);
 
   return m_elements[idx];
 }

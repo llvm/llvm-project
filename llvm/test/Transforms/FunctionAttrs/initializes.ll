@@ -443,7 +443,7 @@ define void @memset_neg(ptr %p) {
 }
 
 define void @memset_volatile(ptr %p) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: write, inaccessiblemem: readwrite)
+; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: write, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @memset_volatile(
 ; CHECK-SAME: ptr writeonly [[P:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 9, i1 true)
@@ -478,9 +478,9 @@ define void @memcpy(ptr %p, ptr %p2) {
 }
 
 define void @memcpy_volatile(ptr %p, ptr %p2) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @memcpy_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -541,9 +541,9 @@ define void @memmove(ptr %p, ptr %p2) {
 }
 
 define void @memmove_volatile(ptr %p, ptr %p2) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @memmove_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;

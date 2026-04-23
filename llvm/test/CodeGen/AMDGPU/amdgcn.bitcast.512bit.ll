@@ -74355,9 +74355,9 @@ define inreg <32 x half> @bitcast_v32bf16_to_v32f16_scalar(<32 x bfloat> inreg %
 ; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; SI-NEXT:    v_and_b32_e32 v50, 0xffff0000, v28
 ; SI-NEXT:    v_lshrrev_b32_e32 v39, 16, v44
+; SI-NEXT:    v_lshr_b64 v[24:25], v[38:39], 16
 ; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; SI-NEXT:    v_lshr_b64 v[24:25], v[38:39], 16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v14
 ; SI-NEXT:    v_mov_b32_e32 v55, v14

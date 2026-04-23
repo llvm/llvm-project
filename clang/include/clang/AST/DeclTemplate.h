@@ -3405,6 +3405,139 @@ getReplacedTemplateParameter(Decl *D, unsigned Index);
 /// If we have an implicit instantiation, adjust 'D' to refer to template.
 const Decl &adjustDeclToTemplate(const Decl &D);
 
+/// Represents an explicit instantiation of a template entity in source code.
+///
+/// \code
+///   template void ns::foo<int>(int);        // function template
+///   extern template struct ns::S<int>;      // class template (extern)
+///   template int ns::bar<int>;              // variable template
+///   template void ns::S<int>::method(int);  // member function
+/// \endcode
+class ExplicitInstantiationDecl final
+    : public Decl,
+      private llvm::TrailingObjects<ExplicitInstantiationDecl,
+                                    NestedNameSpecifierLoc,
+                                    const ASTTemplateArgumentListInfo *> {
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend TrailingObjects;
+
+  /// The underlying specialization (low 3 bits: TSK).
+  llvm::PointerIntPair<NamedDecl *, 3, unsigned> SpecAndTSK;
+
+  /// TypeSourceInfo (low 2 bits: trailing-object flags).
+  /// Always non-null after construction.
+  ///   - Class templates: TemplateSpecializationTypeLoc encoding keyword,
+  ///     qualifier, template-name, and argument locations.
+  ///   - Nested classes: TagTypeLoc encoding keyword, qualifier, and name.
+  ///   - Function / variable templates: the declared type.
+  llvm::PointerIntPair<TypeSourceInfo *, 2, unsigned> TypeAndFlags;
+
+  /// Location of the 'extern' keyword (invalid if not extern template).
+  SourceLocation ExternLoc;
+
+  /// Location of the entity name (e.g., 'foo' in 'template void
+  /// ns::foo<int>(int)').
+  SourceLocation NameLoc;
+
+  enum TrailingFlags : unsigned {
+    HasQualifierFlag = 1,
+    HasArgsAsWrittenFlag = 2,
+  };
+
+  size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
+    return hasTrailingQualifier() ? 1 : 0;
+  }
+
+  /// Raw access to the internal TypeSourceInfo.  For class templates this is
+  /// a TemplateSpecializationTypeLoc; for nested classes a TagTypeLoc.
+  /// Public getTypeAsWritten() returns null for those cases.
+  TypeSourceInfo *getRawTypeSourceInfo() const {
+    return TypeAndFlags.getPointer();
+  }
+
+  /// Returns the trailing ASTTemplateArgumentListInfo pointer, or null.
+  const ASTTemplateArgumentListInfo *getTrailingArgsInfo() const {
+    if (!hasTrailingArgsAsWritten())
+      return nullptr;
+    return *getTrailingObjects<const ASTTemplateArgumentListInfo *>();
+  }
+
+  ExplicitInstantiationDecl(
+      DeclContext *DC, NamedDecl *Specialization, SourceLocation ExternLoc,
+      SourceLocation TemplateLoc, NestedNameSpecifierLoc QualifierLoc,
+      const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+      TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK);
+
+  ExplicitInstantiationDecl(EmptyShell Empty)
+      : Decl(ExplicitInstantiation, Empty) {}
+
+public:
+  static ExplicitInstantiationDecl *
+  Create(ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
+         SourceLocation ExternLoc, SourceLocation TemplateLoc,
+         NestedNameSpecifierLoc QualifierLoc,
+         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+         SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
+         TemplateSpecializationKind TSK);
+
+  static ExplicitInstantiationDecl *
+  CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned TrailingFlags);
+
+  NamedDecl *getSpecialization() const { return SpecAndTSK.getPointer(); }
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+  SourceLocation getEndLoc() const LLVM_READONLY;
+
+  SourceLocation getExternLoc() const { return ExternLoc; }
+  SourceLocation getTemplateLoc() const { return getLocation(); }
+  SourceLocation getNameLoc() const { return NameLoc; }
+
+  /// For class templates / nested classes, the tag keyword location is
+  /// stored inside TypeSourceInfo; otherwise returns an invalid location.
+  SourceLocation getTagKWLoc() const;
+
+  /// Whether the qualifier is stored as a trailing object (function / variable
+  /// templates) rather than inside TypeSourceInfo (class templates / nested
+  /// classes).
+  bool hasTrailingQualifier() const {
+    return TypeAndFlags.getInt() & HasQualifierFlag;
+  }
+  bool hasTrailingArgsAsWritten() const {
+    return TypeAndFlags.getInt() & HasArgsAsWrittenFlag;
+  }
+
+  /// Returns the qualifier regardless of where it is stored.
+  /// For class templates / nested classes, it is extracted from TypeSourceInfo
+  /// (TemplateSpecializationTypeLoc or TagTypeLoc).
+  /// For function / variable templates, it comes from a trailing object.
+  NestedNameSpecifierLoc getQualifierLoc() const;
+
+  /// Number of explicit template arguments, regardless of storage.
+  /// For class templates they come from TemplateSpecializationTypeLoc;
+  /// for function / variable templates from trailing
+  /// ASTTemplateArgumentListInfo.
+  unsigned getNumTemplateArgs() const;
+  TemplateArgumentLoc getTemplateArg(unsigned I) const;
+  SourceLocation getTemplateArgsLAngleLoc() const;
+  SourceLocation getTemplateArgsRAngleLoc() const;
+
+  /// For function / variable templates, returns the declared type (return type
+  /// or variable type).  For class templates and nested classes returns null —
+  /// the qualifier, tag keyword, and template arguments are accessible via
+  /// getQualifierLoc(), getTagKWLoc(), and getTemplateArg().
+  TypeSourceInfo *getTypeAsWritten() const;
+
+  TemplateSpecializationKind getTemplateSpecializationKind() const {
+    return static_cast<TemplateSpecializationKind>(SpecAndTSK.getInt());
+  }
+
+  bool isExternTemplate() const { return ExternLoc.isValid(); }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == ExplicitInstantiation; }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DECLTEMPLATE_H

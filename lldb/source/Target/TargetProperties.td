@@ -169,6 +169,9 @@ let Definition = "target", Path = "target" in {
   def UseHexImmediates: Property<"use-hex-immediates", "Boolean">,
     DefaultTrue,
     Desc<"Show immediates in disassembly as hexadecimal.">;
+  def CheckValueObjectOwnership: Property<"check-vo-ownership", "Boolean">,
+    DefaultFalse,
+    Desc<"Check that ValueObject children are managed by their parents.">;
   def HexImmediateStyle: Property<"hex-immediate-style", "Enum">,
     DefaultEnumValue<"Disassembler::eHexStyleC">,
     EnumValues<"OptionEnumValues(g_hex_immediate_style_values)">,

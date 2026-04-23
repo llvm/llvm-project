@@ -209539,11 +209539,11 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff0000, v15
 ; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v42
-; SI-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
-; SI-NEXT:    s_waitcnt vmcnt(2)
+; SI-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v49, 16, v10
 ; SI-NEXT:    v_lshrrev_b32_e32 v42, 16, v53
 ; SI-NEXT:    v_mov_b32_e32 v24, v6
@@ -209692,6 +209692,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v19, v24
+; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:528 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:532 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshr_b64 v[29:30], v[30:31], 16
 ; SI-NEXT:    v_and_b32_e32 v30, 0xffff0000, v21
 ; SI-NEXT:    v_lshr_b64 v[31:32], v[33:34], 16
@@ -209699,11 +209701,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_mov_b32_e32 v27, v31
 ; SI-NEXT:    buffer_load_dword v30, off, s[0:3], s32 offset:536 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:540 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:528 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:532 ; 4-byte Folded Reload
-; SI-NEXT:    s_waitcnt vmcnt(2)
-; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v21
 ; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v21
 ; SI-NEXT:    v_lshrrev_b32_e32 v25, 16, v60
 ; SI-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:544 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v61, off, s[0:3], s32 offset:548 ; 4-byte Folded Reload

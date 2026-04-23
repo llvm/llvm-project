@@ -2865,8 +2865,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$section
                        );
 
-  let regions = (region MaxSizedRegion<1>:$ctorRegion,
-                        MaxSizedRegion<1>:$dtorRegion);
+  let regions = (region AnyRegion:$ctorRegion,
+                        AnyRegion:$dtorRegion);
 
   let assemblyFormat = [{
     ($sym_visibility^)?

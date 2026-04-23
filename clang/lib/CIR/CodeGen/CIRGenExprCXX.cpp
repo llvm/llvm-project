@@ -1363,6 +1363,24 @@ struct CallObjectDelete final : EHScopeStack::Cleanup {
 };
 } // namespace
 
+/// Emit the code for deleting a single object via a destroying operator
+/// delete. If the element type has a non-virtual destructor, Ptr has already
+/// been converted to the type of the parameter of 'operator delete'. Otherwise
+/// Ptr points to an object of the static type.
+static void emitDestroyingObjectDelete(CIRGenFunction &cgf,
+                                       const CXXDeleteExpr *de, Address ptr,
+                                       QualType elementType) {
+  const CXXDestructorDecl *dtor =
+      elementType->getAsCXXRecordDecl()->getDestructor();
+  if (dtor && dtor->isVirtual()) {
+    cgf.cgm.getCXXABI().emitVirtualObjectDelete(cgf, de, ptr, elementType,
+                                                dtor);
+    return;
+  }
+
+  cgf.emitDeleteCall(de->getOperatorDelete(), ptr.getPointer(), elementType);
+}
+
 /// Emit the code for deleting a single object.
 static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
                              Address ptr, QualType elementType) {
@@ -1441,8 +1459,7 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // A destroying operator delete overrides the entire operation of the
   // delete expression.
   if (e->getOperatorDelete()->isDestroyingOperatorDelete()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXDeleteExpr: destroying operator delete");
+    emitDestroyingObjectDelete(*this, e, ptr, deleteTy);
     return;
   }
 
@@ -1689,7 +1706,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   CallArgList deleteArgs;
 
   UsualDeleteParams params = deleteFD->getUsualDeleteParams();
-  auto paramTypeIt = deleteFTy->param_type_begin();
+  auto paramTypeIter = deleteFTy->param_type_begin();
 
   // Pass std::type_identity tag if present
   if (isTypeAwareAllocation(params.TypeAwareDelete))
@@ -1697,19 +1714,25 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
                  "emitDeleteCall: type aware delete");
 
   // Pass the pointer itself.
-  QualType argTy = *paramTypeIt++;
+  QualType argTy = *paramTypeIter;
+  std::advance(paramTypeIter, 1);
   mlir::Value deletePtr =
       builder.createBitcast(ptr.getLoc(), ptr, convertType(argTy));
   deleteArgs.add(RValue::get(deletePtr), argTy);
 
   // Pass the std::destroying_delete tag if present.
-  if (params.DestroyingDelete)
-    cgm.errorNYI(deleteFD->getSourceRange(),
-                 "emitDeleteCall: destroying delete");
+  if (params.DestroyingDelete) {
+    QualType tagType = *paramTypeIter;
+    std::advance(paramTypeIter, 1);
+    Address tagAddr =
+        createMemTemp(tagType, ptr.getLoc(), "destroying.delete.tag");
+    deleteArgs.add(RValue::getAggregate(tagAddr), tagType);
+  }
 
   // Pass the size if the delete function has a size_t parameter.
   if (params.Size) {
-    QualType sizeType = *paramTypeIt++;
+    QualType sizeType = *paramTypeIter;
+    std::advance(paramTypeIter, 1);
     CharUnits deleteTypeSize = getContext().getTypeSizeInChars(deleteTy);
     assert(mlir::isa<cir::IntType>(convertType(sizeType)) &&
            "expected cir::IntType");
@@ -1724,7 +1747,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
     cgm.errorNYI(deleteFD->getSourceRange(),
                  "emitDeleteCall: aligned allocation");
 
-  assert(paramTypeIt == deleteFTy->param_type_end() &&
+  assert(paramTypeIter == deleteFTy->param_type_end() &&
          "unknown parameter to usual delete function");
 
   // Emit the call to delete.

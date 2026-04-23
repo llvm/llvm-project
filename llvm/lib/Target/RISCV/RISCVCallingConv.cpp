@@ -271,14 +271,17 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRF32s(const RISCVABI::ABI ABI) {
 
 // Pass a 2*XLEN argument that has been split into two XLEN values through
 // registers or the stack as necessary.
-static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
+static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
                                 ISD::ArgFlagsTy ArgFlags1, unsigned ValNo2,
                                 MVT ValVT2, MVT LocVT2,
-                                ISD::ArgFlagsTy ArgFlags2, bool EABI) {
+                                ISD::ArgFlagsTy ArgFlags2,
+                                const RISCVSubtarget &Subtarget) {
+  unsigned XLen = Subtarget.getXLen();
   unsigned XLenInBytes = XLen / 8;
-  const RISCVSubtarget &STI =
-      State.getMachineFunction().getSubtarget<RISCVSubtarget>();
-  ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(STI.getTargetABI());
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
+  bool EABI = ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E;
+
+  ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(ABI);
 
   if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
     // At least one half can be passed via register.
@@ -561,9 +564,8 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     ISD::ArgFlagsTy AF = PendingArgFlags[0];
     PendingLocs.clear();
     PendingArgFlags.clear();
-    return CC_RISCVAssign2XLen(
-        XLen, State, VA, AF, ValNo, ValVT, LocVT, ArgFlags,
-        ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E);
+    return CC_RISCVAssign2XLen(State, VA, AF, ValNo, ValVT, LocVT, ArgFlags,
+                               Subtarget);
   }
 
   // Split arguments might be passed indirectly, so keep track of the pending

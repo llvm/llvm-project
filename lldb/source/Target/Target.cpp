@@ -5296,6 +5296,17 @@ void TargetProperties::SetDebugUtilityExpression(bool debug) {
   SetPropertyAtIndex(idx, debug);
 }
 
+bool TargetProperties::GetCheckValueObjectOwnership() const {
+  const uint32_t idx = ePropertyCheckValueObjectOwnership;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetCheckValueObjectOwnership(bool check) {
+  const uint32_t idx = ePropertyCheckValueObjectOwnership;
+  SetPropertyAtIndex(idx, check);
+}
+
 std::optional<LoadScriptFromSymFile>
 TargetProperties::GetAutoLoadScriptsForModule(
     llvm::StringRef module_name) const {

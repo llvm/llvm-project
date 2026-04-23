@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -40,6 +41,9 @@ void NVGPUDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
       >();
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface, LdMatrixOp>();
+  declarePromisedInterfaces<memref::IndexedMemCopyOpInterface,
+                            DeviceAsyncCopyOp>();
 }
 
 bool NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {

@@ -66,6 +66,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT nxv2s64 = LLT::scalable_vector(2, s64);
 
   const LLT bf16 = LLT::bfloat16();
+  const LLT v4bf16 = LLT::fixed_vector(4, bf16);
 
   const LLT f16 = LLT::float16();
   const LLT v4f16 = LLT::fixed_vector(4, f16);
@@ -876,8 +877,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(0);
 
   getActionDefinitionsBuilder(G_FPEXT)
-      .legalFor(
-          {{f32, f16}, {f64, f16}, {f64, f32}, {v4f32, v4f16}, {v2f64, v2f32}})
+      .legalFor({{f32, f16},
+                 {f64, f16},
+                 {f32, bf16},
+                 {f64, f32},
+                 {v4f32, v4f16},
+                 {v4f32, v4bf16},
+                 {v2f64, v2f32}})
       .libcallFor({{f128, f64}, {f128, f32}, {f128, f16}})
       .moreElementsToNextPow2(0)
       .widenScalarIf(

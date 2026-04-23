@@ -287,3 +287,108 @@ subroutine test_noncontiguous_section(flag)
   ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
   ! CHECK: }
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_polymorphic(
+subroutine test_polymorphic(flag, x, y)
+  type :: base_type
+    integer :: val
+  end type
+  logical :: flag
+  class(base_type), intent(in) :: x, y
+  type(base_type) :: result
+  ! Polymorphic conditional: uses fir.class (not fir.box) to carry dynamic type.
+  result = (flag ? x : y)
+  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>> {bindc_name = ".cond.polymorphic"
+  ! CHECK: %[[UNALLOC:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>
+  ! CHECK: %[[BOX:.*]] = fir.embox %[[UNALLOC]] : (!fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>>
+  ! CHECK: fir.store %[[BOX]] to %[[BOX_ALLOC]]
+  ! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX_ALLOC]] {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_polymorphic_array(
+subroutine test_polymorphic_array(flag, x, y)
+  type :: base_type
+    integer :: val
+  end type
+  logical :: flag
+  class(base_type), intent(in) :: x(:), y(:)
+  type(base_type), allocatable :: result(:)
+  ! Polymorphic array: uses fir.class (not fir.box) for the allocatable temp.
+  result = (flag ? x : y)
+  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_arrayTbase_type{val:i32}>>>> {bindc_name = ".cond.array"
+  ! CHECK: %[[PA_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[PA_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[PA_DECL]]#0 realloc temporary_lhs
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_polymorphic_char_component(
+subroutine test_polymorphic_char_component(flag, x, y)
+  type :: named_type
+    character(20) :: name
+    integer :: id
+  end type
+  logical :: flag
+  class(named_type), intent(in) :: x, y
+  type(named_type), allocatable :: result
+  result = (flag ? x : y)
+  ! The alloca type proves fir.class is used for the polymorphic temp.
+  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_polymorphic_char_componentTnamed_type{name:!fir.char<1,20>,id:i32}>>> {bindc_name = ".cond.polymorphic"
+  ! CHECK: %[[PC_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[PC_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[PC_DECL]]#0 realloc temporary_lhs
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_mixed_type_class(
+subroutine test_mixed_type_class(flag, x, y)
+  type :: base_type
+    integer :: val
+  end type
+  logical :: flag
+  type(base_type), intent(in) :: x
+  class(base_type), intent(in) :: y
+  type(base_type) :: result
+  ! Mixed TYPE(t)/CLASS(t): GetType() returns polymorphic when either branch
+  ! is polymorphic, so the result must use fir.class (not fir.box).
+  result = (flag ? x : y)
+  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_mixed_type_classTbase_type{val:i32}>>> {bindc_name = ".cond.polymorphic"
+  ! CHECK: %[[MX_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[MX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[MX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_polymorphic_extends(
+subroutine test_polymorphic_extends(flag, x, y)
+  type :: base_type
+    integer :: val
+  end type
+  type, extends(base_type) :: extended_type
+    real :: extra
+  end type
+  logical :: flag
+  class(base_type), intent(in) :: x, y
+  type(base_type) :: result
+  ! Polymorphic with type hierarchy: x or y may hold extended_type at runtime.
+  ! The lowering must use fir.class to preserve dynamic type info.
+  result = (flag ? x : y)
+  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_polymorphic_extendsTbase_type{val:i32}>>> {bindc_name = ".cond.polymorphic"
+  ! CHECK: %[[PE_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[PE_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[PE_DECL]]#0 realloc temporary_lhs
+  ! CHECK: }
+end subroutine

@@ -3125,12 +3125,10 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
       ConsumeToken();
 
       CXXScopeSpec SS;
-      Token Replacement;
       ExprResult AllocatorExpr =
           getLangOpts().CPlusPlus
               ? ParseCXXIdExpression()
-              : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
-                                        Replacement);
+              : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
 
       if (AllocatorExpr.isInvalid()) {
         SkipUntil(
@@ -3159,12 +3157,10 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
 
     // Parse 'Allocator(expr)' for <5.2
     CXXScopeSpec SS;
-    Token Replacement;
     ExprResult Allocator =
         getLangOpts().CPlusPlus
             ? ParseCXXIdExpression()
-            : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
-                                      Replacement);
+            : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
     if (Allocator.isInvalid()) {
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);

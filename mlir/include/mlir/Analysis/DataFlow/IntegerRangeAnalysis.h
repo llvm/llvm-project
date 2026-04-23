@@ -26,15 +26,9 @@ class RewriterBase;
 namespace dataflow {
 
 /// This lattice element represents the integer value range of an SSA value.
-/// When this lattice is updated, it automatically updates the constant value
-/// of the SSA value (if the range can be narrowed to one).
 class IntegerValueRangeLattice : public Lattice<IntegerValueRange> {
 public:
   using Lattice::Lattice;
-
-  /// If the range can be narrowed to an integer constant, update the constant
-  /// value of the SSA value.
-  void onUpdate(DataFlowSolver *solver) const override;
 };
 
 /// Integer range analysis determines the integer value range of SSA values

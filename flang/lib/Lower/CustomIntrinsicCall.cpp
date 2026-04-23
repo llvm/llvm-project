@@ -118,7 +118,7 @@ static void prepareMinOrMaxArguments(
   assert(retTy && "MIN and MAX must have a return type");
   mlir::Type resultType = *retTy;
   mlir::Location loc = converter.getCurrentLocation();
-  if (fir::isa_char(resultType))
+  if (fir::isa_char(fir::unwrapSequenceType(resultType)))
     TODO(loc, "CHARACTER MIN and MAX with dynamically optional arguments");
   for (auto arg : llvm::enumerate(procRef.arguments())) {
     const auto *expr =

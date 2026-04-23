@@ -381,6 +381,7 @@ void Writer::layoutMemory() {
     ctx.sym.dsoHandle->setVA(dataStart);
 
   out.dylinkSec->memAlign = 0;
+  uint64_t fixedTLSBase = memoryPtr;
   for (OutputSegment *seg : segments) {
     out.dylinkSec->memAlign = std::max(out.dylinkSec->memAlign, seg->alignment);
     memoryPtr = alignTo(memoryPtr, 1ULL << seg->alignment);
@@ -397,10 +398,7 @@ void Writer::layoutMemory() {
         auto *tlsAlign = cast<DefinedGlobal>(ctx.sym.tlsAlign);
         setGlobalPtr(tlsAlign, int64_t{1} << seg->alignment);
       }
-      if (!ctx.arg.sharedMemory && ctx.sym.tlsBase) {
-        auto *tlsBase = cast<DefinedGlobal>(ctx.sym.tlsBase);
-        setGlobalPtr(tlsBase, memoryPtr);
-      }
+      fixedTLSBase = memoryPtr;
     }
 
     if (ctx.sym.rodataStart && seg->name.starts_with(".rodata") &&
@@ -412,6 +410,15 @@ void Writer::layoutMemory() {
     // Might get set more than once if segment merging is not enabled.
     if (ctx.sym.rodataEnd && seg->name.starts_with(".rodata"))
       ctx.sym.rodataEnd->setVA(memoryPtr);
+  }
+
+  // In single-threaded builds we set __tls_base statically.
+  // Even in the absense of any actual TLS data, this symbol can still be
+  // referenced (for example by __builtin_thread_pointer, which should not
+  // return NULL).
+  if (!ctx.arg.sharedMemory && ctx.sym.tlsBase) {
+    auto *tlsBase = cast<DefinedGlobal>(ctx.sym.tlsBase);
+    setGlobalPtr(tlsBase, fixedTLSBase);
   }
 
   // Make space for the memory initialization flag

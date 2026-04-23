@@ -156,6 +156,8 @@ Transforms/OpenMP/spmdization_indirect.ll
 Transforms/OpenMP/spmdization_no_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_remarks.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
+Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math.ll
+Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math-binary.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-load.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-store.ll

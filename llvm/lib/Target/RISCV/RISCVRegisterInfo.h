@@ -77,6 +77,12 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
+  const TargetRegisterClass *getConstrainedRegClassForOperand(
+      const MachineOperand &MO, const MachineRegisterInfo &MRI) const override;
+
+  const TargetRegisterClass *
+  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB, bool Is64Bit) const;
+
   const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;

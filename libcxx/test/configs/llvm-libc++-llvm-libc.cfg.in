@@ -1,0 +1,27 @@
+# This testing configuration handles running the test suite against LLVM's libc++
+# using a static library.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}',
+    '-pthread' + (' -isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdlibinc -I %{include-dir} -I %{target-include-dir} -I @CMAKE_BINARY_DIR@/libc/include -I %{libcxx-dir}/test/support -idirafter @LIBC_KERNEL_HEADERS@'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nodefaultlibs -nostartfiles -L %{lib-dir} -lc++ -lc++abi @CMAKE_BINARY_DIR@/libc/startup/linux/crt1.o @CMAKE_BINARY_DIR@/libc/lib/libc.a @CMAKE_BINARY_DIR@/libc/lib/libm.a -static -fno-use-cxa-atexit @CMAKE_BINARY_DIR@/compiler-rt/lib/linux/libclang_rt.builtins-x86_64.a'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %{temp} -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

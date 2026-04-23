@@ -4379,7 +4379,7 @@ define i512 @isolate_msb_i512(i512 %a0, i512 %idx) nounwind {
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512F-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vmovq %xmm0, %rcx
 ; AVX512F-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
@@ -4424,7 +4424,7 @@ define i512 @isolate_msb_i512(i512 %a0, i512 %idx) nounwind {
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VL-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vmovq %xmm0, %rcx
 ; AVX512VL-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
@@ -4470,7 +4470,7 @@ define i512 @isolate_msb_i512(i512 %a0, i512 %idx) nounwind {
 ; AVX512VBMI-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512VBMI-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VBMI-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VBMI-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VBMI-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VBMI-NEXT:    vmovq %xmm0, %rcx
 ; AVX512VBMI-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
@@ -4865,7 +4865,7 @@ define i512 @isolate_msb_i512_vector(<8 x i64> %v0, i512 %idx) nounwind {
 ; AVX512F-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512F-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vmovq %xmm0, %rdx
 ; AVX512F-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
@@ -4893,7 +4893,7 @@ define i512 @isolate_msb_i512_vector(<8 x i64> %v0, i512 %idx) nounwind {
 ; AVX512VL-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VL-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vmovq %xmm0, %rdx
 ; AVX512VL-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
@@ -4922,7 +4922,7 @@ define i512 @isolate_msb_i512_vector(<8 x i64> %v0, i512 %idx) nounwind {
 ; AVX512VBMI-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512VBMI-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VBMI-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VBMI-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VBMI-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VBMI-NEXT:    vmovq %xmm0, %rdx
 ; AVX512VBMI-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
@@ -5313,7 +5313,7 @@ define i512 @isolate_msb_i512_load(ptr %p0, i512 %idx) nounwind {
 ; AVX512F-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512F-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vmovq %xmm0, %rdx
 ; AVX512F-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
@@ -5342,7 +5342,7 @@ define i512 @isolate_msb_i512_load(ptr %p0, i512 %idx) nounwind {
 ; AVX512VL-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VL-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vmovq %xmm0, %rdx
 ; AVX512VL-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
@@ -5372,7 +5372,7 @@ define i512 @isolate_msb_i512_load(ptr %p0, i512 %idx) nounwind {
 ; AVX512VBMI-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512VBMI-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512VBMI-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512VBMI-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512VBMI-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
 ; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VBMI-NEXT:    vmovq %xmm0, %rdx
 ; AVX512VBMI-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000

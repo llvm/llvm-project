@@ -494,6 +494,7 @@ private:
                                      BasicBlock::iterator ScanIt,
                                      BasicBlock *BB);
   void setNonLocalPointerDepVisited(BasicBlock *BB, Value *V);
+  bool isNonLocalPointerDepVisited(BasicBlock *BB) const;
   Value *lookupNonLocalPointerDepVisited(BasicBlock *BB) const;
   bool getNonLocalPointerDepFromBB(Instruction *QueryInst,
                                    const PHITransAddr &Pointer,

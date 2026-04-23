@@ -48,6 +48,7 @@ class RegBankLegalizeHelper {
   const bool IsWave32;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
+  const RegisterBank *AgprRB;
   const RegisterBank *VccRB;
 
   static constexpr LLT S1 = LLT::scalar(1);

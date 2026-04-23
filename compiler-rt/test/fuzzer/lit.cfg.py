@@ -70,7 +70,7 @@ config.substitutions.append(("%python", '"%s"' % (sys.executable)))
 
 def generate_compiler_cmd(is_cpp=True, fuzzer_enabled=True, msan_enabled=False):
     compiler_cmd = config.clang
-    extra_cmd = config.target_flags
+    extra_cmd = ""
 
     if is_cpp:
         std_cmd = "--driver-mode=g++"

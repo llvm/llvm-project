@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Missing some math functions that compiler-rt buildins need.
+// XFAIL: LLVM-LIBC-FIXME
+
 // <complex>
 
 // template<class T>

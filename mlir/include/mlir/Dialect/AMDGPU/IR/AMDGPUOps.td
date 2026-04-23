@@ -1091,6 +1091,63 @@ def AMDGPU_WMMAOp :
   let hasVerifier = 1;
 }
 
+def DotInTypes : AnyTypeOf<[VectorOfLengthAndType<[2], [F16, BF16, I16]>,
+                            VectorOfLengthAndType<[4], [I8, F8E4M3FN, F8E5M2]>,
+                            VectorOfLengthAndType<[8], [I<4>]>]>;
+
+def DotOutTypes : AnyTypeOf<[F32, F16, BF16, I32]>;
+
+def AMDGPU_DotOp :
+    AMDGPU_Op<"dot", [AllTypesMatch<["destC", "destD"]>, Pure]>,
+    Arguments<(ins DotInTypes:$sourceA,
+                   DotInTypes:$sourceB,
+                   DotOutTypes:$destC,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$clamp)>,
+    Results<(outs DotOutTypes:$destD)> {
+  let summary = "MLIR wrapper for AMDGPU v_dot* intrinsics";
+  let description = [{
+    The `amdgpu.dot` op is an MLIR wrapper over the `v_dot*` family of intrinsics,
+    which compute `D = sum_i A[i] * B[i] + C`. 
+
+    Variants (source, dest, signedness, chipset -> intrinsic).
+
+    ```text
+    | A elem   | B elem   | destC | signedness | chipset                   | ROCDL op                     |
+    |----------|----------|-------|------------|---------------------------|------------------------------|
+    | f16      | f16      | f32   | n/a        | gfx906+                   | fdot2                        |
+    | f16      | f16      | f16   | n/a        | gfx11+                    | fdot2.f16.f16                |
+    | bf16     | bf16     | f32   | n/a        | gfx11+, gfx950+           | fdot2.f32.bf16               |
+    | bf16     | bf16     | bf16  | n/a        | gfx11+                    | fdot2.bf16.bf16              |
+    | i16      | i16      | i32   | s / u      | gfx906+, no gfx11+/gfx12+ | sdot2 / udot2                |
+    | i8       | i8       | i32   | s / u      | gfx906+                   | sdot4 / udot4                |
+    | i8       | i8       | i32   | mixed      | gfx11+                    | sudot4                       |
+    | i4       | i4       | i32   | s / u      | gfx906+                   | sdot8 / udot8                |
+    | i4       | i4       | i32   | mixed      | gfx11+                    | sudot8                       |
+    | fp8/bf8  | fp8/bf8  | f32   | n/a        | gfx11.7, gfx12+           | dot4.f32.{fp8,bf8}.{fp8,bf8} |
+    ```
+
+    Example:
+    ```mlir
+    %r0 = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, i32
+    %r1 = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp}
+        : vector<8xi4>, vector<8xi4>, i32
+    %r2 = amdgpu.dot %a * %b + %c {unsignedB}
+        : vector<4xi8>, vector<4xi8>, i32
+    %r3 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f32
+    %r4 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f16
+    %r5 = amdgpu.dot %a * %b + %c
+        : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+    ```
+  }];
+  let assemblyFormat = [{
+    $sourceA `*` $sourceB `+` $destC attr-dict
+      `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_SparseMFMAOp :
     AMDGPU_Op<"sparse_mfma", [AllTypesMatch<["destC", "destD"]>,
                               Pure]>,

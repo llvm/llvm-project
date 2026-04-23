@@ -79,6 +79,32 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
   return FunctionType::get(RetTy, PTys, FTy->isVarArg());
 }
 
+static StringRef extractAsmConstraintsFromMetadata(NamedMDNode *NMD,
+                                                   StringRef Constraints,
+                                                   StringRef Name) {
+  // TODO: unify the extractors.
+  if (!NMD)
+    return Constraints;
+
+  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
+    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
+      return MDS->getString() == Name;
+    return false;
+  });
+
+  if (It == NMD->op_end())
+    return Constraints;
+
+  // By convention, the constraints string is stored in the final MD operand.
+  MDNode *MD = dyn_cast<MDNode>((*It)->getOperand((*It)->getNumOperands() - 1));
+  assert(MD && "MDNode operand is expected");
+
+  if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
+    Constraints = MDS->getString();
+
+  return Constraints;
+}
+
 FunctionType *getOriginalFunctionType(const Function &F) {
   return extractFunctionTypeFromMetadata(
       F.getParent()->getNamedMetadata("spv.cloned_funcs"), F.getFunctionType(),
@@ -89,6 +115,13 @@ FunctionType *getOriginalFunctionType(const CallBase &CB) {
   return extractFunctionTypeFromMetadata(
       CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
       CB.getFunctionType(), CB.getName());
+}
+
+StringRef getOriginalAsmConstraints(const CallBase &CB) {
+  return extractAsmConstraintsFromMetadata(
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
+      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
+      CB.getName());
 }
 } // Namespace SPIRV
 
@@ -1202,6 +1235,10 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
   if (GV.hasLinkOnceODRLinkage() &&
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
     return SPIRV::LinkageType::LinkOnceODR;
+
+  if (GV.hasWeakLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_AMD_weak_linkage))
+    return SPIRV::LinkageType::Weak;
 
   return SPIRV::LinkageType::Export;
 }

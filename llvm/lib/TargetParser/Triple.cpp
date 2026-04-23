@@ -1343,6 +1343,32 @@ Triple::Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr,
     ObjectFormat = getDefaultFormat(*this);
 }
 
+Triple::Triple(ArchType A, SubArchType SA, VendorType V, OSType OS)
+    : Data((getArchName(A, SA) + Twine('-') + getVendorTypeName(V) +
+            Twine('-') + getOSTypeName(OS))
+               .str()),
+      Arch(A), SubArch(SA), Vendor(V), OS(OS),
+      ObjectFormat(getDefaultFormat(*this)) {}
+
+Triple::Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
+               EnvironmentType E)
+    : Data((getArchName(A, SA) + Twine('-') + getVendorTypeName(V) +
+            Twine('-') + getOSTypeName(OS) + Twine('-') +
+            getEnvironmentTypeName(E))
+               .str()),
+      Arch(A), SubArch(SA), Vendor(V), OS(OS), Environment(E),
+      ObjectFormat(getDefaultFormat(*this)) {}
+
+Triple::Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
+               EnvironmentType E, ObjectFormatType OF)
+    : Data((getArchName(A, SA) + Twine('-') + getVendorTypeName(V) +
+            Twine('-') + getOSTypeName(OS) + Twine('-') +
+            getEnvironmentTypeName(E) + Twine('-') +
+            getObjectFormatTypeName(OF))
+               .str()),
+      Arch(A), SubArch(SA), Vendor(V), OS(OS), Environment(E),
+      ObjectFormat(OF) {}
+
 static VersionTuple parseVersionFromName(StringRef Name);
 
 static StringRef getDXILArchNameFromShaderModel(StringRef ShaderModelStr) {

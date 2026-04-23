@@ -1950,8 +1950,15 @@ private:
       mlir::Type resultType, llvm::StringRef debugName) {
     const mlir::Location loc{getLoc()};
     fir::FirOpBuilder &builder{getBuilder()};
-    const mlir::Type heapType{fir::HeapType::get(resultType)};
-    const mlir::Type boxHeapType{fir::BoxType::get(heapType)};
+    // Polymorphic types need fir.class (not fir.box) to carry dynamic type
+    // info. Both scalar and array polymorphic types reach here.
+    const bool isPolymorphic{fir::isPolymorphicType(resultType)};
+    const mlir::Type allocType{
+        hlfir::getFortranElementOrSequenceType(resultType)};
+    const mlir::Type heapType{fir::HeapType::get(allocType)};
+    const mlir::Type boxHeapType{isPolymorphic
+                                     ? mlir::Type{fir::ClassType::get(heapType)}
+                                     : mlir::Type{fir::BoxType::get(heapType)}};
     const mlir::Value tempStorage{
         builder.createTemporary(loc, boxHeapType, debugName)};
     const mlir::Value unallocBox{fir::factory::createUnallocatedBox(
@@ -2012,8 +2019,6 @@ private:
     const int rank{condExpr.Rank()};
     mlir::Type resultType{Fortran::lower::translateSomeExprToFIRType(
         converter, toEvExpr(condExpr))};
-    if (fir::isPolymorphicType(resultType))
-      TODO(getLoc(), "polymorphic conditional expression");
     if (fir::isRecordWithTypeParameters(
             hlfir::getFortranElementType(resultType)))
       TODO(getLoc(), "conditional expression with length-parameterized "
@@ -2021,10 +2026,8 @@ private:
     // Arrays: handle early to avoid unnecessary type checks.
     // Per F2023 10.1.4(7), the shape is determined by the chosen branch.
     if (rank != 0) {
-      const mlir::Type condResultType{
-          hlfir::getFortranElementOrSequenceType(resultType)};
       return hlfir::EntityWithAttributes{
-          genAllocatableConditional(condExpr, condResultType, ".cond.array")};
+          genAllocatableConditional(condExpr, resultType, ".cond.array")};
     }
     // CHARACTER scalars require special handling for type parameters.
     if constexpr (T::category == Fortran::common::TypeCategory::Character) {
@@ -2033,6 +2036,9 @@ private:
     }
     // Scalar types (INTEGER, REAL, COMPLEX, LOGICAL, UNSIGNED, Derived).
     const mlir::Type elementType{hlfir::getFortranElementType(resultType)};
+    if (fir::isPolymorphicType(resultType))
+      return hlfir::EntityWithAttributes{
+          genAllocatableConditional(condExpr, resultType, ".cond.polymorphic")};
     if (fir::isa_trivial(elementType))
       return hlfir::EntityWithAttributes{
           genTrivialScalarConditional(condExpr, elementType)};

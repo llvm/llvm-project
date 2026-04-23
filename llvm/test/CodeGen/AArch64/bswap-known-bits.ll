@@ -8,7 +8,7 @@ declare i64 @llvm.bswap.i64(i64)
 define i1 @test1(i16 %arg) {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   %a = or i16 %arg, 511
   %b = call i16 @llvm.bswap.i16(i16 %a)
@@ -20,7 +20,7 @@ define i1 @test1(i16 %arg) {
 define i1 @test2(i16 %arg) {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   %a = or i16 %arg, 1
   %b = call i16 @llvm.bswap.i16(i16 %a)
@@ -32,7 +32,7 @@ define i1 @test2(i16 %arg) {
 define i1 @test3(i16 %arg) {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   %a = or i16 %arg, 256
   %b = call i16 @llvm.bswap.i16(i16 %a)
@@ -44,7 +44,7 @@ define i1 @test3(i16 %arg) {
 define i1 @test4(i32 %arg) {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   %a = or i32 %arg, 2147483647  ; i32_MAX
   %b = call i32 @llvm.bswap.i32(i32 %a)
@@ -111,4 +111,150 @@ define void @demand_one_loaded_byte(ptr %xp, ptr %yp) {
   %r = or i32 %x_zzz4, %y_321z
   store i32 %r, ptr %yp, align 4
   ret void
+}
+
+; Source-side known-bits fold: when the bswap operand has at most one byte
+; of possibly-nonzero bits at a known byte-aligned position, the bswap is
+; equivalent to a shift moving that byte to the mirror byte.
+
+define i16 @bswap_src_and_lo_i16(i16 %x) {
+; CHECK-LABEL: bswap_src_and_lo_i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    rev16 w0, w8
+; CHECK-NEXT:    ret
+  %m = and i16 %x, 255
+  %b = call i16 @llvm.bswap.i16(i16 %m)
+  ret i16 %b
+}
+
+define i16 @bswap_src_and_hi_i16(i16 %x) {
+; CHECK-LABEL: bswap_src_and_hi_i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xffffff00
+; CHECK-NEXT:    rev16 w0, w8
+; CHECK-NEXT:    ret
+  %m = and i16 %x, 65280
+  %b = call i16 @llvm.bswap.i16(i16 %m)
+  ret i16 %b
+}
+
+define i16 @bswap_src_zext_i8_to_i16(i8 %x) {
+; CHECK-LABEL: bswap_src_zext_i8_to_i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    rev16 w0, w8
+; CHECK-NEXT:    ret
+  %z = zext i8 %x to i16
+  %b = call i16 @llvm.bswap.i16(i16 %z)
+  ret i16 %b
+}
+
+define i32 @bswap_src_and_byte0_i32(i32 %x) {
+; CHECK-LABEL: bswap_src_and_byte0_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    lsl w0, w0, #24
+; CHECK-NEXT:    ret
+  %m = and i32 %x, 255
+  %b = call i32 @llvm.bswap.i32(i32 %m)
+  ret i32 %b
+}
+
+define i32 @bswap_src_and_byte1_i32(i32 %x) {
+; CHECK-LABEL: bswap_src_and_byte1_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    lsl w8, w0, #8
+; CHECK-NEXT:    and w0, w8, #0xff0000
+; CHECK-NEXT:    ret
+  %m = and i32 %x, 65280
+  %b = call i32 @llvm.bswap.i32(i32 %m)
+  ret i32 %b
+}
+
+define i32 @bswap_src_and_byte2_i32(i32 %x) {
+; CHECK-LABEL: bswap_src_and_byte2_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xff0000
+; CHECK-NEXT:    lsr w0, w8, #8
+; CHECK-NEXT:    ret
+  %m = and i32 %x, 16711680
+  %b = call i32 @llvm.bswap.i32(i32 %m)
+  ret i32 %b
+}
+
+define i32 @bswap_src_and_byte3_i32(i32 %x) {
+; CHECK-LABEL: bswap_src_and_byte3_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    lsr w0, w0, #24
+; CHECK-NEXT:    ret
+  %m = and i32 %x, 4278190080
+  %b = call i32 @llvm.bswap.i32(i32 %m)
+  ret i32 %b
+}
+
+define i32 @bswap_src_zext_i8_to_i32(i8 %x) {
+; CHECK-LABEL: bswap_src_zext_i8_to_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    lsl w0, w0, #24
+; CHECK-NEXT:    ret
+  %z = zext i8 %x to i32
+  %b = call i32 @llvm.bswap.i32(i32 %z)
+  ret i32 %b
+}
+
+define i64 @bswap_src_zext_i8_to_i64(i8 %x) {
+; CHECK-LABEL: bswap_src_zext_i8_to_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    lsl x0, x0, #56
+; CHECK-NEXT:    ret
+  %z = zext i8 %x to i64
+  %b = call i64 @llvm.bswap.i64(i64 %z)
+  ret i64 %b
+}
+
+define i64 @bswap_src_zext_i16_to_i64(i16 %x) {
+; CHECK-LABEL: bswap_src_zext_i16_to_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    and x8, x0, #0xffff
+; CHECK-NEXT:    rev x0, x8
+; CHECK-NEXT:    ret
+  %z = zext i16 %x to i64
+  %b = call i64 @llvm.bswap.i64(i64 %z)
+  ret i64 %b
+}
+
+; Regression: the producer-side combine must not tag the produced shl
+; with nsw. For bswap(and X, 0xFF) on i16 we shift byte 0 into the top
+; byte, which becomes the sign bit. Bit 7 of the input freely flips the
+; result's sign, so nsw would be unsound and make `icmp slt 0` fold to
+; false. Here the comparison must remain: the result depends on bit 7
+; of the input.
+define i1 @bswap_lo_byte_sign_i16(i16 %x) {
+; CHECK-LABEL: bswap_lo_byte_sign_i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ubfx w0, w0, #7, #1
+; CHECK-NEXT:    ret
+  %m = and i16 %x, 255
+  %b = call i16 @llvm.bswap.i16(i16 %m)
+  %neg = icmp slt i16 %b, 0
+  ret i1 %neg
+}
+
+; Regression test for the known-zero fold: two disjoint byte masks ANDed
+; together are always zero, but the DAG combiner doesn't structurally
+; simplify to a constant before visiting the bswap. computeKnownBits
+; correctly proves the operand is zero, and the combine must fold
+; bswap(known-zero) to 0.
+define i32 @bswap_nested_and_disjoint_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: bswap_nested_and_disjoint_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+  %m1 = and i32 %x, 255
+  %m2 = and i32 %y, 65280
+  %m3 = and i32 %m1, %m2
+  %b = call i32 @llvm.bswap.i32(i32 %m3)
+  ret i32 %b
 }

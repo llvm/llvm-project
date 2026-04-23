@@ -394,8 +394,8 @@ class LLVMType<ValueType vt> {
          "Invalid IIT encoding for vector type v" # vt.nElem # vt.ElementType;
 
   list<int> Sig = !listconcat(
-    !if(vt.isScalable, [IIT_SCALABLE_VEC.Number], []),
     !foreach(iit, IIT_Vecs, iit.Number),
+    !if(vt.isScalable, [IIT_SCALABLE_VEC.Number], []),
     !foreach(iit, IITs,     iit.Number));
 }
 

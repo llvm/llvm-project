@@ -215,7 +215,8 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
     } break;
     case lldb::eStopReasonWatchpoint: {
       body.reason = protocol::eStoppedReasonDataBreakpoint;
-      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+      lldb::break_id_t bp_id =
+          ApplyWatchpointMask(thread.GetStopReasonDataAtIndex(0));
       body.hitBreakpointIds.push_back(bp_id);
       body.text = llvm::formatv("data breakpoint {0}", bp_id).str();
     } break;

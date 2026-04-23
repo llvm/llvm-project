@@ -10,6 +10,9 @@
 /// common to flang and the test tools.
 
 #include "flang/Optimizer/Passes/Pipelines.h"
+#include "flang/Optimizer/OpenACC/Passes.h"
+#include "mlir/Conversion/Passes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
@@ -457,6 +460,33 @@ void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
   addPassConditionally(pm, disableFirToLlvmIr, [&]() {
     return mlir::omp::createPrepareForOMPOffloadPrivatizationPass();
   });
+}
+
+/// Register the passes used in flang's MLIR pass pipeline so that
+/// --mlir-print-ir-before=<pass> and --mlir-print-ir-after=<pass> work.
+/// Must be called BEFORE mlir::registerPassManagerCLOptions() because
+/// that function creates the PassNameCLParser which snapshots the pass
+/// registry during initialization.
+void registerFlangPipelinePasses() {
+  // MLIR core passes used in the pipeline.
+  mlir::registerCSEPass();
+  mlir::registerCanonicalizerPass();
+  mlir::registerInlinerPass();
+
+  // MLIR conversion passes used in the pipeline.
+  mlir::registerSCFToControlFlowPass();
+  mlir::registerConvertMathToFuncs();
+  mlir::registerConvertComplexToStandardPass();
+  mlir::registerConvertMathToLLVMPass();
+  mlir::LLVM::registerLLVMAddComdats();
+  mlir::registerReconcileUnrealizedCastsPass();
+
+  // FIR, HLFIR, and OpenMP passes.
+  fir::registerOptCodeGenPasses();
+  fir::registerOptTransformPasses();
+  hlfir::registerHLFIRPasses();
+  flangomp::registerFlangOpenMPPasses();
+  fir::acc::registerFIROpenACCPasses();
 }
 
 } // namespace fir

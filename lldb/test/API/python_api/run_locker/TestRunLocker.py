@@ -104,7 +104,7 @@ class TestRunLocker(TestBase):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         ret = interp.HandleCommand(
-            "script var = lldb.frame.EvaluateExpression('SomethingToCall()'); var.GetError().GetCString()",
+            "script var = lldb.target.EvaluateExpression('SomethingToCall()'); var.GetError().GetCString()",
             result,
         )
         self.assertIn(

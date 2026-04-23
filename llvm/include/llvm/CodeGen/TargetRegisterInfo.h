@@ -477,6 +477,11 @@ public:
     return false;
   }
 
+  /// Returns true if the two subregisters are equal or overlap.
+  /// The registers may be virtual registers.
+  bool checkSubRegInterference(Register RegA, unsigned SubA, Register RegB,
+                               unsigned SubB) const;
+
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
     return llvm::is_contained(regunits(Reg), RegUnit);

@@ -19,6 +19,17 @@
 # CHECK2-NEXT: .data2        00000008 0000000000002008 DATA
 # CHECK2-NEXT: .data3        00000008 0000000000002010 DATA
 
+## An unclosed output section in the include cannot be closed by the outer
+## SECTIONS { ... } '}'.
+# RUN: cp trunc.lds inc.lds
+# RUN: not ld.lld -T a.lds a.o 2>&1 | FileCheck %s --check-prefix=TRUNC
+# TRUNC: error: inc.lds:1: unexpected EOF
+
+## A stray '}' in the include cannot close the parent SECTIONS { ... }.
+# RUN: cp brace.lds inc.lds
+# RUN: not ld.lld -T a.lds a.o 2>&1 | FileCheck %s --check-prefix=BRACE
+# BRACE: error: inc.lds:1: unexpected EOF
+
 #--- a.s
 .global _start
 _start: nop
@@ -43,3 +54,9 @@ SECTIONS {
 
 #--- full.lds
 .data2 : { QUAD(0) } > RAM
+
+#--- trunc.lds
+.text : { *(.text*)
+
+#--- brace.lds
+}

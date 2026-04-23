@@ -12,6 +12,12 @@ import os
 
 
 class TestDAP_locations(lldbdap_testcase.DAPTestCaseBase):
+    def verify_location(self, location_reference: str, filename: str, line: int):
+        response = self.dap_server.request_locations(location_reference)
+        self.assertTrue(response["success"])
+        self.assertTrue(response["body"]["source"]["path"].endswith(filename))
+        self.assertEqual(response["body"]["line"], line)
+
     @skipIfWindows
     def test_locations(self):
         """
@@ -30,50 +36,54 @@ class TestDAP_locations(lldbdap_testcase.DAPTestCaseBase):
         locals = {l["name"]: l for l in self.dap_server.get_local_variables()}
 
         # var1 has a declarationLocation but no valueLocation
-        self.assertIn("declarationLocationReference", locals["var1"].keys())
-        self.assertNotIn("valueLocationReference", locals["var1"].keys())
-        loc_var1 = self.dap_server.request_locations(
-            locals["var1"]["declarationLocationReference"]
+        declaration_location_reference = locals["var1"].get(
+            "declarationLocationReference"
         )
-        self.assertTrue(loc_var1["success"])
-        self.assertTrue(loc_var1["body"]["source"]["path"].endswith("main.cpp"))
-        self.assertEqual(loc_var1["body"]["line"], 6)
+        self.assertIsNotNone(declaration_location_reference)
+        self.verify_location(declaration_location_reference, "main.cpp", 11)
+        value_location_reference = locals["var1"].get("valueLocationReference")
+        self.assertIsNone(value_location_reference)
 
         # func_ptr has both a declaration and a valueLocation
-        self.assertIn("declarationLocationReference", locals["func_ptr"].keys())
-        self.assertIn("valueLocationReference", locals["func_ptr"].keys())
-        decl_loc_func_ptr = self.dap_server.request_locations(
-            locals["func_ptr"]["declarationLocationReference"]
+        declaration_location_reference = locals["func_ptr"].get(
+            "declarationLocationReference"
         )
-        self.assertTrue(decl_loc_func_ptr["success"])
-        self.assertTrue(
-            decl_loc_func_ptr["body"]["source"]["path"].endswith("main.cpp")
-        )
-        self.assertEqual(decl_loc_func_ptr["body"]["line"], 7)
-        val_loc_func_ptr = self.dap_server.request_locations(
-            locals["func_ptr"]["valueLocationReference"]
-        )
-        self.assertTrue(val_loc_func_ptr["success"])
-        self.assertTrue(val_loc_func_ptr["body"]["source"]["path"].endswith("main.cpp"))
-        self.assertEqual(val_loc_func_ptr["body"]["line"], 3)
+        self.assertIsNotNone(declaration_location_reference)
+        self.verify_location(declaration_location_reference, "main.cpp", 12)
+        value_location_reference = locals["func_ptr"].get("valueLocationReference")
+        self.assertIsNotNone(value_location_reference)
+        self.verify_location(value_location_reference, "main.cpp", 3)
 
         # func_ref has both a declaration and a valueLocation
-        self.assertIn("declarationLocationReference", locals["func_ref"].keys())
-        self.assertIn("valueLocationReference", locals["func_ref"].keys())
-        decl_loc_func_ref = self.dap_server.request_locations(
-            locals["func_ref"]["declarationLocationReference"]
+        declaration_location_reference = locals["func_ref"].get(
+            "declarationLocationReference"
         )
-        self.assertTrue(decl_loc_func_ref["success"])
-        self.assertTrue(
-            decl_loc_func_ref["body"]["source"]["path"].endswith("main.cpp")
+        self.assertIsNotNone(declaration_location_reference)
+        self.verify_location(declaration_location_reference, "main.cpp", 13)
+        value_location_reference = locals["func_ref"].get("valueLocationReference")
+        self.assertIsNotNone(value_location_reference)
+        self.verify_location(value_location_reference, "main.cpp", 3)
+
+        # member_ptr has both a declaration and a valueLocation
+        declaration_location_reference = locals["member_ptr"].get(
+            "declarationLocationReference"
         )
-        self.assertEqual(decl_loc_func_ref["body"]["line"], 8)
-        val_loc_func_ref = self.dap_server.request_locations(
-            locals["func_ref"]["valueLocationReference"]
+        self.assertIsNotNone(declaration_location_reference)
+        self.verify_location(declaration_location_reference, "main.cpp", 14)
+        value_location_reference = locals["member_ptr"].get("valueLocationReference")
+        self.assertIsNotNone(value_location_reference)
+        self.verify_location(value_location_reference, "main.cpp", 6)
+
+        # virtual_member_ptr has a declarationLocation but no valueLocation
+        declaration_location_reference = locals["virtual_member_ptr"].get(
+            "declarationLocationReference"
         )
-        self.assertTrue(val_loc_func_ref["success"])
-        self.assertTrue(val_loc_func_ref["body"]["source"]["path"].endswith("main.cpp"))
-        self.assertEqual(val_loc_func_ref["body"]["line"], 3)
+        self.assertIsNotNone(declaration_location_reference)
+        self.verify_location(declaration_location_reference, "main.cpp", 15)
+        value_location_reference = locals["virtual_member_ptr"].get(
+            "valueLocationReference"
+        )
+        self.assertIsNone(value_location_reference)
 
         # `evaluate` responses for function pointers also have locations associated
         eval_res = self.dap_server.request_evaluate("greet")

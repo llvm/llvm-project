@@ -154,6 +154,10 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_THREAD_MODE=${LIBC_CONF_THREAD_MODE}")
   endif()
 
+  if(LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
+    libc_add_definition(config_options "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY")
+  endif()
+
   if(LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT)
     libc_add_definition(config_options "LIBC_TRAP_ON_RAISE_FP_EXCEPT")
   endif()

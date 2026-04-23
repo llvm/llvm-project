@@ -38,8 +38,6 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
     raw_mutex
     HDRS
       raw_mutex.h
-    COMPILE_OPTIONS
-      ${monotonicity_flags}
     DEPENDS
       .futex_utils
       libc.src.__support.threads.sleep
@@ -55,7 +53,6 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
       raw_rwlock.h
     COMPILE_OPTIONS
       ${rwlock_default_spin_count}
-      ${monotonicity_flags}
     DEPENDS
       .raw_mutex
       libc.src.__support.common
@@ -147,12 +144,24 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.callonce)
   )
 endif()
 
-if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
-  add_object_library(
+if(TARGET libc.src.__support.threads.futex_utils)
+  add_header_library(
     CndVar
-    ALIAS
+    HDRS
+      CndVar.h
     DEPENDS
-    .${LIBC_TARGET_OS}.CndVar
+      .futex_utils
+      .mutex
+      .mutex_common
+      .raw_mutex
+      libc.hdr.stdint_proxy
+      libc.src.__support.CPP.expected
+      libc.src.__support.CPP.limits
+      libc.src.__support.CPP.mutex
+      libc.src.__support.CPP.new
+      libc.src.__support.threads.sleep
+      libc.src.__support.time.monotonicity
+      libc.src.__support.time.abs_timeout
   )
 endif()
 

@@ -91,12 +91,19 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
   if (!offset)
     return;
 
+  // Compute floor-division and a non-negative remainder. A negative flat
+  // offset (e.g. from a pointer one element before the start of an array)
+  // must translate to a negative array index with a non-negative remainder
+  // so that the recursive call can descend into the element type without
+  // a negative offset flowing into the record case below.
   auto getIndexAndNewOffset =
       [](int64_t offset, int64_t eltSize) -> std::pair<int64_t, int64_t> {
     int64_t divRet = offset / eltSize;
-    if (divRet < 0)
-      divRet -= 1; // make sure offset is positive
-    int64_t modRet = offset - (divRet * eltSize);
+    int64_t modRet = offset % eltSize;
+    if (modRet < 0) {
+      divRet -= 1;
+      modRet += eltSize;
+    }
     return {divRet, modRet};
   };
 

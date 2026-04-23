@@ -38,6 +38,7 @@ RegBankLegalizeHelper::RegBankLegalizeHelper(
       RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
+      AgprRB(&RBI.getRegBank(AMDGPU::AGPRRegBankID)),
       VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {}
 
 bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
@@ -1673,6 +1674,8 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32SExt:
   case Sgpr32ZExt:
     return SgprRB;
+  case AgprAnyTy:
+    return AgprRB;
   case Vgpr16:
   case Vgpr32:
   case Vgpr64:
@@ -1703,6 +1706,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB256:
   case VgprB512:
   case VgprBRC:
+  case VgprAnyTy:
   case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
@@ -1789,6 +1793,19 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprPtr128: {
       assert(Ty == getBTyFromID(MethodIDs[OpIdx], Ty));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
+      break;
+    }
+    case VgprAnyTy: {
+      assert(RB == VgprRB);
+      break;
+    }
+    case AgprAnyTy: {
+      if (RB == AgprRB)
+        break;
+      Register NewAgprDst = MRI.createVirtualRegister({AgprRB, Ty});
+      Op.setReg(NewAgprDst);
+      if (!MRI.use_nodbg_empty(Reg))
+        B.buildCopy(Reg, NewAgprDst);
       break;
     }
     // uniform in vcc/vgpr: scalars, vectors and B-types
@@ -1980,6 +1997,20 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       if (RB != VgprRB) {
         auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
         Op.setReg(CopyToVgpr.getReg(0));
+      }
+      break;
+    }
+    case VgprAnyTy: {
+      if (RB != VgprRB) {
+        auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
+        Op.setReg(CopyToVgpr.getReg(0));
+      }
+      break;
+    }
+    case AgprAnyTy: {
+      if (RB != AgprRB) {
+        auto CopyToAgpr = B.buildCopy({AgprRB, Ty}, Reg);
+        Op.setReg(CopyToAgpr.getReg(0));
       }
       break;
     }

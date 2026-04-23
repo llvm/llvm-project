@@ -216,7 +216,7 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-    reportFatalUsageError("DXIL Load not implemented yet");
+    reportFatalUsageError("DXIL Store not implemented for texture resources");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
@@ -240,6 +240,50 @@ static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
       Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_typedbuffer,
                               {II->getOperand(0), II->getOperand(1)});
   V = Builder.CreateExtractValue(V, {0});
+
+  Type *ScalarType = ContainedType->getScalarType();
+  uint64_t AccessSize = DL.getTypeSizeInBits(ScalarType) / 8;
+  Value *Offset =
+      traverseGEPOffsets(DL, Builder, LI->getPointerOperand(), AccessSize);
+  auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+  if (!ConstantOffset || !ConstantOffset->isZero())
+    V = Builder.CreateExtractElement(V, Offset);
+
+  // If we loaded a <1 x ...> instead of a scalar (presumably to feed a
+  // shufflevector), then make sure we're maintaining the resulting type.
+  if (auto *VT = dyn_cast<FixedVectorType>(LI->getType()))
+    if (VT->getNumElements() == 1 && !isa<FixedVectorType>(V->getType()))
+      V = Builder.CreateInsertElement(PoisonValue::get(VT), V,
+                                      Builder.getInt32(0));
+
+  LI->replaceAllUsesWith(V);
+}
+
+static void createTextureLoad(IntrinsicInst *II, LoadInst *LI,
+                              dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = LI->getDataLayout();
+  IRBuilder<> Builder(LI);
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+
+  Value *Handle = II->getOperand(0);
+  Value *Coords = II->getOperand(1);
+
+  // For operator[], mip level is 0.
+  Value *MipLevel = Builder.getInt32(0);
+
+  // For operator[], offsets are zero.
+  Type *CoordTy = Coords->getType();
+  Type *OffsetTy;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy))
+    OffsetTy =
+        FixedVectorType::get(Builder.getInt32Ty(), VecTy->getNumElements());
+  else
+    OffsetTy = Builder.getInt32Ty();
+  Value *Offsets = Constant::getNullValue(OffsetTy);
+
+  Value *V =
+      Builder.CreateIntrinsic(ContainedType, Intrinsic::dx_resource_load_level,
+                              {Handle, Coords, MipLevel, Offsets});
 
   Type *ScalarType = ContainedType->getScalarType();
   uint64_t AccessSize = DL.getTypeSizeInBits(ScalarType) / 8;
@@ -482,6 +526,7 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
   case dxil::ResourceKind::Texture2DArray:
   case dxil::ResourceKind::Texture2DMSArray:
   case dxil::ResourceKind::TextureCubeArray:
+    return createTextureLoad(II, LI, RTI);
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
   case dxil::ResourceKind::TBuffer:

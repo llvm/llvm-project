@@ -1069,14 +1069,17 @@ float case17() {
 // CHECK-NEXT: FloatingLiteral {{.*}} 'float' 2.000000e+00
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: VarDecl {{.*}} used TI 'TwoInts' cinit
+// CHECK-NEXT: ExprWithCleanups {{.*}} 'TwoInts'
 // CHECK-NEXT: InitListExpr {{.*}} 'TwoInts'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .Z
+// CHECK-NEXT: OpaqueValueExpr [[OPV0:0x[0-9a-f]+]] {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue Var {{.*}} 'TF' 'TwoFloats'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .W
+// CHECK-NEXT: OpaqueValueExpr [[OPV0]] {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue Var {{.*}} 'TF' 'TwoFloats'
@@ -1101,6 +1104,7 @@ int case18() {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: OpaqueValueExpr [[OPV1:0x[0-9a-f]+]] {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
@@ -1108,6 +1112,7 @@ int case18() {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: OpaqueValueExpr [[OPV1]] {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
@@ -1115,6 +1120,7 @@ int case18() {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: OpaqueValueExpr [[OPV1]] {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
@@ -1122,6 +1128,7 @@ int case18() {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: OpaqueValueExpr [[OPV1]] {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
@@ -1141,15 +1148,18 @@ int case19() {
 // CHECK-NEXT: FloatingLiteral {{.*}} 'float' 4.000000e+00
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: VarDecl {{.*}} used TI 'TwoInts' cinit
+// CHECK-NEXT: ExprWithCleanups {{.*}} 'TwoInts'
 // CHECK-NEXT: InitListExpr {{.*}} 'TwoInts'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .Z
+// CHECK-NEXT: OpaqueValueExpr [[OPV2:0x[0-9a-f]+]] {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[4]' <HLSLArrayRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float[4]' lvalue Var {{.*}} 'Arr' 'float[4]'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .W
+// CHECK-NEXT: OpaqueValueExpr [[OPV2]] {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[4]' <HLSLArrayRValue> part_of_explicit_cast

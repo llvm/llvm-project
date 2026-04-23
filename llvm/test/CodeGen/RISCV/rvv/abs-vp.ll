@@ -11,15 +11,15 @@
 define <vscale x 1 x i8> @vp_abs_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv1i8:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 1 x i8> @llvm.vp.abs.nxv1i8(<vscale x 1 x i8> %va, i1 false, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i8> %v
@@ -28,14 +28,14 @@ define <vscale x 1 x i8> @vp_abs_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i1>
 define <vscale x 1 x i8> @vp_abs_nxv1i8_unmasked(<vscale x 1 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv1i8_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 1 x i8> @llvm.vp.abs.nxv1i8(<vscale x 1 x i8> %va, i1 false, <vscale x 1 x i1> splat (i1 true), i32 %evl)
@@ -45,15 +45,15 @@ define <vscale x 1 x i8> @vp_abs_nxv1i8_unmasked(<vscale x 1 x i8> %va, i32 zero
 define <vscale x 2 x i8> @vp_abs_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv2i8:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.abs.nxv2i8(<vscale x 2 x i8> %va, i1 false, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i8> %v
@@ -62,14 +62,14 @@ define <vscale x 2 x i8> @vp_abs_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i1>
 define <vscale x 2 x i8> @vp_abs_nxv2i8_unmasked(<vscale x 2 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv2i8_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.abs.nxv2i8(<vscale x 2 x i8> %va, i1 false, <vscale x 2 x i1> splat (i1 true), i32 %evl)
@@ -79,15 +79,15 @@ define <vscale x 2 x i8> @vp_abs_nxv2i8_unmasked(<vscale x 2 x i8> %va, i32 zero
 define <vscale x 4 x i8> @vp_abs_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv4i8:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 4 x i8> @llvm.vp.abs.nxv4i8(<vscale x 4 x i8> %va, i1 false, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i8> %v
@@ -96,14 +96,14 @@ define <vscale x 4 x i8> @vp_abs_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1>
 define <vscale x 4 x i8> @vp_abs_nxv4i8_unmasked(<vscale x 4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv4i8_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 4 x i8> @llvm.vp.abs.nxv4i8(<vscale x 4 x i8> %va, i1 false, <vscale x 4 x i1> splat (i1 true), i32 %evl)
@@ -113,15 +113,15 @@ define <vscale x 4 x i8> @vp_abs_nxv4i8_unmasked(<vscale x 4 x i8> %va, i32 zero
 define <vscale x 8 x i8> @vp_abs_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv8i8:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 8 x i8> @llvm.vp.abs.nxv8i8(<vscale x 8 x i8> %va, i1 false, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i8> %v
@@ -130,14 +130,14 @@ define <vscale x 8 x i8> @vp_abs_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i1>
 define <vscale x 8 x i8> @vp_abs_nxv8i8_unmasked(<vscale x 8 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv8i8_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 8 x i8> @llvm.vp.abs.nxv8i8(<vscale x 8 x i8> %va, i1 false, <vscale x 8 x i1> splat (i1 true), i32 %evl)
@@ -147,15 +147,15 @@ define <vscale x 8 x i8> @vp_abs_nxv8i8_unmasked(<vscale x 8 x i8> %va, i32 zero
 define <vscale x 16 x i8> @vp_abs_nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v10, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i8:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 16 x i8> @llvm.vp.abs.nxv16i8(<vscale x 16 x i8> %va, i1 false, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i8> %v
@@ -164,14 +164,14 @@ define <vscale x 16 x i8> @vp_abs_nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x
 define <vscale x 16 x i8> @vp_abs_nxv16i8_unmasked(<vscale x 16 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vrsub.vi v10, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i8_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 16 x i8> @llvm.vp.abs.nxv16i8(<vscale x 16 x i8> %va, i1 false, <vscale x 16 x i1> splat (i1 true), i32 %evl)
@@ -181,15 +181,15 @@ define <vscale x 16 x i8> @vp_abs_nxv16i8_unmasked(<vscale x 16 x i8> %va, i32 z
 define <vscale x 32 x i8> @vp_abs_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v12, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
+; CHECK-NEXT:    vrsub.vi v12, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv32i8:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 32 x i8> @llvm.vp.abs.nxv32i8(<vscale x 32 x i8> %va, i1 false, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i8> %v
@@ -198,14 +198,14 @@ define <vscale x 32 x i8> @vp_abs_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x
 define <vscale x 32 x i8> @vp_abs_nxv32i8_unmasked(<vscale x 32 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv32i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vrsub.vi v12, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv32i8_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 32 x i8> @llvm.vp.abs.nxv32i8(<vscale x 32 x i8> %va, i1 false, <vscale x 32 x i1> splat (i1 true), i32 %evl)
@@ -215,15 +215,15 @@ define <vscale x 32 x i8> @vp_abs_nxv32i8_unmasked(<vscale x 32 x i8> %va, i32 z
 define <vscale x 64 x i8> @vp_abs_nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vrsub.vi v16, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vrsub.vi v16, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv64i8:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 64 x i8> @llvm.vp.abs.nxv64i8(<vscale x 64 x i8> %va, i1 false, <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i8> %v
@@ -232,14 +232,14 @@ define <vscale x 64 x i8> @vp_abs_nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x
 define <vscale x 64 x i8> @vp_abs_nxv64i8_unmasked(<vscale x 64 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv64i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v16, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv64i8_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 64 x i8> @llvm.vp.abs.nxv64i8(<vscale x 64 x i8> %va, i1 false, <vscale x 64 x i1> splat (i1 true), i32 %evl)
@@ -249,15 +249,15 @@ define <vscale x 64 x i8> @vp_abs_nxv64i8_unmasked(<vscale x 64 x i8> %va, i32 z
 define <vscale x 1 x i16> @vp_abs_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv1i16:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 1 x i16> @llvm.vp.abs.nxv1i16(<vscale x 1 x i16> %va, i1 false, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i16> %v
@@ -266,14 +266,14 @@ define <vscale x 1 x i16> @vp_abs_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x 
 define <vscale x 1 x i16> @vp_abs_nxv1i16_unmasked(<vscale x 1 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv1i16_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 1 x i16> @llvm.vp.abs.nxv1i16(<vscale x 1 x i16> %va, i1 false, <vscale x 1 x i1> splat (i1 true), i32 %evl)
@@ -283,15 +283,15 @@ define <vscale x 1 x i16> @vp_abs_nxv1i16_unmasked(<vscale x 1 x i16> %va, i32 z
 define <vscale x 2 x i16> @vp_abs_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv2i16:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.abs.nxv2i16(<vscale x 2 x i16> %va, i1 false, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i16> %v
@@ -300,14 +300,14 @@ define <vscale x 2 x i16> @vp_abs_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x 
 define <vscale x 2 x i16> @vp_abs_nxv2i16_unmasked(<vscale x 2 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv2i16_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.abs.nxv2i16(<vscale x 2 x i16> %va, i1 false, <vscale x 2 x i1> splat (i1 true), i32 %evl)
@@ -317,15 +317,15 @@ define <vscale x 2 x i16> @vp_abs_nxv2i16_unmasked(<vscale x 2 x i16> %va, i32 z
 define <vscale x 4 x i16> @vp_abs_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv4i16:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 4 x i16> @llvm.vp.abs.nxv4i16(<vscale x 4 x i16> %va, i1 false, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i16> %v
@@ -334,14 +334,14 @@ define <vscale x 4 x i16> @vp_abs_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x 
 define <vscale x 4 x i16> @vp_abs_nxv4i16_unmasked(<vscale x 4 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv4i16_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 4 x i16> @llvm.vp.abs.nxv4i16(<vscale x 4 x i16> %va, i1 false, <vscale x 4 x i1> splat (i1 true), i32 %evl)
@@ -351,15 +351,15 @@ define <vscale x 4 x i16> @vp_abs_nxv4i16_unmasked(<vscale x 4 x i16> %va, i32 z
 define <vscale x 8 x i16> @vp_abs_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v10, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv8i16:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 8 x i16> @llvm.vp.abs.nxv8i16(<vscale x 8 x i16> %va, i1 false, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i16> %v
@@ -368,14 +368,14 @@ define <vscale x 8 x i16> @vp_abs_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x 
 define <vscale x 8 x i16> @vp_abs_nxv8i16_unmasked(<vscale x 8 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vrsub.vi v10, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv8i16_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 8 x i16> @llvm.vp.abs.nxv8i16(<vscale x 8 x i16> %va, i1 false, <vscale x 8 x i1> splat (i1 true), i32 %evl)
@@ -385,15 +385,15 @@ define <vscale x 8 x i16> @vp_abs_nxv8i16_unmasked(<vscale x 8 x i16> %va, i32 z
 define <vscale x 16 x i16> @vp_abs_nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v12, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vrsub.vi v12, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i16:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 16 x i16> @llvm.vp.abs.nxv16i16(<vscale x 16 x i16> %va, i1 false, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i16> %v
@@ -402,14 +402,14 @@ define <vscale x 16 x i16> @vp_abs_nxv16i16(<vscale x 16 x i16> %va, <vscale x 1
 define <vscale x 16 x i16> @vp_abs_nxv16i16_unmasked(<vscale x 16 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vrsub.vi v12, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i16_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 16 x i16> @llvm.vp.abs.nxv16i16(<vscale x 16 x i16> %va, i1 false, <vscale x 16 x i1> splat (i1 true), i32 %evl)
@@ -419,15 +419,15 @@ define <vscale x 16 x i16> @vp_abs_nxv16i16_unmasked(<vscale x 16 x i16> %va, i3
 define <vscale x 32 x i16> @vp_abs_nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vrsub.vi v16, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; CHECK-NEXT:    vrsub.vi v16, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv32i16:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 32 x i16> @llvm.vp.abs.nxv32i16(<vscale x 32 x i16> %va, i1 false, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i16> %v
@@ -436,14 +436,14 @@ define <vscale x 32 x i16> @vp_abs_nxv32i16(<vscale x 32 x i16> %va, <vscale x 3
 define <vscale x 32 x i16> @vp_abs_nxv32i16_unmasked(<vscale x 32 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv32i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v16, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv32i16_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 32 x i16> @llvm.vp.abs.nxv32i16(<vscale x 32 x i16> %va, i1 false, <vscale x 32 x i1> splat (i1 true), i32 %evl)
@@ -453,15 +453,15 @@ define <vscale x 32 x i16> @vp_abs_nxv32i16_unmasked(<vscale x 32 x i16> %va, i3
 define <vscale x 1 x i32> @vp_abs_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv1i32:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 1 x i32> @llvm.vp.abs.nxv1i32(<vscale x 1 x i32> %va, i1 false, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i32> %v
@@ -470,14 +470,14 @@ define <vscale x 1 x i32> @vp_abs_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x 
 define <vscale x 1 x i32> @vp_abs_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv1i32_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 1 x i32> @llvm.vp.abs.nxv1i32(<vscale x 1 x i32> %va, i1 false, <vscale x 1 x i1> splat (i1 true), i32 %evl)
@@ -487,15 +487,15 @@ define <vscale x 1 x i32> @vp_abs_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32 z
 define <vscale x 2 x i32> @vp_abs_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv2i32:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.abs.nxv2i32(<vscale x 2 x i32> %va, i1 false, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i32> %v
@@ -504,14 +504,14 @@ define <vscale x 2 x i32> @vp_abs_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x 
 define <vscale x 2 x i32> @vp_abs_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv2i32_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.abs.nxv2i32(<vscale x 2 x i32> %va, i1 false, <vscale x 2 x i1> splat (i1 true), i32 %evl)
@@ -521,15 +521,15 @@ define <vscale x 2 x i32> @vp_abs_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32 z
 define <vscale x 4 x i32> @vp_abs_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v10, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv4i32:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.vp.abs.nxv4i32(<vscale x 4 x i32> %va, i1 false, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i32> %v
@@ -538,14 +538,14 @@ define <vscale x 4 x i32> @vp_abs_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x 
 define <vscale x 4 x i32> @vp_abs_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vrsub.vi v10, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv4i32_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.vp.abs.nxv4i32(<vscale x 4 x i32> %va, i1 false, <vscale x 4 x i1> splat (i1 true), i32 %evl)
@@ -555,15 +555,15 @@ define <vscale x 4 x i32> @vp_abs_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32 z
 define <vscale x 8 x i32> @vp_abs_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v12, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vrsub.vi v12, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv8i32:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vp.abs.nxv8i32(<vscale x 8 x i32> %va, i1 false, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i32> %v
@@ -572,14 +572,14 @@ define <vscale x 8 x i32> @vp_abs_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x 
 define <vscale x 8 x i32> @vp_abs_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vrsub.vi v12, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv8i32_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vp.abs.nxv8i32(<vscale x 8 x i32> %va, i1 false, <vscale x 8 x i1> splat (i1 true), i32 %evl)
@@ -589,15 +589,15 @@ define <vscale x 8 x i32> @vp_abs_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32 z
 define <vscale x 16 x i32> @vp_abs_nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vrsub.vi v16, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vrsub.vi v16, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i32:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vp.abs.nxv16i32(<vscale x 16 x i32> %va, i1 false, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i32> %v
@@ -606,14 +606,14 @@ define <vscale x 16 x i32> @vp_abs_nxv16i32(<vscale x 16 x i32> %va, <vscale x 1
 define <vscale x 16 x i32> @vp_abs_nxv16i32_unmasked(<vscale x 16 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v16, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i32_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vp.abs.nxv16i32(<vscale x 16 x i32> %va, i1 false, <vscale x 16 x i1> splat (i1 true), i32 %evl)
@@ -623,15 +623,15 @@ define <vscale x 16 x i32> @vp_abs_nxv16i32_unmasked(<vscale x 16 x i32> %va, i3
 define <vscale x 1 x i64> @vp_abs_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v9, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv1i64:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 1 x i64> @llvm.vp.abs.nxv1i64(<vscale x 1 x i64> %va, i1 false, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
@@ -640,14 +640,14 @@ define <vscale x 1 x i64> @vp_abs_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x 
 define <vscale x 1 x i64> @vp_abs_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv1i64_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 1 x i64> @llvm.vp.abs.nxv1i64(<vscale x 1 x i64> %va, i1 false, <vscale x 1 x i1> splat (i1 true), i32 %evl)
@@ -657,15 +657,15 @@ define <vscale x 1 x i64> @vp_abs_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32 z
 define <vscale x 2 x i64> @vp_abs_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v10, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv2i64:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.abs.nxv2i64(<vscale x 2 x i64> %va, i1 false, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %v
@@ -674,14 +674,14 @@ define <vscale x 2 x i64> @vp_abs_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x 
 define <vscale x 2 x i64> @vp_abs_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vrsub.vi v10, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv2i64_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.abs.nxv2i64(<vscale x 2 x i64> %va, i1 false, <vscale x 2 x i1> splat (i1 true), i32 %evl)
@@ -691,15 +691,15 @@ define <vscale x 2 x i64> @vp_abs_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32 z
 define <vscale x 4 x i64> @vp_abs_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v12, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vrsub.vi v12, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv4i64:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 4 x i64> @llvm.vp.abs.nxv4i64(<vscale x 4 x i64> %va, i1 false, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i64> %v
@@ -708,14 +708,14 @@ define <vscale x 4 x i64> @vp_abs_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x 
 define <vscale x 4 x i64> @vp_abs_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vrsub.vi v12, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv4i64_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 4 x i64> @llvm.vp.abs.nxv4i64(<vscale x 4 x i64> %va, i1 false, <vscale x 4 x i1> splat (i1 true), i32 %evl)
@@ -725,15 +725,15 @@ define <vscale x 4 x i64> @vp_abs_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 z
 define <vscale x 7 x i64> @vp_abs_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv7i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vrsub.vi v16, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vrsub.vi v16, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv7i64:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 7 x i64> @llvm.vp.abs.nxv7i64(<vscale x 7 x i64> %va, i1 false, <vscale x 7 x i1> %m, i32 %evl)
   ret <vscale x 7 x i64> %v
@@ -742,14 +742,14 @@ define <vscale x 7 x i64> @vp_abs_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x 
 define <vscale x 7 x i64> @vp_abs_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv7i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v16, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv7i64_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 7 x i64> @llvm.vp.abs.nxv7i64(<vscale x 7 x i64> %va, i1 false, <vscale x 7 x i1> splat (i1 true), i32 %evl)
@@ -759,15 +759,15 @@ define <vscale x 7 x i64> @vp_abs_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32 z
 define <vscale x 8 x i64> @vp_abs_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vrsub.vi v16, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vrsub.vi v16, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv8i64:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 8 x i64> @llvm.vp.abs.nxv8i64(<vscale x 8 x i64> %va, i1 false, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i64> %v
@@ -776,14 +776,14 @@ define <vscale x 8 x i64> @vp_abs_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x 
 define <vscale x 8 x i64> @vp_abs_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v16, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv8i64_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 8 x i64> @llvm.vp.abs.nxv8i64(<vscale x 8 x i64> %va, i1 false, <vscale x 8 x i1> splat (i1 true), i32 %evl)
@@ -793,48 +793,18 @@ define <vscale x 8 x i64> @vp_abs_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32 z
 define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv1r.v v7, v0
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 3
-; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sltu a2, a0, a3
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a2, a2, a3
-; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; CHECK-NEXT:    vrsub.vi v24, v16, 0, v0.t
-; CHECK-NEXT:    vmax.vv v16, v16, v24, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB46_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB46_2:
-; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vrsub.vi v24, v8, 0, v0.t
-; CHECK-NEXT:    vmax.vv v8, v8, v24, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vrsub.vi v24, v8, 0
+; CHECK-NEXT:    vmax.vv v8, v8, v24
+; CHECK-NEXT:    vrsub.vi v24, v16, 0
+; CHECK-NEXT:    vmax.vv v16, v16, v24
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i64:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; ZVABD-NEXT:    vmv1r.v v24, v0
-; ZVABD-NEXT:    csrr a1, vlenb
-; ZVABD-NEXT:    srli a2, a1, 3
-; ZVABD-NEXT:    sub a3, a0, a1
-; ZVABD-NEXT:    vslidedown.vx v0, v0, a2
-; ZVABD-NEXT:    sltu a2, a0, a3
-; ZVABD-NEXT:    addi a2, a2, -1
-; ZVABD-NEXT:    and a2, a2, a3
-; ZVABD-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; ZVABD-NEXT:    vabs.v v16, v16, v0.t
-; ZVABD-NEXT:    bltu a0, a1, .LBB46_2
-; ZVABD-NEXT:  # %bb.1:
-; ZVABD-NEXT:    mv a0, a1
-; ZVABD-NEXT:  .LBB46_2:
-; ZVABD-NEXT:    vmv1r.v v0, v24
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; ZVABD-NEXT:    vabs.v v8, v8, v0.t
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; ZVABD-NEXT:    vabs.v v8, v8
+; ZVABD-NEXT:    vabs.v v16, v16
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vp.abs.nxv16i64(<vscale x 16 x i64> %va, i1 false, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i64> %v
@@ -843,38 +813,18 @@ define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 1
 define <vscale x 16 x i64> @vp_abs_nxv16i64_unmasked(<vscale x 16 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; CHECK-NEXT:    vrsub.vi v24, v16, 0
-; CHECK-NEXT:    vmax.vv v16, v16, v24
-; CHECK-NEXT:    bltu a0, a1, .LBB47_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB47_2:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v24, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v24
+; CHECK-NEXT:    vrsub.vi v24, v16, 0
+; CHECK-NEXT:    vmax.vv v16, v16, v24
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i64_unmasked:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    csrr a1, vlenb
-; ZVABD-NEXT:    sub a2, a0, a1
-; ZVABD-NEXT:    sltu a3, a0, a2
-; ZVABD-NEXT:    addi a3, a3, -1
-; ZVABD-NEXT:    and a2, a3, a2
-; ZVABD-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; ZVABD-NEXT:    vabs.v v16, v16
-; ZVABD-NEXT:    bltu a0, a1, .LBB47_2
-; ZVABD-NEXT:  # %bb.1:
-; ZVABD-NEXT:    mv a0, a1
-; ZVABD-NEXT:  .LBB47_2:
-; ZVABD-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; ZVABD-NEXT:    vabs.v v8, v8
+; ZVABD-NEXT:    vabs.v v16, v16
 ; ZVABD-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vp.abs.nxv16i64(<vscale x 16 x i64> %va, i1 false, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i64> %v

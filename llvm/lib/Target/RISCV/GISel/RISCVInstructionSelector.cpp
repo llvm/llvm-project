@@ -54,9 +54,6 @@ public:
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
-  const TargetRegisterClass *
-  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
-
   static constexpr unsigned MaxRecursionDepth = 6;
 
   bool hasAllNBitUsers(const MachineInstr &MI, unsigned Bits,
@@ -1123,7 +1120,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
         }
 
         const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-        DefRC = getRegClassForTypeOnBank(DefTy, RB);
+        DefRC = TRI.getRegClassForTypeOnBank(DefTy, RB, STI.is64Bit());
         if (!DefRC) {
           LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
           return false;
@@ -1541,39 +1538,6 @@ void RISCVInstructionSelector::renderAddiPairImmLarge(MachineInstrBuilder &MIB,
   MIB.addImm(Imm);
 }
 
-const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
-    LLT Ty, const RegisterBank &RB) const {
-  if (RB.getID() == RISCV::GPRBRegBankID) {
-    if (Ty.getSizeInBits() <= 32 || (STI.is64Bit() && Ty.getSizeInBits() == 64))
-      return &RISCV::GPRRegClass;
-  }
-
-  if (RB.getID() == RISCV::FPRBRegBankID) {
-    if (Ty.getSizeInBits() == 16)
-      return &RISCV::FPR16RegClass;
-    if (Ty.getSizeInBits() == 32)
-      return &RISCV::FPR32RegClass;
-    if (Ty.getSizeInBits() == 64)
-      return &RISCV::FPR64RegClass;
-  }
-
-  if (RB.getID() == RISCV::VRBRegBankID) {
-    if (Ty.getSizeInBits().getKnownMinValue() <= 64)
-      return &RISCV::VRRegClass;
-
-    if (Ty.getSizeInBits().getKnownMinValue() == 128)
-      return &RISCV::VRM2RegClass;
-
-    if (Ty.getSizeInBits().getKnownMinValue() == 256)
-      return &RISCV::VRM4RegClass;
-
-    if (Ty.getSizeInBits().getKnownMinValue() == 512)
-      return &RISCV::VRM8RegClass;
-  }
-
-  return nullptr;
-}
-
 bool RISCVInstructionSelector::isRegInGprb(Register Reg) const {
   return RBI.getRegBank(Reg, *MRI, TRI)->getID() == RISCV::GPRBRegBankID;
 }
@@ -1583,13 +1547,15 @@ bool RISCVInstructionSelector::isRegInFprb(Register Reg) const {
 }
 
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI) const {
+  MachineOperand Dst = MI.getOperand(0);
   Register DstReg = MI.getOperand(0).getReg();
 
   if (DstReg.isPhysical())
     return true;
 
-  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-      MRI->getType(DstReg), *RBI.getRegBank(DstReg, *MRI, TRI));
+  const TargetRegisterClass *DstRC =
+      TRI.getConstrainedRegClassForOperand(Dst, *MRI);
+
   assert(DstRC &&
          "Register class not available for LLT, register bank combination");
 
@@ -1610,8 +1576,8 @@ bool RISCVInstructionSelector::selectImplicitDef(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
 
   const Register DstReg = MI.getOperand(0).getReg();
-  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-      MRI->getType(DstReg), *RBI.getRegBank(DstReg, *MRI, TRI));
+  const TargetRegisterClass *DstRC = TRI.getRegClassForTypeOnBank(
+      MRI->getType(DstReg), *RBI.getRegBank(DstReg, *MRI, TRI), STI.is64Bit());
 
   assert(DstRC &&
          "Register class not available for LLT, register bank combination");

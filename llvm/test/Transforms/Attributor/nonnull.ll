@@ -839,11 +839,11 @@ f:
 }
 
 ; The callsite must execute in order for the attribute to transfer to the parent.
-; The volatile load can't trap, so we can guarantee that we'll get to the call.
+; The volatile load can trap, so we can't guarantee that we'll get to the call.
 
 define i8 @parent6(ptr %a, ptr %b) {
 ; CHECK-LABEL: define {{[^@]+}}@parent6
-; CHECK-SAME: (ptr nonnull [[A:%.*]], ptr nofree noundef [[B:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]], ptr nofree noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = load volatile i8, ptr [[B]], align 1
 ; CHECK-NEXT:    call void @use1nonnull(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret i8 [[C]]

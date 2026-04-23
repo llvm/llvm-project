@@ -398,6 +398,7 @@ defm SPV_EXT_image_raw10_raw12 :ExtensionOperand<133, [EnvOpenCL, EnvVulkan]>;
 defm SPV_ALTERA_arbitrary_precision_floating_point: ExtensionOperand<134, [EnvOpenCL]>;
 defm SPV_KHR_fma : ExtensionOperand<135, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_masked_gather_scatter : ExtensionOperand<136, [EnvOpenCL]>;
+defm SPV_AMD_weak_linkage : ExtensionOperand<137, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -1258,6 +1259,7 @@ multiclass LinkageTypeOperand<bits<32> value, list<Capability> reqCapabilities> 
 defm Export : LinkageTypeOperand<0, [Linkage]>;
 defm Import : LinkageTypeOperand<1, [Linkage]>;
 defm LinkOnceODR : LinkageTypeOperand<2, [Linkage]>;
+defm Weak : LinkageTypeOperand<3, [Linkage]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define AccessQualifier enum values and at the same time

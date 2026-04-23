@@ -777,3 +777,102 @@ func.func @global_prefetch_nt_ht_not_speculative(%src: memref<64x64xf16, #gpu.ad
   amdgpu.global_prefetch %src[%i, %j] NT_HT DEV : memref<64x64xf16, #gpu.address_space<global>>
   func.return
 }
+
+// -----
+
+// DotOp: unsignedA is invalid on a float source.
+func.func @dot_float_source_unsigned_a(%a: vector<2xf16>, %b: vector<2xf16>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op unsignedA/unsignedB are only valid for integer source types}}
+  %r = amdgpu.dot %a * %b + %c {unsignedA} : vector<2xf16>, vector<2xf16>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: unsignedB is invalid on a float source.
+func.func @dot_float_source_unsigned_b(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op unsignedA/unsignedB are only valid for integer source types}}
+  %r = amdgpu.dot %a * %b + %c {unsignedB} : vector<2xbf16>, vector<2xbf16>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: integer source requires i32 accumulator.
+func.func @dot_integer_bad_accumulator(%a: vector<4xi8>, %b: vector<4xi8>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op expected i32 accumulator for integer sources}}
+  %r = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: source element types must match for non-fp8 sources.
+func.func @dot_cross_float_elems(%a: vector<2xf16>, %b: vector<2xbf16>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op expected source operands to have the same element type}}
+  %r = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xbf16>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: fp8 and non-fp8 sources cannot be mixed.
+func.func @dot_fp8_mixed_with_int(%a: vector<4xf8E4M3FN>, %b: vector<4xi8>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op expected source operands to have the same element type}}
+  %r = amdgpu.dot %a * %b + %c : vector<4xf8E4M3FN>, vector<4xi8>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: fp8 source requires f32 accumulator.
+func.func @dot_fp8_bad_accumulator(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>, %c: f16) -> f16 {
+  // expected-error@+1 {{'amdgpu.dot' op expected f32 accumulator for fp8 sources}}
+  %r = amdgpu.dot %a * %b + %c : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f16
+  func.return %r : f16
+}
+
+// -----
+
+// DotOp: clamp is illegal for (f16, f16) — no clamp bit in fdot2.f16.f16.
+func.func @dot_clamp_f16_f16(%a: vector<2xf16>, %b: vector<2xf16>, %c: f16) -> f16 {
+  // expected-error@+1 {{'amdgpu.dot' op clamp is not supported for this (source, accumulator) combination}}
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<2xf16>, vector<2xf16>, f16
+  func.return %r : f16
+}
+
+// -----
+
+// DotOp: clamp is illegal for (bf16, bf16) — no clamp bit in fdot2.bf16.bf16.
+func.func @dot_clamp_bf16_bf16(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: bf16) -> bf16 {
+  // expected-error@+1 {{'amdgpu.dot' op clamp is not supported for this (source, accumulator) combination}}
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<2xbf16>, vector<2xbf16>, bf16
+  func.return %r : bf16
+}
+
+// -----
+
+// DotOp: clamp is illegal for any fp8 variant — no clamp bit in dot4.f32.*.
+func.func @dot_clamp_fp8(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op clamp is not supported for this (source, accumulator) combination}}
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: clamp is illegal for bf8 (F8E5M2) sources as well.
+func.func @dot_clamp_bf8(%a: vector<4xf8E5M2>, %b: vector<4xf8E5M2>, %c: f32) -> f32 {
+  // expected-error@+1 {{'amdgpu.dot' op clamp is not supported for this (source, accumulator) combination}}
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<4xf8E5M2>, vector<4xf8E5M2>, f32
+  func.return %r : f32
+}
+
+// -----
+
+// DotOp: mixed-sign i16 dot has no hardware support (no sudot2 intrinsic).
+func.func @dot_mixed_sign_i16(%a: vector<2xi16>, %b: vector<2xi16>, %c: i32) -> i32 {
+  // expected-error@+1 {{'amdgpu.dot' op mixed-sign dot is not supported for 16-bit integer sources}}
+  %r = amdgpu.dot %a * %b + %c {unsignedA} : vector<2xi16>, vector<2xi16>, i32
+  func.return %r : i32
+}

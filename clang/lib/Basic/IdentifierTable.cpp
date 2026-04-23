@@ -160,6 +160,7 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
   case KEYNOOPENCL:
   case KEYNOMS18:
   case KEYNOZOS:
+  case KEYNOHLSL:
     // The disable behavior for this is handled in getKeywordStatus.
     return KS_Unknown;
   case KEYFIXEDPOINT:
@@ -178,6 +179,8 @@ KeywordStatus clang::getKeywordStatus(const LangOptions &LangOpts,
   // These are tests that need to 'always win', as they are special in that they
   // disable based on certain conditions.
   if (LangOpts.OpenCL && (Flags & KEYNOOPENCL)) return KS_Disabled;
+  if (LangOpts.HLSL && (Flags & KEYNOHLSL))
+    return KS_Disabled;
   if (LangOpts.MSVCCompat && (Flags & KEYNOMS18) &&
       !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
     return KS_Disabled;

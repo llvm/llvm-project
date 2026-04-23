@@ -877,7 +877,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_SETCC,
         ISD::VP_SIGN_EXTEND,
         ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,
-        ISD::VP_ABS, ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
+        ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
         ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
 
     static const unsigned FloatingPointVPOps[] = {
@@ -1683,9 +1683,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
           // Don't promote f16 vector operations to f32 if f32 vector type is
           // not legal.
-          // TODO: could split the f16 vector into two vectors and do promotion.
-          if (!isTypeLegal(F32VecVT))
+          // Custom lower maximum LMUL case to split to 2 half LMUL operations.
+          // TODO: Support more operations.
+          if (!isTypeLegal(F32VecVT)) {
+            setOperationAction(ISD::SETCC, VT, Custom);
             continue;
+          }
           setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
           setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
           continue;
@@ -1711,11 +1714,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
           MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
-          // Don't promote f16 vector operations to f32 if f32 vector type is
+          // Don't promote bf16 vector operations to f32 if f32 vector type is
           // not legal.
-          // TODO: could split the f16 vector into two vectors and do promotion.
-          if (!isTypeLegal(F32VecVT))
+          // Custom lower maximum LMUL case to split to 2 half LMUL operations.
+          // TODO: Support more operations.
+          if (!isTypeLegal(F32VecVT)) {
+            setOperationAction(ISD::SETCC, VT, Custom);
             continue;
+          }
 
           if (Subtarget.hasVInstructionsBF16())
             setOperationPromotedToType(ZvfbfaPromoteOps, VT, F32VecVT);
@@ -5239,12 +5245,13 @@ static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
 }
 
 /// Given a shuffle which can be represented as a pair of two slides,
-/// see if it is a zipeven idiom.  Zipeven is:
+/// see if it is a pair-even idiom.
+/// Pair-even is:
 /// vs2: a0 a1 a2 a3
 /// vs1: b0 b1 b2 b3
 /// vd:  a0 b0 a2 b2
-static bool isZipEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                      ArrayRef<int> Mask, unsigned &Factor) {
+static bool isPairEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
+                       ArrayRef<int> Mask, unsigned &Factor) {
   Factor = SrcInfo[1].second;
   return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
          Mask.size() % Factor == 0 &&
@@ -5252,14 +5259,15 @@ static bool isZipEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
 }
 
 /// Given a shuffle which can be represented as a pair of two slides,
-/// see if it is a zipodd idiom.  Zipodd is:
+/// see if it is a pair-odd idiom.
+/// Pair-odd is:
 /// vs2: a0 a1 a2 a3
 /// vs1: b0 b1 b2 b3
 /// vd:  a1 b1 a3 b3
 /// Note that the operand order is swapped due to the way we canonicalize
 /// the slides, so SrCInfo[0] is vs1, and SrcInfo[1] is vs2.
-static bool isZipOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                     ArrayRef<int> Mask, unsigned &Factor) {
+static bool isPairOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
+                      ArrayRef<int> Mask, unsigned &Factor) {
   Factor = -SrcInfo[1].second;
   return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
          Mask.size() % Factor == 0 &&
@@ -5620,7 +5628,8 @@ static SDValue lowerVZIP(unsigned Opc, SDValue Op0, SDValue Op1,
                          const RISCVSubtarget &Subtarget) {
   assert(RISCVISD::RI_VZIPEVEN_VL == Opc || RISCVISD::RI_VZIPODD_VL == Opc ||
          RISCVISD::RI_VZIP2A_VL == Opc || RISCVISD::RI_VZIP2B_VL == Opc ||
-         RISCVISD::RI_VUNZIP2A_VL == Opc || RISCVISD::RI_VUNZIP2B_VL == Opc);
+         RISCVISD::RI_VUNZIP2A_VL == Opc || RISCVISD::RI_VUNZIP2B_VL == Opc ||
+         RISCVISD::VPAIRE_VL == Opc || RISCVISD::VPAIRO_VL == Opc);
   assert(Op0.getSimpleValueType() == Op1.getSimpleValueType());
 
   MVT VT = Op0.getSimpleValueType();
@@ -6491,29 +6500,33 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       return convertFromScalableVector(VT, Res, DAG, Subtarget);
     }
 
-    if (Subtarget.hasVendorXRivosVizip()) {
+    if (Subtarget.hasVendorXRivosVizip() || Subtarget.hasStdExtZvzip()) {
       bool TryWiden = false;
       unsigned Factor;
-      if (isZipEven(SrcInfo, Mask, Factor)) {
+      if (isPairEven(SrcInfo, Mask, Factor)) {
         if (Factor == 1) {
           SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
           SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
-          return lowerVZIP(RISCVISD::RI_VZIPEVEN_VL, Src1, Src2, DL, DAG,
-                           Subtarget);
+          unsigned int Opc = Subtarget.hasStdExtZvzip()
+                                 ? RISCVISD::VPAIRE_VL
+                                 : RISCVISD::RI_VZIPEVEN_VL;
+          return lowerVZIP(Opc, Src1, Src2, DL, DAG, Subtarget);
         }
         TryWiden = true;
       }
-      if (isZipOdd(SrcInfo, Mask, Factor)) {
+      if (isPairOdd(SrcInfo, Mask, Factor)) {
         if (Factor == 1) {
           SDValue Src1 = SrcInfo[1].first == 0 ? V1 : V2;
           SDValue Src2 = SrcInfo[0].first == 0 ? V1 : V2;
-          return lowerVZIP(RISCVISD::RI_VZIPODD_VL, Src1, Src2, DL, DAG,
-                           Subtarget);
+          unsigned int Opc = Subtarget.hasStdExtZvzip()
+                                 ? RISCVISD::VPAIRO_VL
+                                 : RISCVISD::RI_VZIPODD_VL;
+          return lowerVZIP(Opc, Src1, Src2, DL, DAG, Subtarget);
         }
         TryWiden = true;
       }
       // If we found a widening oppurtunity which would let us form a
-      // zipeven or zipodd, use the generic code to widen the shuffle
+      // pair-even or pair-odd, use the generic code to widen the shuffle
       // and recurse through this logic.
       if (TryWiden)
         if (SDValue V = tryWidenMaskForShuffle(Op, DAG))
@@ -7613,15 +7626,22 @@ static unsigned getRISCVVLOp(SDValue Op) {
 }
 
 static bool isPromotedOpNeedingSplit(SDValue Op,
-                                     const RISCVSubtarget &Subtarget) {
-  return (Op.getValueType() == MVT::nxv32f16 &&
-          (Subtarget.hasVInstructionsF16Minimal() &&
-           !Subtarget.hasVInstructionsF16())) ||
-         (Op.getValueType() == MVT::nxv32bf16 &&
-          Subtarget.hasVInstructionsBF16Minimal() &&
-          (!Subtarget.hasVInstructionsBF16() ||
-           (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
-            !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode()))));
+                                     const RISCVSubtarget &Subtarget,
+                                     const TargetLowering &TLI) {
+  MVT OpVT = Op.getSimpleValueType();
+  if (!OpVT.isVector())
+    return false;
+  MVT EltVT = OpVT.getVectorElementType();
+  if (!(EltVT == MVT::f16 && Subtarget.hasVInstructionsF16Minimal() &&
+        !Subtarget.hasVInstructionsF16()) &&
+      !(EltVT == MVT::bf16 && Subtarget.hasVInstructionsBF16Minimal() &&
+        (!Subtarget.hasVInstructionsBF16() ||
+         (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
+          !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode())))))
+    return false;
+  // Need to split when the same width f32 vector type isn't legal.
+  return !TLI.isTypeLegal(
+      MVT::getVectorVT(MVT::f32, OpVT.getVectorElementCount()));
 }
 
 static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
@@ -8036,7 +8056,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerFMAXIMUM_FMINIMUM(Op, DAG, Subtarget);
   case ISD::FP_EXTEND:
@@ -8320,7 +8340,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::LRINT:
@@ -8377,7 +8397,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMINIMUM:
   case ISD::VP_REDUCE_FMAXIMUM:
-    if (isPromotedOpNeedingSplit(Op.getOperand(1), Subtarget))
+    if (isPromotedOpNeedingSplit(Op.getOperand(1), Subtarget, *this))
       return SplitVectorReductionOp(Op, DAG);
     return lowerVPREDUCE(Op, DAG);
   case ISD::VP_REDUCE_AND:
@@ -8771,7 +8791,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return SDValue();
     }
 
-    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget))
+    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget, *this))
       return SplitVectorOp(Op, DAG);
 
     return lowerToScalableOp(Op, DAG);
@@ -8871,7 +8891,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FMAXNUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     [[fallthrough]];
   case ISD::AVGFLOORS:
@@ -8910,7 +8930,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
   }
   case ISD::ABS:
-  case ISD::VP_ABS:
     return lowerABS(Op, DAG);
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
@@ -8935,7 +8954,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FCOPYSIGN:
     if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
       return lowerFCOPYSIGN(Op, DAG, Subtarget);
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerToScalableOp(Op, DAG);
   case ISD::STRICT_FADD:
@@ -8944,7 +8963,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FDIV:
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FMA:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitStrictFPVectorOp(Op, DAG);
     return lowerToScalableOp(Op, DAG);
   case ISD::STRICT_FSETCC:
@@ -9001,7 +9020,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerLogicVPOp(Op, DAG);
   case ISD::VP_FNEG:
   case ISD::VP_FMA:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
+    if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVPOp(Op, DAG);
     [[fallthrough]];
   case ISD::VP_SRA:
@@ -9021,7 +9040,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FP_ROUND:
     return lowerVectorFPExtendOrRoundLike(Op, DAG);
   case ISD::VP_SETCC:
-    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget))
+    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget, *this))
       return SplitVPOp(Op, DAG);
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPSetCCMaskOp(Op, DAG);
@@ -13805,24 +13824,12 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   SDValue X = Op.getOperand(0);
 
-  assert((Op.getOpcode() == ISD::VP_ABS || VT.isFixedLengthVector()) &&
-         "Unexpected type for ISD::ABS");
+  assert(VT.isFixedLengthVector() && "Unexpected type for ISD::ABS");
 
-  MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(VT);
-    X = convertToScalableVector(ContainerVT, X, DAG, Subtarget);
-  }
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
+  X = convertToScalableVector(ContainerVT, X, DAG, Subtarget);
 
-  SDValue Mask, VL;
-  if (Op->getOpcode() == ISD::VP_ABS) {
-    Mask = Op->getOperand(1);
-    if (VT.isFixedLengthVector())
-      Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
-                                     Subtarget);
-    VL = Op->getOperand(2);
-  } else
-    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue Result;
   if (Subtarget.hasStdExtZvabd()) {
@@ -13837,9 +13844,7 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
     Result = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
                          DAG.getUNDEF(ContainerVT), Mask, VL);
   }
-  if (VT.isFixedLengthVector())
-    Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
-  return Result;
+  return convertFromScalableVector(VT, Result, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,

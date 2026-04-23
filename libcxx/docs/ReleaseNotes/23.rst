@@ -45,6 +45,8 @@ Implemented Papers
 - P2781R9: ``std::constant_wrapper`` (`Github <https://llvm.org/PR148179>`__)
 - P3978R3: ``constant_wrapper`` should unwrap on call and subscript (`Github <https://llvm.org/PR189605>`__)
 - P2164R9: ``views::enumerate`` (`Github <https://llvm.org/PR105251>`__)
+- P2322R6 (partial): ``ranges::fold_left_first`` and ``ranges::fold_left_first_with_iter`` are supported
+  (`Github <https://llvm.org/PR105208>`__)
 
 Improvements and New Features
 -----------------------------

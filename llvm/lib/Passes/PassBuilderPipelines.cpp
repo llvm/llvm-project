@@ -252,8 +252,8 @@ static cl::opt<bool>
                   cl::desc("Enable the GVN sinking pass (default = off)"));
 
 static cl::opt<bool> EnableJumpTableToSwitch(
-    "enable-jump-table-to-switch", cl::init(true),
-    cl::desc("Enable JumpTableToSwitch pass (default = true)"));
+    "enable-jump-table-to-switch",
+    cl::desc("Enable JumpTableToSwitch pass (default = off)"));
 
 // This option is used in simplifying testing SampleFDO optimizations for
 // profile loading.
