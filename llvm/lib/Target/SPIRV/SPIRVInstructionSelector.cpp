@@ -1938,6 +1938,7 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
                                "Lowering to SPIR-V of atomic load is only "
                                "allowed for integer or floating point types");
 
+  assert(I.getNumMemOperands());
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
   // TODO: This must be relaxed since the volatile attribute on atomic load is
