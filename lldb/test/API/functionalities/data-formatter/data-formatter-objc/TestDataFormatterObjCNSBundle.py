@@ -31,7 +31,7 @@ class ObjCDataFormatterNSBundle(ObjCDataFormatterTestCase):
                 "(NSBundle *) bundle_string = ",
                 ' @"/System/Library/Frameworks/Accelerate.framework"',
                 "(NSBundle *) bundle_url = ",
-                ' @"/System/Library/Frameworks/Foundation.framework"',
+                ' "/System/Library/Frameworks/Foundation.framework"',
                 "(NSBundle *) main_bundle = ",
                 "data-formatter-objc",
             ],
