@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror -Wno-unused-dummy-argument
 ! Test warnings on mismatching interfaces involvingCHARACTER arguments
 subroutine constLen(s)
   character(len = 1) s

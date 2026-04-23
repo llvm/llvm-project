@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror -Wno-unused-dummy-argument
 ! Deferred TBPs must be overridden, but when they are private, those
 ! overrides are required to appear in the same module.  We allow overrides
 ! elsewhere as an extension.

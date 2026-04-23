@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror -pedantic
+! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror -Wno-unused-dummy-argument -pedantic
 ! This test is responsible for checking the fix for passing non-variables as
 ! actual arguments to subroutines/functions whose corresponding dummy argument
 ! expects a VOLATILE variable

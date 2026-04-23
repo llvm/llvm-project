@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror -Wno-unused-dummy-argument
 ! PDT sensitivity of FINAL subroutines
 module m
   type :: pdt(k)

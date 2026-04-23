@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror -Wno-unused-dummy-argument
 
 ! Ensure that FINAL subroutine can be called for array with vector-valued
 ! subscript.
