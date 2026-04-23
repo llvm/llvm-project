@@ -120,7 +120,8 @@ private:
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
   void constructFunctionArgumentAttributes(
-      const CIRGenFunctionInfo &info, bool isThunk,
+      const CIRGenFunctionInfo &info, const clang::Decl *targetDecl,
+      bool isThunk, bool attrOnCallSite,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
   /// return value might have been discarded.
