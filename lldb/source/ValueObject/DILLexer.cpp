@@ -194,12 +194,12 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
   // be ordered longest-to-shortest in the list below. E.g. '::' must come
   // before ':', and '+=' must come before '+'.
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},         {Token::arrow, "->"},
-      {Token::coloncolon, "::"}, {Token::colon, ":"},
+      {Token::arrow, "->"},      {Token::coloncolon, "::"},
+      {Token::minusequal, "-="}, {Token::plusequal, "+="},
+      {Token::amp, "&"},         {Token::colon, ":"},
       {Token::equal, "="},       {Token::l_paren, "("},
-      {Token::l_square, "["},    {Token::minusequal, "-="},
-      {Token::minus, "-"},       {Token::percent, "%"},
-      {Token::period, "."},      {Token::plusequal, "+="},
+      {Token::l_square, "["},    {Token::minus, "-"},
+      {Token::percent, "%"},     {Token::period, "."},
       {Token::plus, "+"},        {Token::r_paren, ")"},
       {Token::r_square, "]"},    {Token::slash, "/"},
       {Token::star, "*"},

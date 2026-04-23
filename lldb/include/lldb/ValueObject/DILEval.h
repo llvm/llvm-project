@@ -83,9 +83,7 @@ private:
                                                     CompilerType &rhs_type);
 
   /// Perform an arithmetic conversion on two values from an arithmetic
-  /// operation. If this is part of an assignment operation (is_assign is
-  /// true), do not change the lhs, which is likely to be a program variable.
-  /// \returns The result type of an arithmetic operation.
+  /// operation.
   llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
                                                     lldb::ValueObjectSP &rhs,
                                                     uint32_t location);
@@ -128,14 +126,6 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateAssignment(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                      uint32_t location);
-
-  llvm::Expected<lldb::ValueObjectSP>
-  EvaluateBinaryAddAssign(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
-                          uint32_t location);
-
-  llvm::Expected<lldb::ValueObjectSP>
-  EvaluateBinarySubAssign(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
-                          uint32_t location);
 
   /// A helper function for VerifyCastType (below). This performs
   /// arithmetic-specific checks. It should only be called if the target_type

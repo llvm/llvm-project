@@ -173,6 +173,7 @@ ASTNodeUP DILParser::ParseAssignmentExpression() {
     Token token = CurToken();
     m_dil_lexer.Advance();
     auto rhs = ParseAssignmentExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
     lhs = std::make_unique<BinaryOpNode>(
         token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
         std::move(lhs), std::move(rhs));

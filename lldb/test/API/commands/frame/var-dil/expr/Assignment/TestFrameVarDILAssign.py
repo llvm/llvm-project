@@ -122,25 +122,25 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable 'i = d2'",
             error=True,
-            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+            substrs=["Incompatible types for assignment: Cannot assign 'double' to 'int'"],
         )
         # int = float
         self.expect(
             "frame variable 'i = pi'",
             error=True,
-            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+            substrs=["Incompatible types for assignment: Cannot assign 'float' to 'int'"],
         )
         # float = int
         self.expect(
             "frame variable 'f = 8'",
             error=True,
-            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+            substrs=["Incompatible types for assignment: Cannot assign 'int' to 'float'"],
         )
         # float = double
         self.expect(
             "frame variable 'f = d2'",
             error=True,
-            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+            substrs=["Incompatible types for assignment: Cannot assign 'double' to 'float'"],
         )
         # double = double
         self.expect("frame variable 'd = d2'", substrs=["d = 15.779999999999999"])
@@ -149,13 +149,13 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable 'd = pi'",
             error=True,
-            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+            substrs=["Incompatible types for assignment: Cannot assign 'float' to 'double'"],
         )
         # double = int
         self.expect(
             "frame variable 'd = 17'",
             error=True,
-            substrs=["Invalid assignment: lhs and rhs have incompatible types"],
+            substrs=["Incompatible types for assignment: Cannot assign 'int' to 'double'"],
         )
 
         # bool = int
