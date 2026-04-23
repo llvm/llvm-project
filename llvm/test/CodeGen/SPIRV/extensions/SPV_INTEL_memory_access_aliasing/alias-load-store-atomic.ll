@@ -1,5 +1,6 @@
 ; Check aliasing information translation on atomic load and store.
 ; For stores, the decoration is not generated since the store opcodes do not have an id.
+; For `load atomic`, the decoration is not generated because we're dropping the extension on atomics.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - -filetype=obj | spirv-val %}
@@ -9,11 +10,7 @@
 ; CHECK: %[[#Domain1:]] = OpAliasDomainDeclINTEL
 ; CHECK: %[[#Scope1:]] = OpAliasScopeDeclINTEL %[[#Domain1]]
 ; CHECK: %[[#List1:]] = OpAliasScopeListDeclINTEL %[[#Scope1]]
-; CHECK: %[[#Domain2:]] = OpAliasDomainDeclINTEL
-; CHECK: %[[#Scope2:]] = OpAliasScopeDeclINTEL %[[#Domain2]]
-; CHECK: %[[#List2:]] = OpAliasScopeListDeclINTEL %[[#Scope2]]
 ; CHECK: OpDecorateId %[[#LoadFun:]] NoAliasINTEL %[[#List1]]
-; CHECK: OpDecorateId %[[#LoadInst:]] NoAliasINTEL %[[#List2]]
 ; CHECK-NOT: OpDecorateId
 ; CHECK: %[[#LoadFun:]] = OpAtomicLoad
 ; CHECK: OpAtomicStore

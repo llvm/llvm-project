@@ -2574,14 +2574,8 @@ bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
   // Add aliasing decorations to internal load and store intrinsics
   // and atomic instructions, skipping atomic store as it won't have ID to
   // attach the decoration.
-  if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store,
-                                 Intrinsic::spv_atomic_load>()))
+  if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>()))
     return true;
-
-  if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
-    if (L->isAtomic())
-      return true;
-  }
 
   auto *CI = dyn_cast<CallInst>(Inst);
   if (!CI)
