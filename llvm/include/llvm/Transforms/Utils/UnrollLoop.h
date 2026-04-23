@@ -157,6 +157,9 @@ public:
   ConvergenceKind Convergence;
   bool ConvergenceAllowsRuntime;
 
+  /// \param TripCountIsUniform If true, all threads in a convergent execution
+  /// agree on the trip count, so runtime unrolling with a remainder is safe
+  /// even for loops with uncontrolled convergent operations.
   LLVM_ABI UnrollCostEstimator(const Loop *L, const TargetTransformInfo &TTI,
                                const SmallPtrSetImpl<const Value *> &EphValues,
                                unsigned BEInsns,

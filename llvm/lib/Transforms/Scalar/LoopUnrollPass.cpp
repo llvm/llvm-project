@@ -1346,7 +1346,6 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // loops when all threads agree on the trip count.
   const SCEV *BTC = SE.getBackedgeTakenCount(L);
   bool TripCountIsUniform = UI && isSCEVUniform(BTC, *UI);
-
   UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns, TripCountIsUniform);
   if (!UCE.canUnroll((TM & TM_ForcedByUser) ? &ORE : nullptr, L))
     return LoopUnrollResult::Unmodified;
