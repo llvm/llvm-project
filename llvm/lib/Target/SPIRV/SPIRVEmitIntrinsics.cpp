@@ -2576,7 +2576,6 @@ bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
   // attach the decoration.
   if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>()))
     return true;
-
   auto *CI = dyn_cast<CallInst>(Inst);
   if (!CI)
     return false;
