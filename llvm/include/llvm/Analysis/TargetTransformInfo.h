@@ -1971,6 +1971,9 @@ public:
   /// processing \p Iters scalar iterations per vector iteration.
   LLVM_ABI bool preferEpilogueVectorization(ElementCount Iters) const;
 
+  /// \returns True if the loop vectorizer should prefer using a single wide
+  /// active lane mask of size VF * UF in tail-folded loops, rather than one
+  /// active lane mask per part.
   LLVM_ABI bool preferWideActiveLaneMasks() const;
 
   /// \returns True if the loop vectorizer should discard any VFs where the
