@@ -462,7 +462,7 @@ add_header_macro(
     .llvm-libc-types.pthread_t
     .llvm-libc-types.struct_timespec
     .llvm_libc_common_h
-  )
+)
 
 if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
   add_header_macro(

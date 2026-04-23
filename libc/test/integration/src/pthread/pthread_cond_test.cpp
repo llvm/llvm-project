@@ -217,10 +217,42 @@ template <bool UseBroadcast> static void run_shared_modes() {
   run_timeout_modes<UseBroadcast, true>();
 }
 
+void clockwait_returns_einval_for_invalid_clockid() {
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&mutex, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_cond_init(&cond, nullptr), 0);
+
+  timespec ts{};
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_cond_clockwait(&cond, &mutex, -1, &ts),
+            EINVAL);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_cond_destroy(&cond), 0);
+}
+
+void initializer_act_the_same_as_null_attr() {
+  constexpr size_t EFFECTIVE_BYTES = sizeof(pthread_cond_t) - 2;
+  union {
+    pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+    char cond_bytes[EFFECTIVE_BYTES];
+  };
+  union {
+    pthread_cond_t cond_from_init;
+    char cond_from_init_bytes[EFFECTIVE_BYTES];
+  };
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_cond_init(&cond_from_init, nullptr), 0);
+  // Read as bytes is a defined behavior for trivial types.
+  for (size_t i = 0; i < EFFECTIVE_BYTES; ++i)
+    ASSERT_EQ(cond_bytes[i], cond_from_init_bytes[i]);
+}
+
 } // namespace
 
 TEST_MAIN() {
   run_shared_modes<false>();
   run_shared_modes<true>();
+  initializer_act_the_same_as_null_attr();
+  clockwait_returns_einval_for_invalid_clockid();
   return 0;
 }
