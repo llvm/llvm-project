@@ -1553,8 +1553,6 @@ bool RISCVInstructionSelector::selectCopy(MachineInstr &MI) const {
   if (DstReg.isPhysical())
     return true;
 
-  // If the register class is already decided, for example in the case
-  // of inline assembly, use that already decided registre class.
   const TargetRegisterClass *DstRC =
       TRI.getConstrainedRegClassForOperand(Dst, *MRI);
 
