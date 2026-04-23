@@ -539,6 +539,26 @@ public:
   /// used in the OpenMPIRBuilder generated from OMPKinds.def.
   LLVM_ABI void initialize();
 
+  SmallVector<std::pair<GlobalVariable *, GlobalVariable *>>
+      declareTargetUsmRefPtrPairs;
+
+  /// Replaces all uses of `origGV` with a load from `refPtrGV`.
+  /// This is used for OpenMP `declare target` global variables mapped under
+  /// Unified Shared Memory (USM) where access is routed through a reference
+  /// pointer.
+  Error rewriteDeclareTargetGlobalUsesWithRefPtr(GlobalVariable *origGV,
+                                                 GlobalVariable *refPtrGV);
+
+  /// Registers a mapping between an original `declare target` global variable
+  /// and the corresponding reference pointer global variable generated for
+  /// Unified Shared Memory (USM).
+  void addDeclareTargetUsmRefPair(GlobalVariable *orig, GlobalVariable *refPtr);
+
+  /// Rewrites the uses of all `declare target` global variables registered via
+  /// `addDeclareTargetUsmRefPair` to use their corresponding USM reference
+  /// pointers. This pass is executed at the end of the module translation.
+  Error finalizeDeclareTargetUsmIndirectLoads();
+
   void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
 
   /// Finalize the underlying module, e.g., by outlining regions.
