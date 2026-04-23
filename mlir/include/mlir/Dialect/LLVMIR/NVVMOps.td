@@ -519,6 +519,38 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM transcendental op definitions
+//===----------------------------------------------------------------------===//
+// PTX provides only fast approximations for sin/cos/lg2/ex2/tanh. Exposing
+// these as plain `nvvm.{sin,cos,lg2,ex2,tanh}` (without a `.approx` suffix)
+// keeps the NVVM dialect self-contained -- users don't need to reach for
+// `math.*` ops for something that already has a PTX instruction.
+
+def NVVM_TanhOp : NVVM_Op<"tanh", [Pure, SameOperandsAndResultType]> {
+  let summary = "Hyperbolic tangent (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the hyperbolic tangent of the input
+    value. Lowers to PTX `tanh.approx.f32` (sm_75+, PTX 7.0+). PTX does not
+    expose an `ftz` modifier for `tanh.approx`, so this op has no `ftz`
+    attribute.
+
+    For more information, see PTX ISA:
+    [tanh](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-tanh)
+  }];
+  let arguments = (ins F32:$src);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+  string llvmBuilder = [{
+    llvm::CallInst *call = createIntrinsicCall(
+        builder, llvm::Intrinsic::tanh, {$src}, {$src->getType()});
+    llvm::FastMathFlags fmf;
+    fmf.setApproxFunc();
+    call->setFastMathFlags(fmf);
+    $res = call;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
 
