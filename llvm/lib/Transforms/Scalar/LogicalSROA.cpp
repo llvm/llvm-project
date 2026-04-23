@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LogicalSROA.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/IRBuilder.h"
@@ -43,31 +44,88 @@ collectLifetimeIntrinsicsUsing(Instruction &I) {
   return Output;
 }
 
+// Returns true is all the users and derived users of the alloca
+// allow the alloca to be split.
+static bool isAllocaSplittable(StructuredAllocaInst &SAI) {
+  SmallVector<Value *> WorkList(SAI.users());
+  DenseSet<Value *> Visited;
+
+  // Helper function to enqueue all non-visited users of `I`.
+  auto enqueueAllUsers = [&](Instruction *I) {
+    for (auto *U : I->users()) {
+      if (Visited.contains(U))
+        continue;
+      WorkList.push_back(U);
+    }
+  };
+
+  while (!WorkList.empty()) {
+    Instruction *I = dyn_cast<Instruction>(WorkList.back());
+    WorkList.pop_back();
+
+    // User is not an instruction. Not sure what it it, in
+    // doubt, don't split.
+    if (!I)
+      return false;
+
+    Visited.insert(I);
+
+    // Those allow the alloca split.
+    if (isa<LifetimeIntrinsic>(I))
+      continue;
+
+    // If we load the whole alloca, we cannot split,
+    // otherwise, we can stop looking into derived users.
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      if (LI->getPointerOperand() == &SAI)
+        return false;
+      continue;
+    }
+
+    // If we store to whole alloca, we cannot split,
+    // otherwise, we can stop looking into derived users.
+    if (auto *SI = dyn_cast<StoreInst>(I)) {
+      if (SI->getPointerOperand() == &SAI)
+        return false;
+      continue;
+    }
+
+    // PHI and Select instruction are not inherently preventing
+    // the split, but correctly handling those requires more testing,
+    // so postponing this (See #193749)
+    if (isa<PHINode>(I) || isa<SelectInst>(I))
+      return false;
+
+    if (auto *SGEP = dyn_cast<StructuredGEPInst>(I)) {
+      // If the SGEP has no indices and is still there, this probably means the
+      // ptr is escaping or uses as-is. For now, we bail out.
+      if (SGEP->getNumIndices() == 0)
+        return false;
+
+      enqueueAllUsers(SGEP);
+      continue;
+    }
+
+    // Any other users prevents the split (call, escape, etc).
+    return false;
+  }
+
+  return true;
+}
+
 // Returns a vector with one element for each field of the struct allocated by
 // SAI. Each element is a vector of SGEP instruction referencing this field.
-//
-// If any user of SAI is not an SGEP, or an SGEP referencing the whole struct,
-// this function returns an empty array. This function ignores lifetime
-// intrinsics.
+// This function ignores lifetime intrinsics.
 static SmallVector<SmallVector<StructuredGEPInst *>>
 collectPerFieldSGEP(StructuredAllocaInst &SAI) {
   StructType *ST = cast<StructType>(SAI.getAllocationType());
   SmallVector<SmallVector<StructuredGEPInst *>> Output(ST->getNumElements());
 
   for (User *U : SAI.users()) {
-    auto II = dyn_cast<IntrinsicInst>(U);
-    if (II && II->isLifetimeStartOrEnd())
+    if (dyn_cast<LifetimeIntrinsic>(U))
       continue;
 
-    auto *SGEP = dyn_cast<StructuredGEPInst>(U);
-    if (!SGEP)
-      return {};
-
-    // If the SGEP has no indices, this means we have a pointer on the whole
-    // struct. For now, we bail out: if it was not used, it would be DCE'd, so
-    // there is probably a reference to the whole struct somewhere.
-    if (SGEP->getNumIndices() == 0)
-      return {};
+    auto *SGEP = cast<StructuredGEPInst>(U);
 
     // IR rule: SGEP on struct can only use constant int as indices.
     ConstantInt *Index = cast<ConstantInt>(SGEP->getIndexOperand(0));
@@ -114,9 +172,11 @@ static bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
   if (!ST)
     return false;
 
-  auto PerFieldSGEP = collectPerFieldSGEP(SAI);
-  if (PerFieldSGEP.empty())
+  if (!isAllocaSplittable(SAI))
     return false;
+
+  auto PerFieldSGEP = collectPerFieldSGEP(SAI);
+  assert(PerFieldSGEP.size() == ST->getNumElements());
 
   auto LifetimeIntrinsics = collectLifetimeIntrinsicsUsing(SAI);
   IRBuilder B(&SAI);
