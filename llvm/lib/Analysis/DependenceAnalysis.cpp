@@ -113,7 +113,7 @@ namespace {
 
 /// Types of dependence test routines.
 enum class DependenceTestType {
-  Default, /// All tests except BanerjeeMIV
+  Default, ///< All tests except BanerjeeMIV
   All,
   StrongSIV,
   WeakCrossingSIV,
