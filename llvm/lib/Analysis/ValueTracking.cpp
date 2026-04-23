@@ -7305,6 +7305,9 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
       return false;
     const Function *Callee = CI->getCalledFunction();
 
+    // Assume we can always speculate invariant loads.
+    if (CI->hasMetadata(LLVMContext::MD_invariant_load))
+      return true;
     // The called function could have undefined behavior or side-effects, even
     // if marked readnone nounwind.
     if (!Callee || !Callee->isSpeculatable())

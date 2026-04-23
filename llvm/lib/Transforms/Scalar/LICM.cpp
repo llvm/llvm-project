@@ -1232,6 +1232,10 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
       // Assumes don't actually alias anything or throw
       return true;
 
+    if (CI->hasMetadata(LLVMContext::MD_invariant_load))
+      // Call is always invariant
+      return true;
+
     // Handle simple cases by querying alias analysis.
     MemoryEffects Behavior = AA->getMemoryEffects(CI);
 
@@ -1702,7 +1706,8 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
       !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
-    I.dropUBImplyingAttrsAndMetadata();
+    // Preserve invariant.load as moving load does not change its invariance
+    I.dropUBImplyingAttrsAndMetadata({LLVMContext::MD_invariant_load});
   }
 
   if (isa<PHINode>(I))
