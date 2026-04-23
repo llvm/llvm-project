@@ -87,7 +87,5 @@ class InvalidArgsCommandTestCase(TestBase):
         self.expect(
             "command source",
             error=True,
-            substrs=[
-                "'command source' takes exactly one executable filename argument"
-            ],
+            substrs=["'command source' takes exactly one executable filename argument"],
         )

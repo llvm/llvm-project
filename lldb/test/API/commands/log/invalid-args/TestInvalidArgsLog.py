@@ -9,9 +9,7 @@ class InvalidArgsLogTestCase(TestBase):
         self.expect(
             "log enable",
             error=True,
-            substrs=[
-                "error: log enable takes a log channel and one or more log types"
-            ],
+            substrs=["error: log enable takes a log channel and one or more log types"],
         )
 
     @no_debug_info_test
