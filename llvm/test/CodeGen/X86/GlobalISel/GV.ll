@@ -6,6 +6,7 @@
 
 @g_int = dso_local global i32 0, align 4
 @g_int_stub = global i32 0, align 4
+@external_g_int = external global i32, align 4
 
 define dso_local ptr @test_global_ptrv() {
 ; X64-LABEL: test_global_ptrv:
@@ -104,4 +105,66 @@ define dso_local i32 @test_global_stub_valv() {
 ; X32-NEXT:    retq
   %val = load i32, ptr @g_int_stub, align 4
   ret i32 %val
+}
+
+define dso_local ptr @test_external_global_ptrv() {
+; X64-LABEL: test_external_global_ptrv:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq external_g_int@GOTPCREL(%rip), %rax
+; X64-NEXT:    retq
+;
+; X64_DARWIN_PIC-LABEL: test_external_global_ptrv:
+; X64_DARWIN_PIC:       ## %bb.0: ## %entry
+; X64_DARWIN_PIC-NEXT:    movq _external_g_int@GOTPCREL(%rip), %rax
+; X64_DARWIN_PIC-NEXT:    retq
+;
+; X86-LABEL: test_external_global_ptrv:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    leal external_g_int, %eax
+; X86-NEXT:    retl
+;
+; X32-LABEL: test_external_global_ptrv:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movl external_g_int@GOTPCREL(%rip), %eax
+; X32-NEXT:    retq
+; X32ABI-LABEL: test_external_global_ptrv:
+; X32ABI:       # %bb.0: # %entry
+; X32ABI-NEXT:    movl external_g_int@GOTPCREL(%rip), %eax
+; X32ABI-NEXT:    movl %eax, %eax
+; X32ABI-NEXT:    retq
+entry:
+  ret ptr @external_g_int
+}
+
+define dso_local i32 @test_external_global_valv() {
+; X64-LABEL: test_external_global_valv:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq external_g_int@GOTPCREL(%rip), %rax
+; X64-NEXT:    movl (%rax), %eax
+; X64-NEXT:    retq
+;
+; X64_DARWIN_PIC-LABEL: test_external_global_valv:
+; X64_DARWIN_PIC:       ## %bb.0: ## %entry
+; X64_DARWIN_PIC-NEXT:    movq _external_g_int@GOTPCREL(%rip), %rax
+; X64_DARWIN_PIC-NEXT:    movl (%rax), %eax
+; X64_DARWIN_PIC-NEXT:    retq
+;
+; X86-LABEL: test_external_global_valv:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl external_g_int, %eax
+; X86-NEXT:    retl
+;
+; X32-LABEL: test_external_global_valv:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movl external_g_int@GOTPCREL(%rip), %eax
+; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    retq
+; X32ABI-LABEL: test_external_global_valv:
+; X32ABI:       # %bb.0: # %entry
+; X32ABI-NEXT:    movl external_g_int@GOTPCREL(%rip), %eax
+; X32ABI-NEXT:    movl (%eax), %eax
+; X32ABI-NEXT:    retq
+entry:
+  %0 = load i32, ptr @external_g_int, align 4
+  ret i32 %0
 }
