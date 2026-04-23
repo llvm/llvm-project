@@ -11,5 +11,3 @@ entry:
   %out = tail call <8 x half> @llvm.aarch64.neon.fmmla.v8f16.v8f16(<8 x half> %acc, <8 x half> %a, <8 x half> %b)
   ret <8 x half> %out
 }
-
-declare <8 x half> @llvm.aarch64.neon.fmmla.v8f16.v8f16(<8 x half>, <8 x half>, <8 x half>)

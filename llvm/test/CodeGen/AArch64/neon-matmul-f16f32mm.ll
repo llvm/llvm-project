@@ -11,5 +11,3 @@ entry:
   %out = tail call <4 x float> @llvm.aarch64.neon.fmmla.v4f32.v8f16(<4 x float> %acc, <8 x half> %a, <8 x half> %b)
   ret <4 x float> %out
 }
-
-declare <4 x float> @llvm.aarch64.neon.fmmla.v4f32.v8f16(<4 x float>, <8 x half>, <8 x half>)
