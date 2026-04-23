@@ -19,6 +19,7 @@
 #include "comgr-hotswap-internal.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -92,19 +93,17 @@ void patchDebugFrame(uint8_t *Elf, size_t ElfSize, uint64_t TextAddr,
 
 // -- Weak-symbol patch stubs --------------------------------------------------
 
-__attribute__((weak)) uint32_t applyInPlacePatches(PatchContext &, size_t) {
+LLVM_ATTRIBUTE_WEAK uint32_t applyInPlacePatches(PatchContext &, size_t) {
   return 0;
 }
-__attribute__((weak)) uint32_t applyTrampolinePatches(PatchContext &, size_t) {
+LLVM_ATTRIBUTE_WEAK uint32_t applyTrampolinePatches(PatchContext &, size_t) {
   return 0;
 }
-__attribute__((weak)) uint32_t applyWmmaHazardPatch(PatchContext &) {
+LLVM_ATTRIBUTE_WEAK uint32_t applyWmmaHazardPatch(PatchContext &) { return 0; }
+LLVM_ATTRIBUTE_WEAK uint32_t applyWmmaSplitPatches(PatchContext &, size_t) {
   return 0;
 }
-__attribute__((weak)) uint32_t applyWmmaSplitPatches(PatchContext &, size_t) {
-  return 0;
-}
-__attribute__((weak)) uint32_t applyScratchPatches(PatchContext &, size_t) {
+LLVM_ATTRIBUTE_WEAK uint32_t applyScratchPatches(PatchContext &, size_t) {
   return 0;
 }
 
@@ -114,13 +113,13 @@ __attribute__((weak)) uint32_t applyScratchPatches(PatchContext &, size_t) {
 // allocate above KD count (correct but suboptimal until the real liveness
 // layer lands).
 
-__attribute__((weak)) CFG buildCfg(ArrayRef<InternalDecodedInst> Decoded,
-                                   const MCInstrInfo &) {
+LLVM_ATTRIBUTE_WEAK CFG buildCfg(ArrayRef<InternalDecodedInst> Decoded,
+                                 const MCInstrInfo &) {
   (void)Decoded;
   return CFG();
 }
 
-__attribute__((weak)) LivenessInfo computeLiveness(
+LLVM_ATTRIBUTE_WEAK LivenessInfo computeLiveness(
     ArrayRef<InternalDecodedInst> Decoded, const CFG &, const MCInstrInfo &,
     const MCRegisterInfo &, unsigned MaxVgprs) {
   LivenessInfo Info;
@@ -132,39 +131,39 @@ __attribute__((weak)) LivenessInfo computeLiveness(
   return Info;
 }
 
-__attribute__((weak)) RegDefUse getInstRegDefUse(const MCInst &,
-                                                 const MCInstrInfo &,
-                                                 const MCRegisterInfo &) {
+LLVM_ATTRIBUTE_WEAK RegDefUse getInstRegDefUse(const MCInst &,
+                                               const MCInstrInfo &,
+                                               const MCRegisterInfo &) {
   return {};
 }
 
-__attribute__((weak)) int64_t getBranchImm(const MCInst &) { return 0; }
+LLVM_ATTRIBUTE_WEAK int64_t getBranchImm(const MCInst &) { return 0; }
 
-__attribute__((weak)) bool verifyPatchCorrectness(const uint8_t *, uint64_t,
-                                                  const LLVMState &,
-                                                  ArrayRef<ScratchPatchInfo>,
-                                                  unsigned) {
+LLVM_ATTRIBUTE_WEAK bool verifyPatchCorrectness(const uint8_t *, uint64_t,
+                                                const LLVMState &,
+                                                ArrayRef<ScratchPatchInfo>,
+                                                unsigned) {
   return true;
 }
 
 // -- Weak-symbol DWARF stubs --------------------------------------------------
 
-__attribute__((weak)) bool addTrampolineSymbols(WritableMemoryBuffer &,
-                                                ArrayRef<Trampoline>, uint64_t,
-                                                unsigned) {
+LLVM_ATTRIBUTE_WEAK bool addTrampolineSymbols(WritableMemoryBuffer &,
+                                              ArrayRef<Trampoline>, uint64_t,
+                                              unsigned) {
   return true;
 }
-__attribute__((weak)) bool patchDebugLine(WritableMemoryBuffer &,
-                                          ArrayRef<Trampoline>, uint64_t,
-                                          uint64_t) {
+LLVM_ATTRIBUTE_WEAK bool patchDebugLine(WritableMemoryBuffer &,
+                                        ArrayRef<Trampoline>, uint64_t,
+                                        uint64_t) {
   return true;
 }
-__attribute__((weak)) void patchDebugRanges(uint8_t *, size_t, uint64_t,
-                                            uint64_t, uint64_t) {}
-__attribute__((weak)) void patchDebugInfo(uint8_t *, size_t, uint64_t, uint64_t,
+LLVM_ATTRIBUTE_WEAK void patchDebugRanges(uint8_t *, size_t, uint64_t, uint64_t,
                                           uint64_t) {}
-__attribute__((weak)) void patchDebugFrame(uint8_t *, size_t, uint64_t,
-                                           uint64_t, uint64_t) {}
+LLVM_ATTRIBUTE_WEAK void patchDebugInfo(uint8_t *, size_t, uint64_t, uint64_t,
+                                        uint64_t) {}
+LLVM_ATTRIBUTE_WEAK void patchDebugFrame(uint8_t *, size_t, uint64_t, uint64_t,
+                                         uint64_t) {}
 
 // -- NOP sled scanning --------------------------------------------------------
 
