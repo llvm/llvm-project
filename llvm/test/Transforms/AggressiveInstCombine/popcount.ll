@@ -241,10 +241,9 @@ define i32 @popcount64_mask(i64 %x) {
 }
 
 define i32 @popcnt1_32(i32 noundef %uWord) {
-; CHECK-LABEL: define i32 @popcnt1_32(
-; CHECK-SAME: i32 noundef [[UWORD:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD]])
+; CHECK-LABEL: @popcnt1_32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -271,10 +270,9 @@ entry:
 }
 
 define i32 @popcnt1_32_variant2(i32 noundef %uWord) {
-; CHECK-LABEL: define i32 @popcnt1_32_variant2(
-; CHECK-SAME: i32 noundef [[UWORD:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD]])
+; CHECK-LABEL: @popcnt1_32_variant2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -302,10 +300,9 @@ entry:
 }
 
 define  i64 @popcnt1_64(i64 noundef %uWord) {
-; CHECK-LABEL: define  i64 @popcnt1_64(
-; CHECK-SAME: i64 noundef [[UWORD:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[UWORD]])
+; CHECK-LABEL: @popcnt1_64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[UWORD:%.*]])
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -499,6 +496,125 @@ define <2 x i64> @popcnt1_64vec(<2 x i64> %uWord) {
   %shr19 = lshr <2 x i64> %add17, <i64 32, i64 32>
   %add20 = add <2 x i64> %and18, %shr19
   ret <2 x i64> %add20
+}
+
+; Popcount pattern with masks narrowed by InstCombine's known-bits analysis.
+; 0x0F0F0F0F -> 0x07070707, 0x00FF00FF -> 0x000F000F, 0x0000FFFF -> 0x0000001F
+define i32 @popcnt1_32_narrowed_masks(i32 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_32_narrowed_masks(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add nuw i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add nuw nsw i32 %and4, %and2
+  %and6 = and i32 %add5, 117901063
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 117901063
+  %add9 = add nuw nsw i32 %and8, %and6
+  %and10 = and i32 %add9, 983055
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 983055
+  %add13 = add nuw nsw i32 %and12, %and10
+  %and14 = and i32 %add13, 31
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add nuw nsw i32 %and14, %shr15
+  ret i32 %add16
+}
+
+; 64-bit popcount with masks narrowed by InstCombine.
+; 0x0F0F0F0F0F0F0F0F -> 0x0707070707070707
+; 0x00FF00FF00FF00FF -> 0x000F000F000F000F
+; 0x0000FFFF0000FFFF -> 0x0000001F0000001F
+; 0x00000000FFFFFFFF -> 0x000000000000003F
+define i64 @popcnt1_64_narrowed_masks(i64 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_64_narrowed_masks(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %and = and i64 %uWord, 6148914691236517205
+  %shr = lshr i64 %uWord, 1
+  %and1 = and i64 %shr, 6148914691236517205
+  %add = add nuw i64 %and1, %and
+  %and2 = and i64 %add, 3689348814741910323
+  %shr3 = lshr i64 %add, 2
+  %and4 = and i64 %shr3, 3689348814741910323
+  %add5 = add nuw nsw i64 %and4, %and2
+  %and6 = and i64 %add5, 506381209866536711
+  %shr7 = lshr i64 %add5, 4
+  %and8 = and i64 %shr7, 506381209866536711
+  %add9 = add nuw nsw i64 %and8, %and6
+  %and10 = and i64 %add9, 4222189076152335
+  %shr11 = lshr i64 %add9, 8
+  %and12 = and i64 %shr11, 4222189076152335
+  %add13 = add nuw nsw i64 %and12, %and10
+  %and14 = and i64 %add13, 133143986207
+  %shr15 = lshr i64 %add13, 16
+  %and16 = and i64 %shr15, 133143986207
+  %add17 = add nuw nsw i64 %and16, %and14
+  %and18 = and i64 %add17, 63
+  %shr19 = lshr i64 %add17, 32
+  %add20 = add nuw nsw i64 %and18, %shr19
+  ret i64 %add20
+}
+
+; NEGATIVE: 32-bit narrowed mask NOT a subset of expected mask.
+; Uses 0x17171717 (bit 4 set in each byte) instead of valid narrowing
+; of 0x0F0F0F0F. 0x17 is NOT a subset of 0x0F since bit 4 is outside 0x0F.
+define i32 @popcnt1_32_narrowed_masks_wrong(i32 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_32_narrowed_masks_wrong(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[UWORD:%.*]], 1431655765
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[SHR]], 1431655765
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ADD]], 858993459
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i32 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[SHR3]], 858993459
+; CHECK-NEXT:    [[ADD5:%.*]] = add nuw nsw i32 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i32 [[ADD5]], 389520147
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i32 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i32 [[SHR7]], 389520147
+; CHECK-NEXT:    [[ADD9:%.*]] = add nuw nsw i32 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i32 [[ADD9]], 983055
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i32 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i32 [[SHR11]], 983055
+; CHECK-NEXT:    [[ADD13:%.*]] = add nuw nsw i32 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i32 [[ADD13]], 31
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i32 [[ADD13]], 16
+; CHECK-NEXT:    [[ADD16:%.*]] = add nuw nsw i32 [[AND14]], [[SHR15]]
+; CHECK-NEXT:    ret i32 [[ADD16]]
+;
+entry:
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add nuw i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add nuw nsw i32 %and4, %and2
+  %and6 = and i32 %add5, 389520147
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 389520147
+  %add9 = add nuw nsw i32 %and8, %and6
+  %and10 = and i32 %add9, 983055
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 983055
+  %add13 = add nuw nsw i32 %and12, %and10
+  %and14 = and i32 %add13, 31
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add nuw nsw i32 %and14, %shr15
+  ret i32 %add16
 }
 
 ; Negative test cases - these should NOT be optimized to llvm.ctpop
