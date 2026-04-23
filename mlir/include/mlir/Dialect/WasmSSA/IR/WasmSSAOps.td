@@ -1198,6 +1198,16 @@ def WasmSSA_TruncOp : WasmSSA_UnaryNumericalOp<"trunc",
                                         }],
                                        [WasmSSA_FPType]>{}
 
+def WasmSSA_NearestOp : WasmSSA_UnaryNumericalOp<"nearest",
+                                       "Round floating point value to the nearest integer, ties to even",
+                                        [{Example:
+
+                                         ```mlir
+                                         %a = wasmssa.nearest %b : f32
+                                         ```
+                                        }],
+                                       [WasmSSA_FPType]>{}
+
 def WasmSSA_CtzOp : WasmSSA_UnaryNumericalOp<"ctz",
                                        "Count trailing zeroes of an integer",
                                         [{Example:
