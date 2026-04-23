@@ -59,7 +59,7 @@ private:
   void readEntry();
   void readExtern();
   void readGroup();
-  void readInclude();
+  void readInclude(llvm::function_ref<void()> parse);
   void readInput();
   void readLinkerScriptStmt(StringRef tok);
   void readMemory();
@@ -74,6 +74,7 @@ private:
   void readSections();
   void readSectionsStmt(SmallVectorImpl<SectionCommand *> &v, StringRef tok);
   void readOutputSectionStmt(OutputSection &osec, StringRef tok);
+  void readStmts(llvm::function_ref<void(StringRef)> readStmt);
   void readTarget();
   void readVersion();
   void readVersionScriptCommand();
@@ -239,12 +240,7 @@ void ScriptParser::readVersion() {
 }
 
 void ScriptParser::readLinkerScript() {
-  while (!atEOF()) {
-    StringRef tok = next();
-    if (atEOF())
-      break;
-    readLinkerScriptStmt(tok);
-  }
+  readStmts([&](StringRef t) { readLinkerScriptStmt(t); });
 }
 
 void ScriptParser::readLinkerScriptStmt(StringRef tok) {
@@ -258,7 +254,8 @@ void ScriptParser::readLinkerScriptStmt(StringRef tok) {
   } else if (tok == "GROUP") {
     readGroup();
   } else if (tok == "INCLUDE") {
-    readInclude();
+    readInclude(
+        [&] { readStmts([&](StringRef t) { readLinkerScriptStmt(t); }); });
   } else if (tok == "INPUT") {
     readInput();
   } else if (tok == "MEMORY") {
@@ -303,8 +300,7 @@ void ScriptParser::readDefsym() {
   Expr e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
-  auto *cmd = make<SymbolAssignment>(
-      name, e, 0, getCurrentMB().getBufferIdentifier().str());
+  auto *cmd = make<SymbolAssignment>(name, e, 0, curBuf.filename.str());
   ctx.script->sectionCommands.push_back(cmd);
 }
 
@@ -346,8 +342,7 @@ void ScriptParser::addFile(StringRef s) {
     ctx.driver.addLibrary(s.substr(2));
   } else {
     // Case 4: s is a relative path. Search in the directory of the script file.
-    std::string filename = std::string(getCurrentMB().getBufferIdentifier());
-    StringRef directory = sys::path::parent_path(filename);
+    StringRef directory = sys::path::parent_path(curBuf.filename);
     if (!directory.empty()) {
       SmallString<0> path(directory);
       sys::path::append(path, s);
@@ -400,22 +395,41 @@ void ScriptParser::readGroup() {
     ++ctx.driver.nextGroupId;
 }
 
-void ScriptParser::readInclude() {
+void ScriptParser::readInclude(llvm::function_ref<void()> parse) {
   StringRef name = readName();
   if (!activeFilenames.insert(name).second) {
     setError("there is a cycle in linker script INCLUDEs");
     return;
   }
 
-  if (std::optional<std::string> path = searchScript(ctx, name)) {
-    if (std::optional<MemoryBufferRef> mb = readFile(ctx, *path)) {
-      buffers.push_back(curBuf);
-      curBuf = Buffer(ctx, *mb);
-      mbs.push_back(*mb);
-    }
+  std::optional<std::string> path = searchScript(ctx, name);
+  if (!path) {
+    setError("cannot find linker script " + name);
     return;
   }
-  setError("cannot find linker script " + name);
+  std::optional<MemoryBufferRef> mb = readFile(ctx, *path);
+  if (!mb)
+    return;
+
+  SaveAndRestore savedBuf(curBuf, Buffer(ctx, *mb));
+  SaveAndRestore savedPrevTok(prevTok, StringRef());
+  SaveAndRestore savedPrevTokLine(prevTokLine, size_t(1));
+  parse();
+
+  // parse() leaves `eof` true on normal completion; reset so the parent
+  // buffer continues to be lexed.
+  eof = false;
+  activeFilenames.erase(name);
+}
+
+// Drive `readStmt` on each token until EOF of the current buffer.
+void ScriptParser::readStmts(llvm::function_ref<void(StringRef)> readStmt) {
+  while (!atEOF()) {
+    StringRef tok = next();
+    if (atEOF())
+      return;
+    readStmt(tok);
+  }
 }
 
 void ScriptParser::readInput() {
@@ -707,7 +721,8 @@ void ScriptParser::readSectionsStmt(SmallVectorImpl<SectionCommand *> &v,
     return;
   }
   if (tok == "INCLUDE") {
-    readInclude();
+    readInclude(
+        [&] { readStmts([&](StringRef t) { readSectionsStmt(v, t); }); });
     return;
   }
 
@@ -1097,7 +1112,9 @@ void ScriptParser::readOutputSectionStmt(OutputSection &osec, StringRef tok) {
   } else if (tok == "SORT") {
     readSort();
   } else if (tok == "INCLUDE") {
-    readInclude();
+    readInclude([&] {
+      readStmts([&](StringRef t) { readOutputSectionStmt(osec, t); });
+    });
   } else if (tok == "(" || tok == ")") {
     setError("expected filename pattern");
   } else if (peek() == "(") {
@@ -1856,7 +1873,7 @@ void ScriptParser::readMemory() {
 
 void ScriptParser::readMemoryStmt(StringRef tok) {
   if (tok == "INCLUDE") {
-    readInclude();
+    readInclude([&] { readStmts([&](StringRef t) { readMemoryStmt(t); }); });
     return;
   }
 
