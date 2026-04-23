@@ -461,3 +461,63 @@ double vla_param_2d(int n, double m[n][n], int i, int j) {
 // OGCG:   %[[J_EXT:.*]] = sext i32 %[[J]] to i64
 // OGCG:   %[[ELEM_PTR:.*]] = getelementptr inbounds double, ptr %[[ROW_PTR]], i64 %[[J_EXT]]
 // OGCG:   %[[ELEM:.*]] = load double, ptr %[[ELEM_PTR]]
+
+void complex_vla_cast(int n) {
+  typedef _Complex float CVT[n];
+  _Complex float arr[n];
+  (void)(CVT *)&arr;
+}
+
+// CIR: cir.func {{.*}} @complex_vla_cast
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   cir.store %{{.*}}, %[[LEN_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[LEN:.*]] = cir.load {{.*}} %[[LEN_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !s32i -> !u64i
+// CIR:   %[[STACK_PTR:.*]] = cir.stacksave : !cir.ptr<!u8i>
+// CIR:   cir.store {{.*}} %[[STACK_PTR]], %[[SAVED_STACK]] : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[ArR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, %3 : !u64i, ["arr"]
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     %[[STACK_RESTORE_PTR:.*]] = cir.load {{.*}} %[[SAVED_STACK]] : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+// CIR:     cir.stackrestore %[[STACK_RESTORE_PTR]] : !cir.ptr<!u8i>
+// CIR:     cir.yield
+// CIR:   }
+
+// LLVM: define {{.*}} void @complex_vla_cast
+// LLVM:   %[[LEN_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[SAVED_STACK:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   store i32 %{{.*}}, ptr %[[LEN_ADDR]], align 4
+// LLVM:   %[[LEN:.*]] = load i32, ptr %[[LEN_ADDR]], align 4
+// LLVM:   %[[LEN_SIZE_T:.*]] = sext i32 %[[LEN]] to i64
+// LLVM:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()
+// LLVM:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]], align 8
+// LLVM:   br label %[[CLEANUP_SCOPE:.*]]
+// LLVM: [[CLEANUP_SCOPE]]:
+// LLVM:   %[[ARR:.*]] = alloca { float, float }, i64 %[[LEN_SIZE_T]], align 16
+// LLVM:   br label %[[CLEANUP_BODY:.*]]
+// LLVM: [[CLEANUP_BODY]]:
+// LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]], align 8
+// LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
+// LLVM:   br label %[[CLEANUP_END:.*]]
+// LLVM: [[CLEANUP_END]]:
+// LLVM:   br label %[[DONE:.*]]
+// LLVM: [[DONE]]:
+// LLVM:   ret void
+
+// OGCG: define {{.*}} void @complex_vla_cast
+// OGCG:   %[[LEN_ADDR:.*]] = alloca i32, align 4
+// OGCG:   %[[SAVED_STACK:.*]] = alloca ptr, align 8
+// OGCG:   %[[VLA_EXPR0:.*]] = alloca i64, align 8
+// OGCG:   store i32 %{{.*}}, ptr %[[LEN_ADDR]], align 4
+// OGCG:   %[[TMP_N:.*]] = load i32, ptr %[[LEN_ADDR]], align 4
+// OGCG:   %1 = zext i32 %0 to i64
+// OGCG:   %[[LEN:.*]] = load i32, ptr %[[LEN_ADDR]], align 4
+// OGCG:   %[[LEN_SIZE_T:.*]] = zext i32 %[[LEN]] to i64
+// OGCG:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()
+// OGCG:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]], align 8
+// OGCG:   %[[ARR:.*]] = alloca { float, float }, i64 %[[LEN_SIZE_T]], align 16
+// OGCG:   store i64 %[[LEN_SIZE_T]], ptr %[[VLA_EXPR0]], align 8
+// OGCG:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]], align 8
+// OGCG:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
