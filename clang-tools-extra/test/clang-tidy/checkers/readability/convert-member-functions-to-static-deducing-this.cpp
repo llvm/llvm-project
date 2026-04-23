@@ -26,8 +26,8 @@ class OverloadedUnresolvedWithAutoLambda {
 public:
   void CallsFunctionVar();
   void CallsOverloadedMethodWithArg(int a);
-  void OverloadedMethodWithoutArg();
-  void OverloadedMethodWithArg(int a) { };
+  void OverloadedMethod();
+  void OverloadedMethod(int a) { };
 };
 
 void OverloadedUnresolvedWithAutoLambda::CallsFunctionVar() {
@@ -39,7 +39,7 @@ void OverloadedUnresolvedWithAutoLambda::CallsFunctionVar() {
 
 void OverloadedUnresolvedWithAutoLambda::CallsOverloadedMethodWithArg(int a) {
   auto fun = [&](auto b) {
-    OverloadedMethodWithArg(b);
+    OverloadedMethod(b);
   };
 }
 
