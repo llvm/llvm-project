@@ -17,7 +17,6 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 
 using std::optional;
