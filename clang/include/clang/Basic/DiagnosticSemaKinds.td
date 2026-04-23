@@ -6534,9 +6534,6 @@ def err_inline_declaration_block_scope : Error<
   "inline declaration of %0 not allowed in block scope">;
 def err_static_non_static : Error<
   "static declaration of %0 follows non-static declaration">;
-def err_internal_extern_mismatch : Error<
-  "variable %0 declared with both internal and external linkage "
-  "in the same translation unit%select{; behavior is undefined|}1">;
 def err_different_language_linkage : Error<
   "declaration of %0 has a different language linkage">;
 def ext_retained_language_linkage : Extension<

@@ -1084,6 +1084,77 @@ int useB() { return onlyB; }
       getFullPath("b/M.cppm"));
 }
 
+TEST_F(PrerequisiteModulesTests, DuplicateModuleNamesKeepSeparateBMICache) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  SmallString<256> APcm(TestDir);
+  llvm::sys::path::append(APcm, "build", "a", "M.pcm");
+  SmallString<256> BPcm(TestDir);
+  llvm::sys::path::append(BPcm, "build", "b", "M.pcm");
+
+  CDB.addFile("a/M.cppm", R"cpp(
+export module M;
+export int onlyA = 1;
+  )cpp",
+              {"--precompile", "-o", std::string(APcm)});
+  CDB.addFile("b/M.cppm", R"cpp(
+export module M;
+export int onlyB = 2;
+  )cpp",
+              {"--precompile", "-o", std::string(BPcm)});
+  CDB.addFile("a/Use.cpp", R"cpp(
+import M;
+int useA() { return onlyA; }
+  )cpp",
+              {"-fmodule-file=M=" + std::string(APcm)});
+  CDB.addFile("b/Use.cpp", R"cpp(
+import M;
+int useB() { return onlyB; }
+  )cpp",
+              {"-fmodule-file=M=" + std::string(BPcm)});
+
+  ModulesBuilder Builder(CDB);
+
+  auto AInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("a/Use.cpp"), FS);
+  auto BInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("b/Use.cpp"), FS);
+  ASSERT_TRUE(AInfo);
+  ASSERT_TRUE(BInfo);
+
+  HeaderSearchOptions HSA(TestDir);
+  HeaderSearchOptions HSB(TestDir);
+  AInfo->adjustHeaderSearchOptions(HSA);
+  BInfo->adjustHeaderSearchOptions(HSB);
+  ASSERT_EQ(HSA.PrebuiltModuleFiles.count("M"), 1u);
+  ASSERT_EQ(HSB.PrebuiltModuleFiles.count("M"), 1u);
+  EXPECT_NE(HSA.PrebuiltModuleFiles["M"], HSB.PrebuiltModuleFiles["M"]);
+
+  auto UseA = getInputs("a/Use.cpp", CDB);
+  UseA.ModulesManager = &Builder;
+  auto CIA = buildCompilerInvocation(UseA, DiagConsumer);
+  ASSERT_TRUE(CIA);
+  auto PreambleA = buildPreamble(getFullPath("a/Use.cpp"), *CIA, UseA,
+                                 /*InMemory=*/true, /*Callback=*/nullptr);
+  ASSERT_TRUE(PreambleA);
+  auto ASTA = ParsedAST::build(getFullPath("a/Use.cpp"), UseA, std::move(CIA),
+                               {}, PreambleA);
+  ASSERT_TRUE(ASTA);
+  EXPECT_TRUE(findDecl(*ASTA, "onlyA").isFromASTFile());
+
+  auto UseB = getInputs("b/Use.cpp", CDB);
+  UseB.ModulesManager = &Builder;
+  auto CIB = buildCompilerInvocation(UseB, DiagConsumer);
+  ASSERT_TRUE(CIB);
+  auto PreambleB = buildPreamble(getFullPath("b/Use.cpp"), *CIB, UseB,
+                                 /*InMemory=*/true, /*Callback=*/nullptr);
+  ASSERT_TRUE(PreambleB);
+  auto ASTB = ParsedAST::build(getFullPath("b/Use.cpp"), UseB, std::move(CIB),
+                               {}, PreambleB);
+  ASSERT_TRUE(ASTB);
+  EXPECT_TRUE(findDecl(*ASTB, "onlyB").isFromASTFile());
+}
+
 TEST_F(PrerequisiteModulesTests, ModuleImportThroughInclude) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
 
