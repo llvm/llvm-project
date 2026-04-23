@@ -6,7 +6,7 @@ cir.func @must_be_inside_coroutine() {
   }
 }
 
-cir.func coroutine @must_have_one_coro_body(%arg0 : !cir.bool) {  // expected-error {{coroutine body must use at least one cir.await op}}
+cir.func coroutine @must_have_one_coro_body(%arg0 : !cir.bool) {  // expected-error {{coroutine function must have exactly one cir.body op}}
   cir.coro.body {
     cir.await(user, ready : {
       cir.condition(%arg0)

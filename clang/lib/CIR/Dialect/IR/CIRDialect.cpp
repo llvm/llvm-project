@@ -2553,9 +2553,9 @@ mlir::LogicalResult cir::FuncOp::verify() {
     if (!foundAwait)
       return emitOpError()
              << "coroutine body must use at least one cir.await op";
-    if (coroBodyCount > 1)
+    if (coroBodyCount != 1)
       return emitOpError()
-             << "coroutine body must use at least one cir.await op";
+             << "coroutine function must have exactly one cir.body op";
   }
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
