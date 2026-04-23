@@ -1027,6 +1027,34 @@ def WasmSSA_ConvertSOp : WasmSSA_ConversionOp<"convert_s",
     [WasmSSA_IntegerType],
     [WasmSSA_FPType]>{}
 
+def WasmSSA_TruncSIOp : WasmSSA_ConversionOp<"trunc_si",
+    [{Truncate floating point value to signed integer.
+
+      Consume a floating point value and produces a signed integer holding the value truncated toward zero.
+      Traps if the value is NaN, is infinity, or is outside the range of the target integer type.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_si %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
+def WasmSSA_TruncUIOp : WasmSSA_ConversionOp<"trunc_ui",
+    [{Truncate floating point value to unsigned integer.
+
+      Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+      Traps if the value is NaN, is infinity, is negative, or is outside the range of the target integer type.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_ui %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
 def WasmSSA_DemoteOp : WasmSSA_ConversionOp<"demote",
     "Convert a f64 value to f32",
     [{Example:
