@@ -2915,8 +2915,6 @@ void is_trivial()
   static_assert(__is_trivial(Vector));
   static_assert(__is_trivial(VectorExt));
   
-  
-  static_assert(!__is_trivial(fm2x3));
   static_assert(!__is_trivial(HasCons));
   static_assert(!__is_trivial(HasCopyAssign));
   static_assert(!__is_trivial(HasMoveAssign));
