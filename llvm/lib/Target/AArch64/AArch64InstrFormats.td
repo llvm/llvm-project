@@ -12531,15 +12531,24 @@ class BaseSWP<string order, string size, RegisterClass RC>
   let Inst{11-10} = 0b00;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rt;
-  let Predicates = [HasLSE];
 }
 
-multiclass Swap<bits<1> Acq, bits<1> Rel, string order> {
-  let Sz = 0b00, Acq = Acq, Rel = Rel in def B : BaseSWP<order, "b", GPR32>;
-  let Sz = 0b01, Acq = Acq, Rel = Rel in def H : BaseSWP<order, "h", GPR32>;
-  let Sz = 0b10, Acq = Acq, Rel = Rel in def W : BaseSWP<order, "", GPR32>;
-  let Sz = 0b11, Acq = Acq, Rel = Rel in def X : BaseSWP<order, "", GPR64>;
+multiclass Swap_impl<bits<1> Acq, bits<1> Rel, string order, list<Predicate> preds, string suffix> {
+  let Predicates = preds, Acq = Acq, Rel = Rel in {
+    let Sz = 0b00 in def "B" # suffix : BaseSWP<order, "b", GPR32>;
+    let Sz = 0b01 in def "H" # suffix : BaseSWP<order, "h", GPR32>;
+    let Sz = 0b10 in def "W" # suffix : BaseSWP<order, "",  GPR32>;
+    let Sz = 0b11 in def "X" # suffix : BaseSWP<order, "",  GPR64>;
+  }
 }
+
+multiclass Swap<bits<1> Acq, bits<1> Rel, string order>
+  : Swap_impl<Acq, Rel, order, [HasLSE], "">;
+
+// Like Swap but without the HasLSE predicate — for isCodeGenOnly use by
+// MS intrinsics that must emit SWP* regardless of the -march setting.
+multiclass Swap_cg<bits<1> Acq, bits<1> Rel, string order>
+  : Swap_impl<Acq, Rel, order, [], "_cg">;
 
 // v9.6a swap operations
 class BaseSWPLSUI<string order, RegisterClass RC>

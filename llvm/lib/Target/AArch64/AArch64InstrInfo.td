@@ -3061,6 +3061,12 @@ defm SWPA  : Swap<1, 0, "a">;
 defm SWPL  : Swap<0, 1, "l">;
 defm SWPAL : Swap<1, 1, "al">;
 
+// isCodeGenOnly=1: excluded from asm parser/disassembler, no HasLSE predicate.
+// Used by the __swp* MS intrinsics to force SWP* emission regardless of -march.
+let isCodeGenOnly = 1 in {
+  defm SWP  : Swap_cg<0, 0, "">;
+}
+
 // v9.6a atomic swap (FEAT_LSUI)
 let Predicates = [HasLSUI] in {
   defm SWPT   : SwapLSUI<0, 0, "">;
