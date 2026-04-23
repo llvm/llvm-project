@@ -1586,7 +1586,8 @@ void LowerTypeTestsModule::createJumpTable(
   IRBuilder<> IRB(BB);
 
   SmallVector<DILocation *> Locations;
-  if (M.getDwarfVersion() != 0)
+  // FIXME: Support Cross-DSO CFI.
+  if (M.getDwarfVersion() != 0 && !M.getModuleFlag("Cross-DSO CFI"))
     Locations = createJumpTableDebugInfo(F, Functions);
 
   InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
