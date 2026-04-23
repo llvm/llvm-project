@@ -1062,7 +1062,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       auto Copy = MIB.buildCopy({DstTempRC}, {SrcReg});
       copySubReg(I, MRI, RBI, Copy.getReg(0), DstRC, SubReg);
     } else if (SrcSize > DstSize &&
-               (!SubSrcReg || TRI.getMatchingSuperRegClass(SrcRC, DstRC, SubSrcReg) != SrcRC)) {
+               (!SubSrcReg || TRI.getMatchingSuperRegClass(
+                                  SrcRC, DstRC, SubSrcReg) != SrcRC)) {
       // If the source register is bigger than the destination we need to
       // perform a subregister copy, unless there is already a compatible
       // sub-register present.
