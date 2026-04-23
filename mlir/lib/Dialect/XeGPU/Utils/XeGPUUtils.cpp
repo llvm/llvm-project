@@ -162,7 +162,8 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit)
-        return getDistributeLayoutAttr(tiedInit->get());
+        // return getDistributeLayoutAttr(tiedInit->get());
+        return getTemporaryLayout(*tiedInit);
     }
   }
 

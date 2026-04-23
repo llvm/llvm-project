@@ -33,20 +33,6 @@
 
 using namespace mlir;
 
-void xegpu::recoverTemporaryLayoutsDeprecated(Operation *op) {
-  op->walk([&](Operation *nestOp) {
-    for (OpOperand &opr : nestOp->getOpOperands()) {
-      auto layout = getDistributeLayoutAttr(opr.get());
-      setDistributeLayoutAttr(opr, layout);
-    }
-
-    for (OpResult result : nestOp->getOpResults()) {
-      auto layout = getDistributeLayoutAttr(result);
-      setDistributeLayoutAttr(result, layout);
-    }
-  });
-}
-
 SmallVector<NamedAttribute>
 xegpu::dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute> out;
@@ -293,7 +279,7 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
       }
     });
   };
-
+  removeTemporaryLayoutAttrs(rootOp);
   rootOp->walk([&](func::FuncOp func) {
     processFunc(func.getBody(), func.getSymName());
   });
