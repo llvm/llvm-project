@@ -478,10 +478,9 @@ void OmpStructureChecker::CheckLabelContext(const parser::CharBlock source,
     }
 
     auto getSource{[](const parser::OpenMPConstruct &c) -> parser::CharBlock {
-      if (auto src{parser::GetSource(c)}) {
-        return *src;
-      }
-      return {};
+      std::optional<parser::CharBlock> src{parser::GetSource(c)};
+      assert(src.has_value() && "OpenMPConstruct should have source");
+      return *src;
     }};
 
     return getSource(*lhs).Contains(getSource(*rhs));
