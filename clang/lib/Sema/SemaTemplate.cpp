@@ -6820,8 +6820,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
     Entity = CUE->getGuidDecl();
 
   // If our parameter has pointer type, check for a null template value.
-  if (ParamType->isPointerOrBlockPointerType() ||
-      ParamType->isNullPtrType()) {
+  if (ParamType->isPointerOrBlockPointerType() || ParamType->isNullPtrType()) {
     switch (isNullPointerValueTemplateArgument(S, Param, ParamType, ArgIn,
                                                Entity)) {
     case NPV_NullPointer:
