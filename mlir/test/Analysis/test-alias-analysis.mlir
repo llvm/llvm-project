@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-alias-analysis))' -split-input-file -allow-unregistered-dialect 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(test-alias-analysis)' -split-input-file -allow-unregistered-dialect 2>&1 | FileCheck %s -check-prefix=CHECK-INTERPROCEDURAL
 
 // CHECK-LABEL: Testing : "simple"
 // CHECK-DAG: func.region0#0 <-> func.region0#1: MayAlias
@@ -271,4 +272,75 @@ func.func @constants(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
 func.func @distinct_objects(%arg: memref<?xf32>, %arg1: memref<?xf32>) attributes {test.ptr = "func"} {
   %0, %1 = memref.distinct_objects %arg, %arg1 {test.ptr = "distinct"} : memref<?xf32>, memref<?xf32>
   return
+}
+
+// -----
+
+// CHECK-INTERPROCEDURAL-LABEL: Testing : "m_may_alias"
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#0 <-> func_foo.region0#1: MayAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#0 <-> alloc_1#0: MayAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#1 <-> alloc_1#0: NoAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#0 <-> alloc_2#0: MayAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#1 <-> alloc_2#0: MustAlias
+// CHECK-INTERPROCEDURAL-DAG: alloc_1#0 <-> alloc_2#0: NoAlias
+module @m_may_alias{
+  func.func private @foo(%arg: memref<8x64xf32>, %arg1:memref<8x64xf32>) attributes {test.ptr = "func_foo"} {
+    return
+  }
+
+  func.func @main(%arg: memref<2xf32>, %arg1: memref<2xf32>) {
+    %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+    %3 = memref.alloc() {test.ptr = "alloc_2"} : memref<8x64xf32>
+    func.call @foo(%3, %3) : (memref<8x64xf32>, memref<8x64xf32>) -> ()
+    func.call @foo(%2, %3) : (memref<8x64xf32>, memref<8x64xf32>) -> ()
+    return
+  }
+}
+
+// -----
+
+// CHECK-INTERPROCEDURAL-LABEL: Testing : "m_must_alias"
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#0 <-> func_foo.region0#1: MustAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#0 <-> alloc_1#0: NoAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#1 <-> alloc_1#0: NoAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#0 <-> alloc_2#0: MustAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#1 <-> alloc_2#0: MustAlias
+// CHECK-INTERPROCEDURAL-DAG: alloc_1#0 <-> alloc_2#0: NoAlias
+
+module @m_must_alias{
+  func.func private @foo(%arg: memref<8x64xf32>, %arg1:memref<8x64xf32>) attributes {test.ptr = "func_foo"} {
+    return
+  }
+
+  func.func @main(%arg: memref<2xf32>, %arg1: memref<2xf32>) {
+    %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+    %3 = memref.alloc() {test.ptr = "alloc_2"} : memref<8x64xf32>
+    func.call @foo(%3, %3) : (memref<8x64xf32>, memref<8x64xf32>) -> ()
+    func.call @foo(%3, %3) : (memref<8x64xf32>, memref<8x64xf32>) -> ()
+    return
+  }
+}
+
+// -----
+
+// CHECK-INTERPROCEDURAL-LABEL: Testing : "m_no_alias"
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#0 <-> func_foo.region0#1: NoAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#0 <-> alloc_1#0: MustAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#1 <-> alloc_1#0: NoAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#0 <-> alloc_2#0: NoAlias
+// CHECK-INTERPROCEDURAL-DAG: func_foo.region0#1 <-> alloc_2#0: MustAlias
+// CHECK-INTERPROCEDURAL-DAG: alloc_1#0 <-> alloc_2#0: NoAlias
+
+module @m_no_alias{
+  func.func private @foo(%arg: memref<8x64xf32>, %arg1:memref<8x64xf32>) attributes {test.ptr = "func_foo"} {
+    return
+  }
+
+  func.func @main(%arg: memref<2xf32>, %arg1: memref<2xf32>) {
+    %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+    %3 = memref.alloc() {test.ptr = "alloc_2"} : memref<8x64xf32>
+    func.call @foo(%2, %3) : (memref<8x64xf32>, memref<8x64xf32>) -> ()
+    func.call @foo(%2, %3) : (memref<8x64xf32>, memref<8x64xf32>) -> ()
+    return
+  }
 }
