@@ -471,10 +471,10 @@ StringRef CGDebugInfo::getSelectorName(Selector S) {
 
 StringRef CGDebugInfo::getClassName(const RecordDecl *RD,
                                     bool *NameIsSimplified) {
-  const bool IsTemplateSpecialization =
-      isa<ClassTemplateSpecializationDecl>(RD);
-  if (const IdentifierInfo *II;
-      !IsTemplateSpecialization && (II = RD->getIdentifier()))
+  const Decl::Kind DeclKind = RD->getKind();
+  if (const IdentifierInfo *II = RD->getIdentifier();
+      DeclKind != Decl::ClassTemplateSpecialization &&
+      DeclKind != Decl::ClassTemplatePartialSpecialization && II)
     // Quick optimization to avoid having to intern strings that are already
     // stored reliably elsewhere.
     return II->getName();
@@ -488,7 +488,8 @@ StringRef CGDebugInfo::getClassName(const RecordDecl *RD,
 
   StringRef Name;
   bool Simplified = false;
-  if (IsTemplateSpecialization) {
+  if (DeclKind == Decl::ClassTemplateSpecialization ||
+      DeclKind == Decl::ClassTemplatePartialSpecialization) {
     // Copy this name on the side and use its reference.
     Name = internString(GetName(RD, false, &Simplified));
   } else if (CGM.getCodeGenOpts().EmitCodeView) {
