@@ -80,7 +80,7 @@ func.func @insert_slice_rank_reducing_dynamic_shape(
 }
 
 //   CHECK-LABEL: func.func @insert_slice_rank_reducing_dynamic_shape
-// CHECK-COUNT-2:   tensor.insert_slice
+// CHECK-COUNT-1:   tensor.insert_slice
 
 // -----
 
