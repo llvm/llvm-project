@@ -371,8 +371,7 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
       return;
     }
 
-    cir::GlobalLinkageKind linkage =
-        cgm.getCIRLinkageVarDefinition(&d, /*IsConstant=*/false);
+    cir::GlobalLinkageKind linkage = cgm.getCIRLinkageVarDefinition(&d);
 
     // FIXME: We need to force the emission/use of a guard variable for
     // some variables even if we can constant-evaluate them because
@@ -832,6 +831,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
 
   case Decl::Function:     // void X();
   case Decl::EnumConstant: // enum ? { X = ? }
+  case Decl::ExplicitInstantiation:
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
   case Decl::Label:        // __label__ x;
   case Decl::Import:
@@ -896,7 +896,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
     QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
     assert(!cir::MissingFeatures::generateDebugInfo());
     if (ty->isVariablyModifiedType())
-      cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
+      emitVariablyModifiedType(ty);
     return;
   }
   case Decl::ImplicitConceptSpecialization:
@@ -1141,10 +1141,8 @@ void CIRGenFunction::pushPendingCleanupToEHStack(
   if (entry.activeFlag.isValid()) {
     EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
     scope.setActiveFlag(entry.activeFlag);
-    if (scope.isNormalCleanup())
-      scope.setTestFlagInNormalCleanup();
-    if (scope.isEHCleanup())
-      scope.setTestFlagInEHCleanup();
+    scope.setTestFlagInNormalCleanup(scope.isNormalCleanup());
+    scope.setTestFlagInEHCleanup(scope.isEHCleanup());
   }
 }
 

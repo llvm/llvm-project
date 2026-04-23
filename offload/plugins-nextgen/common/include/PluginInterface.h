@@ -148,6 +148,14 @@ struct AsyncInfoWrapperTy {
     return getQueueAs<Ty>();
   }
 
+  /// Explicitly synchronize with the __tgt_async_info's pending operations
+  /// regardless of which async info this object wraps. The associated
+  /// underlying queue (if any) will not be released. Calling this function does
+  /// not obviate the need to call the finalize function later. This function is
+  /// intended for specific use cases where a synchronous operation needs to
+  /// explicitly wait for the operations already on the queue.
+  Error synchronize();
+
   /// Synchronize with the __tgt_async_info's pending operations if it's the
   /// internal async info. The error associated to the asynchronous operations
   /// issued in this queue must be provided in \p Err. This function will update
@@ -416,8 +424,7 @@ struct GenericKernelTy {
   Error launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                KernelExtraArgsTy *KernelExtraArgs,
-               AsyncInfoWrapperTy &AsyncInfoWrapper,
-               RecordReplayTy::HandleTy *RRHandle = nullptr) const;
+               AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice,
                            uint32_t NumThreads[3], uint32_t NumBlocks[3],
                            uint32_t DynBlockMemSize, KernelArgsTy &KernelArgs,

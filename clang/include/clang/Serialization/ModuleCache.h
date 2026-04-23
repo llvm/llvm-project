@@ -10,6 +10,9 @@
 #define LLVM_CLANG_SERIALIZATION_MODULECACHE_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
 
 #include <ctime>
 #include <memory>
@@ -25,10 +28,27 @@ class MemoryBufferRef;
 namespace clang {
 class InMemoryModuleCache;
 
+/// The address of an instance of this class represents the identity of a module
+/// cache directory.
+class ModuleCacheDirectory {};
+
 /// The module cache used for compiling modules implicitly. This centralizes the
 /// operations the compiler might want to perform on the cache.
 class ModuleCache {
+  /// Mapping from a path to the module cache directory identity.
+  llvm::StringMap<const ModuleCacheDirectory *> ByPath;
+
+  /// Mapping from the filesystem entity to the module cache directory identity.
+  llvm::DenseMap<llvm::sys::fs::UniqueID, std::unique_ptr<ModuleCacheDirectory>>
+      ByUID;
+
 public:
+  /// Returns an opaque pointer representing the module cache directory. This
+  /// returns the same pointer regardless of the path spelling, as long as it
+  /// resolves to the same file system entity. This also resolves links in the
+  /// path. This may return nullptr if the module cache does not exist.
+  virtual const ModuleCacheDirectory *getDirectoryPtr(StringRef Path);
+
   /// Returns lock for the given module file. The lock is initially unlocked.
   virtual std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) = 0;

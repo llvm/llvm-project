@@ -335,6 +335,13 @@ feature_test_macros = [
             "headers": ["concepts"],
         },
         {
+            "name": "__cpp_lib_constant_wrapper",
+            "values": {
+                "c++26": 202603,
+            },
+            "headers": ["utility"],
+        },
+        {
             "name": "__cpp_lib_constexpr_algorithms",
             "values": {
                 "c++20": 201806,
@@ -1124,6 +1131,11 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_contains",
             "values": {"c++23": 202207},
             "headers": ["algorithm"],
+        },
+        {
+            "name": "__cpp_lib_ranges_enumerate",
+            "values": {"c++23": 202302},
+            "headers": ["ranges"],
         },
         {
             "name": "__cpp_lib_ranges_find_last",

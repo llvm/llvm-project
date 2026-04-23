@@ -1089,6 +1089,8 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
+        # Resolves circular-dep b/w Coroutines and Core.
+        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ]),
     hdrs = glob(
         [
@@ -2312,7 +2314,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenFastISel.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/AArch64/AArch64GenGlobalISel.inc",
             ),
             (
