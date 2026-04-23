@@ -206,7 +206,10 @@ if test_cc_resource_dir is not None:
     test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
 lit_config.dbg(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
 local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
-if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
+if (
+    test_cc_resource_dir != local_build_resource_dir
+    and config.test_standalone_build_libs
+):
     if config.compiler_id == "Clang":
         lit_config.dbg(
             f"Overriding test compiler resource dir to use "
@@ -362,6 +365,7 @@ if config.target_os == "NetBSD":
     config.substitutions.append(("%run_nomprotect", config.netbsd_nomprotect_prefix))
 else:
     config.substitutions.append(("%run_nomprotect", "%run"))
+
 
 # Copied from libcxx's config.py
 def get_lit_conf(name, default=None):
@@ -1080,14 +1084,17 @@ if config.has_no_default_config_flag:
     config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 
 if config.has_compiler_rt_libatomic:
-  base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.atomic%s.so"
-                          % config.target_suffix)
-  if sys.platform in ['win32'] and execute_external:
-    # Don't pass dosish path separator to msys bash.exe.
-    base_lib = base_lib.replace('\\', '/')
-  config.substitutions.append(("%libatomic", base_lib + f" -Wl,-rpath,{config.compiler_rt_libdir}"))
+    base_lib = os.path.join(
+        config.compiler_rt_libdir, "libclang_rt.atomic%s.so" % config.target_suffix
+    )
+    if sys.platform in ["win32"] and execute_external:
+        # Don't pass dosish path separator to msys bash.exe.
+        base_lib = base_lib.replace("\\", "/")
+    config.substitutions.append(
+        ("%libatomic", base_lib + f" -Wl,-rpath,{config.compiler_rt_libdir}")
+    )
 else:
-  config.substitutions.append(("%libatomic", "-latomic"))
+    config.substitutions.append(("%libatomic", "-latomic"))
 
 # Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
 push_dynamic_library_lookup_path(config, config.compiler_rt_libdir)

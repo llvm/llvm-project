@@ -21,9 +21,7 @@ namespace clang::tidy::fuchsia {
 /// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/temporary-objects.html
 class TemporaryObjectsCheck : public ClangTidyCheck {
 public:
-  TemporaryObjectsCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        Names(utils::options::parseStringList(Options.get("Names", ""))) {}
+  TemporaryObjectsCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }

@@ -226,6 +226,8 @@ public:
 
   bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
 
+  bool hasAsyncMark() const { return hasVMemToLDSLoad() || HasAsynccnt; }
+
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
   }

@@ -1084,7 +1084,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     if (OrderedInvertedMask == fcInf)
       Pred = IsUnordered ? FCmpInst::FCMP_UNE : FCmpInst::FCMP_ONE;
 
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Src0);
+    Value *Fabs = Builder.CreateFAbs(Src0);
     Value *CmpInf = Builder.CreateFCmp(Pred, Fabs, Inf);
     CmpInf->takeName(&II);
     return replaceInstUsesWith(II, CmpInf);
@@ -2938,7 +2938,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     };
 
     if (IsMinMaxOrXNegX(Arg0, Arg1) || IsMinMaxOrXNegX(Arg1, Arg0)) {
-      Value *R = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
+      Value *R = Builder.CreateFAbs(X, II);
       if (IID == Intrinsic::minimum || IID == Intrinsic::minnum ||
           IID == Intrinsic::minimumnum)
         R = Builder.CreateFNegFMF(R, II);
@@ -3060,13 +3060,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (*KnownSignBit) {
         // If we know that the sign argument is negative, reduce to FNABS:
         // copysign Mag, -Sign --> fneg (fabs Mag)
-        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
+        Value *Fabs = Builder.CreateFAbs(Mag, II);
         return replaceInstUsesWith(*II, Builder.CreateFNegFMF(Fabs, II));
       }
 
       // If we know that the sign argument is positive, reduce to FABS:
       // copysign Mag, +Sign --> fabs Mag
-      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
+      Value *Fabs = Builder.CreateFAbs(Mag, II);
       return replaceInstUsesWith(*II, Fabs);
     }
 
@@ -3117,8 +3117,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     // fabs (-X) --> fabs (X)
     if (match(Arg, m_FNeg(m_Value(X)))) {
-        CallInst *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
-        return replaceInstUsesWith(CI, Fabs);
+      CallInst *Fabs = Builder.CreateFAbs(X, II);
+      return replaceInstUsesWith(CI, Fabs);
     }
 
     if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
@@ -3147,8 +3147,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0),
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
-      CallInst *AbsSign =
-          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Magnitude, II);
+      CallInst *AbsSign = Builder.CreateFAbs(Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 
@@ -3294,25 +3293,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::ptrauth_auth:
   case Intrinsic::ptrauth_resign: {
-    // We don't support this optimization on intrinsic calls with deactivation
-    // symbols, which are represented using operand bundles.
-    if (II->hasOperandBundles())
-      break;
-
     // (sign|resign) + (auth|resign) can be folded by omitting the middle
     // sign+auth component if the key and discriminator match.
     bool NeedSign = II->getIntrinsicID() == Intrinsic::ptrauth_resign;
     Value *Ptr = II->getArgOperand(0);
     Value *Key = II->getArgOperand(1);
     Value *Disc = II->getArgOperand(2);
+    Value *DS = nullptr;
+    if (auto Bundle = II->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+      DS = Bundle->Inputs[0];
 
     // AuthKey will be the key we need to end up authenticating against in
     // whatever we replace this sequence with.
     Value *AuthKey = nullptr, *AuthDisc = nullptr, *BasePtr;
     if (const auto *CI = dyn_cast<CallBase>(Ptr)) {
-      // We don't support this optimization on intrinsic calls with deactivation
-      // symbols, which are represented using operand bundles.
-      if (CI->hasOperandBundles())
+      Value *OtherDS = nullptr;
+      if (auto Bundle =
+              CI->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+        OtherDS = Bundle->Inputs[0];
+      if (DS != OtherDS)
         break;
 
       BasePtr = CI->getArgOperand(0);
@@ -3320,6 +3319,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
           break;
       } else if (CI->getIntrinsicID() == Intrinsic::ptrauth_resign) {
+        // The resign intrinsic does not support deactivation symbols.
+        assert(!DS);
         if (CI->getArgOperand(3) != Key || CI->getArgOperand(4) != Disc)
           break;
         AuthKey = CI->getArgOperand(1);
@@ -3330,7 +3331,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // ptrauth constants are equivalent to a call to @llvm.ptrauth.sign for
       // our purposes, so check for that too.
       const auto *CPA = dyn_cast<ConstantPtrAuth>(PtrToInt->getOperand(0));
-      if (!CPA || !CPA->isKnownCompatibleWith(Key, Disc, DL))
+      if (!CPA || DS || !CPA->isKnownCompatibleWith(Key, Disc, DL))
         break;
 
       // resign(ptrauth(p,ks,ds),ks,ds,kr,dr) -> ptrauth(p,kr,dr)
@@ -3379,9 +3380,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       CallArgs.push_back(II->getArgOperand(4));
     }
 
+    std::vector<OperandBundleDef> Bundles;
+    if (DS)
+      Bundles.push_back(OperandBundleDef("deactivation-symbol", DS));
+
     Function *NewFn =
         Intrinsic::getOrInsertDeclaration(II->getModule(), NewIntrin);
-    return CallInst::Create(NewFn, CallArgs);
+    return CallInst::Create(NewFn, CallArgs, Bundles);
   }
   case Intrinsic::arm_neon_vtbl1:
   case Intrinsic::arm_neon_vtbl2:
@@ -3965,6 +3970,47 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::vp_load: {
+    auto *VPI = cast<VPIntrinsic>(II);
+    // Fold away bit casts of the loaded value by loading the desired type,
+    // if the mask is all-ones.
+    Value *Mask = VPI->getMaskParam();
+    Value *EVL = VPI->getVectorLengthParam();
+    if (!isa<Constant>(Mask) || !cast<Constant>(Mask)->isAllOnesValue() ||
+        !II->hasOneUse())
+      break;
+
+    const DataLayout &DL = II->getDataLayout();
+    auto *Cast = dyn_cast<CastInst>(II->user_back());
+    if (!Cast || !Cast->isNoopCast(DL) || !isa<VectorType>(Cast->getDestTy()))
+      break;
+    VectorType *OrigVecTy = cast<VectorType>(II->getType());
+    Align OrigAlign =
+        DL.getValueOrABITypeAlignment(VPI->getPointerAlignment(), OrigVecTy);
+    ElementCount OrigVecCnt = OrigVecTy->getElementCount();
+    VectorType *NewVecTy = cast<VectorType>(Cast->getDestTy());
+    ElementCount NewVecCnt = NewVecTy->getElementCount();
+
+    // Right now we only support cases where the NewVec is longer, because for
+    // cases where it's shorter, we have to be sure that EVL can be exactly
+    // divided, otherwise it might yield incorrect results or even page faults
+    // (if we round-up during the division).
+    if (OrigVecCnt.isScalable() == NewVecCnt.isScalable() &&
+        NewVecCnt.hasKnownScalarFactor(OrigVecCnt)) {
+      unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
+      Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
+      Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
+      CallInst *NewVP = Builder.CreateIntrinsic(
+          NewVecTy, Intrinsic::vp_load,
+          {VPI->getMemoryPointerParam(), NewMask, NewEVL});
+      // Preserve the original alignment.
+      NewVP->addParamAttrs(
+          0, AttrBuilder(VPI->getContext()).addAlignmentAttr(OrigAlign));
+      replaceInstUsesWith(*Cast, NewVP);
+      return eraseInstFromFunction(*Cast);
+    }
+    break;
+  }
   case Intrinsic::experimental_vp_reverse: {
     Value *X;
     Value *Vec = II->getArgOperand(0);
@@ -4240,6 +4286,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::fptoui_sat:
+  case Intrinsic::fptosi_sat:
+    if (Instruction *I = foldItoFPtoI(*II))
+      return I;
+    break;
   case Intrinsic::frexp: {
     Value *X;
     // The first result is idempotent with the added complication of the struct

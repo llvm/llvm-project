@@ -30,9 +30,9 @@ define amdgpu_kernel void @sin_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; REAL16-NEXT:    s_mov_b32 s3, 0x3e230000
 ; REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_fma_mix_f32_bf16 v0, s2, s3, neg(0) op_sel_hi:[1,0,0]
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; REAL16-NEXT:    v_fma_mixlo_bf16 v0, s2, s3, 0 op_sel_hi:[1,0,0]
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; REAL16-NEXT:    v_sin_bf16_e32 v0.l, v0.l
 ; REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; REAL16-NEXT:    s_endpgm

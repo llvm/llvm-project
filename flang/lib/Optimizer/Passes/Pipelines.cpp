@@ -266,7 +266,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
                                   const MLIRToLLVMPassPipelineConfig &config) {
   llvm::OptimizationLevel optLevel = config.OptLevel;
-  if (optLevel.getSizeLevel() > 0 || optLevel.getSpeedupLevel() > 0) {
+  if (optLevel.getSpeedupLevel() > 0) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
   }
@@ -420,8 +420,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       {framePointerKind, config.InstrumentFunctionEntry,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
-       config.Reciprocals, config.PreferVectorWidth, /*tuneCPU=*/"",
-       setNoCapture, setNoAlias}));
+       config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
+       /*tuneCPU=*/"", setNoCapture, setNoAlias}));
 
   if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(
