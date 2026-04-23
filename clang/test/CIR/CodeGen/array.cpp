@@ -110,6 +110,11 @@ int h[16] = {1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0};
 // OGCG-SAME:               i32 5, i32 6, i32 7, i32 8],
 // OGCG-SAME:             [8 x i32] zeroinitializer }>
 
+char huge[0x1FFFFFFFFFFFFFFFULL];
+// CIR: cir.global external @huge = #cir.zero : !cir.array<!s8i x 2305843009213693951>
+// LLVM: @huge = global [2305843009213693951 x i8] zeroinitializer
+// OGCG: @huge = global [2305843009213693951 x i8] zeroinitializer
+
 extern int b[10];
 // CIR: cir.global "private" external @b : !cir.array<!s32i x 10>
 // LLVM: @b = external global [10 x i32]
@@ -514,3 +519,58 @@ void boolean_index_access(int x) {
 // OGCG: %[[ELE:.*]] = getelementptr inbounds nuw [2 x i32], ptr %[[ARR_ADDR]], i64 0, i64 %[[IDX]]
 // OGCG: %[[VAL:.*]] = load i32, ptr %[[ELE]]
 // OGCG: store i32 %[[VAL]], ptr %[[N_ADDR]]
+
+void bitint_index_access(_BitInt(8) i) {
+  int arr[10] = {};
+  int n = arr[i];
+}
+
+// A narrow signed _BitInt index must be sign-extended to pointer width before
+// being used as a subscript.
+
+// CIR: cir.func{{.*}} @_Z19bitint_index_accessDB8_
+// CIR:   %[[I_ADDR:.*]] = cir.alloca !s8i_bitint, !cir.ptr<!s8i_bitint>, ["i", init]
+// CIR:   %[[ARR_ADDR:.*]] = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["arr", init]
+// CIR:   %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
+// CIR:   %[[I:.*]] = cir.load{{.*}} %[[I_ADDR]] : !cir.ptr<!s8i_bitint>, !s8i_bitint
+// CIR:   %[[IDX:.*]] = cir.cast integral %[[I]] : !s8i_bitint -> !s64i
+// CIR:   %[[ELE:.*]] = cir.get_element %[[ARR_ADDR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CIR:   %[[VAL:.*]] = cir.load{{.*}} %[[ELE]] : !cir.ptr<!s32i>, !s32i
+// CIR:   cir.store{{.*}} %[[VAL]], %[[N_ADDR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: define{{.*}} @_Z19bitint_index_accessDB8_(i8 {{[^)]*}})
+// LLVM:   %[[I_ADDR:.*]] = alloca i8
+// LLVM:   %[[ARR_ADDR:.*]] = alloca [10 x i32]
+// LLVM:   %[[N_ADDR:.*]] = alloca i32
+// LLVM:   %[[I:.*]] = load i8, ptr %[[I_ADDR]]
+// LLVM:   %[[IDX:.*]] = sext i8 %[[I]] to i64
+// LLVM:   %[[ELE:.*]] = getelementptr [10 x i32], ptr %[[ARR_ADDR]], i32 0, i64 %[[IDX]]
+// LLVM:   %[[VAL:.*]] = load i32, ptr %[[ELE]]
+// LLVM:   store i32 %[[VAL]], ptr %[[N_ADDR]]
+
+// OGCG: define{{.*}} @_Z19bitint_index_accessDB8_(i8 {{[^)]*}} %i)
+// OGCG:   %[[I_ADDR:.*]] = alloca i8
+// OGCG:   %[[ARR_ADDR:.*]] = alloca [10 x i32]
+// OGCG:   %[[N_ADDR:.*]] = alloca i32
+// OGCG:   store i8 %i, ptr %[[I_ADDR]]
+// OGCG:   %[[I:.*]] = load i8, ptr %[[I_ADDR]]
+// OGCG:   %[[IDX:.*]] = sext i8 %[[I]] to i64
+// OGCG:   %[[ELE:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_ADDR]], i64 0, i64 %[[IDX]]
+// OGCG:   %[[VAL:.*]] = load i32, ptr %[[ELE]]
+// OGCG:   store i32 %[[VAL]], ptr %[[N_ADDR]]
+
+char access_last_element_of_huge_array() {
+  return huge[0x1FFFFFFFFFFFFFFEULL];
+}
+
+// CIR: cir.func{{.*}} @_Z33access_last_element_of_huge_arrayv
+// CIR:   %[[IDX:.*]] = cir.const #cir.int<2305843009213693950> : !s64i
+// CIR:   %[[HUGE:.*]] = cir.get_global @huge : !cir.ptr<!cir.array<!s8i x 2305843009213693951>>
+// CIR:   %[[ELE:.*]] = cir.get_element %[[HUGE]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 2305843009213693951>> -> !cir.ptr<!s8i>
+// CIR:   cir.load{{.*}} %[[ELE]] : !cir.ptr<!s8i>, !s8i
+
+// LLVM: define{{.*}} @_Z33access_last_element_of_huge_arrayv()
+// LLVM:   load i8, ptr getelementptr inbounds nuw (i8, ptr @huge, i64 2305843009213693950)
+
+// OGCG: define{{.*}} @_Z33access_last_element_of_huge_arrayv()
+// OGCG:   load i8, ptr getelementptr inbounds nuw (i8, ptr @huge, i64 2305843009213693950)
