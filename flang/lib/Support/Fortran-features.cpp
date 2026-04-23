@@ -162,6 +162,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::BadValueInDeadCode);
   warnUsage_.set(UsageWarning::MisplacedIgnoreTKR);
   warnUsage_.set(UsageWarning::ImpureFinalInPure);
+  warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
 }
 
