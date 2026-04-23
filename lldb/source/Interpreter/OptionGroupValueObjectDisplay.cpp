@@ -172,6 +172,7 @@ void OptionGroupValueObjectDisplay::OptionParsingStarting(
   be_raw = false;
   ignore_cap = false;
   run_validator = false;
+  print_braces = true;
 
   TargetSP target_sp =
       execution_context ? execution_context->GetTargetSP() : TargetSP();
@@ -180,6 +181,7 @@ void OptionGroupValueObjectDisplay::OptionParsingStarting(
     auto max_depth_config = target_sp->GetMaximumDepthOfChildrenToDisplay();
     max_depth = std::get<uint32_t>(max_depth_config);
     max_depth_is_default = std::get<bool>(max_depth_config);
+    print_braces = target_sp->GetPrintBraces();
   } else {
     // If we don't have any targets, then dynamic values won't do us much good.
     use_dynamic = lldb::eNoDynamicValues;
@@ -203,6 +205,7 @@ DumpValueObjectOptions OptionGroupValueObjectDisplay::GetAsDumpOptions(
       .SetUseSyntheticValue(use_synth)
       .SetFlatOutput(flat_output)
       .SetIgnoreCap(ignore_cap)
+      .SetPrintBraces(print_braces)
       .SetFormat(format)
       .SetSummary(summary_sp);
 
