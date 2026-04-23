@@ -22,6 +22,7 @@ LLVM and API reference documentation.
    ConvergenceAndUniformity
    ConvergentOperations
    Coroutines
+   DaemonMode
    DependenceGraphs/index
    ExceptionHandling
    Extensions
