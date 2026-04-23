@@ -16,9 +16,9 @@
 
 ; ARM-VALID-NOT: OpenCSD: Unsupported processor architecture
 
-; ARM-NOT-VALID: OpenCSD: Unsupported processor architecture. Only microcontroller-class (Cortex-M) is currently supported.
+; ARM-NOT-VALID: OpenCSD: Unsupported processor architecture. Only Arm M-profile (Cortex-M) with ETM support is currently supported.
 
-; X86: OpenCSD: Unsupported processor architecture. Only microcontroller-class (Cortex-M) is currently supported.
+; X86: OpenCSD: Unsupported processor architecture. Only Arm M-profile (Cortex-M) with ETM support is currently supported.
 
 ;--- arm-valid.yaml
 --- !ELF

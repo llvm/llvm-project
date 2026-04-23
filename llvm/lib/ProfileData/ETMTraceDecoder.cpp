@@ -28,9 +28,9 @@ public:
 class ETMTraceConfig : public HardwareTraceConfig {
 public:
   ocsd_etmv4_cfg Cfg{};
-  uint8_t CSID = 0x10;
+  uint8_t TraceID;
 
-  ETMTraceConfig(const Triple &TargetTriple) {
+  ETMTraceConfig(const Triple &TargetTriple, uint8_t TraceID) : TraceID(TraceID) {
     ocsd_arch_version_t ArchVer = ARCH_UNKNOWN;
     if (TargetTriple.isArmMClass()) {
       unsigned ArchVersion = ARM::parseArchVersion(TargetTriple.getArchName());
@@ -41,14 +41,14 @@ public:
       else
         ArchVer = ARCH_UNKNOWN; // For version 6 (Cortex-M0) and others.
     }
-    // Initialize the decoder for microcontroller-class targets.
+    // Initialize the decoder for Arm M-profile targets.
     Cfg.arch_ver = ArchVer;
     Cfg.core_prof = profile_CortexM;
 
     // The CoreSight Trace ID (CSID) is a hardware-assigned 7-bit identifier
     // used to route trace data. 0x10 is the most common default value for the
     // ETM.
-    Cfg.reg_traceidr = CSID;
+    Cfg.reg_traceidr = TraceID;
   }
 
   Error validate() const {
@@ -139,8 +139,10 @@ class ETMDecoderImpl : public ETMDecoder {
   }
 
 public:
-  ETMDecoderImpl(const object::Binary &Binary, const Triple &Triple)
-      : Binary(Binary), TargetTriple(Triple) {}
+  uint8_t TraceID;
+
+  ETMDecoderImpl(const object::Binary &Binary, const Triple &Triple, uint8_t TraceID)
+      : Binary(Binary), TargetTriple(Triple), TraceID(TraceID) {}
 
   ~ETMDecoderImpl() override {
     if (DcdTree)
@@ -157,14 +159,14 @@ public:
                                "Failed to create OpenCSD decoder tree.");
 
     // Configure and initialize the instruction-level decoder.
-    ETMTraceConfig Config(TargetTriple);
+    ETMTraceConfig Config(TargetTriple, TraceID);
     if (Error E = Config.validate())
       return E;
 
     uint32_t Flags =
         OCSD_CREATE_FLG_FULL_DECODER | OCSD_OPFLG_CHK_RANGE_CONTINUE;
     if (ocsd_dt_create_decoder(DcdTree, OCSD_BUILTIN_DCD_ETMV4I, Flags,
-                               (void *)&Config.Cfg, &Config.CSID) != 0)
+                               (void *)&Config.Cfg, &Config.TraceID) != 0)
       return createStringError(
           inconvertibleErrorCode(),
           "OpenCSD: Failed to initialize the instruction decoder.");
@@ -222,8 +224,8 @@ public:
 } // namespace
 
 Expected<std::unique_ptr<ETMDecoder>>
-ETMDecoder::create(const object::Binary &Binary, const Triple &Triple) {
-  auto Decoder = std::make_unique<ETMDecoderImpl>(Binary, Triple);
+ETMDecoder::create(const object::Binary &Binary, const Triple &Triple, uint8_t TraceID) {
+  auto Decoder = std::make_unique<ETMDecoderImpl>(Binary, Triple, TraceID);
   if (Error E = Decoder->initialize())
     return std::move(E);
   return std::unique_ptr<ETMDecoder>(std::move(Decoder));
@@ -237,7 +239,7 @@ namespace llvm {
 
 Expected<std::unique_ptr<ETMDecoder>>
 ETMDecoder::create(const object::Binary & /*Binary*/,
-                   const Triple & /*Triple*/) {
+                   const Triple & /*Triple*/, uint8_t /*TraceID*/) {
   return createStringError(inconvertibleErrorCode(), "OpenCSD not enabled.");
 }
 

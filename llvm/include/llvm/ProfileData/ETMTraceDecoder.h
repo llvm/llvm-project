@@ -34,7 +34,7 @@ public:
   };
 
   static Expected<std::unique_ptr<ETMDecoder>>
-  create(const object::Binary &Binary, const Triple &TargetTriple);
+  create(const object::Binary &Binary, const Triple &TargetTriple, uint8_t TraceID = 0x10);
 
   virtual Error processTrace(ArrayRef<uint8_t> TraceData,
                              Callback &TraceCallback) = 0;
