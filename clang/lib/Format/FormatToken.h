@@ -150,6 +150,7 @@ namespace format {
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
   TYPE(RecordRBrace)                                                           \
+  TYPE(ReflectionOperator)                                                     \
   TYPE(RegexLiteral)                                                           \
   TYPE(RequiresClause)                                                         \
   TYPE(RequiresClauseInARequiresExpression)                                    \
@@ -160,6 +161,8 @@ namespace format {
    * field name in the C++ struct literal. Also the method or parameter name   \
    * in the Objective-C method declaration or call. */                         \
   TYPE(SelectorName)                                                           \
+  TYPE(SpliceCloser)                                                           \
+  TYPE(SpliceOpener)                                                           \
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \
   TYPE(StatementMacro)                                                         \

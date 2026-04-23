@@ -5734,6 +5734,14 @@ struct FormatStyle {
   /// \version 17
   SpacesInParensCustom SpacesInParensOptions;
 
+  /// If ``true``, spaces will be inserted after ``[:`` and before ``:]``.
+  /// \code
+  ///    true:                                  false:
+  ///    [: ^^int :] i;                 vs.     [:^^int:] i;
+  /// \endcode
+  /// \version 23
+  bool SpacesInSplicers;
+
   /// If ``true``, spaces will be inserted after ``[`` and before ``]``.
   /// Lambdas without arguments or unspecified size array declarations will not
   /// be affected.
@@ -6201,6 +6209,7 @@ struct FormatStyle {
                R.SpacesInLineCommentPrefix.Maximum &&
            SpacesInParens == R.SpacesInParens &&
            SpacesInParensOptions == R.SpacesInParensOptions &&
+           SpacesInSplicers == R.SpacesInSplicers &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&

@@ -56,6 +56,7 @@ private:
   bool tryMergeNullishCoalescingEqual();
   bool tryTransformCSharpForEach();
   bool tryMergeForEach();
+  bool tryMergeSplicer();
 
   // Merge the most recently lexed tokens into a single token if their kinds are
   // correct.

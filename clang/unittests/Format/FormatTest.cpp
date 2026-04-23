@@ -26306,6 +26306,19 @@ TEST_F(FormatTest, LambdaArrowAsTrailingReturnArrow) {
   verifyNoCrash("void foo()([] consteval -> int {}())");
 }
 
+TEST_F(FormatTest, Reflection) {
+  verifyFormat("typename [:^^int:] i = 42;");
+  verifyFormat("obj.[:sub:]");
+  verifyFormat("auto foo() { return [:bar:]; }");
+  verifyFormat("auto x = ^^Bar;");
+
+  auto Style = getLLVMStyle();
+  Style.SpacesInSplicers = true;
+  verifyFormat("typename [: ^^int :] i = 42;", Style);
+  verifyFormat("obj.[: sub :]", Style);
+  verifyFormat("auto foo() { return [: bar :]; }", Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

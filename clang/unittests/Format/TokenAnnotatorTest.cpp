@@ -4505,6 +4505,45 @@ TEST_F(TokenAnnotatorTest, AttributeSquares) {
   EXPECT_TRUE(Tokens[15]->EndsCppAttributeGroup);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsReflection) {
+  auto Tokens = annotate("auto x = ^^int;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::caretcaret, TT_ReflectionOperator);
+
+  Tokens = annotate("auto x = ^^static_cast<void(*)(int)>(&foo);");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::caretcaret, TT_ReflectionOperator);
+
+  Tokens = annotate("[: x :]");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_SpliceOpener);
+  EXPECT_TOKEN(Tokens[2], tok::r_square, TT_SpliceCloser);
+
+  Tokens = annotate("[: ^^int :]");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_SpliceOpener);
+  EXPECT_TOKEN(Tokens[1], tok::caretcaret, TT_ReflectionOperator);
+  EXPECT_TOKEN(Tokens[3], tok::r_square, TT_SpliceCloser);
+
+  Tokens = annotate("[: ^^&T::member :]");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_SpliceOpener);
+  EXPECT_TOKEN(Tokens[1], tok::caretcaret, TT_ReflectionOperator);
+  EXPECT_TOKEN(Tokens[6], tok::r_square, TT_SpliceCloser);
+
+  Tokens = annotate("[: func() :]");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_SpliceOpener);
+  EXPECT_TOKEN(Tokens[4], tok::r_square, TT_SpliceCloser);
+
+  Tokens = annotate("[: condition ? ^^int : ^^double :]");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_SpliceOpener);
+  EXPECT_TOKEN(Tokens[3], tok::caretcaret, TT_ReflectionOperator);
+  EXPECT_TOKEN(Tokens[6], tok::caretcaret, TT_ReflectionOperator);
+  EXPECT_TOKEN(Tokens[8], tok::r_square, TT_SpliceCloser);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

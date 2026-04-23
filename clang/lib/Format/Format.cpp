@@ -1450,6 +1450,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpacesInLineCommentPrefix);
     IO.mapOptional("SpacesInParens", Style.SpacesInParens);
     IO.mapOptional("SpacesInParensOptions", Style.SpacesInParensOptions);
+    IO.mapOptional("SpacesInSplicers", Style.SpacesInSplicers);
     IO.mapOptional("SpacesInSquareBrackets", Style.SpacesInSquareBrackets);
     IO.mapOptional("Standard", Style.Standard);
     IO.mapOptional("StatementAttributeLikeMacros",
@@ -1970,6 +1971,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpacesInLineCommentPrefix = {
       /*Minimum=*/1, /*Maximum=*/std::numeric_limits<unsigned>::max()};
   LLVMStyle.SpacesInParens = FormatStyle::SIPO_Never;
+  LLVMStyle.SpacesInSplicers = false;
   LLVMStyle.SpacesInSquareBrackets = false;
   LLVMStyle.Standard = FormatStyle::LS_Latest;
   LLVMStyle.StatementAttributeLikeMacros.push_back("Q_EMIT");
@@ -4405,12 +4407,11 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOptions LangOpts;
 
-  auto LexingStd = Style.Standard;
-  if (LexingStd == FormatStyle::LS_Auto || LexingStd == FormatStyle::LS_Latest)
-    LexingStd = FormatStyle::LS_Cpp20;
+  const auto LexingStd = Style.Standard;
 
   const bool SinceCpp11 = LexingStd >= FormatStyle::LS_Cpp11;
   const bool SinceCpp20 = LexingStd >= FormatStyle::LS_Cpp20;
+  const bool SinceCpp26 = LexingStd >= FormatStyle::LS_Cpp26;
 
   switch (Style.Language) {
   case FormatStyle::LK_C:
@@ -4425,7 +4426,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
     LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
     LangOpts.CPlusPlus20 = SinceCpp20;
     LangOpts.CPlusPlus23 = LexingStd >= FormatStyle::LS_Cpp23;
-    LangOpts.CPlusPlus26 = LexingStd >= FormatStyle::LS_Cpp26;
+    LangOpts.CPlusPlus26 = SinceCpp26;
     [[fallthrough]];
   default:
     LangOpts.CPlusPlus = 1;
@@ -4437,6 +4438,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   // the sequence "<::" will be unconditionally treated as "[:".
   // Cf. Lexer::LexTokenInternal.
   LangOpts.Digraphs = SinceCpp11;
+  LangOpts.Reflection = SinceCpp26;
 
   LangOpts.LineComment = 1;
   LangOpts.Bool = 1;

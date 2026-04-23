@@ -7503,6 +7503,16 @@ the configuration (without a prefix: ``Auto``).
   ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and
   ``InEmptyParentheses``.
 
+.. _SpacesInSplicers:
+
+**SpacesInSplicers** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <SpacesInSplicers>`
+  If ``true``, spaces will be inserted after ``[:`` and before ``:]``.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     [: ^^int :] i;                 vs.     [:^^int:] i;
+
 .. _SpacesInSquareBrackets:
 
 **SpacesInSquareBrackets** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpacesInSquareBrackets>`

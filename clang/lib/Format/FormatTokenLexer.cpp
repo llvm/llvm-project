@@ -164,6 +164,9 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   if (tryMergeForEach())
     return;
 
+  if (LangOpts.Reflection && tryMergeSplicer())
+    return;
+
   if ((Style.Language == FormatStyle::LK_Cpp ||
        Style.Language == FormatStyle::LK_ObjC) &&
       tryMergeUserDefinedLiteral()) {
@@ -182,6 +185,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     if (tryMergeTokens(NullishCoalescingOperator, TT_NullCoalescingOperator)) {
       // Treat like the "||" operator (as opposed to the ternary ?).
       Tokens.back()->Tok.setKind(tok::pipepipe);
+      Tokens.back()->overwriteFixedType(TT_NullCoalescingOperator);
       return;
     }
     if (tryMergeTokens(NullPropagatingOperator, TT_NullPropagatingOperator)) {
@@ -272,8 +276,9 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     // already a merged token.
     if (Tokens.back()->TokenText.size() == 1 &&
         tryMergeTokensAny({{tok::caret, tok::tilde}, {tok::tilde, tok::caret}},
-                          TT_BinaryOperator)) {
+                          TT_Unknown)) {
       Tokens.back()->Tok.setKind(tok::caret);
+      Tokens.back()->overwriteFixedType(TT_Unknown);
       return;
     }
     // Signed shift and distribution weight.
@@ -468,7 +473,8 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
       StringRef(NullishCoalescing->TokenText.begin(),
                 Equal->TokenText.end() - NullishCoalescing->TokenText.begin());
   NullishCoalescing->ColumnWidth += Equal->ColumnWidth;
-  NullishCoalescing->setType(TT_NullCoalescingEqual);
+  NullishCoalescing->overwriteFixedType(TT_NullCoalescingEqual);
+  NullishCoalescing->setFinalizedType(TT_NullCoalescingEqual);
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
@@ -606,6 +612,15 @@ bool FormatTokenLexer::tryMergeUserDefinedLiteral() {
   return true;
 }
 
+bool FormatTokenLexer::tryMergeSplicer() {
+  if (tryMergeTokens({tok::l_square, tok::colon}, TT_SpliceOpener))
+    return true;
+  if (!tryMergeTokens({tok::colon, tok::r_square}, TT_SpliceCloser))
+    return false;
+  Tokens.back()->Tok.setKind(tok::r_square);
+  return true;
+}
+
 bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
                                       TokenType NewType) {
   if (Tokens.size() < Kinds.size())
@@ -637,7 +652,7 @@ bool FormatTokenLexer::tryMergeTokens(size_t Count, TokenType NewType) {
   First[0]->TokenText = StringRef(First[0]->TokenText.data(),
                                   First[0]->TokenText.size() + AddLength);
   First[0]->ColumnWidth += AddLength;
-  First[0]->setType(NewType);
+  First[0]->setFinalizedType(NewType);
   return true;
 }
 

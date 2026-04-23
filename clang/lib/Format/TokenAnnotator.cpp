@@ -711,7 +711,8 @@ private:
     bool StartsObjCMethodExpr =
         !IsCppStructuredBinding && !InsideInlineASM && !CppArrayTemplates &&
         IsCpp && !IsCpp11AttributeSpecifier && !IsCSharpAttributeSpecifier &&
-        Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
+        Contexts.back().CanBeExpression &&
+        Left->isNoneOf(TT_LambdaLSquare, TT_SpliceOpener) &&
         CurrentToken->isNoneOf(tok::l_brace, tok::r_square) &&
         // Do not consider '[' after a comma inside a braced initializer the
         // start of an ObjC method expression. In braced initializer lists,
@@ -1835,6 +1836,9 @@ private:
       // In TableGen, there must be a value after "=";
       if (Style.isTableGen() && !parseTableGenValue())
         return false;
+      break;
+    case tok::caretcaret:
+      Tok->setFinalizedType(TT_ReflectionOperator);
       break;
     default:
       break;
@@ -4902,6 +4906,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                 LSquareTok.endsSequence(tok::l_square, tok::colon,
                                         TT_SelectorName));
       };
+  if (Left.is(TT_SpliceOpener) || Right.is(TT_SpliceCloser))
+    return Style.SpacesInSplicers;
   if (Left.is(tok::l_square)) {
     return (Left.is(TT_ArrayInitializerLSquare) && Right.isNot(tok::r_square) &&
             SpaceRequiredForArrayInitializerLSquare(Left, Style)) ||
@@ -4920,9 +4926,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           TT_LambdaLSquare)));
   }
   if (Right.is(tok::l_square) &&
-      Right.isNoneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
-                     TT_DesignatedInitializerLSquare,
-                     TT_StructuredBindingLSquare, TT_AttributeLSquare) &&
+      Right.isNoneOf(
+          TT_ObjCMethodExpr, TT_LambdaLSquare, TT_DesignatedInitializerLSquare,
+          TT_StructuredBindingLSquare, TT_AttributeLSquare, TT_SpliceOpener) &&
       Left.isNoneOf(tok::numeric_constant, TT_DictLiteral) &&
       !(Left.isNot(tok::r_square) && Style.SpaceBeforeSquareBrackets &&
         Right.is(TT_ArraySubscriptLSquare))) {
@@ -5093,6 +5099,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // void Fn() const &;
     return getTokenReferenceAlignment(Right) != FormatStyle::PAS_Left;
   }
+  if (Left.is(TT_ReflectionOperator))
+    return false;
 
   return true;
 }
@@ -6641,10 +6649,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   }
 
   return Left.isOneOf(tok::comma, tok::coloncolon, tok::semi, tok::l_brace,
-                      tok::kw_class, tok::kw_struct, tok::comment) ||
+                      tok::kw_class, tok::kw_struct, tok::comment,
+                      TT_SpliceCloser) ||
          Right.isMemberAccess() ||
          Right.isOneOf(TT_TrailingReturnArrow, TT_LambdaArrow, tok::lessless,
-                       tok::colon, tok::l_square, tok::at) ||
+                       tok::colon, tok::l_square, tok::at, TT_SpliceOpener) ||
          (Left.is(tok::r_paren) &&
           Right.isOneOf(tok::identifier, tok::kw_const)) ||
          (Left.is(tok::l_paren) && Right.isNot(tok::r_paren)) ||
