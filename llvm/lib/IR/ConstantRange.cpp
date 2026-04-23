@@ -160,10 +160,10 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
 ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
                                                    const ConstantRange &CR) {
   ConstantRange Result = makeAllowedICmpRegion(Pred.dropSameSign(), CR);
-  if (!Pred.hasSameSign() || !CmpInst::isUnsigned(Pred))
+  if (!Pred.hasSameSign())
     return Result;
   return Result.intersectWith(
-      makeAllowedICmpRegion(ICmpInst::getSignedPredicate(Pred), CR));
+      makeAllowedICmpRegion(Pred.getPreferredSignedPredicate(), CR));
 }
 
 ConstantRange ConstantRange::makeSatisfyingICmpRegion(CmpInst::Predicate Pred,
