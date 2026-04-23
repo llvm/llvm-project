@@ -22,18 +22,13 @@ func.func @dot_fdot2_f32_bf16(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: f32) -
 }
 
 // Uniform-sign sdot4 still dispatches to the dedicated rocdl.sdot4 (not
-// sudot4) on gfx11+. The backend aliases v_dot4_i32_i8 to v_dot4_i32_iu8
-// at llvm/lib/Target/AMDGPU/VOP3PInstructions.td:2647, so this produces
-// identical machine code to the gfx9 lowering.
-
+// sudot4) on gfx11+. The backend aliases v_dot4_i32_i8 to v_dot4_i32_iu8.
 // CHECK-LABEL: @dot_sdot4_gfx11_uniform_sign
 func.func @dot_sdot4_gfx11_uniform_sign(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) -> i32 {
   // CHECK: rocdl.sdot4 %{{.+}}, %{{.+}}, %{{.+}} : (i32, i32, i32) -> i32
   %r = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, i32
   func.return %r : i32
 }
-
-// Mixed-sign i8 dot → rocdl.sudot4.
 
 // CHECK-LABEL: @dot_sudot4_signA_unsignedB
 func.func @dot_sudot4_signA_unsignedB(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) -> i32 {
@@ -48,8 +43,6 @@ func.func @dot_sudot4_unsignedA_signB_clamp(%a: vector<4xi8>, %b: vector<4xi8>, 
   %r = amdgpu.dot %a * %b + %c {unsignedA, clamp} : vector<4xi8>, vector<4xi8>, i32
   func.return %r : i32
 }
-
-// Mixed-sign i4 dot → rocdl.sudot8.
 
 // CHECK-LABEL: @dot_sudot8
 func.func @dot_sudot8(%a: vector<8xi4>, %b: vector<8xi4>, %c: i32) -> i32 {
