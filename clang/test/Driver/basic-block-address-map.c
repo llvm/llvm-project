@@ -1,5 +1,6 @@
 // RUN: %clang -### --target=x86_64 -fbasic-block-address-map %s -S 2>&1 | FileCheck -check-prefix=CHECK-PRESENT %s
 // RUN: %clang -### --target=aarch64 -fbasic-block-address-map %s -S 2>&1 | FileCheck -check-prefix=CHECK-PRESENT %s
+// RUN: %clang -### --target=riscv64 -fbasic-block-address-map %s -S 2>&1 | FileCheck -check-prefix=CHECK-PRESENT %s
 // CHECK-PRESENT: -fbasic-block-address-map
 
 // RUN: %clang -### --target=x86_64 -fno-basic-block-address-map %s -S 2>&1 | FileCheck %s --check-prefix=CHECK-ABSENT
