@@ -17,6 +17,7 @@
 
 static_assert(0.0 == LIBC_NAMESPACE::shared::ceil(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::copysign(0.0, 0.0));
+static_assert(2.0 == LIBC_NAMESPACE::shared::fdim(3.0, 1.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::floor(1.2));
 static_assert(0.0 == LIBC_NAMESPACE::shared::log(1.0));
 
@@ -26,6 +27,7 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::log(1.0));
 
 static_assert(0.0f == LIBC_NAMESPACE::shared::ceilf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::copysignf(0.0f, 0.0f));
+static_assert(2.0f == LIBC_NAMESPACE::shared::fdimf(3.0f, 1.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::floorf(0.0f));
 
 //===----------------------------------------------------------------------===//
@@ -63,7 +65,8 @@ static_assert(float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::copysignf128(float128(0.0),
                                                    float128(0.0)));
-
+static_assert(float128(2.0) ==
+              LIBC_NAMESPACE::shared::fdimf128(float128(3.0),float128(1.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::floorf128(float128(0.0)));
 
@@ -78,6 +81,8 @@ static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::ceilbf16(bfloat16(0.0)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::copysignbf16(bfloat16(0.0),
                                                    bfloat16(0.0)));
+static_assert(bfloat16(2.0) ==
+              LIBC_NAMESPACE::shared::fdimbf16(bfloat16(3.0), bfloat16(1.0)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::floorbf16(bfloat16(0.0f)));
 static_assert(bfloat16(0.0) ==
