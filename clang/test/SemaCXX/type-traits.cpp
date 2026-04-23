@@ -1380,7 +1380,6 @@ void is_trivially_copyable2()
   static_assert(!__is_trivially_copyable(AnIncompleteType[1])); // expected-error {{incomplete type}}
   static_assert(!__is_trivially_copyable(void));
   static_assert(!__is_trivially_copyable(const volatile void));
-
 }
 
 struct CStruct {
