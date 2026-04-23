@@ -2392,9 +2392,6 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
 
   llvm::SmallVector<mlir::Value> applyees;
   for (auto &child : eval.getNestedEvaluations()) {
-    // Stop at OmpEndLoopDirective
-    if (&child == &eval.getLastNestedEvaluation())
-      break;
     // Skip any Compiler Directive
     if (child.getIf<parser::CompilerDirective>())
       continue;

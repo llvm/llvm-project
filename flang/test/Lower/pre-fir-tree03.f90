@@ -21,7 +21,6 @@ program test_omp
     ! CHECK: EndDoStmt
     end do
     ! CHECK: <<End DoConstruct>>
-    ! CHECK: OmpEndLoopDirective
     !$omp end do
     ! CHECK: <<End OpenMPConstruct>>
 
