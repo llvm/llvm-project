@@ -33,16 +33,61 @@ using namespace Fortran::runtime;
 
 namespace {
 
+// Flatten a memref descriptor value into its individual scalar fields using
+// the same ordering as MLIR's standard memref-to-LLVM lowering:
+//   allocatedPtr, alignedPtr, offset, sizes[0..rank-1], strides[0..rank-1].
+// This must match the device-side ABI produced by the gpu-to-nvvm lowering,
+// which expands each memref argument into (3 + 2*rank) scalar parameters.
+static void flattenMemRefDescriptor(mlir::Location loc, mlir::Value desc,
+                                    int64_t rank,
+                                    mlir::PatternRewriter &rewriter,
+                                    llvm::SmallVectorImpl<mlir::Value> &out) {
+  assert(mlir::isa<mlir::LLVM::LLVMStructType>(desc.getType()) &&
+         "expected adapted memref operand to be an LLVM descriptor struct");
+  out.push_back(mlir::LLVM::ExtractValueOp::create(rewriter, loc, desc, 0));
+  out.push_back(mlir::LLVM::ExtractValueOp::create(rewriter, loc, desc, 1));
+  out.push_back(mlir::LLVM::ExtractValueOp::create(rewriter, loc, desc, 2));
+  for (int64_t d = 0; d < rank; ++d)
+    out.push_back(mlir::LLVM::ExtractValueOp::create(
+        rewriter, loc, desc, mlir::ArrayRef<int64_t>{3, d}));
+  for (int64_t d = 0; d < rank; ++d)
+    out.push_back(mlir::LLVM::ExtractValueOp::create(
+        rewriter, loc, desc, mlir::ArrayRef<int64_t>{4, d}));
+}
+
+// Build the kernel argument array used for the CUDA kernel launch.
+//
+// For each operand:
+//   - memref operands are flattened into their descriptor scalar fields so the
+//     host-side parameter list matches the NVVM-lowered device kernel signature
+//     (gpu-to-nvvm expands each memref into 3 + 2*rank scalar parameters);
+//   - all other operands are passed through unchanged.
+//
+// The flattened values are materialized on the stack in a single struct
+// (preserving argument order), and a companion pointer array is populated with
+// the address of each field. That pointer array is what the CUDA launch
+// interface expects as kernelParams.
 static mlir::Value createKernelArgArray(mlir::Location loc,
-                                        mlir::ValueRange operands,
+                                        mlir::ValueRange origOperands,
+                                        mlir::ValueRange adaptedOperands,
                                         mlir::PatternRewriter &rewriter) {
 
   auto *ctx = rewriter.getContext();
-  llvm::SmallVector<mlir::Type> structTypes(operands.size(), nullptr);
 
-  for (auto [i, arg] : llvm::enumerate(operands))
-    structTypes[i] = arg.getType();
+  llvm::SmallVector<mlir::Value, 8> flatValues;
+  flatValues.reserve(adaptedOperands.size());
+  for (auto [origArg, adaptedArg] :
+       llvm::zip_equal(origOperands, adaptedOperands)) {
+    if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(origArg.getType())) {
+      flattenMemRefDescriptor(loc, adaptedArg, memrefTy.getRank(), rewriter,
+                              flatValues);
+      continue;
+    }
+    flatValues.push_back(adaptedArg);
+  }
 
+  auto structTypes = llvm::map_to_vector(
+      flatValues, [](mlir::Value v) { return v.getType(); });
   auto structTy = mlir::LLVM::LLVMStructType::getLiteral(ctx, structTypes);
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   mlir::Type i32Ty = rewriter.getI32Type();
@@ -57,7 +102,7 @@ static mlir::Value createKernelArgArray(mlir::Location loc,
   mlir::Value argArray =
       mlir::LLVM::AllocaOp::create(rewriter, loc, ptrTy, ptrTy, size);
 
-  for (auto [i, arg] : llvm::enumerate(operands)) {
+  for (auto [i, arg] : llvm::enumerate(flatValues)) {
     auto indice = mlir::LLVM::ConstantOp::create(
         rewriter, loc, i32Ty, rewriter.getIntegerAttr(i32Ty, i));
     mlir::Value structMember =
@@ -98,8 +143,8 @@ struct GPULaunchKernelConversion
       dynamicMemorySize = mlir::LLVM::ConstantOp::create(
           rewriter, loc, i32Ty, rewriter.getIntegerAttr(i32Ty, 0));
 
-    mlir::Value kernelArgs =
-        createKernelArgArray(loc, adaptor.getKernelOperands(), rewriter);
+    mlir::Value kernelArgs = createKernelArgArray(
+        loc, op.getKernelOperands(), adaptor.getKernelOperands(), rewriter);
 
     auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
     auto kernel = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(op.getKernelName());
