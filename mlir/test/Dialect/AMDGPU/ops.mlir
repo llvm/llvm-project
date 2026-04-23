@@ -865,3 +865,77 @@ func.func @ds_barrier_ops(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.addres
   %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
   func.return
 }
+
+// CHECK-LABEL: func @dot_f16_f32
+func.func @dot_f16_f32(%a: vector<2xf16>, %b: vector<2xf16>, %c: f32) -> f32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<2xf16>, vector<2xf16>, f32
+  %r = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f32
+  // CHECK: amdgpu.dot {{.*}} {clamp} : vector<2xf16>, vector<2xf16>, f32
+  %s = amdgpu.dot %a * %b + %c {clamp} : vector<2xf16>, vector<2xf16>, f32
+  func.return %r : f32
+}
+
+// CHECK-LABEL: func @dot_f16_f16
+func.func @dot_f16_f16(%a: vector<2xf16>, %b: vector<2xf16>, %c: f16) -> f16 {
+  // CHECK: amdgpu.dot {{.*}} : vector<2xf16>, vector<2xf16>, f16
+  %r = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f16
+  func.return %r : f16
+}
+
+// CHECK-LABEL: func @dot_bf16
+func.func @dot_bf16(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: f32, %d: bf16) {
+  // CHECK: amdgpu.dot {{.*}} {clamp} : vector<2xbf16>, vector<2xbf16>, f32
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<2xbf16>, vector<2xbf16>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<2xbf16>, vector<2xbf16>, bf16
+  %s = amdgpu.dot %a * %b + %d : vector<2xbf16>, vector<2xbf16>, bf16
+  func.return
+}
+
+// CHECK-LABEL: func @dot_i16
+func.func @dot_i16(%a: vector<2xi16>, %b: vector<2xi16>, %c: i32) -> i32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<2xi16>, vector<2xi16>, i32
+  %r = amdgpu.dot %a * %b + %c : vector<2xi16>, vector<2xi16>, i32
+  // CHECK: amdgpu.dot {{.*}} {clamp} : vector<2xi16>, vector<2xi16>, i32
+  %s = amdgpu.dot %a * %b + %c {clamp} : vector<2xi16>, vector<2xi16>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedA, unsignedB} : vector<2xi16>, vector<2xi16>, i32
+  %t = amdgpu.dot %a * %b + %c {unsignedA, unsignedB} : vector<2xi16>, vector<2xi16>, i32
+  func.return %r : i32
+}
+
+// CHECK-LABEL: func @dot_i8
+func.func @dot_i8(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) -> i32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<4xi8>, vector<4xi8>, i32
+  %r = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: amdgpu.dot {{.*}} {clamp, unsignedA, unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  %s = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp} : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  %t = amdgpu.dot %a * %b + %c {unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedA} : vector<4xi8>, vector<4xi8>, i32
+  %u = amdgpu.dot %a * %b + %c {unsignedA} : vector<4xi8>, vector<4xi8>, i32
+  func.return %r : i32
+}
+
+// CHECK-LABEL: func @dot_i4
+func.func @dot_i4(%a: vector<8xi4>, %b: vector<8xi4>, %c: i32) -> i32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<8xi4>, vector<8xi4>, i32
+  %r = amdgpu.dot %a * %b + %c : vector<8xi4>, vector<8xi4>, i32
+  // CHECK: amdgpu.dot {{.*}} {clamp, unsignedA, unsignedB} : vector<8xi4>, vector<8xi4>, i32
+  %s = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp} : vector<8xi4>, vector<8xi4>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedA} : vector<8xi4>, vector<8xi4>, i32
+  %t = amdgpu.dot %a * %b + %c {unsignedA} : vector<8xi4>, vector<8xi4>, i32
+  func.return %r : i32
+}
+
+// CHECK-LABEL: func @dot_fp8
+func.func @dot_fp8(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>,
+                   %e: vector<4xf8E5M2>, %c: f32) -> f32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f32
+  %r0 = amdgpu.dot %a * %a + %c : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+  %r1 = amdgpu.dot %a * %e + %c : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E5M2>, vector<4xf8E4M3FN>, f32
+  %r2 = amdgpu.dot %e * %a + %c : vector<4xf8E5M2>, vector<4xf8E4M3FN>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E5M2>, vector<4xf8E5M2>, f32
+  %r3 = amdgpu.dot %e * %e + %c : vector<4xf8E5M2>, vector<4xf8E5M2>, f32
+  func.return %r0 : f32
+}
