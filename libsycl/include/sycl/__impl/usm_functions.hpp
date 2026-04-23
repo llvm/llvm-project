@@ -35,7 +35,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 /// \return a pointer to the newly allocated memory, which is allocated on
 /// syclDevice and which must eventually be deallocated with sycl::free in order
 /// to avoid a memory leak.
-void *_LIBSYCL_EXPORT malloc_device(std::size_t numBytes,
+_LIBSYCL_EXPORT void *malloc_device(std::size_t numBytes,
                                     const device &syclDevice,
                                     const context &syclContext,
                                     const property_list &propList = {});
@@ -68,7 +68,7 @@ T *malloc_device(std::size_t count, const device &syclDevice,
 /// \return a pointer to the newly allocated memory, which is allocated on
 /// syclDevice and which must eventually be deallocated with sycl::free in order
 /// to avoid a memory leak.
-void *_LIBSYCL_EXPORT malloc_device(std::size_t numBytes,
+_LIBSYCL_EXPORT void *malloc_device(std::size_t numBytes,
                                     const queue &syclQueue,
                                     const property_list &propList = {});
 
@@ -99,7 +99,7 @@ T *malloc_device(std::size_t count, const queue &syclQueue,
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
-void *_LIBSYCL_EXPORT malloc_host(std::size_t numBytes,
+_LIBSYCL_EXPORT void *malloc_host(std::size_t numBytes,
                                   const context &syclContext,
                                   const property_list &propList = {});
 
@@ -127,7 +127,7 @@ T *malloc_host(std::size_t count, const context &syclContext,
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
-void *_LIBSYCL_EXPORT malloc_host(std::size_t numBytes, const queue &syclQueue,
+_LIBSYCL_EXPORT void *malloc_host(std::size_t numBytes, const queue &syclQueue,
                                   const property_list &propList = {});
 
 /// Allocates host USM.
@@ -156,7 +156,7 @@ T *malloc_host(std::size_t count, const queue &syclQueue,
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
-void *_LIBSYCL_EXPORT malloc_shared(std::size_t numBytes,
+_LIBSYCL_EXPORT void *malloc_shared(std::size_t numBytes,
                                     const device &syclDevice,
                                     const context &syclContext,
                                     const property_list &propList = {});
@@ -187,7 +187,7 @@ T *malloc_shared(std::size_t count, const device &syclDevice,
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
-void *_LIBSYCL_EXPORT malloc_shared(std::size_t numBytes,
+_LIBSYCL_EXPORT void *malloc_shared(std::size_t numBytes,
                                     const queue &syclQueue,
                                     const property_list &propList = {});
 
@@ -221,7 +221,7 @@ T *malloc_shared(std::size_t count, const queue &syclQueue,
 /// deallocated with sycl::free in order to avoid a memory leak. If there are
 /// not enough resources to allocate the requested memory, these functions
 /// return nullptr.
-void *_LIBSYCL_EXPORT malloc(std::size_t numBytes, const device &syclDevice,
+_LIBSYCL_EXPORT void *malloc(std::size_t numBytes, const device &syclDevice,
                              const context &syclContext, usm::alloc kind,
                              const property_list &propList = {});
 
@@ -257,7 +257,7 @@ T *malloc(std::size_t count, const device &syclDevice,
 /// deallocated with sycl::free in order to avoid a memory leak. If there are
 /// not enough resources to allocate the requested memory, these functions
 /// return nullptr.
-void *_LIBSYCL_EXPORT malloc(std::size_t numBytes, const queue &syclQueue,
+_LIBSYCL_EXPORT void *malloc(std::size_t numBytes, const queue &syclQueue,
                              usm::alloc kind,
                              const property_list &propList = {});
 
@@ -288,7 +288,7 @@ T *malloc(std::size_t count, const queue &syclQueue, usm::alloc kind,
 /// is a null pointer; ptr has not previously been deallocated; there are no
 /// in-progress or enqueued commands using the memory pointed to by ptr.
 /// \param ctxt the context that is associated with ptr.
-void _LIBSYCL_EXPORT free(void *ptr, const context &ctxt);
+_LIBSYCL_EXPORT void free(void *ptr, const context &ctxt);
 
 /// Deallocate USM of any kind.
 ///
@@ -299,7 +299,7 @@ void _LIBSYCL_EXPORT free(void *ptr, const context &ctxt);
 /// is a null pointer; ptr has not previously been deallocated; there are no
 /// in-progress or enqueued commands using the memory pointed to by ptr.
 /// \param q a queue to determine the context associated with ptr.
-void _LIBSYCL_EXPORT free(void *ptr, const queue &q);
+_LIBSYCL_EXPORT void free(void *ptr, const queue &q);
 /// @}
 
 _LIBSYCL_END_NAMESPACE_SYCL

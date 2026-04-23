@@ -386,6 +386,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_linger
+  HDRS
+    struct_linger.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_linger
+    libc.include.sys_socket
+)
+
+add_proxy_header_library(
   struct_msghdr
   HDRS
     struct_msghdr.h
@@ -400,6 +409,15 @@ add_proxy_header_library(
     struct_sockaddr.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sockaddr
+    libc.include.sys_socket
+)
+
+add_proxy_header_library(
+  struct_sockaddr_storage
+  HDRS
+    struct_sockaddr_storage.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sockaddr_storage
     libc.include.sys_socket
 )
 

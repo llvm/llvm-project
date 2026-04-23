@@ -186,7 +186,7 @@ public:
   using ResultType = PairsAnalysisResult;
 
   llvm::Error add(EntityId Id, const PairsEntitySummary &S) override {
-    result().PairCounts.emplace_back(Id, static_cast<int>(S.Pairs.size()));
+    getResult().PairCounts.emplace_back(Id, static_cast<int>(S.Pairs.size()));
     return llvm::Error::success();
   }
 };
