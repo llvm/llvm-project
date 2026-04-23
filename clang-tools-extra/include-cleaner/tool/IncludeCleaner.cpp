@@ -359,8 +359,8 @@ int main(int argc, const char **argv) {
   using namespace clang::include_cleaner;
 
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
-  auto OptionsParser =
-      clang::tooling::CommonOptionsParser::create(argc, argv, IncludeCleaner);
+  auto OptionsParser = clang::tooling::CommonOptionsParser::create(
+    argc, argv, IncludeCleaner, cl::OneOrMore, Overview);
   if (!OptionsParser) {
     llvm::errs() << toString(OptionsParser.takeError());
     return 1;
