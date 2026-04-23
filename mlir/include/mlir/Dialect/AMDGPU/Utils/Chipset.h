@@ -54,60 +54,6 @@ inline bool hasOcpFp8(const Chipset &chipset) {
          chipset.majorVersion >= 12;
 }
 
-// Predicates mirroring the LLVM AMDGPU `HasDot{N}Insts` features that gate
-// the `v_dot*` instructions consumed by the `amdgpu.dot` lowering.
-
-inline bool hasDot1Insts(const Chipset &chipset) {
-  if (chipset.majorVersion == 9)
-    return chipset >= Chipset(9, 0, 6);
-  if (chipset.majorVersion == 10) {
-    if (chipset.minorVersion == 1)
-      return chipset.steppingVersion == 1u || chipset.steppingVersion == 2u;
-    return chipset.minorVersion >= 3u;
-  }
-  return false;
-}
-
-inline bool hasDot2Insts(const Chipset &chipset) {
-  return hasDot1Insts(chipset);
-}
-
-inline bool hasDot7Insts(const Chipset &chipset) {
-  return chipset.majorVersion >= 11 || hasDot1Insts(chipset);
-}
-
-inline bool hasDot8Insts(const Chipset &chipset) {
-  return chipset.majorVersion >= 11;
-}
-
-inline bool hasDot9Insts(const Chipset &chipset) {
-  if (chipset.majorVersion == 11)
-    return true;
-  return chipset.majorVersion == 12 && chipset.minorVersion == 0;
-}
-
-inline bool hasDot10Insts(const Chipset &chipset) {
-  if (chipset.majorVersion == 11)
-    return true;
-  if (chipset.majorVersion == 12)
-    return chipset.minorVersion == 0;
-  return hasDot1Insts(chipset);
-}
-
-inline bool hasDot11Insts(const Chipset &chipset) {
-  if (chipset.majorVersion == 11)
-    return chipset.minorVersion == 7u;
-  return chipset.majorVersion == 12 && chipset.minorVersion == 0;
-}
-
-inline bool hasDot12Insts(const Chipset &chipset) {
-  if (chipset == Chipset(9, 5, 0))
-    return true;
-  if (chipset.majorVersion == 11)
-    return true;
-  return chipset.majorVersion == 12 && chipset.minorVersion == 0;
-}
-
 } // namespace mlir::amdgpu
 
 #endif
