@@ -52,7 +52,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
@@ -80,7 +79,6 @@
 #include <variant>
 
 #include "MatchContext.h"
-#include "SDNodeDbgValue.h"
 
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
@@ -2987,6 +2985,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
                      m_Deferred(X)))) {
       if (X != Y) {
         // Redistribute shared NUW flag.
+        // TODO: If NSW+NUW occurs on both adds, that can be redistributed too.
         SDNodeFlags NewFlags =
             N->getFlags() & InnerAdd->getFlags() & SDNodeFlags::NoUnsignedWrap;
         SDValue X2 = DAG.getNode(ISD::ADD, DL, VT, X, X, NewFlags);
@@ -13499,6 +13498,7 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
 SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDLoc DL(N);
   auto *Context = DAG.getContext();
+  SDValue Tmp;
   SDValue Acc = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
@@ -13511,6 +13511,14 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     Pred = Op1->getOperand(0);
     Op1 = Op1->getOperand(1);
     Opc = Op1->getOpcode();
+  }
+
+  // Handle negation (sub-reduction).
+  bool IsMLS = false;
+  if (sd_match(Op1, m_AnyOf(m_Neg(m_Value(Tmp)), m_FNeg(m_Value(Tmp))))) {
+    Op1 = Tmp;
+    Opc = Op1->getOpcode();
+    IsMLS = true;
   }
 
   if (Opc != ISD::MUL && Opc != ISD::FMUL && Opc != ISD::SHL)
@@ -13560,6 +13568,14 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     }
   };
 
+  // Generate an MLA or MLS.
+  auto GetMLA = [&](unsigned Opc, SDValue Acc, SDValue LHS,
+                    SDValue RHS) -> SDValue {
+    EVT AccVT = Acc.getValueType();
+    return IsMLS ? DAG.getPartialReduceMLS(Opc, DL, Acc, LHS, RHS)
+                 : DAG.getNode(Opc, DL, AccVT, Acc, LHS, RHS);
+  };
+
   // partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
   // -> partial_reduce_*mla(acc, x, C)
   APInt C;
@@ -13584,7 +13600,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 
     SDValue C = DAG.getConstant(CTrunc, DL, LHSExtOpVT);
     ApplyPredicate(C, LHSExtOp);
-    return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp, C);
+    return GetMLA(NewOpcode, Acc, LHSExtOp, C);
   }
 
   unsigned RHSOpcode = RHS->getOpcode();
@@ -13626,7 +13642,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     return SDValue();
 
   ApplyPredicate(RHSExtOp, LHSExtOp);
-  return DAG.getNode(NewOpc, DL, N->getValueType(0), Acc, LHSExtOp, RHSExtOp);
+  return GetMLA(NewOpc, Acc, LHSExtOp, RHSExtOp);
 }
 
 // partial.reduce.*mla(acc, *ext(op), splat(1))
@@ -13638,6 +13654,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 // -> partial.reduce.*mla(acc, sel(p, op, splat(0)), splat(trunc(1)))
 SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   SDLoc DL(N);
+  SDValue Tmp;
   SDValue Acc = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
@@ -13652,6 +13669,14 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
     Pred = Op1->getOperand(0);
     Op1 = Op1->getOperand(1);
     Op1Opcode = Op1->getOpcode();
+  }
+
+  // Handle negation (sub-reduction).
+  bool IsMLS = false;
+  if (sd_match(Op1, m_AnyOf(m_Neg(m_Value(Tmp)), m_FNeg(m_Value(Tmp))))) {
+    Op1 = Tmp;
+    Op1Opcode = Op1.getOpcode();
+    IsMLS = true;
   }
 
   if (!ISD::isExtOpcode(Op1Opcode) && Op1Opcode != ISD::FP_EXTEND)
@@ -13688,8 +13713,9 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
                        : DAG.getConstant(0, DL, UnextOp1VT);
     Constant = DAG.getSelect(DL, UnextOp1VT, Pred, Constant, Zero);
   }
-  return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, UnextOp1,
-                     Constant);
+  EVT AccVT = Acc.getValueType();
+  return IsMLS ? DAG.getPartialReduceMLS(NewOpcode, DL, Acc, UnextOp1, Constant)
+               : DAG.getNode(NewOpcode, DL, AccVT, Acc, UnextOp1, Constant);
 }
 
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
@@ -14894,7 +14920,6 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                   ISD::LoadExtType ExtLoadType,
                                   ISD::NodeType ExtOpc,
                                   bool NonNegZExt = false) {
-
   bool Frozen = N0.getOpcode() == ISD::FREEZE;
   SDValue Freeze = Frozen ? N0 : SDValue();
   auto *Load = dyn_cast<LoadSDNode>(Frozen ? N0.getOperand(0) : N0);
@@ -14938,80 +14963,8 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
     return {};
 
   SDLoc DL(Load);
-
-  auto SalvageDbgValue = [&](SDDbgValue *Dbg, SDValue Old, SDValue New,
-                             unsigned OldBits, unsigned NewBits,
-                             bool IsSigned) {
-    SmallVector<SDDbgOperand> Locs = Dbg->copyLocationOps();
-    bool Changed = false;
-
-    bool IsVariadic = Dbg->isVariadic();
-    SmallVector<unsigned, 2> AffectedArgs;
-
-    for (unsigned I = 0, E = Locs.size(); I != E; ++I) {
-      SDDbgOperand &Op = Locs[I];
-      if (Op.getKind() != SDDbgOperand::SDNODE)
-        continue;
-
-      if (Op.getSDNode() == Old.getNode() && Op.getResNo() == Old.getResNo()) {
-        Op = SDDbgOperand::fromNode(New.getNode(), New.getResNo());
-        Changed = true;
-
-        if (IsVariadic)
-          AffectedArgs.push_back(I);
-      }
-    }
-
-    if (!Changed)
-      return;
-
-    const DIExpression *OldExpr = Dbg->getExpression();
-    const DIExpression *NewExpr = nullptr;
-
-    if (!IsVariadic) {
-      // Do not introduce DW_OP_LLVM_arg into ordinary single-location
-      // DBG_VALUEs.
-      NewExpr = DIExpression::appendExt(OldExpr, NewBits, OldBits, IsSigned);
-    } else {
-      auto ExtOps = DIExpression::getExtOps(NewBits, OldBits, IsSigned);
-
-      NewExpr = DIExpression::convertToVariadicExpression(OldExpr);
-
-      for (unsigned ArgNo : AffectedArgs)
-        NewExpr = DIExpression::appendOpsToArg(NewExpr, ExtOps, ArgNo,
-                                               /*StackValue=*/false);
-    }
-
-    SDDbgValue *NewDV = DAG.getDbgValueList(
-        Dbg->getVariable(), const_cast<DIExpression *>(NewExpr), Locs,
-        Dbg->getAdditionalDependencies(), Dbg->isIndirect(), Dbg->getDebugLoc(),
-        Dbg->getOrder(), Dbg->isVariadic());
-
-    Dbg->setIsInvalidated();
-    Dbg->setIsEmitted();
-    DAG.AddDbgValue(NewDV, /*isParameter=*/false);
-  };
-
-  // Because we are replacing a load and a s|z ext with a load-s|z ext
-  // instruction, the dbg_value attached to the load will be of a smaller bit
-  // width, and we have to add a DW_OP_LLVM_convert expression to get the
-  // correct size.
-  auto SalvageToOldLoadSize = [&](SDValue Old, SDValue New, bool IsSigned) {
-    SmallVector<SDDbgValue *, 4> DbgVals(
-        DAG.GetDbgValues(Old.getNode()).begin(),
-        DAG.GetDbgValues(Old.getNode()).end());
-
-    unsigned VarBitsOld = Old.getValueSizeInBits();
-    unsigned VarBitsNew = New.getValueSizeInBits();
-
-    for (SDDbgValue *Dbg : DbgVals) {
-      if (Dbg->isInvalidated())
-        continue;
-
-      SalvageDbgValue(Dbg, Old, New, VarBitsOld, VarBitsNew, IsSigned);
-    }
-  };
-
+  // If the load value is used only by N, replace it via CombineTo N.
+  bool NoReplaceTrunc = N0.hasOneUse();
   SDValue ExtLoad =
       DAG.getExtLoad(ExtLoadType, DL, VT, Load->getChain(), Load->getBasePtr(),
                      Load->getValueType(0), Load->getMemOperand());
@@ -15024,18 +14977,8 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                       DAG.getValueType(Load->getValueType(0).getScalarType()));
   }
   Combiner.ExtendSetCCUses(SetCCs, N0, Res, ExtOpc);
-  // If the load value is used only by N, replace it via CombineTo N.
-  unsigned Opcode_N = N->getOpcode();
-  bool IsSigned = Opcode_N == ISD::SIGN_EXTEND;
-  SDValue OldLoadVal(Load, 0);
-  SDValue OldExtValue(N, 0);
-  bool NoReplaceTrunc = N0.hasOneUse();
+  Combiner.CombineTo(N, Res);
   if (NoReplaceTrunc) {
-    if (Load->getHasDebugValue())
-      SalvageToOldLoadSize(OldLoadVal, ExtLoad, IsSigned);
-
-    if (N->getHasDebugValue())
-      DAG.transferDbgValues(OldExtValue, ExtLoad);
     DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), ExtLoad.getValue(1));
     Combiner.recursivelyDeleteUnusedNodes(N0.getNode());
   } else {
@@ -15047,7 +14990,6 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       Combiner.CombineTo(Load, Trunc, ExtLoad.getValue(1));
     }
   }
-  Combiner.CombineTo(N, Res);
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 
@@ -17712,6 +17654,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     // creating a cycle in a DAG. Let's undo that by mutating the freeze.
     assert(N->getOperand(0) == FrozenN0 && "Expected cycle in DAG");
     DAG.UpdateNodeOperands(N, N0);
+    // Revisit the node.
+    AddToWorklist(N);
     return FrozenN0;
   }
 
