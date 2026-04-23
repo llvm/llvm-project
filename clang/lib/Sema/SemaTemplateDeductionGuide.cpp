@@ -1604,18 +1604,22 @@ TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
   while (Ctx->isRequiresExprBody())
     Ctx = Ctx->getParent();
 
-  Ctx = Ctx->isFileContext() ? Ctx : Ctx->getLexicalParent();
+  DeclContext *ParentCtx = Ctx;
+  while(isa<FunctionDecl>(ParentCtx))
+   ParentCtx = ParentCtx->isFileContext()
+                    ? ParentCtx : getLambdaAwareParentOfDeclContext(ParentCtx);
 
-  MultiLevelTemplateArgumentList MTAL;
-  if (NamedDecl *Func = dyn_cast<NamedDecl>(CurContext))
-    MTAL = SemaRef.getTemplateInstantiationArgs(Func);
+  MultiLevelTemplateArgumentList MLTAL;
+  if (NamedDecl *Func = dyn_cast<NamedDecl>(Ctx))
+    MLTAL = SemaRef.getTemplateInstantiationArgs(Func, nullptr, false, std::nullopt
+                                                 , false, nullptr, true);
 
   llvm::SmallVector<NamedDecl *> Parameters;
   llvm::SmallVector<TemplateArgument> Args;
   for (NamedDecl *P : D->getTemplateParameters()->asArray()) {
     auto [Depth, Index] = getDepthAndIndex(P);
     NamedDecl *NewParam = transformTemplateParameter(
-        *this, Ctx, P, MLTAL, Index, Depth ? Depth - 1 : 0);
+        *this, ParentCtx, P, MLTAL, Index, Depth ? Depth - 1 : 0);
     if (!NewParam)
       return nullptr;
     Parameters.push_back(NewParam);
@@ -1631,18 +1635,18 @@ TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
 
   // FIXME: Have a flag to distinguish such special type alias declarations.
   auto *Alias =
-      TypeAliasDecl::Create(AST, Ctx, Loc, /*IdLoc=*/SourceLocation(),
+      TypeAliasDecl::Create(AST, ParentCtx, Loc, /*IdLoc=*/SourceLocation(),
                             /*Id=*/nullptr, AST.getTrivialTypeSourceInfo(Type));
   Alias->setImplicit(true);
 
   auto *Template = TypeAliasTemplateDecl::Create(
-      AST, Ctx, Loc, Alias->getDeclName(), ParamList, Alias);
+      AST, ParentCtx, Loc, Alias->getDeclName(), ParamList, Alias);
 
   Alias->setDescribedAliasTemplate(Template);
 
   Template->setImplicit(true);
   Template->setLexicalDeclContext(Alias->getDeclContext());
-  Ctx->addDecl(Template);
+  ParentCtx->addDecl(Template);
 
   return Template;
 }
