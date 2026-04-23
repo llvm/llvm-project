@@ -1375,6 +1375,14 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
     }
   }
 
+  // Note: Without this, we would inject the pack-expression of the primary
+  // template to the template specialization - which is not great!
+  // https://github.com/llvm/llvm-project/issues/182691#issuecomment-3939486419
+  // With this fix, I think it should work now.
+  // TODO: Add tests and check everything!
+  if (FullySubstituted)
+    PackExpression = ExpandedExprs[Index.value()];
+
   return PackIndexingExpr::Create(getASTContext(), EllipsisLoc, RSquareLoc,
                                   PackExpression, IndexExpr, Index,
                                   ExpandedExprs, FullySubstituted);
