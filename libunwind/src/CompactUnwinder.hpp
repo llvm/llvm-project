@@ -12,6 +12,7 @@
 #ifndef __COMPACT_UNWINDER_HPP__
 #define __COMPACT_UNWINDER_HPP__
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdlib.h>
 
