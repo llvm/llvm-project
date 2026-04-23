@@ -12101,9 +12101,8 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
     auto *ShAmt = dyn_cast<ConstantSDNode>(N0.getOperand(1));
     EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), BW / 2);
     if (ShAmt && ShAmt->getAPIntValue().ult(BW) &&
-        ShAmt->getZExtValue() >= (BW / 2) &&
-        (ShAmt->getZExtValue() % 16) == 0 && TLI.isTypeLegal(HalfVT) &&
-        TLI.isTruncateFree(VT, HalfVT) &&
+        ShAmt->getZExtValue() >= (BW / 2) && (ShAmt->getZExtValue() % 8) == 0 &&
+        TLI.isTypeLegal(HalfVT) && TLI.isTruncateFree(VT, HalfVT) &&
         (!LegalOperations || hasOperation(ISD::BSWAP, HalfVT))) {
       SDValue Res = N0.getOperand(0);
       if (uint64_t NewShAmt = (ShAmt->getZExtValue() - (BW / 2)))
