@@ -138,7 +138,8 @@ static bool isShortLived(const ValueDecl *Var, const SourceManager *SrcMgr,
 }
 
 void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *StandaloneVar = Result.Nodes.getNodeAs<ValueDecl>("standaloneVar");
+  const auto *StandaloneVar =
+      Result.Nodes.getNodeAs<ValueDecl>("standaloneVar");
   if (StandaloneVar) {
     if (!StandaloneVar->getIdentifier())
       return;
