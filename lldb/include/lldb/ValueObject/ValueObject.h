@@ -397,8 +397,6 @@ public:
 
   virtual bool IsBaseClass() { return false; }
 
-  bool IsBaseClass(uint32_t &depth);
-
   virtual bool IsDereferenceOfParent() { return false; }
 
   bool IsIntegerType(bool &is_signed) {
