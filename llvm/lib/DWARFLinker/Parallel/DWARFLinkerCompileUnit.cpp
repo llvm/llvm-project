@@ -674,7 +674,7 @@ Error CompileUnit::cloneAndEmitRanges() {
 
   // Build set of linked address ranges for unit function ranges.
   AddressRanges LinkedFunctionRanges;
-  for (const AddressRangeValuePair &Range : getFunctionRanges())
+  for (const AddressRangeValuePair<int64_t> &Range : getFunctionRanges())
     LinkedFunctionRanges.insert(
         {Range.Range.start() + Range.Value, Range.Range.end() + Range.Value});
 
@@ -697,7 +697,7 @@ void CompileUnit::cloneAndEmitRangeList(DebugSectionKind RngSectionKind,
       getOrCreateSectionDescriptor(RngSectionKind);
 
   if (!DebugInfoSection.ListDebugRangePatch.empty()) {
-    std::optional<AddressRangeValuePair> CachedRange;
+    std::optional<AddressRangeValuePair<int64_t>> CachedRange;
     uint64_t OffsetAfterUnitLength = emitRangeListHeader(OutRangeSection);
 
     DebugRangePatch *CompileUnitRangePtr = nullptr;
@@ -1544,7 +1544,7 @@ Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
     std::vector<DWARFDebugLine::Row> Seq;
 
     const auto &FunctionRanges = getFunctionRanges();
-    std::optional<AddressRangeValuePair> CurrRange;
+    std::optional<AddressRangeValuePair<int64_t>> CurrRange;
 
     // FIXME: This logic is meant to generate exactly the same output as
     // Darwin's classic dsymutil. There is a nicer way to implement this
