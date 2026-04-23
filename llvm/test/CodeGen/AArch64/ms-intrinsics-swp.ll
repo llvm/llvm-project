@@ -142,3 +142,47 @@ define i64 @test_swpl64(ptr %p, i64 %v) {
   %r = call i64 @llvm.aarch64.swpl64(ptr %p, i64 %v)
   ret i64 %r
 }
+
+define i32 @test_swpal8(ptr %p, i32 %v) {
+; CHECK-LABEL: test_swpal8:
+; CHECK:       // %bb.0:
+; NOLSE-NEXT:    .arch_extension lse
+; CHECK-NEXT:    swpalb w1, w0, [x0]
+; NOLSE-NEXT:    .arch_extension nolse
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.swpal8(ptr %p, i32 %v)
+  ret i32 %r
+}
+
+define i32 @test_swpal16(ptr %p, i32 %v) {
+; CHECK-LABEL: test_swpal16:
+; CHECK:       // %bb.0:
+; NOLSE-NEXT:    .arch_extension lse
+; CHECK-NEXT:    swpalh w1, w0, [x0]
+; NOLSE-NEXT:    .arch_extension nolse
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.swpal16(ptr %p, i32 %v)
+  ret i32 %r
+}
+
+define i32 @test_swpal32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_swpal32:
+; CHECK:       // %bb.0:
+; NOLSE-NEXT:    .arch_extension lse
+; CHECK-NEXT:    swpal w1, w0, [x0]
+; NOLSE-NEXT:    .arch_extension nolse
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.aarch64.swpal32(ptr %p, i32 %v)
+  ret i32 %r
+}
+
+define i64 @test_swpal64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_swpal64:
+; CHECK:       // %bb.0:
+; NOLSE-NEXT:    .arch_extension lse
+; CHECK-NEXT:    swpal x1, x0, [x0]
+; NOLSE-NEXT:    .arch_extension nolse
+; CHECK-NEXT:    ret
+  %r = call i64 @llvm.aarch64.swpal64(ptr %p, i64 %v)
+  ret i64 %r
+}
