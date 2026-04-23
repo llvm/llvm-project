@@ -1061,6 +1061,51 @@ bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
   return false;
 }
 
+MemoryEffects Instruction::getMemoryEffects() const {
+  switch (getOpcode()) {
+  default:
+    return MemoryEffects::none();
+  case Instruction::VAArg:
+    return MemoryEffects::argMemOnly();
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+    return MemoryEffects::unknown();
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return cast<CallBase>(this)->getMemoryEffects();
+  case Instruction::Load: {
+    auto *LI = cast<LoadInst>(this);
+    if (isStrongerThanMonotonic(LI->getOrdering()))
+      return MemoryEffects::unknown();
+
+    MemoryEffects ME = MemoryEffects::argMemOnly(
+        LI->isUnordered() ? ModRefInfo::Ref : ModRefInfo::ModRef);
+    if (LI->isVolatile())
+      ME |= MemoryEffects::inaccessibleMemOnly();
+    return ME;
+  }
+  case Instruction::Store: {
+    auto *SI = cast<StoreInst>(this);
+    if (isStrongerThanMonotonic(SI->getOrdering()))
+      return MemoryEffects::unknown();
+
+    MemoryEffects ME = MemoryEffects::argMemOnly(
+        SI->isUnordered() ? ModRefInfo::Mod : ModRefInfo::ModRef);
+    if (SI->isVolatile())
+      ME |= MemoryEffects::inaccessibleMemOnly();
+    return ME;
+  }
+  }
+}
+
+// This is duplicating the logic from getMemoryEffects() for performance
+// reasons. Computing the full MemoryEffects just to perform a Mod/Ref check
+// is expensive.
+
 bool Instruction::mayReadFromMemory() const {
   switch (getOpcode()) {
   default: return false;

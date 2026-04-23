@@ -186,6 +186,18 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
   // Additional locations accessed if the SCC accesses argmem.
   MemoryEffects RecursiveArgME = MemoryEffects::none();
 
+  auto AddNonArgMemoryEffects = [&ME](MemoryEffects InstME) {
+    // Merge instruction memory effects, including inaccessible and errno
+    // memory, but excluding argument memory, which is handled separately.
+    ME |= InstME.getWithoutLoc(IRMemLocation::ArgMem);
+
+    // If the instruction accesses captured memory (currently part of "other")
+    // and an argument is captured (currently not tracked), then it may also
+    // access argument memory.
+    ModRefInfo OtherMR = InstME.getModRef(IRMemLocation::Other);
+    ME |= MemoryEffects::argMemOnly(OtherMR);
+  };
+
   // Inalloca and preallocated arguments are always clobbered by the call.
   if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
       F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
@@ -222,16 +234,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (isa<PseudoProbeInst>(I))
         continue;
 
-      // Merge callee's memory effects into caller's ones, including
-      // inaccessible and errno memory, but excluding argument memory, which is
-      // handled separately.
-      ME |= CallME.getWithoutLoc(IRMemLocation::ArgMem);
-
-      // If the call accesses captured memory (currently part of "other") and
-      // an argument is captured (currently not tracked), then it may also
-      // access argument memory.
-      ModRefInfo OtherMR = CallME.getModRef(IRMemLocation::Other);
-      ME |= MemoryEffects::argMemOnly(OtherMR);
+      AddNonArgMemoryEffects(CallME);
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
@@ -241,27 +244,20 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       continue;
     }
 
-    ModRefInfo MR = ModRefInfo::NoModRef;
-    if (I.mayWriteToMemory())
-      MR |= ModRefInfo::Mod;
-    if (I.mayReadFromMemory())
-      MR |= ModRefInfo::Ref;
-    if (MR == ModRefInfo::NoModRef)
+    MemoryEffects InstME = I.getMemoryEffects();
+    if (InstME.doesNotAccessMemory())
       continue;
 
     std::optional<MemoryLocation> Loc = MemoryLocation::getOrNone(&I);
     if (!Loc) {
       // If no location is known, conservatively assume anything can be
       // accessed.
-      ME |= MemoryEffects(MR);
+      ME |= MemoryEffects(InstME.getModRef());
       continue;
     }
 
-    // Volatile operations may access inaccessible memory.
-    if (I.isVolatile())
-      ME |= MemoryEffects::inaccessibleMemOnly(MR);
-
-    addLocAccess(ME, *Loc, MR, AAR);
+    AddNonArgMemoryEffects(InstME);
+    addLocAccess(ME, *Loc, InstME.getModRef(IRMemLocation::ArgMem), AAR);
   }
 
   return {OrigME & ME, RecursiveArgME};
