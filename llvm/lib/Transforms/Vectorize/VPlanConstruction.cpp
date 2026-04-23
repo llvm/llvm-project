@@ -775,7 +775,8 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
 }
 
 /// Try to hoist \p Previous and its operands before all users of \p FOR.
-/// \returns true if hoisting succeeded or was not necessary, and false otherwise.
+/// \returns true if hoisting succeeded or was not necessary, and false
+/// otherwise.
 static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
                                         VPRecipeBase *Previous,
                                         VPDominatorTree &VPDT) {
@@ -891,21 +892,15 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
-  // If Previous is a live-in (no defining recipe), it naturally dominates all
-  // recipes in the loop, so no sinking is needed.
-  if (!Previous)
-    return true;
-
-
-    // Sink FOR users after Previous or hoist Previous before FOR users, if i is a recipe.
-    if (Previous && (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
-        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT)))
+    assert(Previous && "Previous must be a recipe");
+    // Sink FOR users after Previous or hoist Previous before FOR users.
+    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
+        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
       return false;
 
     // Create FirstOrderRecurrenceSplice and replace FOR uses.
-    VPBasicBlock *InsertBlock =
-        Previous ? Previous->getParent() : FOR->getParent();
-    auto InsertPt = (!Previous || isa<VPHeaderPHIRecipe>(Previous))
+    VPBasicBlock *InsertBlock = Previous->getParent();
+    auto InsertPt = isa<VPHeaderPHIRecipe>(Previous)
                         ? InsertBlock->getFirstNonPhi()
                         : std::next(Previous->getIterator());
     VPBuilder LoopBuilder(InsertBlock, InsertPt);
