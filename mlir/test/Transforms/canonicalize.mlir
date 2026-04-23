@@ -1248,3 +1248,12 @@ func.func @test_materialize_failure() -> i64 {
   %u = index.castu %const : index to i64
   return %u: i64
 }
+
+// -----
+
+// Make sure that the canonicalizer does not fold infinitely.
+
+// CHECK: %[[c0:.*]] = arith.constant 0 : index
+%c0 = arith.constant 0 : index
+// CHECK: %[[add:.*]] = arith.addi %[[c0]], %[[add]] : index
+%0 = arith.addi %c0, %0 : index
