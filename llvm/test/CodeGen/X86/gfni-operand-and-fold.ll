@@ -23,8 +23,9 @@ define <32 x i8> @test_const_splat_on_const_matrix256(<32 x i8> %src) nounwind {
   ret <32 x i8> %gfni
 }
 
-define <16 x i8> @test_const_splat_parity_matrix(<16 x i8> %src) nounwind {
-; CHECK-LABEL: test_const_splat_parity_matrix:
+;; Same situation as above but with a diffrent matrix
+define <16 x i8> @test_const_splat_alternative_const_matrix(<16 x i8> %src) nounwind {
+; CHECK-LABEL: test_const_splat_alternative_const_matrix:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -95,9 +96,8 @@ define <16 x i8> @test_const_splat_on_const_matrix_multi_use(<16 x i8> %src) nou
 ; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %matrix = bitcast <2 x i64> splat(i64 9223655728169885760) to <16 x i8>
   %and = and <16 x i8> %src, splat(i8 15)
-  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> %matrix, i8 0)
+  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> <i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128>, i8 0)
   %xor = xor <16 x i8> %gfni, %and
   ret <16 x i8> %xor
 }
@@ -114,9 +114,8 @@ define <16 x i8> @test_var_splat_on_const_matrix_multi_use(<16 x i8> %src, i8 %s
 ; CHECK-NEXT:    retq
   %inlo = insertelement <16 x i8> poison, i8 %scalar, i64 0
   %varsplat = shufflevector <16 x i8> %inlo, <16 x i8> poison, <16 x i32> zeroinitializer
-  %matrix = bitcast <2 x i64> splat(i64 9223655728169885760) to <16 x i8>
   %and = and <16 x i8> %src, %varsplat
-  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> %matrix, i8 0)
+  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> <i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128>, i8 0)
   %xor = xor <16 x i8> %gfni, %and
   ret <16 x i8> %xor
 }
@@ -158,8 +157,7 @@ define <16 x i8> @test_const_splat16_on_const_matrix(<16 x i8> %src) nounwind {
 ; CHECK-NEXT:    retq
   %splat = bitcast <8 x i16> splat(i16 1) to <16 x i8>
   %and = and <16 x i8> %src, %splat
-  %matrix = bitcast <2 x i64> splat(i64 9223655728169885760) to <16 x i8>
-  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> %matrix, i8 0)
+  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> <i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128>, i8 0)
   ret <16 x i8> %gfni
 }
 
@@ -176,7 +174,6 @@ define <16 x i8> @test_var_splat16_on_const_matrix(<16 x i8> %src, i16 %scalar) 
   %varsplat16 = shufflevector <8 x i16> %inlo, <8 x i16> poison, <8 x i32> zeroinitializer
   %varsplat = bitcast <8 x i16> %varsplat16 to <16 x i8>
   %and = and <16 x i8> %src, %varsplat
-  %matrix = bitcast <2 x i64> splat(i64 9223655728169885760) to <16 x i8>
-  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> %matrix, i8 0)
+  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> <i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128>, i8 0)
   ret <16 x i8> %gfni
 }
