@@ -6669,7 +6669,7 @@ CheckTemplateArgumentIsCompatibleWithParameter(Sema &S, NamedDecl *Param,
                                                QualType ParamType, Expr *ArgIn,
                                                Expr *Arg, QualType ArgType) {
   bool ObjCLifetimeConversion;
-  if ((ParamType->isPointerType() || ParamType->isBlockPointerType()) &&
+  if (ParamType->isPointerOrBlockPointerType() &&
       !ParamType->getPointeeType()->isFunctionType() &&
       S.IsQualificationConversion(ArgType, ParamType, false,
                                   ObjCLifetimeConversion)) {
@@ -6820,7 +6820,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
     Entity = CUE->getGuidDecl();
 
   // If our parameter has pointer type, check for a null template value.
-  if (ParamType->isPointerType() || ParamType->isBlockPointerType() ||
+  if (ParamType->isPointerOrBlockPointerType() ||
       ParamType->isNullPtrType()) {
     switch (isNullPointerValueTemplateArgument(S, Param, ParamType, ArgIn,
                                                Entity)) {
@@ -7358,8 +7358,8 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
       auto *E = const_cast<Expr *>(Base.dyn_cast<const Expr *>());
       //   For a non-type template-parameter of pointer or reference type,
       //   the value of the constant expression shall not refer to
-      assert(ParamType->isPointerOrReferenceType() ||
-             ParamType->isBlockPointerType() || ParamType->isNullPtrType());
+      assert(ParamType->isPointerOrBlockPointerOrReferenceType() ||
+             ParamType->isNullPtrType());
       // -- a temporary object
       // -- a string literal
       // -- the result of a typeid expression, or
@@ -7665,7 +7665,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     return Arg;
   }
 
-  if (ParamType->isPointerType() || ParamType->isBlockPointerType()) {
+  if (ParamType->isPointerOrBlockPointerType()) {
     //   -- for a non-type template-parameter of type pointer to
     //      object, qualification conversions (4.4) and the
     //      array-to-pointer conversion (4.2) are applied.

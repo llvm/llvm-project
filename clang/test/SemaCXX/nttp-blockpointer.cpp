@@ -49,6 +49,21 @@ void test_params() {
 template<auto B>
 struct AutoBlock {};
 
+template<auto B>
+void deduce_auto(AutoBlock<B> a) {}
+
 void test_auto() {
   AutoBlock<global_block> a;
+  deduce_auto(a);
+}
+
+template<typename T, T B>
+struct TypedBlock {};
+
+template<typename T, T B>
+void deduce_type(TypedBlock<T, B> a) {}
+
+void test_typed() {
+  TypedBlock<void(^)(), global_block> a;
+  deduce_type(a);
 }

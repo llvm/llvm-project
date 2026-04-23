@@ -6849,7 +6849,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
           Out << "cv";
           mangleType(T);
         }
-        if (T->isPointerType() || T->isBlockPointerType())
+        if (T->isPointerOrBlockPointerType())
           Out << "ad";
         Out << "so";
         mangleType(T->isVoidPointerType()
@@ -6864,7 +6864,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
           Out << "cv";
           mangleType(T);
         }
-        if (T->isPointerType() || T->isBlockPointerType()) {
+        if (T->isPointerOrBlockPointerType()) {
           NotPrimaryExpr();
           Out << "ad";
         }
