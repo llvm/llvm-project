@@ -960,4 +960,46 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // CHECK-LABEL: @bitcast_distribution
+  gpu.func @bitcast_distribution(%src: memref<256x128xf32>) {
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32>
+      -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
+    %load =  xegpu.load_nd %tdesc[0, 0] {layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>}
+      : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> vector<256x128xf32>
+    // CHECK: vector.bitcast {{.*}} : vector<32x32xf32> to vector<32x64xi16>
+    %bitcast = vector.bitcast %load {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 1]>}
+      : vector<256x128xf32> to vector<256x256xi16>
+    gpu.return
+  }
+
+  // CHECK-LABEL: @interleave_distribution
+  gpu.func @interleave_distribution(%src: memref<256x128xf32>) {
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32>
+      -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
+    %load1 =  xegpu.load_nd %tdesc[0, 0] {layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>}
+      : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> vector<256x128xf32>
+    %load2 =  xegpu.load_nd %tdesc[0, 0] {layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>}
+      : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> vector<256x128xf32>
+    // CHECK: vector.interleave {{.*}}, {{.*}} : vector<32x32xf32>
+    %interleave = vector.interleave %load1, %load2 {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 1]>}
+      : vector<256x128xf32> -> vector<256x256xf32>
+    gpu.return
+  }
+
+  // CHECK-LABEL: @deinterleave_distribution
+  gpu.func @deinterleave_distribution(%src: memref<256x256xf32>) {
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x256xf32>
+      -> !xegpu.tensor_desc<256x256xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 1]>>
+    %load =  xegpu.load_nd %tdesc[0, 0] {layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 1]>}
+      : !xegpu.tensor_desc<256x256xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> vector<256x256xf32>
+    // CHECK: {{.*}} = vector.deinterleave {{.*}} : vector<32x64xf32> -> vector<32x32xf32>
+    %deinterleave:2 = vector.deinterleave %load {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_1 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>}
+      : vector<256x256xf32> -> vector<256x128xf32>
+    gpu.return
+  }
+
 }
