@@ -943,26 +943,18 @@ bool AA::isAssumedThreadLocalObject(Attributor &A, Value &Obj,
   }
 
   if (A.getInfoCache().targetIsGPU()) {
-    const Module *M = nullptr;
-    if (auto *GV = dyn_cast<GlobalValue>(&Obj))
-      M = GV->getParent();
-    else if (auto *Arg = dyn_cast<Argument>(&Obj))
-      M = Arg->getParent()->getParent();
-    else if (auto *I = dyn_cast<Instruction>(&Obj))
-      M = I->getModule();
-    assert(M && "Could not find the Module");
-    if (M) {
-      unsigned ObjAS = Obj.getType()->getPointerAddressSpace();
-      if (AA::isGPULocalAddressSpace(*M, ObjAS)) {
-        LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
-                          << "' is thread local; GPU local memory\n");
-        return true;
-      }
-      if (AA::isGPUConstantAddressSpace(*M, ObjAS)) {
-        LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
-                          << "' is thread local; GPU constant memory\n");
-        return true;
-      }
+    if (AA::isGPULocalAddressSpace(A.getInfoCache().getModule(),
+                                   Obj.getType()->getPointerAddressSpace())) {
+      LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
+                        << "' is thread local; GPU local memory\n");
+      return true;
+    }
+    if (AA::isGPUConstantAddressSpace(
+            A.getInfoCache().getModule(),
+            Obj.getType()->getPointerAddressSpace())) {
+      LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
+                        << "' is thread local; GPU constant memory\n");
+      return true;
     }
   }
 
@@ -3375,7 +3367,7 @@ InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
 }
 
 std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
-  if (TargetTriple.isGPU())
+  if (targetIsGPU())
     return 0;
   return std::nullopt;
 }

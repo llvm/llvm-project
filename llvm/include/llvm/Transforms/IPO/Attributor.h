@@ -1223,8 +1223,7 @@ struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
                    BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
                    bool UseExplorer = true)
-      : CGSCC(CGSCC), DL(M.getDataLayout()), Allocator(Allocator), AG(AG),
-        TargetTriple(M.getTargetTriple()) {
+      : CGSCC(CGSCC), M(M), Allocator(Allocator), AG(AG) {
     if (UseExplorer)
       Explorer = new (Allocator) MustBeExecutedContextExplorer(
           /* ExploreInterBlock */
@@ -1335,8 +1334,10 @@ struct InformationCache {
     return AG.getAnalysis<AP>(F, CachedOnly);
   }
 
+  const Module &getModule() const { return M; }
+
   /// Return datalayout used in the module.
-  const DataLayout &getDL() { return DL; }
+  const DataLayout &getDL() const { return M.getDataLayout(); }
 
   /// Return the map conaining all the knowledge we have from `llvm.assume`s.
   const RetainedKnowledgeMap &getKnowledgeMap() const { return KnowledgeMap; }
@@ -1358,7 +1359,7 @@ struct InformationCache {
   bool stackIsAccessibleByOtherThreads() { return !targetIsGPU(); }
 
   /// Return true if the target is a GPU.
-  bool targetIsGPU() { return TargetTriple.isGPU(); }
+  bool targetIsGPU() const { return M.getTargetTriple().isGPU(); }
 
   /// Return all functions that might be called indirectly, only valid for
   /// closed world modules (see isClosedWorldModule).
@@ -1415,8 +1416,8 @@ private:
   /// through the information cache interface *prior* to looking at them.
   LLVM_ABI void initializeInformationCache(const Function &F, FunctionInfo &FI);
 
-  /// The datalayout used in the module.
-  const DataLayout &DL;
+  /// The module.
+  const Module &M;
 
   /// The allocator used to allocate memory, e.g. for `FunctionInfo`s.
   BumpPtrAllocator &Allocator;
@@ -1438,9 +1439,6 @@ private:
 
   /// Set of inlineable functions
   SmallPtrSet<const Function *, 8> InlineableFunctions;
-
-  /// The triple describing the target machine.
-  Triple TargetTriple;
 
   /// Give the Attributor access to the members so
   /// Attributor::identifyDefaultAbstractAttributes(...) can initialize them.
@@ -2490,7 +2488,7 @@ public:
                        DenseMap<Function *, Function *> &FnMap);
 
   /// Return the data layout associated with the anchor scope.
-  const DataLayout &getDataLayout() const { return InfoCache.DL; }
+  const DataLayout &getDataLayout() const { return InfoCache.getDL(); }
 
   /// The allocator used to allocate memory, e.g. for `AbstractAttribute`s.
   BumpPtrAllocator &Allocator;
