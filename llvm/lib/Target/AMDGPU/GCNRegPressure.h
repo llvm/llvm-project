@@ -326,15 +326,41 @@ public:
 protected:
   const LiveIntervals &LIS;
 
-  // Virtual register tracking
   LiveRegSet VirtLiveRegs;
-  GCNRegPressure CurPressure, MaxPressure;
 
-  // Physical register tracking: Maintain clean separation between virtual and
-  // physical registers. Tracking physical registers can be turned OFF with an
-  // option. Uses LiveRegUnits (bit vector of live register units).
-  LiveRegUnits PhysLiveRegs;
-  GCNRegPressure CurPhysPressure, MaxPhysPressure;
+  // Physical register liveness: Units provides O(1) unit-level alias checks,
+  // Regs tracks which register names contributed to pressure for cheap
+  // reconstruction. Both must be kept in sync.
+  struct PhysicalRegLiveness {
+    LiveRegUnits Units;
+    SmallDenseSet<MCRegister, 16> Regs;
+
+    void init(const TargetRegisterInfo &TRI) {
+      Units.init(TRI);
+      Regs.clear();
+    }
+    void clear() {
+      Units.clear();
+      Regs.clear();
+    }
+    const BitVector &getBitVector() const { return Units.getBitVector(); }
+
+    void add(Register Reg) {
+      Units.addReg(Reg);
+      Regs.insert(Reg.asMCReg());
+    }
+    void remove(Register Reg) {
+      Units.removeReg(Reg);
+      Regs.erase(Reg.asMCReg());
+    }
+    void remove(const BitVector &KilledUnits, MCRegister Reg) {
+      Units.removeUnits(KilledUnits);
+      Regs.erase(Reg);
+    }
+  };
+  PhysicalRegLiveness PhysLiveRegs;
+
+  GCNRegPressure CurPressure, MaxPressure;
 
   // Flag to control whether physical register tracking is active.
   // Set to true when GCNTrackers are enabled, false otherwise.
@@ -352,19 +378,17 @@ protected:
       PhysLiveRegs.init(*SRI);
   }
 
-  // Copy constructor - PhysLiveRegs must be initialized then copied.
+  // Copy constructor - PhysLiveRegs.Units must be initialized then copied.
   GCNRPTracker(const GCNRPTracker &Other)
       : LIS(Other.LIS), VirtLiveRegs(Other.VirtLiveRegs),
-        CurPressure(Other.CurPressure),
-        MaxPressure(Other.MaxPressure),
-        CurPhysPressure(Other.CurPhysPressure),
-        MaxPhysPressure(Other.MaxPhysPressure),
+        CurPressure(Other.CurPressure), MaxPressure(Other.MaxPressure),
         TrackPhysRegs(Other.TrackPhysRegs), LastTrackedMI(Other.LastTrackedMI),
         MRI(Other.MRI), SRI(Other.SRI) {
     if (TrackPhysRegs) {
       assert(SRI && "SRI not initialized");
       PhysLiveRegs.init(*SRI);
-      PhysLiveRegs.addUnits(Other.PhysLiveRegs.getBitVector());
+      PhysLiveRegs.Units.addUnits(Other.PhysLiveRegs.getBitVector());
+      PhysLiveRegs.Regs = Other.PhysLiveRegs.Regs;
     }
   }
 
@@ -376,11 +400,14 @@ protected:
 
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
-  // Helper to check if a register unit is live at a given slot index.
+  // Check if a register unit is live at a given slot index per LIS.
   bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
 
   // Check if any register unit of Reg is not currently live in PhysLiveRegs.
   bool isAnyRegUnitNotLive(MCRegister Reg) const;
+
+  // Reconstruct physical register pressure from PhysLiveRegs.Regs.
+  GCNRegPressure constructPhysRegPressure() const;
 
   // Check if Reg has any killed units at the given slot index.
   bool checkRegKilled(MCRegister Reg, SlotIndex SI) const;
@@ -410,26 +437,9 @@ public:
   const decltype(VirtLiveRegs) &getVirtLiveRegs() const { return VirtLiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
 
-  void clearMaxPressure() {
-    MaxPressure.clear();
-    MaxPhysPressure.clear();
-  }
+  void clearMaxPressure() { MaxPressure.clear(); }
 
-  // Returns sum of virtual and physical register pressure
-  GCNRegPressure getPressure() const {
-    return CurPressure + CurPhysPressure;
-  }
-
-  // Returns only virtual register pressure
-  GCNRegPressure getVirtPressure() const { return CurPressure; }
-
-  // Returns only physical register pressure
-  GCNRegPressure getPhysPressure() const { return CurPhysPressure; }
-
-  // Returns sum of virtual and physical max pressure
-  GCNRegPressure getMaxPressure() const {
-    return MaxPressure + MaxPhysPressure;
-  }
+  GCNRegPressure getPressure() const { return CurPressure; }
 
   decltype(VirtLiveRegs) moveVirtLiveRegs() { return std::move(VirtLiveRegs); }
 };
@@ -474,13 +484,12 @@ public:
   /// to reported by LIS.
   bool isValid() const;
 
-  void resetMaxPressure() {
-    MaxPressure = CurPressure;
-    MaxPhysPressure = CurPhysPressure;
-  }
+  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
+
+  void resetMaxPressure() { MaxPressure = CurPressure; }
 
   GCNRegPressure getMaxPressureAndReset() {
-    GCNRegPressure RP = getMaxPressure();
+    GCNRegPressure RP = MaxPressure;
     resetMaxPressure();
     return RP;
   }
@@ -505,9 +514,8 @@ public:
 
   /// \p return MaxPressure and clear it.
   GCNRegPressure moveMaxPressure() {
-    auto Res = getMaxPressure();
+    auto Res = MaxPressure;
     MaxPressure.clear();
-    MaxPhysPressure.clear();
     return Res;
   }
 

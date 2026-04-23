@@ -70,7 +70,7 @@ entry:
 
 ; GCN-DEBUG-LABEL: test_multiple_physregs
 ; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 6
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 6
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 6
 
 ; GENERIC-DEBUG-LABEL: test_multiple_physregs
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 6
@@ -274,7 +274,7 @@ entry:
 
 ; GCN-DEBUG-LABEL: test_early_clobber_tuple
 ; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 8
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 8
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
 
 ; GENERIC-DEBUG-LABEL: test_early_clobber_tuple
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
@@ -525,7 +525,7 @@ entry:
 
 ; GCN-DEBUG-LABEL: test_vreg_and_physreg_live_range_overlap
 ; GCN-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 16, LVGPR WT: 0, LSGPR WT: 16
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 14, LVGPR WT: 0, LSGPR WT: 16
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 13, LVGPR WT: 0, LSGPR WT: 16
 
 ; GENERIC-DEBUG-LABEL: test_vreg_and_physreg_live_range_overlap
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 14, LVGPR WT: 0, LSGPR WT: 16
