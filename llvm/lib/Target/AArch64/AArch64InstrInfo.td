@@ -3026,6 +3026,12 @@ defm CASA  : CompareAndSwap<1, 0, "a">;
 defm CASL  : CompareAndSwap<0, 1, "l">;
 defm CASAL : CompareAndSwap<1, 1, "al">;
 
+// isCodeGenOnly=1: excluded from asm parser/disassembler, no HasLSE predicate.
+// Used by the __cas* MS intrinsics to force CAS* emission regardless of -march.
+let isCodeGenOnly = 1 in {
+  defm CAS   : CompareAndSwap_cg<0, 0, "">;
+}
+
 // v8.1 atomic CASP
 defm CASP   : CompareAndSwapPair<0, 0, "">;
 defm CASPA  : CompareAndSwapPair<1, 0, "a">;
