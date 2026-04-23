@@ -31,7 +31,11 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for device (S1) // expected-error {{'S1' does not refer to a value}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target parallel for device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
+  #pragma omp target parallel for device (-3) // expected-error {{argument to 'device' clause must be a non-negative integer value, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)}}
+  for (i = 0; i < argc; ++i) foo();
+  #pragma omp target parallel for device (-2) // OK: omp_invalid_device
+  for (i = 0; i < argc; ++i) foo();
+  #pragma omp target parallel for device (-1) // OK: omp_initial_device
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for device (-10u)
   for (i = 0; i < argc; ++i) foo();

@@ -35,7 +35,11 @@ int main(int argc, char **argv) {
   foo();
   #pragma omp target device (S1) // expected-error {{'S1' does not refer to a value}}
   foo();
-  #pragma omp target device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
+  #pragma omp target device (-3) // expected-error {{argument to 'device' clause must be a non-negative integer value, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)}}
+  foo();
+  #pragma omp target device (-2) // OK: omp_invalid_device
+  foo();
+  #pragma omp target device (-1) // OK: omp_initial_device
   foo();
   #pragma omp target device (-10u)
   foo();
