@@ -8,9 +8,6 @@
 //
 // REQUIRES: long_tests
 
-// Missing tgamma
-// XFAIL: LLVM-LIBC-FIXME
-
 // <random>
 
 // template<class RealType = double>

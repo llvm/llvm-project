@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Investigate why this test unexpectedly passes with LLVM libc.
-// UNSUPPORTED: LLVM-LIBC-FIXME
-
 // XFAIL: !has-1024-bit-atomics
 
 // <atomic>

@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Missing lgamma_r
-// XFAIL: LLVM-LIBC-FIXME
-
 // <random>
 
 // template<class IntType = int>
