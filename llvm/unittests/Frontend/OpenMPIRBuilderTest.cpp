@@ -7353,11 +7353,11 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
 
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
-      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
-                              {}, Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
-                              /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
-                              BodyGenCB, SimpleArgAccessorCB, CustomMapperCB,
-                              {}, false));
+      OMPBuilder.createTarget(
+          Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
+          /*DeallocBlocks=*/{}, Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
+          /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB, BodyGenCB,
+          SimpleArgAccessorCB, CustomMapperCB, {}, false));
   EXPECT_EQ(DL, Builder.getCurrentDebugLocation());
   Builder.restoreIP(AfterIP);
 

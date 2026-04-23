@@ -2682,9 +2682,9 @@ llvm::StructType *OpenMPIRBuilder::getKmpTaskAffinityInfoTy() {
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
-    ArrayRef<BasicBlock *> DeallocBlocks,
-    BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    const DependenciesInfo Dependencies, const AffinityData Affinities,
+    ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB,
+    bool Tied, Value *Final, Value *IfCondition,
+    const DependenciesInfo &Dependencies, const AffinityData &Affinities,
     bool Mergeable, Value *EventHandle, Value *Priority) {
 
   if (!updateToLocation(Loc))

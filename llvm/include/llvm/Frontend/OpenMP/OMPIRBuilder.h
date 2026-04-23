@@ -1625,9 +1625,9 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB,
       bool Tied = true, Value *Final = nullptr, Value *IfCondition = nullptr,
-      const DependenciesInfo Dependencies = {}, const AffinityData Affinities = {},
-      bool Mergeable = false, Value *EventHandle = nullptr,
-      Value *Priority = nullptr);
+      const DependenciesInfo &Dependencies = {},
+      const AffinityData &Affinities = {}, bool Mergeable = false,
+      Value *EventHandle = nullptr, Value *Priority = nullptr);
 
   /// Generator for the taskgroup construct
   ///
@@ -3620,7 +3620,7 @@ public:
       ArrayRef<BasicBlock *> DeallocBlocks)>;
 
   using TargetGenArgAccessorsCallbackTy = function_ref<InsertPointOrErrorTy(
-      Argument &Arg, Value *Input, Value *&RetVal, InsertPointTy AllocIP,
+      Argument &Arg, Value *Input, Value *&RetVal, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<InsertPointTy> DeallocIPs)>;
 
   /// Generator for '#omp target'
