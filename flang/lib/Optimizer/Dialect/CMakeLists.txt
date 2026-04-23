@@ -20,7 +20,6 @@ add_flang_library(FIRDialect
   FIROpsIncGen
   FIRSafeTempArrayCopyAttrInterfaceIncGen
   CUFAttrsIncGen
-  CUFOpsIncGen
   intrinsics_gen
 
   LINK_LIBS
