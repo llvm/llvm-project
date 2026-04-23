@@ -520,7 +520,7 @@ void boolean_index_access(int x) {
 // OGCG: %[[VAL:.*]] = load i32, ptr %[[ELE]]
 // OGCG: store i32 %[[VAL]], ptr %[[N_ADDR]]
 
-void bitint_index_access(_BitInt(8) i) {
+void bitint_index_access(_BitInt(7) i) {
   int arr[10] = {};
   int n = arr[i];
 }
@@ -528,33 +528,33 @@ void bitint_index_access(_BitInt(8) i) {
 // A narrow signed _BitInt index must be sign-extended to pointer width before
 // being used as a subscript.
 
-// CIR: cir.func{{.*}} @_Z19bitint_index_accessDB8_
-// CIR:   %[[I_ADDR:.*]] = cir.alloca !s8i_bitint, !cir.ptr<!s8i_bitint>, ["i", init]
+// CIR: cir.func{{.*}} @_Z19bitint_index_accessDB7_
+// CIR:   %[[I_ADDR:.*]] = cir.alloca !cir.int<s, 7, bitint>, !cir.ptr<!cir.int<s, 7, bitint>>, ["i", init]
 // CIR:   %[[ARR_ADDR:.*]] = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["arr", init]
 // CIR:   %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR:   %[[I:.*]] = cir.load{{.*}} %[[I_ADDR]] : !cir.ptr<!s8i_bitint>, !s8i_bitint
-// CIR:   %[[IDX:.*]] = cir.cast integral %[[I]] : !s8i_bitint -> !s64i
+// CIR:   %[[I:.*]] = cir.load{{.*}} %[[I_ADDR]] : !cir.ptr<!cir.int<s, 7, bitint>>, !cir.int<s, 7, bitint>
+// CIR:   %[[IDX:.*]] = cir.cast integral %[[I]] : !cir.int<s, 7, bitint> -> !s64i
 // CIR:   %[[ELE:.*]] = cir.get_element %[[ARR_ADDR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR:   %[[VAL:.*]] = cir.load{{.*}} %[[ELE]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store{{.*}} %[[VAL]], %[[N_ADDR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: define{{.*}} @_Z19bitint_index_accessDB8_(i8 {{[^)]*}})
-// LLVM:   %[[I_ADDR:.*]] = alloca i8
+// LLVM: define{{.*}} @_Z19bitint_index_accessDB7_(i7 {{[^)]*}})
+// LLVM:   %[[I_ADDR:.*]] = alloca i7
 // LLVM:   %[[ARR_ADDR:.*]] = alloca [10 x i32]
 // LLVM:   %[[N_ADDR:.*]] = alloca i32
-// LLVM:   %[[I:.*]] = load i8, ptr %[[I_ADDR]]
-// LLVM:   %[[IDX:.*]] = sext i8 %[[I]] to i64
+// LLVM:   %[[I:.*]] = load i7, ptr %[[I_ADDR]]
+// LLVM:   %[[IDX:.*]] = sext i7 %[[I]] to i64
 // LLVM:   %[[ELE:.*]] = getelementptr [10 x i32], ptr %[[ARR_ADDR]], i32 0, i64 %[[IDX]]
 // LLVM:   %[[VAL:.*]] = load i32, ptr %[[ELE]]
 // LLVM:   store i32 %[[VAL]], ptr %[[N_ADDR]]
 
-// OGCG: define{{.*}} @_Z19bitint_index_accessDB8_(i8 {{[^)]*}} %i)
+// OGCG: define{{.*}} @_Z19bitint_index_accessDB7_(i7 {{[^)]*}})
 // OGCG:   %[[I_ADDR:.*]] = alloca i8
 // OGCG:   %[[ARR_ADDR:.*]] = alloca [10 x i32]
 // OGCG:   %[[N_ADDR:.*]] = alloca i32
-// OGCG:   store i8 %i, ptr %[[I_ADDR]]
 // OGCG:   %[[I:.*]] = load i8, ptr %[[I_ADDR]]
-// OGCG:   %[[IDX:.*]] = sext i8 %[[I]] to i64
+// OGCG:   %[[I_CAST:.*]] = trunc i8 %[[I]] to i7
+// OGCG:   %[[IDX:.*]] = sext i7 %[[I_CAST]] to i64
 // OGCG:   %[[ELE:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_ADDR]], i64 0, i64 %[[IDX]]
 // OGCG:   %[[VAL:.*]] = load i32, ptr %[[ELE]]
 // OGCG:   store i32 %[[VAL]], ptr %[[N_ADDR]]
