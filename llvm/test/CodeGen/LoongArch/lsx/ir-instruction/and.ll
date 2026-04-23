@@ -124,3 +124,33 @@ entry:
   store <2 x i64> %v1, ptr %res
   ret void
 }
+
+define <8 x i16> @and_u_v8i16_1(<8 x i16> %a) nounwind {
+; CHECK-LABEL: and_u_v8i16_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vandi.b $vr0, $vr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = and <8 x i16> %a, splat (i16 257)
+  ret <8 x i16> %0
+}
+
+define <4 x i32> @and_u_v4i32_1(<4 x i32> %a) nounwind {
+; CHECK-LABEL: and_u_v4i32_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vandi.b $vr0, $vr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = and <4 x i32> %a, splat (i32 16843009)
+  ret <4 x i32> %0
+}
+
+define <2 x i64> @and_u_v2i64_1(<2 x i64> %a) nounwind {
+; CHECK-LABEL: and_u_v2i64_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vandi.b $vr0, $vr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = and <2 x i64> %a, splat (i64 72340172838076673)
+  ret <2 x i64> %0
+}

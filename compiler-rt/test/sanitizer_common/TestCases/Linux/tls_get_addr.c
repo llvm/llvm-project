@@ -8,7 +8,7 @@
 // XFAIL: i386-linux
 
 // These don't intercept __tls_get_addr.
-// XFAIL: lsan,hwasan,tysan,ubsan
+// XFAIL: lsan,hwasan,ubsan
 
 // FIXME: Fails for unknown reasons.
 // UNSUPPORTED: powerpc64le-target-arch

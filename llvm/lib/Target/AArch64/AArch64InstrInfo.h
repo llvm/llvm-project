@@ -383,9 +383,8 @@ public:
 
   using TargetInstrInfo::foldMemoryOperandImpl;
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex, MachineInstr *&CopyMI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
@@ -854,6 +853,7 @@ static inline unsigned getBranchOpcodeForKey(bool IsCall, AArch64PACKey::ID K,
 
 namespace AArch64 {
 
+// clang-format off
 enum ElementSizeType {
   ElementSizeMask = TSFLAG_ELEMENT_SIZE_TYPE(0x7),
   ElementSizeNone = TSFLAG_ELEMENT_SIZE_TYPE(0x0),
@@ -876,6 +876,8 @@ enum DestructiveInstType {
   DestructiveTernaryCommWithRev = TSFLAG_DESTRUCTIVE_INST_TYPE(0x8),
   Destructive2xRegImmUnpred     = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
   DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0xa),
+  DestructivePredicate          = TSFLAG_DESTRUCTIVE_INST_TYPE(0xb),
+  DestructiveBinaryImmUnpred    = TSFLAG_DESTRUCTIVE_INST_TYPE(0xc),
 };
 
 enum FalseLaneType {
@@ -883,6 +885,8 @@ enum FalseLaneType {
   FalseLanesZero  = TSFLAG_FALSE_LANE_TYPE(0x1),
   FalseLanesUndef = TSFLAG_FALSE_LANE_TYPE(0x2),
 };
+
+// clang-format on
 
 // NOTE: This is a bit field.
 static const uint64_t InstrFlagIsWhile     = TSFLAG_INSTR_FLAGS(0x1);

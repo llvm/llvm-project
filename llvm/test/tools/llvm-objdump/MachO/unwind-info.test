@@ -1,7 +1,7 @@
 RUN: llvm-objdump --macho -u %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
-CHECK: Contents of __compact_unwind section:
-CHECK:   Entry at offset 0x0:
-CHECK:     start:                0x0 _main
-CHECK:     length:               0x3b
-CHECK:     compact encoding:     0x01000000
+CHECK:      Contents of __compact_unwind section:
+CHECK-NEXT:   Entry at offset 0x0:
+CHECK-NEXT:     start:                0x0 _main
+CHECK-NEXT:     length:               0x3b
+CHECK-NEXT:     compact encoding:     0x01000000

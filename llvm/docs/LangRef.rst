@@ -3854,15 +3854,8 @@ volatile operation may not be changed. Different address spaces may
 have different trapping behavior when dereferencing an invalid
 pointer.
 
-The compiler may assume execution will continue after a volatile operation,
-so operations which modify memory or may have undefined behavior can be
-hoisted past a volatile operation.
-
-As an exception to the preceding rule, the compiler may not assume execution
-will continue after a volatile store operation. This restriction is necessary
-to support the somewhat common pattern in C of intentionally storing to an
-invalid pointer to crash the program. In the future, it might make sense to
-allow frontends to control this behavior.
+Volatile operations are permitted to trap. The compiler may not assume
+that execution will continue after a volatile operation.
 
 IR-level volatile loads and stores cannot safely be optimized into ``llvm.memcpy``
 or ``llvm.memmove`` intrinsics even when those intrinsics are flagged volatile.
@@ -5506,6 +5499,14 @@ instructions to emit), a list of operand constraints (stored as a string), a
 flag that indicates whether or not the inline asm expression has side effects,
 and a flag indicating whether the function containing the asm needs to align its
 stack conservatively.
+
+The compiler may not assume that the actual code executed at runtime matches the
+contents of the template string. Correctness-critical analyses must base their
+results only on the list of operand constraints and the flags -- not the
+contents of the template string. This ensures correct behavior if the assembly
+code emitted by this expression is altered later, e.g. via self-modifying code,
+as long as the code keeps upholding the requirements of the operand constraints
+and the flags.
 
 The template string supports argument substitution of the operands using "``$``"
 followed by a number, to indicate substitution of the given register/memory
@@ -9122,6 +9123,36 @@ For example:
     !0 = !{i32 1, !"override-stack-alignment", i32 8}
 
 This will change the stack alignment to 8B.
+
+Windows Control Flow Guard Metadata
+-----------------------------------
+
+Controls what Control Flow Guard (CFG) checks are performed, how they are
+performed, and what metadata is emitted. There are multiple flags that can be
+used to control different aspects of CFG. Using two different values for the
+same flag will raise a warning when linking.
+
+To pass this information to the backend, these options are encoded in module
+flags metadata, using the following key-value pairs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Key
+     - Value
+
+   * - cfguard
+     - * 0 --- CFG is completely disabled.
+       * 1 --- The CFG table is emitted, but no checks are performed.
+       * 2 --- The CFG table is emitted and checks are performed.
+
+   * - cfguard-mechanism
+     - * 0 --- CFG uses the default mechanism for the architecture.
+       * 1 --- CFG uses the "check" mechanism. This will result in a separate
+         call to the checker function and then one to the target.
+       * 2 --- CFG uses the "dispatch" mechanism. This calls a dispatcher
+         function which both checks and then calls the target.
 
 Embedded Objects Names Metadata
 ===============================
@@ -28055,8 +28086,9 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or an
-``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
+The argument is either a ``poison`` value or an SSA variable whose defining
+instruction is ``alloca`` or a call of the ``llvm.structured.alloca``
+intrinsics. Otherwise, the IR is considered ill-formed.
 
 Semantics:
 """"""""""
@@ -28066,10 +28098,12 @@ If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
 Otherwise, the stack-allocated object that ``ptr`` points to is initially
 marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
 alive and has an uninitialized value.
-The stack object is marked as dead when either
-:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is
-executed or the function returns.
+Calling ``llvm.lifetime.start`` when the stack object is already alive just
+resets its contents to be uninitialized.
 
+The stack object is marked as dead again when either
+:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is executed or the
+function returns.
 After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
 The second '``llvm.lifetime.start``' call marks the object as alive, but it
@@ -28096,8 +28130,9 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or an
-``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
+The argument is either a ``poison`` value or an SSA variable whose defining
+instruction is ``alloca`` or a call of the ``llvm.structured.alloca``
+intrinsics. Otherwise, the IR is considered ill-formed.
 
 Semantics:
 """"""""""
