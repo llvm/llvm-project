@@ -72,30 +72,31 @@ struct TestXeGPUUnrollingPatterns
         } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
           tdescTy = storeNdOp.getTensorDescType();
         } else if (auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(op)) {
-          tdescTy = prefetchOp.getTensorDescType();
+          auto layout =
+              llvm::dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+          if (layout && layout.isForSubgroup()) {
+            auto inst_data = layout.getEffectiveInstDataAsInt();
+            if (!inst_data.empty())
+              return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
+          }
+          return std::nullopt;
         } else if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
-          if (loadOp.getOffsets()) {
-            auto layout = xegpu::getDistributeLayoutAttr(loadOp.getResult());
-            if (layout && layout.isForSubgroup()) {
-              auto inst_data = layout.getEffectiveInstDataAsInt();
-              if (!inst_data.empty())
-                return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
-            }
-            return std::nullopt;
+          auto layout = xegpu::getDistributeLayoutAttr(loadOp.getResult());
+          if (layout && layout.isForSubgroup()) {
+            auto inst_data = layout.getEffectiveInstDataAsInt();
+            if (!inst_data.empty())
+              return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
           }
-          tdescTy = loadOp.getTensorDescType();
+          return std::nullopt;
         } else if (auto storeOp = dyn_cast<xegpu::StoreScatterOp>(op)) {
-          if (storeOp.getOffsets()) {
-            auto layout = llvm::dyn_cast_or_null<xegpu::LayoutAttr>(
-                op->getAttr("layout"));
-            if (layout && layout.isForSubgroup()) {
-              auto inst_data = layout.getEffectiveInstDataAsInt();
-              if (!inst_data.empty())
-                return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
-            }
-            return std::nullopt;
+          auto layout =
+              llvm::dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+          if (layout && layout.isForSubgroup()) {
+            auto inst_data = layout.getEffectiveInstDataAsInt();
+            if (!inst_data.empty())
+              return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
           }
-          tdescTy = storeOp.getTensorDescType();
+          return std::nullopt;
         }
 
         if (auto layout = tdescTy.getLayoutAttr()) {

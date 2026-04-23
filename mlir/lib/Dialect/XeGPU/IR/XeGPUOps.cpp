@@ -546,12 +546,6 @@ LogicalResult StoreNdOp::verify() {
 // XeGPU_PrefetchOp
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {
-  auto tdescTy = getTensorDescType();
-
-  if (tdescTy)
-    return emitOpError("tensor_desc source is not supported for scatter "
-                       "prefetch.");
-
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
@@ -583,13 +577,8 @@ LogicalResult PrefetchOp::verify() {
 // XeGPU_LoadGatherOp
 //===----------------------------------------------------------------------===//
 LogicalResult LoadGatherOp::verify() {
-  auto tdescTy = getTensorDescType();
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
-
-  if (tdescTy)
-    return emitOpError("tensor_desc source is not supported for scatter "
-                       "load.");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -654,13 +643,8 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
 // XeGPU_StoreScatterOp
 //===----------------------------------------------------------------------===//
 LogicalResult StoreScatterOp::verify() {
-  auto tdescTy = getTensorDescType();
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
-
-  if (tdescTy)
-    return emitOpError("tensor_desc source is not supported for scatter "
-                       "store.");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();

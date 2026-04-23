@@ -577,12 +577,14 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
 
     Example 1 (Workgroup level):
     ```mlir
-      xegpu.prefetch %tdesc {l1_hint = #xegpu.cache_hint<cached>,
+      %a = memref.alloc() : memref<256xf16>
+      %offsets = arith.constant dense<[0, 1, ..., 255]> : vector<256xindex>
+      xegpu.prefetch %a[%offsets] {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
                              l3_hint = #xegpu.cache_hint<cached>,
                              layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>
                              }
-        : !xegpu.tensor_desc<256xf16>
+        : memref<256xf16>, vector<256xindex>
     ```
 
     Example 2 (lane level):
@@ -637,17 +639,6 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
       setLayoutAttr(anchorLayout);
-    }
-
-    TypedValue<xegpu::TensorDescType> getTensorDesc() {
-      if (auto tdescType = getTensorDescType()) {
-        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
-      }
-      return TypedValue<xegpu::TensorDescType>();
-    }
-
-    xegpu::TensorDescType getTensorDescType() {
-      return dyn_cast<xegpu::TensorDescType>(getSourceType());
     }
 
   }];
@@ -748,17 +739,6 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
       setLayoutAttr(anchorLayout);
-    }
-
-    TypedValue<xegpu::TensorDescType> getTensorDesc() {
-      if (auto tdescType = getTensorDescType()) {
-        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
-      }
-      return TypedValue<xegpu::TensorDescType>();
-    }
-
-    xegpu::TensorDescType getTensorDescType() {
-       return dyn_cast<xegpu::TensorDescType>(getSourceType());
     }
 
     mlir::Type getElementType() {
@@ -887,17 +867,6 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
 
     void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
       setLayoutAttr(anchorLayout);
-    }
-
-    TypedValue<xegpu::TensorDescType> getTensorDesc() {
-      if (auto tdescType = getTensorDescType()) {
-        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getDest());
-      }
-      return TypedValue<xegpu::TensorDescType>();
-    }
-
-    xegpu::TensorDescType getTensorDescType() {
-      return dyn_cast<xegpu::TensorDescType>(getDestType());
     }
 
     mlir::Type getElementType() {
