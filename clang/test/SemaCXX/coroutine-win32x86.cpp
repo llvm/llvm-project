@@ -33,5 +33,5 @@ template <> struct std::coroutine_traits<void> {
 
 
 void f() {
-    co_return; // expected-warning {{coroutines support when targeting the 32 bits x86 Microsoft ABI is experimental and incomplete}}
+    co_return; // expected-warning {{coroutines are not currently supported on the 32-bit x86 Microsoft ABI}}
 }

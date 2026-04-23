@@ -12882,8 +12882,7 @@ def note_redefinition_include_same_file : Note<
 
 let CategoryName = "Coroutines Issue" in {
 def warn_coroutines_x86_windows : Warning<
-  "coroutines support when targeting the 32 bits x86 Microsoft ABI"
-  " is experimental and incomplete">,
+  "coroutines are not currently supported on the 32-bit x86 Microsoft ABI">,
   InGroup<DiagGroup<"coroutines-unsupported-target">>;
 def err_return_in_coroutine : Error<
   "return statement not allowed in coroutine; did you mean 'co_return'?">;
