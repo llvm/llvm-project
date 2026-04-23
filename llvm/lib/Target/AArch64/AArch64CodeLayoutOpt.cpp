@@ -20,6 +20,7 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/CommandLine.h"
@@ -30,6 +31,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-code-layout-opt"
+#define DBG(...) LLVM_DEBUG(dbgs() << DEBUG_TYPE ": " << __VA_ARGS__)
 #define AARCH64_CODE_LAYOUT_OPT_NAME "AArch64 Code Layout Optimization"
 
 enum CodeLayoutOpt {
@@ -78,6 +80,16 @@ private:
 
   // Returns true if MBB contains at least one layout-sensitive pattern.
   bool detectLayoutSensitivePattern(MachineBasicBlock *MBB);
+
+  // Emit .p2align before MI. Splits the block if MI is not at its start.
+  void emitP2Align(MachineInstr &MI, Align DesiredAlign,
+                   unsigned MaxSkipBytes = 4);
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  void padIfCachelineStraddle(MachineInstr &MI) {
+    emitP2Align(MI, Align(64));
+    DBG(".p2align 6, , 4 before " << MI);
+  }
 
   bool optimizeForCodeLayout(MachineFunction &MF);
 };
@@ -175,67 +187,79 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
   return optimizeForCodeLayout(MF);
 }
 
+void AArch64CodeLayoutOpt::emitP2Align(MachineInstr &MI, Align DesiredAlign,
+                                       unsigned MaxSkipBytes) {
+  MachineBasicBlock *MBB = MI.getParent();
+
+  auto FirstReal =
+      skipDebugInstructionsForward(MBB->instr_begin(), MBB->instr_end());
+  if (&*FirstReal != &MI) {
+    auto PrevIt = prev_nodbg(MI.getIterator(), MBB->instr_begin());
+    MBB = MBB->splitAt(*PrevIt, /*UpdateLiveIns=*/true);
+  }
+
+  MBB->setAlignment(DesiredAlign);
+  MBB->setMaxBytesForAlignment(MaxSkipBytes);
+}
+
 // Returns true if MBB contains at least one layout-sensitive pair.
 // A pair is: a qualifying lead instruction immediately followed by its
 // consumer (FCMP→FCSEL or CMP/CMN→CSEL), with no intervening instructions.
 bool AArch64CodeLayoutOpt::detectLayoutSensitivePattern(
     MachineBasicBlock *MBB) {
-  auto Instrs = instructionsWithoutDebug(MBB->begin(), MBB->end());
   auto End = MBB->instr_end();
+  SmallVector<std::pair<MachineInstr *, bool>, 4> Pairs;
 
-  // --- FCMP-FCSEL detection ---
-  if (EnableCodeAlignment.isSet(FcmpFcsel)) {
-    if (llvm::any_of(Instrs, [End](MachineInstr &MI) {
-          if (!isFloatingPointCompare(MI.getOpcode()))
-            return false;
-          auto NextIt =
-              skipDebugInstructionsForward(std::next(MI.getIterator()), End);
-          return NextIt != End &&
-                 isFloatingPointConditionalSelect(NextIt->getOpcode());
-        })) {
-      ++NumFcmpFcselPairsDetected;
-      return true;
+  for (auto &MI : instructionsWithoutDebug(MBB->begin(), MBB->end())) {
+    auto NextIt =
+        skipDebugInstructionsForward(std::next(MI.getIterator()), End);
+    if (NextIt == End)
+      break;
+
+    // --- FCMP-FCSEL detection ---
+    if (EnableCodeAlignment.isSet(FcmpFcsel) &&
+        isFloatingPointCompare(MI.getOpcode()) &&
+        isFloatingPointConditionalSelect(NextIt->getOpcode())) {
+      Pairs.push_back({&MI, true});
+      continue;
+    }
+
+    // --- CMP/CMN-CSEL detection ---
+    if (EnableCodeAlignment.isSet(CmpCsel) && isQualifyingIntCompare(MI) &&
+        NextIt->getOpcode() == AArch64::CSELWr) {
+      Pairs.push_back({&MI, false});
+      continue;
     }
   }
 
-  // --- CMP/CMN-CSEL detection ---
-  if (EnableCodeAlignment.isSet(CmpCsel)) {
-    if (llvm::any_of(Instrs, [End](MachineInstr &MI) {
-          if (!isQualifyingIntCompare(MI))
-            return false;
-          auto NextIt =
-              skipDebugInstructionsForward(std::next(MI.getIterator()), End);
-          return NextIt != End && NextIt->getOpcode() == AArch64::CSELWr;
-        })) {
-      ++NumCmpCselPairsDetected;
-      return true;
-    }
+  for (auto &[MI, IsFcmpFcsel] : Pairs) {
+    padIfCachelineStraddle(*MI);
+    ++(IsFcmpFcsel ? NumFcmpFcselPairsDetected : NumCmpCselPairsDetected);
   }
 
-  return false;
+  return !Pairs.empty();
 }
 
 bool AArch64CodeLayoutOpt::optimizeForCodeLayout(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE ": optimizeForCodeLayout: " << MF.getName()
-                    << "\n");
+  DBG("optimizeForCodeLayout: " << MF.getName() << "\n");
 
+  bool Changed = false;
   for (auto &MBB : MF) {
     if (!detectLayoutSensitivePattern(&MBB))
       continue;
-
-    if (MF.getAlignment() >= Align(FunctionAlignBytes)) {
-      LLVM_DEBUG(dbgs() << DEBUG_TYPE ": Function " << MF.getName()
-                        << " already has sufficient alignment\n");
-      return false;
-    }
-
-    MF.setAlignment(Align(FunctionAlignBytes));
-    ++NumFunctionsAligned;
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": Set " << FunctionAlignBytes
-                      << "-byte alignment for function " << MF.getName()
-                      << "\n");
-    return true;
+    Changed = true;
   }
 
-  return false;
+  if (!Changed)
+    return false;
+
+  if (MF.getAlignment() < Align(FunctionAlignBytes)) {
+    MF.setAlignment(Align(FunctionAlignBytes));
+    ++NumFunctionsAligned;
+    DBG("Set " << FunctionAlignBytes << "-byte alignment for function "
+               << MF.getName() << "\n");
+  } else {
+    DBG("Function " << MF.getName() << " already has sufficient alignment\n");
+  }
+  return true;
 }
