@@ -15,13 +15,13 @@ define amdgpu_ps void @licm_s_buffer_load(ptr addrspace(1) nocapture %out, i32 i
 ; CHECK-NEXT:    [[DESC:%.*]] = load <4 x i32>, ptr addrspace(4) [[I4]], align 16
 ; CHECK-NEXT:    [[VAL_0:%.*]] = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> [[DESC]], i32 16, i32 0), !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp eq i32 [[VAL_0]], 0
+; CHECK-NEXT:    [[VAL_1:%.*]] = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> [[DESC]], i32 20, i32 0), !invariant.load [[META0]]
+; CHECK-NEXT:    [[COND_1:%.*]] = icmp ne i32 [[VAL_1]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ 0, %[[PREHEADER]] ], [ [[NEXT_I:%.*]], %[[LOOP_END:.*]] ]
 ; CHECK-NEXT:    br i1 [[COND_0]], label %[[BRANCH_A:.*]], label %[[LOOP_END]]
 ; CHECK:       [[BRANCH_A]]:
-; CHECK-NEXT:    [[VAL_1:%.*]] = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> [[DESC]], i32 20, i32 0), !invariant.load [[META0]]
-; CHECK-NEXT:    [[COND_1:%.*]] = icmp ne i32 [[VAL_1]], 0
 ; CHECK-NEXT:    br i1 [[COND_1]], label %[[BRANCH_B:.*]], label %[[LOOP_END]]
 ; CHECK:       [[BRANCH_B]]:
 ; CHECK-NEXT:    [[IDX_I64:%.*]] = sext i32 [[IDX]] to i64
