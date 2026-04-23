@@ -452,8 +452,8 @@ generic-llvm-libc)
     clean
 
     # Install rsync, which is needed for installing the linux kernel headers.
-    apt-get update
-    apt-get install -y rsync
+    sudo apt-get update
+    sudo apt-get install -y rsync
 
     # Install kernel headers from a known-good Linux kernel version to ensure
     # the test is hermetic.
