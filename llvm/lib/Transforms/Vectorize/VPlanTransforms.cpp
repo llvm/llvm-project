@@ -870,8 +870,13 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
         continue;
 
-      // VPReplicateRecipe is not compatible
-      if (match(Def,
+      // VPReplicateRecipe is sometimes compatible with ExtractValue:
+      // scalarizeInstruction() will fail if the recipe dictates that it
+      // setOperand(1), because ExtractValue's indices are read-only.
+      // Since VPWidenIntOrFpInductionRecipe is only an optimization, skip it
+      // in the case of ExtractValue to be on the safe case.
+      if (isa<VPWidenIntOrFpInductionRecipe>(&Phi) &&
+          match(Def,
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
 
