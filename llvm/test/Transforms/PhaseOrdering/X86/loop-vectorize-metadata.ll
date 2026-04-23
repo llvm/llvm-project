@@ -3,8 +3,8 @@
 ; RUN: opt < %s -mcpu=corei7 -passes="default<O2>" -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=O2
 ; RUN: opt < %s -mcpu=corei7 -passes="default<O3>" -S -unroll-threshold=150 -unroll-allow-partial=0 | FileCheck %s --check-prefix=O3
 ; RUN: opt < %s -mcpu=corei7 -passes="default<O3>" -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=O3DEFAULT
-; RUN: opt < %s -mcpu=corei7 -passes="default<Os>" -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=Os
-; RUN: opt < %s -mcpu=corei7 -passes="default<Oz>" -force-attribute=minsize -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=Oz
+; RUN: opt < %s -mcpu=corei7 -passes="default<O2>" -force-attribute=optsize -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=Os
+; RUN: opt < %s -mcpu=corei7 -passes="default<O2>" -force-attribute=minsize -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=Oz
 ; RUN: opt < %s -mcpu=corei7 -passes="default<O1>,loop-vectorize" -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=O1VEC2
 ; RUN: opt < %s -mcpu=corei7 -passes="default<O3>" -unroll-threshold=150 -vectorize-loops=false -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=O3DIS
 
@@ -360,84 +360,18 @@ define i32 @enabled(ptr noalias nocapture %a, ptr noalias nocapture readonly %b,
 ; Os-NEXT:  entry:
 ; Os-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; Os-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; Os-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[B:%.*]], i64 16
-; Os-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; Os-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; Os-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 16
-; Os-NEXT:    store <4 x i32> [[TMP1]], ptr [[A]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP3]], align 4
-; Os-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
-; Os-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 48
-; Os-NEXT:    [[WIDE_LOAD_1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_1:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
-; Os-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_1]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_1]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
-; Os-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 48
-; Os-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP9]], align 4
-; Os-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 64
-; Os-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 80
-; Os-NEXT:    [[WIDE_LOAD_2:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_2:%.*]] = load <4 x i32>, ptr [[TMP11]], align 4
-; Os-NEXT:    [[TMP12:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_2]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_2]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 64
-; Os-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 80
-; Os-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP14]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP15]], align 4
-; Os-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 96
-; Os-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 112
-; Os-NEXT:    [[WIDE_LOAD_3:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_3:%.*]] = load <4 x i32>, ptr [[TMP17]], align 4
-; Os-NEXT:    [[TMP18:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_3]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP19:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_3]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 96
-; Os-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 112
-; Os-NEXT:    store <4 x i32> [[TMP18]], ptr [[TMP20]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP19]], ptr [[TMP21]], align 4
-; Os-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 128
-; Os-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 144
-; Os-NEXT:    [[WIDE_LOAD_4:%.*]] = load <4 x i32>, ptr [[TMP22]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_4:%.*]] = load <4 x i32>, ptr [[TMP23]], align 4
-; Os-NEXT:    [[TMP24:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_4]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP25:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_4]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
-; Os-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 144
-; Os-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP26]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP25]], ptr [[TMP27]], align 4
-; Os-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 160
-; Os-NEXT:    [[TMP29:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 176
-; Os-NEXT:    [[WIDE_LOAD_5:%.*]] = load <4 x i32>, ptr [[TMP28]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_5:%.*]] = load <4 x i32>, ptr [[TMP29]], align 4
-; Os-NEXT:    [[TMP30:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_5]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP31:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_5]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 160
-; Os-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 176
-; Os-NEXT:    store <4 x i32> [[TMP30]], ptr [[TMP32]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP31]], ptr [[TMP33]], align 4
-; Os-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 192
-; Os-NEXT:    [[TMP35:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 208
-; Os-NEXT:    [[WIDE_LOAD_6:%.*]] = load <4 x i32>, ptr [[TMP34]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_6:%.*]] = load <4 x i32>, ptr [[TMP35]], align 4
-; Os-NEXT:    [[TMP36:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_6]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP37:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_6]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP38:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 192
-; Os-NEXT:    [[TMP39:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 208
-; Os-NEXT:    store <4 x i32> [[TMP36]], ptr [[TMP38]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP37]], ptr [[TMP39]], align 4
-; Os-NEXT:    [[TMP40:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 224
-; Os-NEXT:    [[TMP41:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 240
-; Os-NEXT:    [[WIDE_LOAD_7:%.*]] = load <4 x i32>, ptr [[TMP40]], align 4
+; Os-NEXT:    br label [[VECTOR_BODY:%.*]]
+; Os:       vector.body:
+; Os-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; Os-NEXT:    [[TMP41:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B:%.*]], i64 [[INDEX]]
 ; Os-NEXT:    [[WIDE_LOAD1_7:%.*]] = load <4 x i32>, ptr [[TMP41]], align 4
-; Os-NEXT:    [[TMP42:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_7]], [[BROADCAST_SPLAT]]
 ; Os-NEXT:    [[TMP43:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_7]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 224
-; Os-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 240
-; Os-NEXT:    store <4 x i32> [[TMP42]], ptr [[TMP44]], align 4
+; Os-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; Os-NEXT:    store <4 x i32> [[TMP43]], ptr [[TMP45]], align 4
+; Os-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; Os-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
+; Os-NEXT:    br i1 [[TMP3]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; Os:       for.end:
 ; Os-NEXT:    [[TMP46:%.*]] = load i32, ptr [[A]], align 4
 ; Os-NEXT:    ret i32 [[TMP46]]
 ;
@@ -926,84 +860,18 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; Os-NEXT:  entry:
 ; Os-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; Os-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; Os-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[B:%.*]], i64 16
-; Os-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; Os-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; Os-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 16
-; Os-NEXT:    store <4 x i32> [[TMP1]], ptr [[A]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP3]], align 4
-; Os-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
-; Os-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 48
-; Os-NEXT:    [[WIDE_LOAD_1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_1:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
-; Os-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_1]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_1]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
-; Os-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 48
-; Os-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP9]], align 4
-; Os-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 64
-; Os-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 80
-; Os-NEXT:    [[WIDE_LOAD_2:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_2:%.*]] = load <4 x i32>, ptr [[TMP11]], align 4
-; Os-NEXT:    [[TMP12:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_2]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_2]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 64
-; Os-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 80
-; Os-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP14]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP15]], align 4
-; Os-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 96
-; Os-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 112
-; Os-NEXT:    [[WIDE_LOAD_3:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_3:%.*]] = load <4 x i32>, ptr [[TMP17]], align 4
-; Os-NEXT:    [[TMP18:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_3]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP19:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_3]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 96
-; Os-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 112
-; Os-NEXT:    store <4 x i32> [[TMP18]], ptr [[TMP20]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP19]], ptr [[TMP21]], align 4
-; Os-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 128
-; Os-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 144
-; Os-NEXT:    [[WIDE_LOAD_4:%.*]] = load <4 x i32>, ptr [[TMP22]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_4:%.*]] = load <4 x i32>, ptr [[TMP23]], align 4
-; Os-NEXT:    [[TMP24:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_4]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP25:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_4]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
-; Os-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 144
-; Os-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP26]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP25]], ptr [[TMP27]], align 4
-; Os-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 160
-; Os-NEXT:    [[TMP29:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 176
-; Os-NEXT:    [[WIDE_LOAD_5:%.*]] = load <4 x i32>, ptr [[TMP28]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_5:%.*]] = load <4 x i32>, ptr [[TMP29]], align 4
-; Os-NEXT:    [[TMP30:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_5]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP31:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_5]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 160
-; Os-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 176
-; Os-NEXT:    store <4 x i32> [[TMP30]], ptr [[TMP32]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP31]], ptr [[TMP33]], align 4
-; Os-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 192
-; Os-NEXT:    [[TMP35:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 208
-; Os-NEXT:    [[WIDE_LOAD_6:%.*]] = load <4 x i32>, ptr [[TMP34]], align 4
-; Os-NEXT:    [[WIDE_LOAD1_6:%.*]] = load <4 x i32>, ptr [[TMP35]], align 4
-; Os-NEXT:    [[TMP36:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_6]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP37:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_6]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP38:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 192
-; Os-NEXT:    [[TMP39:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 208
-; Os-NEXT:    store <4 x i32> [[TMP36]], ptr [[TMP38]], align 4
-; Os-NEXT:    store <4 x i32> [[TMP37]], ptr [[TMP39]], align 4
-; Os-NEXT:    [[TMP40:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 224
-; Os-NEXT:    [[TMP41:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 240
-; Os-NEXT:    [[WIDE_LOAD_7:%.*]] = load <4 x i32>, ptr [[TMP40]], align 4
+; Os-NEXT:    br label [[VECTOR_BODY:%.*]]
+; Os:       vector.body:
+; Os-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; Os-NEXT:    [[TMP41:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B:%.*]], i64 [[INDEX]]
 ; Os-NEXT:    [[WIDE_LOAD1_7:%.*]] = load <4 x i32>, ptr [[TMP41]], align 4
-; Os-NEXT:    [[TMP42:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_7]], [[BROADCAST_SPLAT]]
 ; Os-NEXT:    [[TMP43:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_7]], [[BROADCAST_SPLAT]]
-; Os-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 224
-; Os-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 240
-; Os-NEXT:    store <4 x i32> [[TMP42]], ptr [[TMP44]], align 4
+; Os-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; Os-NEXT:    store <4 x i32> [[TMP43]], ptr [[TMP45]], align 4
+; Os-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; Os-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
+; Os-NEXT:    br i1 [[TMP3]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; Os:       for.end:
 ; Os-NEXT:    [[TMP46:%.*]] = load i32, ptr [[A]], align 4
 ; Os-NEXT:    ret i32 [[TMP46]]
 ;
@@ -1219,7 +1087,7 @@ define i32 @disabled(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; Os-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; Os-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; Os-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 48
-; Os-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; Os-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; Os:       for.end:
 ; Os-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
 ; Os-NEXT:    ret i32 [[TMP1]]

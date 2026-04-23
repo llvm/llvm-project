@@ -199,7 +199,7 @@ define i64 @live_out_scalar_vf(i64 %n) {
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[STEP_ADD_3]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp uge i64 [[TMP16]], 12
 ; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i64 [[TMP27]], i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i64> [[VECTOR_RECUR]], i32 3
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i64> [[VECTOR_RECUR]], i64 3
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[LAST_ACTIVE_LANE]], 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP31]], i64 [[TMP30]], i64 [[TMP29]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

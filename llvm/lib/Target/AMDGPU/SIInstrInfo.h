@@ -942,6 +942,24 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VOP3P;
   }
 
+  bool isVOP3PMix(const MachineInstr &MI) const {
+    return isVOP3PMix(MI.getOpcode());
+  }
+
+  bool isVOP3PMix(uint16_t Opcode) const {
+    switch (Opcode) {
+    case AMDGPU::V_FMA_MIXHI_F16:
+    case AMDGPU::V_FMA_MIXLO_F16:
+    case AMDGPU::V_FMA_MIX_F32:
+    case AMDGPU::V_MAD_MIXHI_F16:
+    case AMDGPU::V_MAD_MIXLO_F16:
+    case AMDGPU::V_MAD_MIX_F32:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   static bool isVINTRP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::VINTRP;
   }
@@ -1695,9 +1713,8 @@ public:
   void fixImplicitOperands(MachineInstr &MI) const;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex, MachineInstr *&CopyMI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
