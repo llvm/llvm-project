@@ -7408,7 +7408,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
 }
 
 bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
-                                       Type *ScalarTy, Align CommonAlignment,
+                                       Type *BaseTy, Align CommonAlignment,
                                        SmallVectorImpl<unsigned> &SortedIndices,
                                        StridedPtrInfo &SPtrInfo,
                                        bool IsLoad) const {
@@ -7448,20 +7448,20 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // be if all the checks pass. Check if this type is legal for the target.
   const unsigned Sz = PointerOps.size();
   unsigned VecSz = Sz;
-  Type *NewScalarTy = ScalarTy;
+  Type *NewScalarTy = BaseTy;
   if (NumOffsets > 1) {
     if (Sz % NumOffsets != 0)
       return false;
     VecSz = Sz / NumOffsets;
   }
-  if (NumOffsets > 1 || ScalarTy->isVectorTy())
+  if (NumOffsets > 1 || BaseTy->isVectorTy())
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
-        DL->getTypeSizeInBits(ScalarTy).getFixedValue() * NumOffsets);
+        DL->getTypeSizeInBits(BaseTy).getFixedValue() * NumOffsets);
   FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
   unsigned MinProfitableStridedOps =
       IsLoad ? MinProfitableStridedLoads : MinProfitableStridedStores;
-  const unsigned InputTyNumElts = getNumElements(ScalarTy);
+  const unsigned InputTyNumElts = getNumElements(BaseTy);
   if (Sz * InputTyNumElts <= MinProfitableStridedOps ||
       !TTI->isTypeLegal(StridedLoadTy) ||
       !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
@@ -7571,7 +7571,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
   SmallVector<int64_t> Coeffs0(VecSz);
   SmallVector<unsigned> SortedIndicesForOffset0;
-  const SCEV *Stride0 = calculateRtStride(PointerOps0, ScalarTy, *DL, *SE,
+  const SCEV *Stride0 = calculateRtStride(PointerOps0, BaseTy, *DL, *SE,
                                           SortedIndicesForOffset0, Coeffs0);
   if (!Stride0)
     return false;
@@ -7598,9 +7598,8 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         OffsetToPointerOpIdxMap[Offset].first;
     ArrayRef<unsigned> IndicesInAllPointerOps =
         OffsetToPointerOpIdxMap[Offset].second;
-    const SCEV *StrideWithinGroup =
-        calculateRtStride(PointerOpsForOffset, ScalarTy, *DL, *SE,
-                          SortedIndicesForOffset, Coeffs);
+    const SCEV *StrideWithinGroup = calculateRtStride(
+        PointerOpsForOffset, BaseTy, *DL, *SE, SortedIndicesForOffset, Coeffs);
 
     if (!StrideWithinGroup || StrideWithinGroup != Stride0)
       return false;
