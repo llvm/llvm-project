@@ -509,8 +509,8 @@ class DebugCommunication(object):
             # Per DAP spec, "env" contains additions/overrides to the
             # default environment, not a full replacement. Merge with
             # os.environ so the spawned process inherits PATH etc.
-            env = [f"{k}={v}" for k, v in os.environ]
-            env += [f"{k}={v}" for k, v in arguments.get("env", {}).items()]
+            env_dict = os.environ | arguments.get("env", {})
+            env = [f"{k}={v}" for k, v in env_dict.items()]
             self.reverse_process = self.spawn_helper(
                 exe, args, env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
