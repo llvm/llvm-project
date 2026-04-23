@@ -768,7 +768,7 @@ void GCNSubtarget::adjustSchedDependency(
     Dep.setReg(Reg);
   } else {
     Dep = SDep(Def, SDep::Artificial);
-    return; // this is not a data dependency anymore
+    return; // This is not a data dependency anymore.
   }
 
   if (DefI->isBundle()) {
