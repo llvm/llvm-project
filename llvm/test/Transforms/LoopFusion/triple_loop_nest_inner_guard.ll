@@ -70,7 +70,7 @@ define i32 @triple_loop_nest_inner_guard(i32 %m, i32 %n, i32 %mm, i32 %nn) {
 ; CHECK:       [[OUTER2_EXIT]]:
 ; CHECK-NEXT:    br label %[[FUNC_EXIT]]
 ; CHECK:       [[FUNC_EXIT]]:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %cmp101 = icmp sgt i32 %m, 0
@@ -173,5 +173,5 @@ outer2.exit:
   br label %func_exit
 
 func_exit:
-  ret i32 undef
+  ret i32 0
 }
