@@ -7214,13 +7214,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
     StringRef RoundStr = cast<MDString>(RoundMD)->getString();
     std::optional<RoundingMode> RoundMode = convertStrToRoundingMode(RoundStr);
-    if (!RoundMode || *RoundMode == RoundingMode::Dynamic) {
-      DAG.getContext()->emitError(
-          "convert_to_arbitrary_fp: unsupported rounding mode '" + RoundStr +
-          "'");
-      setValue(&I, DAG.getPOISON(DstVT));
-      return;
-    }
+    assert(RoundMode && *RoundMode != RoundingMode::Dynamic &&
+           "Dynamic rounding mode should have been rejected by the verifier");
 
     uint64_t Saturate =
         cast<ConstantInt>(I.getArgOperand(3))->getZExtValue() ? 1 : 0;

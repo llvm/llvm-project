@@ -3555,6 +3555,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Float8E3M4, Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ,
     // Float8E8M0FNU.
     EVT DstVT = Node->getValueType(0);
+    assert(!DstVT.isVector() &&
+           "Vector apfloat conversions are handled in LegalizeVectorOps");
 
     SDValue IntVal = Node->getOperand(0);
     const uint64_t SemEnum = Node->getConstantOperandVal(1);
@@ -3791,6 +3793,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Float8E3M4, Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ,
     // Float8E8M0FNU.
     EVT ResVT = Node->getValueType(0);
+    assert(!ResVT.isVector() &&
+           "Vector apfloat conversions are handled in LegalizeVectorOps");
 
     SDValue FloatVal = Node->getOperand(0);
     const uint64_t SemEnum = Node->getConstantOperandVal(1);
@@ -3848,11 +3852,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     const fltNanEncoding DstNanEnc = DstSem.nanEncoding;
 
     // Compute the maximum normal exponent for the destination format.
-    unsigned DstExpMaxNormal;
-    if (DstNFBehavior == fltNonfiniteBehavior::IEEE754)
-      DstExpMaxNormal = DstExpMax - 1;
-    else
-      DstExpMaxNormal = DstExpMax;
+    const unsigned DstExpMaxNormal =
+        DstNFBehavior == fltNonfiniteBehavior::IEEE754 ? DstExpMax - 1
+                                                       : DstExpMax;
 
     // For NanOnly formats the max exponent field for finite values
     // is DstExpMax, but the encoding with exp = DstExpMax and
