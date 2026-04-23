@@ -3172,6 +3172,10 @@ getCodeGenOnlyAtomicArchExtension(unsigned Opc) {
   case AArch64::SWPAH_cg:
   case AArch64::SWPAW_cg:
   case AArch64::SWPAX_cg:
+  case AArch64::SWPLB_cg:
+  case AArch64::SWPLH_cg:
+  case AArch64::SWPLW_cg:
+  case AArch64::SWPLX_cg:
     return {"lse", AArch64::FeatureLSE};
   }
 }
