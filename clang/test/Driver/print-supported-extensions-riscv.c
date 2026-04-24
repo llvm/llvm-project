@@ -253,6 +253,7 @@
 // CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
 // CHECK-NEXT:     zvfofp8min           0.2       'Zvfofp8min' (Vector OFP8 Converts)
 // CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)
+// CHECK-NEXT:     zvvmm                0.1       'Zvvmm' (Integer Matrix Multiply-Accumulate)
 // CHECK-NEXT:     zvzip                0.1       'Zvzip' (Vector Reordering Structured Data)
 // CHECK-NEXT:     smpmpmt              0.6       'Smpmpmt' (PMP-based Memory Types Extension)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
