@@ -5594,27 +5594,27 @@ define inreg <22 x i16> @bitcast_v22f16_to_v22i16_scalar(<22 x half> inreg %a, i
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v27
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v28
+; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v8
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s6
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v10
 ; SI-NEXT:    v_cvt_f32_f16_e32 v10, s22
-; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v8
 ; SI-NEXT:    v_cvt_f32_f16_e32 v11, s24
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v10
-; SI-NEXT:    v_cvt_f32_f16_e32 v10, s6
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
-; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
+; SI-NEXT:    v_cvt_f16_f32_e32 v31, v11
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; SI-NEXT:    v_or_b32_e32 v31, v8, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
+; SI-NEXT:    v_or_b32_e32 v30, v10, v6
 ; SI-NEXT:    v_lshr_b64 v[18:19], v[0:1], 16
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v10
-; SI-NEXT:    v_or_b32_e32 v30, v11, v8
 ; SI-NEXT:    v_lshr_b64 v[16:17], v[2:3], 16
 ; SI-NEXT:    v_lshr_b64 v[14:15], v[4:5], 16
 ; SI-NEXT:    v_lshr_b64 v[12:13], v[6:7], 16
 ; SI-NEXT:    v_lshr_b64 v[10:11], v[8:9], 16
+; SI-NEXT:    v_or_b32_e32 v8, v31, v8
 ; SI-NEXT:    s_branch .LBB23_5
 ; SI-NEXT:  .LBB23_3:
 ; SI-NEXT:    s_branch .LBB23_2
@@ -5631,8 +5631,8 @@ define inreg <22 x i16> @bitcast_v22f16_to_v22i16_scalar(<22 x half> inreg %a, i
 ; SI-NEXT:    v_mov_b32_e32 v7, s23
 ; SI-NEXT:    v_mov_b32_e32 v9, s25
 ; SI-NEXT:    v_mov_b32_e32 v23, s26
-; SI-NEXT:    v_mov_b32_e32 v30, s24
-; SI-NEXT:    v_mov_b32_e32 v31, s22
+; SI-NEXT:    v_mov_b32_e32 v8, s24
+; SI-NEXT:    v_mov_b32_e32 v30, s22
 ; SI-NEXT:    v_mov_b32_e32 v29, s20
 ; SI-NEXT:    v_mov_b32_e32 v22, s18
 ; SI-NEXT:    v_mov_b32_e32 v21, s16
@@ -5660,17 +5660,17 @@ define inreg <22 x i16> @bitcast_v22f16_to_v22i16_scalar(<22 x half> inreg %a, i
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff, v5
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v26
 ; SI-NEXT:    v_or_b32_e32 v5, v5, v6
-; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v31
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v12
-; SI-NEXT:    v_or_b32_e32 v6, v6, v8
-; SI-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v25
-; SI-NEXT:    v_or_b32_e32 v7, v7, v8
-; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v30
+; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v30
+; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
+; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v8
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; SI-NEXT:    v_or_b32_e32 v6, v6, v11
+; SI-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v25
 ; SI-NEXT:    v_or_b32_e32 v8, v8, v10
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff, v9
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v24
+; SI-NEXT:    v_or_b32_e32 v7, v7, v11
 ; SI-NEXT:    v_or_b32_e32 v9, v9, v10
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v23
 ; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v20
