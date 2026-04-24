@@ -32,3 +32,63 @@ entry:
   %r = load atomic i32, ptr %x seq_cst, align 4
   ret i32 %r
 }
+
+define void @atomicrmw_monotonic_arg(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: @atomicrmw_monotonic_arg(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[X:%.*]], i32 1 monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  atomicrmw add ptr %x, i32 1 monotonic, align 4
+  ret void
+}
+
+define void @atomicrmw_acq_rel_arg(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @atomicrmw_acq_rel_arg(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[X:%.*]], i32 1 acq_rel, align 4
+; CHECK-NEXT:    ret void
+;
+  atomicrmw add ptr %x, i32 1 acq_rel, align 4
+  ret void
+}
+
+define void @atomicrmw_monotonic_volatile_arg(ptr %x) {
+; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CHECK-LABEL: @atomicrmw_monotonic_volatile_arg(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw volatile add ptr [[X:%.*]], i32 1 monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  atomicrmw volatile add ptr %x, i32 1 monotonic, align 4
+  ret void
+}
+
+define void @cmpxchg_monotonic_arg(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: @cmpxchg_monotonic_arg(
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X:%.*]], i32 0, i32 1 monotonic monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  cmpxchg ptr %x, i32 0, i32 1 monotonic monotonic
+  ret void
+}
+
+define void @cmpxchg_acq_rel_arg(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @cmpxchg_acq_rel_arg(
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X:%.*]], i32 0, i32 1 acq_rel monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic
+  ret void
+}
+
+define void @cmpxchg_monotonic_volatile_arg(ptr %x) {
+; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CHECK-LABEL: @cmpxchg_monotonic_volatile_arg(
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg volatile ptr [[X:%.*]], i32 0, i32 1 monotonic monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  cmpxchg volatile ptr %x, i32 0, i32 1 monotonic monotonic
+  ret void
+}
