@@ -77,3 +77,8 @@ module SwiftImportAs {
 module SwiftReturnOwnershipForObjC {
   header "SwiftReturnOwnershipForObjC.h"
 }
+
+module UnsafeBufferUsage {
+  header "UnsafeBufferUsage.h"
+  export *
+}
