@@ -2136,10 +2136,23 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
       !TLI.isOperationLegalOrCustom(ISD::OR, IntVT))
     return SDValue();
 
-  // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
-  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::FSUB, VT) &&
-      !VT.isScalableVector())
-    return SDValue();
+  // Heuristic check to determine whether vector should be expanded to integer
+  // operations or unroll to scalar operations.
+  // 1. Scalable vector is never unrolled.
+  // 2. Fixed vectors is unrolled if one of following is true:
+  //      a. Vector only has 1 element and target know how to handle scalar
+  //         FOPYSIGN(either legal or custom expand).
+  //      b. Vector has more than 1 elements and target supports scalar
+  //         FCOPYSIGN natively and vector length <= 3(2 AND + 1 OR).
+  if (VT.isFixedLengthVector()) {
+    EVT EltVT = VT.getScalarType();
+    if ((VT.getVectorNumElements() == 1 &&
+         TLI.isOperationLegalOrCustom(ISD::FCOPYSIGN, EltVT)) ||
+        (VT.getVectorNumElements() < 4 &&
+         TLI.isOperationLegal(ISD::FCOPYSIGN, EltVT) &&
+         TLI.isExtractVecEltCheap(VT, 0)))
+      return SDValue();
+  }
 
   SDLoc DL(Node);
   SDValue Mag = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
