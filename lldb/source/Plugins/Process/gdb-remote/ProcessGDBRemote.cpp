@@ -1770,7 +1770,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     bool queue_vars_valid, // Set to true if queue_name, queue_kind and
                            // queue_serial are valid
     LazyBool associated_with_dispatch_queue, addr_t dispatch_queue_t,
-    std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial) {
+    std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial,
+    std::vector<lldb::addr_t> &added_binaries,
+    StructuredData::ObjectSP &detailed_binaries_info) {
 
   if (tid == LLDB_INVALID_THREAD_ID)
     return nullptr;
@@ -1827,6 +1829,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   if (dispatch_queue_t != LLDB_INVALID_ADDRESS)
     gdb_thread->SetQueueLibdispatchQueueAddress(dispatch_queue_t);
+
+  gdb_thread->SetNewlyAddedBinaries(added_binaries);
+  gdb_thread->SetDetailedBinariesInfo(detailed_binaries_info);
 
   // Make sure we update our thread stop reason just once, but don't overwrite
   // the stop info for threads that haven't moved:
@@ -2120,6 +2125,9 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   static constexpr llvm::StringLiteral g_key_memory("memory");
   static constexpr llvm::StringLiteral g_key_description("description");
   static constexpr llvm::StringLiteral g_key_signal("signal");
+  static constexpr llvm::StringLiteral g_key_added_binaries("added-binaries");
+  static constexpr llvm::StringLiteral g_key_detailed_binaries_info(
+      "detailed-binaries-info");
 
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
@@ -2137,6 +2145,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   std::string queue_name;
   QueueKind queue_kind = eQueueKindUnknown;
   uint64_t queue_serial_number = 0;
+  std::vector<addr_t> added_binaries;
+  StructuredData::ObjectSP detailed_binaries_info;
   // Iterate through all of the thread dictionary key/value pairs from the
   // structured data dictionary
 
@@ -2145,7 +2155,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                         &signo, &reason, &description, &exc_type, &exc_data,
                         &thread_dispatch_qaddr, &queue_vars_valid,
                         &associated_with_dispatch_queue, &dispatch_queue_t,
-                        &queue_name, &queue_kind, &queue_serial_number](
+                        &queue_name, &queue_kind, &queue_serial_number,
+                        &added_binaries, &detailed_binaries_info](
                            llvm::StringRef key,
                            StructuredData::Object *object) -> bool {
     if (key == g_key_tid) {
@@ -2244,17 +2255,43 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
           return true; // Keep iterating through all array items
         });
       }
-
     } else if (key == g_key_signal)
       signo = object->GetUnsignedIntegerValue(LLDB_INVALID_SIGNAL_NUMBER);
+    else if (key == g_key_added_binaries) {
+      StructuredData::Array *array = object->GetAsArray();
+      if (array) {
+        array->ForEach([&added_binaries](
+                           StructuredData::Object *object) -> bool {
+          StructuredData::UnsignedInteger *addr =
+              object->GetAsUnsignedInteger();
+          if (addr) {
+            addr_t value = addr->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+            if (value != LLDB_INVALID_ADDRESS)
+              added_binaries.push_back(value);
+          }
+          return true; // Keep iterating through all array items
+        });
+      }
+    } else if (key == g_key_detailed_binaries_info) {
+      // Get a string representation and then parse it into
+      // StructuredData to get a separate copy of this part of
+      // the response.  We only have an Object* here, not the
+      // original shared pointer, to increase the ref count.
+      if (object->GetAsDictionary()) {
+        StreamString json_str;
+        object->Dump(json_str);
+        detailed_binaries_info =
+            StructuredData::ParseJSON(json_str.GetString());
+      }
+    }
     return true; // Keep iterating through all dictionary key/value pairs
   });
 
-  return SetThreadStopInfo(tid, expedited_register_map, signo, thread_name,
-                           reason, description, exc_type, exc_data,
-                           thread_dispatch_qaddr, queue_vars_valid,
-                           associated_with_dispatch_queue, dispatch_queue_t,
-                           queue_name, queue_kind, queue_serial_number);
+  return SetThreadStopInfo(
+      tid, expedited_register_map, signo, thread_name, reason, description,
+      exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
+      associated_with_dispatch_queue, dispatch_queue_t, queue_name, queue_kind,
+      queue_serial_number, added_binaries, detailed_binaries_info);
 }
 
 StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
@@ -2286,6 +2323,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     std::string thread_name;
     std::string reason;
     std::string description;
+    std::vector<addr_t> added_binaries;
+    StructuredData::ObjectSP detailed_binaries_info;
     uint32_t exc_type = 0;
     std::vector<addr_t> exc_data;
     addr_t thread_dispatch_qaddr = LLDB_INVALID_ADDRESS;
@@ -2456,6 +2495,25 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!value.getAsInteger(0, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
+      } else if (key == "added-binaries") {
+        // A comma separated list of all threads in the current
+        // process that includes the thread for this stop reply packet
+        lldb::addr_t pc;
+        while (!value.empty()) {
+          llvm::StringRef pc_str;
+          std::tie(pc_str, value) = value.split(',');
+          if (pc_str.getAsInteger(16, pc))
+            pc = LLDB_INVALID_ADDRESS;
+          added_binaries.push_back(pc);
+        }
+      } else if (key == "detailed-binaries-info") {
+        StringExtractor json_extractor(value);
+        std::string json;
+        // Now convert the HEX bytes into a string value.
+        json_extractor.GetHexByteString(json);
+
+        // This JSON contains detailed information about binares.
+        detailed_binaries_info = StructuredData::ParseJSON(json);
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))
@@ -2492,7 +2550,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         tid, expedited_register_map, signo, thread_name, reason, description,
         exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
         associated_with_dispatch_queue, dispatch_queue_t, queue_name,
-        queue_kind, queue_serial_number);
+        queue_kind, queue_serial_number, added_binaries,
+        detailed_binaries_info);
 
     return eStateStopped;
   } break;
