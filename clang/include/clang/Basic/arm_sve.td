@@ -2256,10 +2256,10 @@ let SVETargetGuard = "sve2p1|sme2", SMETargetGuard = "sve2p1|sme2" in {
 //
 // Multi-vector saturating rounding shift right narrow and interleave
 //
-let SVETargetGuard = "sve2p3", SMETargetGuard = "sme2p3" in {
-  def SVSQRSHRN_X2_2P3  : SInst<"svqrshrn[_n]_{0}[_{d}_x2]", "h2i", "s",  MergeNone, "aarch64_sve_sqrshrn_x2", [VerifyRuntimeMode], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
-  def SVUQRSHRN_X2_2P3  : SInst<"svqrshrn[_n]_{0}[_{d}_x2]", "e2i", "Us", MergeNone, "aarch64_sve_uqrshrn_x2", [VerifyRuntimeMode], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
-  def SVSQRSHRUN_X2_2P3 : SInst<"svqrshrun[_n]_{0}[_{d}_x2]", "e2i", "s", MergeNone, "aarch64_sve_sqrshrun_x2", [VerifyRuntimeMode], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
+let SVETargetGuard = "sve2p3|sme2p3", SMETargetGuard = "sve2p3|sme2p3" in {
+  def SVSQRSHRN_X2_S8  : SInst<"svqrshrn[_n]_{0}[_{d}_x2]", "h2i", "s",  MergeNone, "aarch64_sve_sqrshrn_x2", [VerifyRuntimeMode], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
+  def SVUQRSHRN_X2_U8  : SInst<"svqrshrn[_n]_{0}[_{d}_x2]", "e2i", "Us", MergeNone, "aarch64_sve_uqrshrn_x2", [VerifyRuntimeMode], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
+  def SVSQRSHRUN_X2_S8 : SInst<"svqrshrun[_n]_{0}[_{d}_x2]", "e2i", "s", MergeNone, "aarch64_sve_sqrshrun_x2", [VerifyRuntimeMode], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
 }
 
 let SVETargetGuard = "sve2p1|sme2p1", SMETargetGuard = "sve2p1|sme2p1" in {
@@ -2344,7 +2344,7 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme-f16f16" in {
 //
 // Multi-vector saturating shift right narrow and interleave
 //
-let SVETargetGuard = "sve2p3", SMETargetGuard = "sme2p3" in {
+let SVETargetGuard = "sve2p3|sme2p3", SMETargetGuard = "sve2p3|sme2p3" in {
   def SVSQSHRN_X2 : SInst<"svqshrn[_n]_{0}[_{d}_x2]", "h2i", "is",  MergeNone, "aarch64_sve_sqshrn_x2", [VerifyRuntimeMode], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
   def SVUQSHRN_X2 : SInst<"svqshrn[_n]_{0}[_{d}_x2]", "e2i", "UiUs",  MergeNone, "aarch64_sve_uqshrn_x2", [VerifyRuntimeMode], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
   def SVSQSHRUN_X2 : SInst<"svqshrun[_n]_{0}[_{d}_x2]", "e2i", "is",  MergeNone, "aarch64_sve_sqshrun_x2", [VerifyRuntimeMode], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;

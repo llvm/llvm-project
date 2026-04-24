@@ -2,8 +2,13 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme                       -target-feature +sme2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve                       -target-feature +sme2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme                       -target-feature +sve2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme                       -target-feature +sme2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve                       -target-feature +sme2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme                       -target-feature +sve2p3 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -19,9 +24,9 @@
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
-#define SVE_ACLE_FUNC(A1,A2_UNUSED,A3,A4_UNUSED,A5) A1##A3##A5
+#define SVE_ACLE_FUNC(A1,A2_UNUSED,A3,A4_UNUSED) A1##A3
 #else
-#define SVE_ACLE_FUNC(A1,A2,A3,A4,A5) A1##A2##A3##A4##A5
+#define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqshrn_n_s8_s16_x2(
@@ -62,7 +67,7 @@
 //
 svint8_t test_svqshrn_n_s8_s16_x2(svint16x2_t zn, uint64_t imm) ATTR
 {
-  return SVE_ACLE_FUNC(svqshrn,_n,_s8,_s16_x2,)(zn, 8);
+  return SVE_ACLE_FUNC(svqshrn,_n,_s8,_s16_x2)(zn, 8);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svqshrn_n_s16_s32_x2(
@@ -103,7 +108,7 @@ svint8_t test_svqshrn_n_s8_s16_x2(svint16x2_t zn, uint64_t imm) ATTR
 //
 svint16_t test_svqshrn_n_s16_s32_x2(svint32x2_t zn, uint64_t imm) ATTR
 {
-  return SVE_ACLE_FUNC(svqshrn,_n,_s16,_s32_x2,)(zn, 16);
+  return SVE_ACLE_FUNC(svqshrn,_n,_s16,_s32_x2)(zn, 16);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqshrn_n_u8_u16_x2(
@@ -144,7 +149,7 @@ svint16_t test_svqshrn_n_s16_s32_x2(svint32x2_t zn, uint64_t imm) ATTR
 //
 svuint8_t test_svqshrn_n_u8_u16_x2(svuint16x2_t zn, uint64_t imm) ATTR
 {
-  return SVE_ACLE_FUNC(svqshrn,_n,_u8,_u16_x2,)(zn, 8);
+  return SVE_ACLE_FUNC(svqshrn,_n,_u8,_u16_x2)(zn, 8);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svqshrn_n_u16_u32_x2(
@@ -185,7 +190,7 @@ svuint8_t test_svqshrn_n_u8_u16_x2(svuint16x2_t zn, uint64_t imm) ATTR
 //
 svuint16_t test_svqshrn_n_u16_u32_x2(svuint32x2_t zn, uint64_t imm) ATTR
 {
-  return SVE_ACLE_FUNC(svqshrn,_n,_u16,_u32_x2,)(zn, 16);
+  return SVE_ACLE_FUNC(svqshrn,_n,_u16,_u32_x2)(zn, 16);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svqshrun_n_u16_s32_x2(
@@ -226,7 +231,7 @@ svuint16_t test_svqshrn_n_u16_u32_x2(svuint32x2_t zn, uint64_t imm) ATTR
 //
 svuint16_t test_svqshrun_n_u16_s32_x2(svint32x2_t zn, uint64_t imm) ATTR
 {
-  return SVE_ACLE_FUNC(svqshrun,_n,_u16,_s32_x2,)(zn, 16);
+  return SVE_ACLE_FUNC(svqshrun,_n,_u16,_s32_x2)(zn, 16);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqshrun_n_u8_s16_x2(
@@ -267,5 +272,5 @@ svuint16_t test_svqshrun_n_u16_s32_x2(svint32x2_t zn, uint64_t imm) ATTR
 //
 svuint8_t test_svqshrun_n_u8_s16_x2(svint16x2_t zn, uint64_t imm) ATTR
 {
-  return SVE_ACLE_FUNC(svqshrun,_n,_u8,_s16_x2,)(zn, 8);
+  return SVE_ACLE_FUNC(svqshrun,_n,_u8,_s16_x2)(zn, 8);
 }
