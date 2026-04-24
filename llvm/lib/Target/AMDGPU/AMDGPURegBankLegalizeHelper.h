@@ -143,7 +143,7 @@ private:
   bool lowerInsVecEltTo32(MachineInstr &MI);
   bool lowerAbsToNegMax(MachineInstr &MI);
   bool lowerAbsToS32(MachineInstr &MI);
-  bool applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI);
+  bool applyRegisterBanksVgprWithSgprRsrc(MachineInstr &MI, unsigned RsrcIdx);
 };
 
 } // end namespace AMDGPU
