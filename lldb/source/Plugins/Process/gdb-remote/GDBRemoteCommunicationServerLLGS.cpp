@@ -2895,9 +2895,6 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
       response.PutStringAsRawHex8(name.GetStringRef());
       response.PutChar(';');
     }
-
-    if (std::optional<unsigned> protection_key = region_info.GetProtectionKey())
-      response.Printf("protection-key:%" PRIu32 ";", *protection_key);
   }
 
   return SendPacketNoLock(response.GetString());
