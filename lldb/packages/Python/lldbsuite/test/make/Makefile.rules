@@ -305,7 +305,7 @@ ifeq ($(CC_TYPE), clang)
 endif
 
 CFLAGS += $(CFLAGS_EXTRAS)
-CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
+CXXFLAGS += -std=c++11 $(CFLAGS)
 # Copy common options to the linker flags (dwarf, arch. & etc).
 # Note: we get some 'garbage' options for linker here (such as -I, --isystem & etc).
 LDFLAGS += $(CFLAGS)
