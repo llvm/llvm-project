@@ -1206,7 +1206,8 @@ def AMDGPU_SparseMFMAOp :
         : vector<8xi8>, vector<16xi8>, vector<4xi32>
 
       %2 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
-        : vector<8xf16>, vector<16xf16>, vector<4xf32>
+        { cbsz = 0 : i32, abid = 1 : i32 }
+        : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
 
       %3 = amdgpu.sparse_mfma 16x16x128 %matA * %matB + %matC sparse(%idx : i32)
         : vector<16xf8E4M3FN>, vector<32xf8E4M3FN>, vector<4xf32>
