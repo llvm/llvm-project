@@ -1326,6 +1326,19 @@ InstructionCost TargetTransformInfo::getMinMaxReductionCost(
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getActiveLaneMaskCost(
+    Type *ResTy, Type *ArgTy, FastMathFlags FMF, TTI::TargetCostKind CostKind,
+    unsigned NumResults) const {
+  // Return Invalid if ResTy cannot be split into the number of parts requested.
+  if (!cast<VectorType>(ResTy)->getElementCount().isKnownMultipleOf(NumResults))
+    return InstructionCost::getInvalid();
+
+  InstructionCost Cost =
+      TTIImpl->getActiveLaneMaskCost(ResTy, ArgTy, FMF, CostKind, NumResults);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
     std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
@@ -1479,10 +1492,6 @@ bool TargetTransformInfo::preferPredicatedReductionSelect() const {
 bool TargetTransformInfo::preferEpilogueVectorization(
     ElementCount Iters) const {
   return TTIImpl->preferEpilogueVectorization(Iters);
-}
-
-bool TargetTransformInfo::preferWideActiveLaneMasks() const {
-  return TTIImpl->preferWideActiveLaneMasks();
 }
 
 bool TargetTransformInfo::shouldConsiderVectorizationRegPressure() const {

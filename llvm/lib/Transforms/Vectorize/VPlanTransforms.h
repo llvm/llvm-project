@@ -40,6 +40,7 @@ struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<WideActiveLaneMask> EnableWideActiveLaneMask;
+LLVM_ABI_FOR_TEST extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;

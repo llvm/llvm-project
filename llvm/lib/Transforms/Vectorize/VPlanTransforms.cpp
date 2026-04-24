@@ -2138,10 +2138,26 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
                                        unsigned UF,
                                        const TargetTransformInfo &TTI) {
   if (EnableWideActiveLaneMask == WideActiveLaneMask::Disable ||
-      (EnableWideActiveLaneMask == WideActiveLaneMask::Default &&
-       !TTI.preferWideActiveLaneMasks()) ||
       !VF.isVector() || UF == 1)
     return false;
+
+  LLVMContext &Ctx = Plan.getContext();
+  if (EnableWideActiveLaneMask != WideActiveLaneMask::Force &&
+      ForceTargetInstructionCost.getNumOccurrences() == 0) {
+    Type *ArgTy = Type::getInt64Ty(Ctx);
+    Type *ResTy = VectorType::get(Type::getInt1Ty(Ctx), VF);
+    InstructionCost ALMCost =
+        TTI.getActiveLaneMaskCost(ResTy, ArgTy, FastMathFlags(),
+                                  TTI::TCK_RecipThroughput, 1) *
+        UF;
+
+    ResTy = VectorType::get(Type::getInt1Ty(Ctx), VF * UF);
+    InstructionCost WideALMCost = TTI.getActiveLaneMaskCost(
+        ResTy, ArgTy, FastMathFlags(), TTI::TCK_RecipThroughput, UF);
+
+    if (WideALMCost == InstructionCost::getInvalid() || WideALMCost >= ALMCost)
+      return false;
+  }
 
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
@@ -2153,8 +2169,6 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
     return false;
 
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
-  LLVMContext &Ctx = Plan.getContext();
-
   auto ExtractFromALM = [&](VPInstruction *ALM,
                             SmallVectorImpl<VPValue *> &Extracts) {
     DebugLoc DL = ALM->getDebugLoc();

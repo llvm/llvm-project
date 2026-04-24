@@ -1241,10 +1241,8 @@ public:
     case (WideActiveLaneMask::Disable):
       return false;
     case (WideActiveLaneMask::Force):
-      return true;
     case (WideActiveLaneMask::Default):
-      return TTI.preferWideActiveLaneMasks() &&
-             getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
+      return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
     }
     llvm_unreachable("invalid enum");
   }
@@ -1325,6 +1323,8 @@ public:
   /// Returns true if \p Op should be considered invariant and if it is
   /// trivially hoistable.
   bool shouldConsiderInvariant(Value *Op);
+
+  bool shouldWidenActiveLaneMask(ElementCount VF, unsigned IC);
 
 private:
   unsigned NumPredStores = 0;
@@ -4662,6 +4662,33 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
                                Config.CostKind, OpInfo, I);
   }
   return getWideningCost(I, VF);
+}
+
+bool LoopVectorizationCostModel::shouldWidenActiveLaneMask(ElementCount VF,
+                                                           unsigned IC) {
+  if (EnableWideActiveLaneMask.getValue() == WideActiveLaneMask::Force ||
+      ForceTargetInstructionCost.getNumOccurrences() > 0)
+    return true;
+
+  LLVMContext &Ctx = TheFunction->getContext();
+  Type *ArgTy = Type::getInt64Ty(Ctx);
+
+  // Compare the cost of one narrow mask per part vs one wide lane mask
+  // with extracts.
+  Type *ResTy = VectorType::get(Type::getInt1Ty(Ctx), VF);
+  InstructionCost ALMCost =
+      TTI.getActiveLaneMaskCost(ResTy, ArgTy, FastMathFlags(),
+                                TTI::TCK_RecipThroughput, 1) *
+      IC;
+
+  ResTy = VectorType::get(Type::getInt1Ty(Ctx), VF * IC);
+  InstructionCost WideALMCost = TTI.getActiveLaneMaskCost(
+      ResTy, ArgTy, FastMathFlags(), TTI::TCK_RecipThroughput, IC);
+
+  if (WideALMCost == InstructionCost::getInvalid())
+    return false;
+
+  return WideALMCost < ALMCost;
 }
 
 InstructionCost
@@ -8358,6 +8385,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(*BestPlanPtr, VF.Width, VF.Cost);
+
+    if (IC > 1 && !CM.isEpilogueAllowed() &&
+        (CM.preferTailFoldedLoop() && CM.useWideActiveLaneMask()) &&
+        !CM.shouldWidenActiveLaneMask(VF.Width, IC))
+      IC = 1;
 
     unsigned SelectedIC = std::max(IC, UserIC);
     //  Optimistically generate runtime checks if they are needed. Drop them if

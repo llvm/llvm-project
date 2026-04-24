@@ -6,6 +6,8 @@
 ; RUN:     -enable-wide-lane-mask=force -mattr=+sve < %s | FileCheck %s -check-prefix=CHECK-WIDEALM
 ; RUN: opt -S --passes=loop-vectorize -tail-folding-policy=must-fold-tail -force-vector-interleave=2 \
 ; RUN:     -mattr=+sve2p1 < %s | FileCheck %s -check-prefix=CHECK-WIDEALM
+; RUN: opt -S --passes=loop-vectorize -tail-folding-policy=must-fold-tail -force-vector-interleave=2 \
+; RUN:     -enable-wide-lane-mask=default -mattr=+sve -force-target-instruction-cost=1 < %s | FileCheck %s -check-prefix=CHECK-WIDEALM
 
 ; RUN: opt -S --passes=loop-vectorize -tail-folding-policy=must-fold-tail -force-vector-interleave=2 \
 ; RUN:     -enable-wide-lane-mask=default -mattr=+sve < %s | FileCheck %s -check-prefix=CHECK-NO-WIDEALM

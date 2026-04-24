@@ -1224,9 +1224,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
     unsigned Multiplier = cast<VPConstantInt>(getOperand(2))->getZExtValue();
     Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF * Multiplier);
-    IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
-                                  {ArgTy, ArgTy});
-    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+    return Ctx.TTI.getActiveLaneMaskCost(RetTy, ArgTy, FastMathFlags(),
+                                         Ctx.CostKind, Multiplier);
   }
   case VPInstruction::ExplicitVectorLength: {
     Type *Arg0Ty = Ctx.Types.inferScalarType(getOperand(0));

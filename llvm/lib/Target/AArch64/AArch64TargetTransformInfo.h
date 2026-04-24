@@ -246,6 +246,11 @@ public:
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
                          TTI::TargetCostKind CostKind) const override;
 
+  InstructionCost getActiveLaneMaskCost(Type *ResTy, Type *ArgTy,
+                                        FastMathFlags FMF,
+                                        TTI::TargetCostKind CostKind,
+                                        unsigned NumResults) const override;
+
   InstructionCost
   getArithmeticReductionCostSVE(unsigned Opcode, VectorType *ValTy,
                                 TTI::TargetCostKind CostKind) const;
@@ -476,11 +481,6 @@ public:
   unsigned getEpilogueVectorizationMinVF() const override;
 
   bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override;
-
-  bool preferWideActiveLaneMasks() const override {
-    return ST->isSVEorStreamingSVEAvailable() &&
-           (ST->hasSVE2p1() || ST->hasSME2());
-  }
 
   bool supportsScalableVectors() const override {
     return ST->isSVEorStreamingSVEAvailable();
