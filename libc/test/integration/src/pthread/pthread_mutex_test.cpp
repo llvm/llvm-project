@@ -18,12 +18,22 @@
 #include "src/pthread/pthread_mutexattr_destroy.h"
 #include "src/pthread/pthread_mutexattr_init.h"
 #include "src/pthread/pthread_mutexattr_settype.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
 
 constexpr int START = 0;
 constexpr int MAX = 10000;
+
+static pthread_mutex_t snapshot_mutex(const void *mutex_storage) {
+  pthread_mutex_t snapshot;
+  // The original storage may currently hold libc's internal mutex
+  // representation. Copy the bytes into pthread_mutex_t storage before
+  // inspection to avoid strict aliasing violations.
+  LIBC_NAMESPACE::inline_memcpy(&snapshot, mutex_storage, sizeof(snapshot));
+  return snapshot;
+}
 
 pthread_mutex_t mutex;
 static int shared_int = START;
@@ -164,9 +174,10 @@ void recursive_mutex_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&recursive_mutex, &attr), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
 
-  ASSERT_TRUE(recursive_mutex.__recursive);
-  ASSERT_EQ(recursive_mutex.__owner, 0);
-  ASSERT_EQ(recursive_mutex.__lock_count, size_t(0));
+  pthread_mutex_t snapshot = snapshot_mutex(&recursive_mutex);
+  ASSERT_TRUE(snapshot.__recursive);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&recursive_mutex), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&recursive_mutex), 0);
@@ -181,8 +192,9 @@ void recursive_mutex_test() {
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&recursive_mutex), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&recursive_mutex), 0);
-  ASSERT_EQ(recursive_mutex.__owner, 0);
-  ASSERT_EQ(recursive_mutex.__lock_count, size_t(0));
+  snapshot = snapshot_mutex(&recursive_mutex);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&recursive_mutex), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&recursive_mutex), 0);
@@ -194,13 +206,17 @@ void initializer_acts_the_same_as_null_attr() {
   pthread_mutex_t mutex_from_init;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&mutex_from_init, nullptr), 0);
 
-  ASSERT_EQ(mutex.__ftxw.__word, mutex_from_init.__ftxw.__word);
-  ASSERT_EQ(mutex.__priority_inherit, mutex_from_init.__priority_inherit);
-  ASSERT_EQ(mutex.__recursive, mutex_from_init.__recursive);
-  ASSERT_EQ(mutex.__robust, mutex_from_init.__robust);
-  ASSERT_EQ(mutex.__pshared, mutex_from_init.__pshared);
-  ASSERT_EQ(mutex.__owner, mutex_from_init.__owner);
-  ASSERT_EQ(mutex.__lock_count, mutex_from_init.__lock_count);
+  pthread_mutex_t mutex_snapshot = snapshot_mutex(&mutex);
+  pthread_mutex_t mutex_from_init_snapshot = snapshot_mutex(&mutex_from_init);
+  ASSERT_EQ(mutex_snapshot.__ftxw.__word,
+            mutex_from_init_snapshot.__ftxw.__word);
+  ASSERT_EQ(mutex_snapshot.__priority_inherit,
+            mutex_from_init_snapshot.__priority_inherit);
+  ASSERT_EQ(mutex_snapshot.__recursive, mutex_from_init_snapshot.__recursive);
+  ASSERT_EQ(mutex_snapshot.__robust, mutex_from_init_snapshot.__robust);
+  ASSERT_EQ(mutex_snapshot.__pshared, mutex_from_init_snapshot.__pshared);
+  ASSERT_EQ(mutex_snapshot.__owner, mutex_from_init_snapshot.__owner);
+  ASSERT_EQ(mutex_snapshot.__lock_count, mutex_from_init_snapshot.__lock_count);
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&mutex), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&mutex), EBUSY);

@@ -12,6 +12,7 @@
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #include "test/IntegrationTest/test.h"
 
@@ -19,6 +20,15 @@
 
 constexpr int START = 0;
 constexpr int MAX = 10000;
+
+static mtx_t snapshot_mutex(const void *mutex_storage) {
+  mtx_t snapshot;
+  // The original storage may currently hold libc's internal mutex
+  // representation. Copy the bytes into mtx_t storage before inspection to
+  // avoid strict aliasing violations.
+  LIBC_NAMESPACE::inline_memcpy(&snapshot, mutex_storage, sizeof(snapshot));
+  return snapshot;
+}
 
 mtx_t mutex;
 static int shared_int = START;
@@ -143,9 +153,10 @@ void recursive_mutex_test() {
   ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&recursive_mutex, mtx_recursive),
             static_cast<int>(thrd_success));
 
-  ASSERT_TRUE(recursive_mutex.__recursive);
-  ASSERT_EQ(recursive_mutex.__owner, 0);
-  ASSERT_EQ(recursive_mutex.__lock_count, size_t(0));
+  mtx_t snapshot = snapshot_mutex(&recursive_mutex);
+  ASSERT_TRUE(snapshot.__recursive);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
 
   ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&recursive_mutex),
             static_cast<int>(thrd_success));
@@ -156,8 +167,9 @@ void recursive_mutex_test() {
             static_cast<int>(thrd_success));
   ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&recursive_mutex),
             static_cast<int>(thrd_success));
-  ASSERT_EQ(recursive_mutex.__owner, 0);
-  ASSERT_EQ(recursive_mutex.__lock_count, size_t(0));
+  snapshot = snapshot_mutex(&recursive_mutex);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
 
   LIBC_NAMESPACE::mtx_destroy(&recursive_mutex);
 }
