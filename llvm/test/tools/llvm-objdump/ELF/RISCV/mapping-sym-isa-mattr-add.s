@@ -10,6 +10,10 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s -o %t.o
 # RUN: llvm-objdump -d --no-show-raw-insn --mattr=+xqcilia %t.o \
 # RUN:     | FileCheck %s
+## Without --mattr=+xqcilia, the mapping symbol's base rv32i is used as-is,
+## and the Xqcilia-encoded instruction decodes as <unknown>.
+# RUN: llvm-objdump -d --no-show-raw-insn %t.o \
+# RUN:     | FileCheck %s --check-prefix=CHECK-NO-MATTR
 
 .text
 
@@ -17,3 +21,4 @@
 ## Encoding from llvm/test/MC/RISCV/insn_xqci.s.
 .insn 6, 0x00ff00ff251f
 # CHECK: qc.e.addai a0, 0xff00ff
+# CHECK-NO-MATTR: <unknown>
