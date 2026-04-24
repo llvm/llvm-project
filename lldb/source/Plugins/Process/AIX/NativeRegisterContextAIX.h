@@ -19,10 +19,10 @@ class NativeRegisterContextAIX
     : public virtual NativeRegisterContextRegisterInfo {
 public:
   // This function is implemented in the NativeRegisterContextAIX_ppc64
-  // subclasses to create a new instance of the host specific
-  // NativeRegisterContextAIX. The implementations can't collide as only one
-  // NativeRegisterContextAIX_ppc64 variant should be compiled into the final
-  // executable.
+  // subclasses to create a new instance (for both 32-bit or 64-bit) of the host
+  // specific NativeRegisterContextAIX. Only one variant (e.g., 32-bit or
+  // 64-bit) is
+  // compiled into the final executable, so there is no conflict between them.
   static std::unique_ptr<NativeRegisterContextAIX>
   CreateHostNativeRegisterContextAIX(const ArchSpec &target_arch,
                                      NativeThreadAIX &native_thread);

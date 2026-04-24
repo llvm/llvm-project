@@ -69,9 +69,8 @@ private:
   union GPRStorage {
     GPR_PPC gpr32;   // 32-bit general purpose registers.
     GPR_PPC64 gpr64; // 64-bit general purpose registers.
-  };
+  } m_gpr_storage;
 
-  GPRStorage m_gpr_storage;
   void *m_gpr = nullptr;
 };
 

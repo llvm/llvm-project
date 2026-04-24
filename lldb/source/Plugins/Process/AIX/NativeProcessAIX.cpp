@@ -284,10 +284,10 @@ llvm::Error NativeProcessAIX::Detach(lldb::tid_t tid) {
 }
 
 template <typename GPR_T, typename PTSPRS_T>
-llvm::Expected<int> GetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
+int GetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
   PTSPRS_T sprs;
 
-  int ret = ptrace64(req, tid, (long long)&sprs, 0, 0);
+  int ret = ptrace64(req, tid, reinterpret_cast<long long>(&sprs), 0, 0);
 
   if (ret != -1) {
     gpr->cr = sprs.pt_cr;
@@ -301,7 +301,7 @@ llvm::Expected<int> GetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
 }
 
 template <typename GPR_T, typename PTSPRS_T>
-llvm::Expected<int> SetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
+int SetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
   PTSPRS_T sprs;
 
   sprs.pt_cr = gpr->cr;
@@ -311,13 +311,13 @@ llvm::Expected<int> SetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
   sprs.pt_ctr = gpr->ctr;
   sprs.pt_iar = gpr->pc;
 
-  return (ptrace64(req, tid, (long long)&sprs, 0, 0));
+  return ptrace64(req, tid, reinterpret_cast<long long>(&sprs), 0, 0);
 }
 
 llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
                                                     void *addr, void *data,
                                                     size_t data_size) {
-  int ret;
+  int ret = 0;
   Log *log = GetLog(POSIXLog::Ptrace);
   // for PTT_*
   const char procdir[] = "/proc/";
@@ -325,6 +325,12 @@ llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
   std::string process_task_dir = procdir + std::to_string(pid) + lwpdir;
   DIR *dirproc = opendir(process_task_dir.c_str());
 
+  // PTT_* requests require a thread ID (TID).
+  // Each entry under /proc/<pid>/lwp/ represents a thread,
+  // and the directory name corresponds to its thread ID (TID).
+  // A process may contain multiple threads.
+  // TODO: With multi-threading support, iterate over all entries to enumerate
+  // available TIDs and retrieve the target debugging thread ID.
   lldb::tid_t tid = 0;
   if (dirproc) {
     struct dirent *direntry = nullptr;
@@ -340,32 +346,34 @@ llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
   }
 
   switch (req) {
+  // On AIX, ptrace exposes differently. GPRs and SPRs are handled via separate
+  // requests: PTT_READ_GPRS reads only GPRs & PTT_READ_SPRS is required to
+  // fetch SPRs. Similarly, writes are also split across:
+  // PTT_WRITE_GPRS & PTT_WRITE_SPRS.
   case PTT_READ_GPRS:
     if (data_size == sizeof(GPR_PPC)) // 32bit SPRs read
       ret = GetSPRs<GPR_PPC, ptsprs>(PTT_READ_SPRS, tid,
-                                     static_cast<GPR_PPC *>(data))
-                .get();
+                                     static_cast<GPR_PPC *>(data));
     else if (data_size == sizeof(GPR_PPC64)) // 64bit SPRs read
       ret = GetSPRs<GPR_PPC64, ptxsprs>(PTT_READ_SPRS, tid,
-                                        static_cast<GPR_PPC64 *>(data))
-                .get();
+                                        static_cast<GPR_PPC64 *>(data));
 
     if (ret != -1)
-      ret = ptrace64(req, tid, (long long)data, 0, 0); // read GPRs
+      ret = ptrace64(req, tid, reinterpret_cast<long long>(data), 0,
+                     0); // read GPRs
     break;
 
   case PTT_WRITE_GPRS:
     if (data_size == sizeof(GPR_PPC)) // 32bit SPRs write
       ret = SetSPRs<GPR_PPC, ptsprs>(PTT_WRITE_SPRS, tid,
-                                     static_cast<GPR_PPC *>(data))
-                .get();
+                                     static_cast<GPR_PPC *>(data));
     else if (data_size == sizeof(GPR_PPC64)) // 64bit SPRS write
       ret = SetSPRs<GPR_PPC64, ptxsprs>(PTT_WRITE_SPRS, tid,
-                                        static_cast<GPR_PPC64 *>(data))
-                .get();
+                                        static_cast<GPR_PPC64 *>(data));
 
     if (ret != -1)
-      ret = ptrace64(req, tid, (long long)data, 0, 0); // write GPRs
+      ret = ptrace64(req, tid, reinterpret_cast<long long>(data), 0,
+                     0); // write GPRs
     break;
   case PT_ATTACH:
   case PT_DETACH:

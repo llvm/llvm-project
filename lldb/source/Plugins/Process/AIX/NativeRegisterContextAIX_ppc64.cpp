@@ -110,9 +110,11 @@ NativeRegisterContextAIX_ppc64::NativeRegisterContextAIX_ppc64(
       NativeRegisterContextAIX(native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::ppc:
+    new (&m_gpr_storage.gpr32) GPR_PPC{};
     m_gpr = &m_gpr_storage.gpr32;
     break;
   case llvm::Triple::ppc64:
+    new (&m_gpr_storage.gpr32) GPR_PPC64{};
     m_gpr = &m_gpr_storage.gpr64;
     break;
   default:
