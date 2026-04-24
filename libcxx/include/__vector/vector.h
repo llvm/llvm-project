@@ -257,6 +257,7 @@ private:
     vector& __vec_;
   };
 
+  using __emplace_back_result_t = _If<(_LIBCPP_STD_VER < 17), void, reference>;
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~vector() { __destroy_vector (*this)(); }
 
@@ -466,12 +467,17 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void push_back(value_type&& __x) { emplace_back(std::move(__x)); }
 
   template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-#if _LIBCPP_STD_VER >= 17
-  reference emplace_back(_Args&&... __args);
-#else
-  void emplace_back(_Args&&... __args);
-#endif
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __emplace_back_result_t emplace_back(_Args&&... __args) {
+    if (__layout_.__is_full()) [[likely]] {
+      __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
+    }
+    else {
+      __emplace_back_slow_path(std::forward<_Args>(__args)...);
+    }
+  #if _LIBCPP_STD_VER >= 17
+    return back();
+  #endif
+  }
 
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __emplace_back_assume_capacity(_Args&&... __args) {
@@ -1078,29 +1084,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __if_likely_else(bool _
   }
 }
 
-template <class _Tp, class _Allocator>
-template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline
-#if _LIBCPP_STD_VER >= 17
-    typename vector<_Tp, _Allocator>::reference
-#else
-    void
-#endif
-    vector<_Tp, _Allocator>::emplace_back(_Args&&... __args) {
-  auto __current_boundary = __layout_.__boundary_representation();
-  std::__if_likely_else(
-      __current_boundary < __layout_.__capacity_representation(),
-      [&] {
-        __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
-        ++__current_boundary;
-      },
-      [&] { __current_boundary = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
-
-  __layout_.__set_boundary(__current_boundary);
-#if _LIBCPP_STD_VER >= 17
-  return back();
-#endif
-}
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
