@@ -1624,7 +1624,7 @@ struct SymbolDependenceAnalysis {
   }
   /// Analyze the dependencies of a set of module variables that are host
   /// associated (or use associated in host module scopes).
-  SymbolDependenceAnalysis(
+  explicit SymbolDependenceAnalysis(
       const llvm::SetVector<const semantics::Symbol *> &moduleVariables) {
     for (const semantics::Symbol *sym : moduleVariables)
       analyzeLocalEquivalenceSets(sym->owner());
@@ -2146,7 +2146,7 @@ lower::pft::getDependentVariableList(const semantics::Symbol &symbol) {
 }
 
 static bool
-isGenericHiddingProcedurePointer(const Fortran::semantics::Symbol &sym) {
+isGenericHidingProcedurePointer(const Fortran::semantics::Symbol &sym) {
   if (const auto *generic = sym.detailsIf<Fortran::semantics::GenericDetails>())
     if (const Fortran::semantics::Symbol *specific = generic->specific())
       return Fortran::semantics::IsProcedurePointer(*specific);
@@ -2167,7 +2167,7 @@ static void collectHostAssociatedModuleVariables(
         ultimate.detailsIf<Fortran::semantics::NamelistDetails>();
     if (!ultimate.has<Fortran::semantics::ObjectEntityDetails>() &&
         !Fortran::semantics::IsProcedurePointer(ultimate) &&
-        !isGenericHiddingProcedurePointer(ultimate) && !namelistDetails)
+        !isGenericHidingProcedurePointer(ultimate) && !namelistDetails)
       return;
     const Fortran::semantics::Scope &symbolScope =
         Fortran::semantics::FollowHostAssoc(sym).owner();
