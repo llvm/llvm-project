@@ -265,10 +265,33 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
+
+  // VPWidenRecipe converted e.g., { <i64>, <i1> } to { <4 x i64>, <4 x i1> }.
+  // Invert it here.
+  auto *StructTy = dyn_cast<StructType>(VecPart->getType());
+  if (StructTy && isVectorizedStructTy(StructTy)) {
+    Value *LaneV = Lane.getAsRuntimeExpr(Builder, VF);
+
+    Type *StructScalarTy = toScalarizedTy(StructTy);
+    Value *Extract = PoisonValue::get(StructScalarTy);
+
+    for (unsigned i = 0; i != StructTy->getNumElements(); i++) {
+      Value *FieldVectorValue = Builder.CreateExtractValue(VecPart, i);
+      Value *FieldScalarValue =
+          Builder.CreateExtractElement(FieldVectorValue, LaneV);
+      Extract = Builder.CreateInsertValue(Extract, FieldScalarValue, i);
+    }
+
+    // TODO: Cache created scalar values.
+    // set(Def, Extract, Instance);
+    return Extract;
+  }
+
   if (!VecPart->getType()->isVectorTy()) {
     assert(Lane.isFirstLane() && "cannot get lane > 0 for scalar");
     return VecPart;
   }
+
   // TODO: Cache created scalar values.
   Value *LaneV = Lane.getAsRuntimeExpr(Builder, VF);
   auto *Extract = Builder.CreateExtractElement(VecPart, LaneV);
