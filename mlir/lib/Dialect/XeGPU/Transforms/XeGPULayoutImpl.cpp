@@ -1184,11 +1184,19 @@ getValidLayouts(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
 static std::optional<std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
                                 SmallVector<int64_t>>>
 getDpasInstDataVectors(VectorType aTy, VectorType bTy, VectorType cdTy,
-                       const xegpu::uArch::uArch *uArch) {
+                       const xegpu::uArch::uArch *uArch,
+                       bool isDpasMx = false) {
   const int subgroupSize = uArch->getSubgroupSize();
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
-          xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
+
+  const xegpu::uArch::MMAInstructionInterface *uArchInstruction;
+  if (isDpasMx)
+    uArchInstruction = dyn_cast<xegpu::uArch::SubgroupScaledMatrixMultiplyAcc>(
+        uArch->getInstruction(
+            xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
+  else
+    uArchInstruction =
+        dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
+            xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
 
   const unsigned dataALen = aTy.getShape().front();
   auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
@@ -1206,11 +1214,19 @@ getDpasInstDataVectors(VectorType aTy, VectorType bTy, VectorType cdTy,
   if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
     return std::nullopt;
 
+  // For DPAS_MX, use getSupportedK to get the scaled K dimension
+  int kDimSize = subgroupSize;
+  if (isDpasMx) {
+    auto supportedKLen = uArchInstruction->getSupportedK(aTy.getElementType());
+    if (!supportedKLen.empty())
+      kDimSize = supportedKLen[0];
+  }
+
   SmallVector<int64_t> instDataA(aTy.getRank(), 1);
   instDataA[aTy.getRank() - 2] = maxALen;
-  instDataA[aTy.getRank() - 1] = subgroupSize;
+  instDataA[aTy.getRank() - 1] = kDimSize;
   SmallVector<int64_t> instDataB(bTy.getRank(), 1);
-  instDataB[bTy.getRank() - 2] = subgroupSize;
+  instDataB[bTy.getRank() - 2] = kDimSize;
   instDataB[bTy.getRank() - 1] = maxBLen;
   SmallVector<int64_t> instDataCD(cdTy.getRank(), 1);
   instDataCD[cdTy.getRank() - 2] = maxALen;
@@ -1220,9 +1236,9 @@ getDpasInstDataVectors(VectorType aTy, VectorType bTy, VectorType cdTy,
 
 /// Helper function to set up subgroup layouts for DPAS operands A, B, and C/D.
 /// Returns the three layouts if successful, nullopt otherwise.
-static std::optional<std::tuple<xegpu::DistributeLayoutAttr,
-                                xegpu::DistributeLayoutAttr,
-                                xegpu::DistributeLayoutAttr>>
+static std::optional<
+    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr>>
 getupDpasSubgroupLayouts(mlir::MLIRContext *context, VectorType aTy,
                          VectorType bTy, VectorType cdTy,
                          xegpu::DistributeLayoutAttr consumerLayout, int numSg,
@@ -1237,8 +1253,7 @@ getupDpasSubgroupLayouts(mlir::MLIRContext *context, VectorType aTy,
 
   std::optional<LayoutRepresentation> consumerSgLayout = std::nullopt;
   if (consumerLayout && consumerLayout.isForWorkgroup()) {
-    SmallVector<int64_t> sgLayoutD =
-        consumerLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> sgLayoutD = consumerLayout.getEffectiveSgLayoutAsInt();
     consumerSgLayout = std::make_pair(sgLayoutD[0], sgLayoutD[1]);
   }
 
@@ -1252,7 +1267,7 @@ getupDpasSubgroupLayouts(mlir::MLIRContext *context, VectorType aTy,
   // Pick the best subgroup layout
   llvm::DenseSet<LayoutRepresentation> setA(layoutsA.begin(), layoutsA.end());
   llvm::DenseSet<LayoutRepresentation> setCD(layoutsCD.begin(),
-                                              layoutsCD.end());
+                                             layoutsCD.end());
   std::optional<LayoutRepresentation> bestPick;
   for (auto &sgLayout : layoutsB) {
     if (setA.contains(sgLayout) && setCD.contains(sgLayout)) {
@@ -1279,18 +1294,18 @@ getupDpasSubgroupLayouts(mlir::MLIRContext *context, VectorType aTy,
       static_cast<int>(cdTy.getShape()[0] / sgLayout[0]),
       static_cast<int>(cdTy.getShape()[1] / sgLayout[1])};
 
-  auto dpasALayout = xegpu::LayoutAttr::get(
-      context, DenseI32ArrayAttr::get(context, sgLayout),
-      DenseI32ArrayAttr::get(context, sgDataA), nullptr, nullptr, nullptr,
-      nullptr);
-  auto dpasBLayout = xegpu::LayoutAttr::get(
-      context, DenseI32ArrayAttr::get(context, sgLayout),
-      DenseI32ArrayAttr::get(context, sgDataB), nullptr, nullptr, nullptr,
-      nullptr);
-  auto dpasCDLayout = xegpu::LayoutAttr::get(
-      context, DenseI32ArrayAttr::get(context, sgLayout),
-      DenseI32ArrayAttr::get(context, sgDataCD), nullptr, nullptr, nullptr,
-      nullptr);
+  auto dpasALayout =
+      xegpu::LayoutAttr::get(context, DenseI32ArrayAttr::get(context, sgLayout),
+                             DenseI32ArrayAttr::get(context, sgDataA), nullptr,
+                             nullptr, nullptr, nullptr);
+  auto dpasBLayout =
+      xegpu::LayoutAttr::get(context, DenseI32ArrayAttr::get(context, sgLayout),
+                             DenseI32ArrayAttr::get(context, sgDataB), nullptr,
+                             nullptr, nullptr, nullptr);
+  auto dpasCDLayout =
+      xegpu::LayoutAttr::get(context, DenseI32ArrayAttr::get(context, sgLayout),
+                             DenseI32ArrayAttr::get(context, sgDataCD), nullptr,
+                             nullptr, nullptr, nullptr);
 
   return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout);
 }
@@ -1353,109 +1368,91 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
                          xegpu::DistributeLayoutAttr consumerLayout, int numSg,
                          const xegpu::uArch::uArch *uArch) {
   auto context = aTy.getContext();
-  const int subgroupSize = uArch->getSubgroupSize();
 
-  // Helper to create scale layout from parent layout
-  auto createScaleLayout = [&](VectorType parentTy, VectorType scaleTy,
-                               xegpu::DistributeLayoutAttr parentLayout,
+  // Helper to create scale layout from matrix layout
+  auto createScaleLayout = [&](VectorType matrixTy, VectorType scaleTy,
+                               xegpu::DistributeLayoutAttr matrixLayout,
                                bool isBScale) -> xegpu::DistributeLayoutAttr {
-    if (!scaleTy || !parentLayout)
+    if (!scaleTy || !matrixLayout)
       return nullptr;
 
-    // Calculate scaling factor by dividing parent shape by scale shape
-    ArrayRef<int64_t> parentShape = parentTy.getShape();
+    // Calculate scaling factor by dividing matrix shape by scale shape
+    ArrayRef<int64_t> matrixShape = matrixTy.getShape();
     ArrayRef<int64_t> scaleShape = scaleTy.getShape();
 
     // Scale shapes can be 1D or 2D, handle both cases
     if (scaleShape.empty())
       return nullptr;
 
-    int64_t scaleFactor = parentShape.back() / scaleShape.back();
-    int64_t rank = parentLayout.getRank();
+    auto uArchInstruction = dyn_cast<
+        xegpu::uArch::SubgroupScaledMatrixMultiplyAcc>(uArch->getInstruction(
+        xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
+    int64_t scaleFactor = uArchInstruction->getScaleFactor();
+
+    int64_t rank = matrixLayout.getRank();
     assert(rank == 2 && "dpas layouts must be two dimensions");
 
-    SmallVector<int64_t> sgLayout = parentLayout.getEffectiveSgLayoutAsInt();
-    SmallVector<int64_t> sgData = parentLayout.getEffectiveSgDataAsInt();
-    SmallVector<int64_t> instData = parentLayout.getEffectiveInstDataAsInt();
+    SmallVector<int64_t> sgLayout = matrixLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> sgData = matrixLayout.getEffectiveSgDataAsInt();
+    SmallVector<int64_t> instData = matrixLayout.getEffectiveInstDataAsInt();
     SmallVector<int64_t> laneLayout =
-        parentLayout.getEffectiveLaneLayoutAsInt();
-    SmallVector<int64_t> laneData = parentLayout.getEffectiveLaneDataAsInt();
-    auto order = parentLayout.getOrder();
+        matrixLayout.getEffectiveLaneLayoutAsInt();
+    SmallVector<int64_t> laneData = matrixLayout.getEffectiveLaneDataAsInt();
+    auto order = matrixLayout.getOrder();
 
-    // For subgroup layouts, compute sg_data based on scale shape / sg_layout
+    SmallVector<int> scaleSgLayout(sgLayout.begin(), sgLayout.end());
+    SmallVector<int> scaleSgData(sgData.begin(), sgData.end());
+
     if (!sgLayout.empty() && !sgData.empty()) {
-      // sg_data = scale_shape / sg_layout
-      if (scaleShape.size() >= 2) {
-        sgData[rank - 2] = scaleShape[rank - 2] / sgLayout[rank - 2];
-        sgData[rank - 1] = scaleShape[rank - 1] / sgLayout[rank - 1];
-      } else if (scaleShape.size() == 1) {
-        sgData[rank - 1] = scaleShape[0] / sgLayout[rank - 1];
-      }
+      scaleSgData[rank - 2] =
+          std::max<int64_t>(scaleShape[rank - 2] / sgLayout[rank - 2], 1);
+      scaleSgData[rank - 1] =
+          std::max<int64_t>(scaleShape[rank - 1] / sgLayout[rank - 1], 1);
     }
 
-    // For inst_data only layouts (no lane info), create a simple inst_data layout for scales
-    // The scale dimensions are much smaller, so we use the scale shape directly
-    if (!instData.empty() && laneLayout.empty() && laneData.empty()) {
-      // For inst_data layout, create simple inst_data for the scale
-      SmallVector<int64_t> scaleInstData(rank, 1);
-      if (scaleShape.size() >= 2) {
-        scaleInstData[rank - 2] = scaleShape[rank - 2];
-        scaleInstData[rank - 1] = scaleShape[rank - 1];
-      } else if (scaleShape.size() == 1) {
-        scaleInstData[rank - 1] = scaleShape[0];
-      }
-      return xegpu::LayoutAttr::get(
-          context, nullptr, nullptr,
-          DenseI32ArrayAttr::get(
-              context, SmallVector<int>(scaleInstData.begin(), scaleInstData.end())),
-          nullptr, nullptr, order);
+    SmallVector<int> scaleInstData(matrixShape.begin(), matrixShape.end());
+    if (!instData.empty()) {
+      if (isBScale)
+        scaleInstData[rank - 2] =
+            std::max<int64_t>(matrixShape[rank - 2] / scaleFactor, 1);
+      else
+        scaleInstData[rank - 1] =
+            std::max<int64_t>(matrixShape[rank - 1] / scaleFactor, 1);
     }
 
-    // Handle lane layout for subgroup/lane layout kinds
+    SmallVector<int> scaleLaneLayout(laneLayout.begin(), laneLayout.end());
+    SmallVector<int> scaleLaneData(laneData.begin(), laneData.end());
+
     if (!laneLayout.empty() && !laneData.empty()) {
-      // For scales, lane_layout should match the scale shape dimensions
-      // and lane_data should be [1, 1] since each lane holds one scale element
-      if (scaleShape.size() >= 2) {
-        laneLayout[rank - 2] = scaleShape[rank - 2];
-        laneLayout[rank - 1] = scaleShape[rank - 1];
-      } else if (scaleShape.size() == 1) {
-        laneLayout[rank - 2] = 1;
-        laneLayout[rank - 1] = scaleShape[0];
-      }
-      laneData[rank - 2] = 1;
-      laneData[rank - 1] = 1;
-    }
+      bool order = uArchInstruction->isLaneLayoutRowMajorOrder();
+      if (isBScale ^ order)
+        std::swap(scaleLaneLayout[rank - 2], scaleLaneLayout[rank - 1]);
 
+      scaleLaneData[rank - 2] =
+          std::max<int64_t>(scaleShape[rank - 2] / laneLayout[rank - 2], 1);
+      scaleLaneData[rank - 1] =
+          std::max<int64_t>(scaleShape[rank - 1] / laneLayout[rank - 1], 1);
+    }
     return xegpu::LayoutAttr::get(
         context,
-        sgLayout.empty()
+        scaleSgLayout.empty() ? nullptr
+                              : DenseI32ArrayAttr::get(context, scaleSgLayout),
+        scaleSgData.empty() ? nullptr
+                            : DenseI32ArrayAttr::get(context, scaleSgData),
+        scaleInstData.empty() ? nullptr
+                              : DenseI32ArrayAttr::get(context, scaleInstData),
+        scaleLaneLayout.empty()
             ? nullptr
-            : DenseI32ArrayAttr::get(
-                  context, SmallVector<int>(sgLayout.begin(), sgLayout.end())),
-        sgData.empty()
-            ? nullptr
-            : DenseI32ArrayAttr::get(
-                  context, SmallVector<int>(sgData.begin(), sgData.end())),
-        instData.empty()
-            ? nullptr
-            : DenseI32ArrayAttr::get(
-                  context, SmallVector<int>(instData.begin(), instData.end())),
-        laneLayout.empty() ? nullptr
-                           : DenseI32ArrayAttr::get(
-                                 context, SmallVector<int>(laneLayout.begin(),
-                                                           laneLayout.end())),
-        laneData.empty()
-            ? nullptr
-            : DenseI32ArrayAttr::get(
-                  context, SmallVector<int>(laneData.begin(), laneData.end())),
+            : DenseI32ArrayAttr::get(context, scaleLaneLayout),
+        scaleLaneData.empty() ? nullptr
+                              : DenseI32ArrayAttr::get(context, scaleLaneData),
         order);
   };
-
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(numSg > 0 &&
            "Number of subgroups must be provided for sg layout creation.");
-    auto dpasLayouts =
-        getupDpasSubgroupLayouts(context, aTy, bTy, cdTy, consumerLayout, numSg, uArch);
+    auto dpasLayouts = getupDpasSubgroupLayouts(context, aTy, bTy, cdTy,
+                                                consumerLayout, numSg, uArch);
     if (!dpasLayouts)
       return std::nullopt;
 
@@ -1474,7 +1471,8 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
                            bScaleLayout);
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    auto instDataVecs = getDpasInstDataVectors(aTy, bTy, cdTy, uArch);
+    auto instDataVecs =
+        getDpasInstDataVectors(aTy, bTy, cdTy, uArch, /*isDpasMx=*/true);
     if (!instDataVecs)
       return std::nullopt;
     auto [instDataA, instDataB, instDataCD] = *instDataVecs;
