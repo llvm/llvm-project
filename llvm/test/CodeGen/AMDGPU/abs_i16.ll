@@ -811,33 +811,33 @@ define <16 x i16> @v_abs_v16i16(<16 x i16> %arg) {
 ; GFX8-NEXT:    v_sub_u16_sdwa v14, v8, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_u16_sdwa v15, v8, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_u16_sdwa v8, v8, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX8-NEXT:    v_sub_u16_e32 v19, 0, v0
+; GFX8-NEXT:    v_sub_u16_e32 v16, 0, v0
 ; GFX8-NEXT:    v_max_i16_sdwa v8, v0, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_max_i16_e32 v0, v0, v19
+; GFX8-NEXT:    v_max_i16_e32 v0, v0, v16
 ; GFX8-NEXT:    v_or_b32_e32 v0, v0, v8
 ; GFX8-NEXT:    v_sub_u16_e32 v8, 0, v1
 ; GFX8-NEXT:    v_max_i16_sdwa v15, v1, v15 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_max_i16_e32 v1, v1, v8
-; GFX8-NEXT:    v_sub_u16_e32 v16, 0, v7
-; GFX8-NEXT:    v_sub_u16_e32 v17, 0, v6
-; GFX8-NEXT:    v_sub_u16_e32 v18, 0, v5
-; GFX8-NEXT:    v_sub_u16_e32 v19, 0, v4
-; GFX8-NEXT:    v_sub_u16_e32 v8, 0, v3
 ; GFX8-NEXT:    v_or_b32_e32 v1, v1, v15
 ; GFX8-NEXT:    v_sub_u16_e32 v15, 0, v2
+; GFX8-NEXT:    v_max_i16_sdwa v14, v2, v14 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-NEXT:    v_max_i16_e32 v2, v2, v15
+; GFX8-NEXT:    v_or_b32_e32 v2, v2, v14
+; GFX8-NEXT:    v_sub_u16_e32 v14, 0, v3
+; GFX8-NEXT:    v_max_i16_sdwa v13, v3, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-NEXT:    v_sub_u16_e32 v16, 0, v7
+; GFX8-NEXT:    v_sub_u16_e32 v8, 0, v6
+; GFX8-NEXT:    v_sub_u16_e32 v15, 0, v5
+; GFX8-NEXT:    v_max_i16_e32 v3, v3, v14
+; GFX8-NEXT:    v_sub_u16_e32 v14, 0, v4
 ; GFX8-NEXT:    v_max_i16_sdwa v9, v7, v9 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_max_i16_sdwa v10, v6, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_max_i16_sdwa v11, v5, v11 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_max_i16_sdwa v12, v4, v12 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_max_i16_sdwa v13, v3, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_max_i16_sdwa v14, v2, v14 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_max_i16_e32 v2, v2, v15
-; GFX8-NEXT:    v_max_i16_e32 v3, v3, v8
-; GFX8-NEXT:    v_max_i16_e32 v4, v4, v19
-; GFX8-NEXT:    v_max_i16_e32 v5, v5, v18
-; GFX8-NEXT:    v_max_i16_e32 v6, v6, v17
+; GFX8-NEXT:    v_max_i16_e32 v4, v4, v14
+; GFX8-NEXT:    v_max_i16_e32 v5, v5, v15
+; GFX8-NEXT:    v_max_i16_e32 v6, v6, v8
 ; GFX8-NEXT:    v_max_i16_e32 v7, v7, v16
-; GFX8-NEXT:    v_or_b32_e32 v2, v2, v14
 ; GFX8-NEXT:    v_or_b32_e32 v3, v3, v13
 ; GFX8-NEXT:    v_or_b32_e32 v4, v4, v12
 ; GFX8-NEXT:    v_or_b32_e32 v5, v5, v11

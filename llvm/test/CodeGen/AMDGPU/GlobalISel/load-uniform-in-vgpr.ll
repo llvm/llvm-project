@@ -774,54 +774,53 @@ define amdgpu_ps void @load_uniform_P1_v16i32(ptr addrspace(1) inreg %ptra, ptr 
 ; GFX7-NEXT:    buffer_load_dwordx4 v[6:9], off, s[0:3], 0 offset:16
 ; GFX7-NEXT:    buffer_load_dwordx4 v[10:13], off, s[0:3], 0 offset:32
 ; GFX7-NEXT:    buffer_load_dwordx4 v[14:17], off, s[0:3], 0 offset:48
-; GFX7-NEXT:    s_waitcnt vmcnt(3)
+; GFX7-NEXT:    buffer_load_dwordx4 v[18:21], off, s[0:3], 0 glc
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_readfirstlane_b32 s4, v2
 ; GFX7-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX7-NEXT:    v_readfirstlane_b32 s6, v4
 ; GFX7-NEXT:    v_readfirstlane_b32 s7, v5
-; GFX7-NEXT:    buffer_load_dwordx4 v[2:5], off, s[0:3], 0 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_readfirstlane_b32 s8, v6
 ; GFX7-NEXT:    v_readfirstlane_b32 s9, v7
+; GFX7-NEXT:    buffer_load_dwordx4 v[2:5], off, s[0:3], 0 offset:16 glc
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_readfirstlane_b32 s10, v8
 ; GFX7-NEXT:    v_readfirstlane_b32 s11, v9
-; GFX7-NEXT:    buffer_load_dwordx4 v[6:9], off, s[0:3], 0 offset:16 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_readfirstlane_b32 s12, v10
 ; GFX7-NEXT:    v_readfirstlane_b32 s13, v11
+; GFX7-NEXT:    buffer_load_dwordx4 v[6:9], off, s[0:3], 0 offset:32 glc
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_readfirstlane_b32 s14, v12
 ; GFX7-NEXT:    v_readfirstlane_b32 s15, v13
-; GFX7-NEXT:    buffer_load_dwordx4 v[10:13], off, s[0:3], 0 offset:32 glc
+; GFX7-NEXT:    buffer_load_dwordx4 v[10:13], off, s[0:3], 0 offset:48 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    v_readfirstlane_b32 s20, v18
 ; GFX7-NEXT:    v_readfirstlane_b32 s16, v14
+; GFX7-NEXT:    v_readfirstlane_b32 s21, v19
+; GFX7-NEXT:    v_readfirstlane_b32 s22, v20
+; GFX7-NEXT:    v_readfirstlane_b32 s23, v21
+; GFX7-NEXT:    s_add_i32 s4, s4, s20
 ; GFX7-NEXT:    v_readfirstlane_b32 s17, v15
 ; GFX7-NEXT:    v_readfirstlane_b32 s18, v16
 ; GFX7-NEXT:    v_readfirstlane_b32 s19, v17
-; GFX7-NEXT:    buffer_load_dwordx4 v[14:17], off, s[0:3], 0 offset:48 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_add_i32 s5, s5, s21
+; GFX7-NEXT:    s_add_i32 s6, s6, s22
+; GFX7-NEXT:    s_add_i32 s7, s7, s23
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b64 s[0:1], 0
-; GFX7-NEXT:    v_readfirstlane_b32 s20, v2
-; GFX7-NEXT:    v_readfirstlane_b32 s21, v3
-; GFX7-NEXT:    v_readfirstlane_b32 s22, v4
-; GFX7-NEXT:    v_readfirstlane_b32 s23, v5
-; GFX7-NEXT:    s_add_i32 s4, s4, s20
-; GFX7-NEXT:    v_readfirstlane_b32 s24, v6
-; GFX7-NEXT:    v_readfirstlane_b32 s25, v7
-; GFX7-NEXT:    v_readfirstlane_b32 s26, v8
-; GFX7-NEXT:    v_readfirstlane_b32 s27, v9
-; GFX7-NEXT:    s_add_i32 s5, s5, s21
-; GFX7-NEXT:    v_readfirstlane_b32 s28, v10
-; GFX7-NEXT:    v_readfirstlane_b32 s29, v11
-; GFX7-NEXT:    v_readfirstlane_b32 s30, v12
-; GFX7-NEXT:    v_readfirstlane_b32 s31, v13
-; GFX7-NEXT:    s_add_i32 s6, s6, s22
-; GFX7-NEXT:    v_readfirstlane_b32 s33, v14
-; GFX7-NEXT:    v_readfirstlane_b32 s34, v15
-; GFX7-NEXT:    v_readfirstlane_b32 s35, v16
-; GFX7-NEXT:    v_readfirstlane_b32 s36, v17
-; GFX7-NEXT:    s_add_i32 s7, s7, s23
+; GFX7-NEXT:    v_readfirstlane_b32 s24, v2
+; GFX7-NEXT:    v_readfirstlane_b32 s25, v3
+; GFX7-NEXT:    v_readfirstlane_b32 s26, v4
+; GFX7-NEXT:    v_readfirstlane_b32 s27, v5
 ; GFX7-NEXT:    s_add_i32 s8, s8, s24
+; GFX7-NEXT:    v_readfirstlane_b32 s28, v6
+; GFX7-NEXT:    v_readfirstlane_b32 s29, v7
+; GFX7-NEXT:    v_readfirstlane_b32 s30, v8
+; GFX7-NEXT:    v_readfirstlane_b32 s33, v10
+; GFX7-NEXT:    v_readfirstlane_b32 s31, v9
+; GFX7-NEXT:    v_readfirstlane_b32 s34, v11
+; GFX7-NEXT:    v_readfirstlane_b32 s35, v12
+; GFX7-NEXT:    v_readfirstlane_b32 s36, v13
 ; GFX7-NEXT:    s_add_i32 s12, s12, s28
 ; GFX7-NEXT:    s_add_i32 s16, s16, s33
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
