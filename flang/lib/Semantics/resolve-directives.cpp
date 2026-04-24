@@ -611,9 +611,6 @@ public:
 
   bool Pre(const parser::OpenMPLoopConstruct &);
   void Post(const parser::OpenMPLoopConstruct &) { PopContext(); }
-  void Post(const parser::OmpBeginLoopDirective &) {
-    GetContext().withinConstruct = true;
-  }
   bool Pre(const parser::OpenMPMisplacedEndDirective &x) { return false; }
   bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
 

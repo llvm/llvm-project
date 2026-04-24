@@ -192,7 +192,7 @@ program omp_examples
 !CHECK: !$OMP PARALLEL DO REDUCTION(+: sum)
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | OmpBeginLoopDirective
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
@@ -210,7 +210,7 @@ program omp_examples
 !CHECK: !$OMP PARALLEL DO REDUCTION(*: prod)
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | OmpBeginLoopDirective
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply
@@ -228,7 +228,7 @@ program omp_examples
 !CHECK:  $OMP PARALLEL DO REDUCTION(max: big)
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | OmpBeginLoopDirective
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'max'
@@ -246,7 +246,7 @@ program omp_examples
 !CHECK: !$OMP PARALLEL DO REDUCTION(min: small)
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | OmpBeginLoopDirective
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'min'
