@@ -810,39 +810,6 @@ void LayoutInfoPropagation::visitDpasOp(
     std::tie(requiredALayout, requiredBLayout, requiredCDLayoutAttr) = *layouts;
 
     dpas.setLayoutAAttr(requiredALayout);
-
-/// Propagate layout for DpasMxOp operands using the layout attributes.
-/// DpasMxOp has operands: a, b, acc (optional), scale_a (optional), scale_b (optional)
-void LayoutInfoPropagation::visitDpasMxOp(
-    xegpu::DpasMxOp dpasMx, ArrayRef<LayoutInfoLattice *> operands,
-    ArrayRef<const LayoutInfoLattice *> results) {
-
-  // Get the layout attributes from the operation
-  xegpu::DistributeLayoutAttr layoutA = dpasMx.getLayoutAAttr();
-  xegpu::DistributeLayoutAttr layoutB = dpasMx.getLayoutBAttr();
-  xegpu::DistributeLayoutAttr layoutCD = dpasMx.getLayoutCdAttr();
-  xegpu::DistributeLayoutAttr layoutAScale = dpasMx.getLayoutAScaleAttr();
-  xegpu::DistributeLayoutAttr layoutBScale = dpasMx.getLayoutBScaleAttr();
-
-  // Propagate layouts to operands based on their positions:
-  // operands[0] = a, operands[1] = b, operands[2] = acc (optional),
-  // operands[3] = scale_a (optional), operands[4] = scale_b (optional)
-
-  if (layoutA && operands.size() > 0)
-    propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(layoutA)));
-
-  if (layoutB && operands.size() > 1)
-    propagateIfChanged(operands[1], operands[1]->meet(LayoutInfo(layoutB)));
-
-  if (layoutCD && operands.size() > 2)
-    propagateIfChanged(operands[2], operands[2]->meet(LayoutInfo(layoutCD)));
-
-  if (layoutAScale && operands.size() > 3)
-    propagateIfChanged(operands[3], operands[3]->meet(LayoutInfo(layoutAScale)));
-
-  if (layoutBScale && operands.size() > 4)
-    propagateIfChanged(operands[4], operands[4]->meet(LayoutInfo(layoutBScale)));
-}
     dpas.setLayoutBAttr(requiredBLayout);
     dpas.setLayoutCdAttr(requiredCDLayoutAttr);
     dpasALayout = LayoutInfo(requiredALayout);
@@ -853,6 +820,120 @@ void LayoutInfoPropagation::visitDpasMxOp(
   propagateIfChanged(operands[1], operands[1]->meet(dpasBLayout));
   if (operands.size() > 2)
     propagateIfChanged(operands[2], operands[2]->meet(dpasCDLayout));
+}
+
+
+/// Propagate layout for DpasMxOp operands using the layout attributes.
+/// DpasMxOp has operands: a, b, acc (optional), scale_a (optional), scale_b (optional)
+void LayoutInfoPropagation::visitDpasMxOp(
+    xegpu::DpasMxOp dpasMx, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+
+  // Initialize layout variables
+  LayoutInfo dpasMxALayout, dpasMxBLayout, dpasMxCDLayout;
+  LayoutInfo dpasMxAScaleLayout, dpasMxBScaleLayout;
+
+  // Get existing layout attributes from the operation
+  xegpu::DistributeLayoutAttr anchorLayoutA = dpasMx.getLayoutAAttr();
+  xegpu::DistributeLayoutAttr anchorLayoutB = dpasMx.getLayoutBAttr();
+  xegpu::DistributeLayoutAttr anchorLayoutCD = dpasMx.getLayoutCdAttr();
+
+  // Check if all layouts are already set
+  if (anchorLayoutA && anchorLayoutB && anchorLayoutCD &&
+      hasParamsOfLayoutKind(anchorLayoutA) &&
+      hasParamsOfLayoutKind(anchorLayoutB) &&
+      hasParamsOfLayoutKind(anchorLayoutCD)) {
+    dpasMxALayout = LayoutInfo(anchorLayoutA);
+    dpasMxBLayout = LayoutInfo(anchorLayoutB);
+    dpasMxCDLayout = LayoutInfo(anchorLayoutCD);
+
+    // Get scale layouts if available
+    xegpu::DistributeLayoutAttr anchorLayoutAScale = dpasMx.getLayoutAScaleAttr();
+    xegpu::DistributeLayoutAttr anchorLayoutBScale = dpasMx.getLayoutBScaleAttr();
+    if (anchorLayoutAScale)
+      dpasMxAScaleLayout = LayoutInfo(anchorLayoutAScale);
+    if (anchorLayoutBScale)
+      dpasMxBScaleLayout = LayoutInfo(anchorLayoutBScale);
+  } else {
+    // Need to compute layouts
+    const uArch *uArch = getUArch(getChipStr(dpasMx).value_or(""));
+    if (!uArch)
+      return;
+
+    VectorType aTy = dpasMx.getAType();
+    VectorType bTy = dpasMx.getBType();
+    VectorType cdTy = dpasMx.getResultType();
+
+    // Get scale types if present
+    std::optional<VectorType> aScaleTy = std::nullopt;
+    std::optional<VectorType> bScaleTy = std::nullopt;
+    Value scaleA = dpasMx.getScaleA();
+    Value scaleB = dpasMx.getScaleB();
+    if (scaleA)
+      aScaleTy = dyn_cast<VectorType>(scaleA.getType());
+    if (scaleB)
+      bScaleTy = dyn_cast<VectorType>(scaleB.getType());
+
+    xegpu::DistributeLayoutAttr consumerLayoutAttr = nullptr;
+    xegpu::DistributeLayoutAttr requiredCDLayoutAttr, requiredALayout,
+        requiredBLayout, requiredAScaleLayout, requiredBScaleLayout;
+
+    int numSg = 0;
+    if (layoutKind == xegpu::LayoutKind::Subgroup) {
+      LayoutInfo consumerLayout = results[0]->getValue();
+      if (!consumerLayout.isAssigned())
+        return;
+      consumerLayoutAttr =
+          dyn_cast<xegpu::DistributeLayoutAttr>(consumerLayout.get());
+      auto numSgOrErr = getNumSg(dpasMx, uArch->getSubgroupSize());
+      if (failed(numSgOrErr)) {
+        dpasMx.emitWarning(
+            "Unable to determine the number of subgroups for the operation.");
+        return;
+      }
+      numSg = numSgOrErr.value();
+    }
+
+    auto layouts = xegpu::setupDpasMxLayout(layoutKind, aTy, bTy, cdTy,
+                                            aScaleTy, bScaleTy,
+                                            consumerLayoutAttr, numSg, uArch);
+    if (!layouts.has_value()) {
+      dpasMx.emitWarning(
+          "Failed to determine required layouts for DPAS_MX operands.");
+      return;
+    }
+
+    std::tie(requiredALayout, requiredBLayout, requiredCDLayoutAttr,
+             requiredAScaleLayout, requiredBScaleLayout) = *layouts;
+
+    dpasMx.setLayoutAAttr(requiredALayout);
+    dpasMx.setLayoutBAttr(requiredBLayout);
+    dpasMx.setLayoutCdAttr(requiredCDLayoutAttr);
+    if (requiredAScaleLayout)
+      dpasMx.setLayoutAScaleAttr(requiredAScaleLayout);
+    if (requiredBScaleLayout)
+      dpasMx.setLayoutBScaleAttr(requiredBScaleLayout);
+
+    dpasMxALayout = LayoutInfo(requiredALayout);
+    dpasMxBLayout = LayoutInfo(requiredBLayout);
+    dpasMxCDLayout = LayoutInfo(requiredCDLayoutAttr);
+    if (requiredAScaleLayout)
+      dpasMxAScaleLayout = LayoutInfo(requiredAScaleLayout);
+    if (requiredBScaleLayout)
+      dpasMxBScaleLayout = LayoutInfo(requiredBScaleLayout);
+  }
+
+  // Propagate layouts to operands
+  // operands[0] = a, operands[1] = b, operands[2] = acc (optional),
+  // operands[3] = scale_a (optional), operands[4] = scale_b (optional)
+  propagateIfChanged(operands[0], operands[0]->meet(dpasMxALayout));
+  propagateIfChanged(operands[1], operands[1]->meet(dpasMxBLayout));
+  if (operands.size() > 2)
+    propagateIfChanged(operands[2], operands[2]->meet(dpasMxCDLayout));
+  if (operands.size() > 3 && dpasMxAScaleLayout.isAssigned())
+    propagateIfChanged(operands[3], operands[3]->meet(dpasMxAScaleLayout));
+  if (operands.size() > 4 && dpasMxBScaleLayout.isAssigned())
+    propagateIfChanged(operands[4], operands[4]->meet(dpasMxBScaleLayout));
 }
 
 /// Set the layout for the value and tensor descriptor operands in StoreNdOp.

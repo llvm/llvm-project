@@ -391,3 +391,50 @@ gpu.module @test{
     gpu.return
   }
 }
+// =============================================================================
+// Test for propagate-layout-inst-data.mlir
+// Add this test to the end of that file
+// =============================================================================
+
+// -----
+
+// CHECK-LABEL: func.func @dpas_mx_f8e5m2
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<16x64xf8E5M2>, %[[ARG1:[0-9a-zA-Z]+]]: memref<64x32xf8E5M2>, %[[ARG2:[0-9a-zA-Z]+]]: memref<16x32xbf16>
+// CHECK-SAME: %[[ARG3:[0-9a-zA-Z]+]]: memref<16x2xf8E8M0FNU>, %[[ARG4:[0-9a-zA-Z]+]]: memref<2x32xf8E8M0FNU>
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} dense<0.000000e+00> : vector<16x32xbf16>
+// CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][{{.*}}] : memref<16x64xf8E5M2> -> !xegpu.tensor_desc<16x64xf8E5M2, #xegpu.layout<inst_data = [8, 16]>>
+// CHECK: %[[T1:.*]] = xegpu.create_nd_tdesc %[[ARG1]][{{.*}}] : memref<64x32xf8E5M2> -> !xegpu.tensor_desc<64x32xf8E5M2, #xegpu.layout<inst_data = [16, 16]>>
+// CHECK: %[[T2:.*]] = xegpu.load_nd %[[T0]] <{layout = #xegpu.layout<inst_data = [8, 16]>}> :
+// CHECK-SAME: !xegpu.tensor_desc<16x64xf8E5M2, #xegpu.layout<inst_data = [8, 16]>> -> vector<16x64xf8E5M2>
+// CHECK: %[[T3:.*]] = xegpu.load_nd %[[T1]] <{layout = #xegpu.layout<inst_data = [16, 16]>}> :
+// CHECK-SAME: !xegpu.tensor_desc<64x32xf8E5M2, #xegpu.layout<inst_data = [16, 16]>> -> vector<64x32xf8E5M2>
+// CHECK: %[[T4:.*]] = xegpu.create_nd_tdesc %[[ARG3]][{{.*}}] : memref<16x2xf8E8M0FNU> -> !xegpu.tensor_desc<16x2xf8E8M0FNU, #xegpu.layout<inst_data = [16, 2]>>
+// CHECK: %[[T5:.*]] = xegpu.load_nd %[[T4]] <{layout = #xegpu.layout<inst_data = [16, 2]>}> :
+// CHECK-SAME: !xegpu.tensor_desc<16x2xf8E8M0FNU, #xegpu.layout<inst_data = [16, 2]>> -> vector<16x2xf8E8M0FNU>
+// CHECK: %[[T6:.*]] = xegpu.create_nd_tdesc %[[ARG4]][{{.*}}] : memref<2x32xf8E8M0FNU> -> !xegpu.tensor_desc<2x32xf8E8M0FNU, #xegpu.layout<inst_data = [2, 32]>>
+// CHECK: %[[T7:.*]] = xegpu.load_nd %[[T6]] <{layout = #xegpu.layout<inst_data = [2, 32]>}> :
+// CHECK-SAME: !xegpu.tensor_desc<2x32xf8E8M0FNU, #xegpu.layout<inst_data = [2, 32]>> -> vector<2x32xf8E8M0FNU>
+// CHECK: %[[T8:.*]] = xegpu.dpas_mx %[[T2]], %[[T3]], %[[CST]] scale_a = %[[T5]] scale_b = %[[T7]]
+// CHECK-SAME: {layout_a = #xegpu.layout<inst_data = [8, 16]>, layout_a_scale = #xegpu.layout<inst_data = [16, 2]>, layout_b = #xegpu.layout<inst_data = [16, 16]>, layout_b_scale = #xegpu.layout<inst_data = [2, 32]>, layout_cd = #xegpu.layout<inst_data = [8, 16]>} :
+// CHECK-SAME: vector<16x64xf8E5M2>, vector<64x32xf8E5M2>, vector<16x32xbf16>, vector<16x2xf8E8M0FNU>, vector<2x32xf8E8M0FNU> -> vector<16x32xbf16>
+// CHECK: %[[T9:.*]] = xegpu.create_nd_tdesc %[[ARG2]][{{.*}}] : memref<16x32xbf16> -> !xegpu.tensor_desc<16x32xbf16, #xegpu.layout<inst_data = [8, 16]>>
+// CHECK: xegpu.store_nd %[[T8]], %[[T9]] <{layout = #xegpu.layout<inst_data = [8, 16]>}> : vector<16x32xbf16>, !xegpu.tensor_desc<16x32xbf16, #xegpu.layout<inst_data = [8, 16]>>
+gpu.module @test {
+func.func @dpas_mx_f8e5m2(%arg0: memref<16x64xf8E5M2>, %arg1: memref<64x32xf8E5M2>, %arg2: memref<16x32xbf16>,
+    %arg3: memref<16x2xf8E8M0FNU>, %arg4: memref<2x32xf8E8M0FNU>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense<0.000000e+00> : vector<16x32xbf16>
+  %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<16x64xf8E5M2> -> !xegpu.tensor_desc<16x64xf8E5M2>
+  %1 = xegpu.create_nd_tdesc %arg1[%c0, %c0] : memref<64x32xf8E5M2> -> !xegpu.tensor_desc<64x32xf8E5M2>
+  %2 = xegpu.load_nd %0  : !xegpu.tensor_desc<16x64xf8E5M2> -> vector<16x64xf8E5M2>
+  %3 = xegpu.load_nd %1  : !xegpu.tensor_desc<64x32xf8E5M2> -> vector<64x32xf8E5M2>
+  %4 = xegpu.create_nd_tdesc %arg3[%c0, %c0] : memref<16x2xf8E8M0FNU> -> !xegpu.tensor_desc<16x2xf8E8M0FNU>
+  %5 = xegpu.load_nd %4  : !xegpu.tensor_desc<16x2xf8E8M0FNU> -> vector<16x2xf8E8M0FNU>
+  %6 = xegpu.create_nd_tdesc %arg4[%c0, %c0] : memref<2x32xf8E8M0FNU> -> !xegpu.tensor_desc<2x32xf8E8M0FNU>
+  %7 = xegpu.load_nd %6  : !xegpu.tensor_desc<2x32xf8E8M0FNU> -> vector<2x32xf8E8M0FNU>
+  %8 = xegpu.dpas_mx %2, %3, %cst scale_a = %5 scale_b = %7 : vector<16x64xf8E5M2>, vector<64x32xf8E5M2>, vector<16x32xbf16>, vector<16x2xf8E8M0FNU>, vector<2x32xf8E8M0FNU> -> vector<16x32xbf16>
+  %9 = xegpu.create_nd_tdesc %arg2[%c0, %c0] : memref<16x32xbf16> -> !xegpu.tensor_desc<16x32xbf16>
+  xegpu.store_nd %8, %9  : vector<16x32xbf16>, !xegpu.tensor_desc<16x32xbf16>
+  return
+}
+}
