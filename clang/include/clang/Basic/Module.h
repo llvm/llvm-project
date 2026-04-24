@@ -738,6 +738,7 @@ public:
   void setParent(Module *M) {
     assert(!Parent);
     Parent = M;
+    Parent->SubModuleIndex[M->Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 
