@@ -419,9 +419,9 @@ LogicalResult LoadNdOp::verify() {
     }
   }
 
-  // Handle array_length: multiply non-FCD (first dimension) to create stacked layout
-  // With 2D stacked layout: descriptor 32x16 with array_length=2 -> result 64x16
-  // The array blocks are stacked vertically in register layout
+  // Handle array_length: multiply non-FCD (first dimension) to create stacked
+  // layout With 2D stacked layout: descriptor 32x16 with array_length=2 ->
+  // result 64x16 The array blocks are stacked vertically in register layout
   auto array_len = tdescTy.getArrayLength();
   if (array_len > 1 && !tdescShape.empty()) {
     // Multiply the first dimension (vertically stacked blocks)
