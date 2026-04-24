@@ -147,12 +147,16 @@ public:
     if (Entry.State == ModuleCacheEntry::S_Written) {
       assert(Entry.Buffer && *Entry.Buffer == Buffer &&
              "Wrote the same PCM with different contents");
+      Size = Entry.Buffer->getBufferSize();
+      ModTime = Entry.ModTime;
       return {};
     }
     Entry.Buffer =
         llvm::MemoryBuffer::getMemBufferCopy(Buffer.getBuffer(), Path);
     Entry.ModTime = llvm::sys::toTimeT(std::chrono::system_clock::now());
     Entry.State = ModuleCacheEntry::S_Written;
+    Size = Entry.Buffer->getBufferSize();
+    ModTime = Entry.ModTime;
     return {};
   }
 
