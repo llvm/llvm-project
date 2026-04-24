@@ -1429,7 +1429,9 @@ def SVADDQP   : SInst<"svaddqp[_{d}]", "ddd", "csilUcUsUiUl", MergeNone, "aarch6
                     [VerifyRuntimeMode]>;
 def SVADDSUBP : SInst<"svaddsubp[_{d}]", "ddd", "csilUcUsUiUl", MergeNone, "aarch64_sve_addsubp",
                     [VerifyRuntimeMode]>;
-def SVSUBP    : SInst<"svsubp[_{d}]", "dPdd", "csilUcUsUiUl", MergeNone, "aarch64_sve_subp", [VerifyRuntimeMode]>;
+def SVSUBP_M  : SInst<"svsubp[_{d}]", "dPdd", "csilUcUsUiUl", MergeOp1,  "aarch64_sve_subp", [VerifyRuntimeMode]>;
+def SVSUBP_X  : SInst<"svsubp[_{d}]", "dPdd", "csilUcUsUiUl", MergeAny,  "aarch64_sve_subp", [VerifyRuntimeMode]>;
+def SVSUBP_Z  : SInst<"svsubp[_{d}]", "dPdd", "csilUcUsUiUl", MergeZero, "aarch64_sve_subp", [VerifyRuntimeMode]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

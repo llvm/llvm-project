@@ -27,12 +27,12 @@
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
-#define SVE_ACLE_FUNC(A1,A2_UNUSED) A1
+#define SVE_ACLE_FUNC(A1,A2_UNUSED,A3) A1##A3
 #else
-#define SVE_ACLE_FUNC(A1,A2) A1##A2
+#define SVE_ACLE_FUNC(A1,A2,A3) A1##A2##A3
 #endif
 
-// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_subp_s8(
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_subp_s8_m(
 // CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -47,7 +47,7 @@
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z12test_subp_s8u10__SVBool_tu10__SVInt8_tS0_(
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z14test_subp_s8_mu10__SVBool_tu10__SVInt8_tS0_(
 // CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -62,12 +62,12 @@
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 //
-svint8_t test_subp_s8(svbool_t pg, svint8_t zn, svint8_t zm) ATTR
+svint8_t test_subp_s8_m(svbool_t pg, svint8_t zn, svint8_t zm) ATTR
 {
-  return SVE_ACLE_FUNC(svsubp,_s8)(pg, zn, zm);
+  return SVE_ACLE_FUNC(svsubp,_s8,_m)(pg, zn, zm);
 }
 
-// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_subp_u8(
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_subp_u8_m(
 // CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -82,7 +82,7 @@ svint8_t test_subp_s8(svbool_t pg, svint8_t zn, svint8_t zm) ATTR
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z12test_subp_u8u10__SVBool_tu11__SVUint8_tS0_(
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z14test_subp_u8_mu10__SVBool_tu11__SVUint8_tS0_(
 // CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -97,12 +97,12 @@ svint8_t test_subp_s8(svbool_t pg, svint8_t zn, svint8_t zm) ATTR
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 //
-svuint8_t test_subp_u8(svbool_t pg, svuint8_t zn, svuint8_t zm) ATTR
+svuint8_t test_subp_u8_m(svbool_t pg, svuint8_t zn, svuint8_t zm) ATTR
 {
-  return SVE_ACLE_FUNC(svsubp,_u8)(pg, zn, zm);
+  return SVE_ACLE_FUNC(svsubp,_u8,_m)(pg, zn, zm);
 }
 
-// CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_subp_s16(
+// CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_subp_s16_m(
 // CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -118,7 +118,7 @@ svuint8_t test_subp_u8(svbool_t pg, svuint8_t zn, svuint8_t zm) ATTR
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z13test_subp_s16u10__SVBool_tu11__SVInt16_tS0_(
+// CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z15test_subp_s16_mu10__SVBool_tu11__SVInt16_tS0_(
 // CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -134,12 +134,12 @@ svuint8_t test_subp_u8(svbool_t pg, svuint8_t zn, svuint8_t zm) ATTR
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
-svint16_t test_subp_s16(svbool_t pg, svint16_t zn, svint16_t zm)ATTR
+svint16_t test_subp_s16_m(svbool_t pg, svint16_t zn, svint16_t zm)ATTR
 {
-  return SVE_ACLE_FUNC(svsubp,_s16)(pg, zn, zm);
+  return SVE_ACLE_FUNC(svsubp,_s16,_m)(pg, zn, zm);
 }
 
-// CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_subp_u16(
+// CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_subp_u16_m(
 // CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -155,7 +155,7 @@ svint16_t test_subp_s16(svbool_t pg, svint16_t zn, svint16_t zm)ATTR
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z13test_subp_u16u10__SVBool_tu12__SVUint16_tS0_(
+// CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z15test_subp_u16_mu10__SVBool_tu12__SVUint16_tS0_(
 // CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -171,12 +171,12 @@ svint16_t test_subp_s16(svbool_t pg, svint16_t zn, svint16_t zm)ATTR
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
-svuint16_t test_subp_u16(svbool_t pg, svuint16_t zn, svuint16_t zm) ATTR
+svuint16_t test_subp_u16_m(svbool_t pg, svuint16_t zn, svuint16_t zm) ATTR
 {
-  return SVE_ACLE_FUNC(svsubp,_u16)(pg, zn, zm);
+  return SVE_ACLE_FUNC(svsubp,_u16,_m)(pg, zn, zm);
 }
 
-// CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_subp_s32(
+// CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_subp_s32_m(
 // CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -192,7 +192,7 @@ svuint16_t test_subp_u16(svbool_t pg, svuint16_t zn, svuint16_t zm) ATTR
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[TMP2]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 4 x i32> @_Z13test_subp_s32u10__SVBool_tu11__SVInt32_tS0_(
+// CPP-CHECK-LABEL: define dso_local <vscale x 4 x i32> @_Z15test_subp_s32_mu10__SVBool_tu11__SVInt32_tS0_(
 // CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -208,12 +208,12 @@ svuint16_t test_subp_u16(svbool_t pg, svuint16_t zn, svuint16_t zm) ATTR
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[TMP2]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
 //
-svint32_t test_subp_s32(svbool_t pg, svint32_t zn, svint32_t zm) ATTR
+svint32_t test_subp_s32_m(svbool_t pg, svint32_t zn, svint32_t zm) ATTR
 {
-  return SVE_ACLE_FUNC(svsubp,_s32)(pg, zn, zm);
+  return SVE_ACLE_FUNC(svsubp,_s32,_m)(pg, zn, zm);
 }
 
-// CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_subp_u32(
+// CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_subp_u32_m(
 // CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -229,7 +229,7 @@ svint32_t test_subp_s32(svbool_t pg, svint32_t zn, svint32_t zm) ATTR
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[TMP2]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 4 x i32> @_Z13test_subp_u32u10__SVBool_tu12__SVUint32_tS0_(
+// CPP-CHECK-LABEL: define dso_local <vscale x 4 x i32> @_Z15test_subp_u32_mu10__SVBool_tu12__SVUint32_tS0_(
 // CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -245,12 +245,12 @@ svint32_t test_subp_s32(svbool_t pg, svint32_t zn, svint32_t zm) ATTR
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[TMP2]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
 //
-svuint32_t test_subp_u32(svbool_t pg, svuint32_t zn, svuint32_t zm) ATTR
+svuint32_t test_subp_u32_m(svbool_t pg, svuint32_t zn, svuint32_t zm) ATTR
 {
-  return SVE_ACLE_FUNC(svsubp,_u32)(pg, zn, zm);
+  return SVE_ACLE_FUNC(svsubp,_u32,_m)(pg, zn, zm);
 }
 
-// CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_subp_s64(
+// CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_subp_s64_m(
 // CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -266,7 +266,7 @@ svuint32_t test_subp_u32(svbool_t pg, svuint32_t zn, svuint32_t zm) ATTR
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[TMP2]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 2 x i64> @_Z13test_subp_s64u10__SVBool_tu11__SVInt64_tS0_(
+// CPP-CHECK-LABEL: define dso_local <vscale x 2 x i64> @_Z15test_subp_s64_mu10__SVBool_tu11__SVInt64_tS0_(
 // CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -282,12 +282,12 @@ svuint32_t test_subp_u32(svbool_t pg, svuint32_t zn, svuint32_t zm) ATTR
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[TMP2]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 //
-svint64_t test_subp_s64(svbool_t pg, svint64_t zn, svint64_t zm) ATTR
+svint64_t test_subp_s64_m(svbool_t pg, svint64_t zn, svint64_t zm) ATTR
 {
-  return SVE_ACLE_FUNC(svsubp,_s64)(pg, zn, zm);
+  return SVE_ACLE_FUNC(svsubp,_s64,_m)(pg, zn, zm);
 }
 
-// CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_subp_u64(
+// CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_subp_u64_m(
 // CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -303,7 +303,7 @@ svint64_t test_subp_s64(svbool_t pg, svint64_t zn, svint64_t zm) ATTR
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[TMP2]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 //
-// CPP-CHECK-LABEL: define dso_local <vscale x 2 x i64> @_Z13test_subp_u64u10__SVBool_tu12__SVUint64_tS0_(
+// CPP-CHECK-LABEL: define dso_local <vscale x 2 x i64> @_Z15test_subp_u64_mu10__SVBool_tu12__SVUint64_tS0_(
 // CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
@@ -319,7 +319,610 @@ svint64_t test_subp_s64(svbool_t pg, svint64_t zn, svint64_t zm) ATTR
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[TMP2]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 //
-svuint64_t test_subp_u64(svbool_t pg, svuint64_t zn, svuint64_t zm) ATTR
+svuint64_t test_subp_u64_m(svbool_t pg, svuint64_t zn, svuint64_t zm) ATTR
 {
-  return SVE_ACLE_FUNC(svsubp,_u64)(pg, zn, zm);
+  return SVE_ACLE_FUNC(svsubp,_u64,_m)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_subp_s8_x(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 16 x i8> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i8>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i8>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z14test_subp_s8_xu10__SVBool_tu10__SVInt8_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 16 x i8> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i8> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i8>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i8>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
+//
+svint8_t test_subp_s8_x(svbool_t pg, svint8_t zn, svint8_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_s8,_x)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_subp_u8_x(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 16 x i8> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i8>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i8>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z14test_subp_u8_xu10__SVBool_tu11__SVUint8_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 16 x i8> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i8> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i8>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i8>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
+//
+svuint8_t test_subp_u8_x(svbool_t pg, svuint8_t zn, svuint8_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_u8,_x)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_subp_s16_x(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 8 x i16> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 8 x i16> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x i16>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 8 x i16>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z15test_subp_s16_xu10__SVBool_tu11__SVInt16_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 8 x i16> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 8 x i16> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x i16>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 8 x i16>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
+//
+svint16_t test_subp_s16_x(svbool_t pg, svint16_t zn, svint16_t zm)ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_s16,_x)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_subp_u16_x(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 8 x i16> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 8 x i16> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x i16>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 8 x i16>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z15test_subp_u16_xu10__SVBool_tu12__SVUint16_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 8 x i16> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 8 x i16> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x i16>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 8 x i16>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
+//
+svuint16_t test_subp_u16_x(svbool_t pg, svuint16_t zn, svuint16_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_u16,_x)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_subp_s32_x(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 4 x i32> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 4 x i32> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 4 x i32> @_Z15test_subp_s32_xu10__SVBool_tu11__SVInt32_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 4 x i32> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 4 x i32> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
+//
+svint32_t test_subp_s32_x(svbool_t pg, svint32_t zn, svint32_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_s32,_x)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_subp_u32_x(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 4 x i32> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 4 x i32> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 4 x i32> @_Z15test_subp_u32_xu10__SVBool_tu12__SVUint32_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 4 x i32> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 4 x i32> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
+//
+svuint32_t test_subp_u32_x(svbool_t pg, svuint32_t zn, svuint32_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_u32,_x)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_subp_s64_x(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 2 x i64> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 2 x i64> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i64>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 2 x i64> @_Z15test_subp_s64_xu10__SVBool_tu11__SVInt64_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 2 x i64> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 2 x i64> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i64>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
+//
+svint64_t test_subp_s64_x(svbool_t pg, svint64_t zn, svint64_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_s64,_x)(pg, zn, zm);
+}
+
+//
+//
+
+// CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_subp_u64_x(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 2 x i64> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 2 x i64> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i64>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 2 x i64> @_Z15test_subp_u64_xu10__SVBool_tu12__SVUint64_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 2 x i64> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 2 x i64> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i64>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
+//
+svuint64_t test_subp_u64_x(svbool_t pg, svuint64_t zn, svuint64_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_u64,_x)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_subp_s8_z(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 16 x i8> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i8>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i8>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = select <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> zeroinitializer
+// CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z14test_subp_s8_zu10__SVBool_tu10__SVInt8_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 16 x i8> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i8> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i8>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i8>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = select <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
+//
+svint8_t test_subp_s8_z(svbool_t pg, svint8_t zn, svint8_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_s8,_z)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_subp_u8_z(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 16 x i8> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i8>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i8>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = select <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> zeroinitializer
+// CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z14test_subp_u8_zu10__SVBool_tu11__SVUint8_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 16 x i8> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i8> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i8>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i8>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = select <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.subp.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
+//
+svuint8_t test_subp_u8_z(svbool_t pg, svuint8_t zn, svuint8_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_u8,_z)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_subp_s16_z(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 8 x i16> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 8 x i16> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x i16>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 8 x i16>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> zeroinitializer
+// CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP5]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z15test_subp_s16_zu10__SVBool_tu11__SVInt16_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 8 x i16> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 8 x i16> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x i16>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 8 x i16>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP5]]
+//
+svint16_t test_subp_s16_z(svbool_t pg, svint16_t zn, svint16_t zm)ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_s16,_z)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_subp_u16_z(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 8 x i16> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 8 x i16> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x i16>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 8 x i16>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> zeroinitializer
+// CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP5]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z15test_subp_u16_zu10__SVBool_tu12__SVUint16_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 8 x i16>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 8 x i16> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 8 x i16> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x i16>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 8 x i16>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.subp.nxv8i16(<vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP5]]
+//
+svuint16_t test_subp_u16_z(svbool_t pg, svuint16_t zn, svuint16_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_u16,_z)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_subp_s32_z(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 4 x i32> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 4 x i32> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 4 x i32> @_Z15test_subp_s32_zu10__SVBool_tu11__SVInt32_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 4 x i32> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 4 x i32> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
+//
+svint32_t test_subp_s32_z(svbool_t pg, svint32_t zn, svint32_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_s32,_z)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_subp_u32_z(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 4 x i32> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 4 x i32> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 4 x i32> @_Z15test_subp_u32_zu10__SVBool_tu12__SVUint32_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 4 x i32> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 4 x i32> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.subp.nxv4i32(<vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP4]], <vscale x 4 x i32> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
+//
+svuint32_t test_subp_u32_z(svbool_t pg, svuint32_t zn, svuint32_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_u32,_z)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_subp_s64_z(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 2 x i64> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 2 x i64> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i64>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> zeroinitializer
+// CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 2 x i64> @_Z15test_subp_s64_zu10__SVBool_tu11__SVInt64_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 2 x i64> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 2 x i64> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i64>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
+//
+svint64_t test_subp_s64_z(svbool_t pg, svint64_t zn, svint64_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_s64,_z)(pg, zn, zm);
+}
+
+// CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_subp_u64_z(
+// CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    store <vscale x 2 x i64> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 2 x i64> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, ptr [[ZN_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i64>, ptr [[ZM_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> zeroinitializer
+// CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP2]])
+// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 2 x i64> @_Z15test_subp_u64_zu10__SVBool_tu12__SVUint64_tS0_(
+// CPP-CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[ZN:%.*]], <vscale x 2 x i64> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  [[ENTRY:.*:]]
+// CPP-CHECK-NEXT:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
+// CPP-CHECK-NEXT:    [[ZN_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CPP-CHECK-NEXT:    [[ZM_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CPP-CHECK-NEXT:    store <vscale x 16 x i1> [[PG]], ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    store <vscale x 2 x i64> [[ZN]], ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    store <vscale x 2 x i64> [[ZM]], ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, ptr [[PG_ADDR]], align 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, ptr [[ZN_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i64>, ptr [[ZM_ADDR]], align 16
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.subp.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP2]])
+// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
+//
+svuint64_t test_subp_u64_z(svbool_t pg, svuint64_t zn, svuint64_t zm) ATTR
+{
+  return SVE_ACLE_FUNC(svsubp,_u64,_z)(pg, zn, zm);
 }
