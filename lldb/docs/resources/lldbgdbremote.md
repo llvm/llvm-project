@@ -147,12 +147,29 @@ One requests information on all shared libraries:
 ```
 jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}
 ```
-with an optional `"report_load_commands":false` which can be added, asking
-that only the dyld SPI information (load addresses, filenames) be returned.
-The default behavior is that debugserver scans the mach-o header and load
-commands of each binary, and returns it in the JSON reply.
 
-And the second requests information about a list of shared libraries, given their load addresses:
+There are two additional keys that can be specified: the older
+`"report_load_commands":false` which specifies that the detailed
+information about the binary should not be included (the Mach-O
+header and load commands), and the newer key that supplants
+`report_load_commands`, `information-level` which takes a string
+argument that is one of `address-only`, `address-name`,
+`address-name-uuid`, `full`.  `full` will include the details of
+the mach header and segment virtual addresses for the binaries.
+
+`"report_load_commands":false` is equivalent to
+`"information-level":"address-only"`.
+
+`information-level` allows the caller to limit the amount of data
+being returned to one of (address, address+name, address+name+uuid,
+full).  When we first attach to a process, we may want to fetch the
+binary addresses for all binaries loaded in the process, and then
+fetch detailed information in batches, to keep the size of the
+packets from becoming too large.
+
+
+And the second form of jGetLoadedDynamicLibrariesInfos 
+requests information about a list of binaries, given their load addresses:
 ```
 jGetLoadedDynamicLibrariesInfos:{"solib_addresses":[8382824135,3258302053,830202858503]}
 ```
@@ -727,10 +744,19 @@ server to expedite memory that the client is likely to use (e.g., areas around t
 stack pointer, which are needed for computing backtraces) and it reduces the packet
 count.
 
+When a thread has hit the binaries-loaded lldb internal breakpoint
+(if the server can detect that), the server may expedite information
+about the binaries that have been loaded, to reduce packet traffic
+that would immediately follow.  The key `added-binaries` will have
+a value of an array of binary addresses.  The key `detailed-binaries-info`
+will have a value of a JSON dictionary which is the reply that
+`jGetLoadedDynamicLibrariesInfos` would return for these binaries,
+so lldb doesn't need to request it.
+
 On macOS with debugserver, we expedite the frame pointer backchain for a thread
 (up to 256 entries) by reading 2 pointers worth of bytes at the frame pointer (for
 the previous FP and PC), and follow the backchain. Most backtraces on macOS and
-iOS now don't require us to read any memory!
+iOS now don't require us to read any memory.
 
 **Priority To Implement:** Low
 
@@ -2245,6 +2271,19 @@ following keys and values:
   Specifies how many bits in addresses in high memory are significant for
   addressing, base 10.  AArch64 can have different page table setups for low and
   high memory, and therefore a different number of bits used for addressing.
+* `added-binaries` when the remote stub knows that a thread has stopped
+  at a binaries-loaded breakpoint notification, and it can retrieve the list
+  of binaries that have just been loaded, it may send the list of base16
+  addresses (no 0x prefix) for all of the binaries, to save lldb the need
+  to read it from memory.
+* `detailed-binaries-info` when the remote stub knows that a thread
+  has stopped at a binaries-loaded breakpoint notification, it may
+  be able to gather detailed information about the newly loaded
+  binaries, the information jGetLoadedDynamicLibrariesInfos would
+  return.  If this key is present, the information for all binaries
+  being added at this stop are provided.  The value is asciihex
+  encoded JSON.  It must be asciihex encoded in case a filename
+  includes one of the gdb RSP packet metacharacters or a semicolon.
 
 ### Best Practices
 
