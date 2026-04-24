@@ -286,10 +286,10 @@ ScopedHashTableScope<K, V, KInfo, Allocator>::~ScopedHashTableScope() {
 /// This value is owned by "Scope1(HT)".
 template <typename K, typename V, typename KInfo, typename Allocator>
 void ScopedHashTableScope<K, V, KInfo, Allocator>::erase(const K &Key) {
-  auto I = HT.TopLevelMap.find(Key);
-  if (I == HT.TopLevelMap.end())
+  auto It = HT.TopLevelMap.find(Key);
+  if (It == HT.TopLevelMap.end())
     return;
-  ScopedHashTableVal<K, V> *&ThisEntry = I->second;
+  ScopedHashTableVal<K, V> *&ThisEntry = It->second;
 
   // `ThisEntry` may be the LastValInScope of a parent scope rather than the
   // current scope. We iterate through the scope chain to find the scope
@@ -303,7 +303,7 @@ void ScopedHashTableScope<K, V, KInfo, Allocator>::erase(const K &Key) {
     S = S->PrevScope;
   }
   if (ThisEntry->getNextForKey() == nullptr)
-    HT.TopLevelMap.erase(Key);
+    HT.TopLevelMap.erase(It);
   ScopedHashTableVal<K, V>::erase(ThisEntry, HT.getAllocator());
 }
 } // end namespace llvm
