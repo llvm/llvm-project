@@ -19,6 +19,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cmath>
+#include <limits>
 #include <optional>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -1295,15 +1296,19 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
     CacheLineBytes = 64;
   if (const ConstantInt *StrideCI =
           dyn_cast_or_null<ConstantInt>(MICA.getStrideVal())) {
-    uint64_t AbsStride = (uint64_t)std::abs(StrideCI->getSExtValue());
-    if (AbsStride < CacheLineBytes) {
-      uint64_t MaxCombines = ST->getMaxVectorCoalesceElts();
-      if ((CacheLineBytes / AbsStride) >= MaxCombines)
-        NumLoads = divideCeil(NumLoads, MaxCombines);
-      else
-        // If we were to calculate CacheLineBytes / AbsStride first, would lose
-        // accuracy
-        NumLoads = divideCeil((NumLoads * AbsStride), CacheLineBytes);
+    int64_t Stride = StrideCI->getSExtValue();
+    // Bail early to avoid UB with std:abs() call
+    if (Stride != std::numeric_limits<int64_t>::min()) {
+      uint64_t AbsStride = (uint64_t)std::abs(Stride);
+      if (AbsStride < CacheLineBytes) {
+        uint64_t MaxCombines = ST->getMaxVectorCoalesceElts();
+        if ((CacheLineBytes / AbsStride) >= MaxCombines)
+          NumLoads = divideCeil(NumLoads, MaxCombines);
+        else
+          // If we were to calculate CacheLineBytes / AbsStride first, would
+          // lose accuracy
+          NumLoads = divideCeil((NumLoads * AbsStride), CacheLineBytes);
+      }
     }
   }
   return NumLoads * MemOpCost;
