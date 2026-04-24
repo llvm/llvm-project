@@ -8,9 +8,8 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AmbiguousSmartptrResetCallCheck.h"
-#include "AvoidConstParamsInDecls.h"
+#include "AvoidConstParamsInDeclsCheck.h"
 #include "AvoidNestedConditionalOperatorCheck.h"
 #include "AvoidReturnWithVoidValueCheck.h"
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
@@ -19,7 +18,7 @@
 #include "ContainerContainsCheck.h"
 #include "ContainerDataPointerCheck.h"
 #include "ContainerSizeEmptyCheck.h"
-#include "ConvertMemberFunctionsToStatic.h"
+#include "ConvertMemberFunctionsToStaticCheck.h"
 #include "DeleteNullPointerCheck.h"
 #include "DuplicateIncludeCheck.h"
 #include "ElseAfterReturnCheck.h"
@@ -30,6 +29,7 @@
 #include "IdentifierNamingCheck.h"
 #include "ImplicitBoolConversionCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
+#include "InconsistentIfElseBracesCheck.h"
 #include "IsolateDeclarationCheck.h"
 #include "MagicNumbersCheck.h"
 #include "MakeMemberFunctionConstCheck.h"
@@ -46,12 +46,15 @@
 #include "RedundantDeclarationCheck.h"
 #include "RedundantFunctionPtrDereferenceCheck.h"
 #include "RedundantInlineSpecifierCheck.h"
+#include "RedundantLambdaParameterListCheck.h"
 #include "RedundantMemberInitCheck.h"
 #include "RedundantParenthesesCheck.h"
 #include "RedundantPreprocessorCheck.h"
+#include "RedundantQualifiedAliasCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
+#include "RedundantTypenameCheck.h"
 #include "ReferenceToConstructedTemporaryCheck.h"
 #include "SimplifyBooleanExprCheck.h"
 #include "SimplifySubscriptExprCheck.h"
@@ -59,6 +62,7 @@
 #include "StaticDefinitionInAnonymousNamespaceCheck.h"
 #include "StringCompareCheck.h"
 #include "SuspiciousCallArgumentCheck.h"
+#include "TrailingCommaCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
@@ -67,13 +71,14 @@
 
 namespace clang::tidy {
 namespace readability {
+namespace {
 
 class ReadabilityModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AmbiguousSmartptrResetCallCheck>(
         "readability-ambiguous-smartptr-reset-call");
-    CheckFactories.registerCheck<AvoidConstParamsInDecls>(
+    CheckFactories.registerCheck<AvoidConstParamsInDeclsCheck>(
         "readability-avoid-const-params-in-decls");
     CheckFactories.registerCheck<AvoidNestedConditionalOperatorCheck>(
         "readability-avoid-nested-conditional-operator");
@@ -91,7 +96,7 @@ public:
         "readability-container-data-pointer");
     CheckFactories.registerCheck<ContainerSizeEmptyCheck>(
         "readability-container-size-empty");
-    CheckFactories.registerCheck<ConvertMemberFunctionsToStatic>(
+    CheckFactories.registerCheck<ConvertMemberFunctionsToStaticCheck>(
         "readability-convert-member-functions-to-static");
     CheckFactories.registerCheck<DeleteNullPointerCheck>(
         "readability-delete-null-pointer");
@@ -111,6 +116,8 @@ public:
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
+    CheckFactories.registerCheck<InconsistentIfElseBracesCheck>(
+        "readability-inconsistent-ifelse-braces");
     CheckFactories.registerCheck<MathMissingParenthesesCheck>(
         "readability-math-missing-parentheses");
     CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(
@@ -137,12 +144,18 @@ public:
         "readability-redundant-casting");
     CheckFactories.registerCheck<RedundantFunctionPtrDereferenceCheck>(
         "readability-redundant-function-ptr-dereference");
+    CheckFactories.registerCheck<RedundantLambdaParameterListCheck>(
+        "readability-redundant-lambda-parameter-list");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
         "readability-redundant-member-init");
     CheckFactories.registerCheck<RedundantParenthesesCheck>(
         "readability-redundant-parentheses");
     CheckFactories.registerCheck<RedundantPreprocessorCheck>(
         "readability-redundant-preprocessor");
+    CheckFactories.registerCheck<RedundantQualifiedAliasCheck>(
+        "readability-redundant-qualified-alias");
+    CheckFactories.registerCheck<RedundantTypenameCheck>(
+        "readability-redundant-typename");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
         "readability-reference-to-constructed-temporary");
     CheckFactories.registerCheck<SimplifySubscriptExprCheck>(
@@ -171,6 +184,8 @@ public:
         "readability-simplify-boolean-expr");
     CheckFactories.registerCheck<SuspiciousCallArgumentCheck>(
         "readability-suspicious-call-argument");
+    CheckFactories.registerCheck<TrailingCommaCheck>(
+        "readability-trailing-comma");
     CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(
         "readability-uniqueptr-delete-release");
     CheckFactories.registerCheck<UppercaseLiteralSuffixCheck>(
@@ -183,6 +198,8 @@ public:
         "readability-use-std-min-max");
   }
 };
+
+} // namespace
 
 // Register the ReadabilityModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ReadabilityModule>

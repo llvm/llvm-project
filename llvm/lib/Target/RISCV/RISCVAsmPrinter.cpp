@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
+#include "MCTargetDesc/RISCVELFStreamer.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMatInt.h"
@@ -68,6 +69,11 @@ public:
       : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
+
+  RISCVTargetStreamer &getTargetStreamer() const {
+    return static_cast<RISCVTargetStreamer &>(
+        *OutStreamer->getTargetStreamer());
+  }
 
   void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                      const MachineInstr &MI);
@@ -154,7 +160,7 @@ void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
     ++MII;
-    NumNOPBytes -= 4;
+    NumNOPBytes -= NOPBytes;
   }
 
   // Emit nops.
@@ -272,18 +278,19 @@ bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst,
 // instructions) auto-generated.
 #include "RISCVGenMCPseudoLowering.inc"
 
-// If the target supports Zihintntl and the instruction has a nontemporal
-// MachineMemOperand, emit an NTLH hint instruction before it.
+// If the instruction has a nontemporal MachineMemOperand, emit an NTL hint
+// instruction before it. NTL hints are always safe to emit since they use
+// HINT encodings that are guaranteed not to trap
+// (riscv-non-isa/riscv-elf-psabi-doc#474).
 void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
-  if (!STI->hasStdExtZihintntl())
+  if (!STI->getInstrInfo()->requiresNTLHint(*MI))
     return;
 
-  if (MI->memoperands_empty())
-    return;
+  assert(!MI->memoperands_empty());
 
   MachineMemOperand *MMO = *(MI->memoperands_begin());
-  if (!MMO->isNonTemporal())
-    return;
+
+  assert(MMO->isNonTemporal());
 
   unsigned NontemporalMode = 0;
   if (MMO->getFlags() & MONontemporalBit0)
@@ -452,8 +459,7 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 bool RISCVAsmPrinter::emitDirectiveOptionArch() {
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
   const MCSubtargetInfo &MCSTI = *TM.getMCSubtargetInfo();
   for (const auto &Feature : RISCVFeatureKV) {
@@ -478,8 +484,7 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
 
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
 
   bool EmittedOptionArch = emitDirectiveOptionArch();
 
@@ -548,8 +553,9 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
 }
 
 void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  assert(OutStreamer->getTargetStreamer() &&
+         "target streamer is uninitialized");
+  RISCVTargetStreamer &RTS = getTargetStreamer();
   if (const MDString *ModuleTargetABI =
           dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
@@ -582,8 +588,7 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     RTS.finishAttributeSection();
@@ -593,8 +598,7 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
 }
 
 void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
@@ -604,8 +608,7 @@ void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
 void RISCVAsmPrinter::emitFunctionEntryLabel() {
   const auto *RMFI = MF->getInfo<RISCVMachineFunctionInfo>();
   if (RMFI->isVectorCall()) {
-    auto &RTS =
-        static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    RISCVTargetStreamer &RTS = getTargetStreamer();
     RTS.emitDirectiveVariantCC(*CurrentFnSym);
   }
   return AsmPrinter::emitFunctionEntryLabel();
@@ -635,7 +638,7 @@ void RISCVAsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
   auto Res = MCSymbolRefExpr::create(Sym, OutContext);
-  auto Expr = MCSpecifierExpr::create(Res, ELF::R_RISCV_CALL_PLT, OutContext);
+  auto Expr = MCSpecifierExpr::create(Res, RISCV::S_CALL_PLT, OutContext);
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr));
 }
@@ -740,14 +743,13 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
       OutContext.getOrCreateSymbol("__hwasan_tag_mismatch_v2");
   // Annotate symbol as one having incompatible calling convention, so
   // run-time linkers can instead eagerly bind this function.
-  auto &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RISCVTargetStreamer &RTS = getTargetStreamer();
   RTS.emitDirectiveVariantCC(*HwasanTagMismatchV2Sym);
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
       MCSymbolRefExpr::create(HwasanTagMismatchV2Sym, OutContext);
-  auto Expr = MCSpecifierExpr::create(HwasanTagMismatchV2Ref,
-                                      ELF::R_RISCV_CALL_PLT, OutContext);
+  auto Expr = MCSpecifierExpr::create(HwasanTagMismatchV2Ref, RISCV::S_CALL_PLT,
+                                      OutContext);
 
   for (auto &P : HwasanMemaccessSymbols) {
     unsigned Reg = std::get<0>(P.first);
@@ -951,10 +953,10 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 }
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
+  assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
-    RISCVTargetStreamer &RTS =
-        static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
     RTS.emitNoteGnuPropertySection(ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS);
   }
 }
@@ -971,7 +973,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = RISCV::S_None;
     break;
   case RISCVII::MO_CALL:
-    Kind = ELF::R_RISCV_CALL_PLT;
+    Kind = RISCV::S_CALL_PLT;
     break;
   case RISCVII::MO_LO:
     Kind = RISCV::S_LO;
@@ -983,10 +985,10 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = RISCV::S_PCREL_LO;
     break;
   case RISCVII::MO_PCREL_HI:
-    Kind = ELF::R_RISCV_PCREL_HI20;
+    Kind = RISCV::S_PCREL_HI;
     break;
   case RISCVII::MO_GOT_HI:
-    Kind = ELF::R_RISCV_GOT_HI20;
+    Kind = RISCV::S_GOT_HI;
     break;
   case RISCVII::MO_TPREL_LO:
     Kind = RISCV::S_TPREL_LO;
@@ -1175,8 +1177,8 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   // V instructions. All V instructions are modeled as the masked version.
   const MCInstrDesc &OutMCID = TII->get(OutMI.getOpcode());
   if (OutMI.getNumOperands() < OutMCID.getNumOperands()) {
-    assert(OutMCID.operands()[OutMI.getNumOperands()].RegClass ==
-               RISCV::VMV0RegClassID &&
+    assert(OutMCID.operands()[OutMI.getNumOperands()].OperandType ==
+               RISCVOp::OPERAND_VMASK &&
            "Expected only mask operand to be missing");
     OutMI.addOperand(MCOperand::createReg(RISCV::NoRegister));
   }

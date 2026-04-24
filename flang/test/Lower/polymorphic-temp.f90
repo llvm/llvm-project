@@ -24,7 +24,7 @@ contains
 
     call pass_unlimited_poly_1d(spread(p, dim=1, ncopies=2))
     call pass_unlimited_poly_1d(spread(pa(1), dim=1, ncopies=2))
-    
+
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_spread() {
@@ -220,7 +220,7 @@ contains
 ! CHECK: %[[LOAD_I:.*]] = fir.load %[[I]] : !fir.ref<i32>
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK: %[[CMPI:.*]] = arith.cmpi eq, %[[LOAD_I]], %[[C1]] : i32
-! CHECK: %[[A_REBOX:.*]] = fir.rebox %[[LOAD_A]] : (!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>> 
+! CHECK: %[[A_REBOX:.*]] = fir.rebox %[[LOAD_A]] : (!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>
 ! CHECK: %{{.*}} = arith.select %[[CMPI]], %[[A_REBOX]], %[[LOAD_B]] : !fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>
 
   subroutine check_unlimited_poly(a)

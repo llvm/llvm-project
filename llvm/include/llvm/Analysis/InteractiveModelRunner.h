@@ -51,7 +51,7 @@ public:
     Log->flush();
   }
 
-  virtual ~InteractiveModelRunner();
+  ~InteractiveModelRunner() override;
 
 private:
   void *evaluateUntyped() override;

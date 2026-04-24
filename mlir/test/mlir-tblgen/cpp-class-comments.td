@@ -36,6 +36,7 @@ def A_SomeOp1 : Op<A_Dialect, "some_op1", []>{
 
   let cppNamespace = "OP1";
 // OP: namespace OP1
+// OP-EMPTY:
 // OP-NEXT: /// Some Op1 summary line1
 // OP-NEXT: /// summary line2
 // OP-NEXT: /// Some Op1 description
@@ -97,6 +98,7 @@ def EncodingTrait : AttrInterface<"EncodingTrait"> {
   let methods = [
   ];
 // ATTR-INTERFACE: namespace mlir::a::traits {
+// ATTR-INTERFACE-EMPTY:
 // ATTR-INTERFACE-NEXT: /// Common trait for all layouts.
 // ATTR-INTERFACE-NEXT: class EncodingTrait;
 }
@@ -104,6 +106,7 @@ def EncodingTrait : AttrInterface<"EncodingTrait"> {
 def SimpleEncodingTrait : AttrInterface<"SimpleEncodingTrait"> {
   let cppNamespace = "a::traits";
 // ATTR-INTERFACE: namespace a::traits {
+// ATTR-INTERFACE-EMPTY:
 // ATTR-INTERFACE-NEXT: class SimpleEncodingTrait;
 }
 
@@ -114,6 +117,7 @@ def SimpleOpInterface : OpInterface<"SimpleOpInterface"> {
     Simple Op Interface description
     }];
 // OP-INTERFACE: namespace a::traits {
+// OP-INTERFACE-EMPTY:
 // OP-INTERFACE-NEXT: /// Simple Op Interface description
 // OP-INTERFACE-NEXT: class SimpleOpInterface;
 }

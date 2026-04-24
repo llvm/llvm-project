@@ -75,9 +75,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
-  Target *target_ptr = m_exe_ctx.GetTargetPtr();
-  // Fallback to the dummy target, which can allow for expression evaluation.
-  Target &target = target_ptr ? *target_ptr : GetDummyTarget();
+  Target &target = m_exe_ctx.GetTargetRef();
 
   EvaluateExpressionOptions eval_options =
       m_expr_options.GetEvaluateExpressionOptions(target, m_varobj_options);
@@ -95,9 +93,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 
   // Either the language was explicitly specified, or we check the frame.
-  lldb::LanguageType language = m_expr_options.language;
-  if (language == lldb::eLanguageTypeUnknown && frame)
-    language = frame->GuessLanguage().AsLanguageType();
+  SourceLanguage language{m_expr_options.language};
+  if (!language && frame)
+    language = frame->GuessLanguage();
 
   // Add a hint if object description was requested, but no description
   // function was implemented.
@@ -118,15 +116,15 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     static const std::regex swift_class_regex(
         "^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
 
-    if (GetDebugger().GetShowDontUsePoHint() && target_ptr &&
-        (language == lldb::eLanguageTypeSwift ||
-         language == lldb::eLanguageTypeObjC) &&
+    if (GetDebugger().GetShowDontUsePoHint() && !target.IsDummyTarget() &&
+        (language.AsLanguageType() == lldb::eLanguageTypeSwift ||
+         language.IsObjC()) &&
         std::regex_match(output.data(), swift_class_regex)) {
 
       result.AppendNote(
           "object description requested, but type doesn't implement "
           "a custom object description. Consider using \"p\" instead of "
-          "\"po\" (this note will only be shown once per debug session).\n");
+          "\"po\" (this note will only be shown once per debug session)");
       note_shown = true;
     }
   };
@@ -170,8 +168,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     Status status;
     auto valobj_sp = frame->GetValueForVariableExpressionPath(
         expr, eval_options.GetUseDynamic(),
-        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp,
-        status);
+        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
+            StackFrame::eExpressionPathOptionsDisallowGlobals,
+        var_sp, status, lldb::eDILModeSimple);
     if (valobj_sp && status.Success() && valobj_sp->GetError().Success()) {
       if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())
@@ -193,7 +192,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   // Second, try `expr` as a persistent variable.
   if (expr.starts_with("$"))
-    if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
+    if (auto *state = target.GetPersistentExpressionStateForLanguage(
+            language.AsLanguageType()))
       if (auto var_sp = state->GetVariable(expr))
         if (auto valobj_sp = var_sp->GetValueObject()) {
           dump_val_object(*valobj_sp);

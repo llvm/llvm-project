@@ -31,7 +31,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace dwarf;
@@ -47,7 +46,7 @@ static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
     if (!PropName.empty())
       OS << PropName;
     else
-      OS << format("DW_APPLE_PROPERTY_0x%" PRIx64, Bit);
+      OS << formatv("DW_APPLE_PROPERTY_{0:x}", Bit);
     if (!(Val ^= Bit))
       break;
     OS << ", ";
@@ -97,8 +96,7 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
          "bad FORM for location expression");
   DWARFContext &Ctx = U->getContext();
   ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
-  DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                     Ctx.isLittleEndian(), 0);
+  DataExtractor Data(Expr, Ctx.isLittleEndian());
   DWARFExpression DE(Data, U->getAddressByteSize(), U->getFormParams().Format);
   printDwarfExpression(&DE, OS, DumpOpts, U);
 }
@@ -127,6 +125,25 @@ prettyLanguageVersionString(const DWARFAttribute &AttrValue,
 
   return llvm::dwarf::LanguageDescription(
       static_cast<SourceLanguageName>(*LName), *LVersion);
+}
+
+static llvm::Expected<llvm::StringRef>
+getApplePropertyName(const DWARFDie &PropDIE) {
+  if (!PropDIE)
+    return llvm::createStringError("invalid DIE");
+
+  if (PropDIE.getTag() != DW_TAG_APPLE_property)
+    return llvm::createStringError("not referencing a DW_TAG_APPLE_property");
+
+  auto PropNameForm = PropDIE.find(DW_AT_APPLE_property_name);
+  if (!PropNameForm)
+    return "";
+
+  auto NameOrErr = PropNameForm->getAsCString();
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+
+  return *NameOrErr;
 }
 
 static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
@@ -228,11 +245,21 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
   if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin ||
-      Attr == DW_AT_call_origin) {
+      Attr == DW_AT_call_origin || Attr == DW_AT_import ||
+      Attr == DW_AT_LLVM_virtual_call_origin) {
     if (const char *Name =
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
+  } else if (Attr == DW_AT_APPLE_property) {
+    auto PropDIE = Die.getAttributeValueAsReferencedDie(FormValue);
+    if (auto PropNameOrErr = getApplePropertyName(PropDIE))
+      OS << Space << "\"" << *PropNameOrErr << '\"';
+    else
+      DumpOpts.RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          llvm::formatv("decoding DW_AT_APPLE_property_name: {}",
+                        toString(PropNameOrErr.takeError()))));
   } else if (Attr == DW_AT_type || Attr == DW_AT_containing_type) {
     DWARFDie D = resolveReferencedType(Die, FormValue);
     if (D && !D.isNULL()) {
@@ -650,7 +677,7 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
     uint32_t abbrCode = debug_info_data.getULEB128(&offset);
     if (DumpOpts.ShowAddresses)
       WithColor(OS, HighlightColor::Address).get()
-          << format("\n0x%8.8" PRIx64 ": ", Offset);
+          << formatv("\n{0:x8}: ", Offset);
 
     if (abbrCode) {
       auto AbbrevDecl = getAbbreviationDeclarationPtr();
@@ -658,11 +685,11 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
         WithColor(OS, HighlightColor::Tag).get().indent(Indent)
             << formatv("{0}", getTag());
         if (DumpOpts.Verbose) {
-          OS << format(" [%u] %c", abbrCode,
-                       AbbrevDecl->hasChildren() ? '*' : ' ');
+          OS << formatv(" [{0}] {1}", abbrCode,
+                        AbbrevDecl->hasChildren() ? '*' : ' ');
           if (std::optional<uint32_t> ParentIdx = Die->getParentIdx())
-            OS << format(" (0x%8.8" PRIx64 ")",
-                         U->getDIEAtIndex(*ParentIdx).getOffset());
+            OS << formatv(" ({0:x8})",
+                          U->getDIEAtIndex(*ParentIdx).getOffset());
         }
         OS << '\n';
 
@@ -676,7 +703,9 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
           DIDumpOptions ChildDumpOpts = DumpOpts;
           ChildDumpOpts.ShowParents = false;
           while (Child) {
-            Child.dump(OS, Indent + 2, ChildDumpOpts);
+            if (DumpOpts.FilterChildTag.empty() ||
+                llvm::is_contained(DumpOpts.FilterChildTag, Child.getTag()))
+              Child.dump(OS, Indent + 2, ChildDumpOpts);
             Child = Child.getSibling();
           }
         }
@@ -824,6 +853,7 @@ bool DWARFAttribute::mayHaveLocationExpr(dwarf::Attribute Attr) {
   // Extensions.
   case DW_AT_GNU_call_site_value:
   case DW_AT_GNU_call_site_target:
+  case DW_AT_GNU_call_site_target_clobbered:
     return true;
   default:
     return false;

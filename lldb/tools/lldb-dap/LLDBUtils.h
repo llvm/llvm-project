@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_LLDBUTILS_H
 
 #include "DAPForward.h"
+#include "Protocol/ProtocolBase.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
@@ -30,50 +31,13 @@ namespace lldb_dap {
 /// Run a list of LLDB commands in the LLDB command interpreter.
 ///
 /// All output from every command, including the prompt + the command
-/// is placed into the "strm" argument.
-///
-/// Each individual command can be prefixed with \b ! and/or \b ? in no
-/// particular order. If \b ? is provided, then the output of that command is
-/// only emitted if it fails, and if \b ! is provided, then the output is
-/// emitted regardless, and \b false is returned without executing the
-/// remaining commands.
-///
-/// \param[in] debugger
-///     The debugger that will execute the lldb commands.
-///
-/// \param[in] prefix
-///     A string that will be printed into \a strm prior to emitting
-///     the prompt + command and command output. Can be NULL.
-///
-/// \param[in] commands
-///     An array of LLDB commands to execute.
-///
-/// \param[in] strm
-///     The stream that will receive the prefix, prompt + command and
-///     all command output.
-///
-/// \param[in] parse_command_directives
-///     If \b false, then command prefixes like \b ! or \b ? are not parsed and
-///     each command is executed verbatim.
-///
-/// \param[in] echo_commands
-///     If \b true, the command are echoed to the stream.
-///
-/// \return
-///     \b true, unless a command prefixed with \b ! fails and parsing of
-///     command directives is enabled.
-bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                     const llvm::ArrayRef<std::string> &commands,
-                     llvm::raw_ostream &strm, bool parse_command_directives,
-                     bool echo_commands);
-
-/// Run a list of LLDB commands in the LLDB command interpreter.
-///
-/// All output from every command, including the prompt + the command
 /// is returned in the std::string return value.
 ///
 /// \param[in] debugger
 ///     The debugger that will execute the lldb commands.
+///
+/// \param[in] mutex
+///     The mutex protecting this target.
 ///
 /// \param[in] prefix
 ///     A string that will be printed into \a strm prior to emitting
@@ -96,8 +60,9 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 /// \return
 ///     A std::string that contains the prefix and all commands and
 ///     command output.
-std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                            const llvm::ArrayRef<std::string> &commands,
+std::string RunLLDBCommands(lldb::SBDebugger &debugger, lldb::SBMutex mutex,
+                            llvm::StringRef prefix,
+                            const llvm::ArrayRef<protocol::String> &commands,
                             bool &required_command_failed,
                             bool parse_command_directives = true,
                             bool echo_commands = false);
@@ -125,7 +90,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread);
 /// \return
 ///     A unique integer that allows us to easily find the right
 ///     stack frame within a thread on subsequent VS code requests.
-int64_t MakeDAPFrameID(lldb::SBFrame &frame);
+uint64_t MakeDAPFrameID(lldb::SBFrame &frame);
 
 /// Given a DAP frame ID, convert to a LLDB thread index id.
 ///
@@ -152,17 +117,6 @@ uint32_t GetLLDBThreadIndexID(uint64_t dap_frame_id);
 /// \return
 ///     The LLDB frame index ID.
 uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
-
-/// Gets all the environment variables from the json object depending on if the
-/// kind is an object or an array.
-///
-/// \param[in] arguments
-///     The json object with the launch options
-///
-/// \return
-///     The environment variables stored in the env key
-lldb::SBEnvironment
-GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 
 /// Gets an SBFileSpec and returns its path as a string.
 ///
@@ -243,11 +197,29 @@ private:
 lldb::StopDisassemblyType GetStopDisassemblyDisplay(lldb::SBDebugger &debugger);
 
 /// Take ownership of the stored error.
-llvm::Error ToError(const lldb::SBError &error);
+llvm::Error ToError(const lldb::SBError &error, bool show_user = true);
 
 /// Provides the string value if this data structure is a string type.
 std::string GetStringValue(const lldb::SBStructuredData &data);
 
+/// Converts UTF16 column codeunits to bytes.
+/// we are recieving utf8 from the specification.
+/// UTF16 codunit size => 2 bytes.
+/// UTF8 codunit size => 1 byte.
+/// Example
+/// | info     | info  | utf16_cu | size in bytes |
+/// | fake f   | ƒ     | 1        | 2             |
+/// | fake c   | ç     | 1        | 3             |
+/// | poop char| 💩    | 2        | 4             |
+///
+/// so with inputs string of
+/// (`ƒ💩`, 3) we have 3 utf16_u and ( 2 + 4 ) bytes.
+/// (`ƒ💩`, 2) we have 3 utf16_u and ( 2 + 4 ) bytes but the position is in
+///  between the 💩 char so we return null since the codepoint is not complete.
+///
+/// see https://utf8everywhere.org/#characters for more info.
+std::optional<size_t> UTF16CodeunitToBytes(llvm::StringRef line,
+                                           uint32_t utf16_codeunits);
 } // namespace lldb_dap
 
 #endif

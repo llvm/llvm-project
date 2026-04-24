@@ -207,12 +207,12 @@ LLVM_ABI bool replace_path_prefix(SmallVectorImpl<char> &Path,
 LLVM_ABI StringRef remove_leading_dotslash(StringRef path LLVM_LIFETIME_BOUND,
                                            Style style = Style::native);
 
-/// In-place remove any './' and optionally '../' components from a path.
+/// Remove './' and optionally '../' components, and canonicalize separators.
 ///
-/// @param path processed path
+/// @param path processed path.
 /// @param remove_dot_dot specify if '../' (except for leading "../") should be
-/// removed
-/// @result True if path was changed
+/// removed.
+/// @result True if path was changed.
 LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path,
                           bool remove_dot_dot = false,
                           Style style = Style::native);
@@ -263,6 +263,14 @@ LLVM_ABI void append(SmallVectorImpl<char> &path, const_iterator begin,
 /// @param result Holds the result of the transformation.
 LLVM_ABI void native(const Twine &path, SmallVectorImpl<char> &result,
                      Style style = Style::native);
+
+/// Convert path to the native form and return it as a std::string. This is used
+/// to give paths to users and operating system calls in the platform's normal
+/// way. For example, on Windows all '/' are converted to '\'. On Unix, it
+/// converts all '\' to '/'.
+///
+/// @param path A path that is transformed to native format.
+LLVM_ABI std::string native(const Twine &path, Style style = Style::native);
 
 /// Convert path to the native form in place. This is used to give paths to
 /// users and operating system calls in the platform's normal way. For example,

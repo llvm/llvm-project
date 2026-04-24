@@ -4,5 +4,5 @@
 // RUN:   -nogpuinc -nogpulib \
 // RUN:   %s 2>&1 | FileCheck %s
 
-// CHECK: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx1030"}}
-// CHECK: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx1031"}}
+// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx1030"
+// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx1031"

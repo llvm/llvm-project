@@ -114,7 +114,7 @@ Register llvm::constrainOperandRegClass(
   // Assume physical registers are properly constrained.
   assert(Reg.isVirtual() && "PhysReg not implemented");
 
-  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx, &TRI);
+  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx);
   // Some of the target independent instructions, like COPY, may not impose any
   // register class constraints on some of their operands: If it's a use, we can
   // skip constraining as the instruction defining the register would constrain
@@ -152,7 +152,7 @@ Register llvm::constrainOperandRegClass(
                                   RegMO);
 }
 
-bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
+void llvm::constrainSelectedInstRegOperands(MachineInstr &I,
                                             const TargetInstrInfo &TII,
                                             const TargetRegisterInfo &TRI,
                                             const RegisterBankInfo &RBI) {
@@ -170,7 +170,6 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
       continue;
 
     LLVM_DEBUG(dbgs() << "Converting operand: " << MO << '\n');
-    assert(MO.isReg() && "Unsupported non-reg operand");
 
     Register Reg = MO.getReg();
     // Physical registers don't need to be constrained.
@@ -195,7 +194,6 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
         I.tieOperands(DefIdx, OpI);
     }
   }
-  return true;
 }
 
 bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
@@ -234,11 +232,11 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
 
 static void reportGISelDiagnostic(DiagnosticSeverity Severity,
                                   MachineFunction &MF,
-                                  const TargetPassConfig &TPC,
                                   MachineOptimizationRemarkEmitter &MORE,
                                   MachineOptimizationRemarkMissed &R) {
-  bool IsFatal = Severity == DS_Error &&
-                 TPC.isGlobalISelAbortEnabled();
+  bool IsGlobalISelAbortEnabled =
+      MF.getTarget().Options.GlobalISelAbort == GlobalISelAbortMode::Enable;
+  bool IsFatal = Severity == DS_Error && IsGlobalISelAbortEnabled;
   // Print the function name explicitly if we don't have a debug location (which
   // makes the diagnostic less useful) or if we're going to emit a raw error.
   if (!R.getLocation().isValid() || IsFatal)
@@ -250,20 +248,20 @@ static void reportGISelDiagnostic(DiagnosticSeverity Severity,
     MORE.emit(R);
 }
 
-void llvm::reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
+void llvm::reportGISelWarning(MachineFunction &MF,
                               MachineOptimizationRemarkEmitter &MORE,
                               MachineOptimizationRemarkMissed &R) {
-  reportGISelDiagnostic(DS_Warning, MF, TPC, MORE, R);
+  reportGISelDiagnostic(DS_Warning, MF, MORE, R);
 }
 
-void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
+void llvm::reportGISelFailure(MachineFunction &MF,
                               MachineOptimizationRemarkEmitter &MORE,
                               MachineOptimizationRemarkMissed &R) {
   MF.getProperties().setFailedISel();
-  reportGISelDiagnostic(DS_Error, MF, TPC, MORE, R);
+  reportGISelDiagnostic(DS_Error, MF, MORE, R);
 }
 
-void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
+void llvm::reportGISelFailure(MachineFunction &MF,
                               MachineOptimizationRemarkEmitter &MORE,
                               const char *PassName, StringRef Msg,
                               const MachineInstr &MI) {
@@ -271,9 +269,10 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                                     MI.getDebugLoc(), MI.getParent());
   R << Msg;
   // Printing MI is expensive;  only do it if expensive remarks are enabled.
-  if (TPC.isGlobalISelAbortEnabled() || MORE.allowExtraAnalysis(PassName))
+  if (MF.getTarget().Options.GlobalISelAbort == GlobalISelAbortMode::Enable ||
+      MORE.allowExtraAnalysis(PassName))
     R << ": " << ore::MNV("Inst", MI);
-  reportGISelFailure(MF, TPC, MORE, R);
+  reportGISelFailure(MF, MORE, R);
 }
 
 unsigned llvm::getInverseGMinMaxOpcode(unsigned MinMaxOpc) {
@@ -451,8 +450,10 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
           VReg, MRI, LookThroughInstrs);
   if (!Reg)
     return std::nullopt;
-  return FPValueAndVReg{getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF(),
-                        Reg->VReg};
+
+  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
+                   Reg->Value);
+  return FPValueAndVReg{FloatVal, Reg->VReg};
 }
 
 const ConstantFP *
@@ -588,7 +589,7 @@ bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
     return true;
   }
 
-  LeftoverTy = LLT::scalar(LeftoverSize);
+  LeftoverTy = LLT::integer(LeftoverSize);
   // For irregular sizes, extract the individual parts.
   for (unsigned I = 0; I != NumParts; ++I) {
     Register NewReg = MRI.createGenericVirtualRegister(MainTy);
@@ -775,6 +776,10 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
     return minimum(C1, C2);
   case TargetOpcode::G_FMAXIMUM:
     return maximum(C1, C2);
+  case TargetOpcode::G_FMINIMUMNUM:
+    return minimumnum(C1, C2);
+  case TargetOpcode::G_FMAXIMUMNUM:
+    return maximumnum(C1, C2);
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     // FIXME: These operations were unfortunately named. fminnum/fmaxnum do not
@@ -789,15 +794,35 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
   return std::nullopt;
 }
 
+static GBuildVector *getBuildVectorLikeDef(Register Reg,
+                                           const MachineRegisterInfo &MRI) {
+  if (auto *BV = getOpcodeDef<GBuildVector>(Reg, MRI))
+    return BV;
+
+  auto *Bitcast = getOpcodeDef(TargetOpcode::G_BITCAST, Reg, MRI);
+  if (!Bitcast)
+    return nullptr;
+
+  auto [Dst, DstTy, Src, SrcTy] = Bitcast->getFirst2RegLLTs();
+  if (!SrcTy.isVector() || !DstTy.isVector())
+    return nullptr;
+  if (SrcTy.getElementCount() != DstTy.getElementCount())
+    return nullptr;
+  if (SrcTy.getScalarSizeInBits() != DstTy.getScalarSizeInBits())
+    return nullptr;
+
+  return getOpcodeDef<GBuildVector>(Src, MRI);
+}
+
 SmallVector<APInt>
 llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
                               const Register Op2,
                               const MachineRegisterInfo &MRI) {
-  auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+  auto *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
   if (!SrcVec2)
     return SmallVector<APInt>();
 
-  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+  auto *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
   if (!SrcVec1)
     return SmallVector<APInt>();
 
@@ -810,89 +835,6 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
     FoldedElements.push_back(*MaybeCst);
   }
   return FoldedElements;
-}
-
-bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
-                           bool SNaN) {
-  const MachineInstr *DefMI = MRI.getVRegDef(Val);
-  if (!DefMI)
-    return false;
-
-  if (DefMI->getFlag(MachineInstr::FmNoNans))
-    return true;
-
-  // If the value is a constant, we can obviously see if it is a NaN or not.
-  if (const ConstantFP *FPVal = getConstantFPVRegVal(Val, MRI)) {
-    return !FPVal->getValueAPF().isNaN() ||
-           (SNaN && !FPVal->getValueAPF().isSignaling());
-  }
-
-  if (DefMI->getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
-    for (const auto &Op : DefMI->uses())
-      if (!isKnownNeverNaN(Op.getReg(), MRI, SNaN))
-        return false;
-    return true;
-  }
-
-  switch (DefMI->getOpcode()) {
-  default:
-    break;
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FREM:
-  case TargetOpcode::G_FSIN:
-  case TargetOpcode::G_FCOS:
-  case TargetOpcode::G_FTAN:
-  case TargetOpcode::G_FACOS:
-  case TargetOpcode::G_FASIN:
-  case TargetOpcode::G_FATAN:
-  case TargetOpcode::G_FATAN2:
-  case TargetOpcode::G_FCOSH:
-  case TargetOpcode::G_FSINH:
-  case TargetOpcode::G_FTANH:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FMAD:
-    if (SNaN)
-      return true;
-
-    // TODO: Need isKnownNeverInfinity
-    return false;
-  case TargetOpcode::G_FMINNUM_IEEE:
-  case TargetOpcode::G_FMAXNUM_IEEE: {
-    if (SNaN)
-      return true;
-    // This can return a NaN if either operand is an sNaN, or if both operands
-    // are NaN.
-    return (isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI) &&
-            isKnownNeverSNaN(DefMI->getOperand(2).getReg(), MRI)) ||
-           (isKnownNeverSNaN(DefMI->getOperand(1).getReg(), MRI) &&
-            isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI));
-  }
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXNUM: {
-    // Only one needs to be known not-nan, since it will be returned if the
-    // other ends up being one.
-    return isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI, SNaN) ||
-           isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI, SNaN);
-  }
-  }
-
-  if (SNaN) {
-    // FP operations quiet. For now, just handle the ones inserted during
-    // legalization.
-    switch (DefMI->getOpcode()) {
-    case TargetOpcode::G_FPEXT:
-    case TargetOpcode::G_FPTRUNC:
-    case TargetOpcode::G_FCANONICALIZE:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  return false;
 }
 
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
@@ -1324,7 +1266,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
   LLT TargetScalar = TargetTy.getScalarType();
   unsigned GCD = std::gcd(OrigScalar.getSizeInBits().getFixedValue(),
                           TargetScalar.getSizeInBits().getFixedValue());
-  return LLT::scalar(GCD);
+  return LLT::integer(GCD);
 }
 
 std::optional<int> llvm::getSplatIndex(MachineInstr &MI) {
@@ -1870,6 +1812,7 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
     return true;
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTLS:
   case TargetOpcode::G_ABS:
   case TargetOpcode::G_CTPOP:
   case TargetOpcode::G_BSWAP:
@@ -1893,6 +1836,8 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_UADDSAT:
   case TargetOpcode::G_SSUBSAT:
   case TargetOpcode::G_USUBSAT:
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX:
     return false;
   case TargetOpcode::G_SSHLSAT:
   case TargetOpcode::G_USHLSAT:

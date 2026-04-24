@@ -341,7 +341,7 @@ func.func @mixed_parallel_reduced_results(%arg0 : tensor<?x?x?xf32>,
 func.func @map_no_inputs(%init: tensor<64xf32>) -> tensor<64xf32> {
    %add = linalg.map
       outs(%init:tensor<64xf32>)
-      () {
+      (%out: f32) {
         %0 = arith.constant 0.0: f32
         linalg.yield %0: f32
       }
@@ -349,7 +349,7 @@ func.func @map_no_inputs(%init: tensor<64xf32>) -> tensor<64xf32> {
 }
 // CHECK-LABEL: func @map_no_inputs
 //       CHECK:   linalg.map outs
-//  CHECK-NEXT:   () {
+//  CHECK-NEXT:   (%[[OUT:.*]]: f32) {
 //  CHECK-NEXT:     arith.constant
 //  CHECK-NEXT:     linalg.yield
 //  CHECK-NEXT:   }
@@ -361,7 +361,7 @@ func.func @map_binary(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
    %add = linalg.map
           ins(%lhs, %rhs: tensor<64xf32>, tensor<64xf32>)
           outs(%init:tensor<64xf32>)
-          (%lhs_elem: f32, %rhs_elem: f32) {
+          (%lhs_elem: f32, %rhs_elem: f32, %out: f32) {
             %0 = arith.addf %lhs_elem, %rhs_elem: f32
             linalg.yield %0: f32
           }
@@ -378,7 +378,7 @@ func.func @map_binary_memref(%lhs: memref<64xf32>, %rhs: memref<64xf32>,
    linalg.map
       ins(%lhs, %rhs: memref<64xf32>, memref<64xf32>)
       outs(%init:memref<64xf32>)
-      (%lhs_elem: f32, %rhs_elem: f32) {
+      (%lhs_elem: f32, %rhs_elem: f32, %out: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f32
         linalg.yield %0: f32
       }
@@ -393,7 +393,7 @@ func.func @map_unary(%input: tensor<64xf32>, %init: tensor<64xf32>) -> tensor<64
    %abs = linalg.map
           ins(%input:tensor<64xf32>)
           outs(%init:tensor<64xf32>)
-          (%input_elem: f32) {
+          (%input_elem: f32, %out: f32) {
             %0 = math.absf %input_elem: f32
             linalg.yield %0: f32
           }
@@ -408,7 +408,7 @@ func.func @map_unary_memref(%input: memref<64xf32>, %init: memref<64xf32>) {
    linalg.map
       ins(%input:memref<64xf32>)
       outs(%init:memref<64xf32>)
-      (%input_elem: f32) {
+      (%input_elem: f32, %out: f32) {
         %0 = math.absf %input_elem: f32
         linalg.yield %0: f32
       }
@@ -604,7 +604,7 @@ func.func @map_arith_with_attr(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
   %add = linalg.map
           ins(%lhs, %rhs: tensor<64xf32>, tensor<64xf32>)
           outs(%init:tensor<64xf32>)
-          (%lhs_elem: f32, %rhs_elem: f32) {
+          (%lhs_elem: f32, %rhs_elem: f32, %out: f32) {
             %0 = arith.addf %lhs_elem, %rhs_elem fastmath<fast> : f32
             linalg.yield %0: f32
           }
@@ -622,7 +622,7 @@ func.func @map_arith_with_attr(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
 
 func.func @map_not_short_form_compatible(%lhs: tensor<1x32xf32>, %rhs: tensor<1x32xf32>, %init: tensor<1x32xf32>) -> tensor<1x32xf32> {
   %mapped = linalg.map ins(%lhs, %rhs : tensor<1x32xf32>, tensor<1x32xf32>) outs(%init : tensor<1x32xf32>)
-    (%in_1: f32, %in_2: f32) {
+    (%in_1: f32, %in_2: f32, %out: f32) {
       %1 = arith.maximumf %in_1, %in_2 : f32
       linalg.yield %in_1 : f32
     }
@@ -634,7 +634,7 @@ func.func @map_not_short_form_compatible(%lhs: tensor<1x32xf32>, %rhs: tensor<1x
 // CHECK-NOT:     linalg.map { arith.maximumf } ins(%[[LHS]] : tensor<1x32xf32>
 // CHECK:         linalg.map ins(%[[LHS]], %[[RHS]] : tensor<1x32xf32>, tensor<1x32xf32>) 
 // CHECK-SAME:               outs(%[[INIT]] : tensor<1x32xf32>)
-// CHECK-NEXT:      (%[[IN1:.*]]: f32, %[[IN2:.*]]: f32) {
+// CHECK-NEXT:      (%[[IN1:.*]]: f32, %[[IN2:.*]]: f32, %[[OUT:.*]]: f32) {
 // CHECK-NEXT:        %[[MAX_RESULT:.*]] = arith.maximumf %[[IN1]], %[[IN2]] : f32
 // CHECK-NEXT:        linalg.yield %[[IN1]] : f32
 // CHECK-NEXT:    }
@@ -755,3 +755,77 @@ func.func @conv2d_channel_first_q_promote(%img: tensor<100x3x224x224xi8>, %filt:
 // CHECK-LABEL: func @conv2d_channel_first_q_promote(
 // CHECK:   %[[arg0:[a-zA-z0-9]*]]: tensor<100x3x224x224xi8>, %[[arg1:[a-zA-z0-9]*]]: tensor<64x3x5x5xi8>, %[[arg2:[a-zA-z0-9]*]]: i8, %[[arg3:[a-zA-z0-9]*]]: i8)
 // CHECK:         linalg.conv_2d_nchw_fchw_q {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>} ins(%[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]] : tensor<100x3x224x224xi8>, tensor<64x3x5x5xi8>, i8, i8) outs(%{{.*}} : tensor<100x64x220x220xi32>) -> tensor<100x64x220x220xi32>
+
+// -----
+
+func.func @pack_memref(%source: memref<128x256xf32>, %dest: memref<8x16x8x32xf32>) {
+  linalg.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+      into %dest : memref<128x256xf32> -> memref<8x16x8x32xf32>
+  return
+}
+
+// CHECK-LABEL: func @pack_memref(
+// CHECK:   %[[source:[a-zA-z0-9]*]]: memref<128x256xf32>, %[[dest:[a-zA-z0-9]*]]: memref<8x16x8x32xf32>) {
+// CHECK:     linalg.pack %[[source]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %[[dest]] : memref<128x256xf32> -> memref<8x16x8x32xf32>
+// CHECK:   return
+// CHECK: }
+// -----
+
+func.func @unpack_memref(%source: memref<16x8x8x32xf32>, %dest: memref<128x256xf32>) {
+  linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+      into %dest : memref<16x8x8x32xf32> -> memref<128x256xf32>
+  return
+}
+
+// CHECK-LABEL: func @unpack_memref(
+// CHECK:   %[[source:[a-zA-z0-9]*]]: memref<16x8x8x32xf32>, %[[dest:[a-zA-z0-9]*]]: memref<128x256xf32>) {
+// CHECK:         linalg.unpack %[[source]] inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %[[dest]] : memref<16x8x8x32xf32> -> memref<128x256xf32>
+// CHECK:   return
+
+// -----
+
+// CHECK-LABEL: func @test_pack_memref
+func.func @test_pack_memref(%arg0: memref<128x256xf32>, %arg1: memref<16x8x8x32xf32>) {
+  // CHECK-NOT: %{{.*}} = linalg.pack
+  // CHECK: linalg.pack %{{.*}} inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : memref<128x256xf32> -> memref<16x8x8x32xf32>
+  linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : memref<128x256xf32> -> memref<16x8x8x32xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @test_unpack_memref
+func.func @test_unpack_memref(%arg0: memref<16x8x8x32xf32>, %arg1: memref<128x256xf32>) {
+  // CHECK: linalg.unpack %{{.*}} inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : memref<16x8x8x32xf32>
+  linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : memref<16x8x8x32xf32> -> memref<128x256xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @test_pack_memref_with_padding
+func.func @test_pack_memref_with_padding(%arg0: memref<127x255xf32>, %arg1: memref<16x8x8x32xf32>, %pad: f32) {
+  // CHECK: linalg.pack %{{.*}} padding_value(%{{.*}} : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : memref<127x255xf32>
+  linalg.pack %arg0 padding_value(%pad : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : memref<127x255xf32> -> memref<16x8x8x32xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @test_pack_tensor
+func.func @test_pack_tensor(%arg0: tensor<128x256xf32>, %arg1: tensor<16x8x8x32xf32>) -> tensor<16x8x8x32xf32> {
+  // CHECK: %[[RESULT:.*]] = linalg.pack %{{.*}} inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
+  %0 = linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
+  // CHECK: return %[[RESULT]] : tensor<16x8x8x32xf32>
+  return %0 : tensor<16x8x8x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @test_unpack_tensor
+func.func @test_unpack_tensor(%arg0: tensor<16x8x8x32xf32>, %arg1: tensor<128x256xf32>) -> tensor<128x256xf32> {
+  // CHECK: %[[RESULT:.*]] = linalg.unpack %{{.*}} inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
+  %0 = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
+  // CHECK: return %[[RESULT]] : tensor<128x256xf32>
+  return %0 : tensor<128x256xf32>
+}

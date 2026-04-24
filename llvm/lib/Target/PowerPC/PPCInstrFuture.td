@@ -11,6 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+class XForm_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                list<dag> pattern> : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> RS;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = RS;
+  let Inst{11...20} = 0;
+  let Inst{21...30} = xo;
+  let Inst{31} = 0;
+}
+
 class XOForm_RTAB5_L1<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
                       string asmstr, list<dag> pattern>
     : I<opcode, OOL, IOL, asmstr, NoItinerary> {
@@ -182,6 +194,22 @@ class XX3Form_XTAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31} = XT{5};
 }
 
+class XForm_RBS5<bits<6> opCode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                 InstrItinClass itin, list<dag> pattern>
+    : I<opCode, OOL, IOL, asmstr, itin> {
+
+  bits<5> RB;
+  bits<5> RS;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = RS;
+  let Inst{11...15} = 0;
+  let Inst{16...20} = RB;
+  let Inst{21...30} = xo;
+  let Inst{31} = 0;
+}
+
 class XX3Form_XTAB6_S<bits<5> xo, dag OOL, dag IOL, string asmstr,
                        list<dag> pattern>
     : I<59, OOL, IOL, asmstr, NoItinerary> {
@@ -284,9 +312,41 @@ class 8RR_XX4Form_XTABC6_P<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Inst{63} = XT{5};
 }
 
+class MLS_DForm_R_SI32_RTA5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
+                            InstrItinClass itin, list<dag> pattern>
+    : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<5> RT;
+  bits<5> RA;
+  bits<32> SI;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6...7} = 2;
+  let Inst{8} = 0;
+  let Inst{11} = PCRel;
+  let Inst{16...31} = SI{31...16};
+
+  // The instruction.
+  let Inst{38...42} = RT;
+  let Inst{43...47} = RA;
+  let Inst{48...63} = SI{15...0};
+}
+
+multiclass MLS_DForm_R_SI32_RTA5_p<bits<6> opcode, dag OOL, dag IOL,
+                                   dag PCRel_IOL, string asmstr,
+                                   InstrItinClass itin> {
+  def NAME : MLS_DForm_R_SI32_RTA5<opcode, OOL, IOL, !strconcat(asmstr, ", 0"),
+                                   itin, []>;
+  def pc : MLS_DForm_R_SI32_RTA5<opcode, OOL, PCRel_IOL,
+                                 !strconcat(asmstr, ", 1"), itin, []>,
+           isPCRel;
+}
+
 //-------------------------- Instruction definitions -------------------------//
 // Predicate combinations available:
 // [IsISAFuture]
+// [IsISAFuture, PrefixInstrs]
 // [HasVSX, IsISAFuture]
 // [HasVSX, PrefixInstrs, IsISAFuture]
 
@@ -294,9 +354,43 @@ let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L), "subfus",
                                  "$RT, $L, $RA, $RB", []>;
+  def TLBSYNCIO
+      : XForm_RS5<31, 564, (outs), (ins g8rc:$RS), "tlbsyncio $RS", []>;
+  def PTESYNCIO
+      : XForm_RS5<31, 596, (outs), (ins g8rc:$RS), "ptesyncio $RS", []>;
+  def TLBIEP : XForm_RSB5_UIMM2_2UIMM1<31, 50, (outs),
+                                       (ins gprc:$RB, gprc:$RS, u2imm:$RIC,
+                                           u1imm:$PRS, u1imm:$R),
+                                       "tlbiep $RB, $RS, $RIC, $PRS, $R", []>;
+  def TLBIEIO
+      : XForm_RSB5_UIMM2<31, 18, (outs), (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC),
+                         "tlbieio $RB, $RS, $RIC", []>;
+  def MTLPL : XForm_RBS5<31, 275, (outs), (ins gprc:$RB, gprc:$RS),
+                         "mtlpl $RB, $RS", IIC_SprMTSPR, []>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def TLBIEP8
+        : XForm_RSB5_UIMM2_2UIMM1<31, 50, (outs),
+                                  (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC,
+                                      u1imm:$PRS, u1imm:$R),
+                                  "tlbiep $RB, $RS, $RIC, $PRS, $R", []>;
+    def MTLPL8 : XForm_RBS5<31, 275, (outs), (ins g8rc:$RB, g8rc:$RS),
+                            "mtlpl $RB, $RS", IIC_SprMTSPR, []>, isPPC64;
+  }
 }
 
-let Predicates = [HasVSX, IsISAFuture] in {
+let Predicates = [IsISAFuture, PrefixInstrs] in {
+  defm PADDIS : MLS_DForm_R_SI32_RTA5_p<15, (outs gprc:$RT),
+                                        (ins gprc_nor0:$RA, s32imm:$SI),
+                                        (ins immZero:$RA, s32imm_pcrel:$SI),
+                                        "paddis $RT, $RA, $SI", IIC_LdStLFD>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in
+    defm PADDIS8 : MLS_DForm_R_SI32_RTA5_p<15, (outs g8rc:$RT),
+                                           (ins g8rc_nox0:$RA, s32imm64:$SI),
+                                           (ins immZero:$RA, s32imm64_pcrel:$SI),
+                                           "paddis $RT, $RA, $SI", IIC_LdStLFD>;
+}
+
+let Predicates = [HasFutureVector] in {
   let mayLoad = 1 in {
     def LXVRL : XX1Form_memOp<31, 525, (outs vsrc:$XT),
                               (ins (memr $RA):$addr, g8rc:$RB),
@@ -310,6 +404,10 @@ let Predicates = [HasVSX, IsISAFuture] in {
     def LXVPRLL : XForm_XTp5_RAB5<31, 621, (outs vsrprc:$XTp),
                                   (ins (memr $RA):$addr, g8rc:$RB),
                                   "lxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
+    def LXVPB32X
+        : XForm_XTp5_RAB5<31, 877, (outs vsrprc:$XTp),
+                          (ins (memr $RA):$addr, g8rc:$RB),
+                          "lxvpb32x $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
   let mayStore = 1 in {
@@ -326,41 +424,74 @@ let Predicates = [HasVSX, IsISAFuture] in {
         : XForm_XTp5_RAB5<31, 749, (outs),
                           (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
                           "stxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
+    def STXVPB32X
+        : XForm_XTp5_RAB5<31, 1005, (outs),
+                          (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
+                          "stxvpb32x $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
   def VUPKHSNTOB : VXForm_VRTB5<387, 0, (outs vrrc:$VRT), (ins vrrc:$VRB),
-                                "vupkhsntob $VRT, $VRB", []>;
+                                "vupkhsntob $VRT, $VRB",
+                                [(set v16i8:$VRT,
+                                  (int_ppc_altivec_vupkhsntob v16i8:$VRB))]>;
   def VUPKLSNTOB : VXForm_VRTB5<387, 1, (outs vrrc:$VRT), (ins vrrc:$VRB),
-                                "vupklsntob $VRT, $VRB", []>;
+                                "vupklsntob $VRT, $VRB",
+                                [(set v16i8:$VRT,
+                                  (int_ppc_altivec_vupklsntob v16i8:$VRB))]>;
   def VUPKINT4TOBF16
       : VXForm_VRTB5_UIM2<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
-                          "vupkint4tobf16 $VRT, $VRB, $UIM", []>;
+                          "vupkint4tobf16 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint4tobf16 v16i8:$VRB, u2imm_timm:$UIM))]>;
   def VUPKINT8TOBF16
       : VXForm_VRTB5_UIM1<387, 1, (outs vrrc:$VRT), (ins vrrc:$VRB, u1imm:$UIM),
-                          "vupkint8tobf16 $VRT, $VRB, $UIM", []>;
+                          "vupkint8tobf16 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint8tobf16 v16i8:$VRB, u1imm_timm:$UIM))]>;
   def VUPKINT8TOFP32
       : VXForm_VRTB5_UIM2<387, 3, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
-                          "vupkint8tofp32 $VRT, $VRB, $UIM", []>;
+                          "vupkint8tofp32 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint8tofp32 v16i8:$VRB, u2imm_timm:$UIM))]>;
   def VUPKINT4TOFP32
       : VXForm_VRTB5_UIM3<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u3imm:$UIM),
-                          "vupkint4tofp32 $VRT, $VRB, $UIM", []>;
+                          "vupkint4tofp32 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint4tofp32 v16i8:$VRB, u3imm_timm:$UIM))]>;
 
   def VUCMPRHN : VXForm_VRTAB5<3, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                               "vucmprhn $VRT, $VRA, $VRB", []>;
+                               "vucmprhn $VRT, $VRA, $VRB",
+                               [(set v16i8:$VRT,
+                                 (int_ppc_altivec_vucmprhn v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRLN : VXForm_VRTAB5<67, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                               "vucmprln $VRT, $VRA, $VRB", []>;
+                               "vucmprln $VRT, $VRA, $VRB",
+                               [(set v16i8:$VRT,
+                                 (int_ppc_altivec_vucmprln v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRHB
       : VXForm_VRTAB5<131, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprhb $VRT, $VRA, $VRB", []>;
+                      "vucmprhb $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprhb v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRLB
       : VXForm_VRTAB5<195, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprlb $VRT, $VRA, $VRB", []>;
+                      "vucmprlb $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprlb v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRHH
       : VXForm_VRTAB5<259, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprhh $VRT, $VRA, $VRB", []>;
+                      "vucmprhh $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprhh v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRLH
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprlh $VRT, $VRA, $VRB", []>;
+                      "vucmprlh $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprlh v16i8:$VRA, v16i8:$VRB))]>;
+
+  def XVRLW : XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                            "xvrlw $XT, $XA, $XB",
+                            [(set v4i32:$XT, (int_ppc_vsx_xvrlw v4i32:$XA,
+                                                 v4i32:$XB))]>;
 
   // AES Acceleration Instructions
   def XXAESENCP : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),
@@ -464,7 +595,7 @@ let Predicates = [HasVSX, IsISAFuture] in {
                       "xsrebase3t3uqm $XT, $XA, $XB", []>;
 }
 
-let Predicates = [HasVSX, PrefixInstrs, IsISAFuture] in {
+let Predicates = [HasFutureVector, PrefixInstrs] in {
   def XXSSUMUDMCEXT
       : 8RR_XX4Form_XTABC6_P<
             34, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB, vsrc:$XC, u1imm:$P),
@@ -490,11 +621,113 @@ def : Pat<(int_ppc_vsx_stxvprl v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRL $XTp,
 def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRLL $XTp,
                                                                      $RA, $RB)>;
 
+// Regular load/store patterns for v256i1 (for ISA Future)
+let Predicates = [HasFutureVector, PairedVectorMemops] in {
+  def : Pat<(v256i1 (load iaddrX16:$src)), (LXVP iaddrX16:$src)>;
+  def : Pat<(v256i1 (load PDForm:$src)), (PLXVP memri34:$src)>;
+  def : Pat<(v256i1 (load xoaddr:$src)), (LXVPX xoaddr:$src)>;
+  def : Pat<(store v256i1:$XSp, iaddrX16:$dst), (STXVP $XSp, iaddrX16:$dst)>;
+  def : Pat<(store v256i1:$XSp, PDForm:$dst), (PSTXVP $XSp, memri34:$dst)>;
+  def : Pat<(store v256i1:$XSp, xoaddr:$dst), (STXVPX $XSp, xoaddr:$dst)>;
+}
+
+let Predicates = [HasFutureVector] in {
+  def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
+                                                     v4i32:$vB))>;
+  def : Pat<(v4i32 (int_ppc_altivec_vrlw v4i32:$vA, v4i32:$vB)),
+            (v4i32 (XVRLW v4i32:$vA, v4i32:$vB))>;
+
+  // Elliptic Curve Cryptography Patterns
+  def : Pat<(v16i8 (int_ppc_xxmulmul v16i8:$XA, v16i8:$XB, u3imm_timm:$S)),
+            (v16i8 (COPY_TO_REGCLASS (XXMULMUL RCCp.AToVSRC, RCCp.BToVSRC, $S), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxmulmulhiadd v16i8:$XA, v16i8:$XB, u1imm_timm:$S0, u1imm_timm:$S1, u1imm_timm:$S2)),
+            (v16i8 (COPY_TO_REGCLASS (XXMULMULHIADD RCCp.AToVSRC, RCCp.BToVSRC, $S0, $S1, $S2), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxmulmulloadd v16i8:$XA, v16i8:$XB, u1imm_timm:$S1, u1imm_timm:$S2)),
+            (v16i8 (COPY_TO_REGCLASS (XXMULMULLOADD RCCp.AToVSRC, RCCp.BToVSRC, $S1, $S2), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxssumudm v16i8:$XA, v16i8:$XB, u1imm_timm:$P)),
+            (v16i8 (COPY_TO_REGCLASS (XXSSUMUDM RCCp.AToVSRC, RCCp.BToVSRC, $P), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxssumudmc v16i8:$XA, v16i8:$XB, u1imm_timm:$P)),
+            (v16i8 (COPY_TO_REGCLASS (XXSSUMUDMC RCCp.AToVSRC, RCCp.BToVSRC, $P), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xxssumudmcext v16i8:$XA, v16i8:$XB, v16i8:$XC, u1imm_timm:$P)),
+            (v16i8 (COPY_TO_REGCLASS (XXSSUMUDMCEXT RCCp.AToVSRC, RCCp.BToVSRC, RCCp.CToVSRC, $P), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddadduqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDADDUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddaddsuqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDADDSUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddsubuqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDSUBUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsaddsubsuqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSADDSUBSUQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge2t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE2T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge2t2uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE2T2UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge2t3uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE2T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsmerge3t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSMERGE3T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t2uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T2UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t3uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase2t4uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE2T4UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase3t1uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE3T1UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase3t2uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE3T2UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+  def : Pat<(v16i8 (int_ppc_xsrebase3t3uqm v16i8:$XA, v16i8:$XB)),
+            (v16i8 (COPY_TO_REGCLASS (XSREBASE3T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
+}
+
+// Post Quantum Cryptography Acceleration patterns.
+// Use AddedComplexity to prefer these patterns over AltiVec patterns.
+let Predicates = [HasFutureVector], AddedComplexity = 400 in {
+  // Vector add
+  def : Pat<(v4i32 (add v4i32:$XA, v4i32:$XB)), (v4i32 (XVADDUWM $XA, $XB))>;
+  def : Pat<(v8i16 (add v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVADDUHM RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+  // Vector subtract
+  // Don't have a VSX negate instruction so use VNEGW instead.
+  def : Pat<(v4i32 (sub (v4i32 immAllZerosV), v4i32:$vB)), (v4i32 (VNEGW $vB))>;
+  def : Pat<(v4i32 (sub v4i32:$XA, v4i32:$XB)), (v4i32 (XVSUBUWM $XA, $XB))>;
+  def : Pat<(v8i16 (sub v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVSUBUHM RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+  // Vector multiply
+  def : Pat<(v4i32 (mul v4i32:$XA, v4i32:$XB)), (v4i32 (XVMULUWM $XA, $XB))>;
+  def : Pat<(v8i16 (mul v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVMULUHM RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+  // Vector multiply high intrinsics
+  def : Pat<(v4i32 (int_ppc_altivec_vmulhsw v4i32:$XA, v4i32:$XB)),
+            (v4i32 (XVMULHSW $XA, $XB))>;
+  def : Pat<(v4i32 (int_ppc_altivec_vmulhuw v4i32:$XA, v4i32:$XB)),
+            (v4i32 (XVMULHUW $XA, $XB))>;
+  def : Pat<(v8i16 (int_ppc_altivec_vmulhsh v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVMULHSH RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+  def : Pat<(v8i16 (int_ppc_altivec_vmulhuh v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVMULHUH RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+}
+
 //---------------------------- Instruction aliases ---------------------------//
 // Predicate combinations available:
 // [HasVSX, IsISAFuture]
 
-let Predicates = [HasVSX, IsISAFuture] in {
+def : InstAlias<"paddis $RT, $RA, $SI", (PADDIS gprc:$RT, gprc_nor0:$RA,
+                                            s32imm:$SI)>;
+def : InstAlias<"paddis $RT, $RA, $SI", (PADDIS8 g8rc:$RT, g8rc_nox0:$RA,
+                                            s32imm64:$SI)>;
+def : InstAlias<"plis $RT, $SI", (PADDIS gprc:$RT, ZERO, s32imm:$SI)>;
+def : InstAlias<"plis $RT, $SI", (PADDIS8 g8rc:$RT, ZERO8, s32imm64:$SI)>;
+// psubis: subtract immediate from register
+// For assembly: psubis $RT, $RA, $SI -> paddis $RT, $RA, -$SI, 0
+def : InstAlias<"psubis $RT, $RA, $SI", (PADDIS gprc:$RT, gprc_nor0:$RA,
+                                            neg_s32imm:$SI)>;
+def : InstAlias<"psubis $RT, $RA, $SI", (PADDIS8 g8rc:$RT, g8rc_nox0:$RA,
+                                            neg_s32imm64:$SI)>;
+
+let Predicates = [HasFutureVector] in {
   def : InstAlias<"xxaes128encp $XTp, $XAp, $XBp",
                   (XXAESENCP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 0)>;
   def : InstAlias<"xxaes192encp $XTp, $XAp, $XBp",

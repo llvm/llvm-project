@@ -14,7 +14,6 @@
 #define LLVM_TRANSFORMS_UTILS_LOWERVECTORINTRINSICS_H
 
 #include <cstdint>
-#include <optional>
 
 namespace llvm {
 
@@ -24,6 +23,10 @@ class Module;
 /// Lower \p CI as a loop. \p CI is a unary intrinsic with a vector argument and
 /// is deleted and replaced with a loop.
 bool lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI);
+
+/// Lower \p CI as a loop. \p CI is a binary intrinsic with two vector arguments
+/// and is deleted and replaced with a loop.
+bool lowerBinaryVectorIntrinsicAsLoop(Module &M, CallInst *CI);
 
 } // namespace llvm
 

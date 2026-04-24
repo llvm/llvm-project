@@ -323,6 +323,8 @@ void StmtProfiler::VisitReturnStmt(const ReturnStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitDeferStmt(const DeferStmt *S) { VisitStmt(S); }
+
 void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
   VisitStmt(S);
   ID.AddBoolean(S->isVolatile());
@@ -496,6 +498,12 @@ void OMPClauseProfiler::VisitOMPSizesClause(const OMPSizesClause *C) {
       Profiler->VisitExpr(E);
 }
 
+void OMPClauseProfiler::VisitOMPCountsClause(const OMPCountsClause *C) {
+  for (auto *E : C->getCountsRefs())
+    if (E)
+      Profiler->VisitExpr(E);
+}
+
 void OMPClauseProfiler::VisitOMPPermutationClause(
     const OMPPermutationClause *C) {
   for (Expr *E : C->getArgsRefs())
@@ -545,6 +553,14 @@ void OMPClauseProfiler::VisitOMPNocontextClause(const OMPNocontextClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPDefaultClause(const OMPDefaultClause *C) { }
+
+void OMPClauseProfiler::VisitOMPThreadsetClause(const OMPThreadsetClause *C) {}
+
+void OMPClauseProfiler::VisitOMPTransparentClause(
+    const OMPTransparentClause *C) {
+  if (C->getImpexType())
+    Profiler->VisitStmt(C->getImpexType());
+}
 
 void OMPClauseProfiler::VisitOMPProcBindClause(const OMPProcBindClause *C) { }
 
@@ -966,6 +982,12 @@ void OMPClauseProfiler::VisitOMPXDynCGroupMemClause(
   if (Expr *Size = C->getSize())
     Profiler->VisitStmt(Size);
 }
+void OMPClauseProfiler::VisitOMPDynGroupprivateClause(
+    const OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  if (auto *Size = C->getSize())
+    Profiler->VisitStmt(Size);
+}
 void OMPClauseProfiler::VisitOMPDoacrossClause(const OMPDoacrossClause *C) {
   VisitOMPClauseList(C);
 }
@@ -1032,6 +1054,10 @@ void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
 
 void StmtProfiler::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *S) {
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPSplitDirective(const OMPSplitDirective *S) {
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
@@ -1394,6 +1420,11 @@ void StmtProfiler::VisitSYCLUniqueStableNameExpr(
   VisitType(S->getTypeSourceInfo()->getType());
 }
 
+void StmtProfiler::VisitUnresolvedSYCLKernelCallStmt(
+    const UnresolvedSYCLKernelCallStmt *S) {
+  VisitStmt(S);
+}
+
 void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
   VisitExpr(S);
   ID.AddInteger(llvm::to_underlying(S->getIdentKind()));
@@ -1497,6 +1528,11 @@ StmtProfiler::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *S) {
 }
 
 void StmtProfiler::VisitArraySubscriptExpr(const ArraySubscriptExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitMatrixSingleSubscriptExpr(
+    const MatrixSingleSubscriptExpr *S) {
   VisitExpr(S);
 }
 
@@ -1655,6 +1691,11 @@ void StmtProfiler::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *S) {
 }
 
 void StmtProfiler::VisitExtVectorElementExpr(const ExtVectorElementExpr *S) {
+  VisitExpr(S);
+  VisitName(&S->getAccessor());
+}
+
+void StmtProfiler::VisitMatrixElementExpr(const MatrixElementExpr *S) {
   VisitExpr(S);
   VisitName(&S->getAccessor());
 }
@@ -2167,6 +2208,11 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
   ID.AddInteger(Hasher.CalculateHash());
 }
 
+void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
+}
+
 void
 StmtProfiler::VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *S) {
   VisitExpr(S);
@@ -2316,14 +2362,14 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
 }
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
-  VisitExpr(E->getIndexExpr());
-
+  VisitStmtNoChildren(E);
+  Visit(E->getIndexExpr());
   if (E->expandsToEmptyPack() || E->getExpressions().size() != 0) {
     ID.AddInteger(E->getExpressions().size());
     for (const Expr *Sub : E->getExpressions())
       Visit(Sub);
   } else {
-    VisitExpr(E->getPackIdExpression());
+    Visit(E->getPackIdExpression());
   }
 }
 
@@ -2354,7 +2400,35 @@ void StmtProfiler::VisitMaterializeTemporaryExpr(
 }
 
 void StmtProfiler::VisitCXXFoldExpr(const CXXFoldExpr *S) {
-  VisitExpr(S);
+  // For CXXFoldExpr, do not profile the callee as it may
+  // be affected by the context. e.g.,
+  //
+  // "a.h"
+  //
+  //   struct F {
+  //     template <typename... T> requires ((sizeof(T) > 0) && ...)
+  //     void operator()(T...) {}
+  //   } f;
+  //
+  // and
+  //
+  // "c.h"
+  //
+  //   void operator&&(struct X, struct X);
+  //   #include "a.h"
+  //
+  // Here we may give different profile results to F::operator() in
+  // "c.h" vs other use cases of "a.h". This is problematic in
+  // cases where we may have expression coming from different
+  // headers, e.g., modules.
+  if (S->getLHS())
+    Visit(S->getLHS());
+  else
+    ID.AddInteger(0);
+  if (S->getRHS())
+    Visit(S->getRHS());
+  else
+    ID.AddInteger(0);
   ID.AddInteger(S->getOperator());
 }
 
@@ -2394,20 +2468,24 @@ void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
 
 void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
 
+void StmtProfiler::VisitObjCObjectLiteral(const ObjCObjectLiteral *E) {
+  VisitExpr(E);
+}
+
 void StmtProfiler::VisitObjCStringLiteral(const ObjCStringLiteral *S) {
-  VisitExpr(S);
+  VisitObjCObjectLiteral(S);
 }
 
 void StmtProfiler::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
 }
 
 void StmtProfiler::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
 }
 
 void StmtProfiler::VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
 }
 
 void StmtProfiler::VisitObjCEncodeExpr(const ObjCEncodeExpr *S) {

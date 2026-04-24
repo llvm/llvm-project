@@ -145,6 +145,74 @@ TEST(CodeExtractor, InputOutputMonitoring) {
   EXPECT_FALSE(verifyFunction(*Func));
 }
 
+TEST(CodeExtractor, InputOutputReturnMonitoring) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
+    define i32 @foo(i32 %x, i32 %y, i32 %z) {
+    header:
+      %0 = icmp ugt i32 %x, %y
+      br i1 %0, label %body1, label %body2
+
+    body1:
+      %1 = add i32 %z, 2
+      br label %notExtracted
+
+    body2:
+      %2 = mul i32 %z, 7
+      br label %notExtracted
+
+    notExtracted:
+      %3 = phi i32 [ %1, %body1 ], [ %2, %body2 ]
+      %4 = add i32 %3, %x
+      ret i32 %4
+    }
+  )invalid",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 3> Candidates{getBlockByName(Func, "header"),
+                                          getBlockByName(Func, "body1"),
+                                          getBlockByName(Func, "body2")};
+
+  CodeExtractor CE(Candidates, /* DT */ nullptr, /* AggregateArgs */ false,
+                   /* BFI */ nullptr, /* BPI */ nullptr, /* AC */ nullptr,
+                   /* AllowVarargs */ false, /* AllowAlloca */ false,
+                   /* AllocaBlock */ nullptr, /* Suffix */ "",
+                   /* ArgsInZeroAddressSpace */ false,
+                   /* VoidReturnWithSingleOutput */ false);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs;
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+
+  EXPECT_EQ(Inputs.size(), 3u);
+  EXPECT_EQ(Inputs[0], Func->getArg(2));
+  EXPECT_EQ(Inputs[1], Func->getArg(0));
+  EXPECT_EQ(Inputs[2], Func->getArg(1));
+  EXPECT_EQ(Outputs.size(), 0u);
+  BasicBlock *Exit = getBlockByName(Func, "notExtracted");
+  BasicBlock *ExitSplit = getBlockByName(Outlined, "notExtracted.split");
+  // Ensure that PHI in exit block has only one incoming value (from code
+  // replacer block).
+  EXPECT_TRUE(Exit && cast<PHINode>(Exit->front()).getNumIncomingValues() == 1);
+  // Ensure that there is a PHI in outlined function with 2 incoming values.
+  EXPECT_TRUE(ExitSplit &&
+              cast<PHINode>(ExitSplit->front()).getNumIncomingValues() == 2);
+
+  BasicBlock *ExitStub = getBlockByName(Outlined, "notExtracted.exitStub");
+  Instruction *ExitTerm = ExitStub->getTerminator();
+  ReturnInst *ExitReturn = dyn_cast<ReturnInst>(ExitTerm);
+  EXPECT_TRUE(ExitReturn);
+  Value *RetVal = ExitReturn->getReturnValue();
+  EXPECT_TRUE(RetVal);
+
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
 TEST(CodeExtractor, ExitBlockOrderingPhis) {
   LLVMContext Ctx;
   SMDiagnostic Err;
@@ -154,13 +222,13 @@ TEST(CodeExtractor, ExitBlockOrderingPhis) {
       %0 = alloca i32, align 4
       br label %test0
     test0:
-      %c = load i32, i32* %0, align 4
+      %c = load i32, ptr %0, align 4
       br label %test1
     test1:
-      %e = load i32, i32* %0, align 4
+      %e = load i32, ptr %0, align 4
       br i1 true, label %first, label %test
     test:
-      %d = load i32, i32* %0, align 4
+      %d = load i32, ptr %0, align 4
       br i1 true, label %first, label %next
     first:
       %1 = phi i32 [ %c, %test ], [ %e, %test1 ]
@@ -212,13 +280,13 @@ TEST(CodeExtractor, ExitBlockOrdering) {
       %0 = alloca i32, align 4
       br label %test0
     test0:
-      %c = load i32, i32* %0, align 4
+      %c = load i32, ptr %0, align 4
       br label %test1
     test1:
-      %e = load i32, i32* %0, align 4
+      %e = load i32, ptr %0, align 4
       br i1 true, label %first, label %test
     test:
-      %d = load i32, i32* %0, align 4
+      %d = load i32, ptr %0, align 4
       br i1 true, label %first, label %next
     first:
       ret void
@@ -317,7 +385,7 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
   std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
     declare i8 @hoge()
 
-    define i32 @foo() personality i8* null {
+    define i32 @foo() personality ptr null {
       entry:
         %call = invoke i8 @hoge()
                 to label %invoke.cont unwind label %lpad
@@ -326,8 +394,8 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
         unreachable
 
       lpad:                                             ; preds = %entry
-        %0 = landingpad { i8*, i32 }
-                catch i8* null
+        %0 = landingpad { ptr, i32 }
+                catch ptr null
         br i1 undef, label %catch, label %finally.catchall
 
       catch:                                            ; preds = %lpad
@@ -342,18 +410,18 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
         unreachable
 
       lpad2:                                           ; preds = %invoke.cont2, %catch
-        %ex.1 = phi i8* [ undef, %invoke.cont2 ], [ null, %catch ]
-        %1 = landingpad { i8*, i32 }
-                catch i8* null
+        %ex.1 = phi ptr [ undef, %invoke.cont2 ], [ null, %catch ]
+        %1 = landingpad { ptr, i32 }
+                catch ptr null
         br label %finally.catchall
 
       finally.catchall:                                 ; preds = %lpad33, %lpad
-        %ex.2 = phi i8* [ %ex.1, %lpad2 ], [ null, %lpad ]
+        %ex.2 = phi ptr [ %ex.1, %lpad2 ], [ null, %lpad ]
         unreachable
     }
   )invalid", Err, Ctx));
 
-	if (!M) {
+  if (!M) {
     Err.print("unit", errs());
     exit(1);
   }
@@ -384,7 +452,7 @@ TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
   std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
     declare i32 @bar()
 
-    define i32 @foo() personality i8* null {
+    define i32 @foo() personality ptr null {
     entry:
       %0 = invoke i32 @bar() to label %exit unwind label %lpad
 
@@ -392,9 +460,9 @@ TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
       ret i32 %0
 
     lpad:
-      %1 = landingpad { i8*, i32 }
+      %1 = landingpad { ptr, i32 }
               cleanup
-      resume { i8*, i32 } %1
+      resume { ptr, i32 } %1
     }
   )invalid",
                                                 Err, Ctx));
@@ -421,7 +489,7 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
         target triple = "aarch64"
 
         %b = type { i64 }
-        declare void @g(i8*)
+        declare void @g(ptr)
 
         declare void @llvm.assume(i1) #0
 
@@ -430,9 +498,9 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
           br label %label
 
         label:
-          %0 = load %b*, %b** inttoptr (i64 8 to %b**), align 8
-          %1 = getelementptr inbounds %b, %b* %0, i64 undef, i32 0
-          %2 = load i64, i64* %1, align 8
+          %0 = load ptr, ptr inttoptr (i64 8 to ptr), align 8
+          %1 = getelementptr inbounds %b, ptr %0, i64 undef, i32 0
+          %2 = load i64, ptr %1, align 8
           %3 = icmp ugt i64 %2, 1
           br i1 %3, label %if.then, label %if.else
 
@@ -440,8 +508,8 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
           unreachable
 
         if.else:
-          call void @g(i8* undef)
-          store i64 undef, i64* null, align 536870912
+          call void @g(ptr undef)
+          store i64 undef, ptr null, align 536870912
           %4 = icmp eq i64 %2, 0
           call void @llvm.assume(i1 %4)
           unreachable
@@ -473,9 +541,9 @@ TEST(CodeExtractor, RemoveBitcastUsesFromOuterLifetimeMarkers) {
     target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
     target triple = "x86_64-unknown-linux-gnu"
 
-    declare void @use(i32*)
-    declare void @llvm.lifetime.start.p0i8(i64, i8*)
-    declare void @llvm.lifetime.end.p0i8(i64, i8*)
+    declare void @use(ptr)
+    declare void @llvm.lifetime.start.p0i8(i64, ptr)
+    declare void @llvm.lifetime.end.p0i8(i64, ptr)
 
     define void @foo() {
     entry:
@@ -483,14 +551,14 @@ TEST(CodeExtractor, RemoveBitcastUsesFromOuterLifetimeMarkers) {
       br label %extract
 
     extract:
-      %1 = bitcast i32* %0 to i8*
-      call void @llvm.lifetime.start.p0i8(i64 4, i8* %1)
-      call void @use(i32* %0)
+      %1 = bitcast ptr %0 to ptr
+      call void @llvm.lifetime.start.p0i8(i64 4, ptr %1)
+      call void @use(ptr %0)
       br label %exit
 
     exit:
-      call void @use(i32* %0)
-      call void @llvm.lifetime.end.p0i8(i64 4, i8* %1)
+      call void @use(ptr %0)
+      call void @llvm.lifetime.end.p0i8(i64 4, ptr %1)
       ret void
     }
   )ir",

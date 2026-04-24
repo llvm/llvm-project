@@ -209,8 +209,8 @@ protected:
             process_sp->GetWatchpointSlotCount();
 
         if (num_supported_hardware_watchpoints)
-          result.AppendMessageWithFormat(
-              "Number of supported hardware watchpoints: %u\n",
+          result.AppendMessageWithFormatv(
+              "Number of supported hardware watchpoints: {0}",
               *num_supported_hardware_watchpoints);
       }
     }
@@ -305,9 +305,9 @@ protected:
     if (command.GetArgumentCount() == 0) {
       // No watchpoint selected; enable all currently set watchpoints.
       target.EnableAllWatchpoints();
-      result.AppendMessageWithFormat("All watchpoints enabled. (%" PRIu64
-                                     " watchpoints)\n",
-                                     (uint64_t)num_watchpoints);
+      result.AppendMessageWithFormatv(
+          "All watchpoints enabled. ({0} watchpoints)",
+          (uint64_t)num_watchpoints);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Particular watchpoints selected; enable them.
@@ -323,7 +323,7 @@ protected:
       for (size_t i = 0; i < size; ++i)
         if (target.EnableWatchpointByID(wp_ids[i]))
           ++count;
-      result.AppendMessageWithFormat("%d watchpoints enabled.\n", count);
+      result.AppendMessageWithFormatv("{0} watchpoints enabled.", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
@@ -373,9 +373,9 @@ protected:
     if (command.GetArgumentCount() == 0) {
       // No watchpoint selected; disable all currently set watchpoints.
       if (target.DisableAllWatchpoints()) {
-        result.AppendMessageWithFormat("All watchpoints disabled. (%" PRIu64
-                                       " watchpoints)\n",
-                                       (uint64_t)num_watchpoints);
+        result.AppendMessageWithFormatv(
+            "All watchpoints disabled. ({0} watchpoints)",
+            (uint64_t)num_watchpoints);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         result.AppendError("Disable all watchpoints failed\n");
@@ -394,7 +394,7 @@ protected:
       for (size_t i = 0; i < size; ++i)
         if (target.DisableWatchpointByID(wp_ids[i]))
           ++count;
-      result.AppendMessageWithFormat("%d watchpoints disabled.\n", count);
+      result.AppendMessageWithFormatv("{0} watchpoints disabled.\n", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
@@ -488,9 +488,9 @@ protected:
         result.AppendMessage("Operation cancelled...");
       } else {
         target.RemoveAllWatchpoints();
-        result.AppendMessageWithFormat("All watchpoints removed. (%" PRIu64
-                                       " watchpoints)\n",
-                                       (uint64_t)num_watchpoints);
+        result.AppendMessageWithFormatv(
+            "All watchpoints removed. ({0} watchpoints)",
+            (uint64_t)num_watchpoints);
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
@@ -509,7 +509,7 @@ protected:
     for (size_t i = 0; i < size; ++i)
       if (target.RemoveWatchpointByID(wp_ids[i]))
         ++count;
-    result.AppendMessageWithFormat("%d watchpoints deleted.\n", count);
+    result.AppendMessageWithFormatv("{0} watchpoints deleted.", count);
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
@@ -602,9 +602,9 @@ protected:
 
     if (command.GetArgumentCount() == 0) {
       target.IgnoreAllWatchpoints(m_options.m_ignore_count);
-      result.AppendMessageWithFormat("All watchpoints ignored. (%" PRIu64
-                                     " watchpoints)\n",
-                                     (uint64_t)num_watchpoints);
+      result.AppendMessageWithFormatv(
+          "All watchpoints ignored. ({0} watchpoints)",
+          (uint64_t)num_watchpoints);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Particular watchpoints selected; ignore them.
@@ -620,7 +620,7 @@ protected:
       for (size_t i = 0; i < size; ++i)
         if (target.IgnoreWatchpointByID(wp_ids[i], m_options.m_ignore_count))
           ++count;
-      result.AppendMessageWithFormat("%d watchpoints ignored.\n", count);
+      result.AppendMessageWithFormatv("{0} watchpoints ignored.", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
@@ -741,7 +741,7 @@ protected:
           ++count;
         }
       }
-      result.AppendMessageWithFormat("%d watchpoints modified.\n", count);
+      result.AppendMessageWithFormatv("{0} watchpoints modified.", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
@@ -906,7 +906,7 @@ protected:
     if (!watch_sp) {
       result.AppendErrorWithFormat(
           "Watchpoint creation failed (addr=0x%" PRIx64 ", size=%" PRIu64
-          ", variable expression='%s').\n",
+          ", variable expression='%s').",
           addr, static_cast<uint64_t>(size), command.GetArgumentAtIndex(0));
       if (const char *error_message = error.AsCString(nullptr))
         result.AppendError(error_message);
@@ -1104,7 +1104,7 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendErrorWithFormat("Watchpoint creation failed (addr=0x%" PRIx64
-                                   ", size=%" PRIu64 ").\n",
+                                   ", size=%" PRIu64 ").",
                                    addr, (uint64_t)size);
       if (error.AsCString(nullptr))
         result.AppendError(error.AsCString());

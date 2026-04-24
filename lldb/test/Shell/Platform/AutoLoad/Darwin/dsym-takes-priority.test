@@ -1,0 +1,31 @@
+# REQUIRES: python, asserts, system-darwin
+#
+# Test that when both a dSYM script and a safe-path script exist,
+# the dSYM script takes priority.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/TestModule.out
+# RUN: mkdir -p %t/TestModule.out.dSYM/Contents/Resources/Python
+# RUN: mkdir -p %t/safe-path/TestModule
+
+# RUN: cp %t/dsym_script.py %t/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py
+# RUN: cp %t/safe_script.py %t/safe-path/TestModule/TestModule.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'settings append testing.safe-auto-load-paths %t/safe-path' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 | FileCheck %s --implicit-check-not=SAFE_PATH_SCRIPT
+
+# CHECK: DSYM_SCRIPT
+
+#--- main.c
+int main() { return 0; }
+
+#--- dsym_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("DSYM_SCRIPT", file=sys.stderr)
+
+#--- safe_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SAFE_PATH_SCRIPT", file=sys.stderr)

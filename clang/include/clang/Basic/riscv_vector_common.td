@@ -60,6 +60,8 @@
 //      element type which is four times as wide as the element type of 'v'
 //   o: computes a vector type identical to what 'v' computes except for the
 //      element type which is eight times as wide as the element type of 'v'
+//   d: computes a vector type identical to what 'v' computes except for the
+//      LMUL which is twice as large as the LMUL of 'v'
 //   m: computes a vector type identical to what 'v' computes except for the
 //      element type which is bool
 //   0: void type, ignores "t"
@@ -181,6 +183,9 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // This builtin has a masked form.
   bit HasMasked = true;
 
+  // This is used by intrinsics that need vtype.altfmt
+  bit AltFmt = false;
+
   // If HasMasked, this flag states that this builtin has a maskedoff operand. It
   // is always the first operand in builtin and IR intrinsic.
   bit HasMaskedOffOperand = true;
@@ -247,6 +252,9 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // Set to true if the builtin has a parameter that models floating-point
   // rounding mode control
   bit HasFRMRoundModeOp = false;
+
+  // TWiden for XSfmm.
+  int TWiden = 0;
 }
 
 // This is the code emitted in the header.

@@ -8,7 +8,7 @@
 
 #include "lldb/Interpreter/CommandReturnObject.h"
 
-#include "lldb/Utility/DiagnosticsRendering.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -31,6 +31,24 @@ static llvm::raw_ostream &note(Stream &strm) {
   return llvm::WithColor(strm.AsRawOstream(), llvm::HighlightColor::Note,
                          llvm::ColorMode::Enable)
          << "note: ";
+}
+
+static llvm::StringRef validate_diagnostic(llvm::StringRef diagnostic) {
+  // This class is already adding the prefix.
+  assert(!diagnostic.starts_with("warning:") &&
+         !diagnostic.starts_with("error:") &&
+         !diagnostic.starts_with("note:") &&
+         "diagnostics shouldn't duplicate error:/warning:/note:");
+
+  // https://llvm.org/docs/CodingStandards.html#error-and-warning-messages
+  assert(!diagnostic.ends_with('\n') && !diagnostic.ends_with('.') &&
+         "diagnostics should end without a period/newline");
+
+  // Handing the case where the assert doesn't hold goes against the idea of
+  // them being pre-conditions. However this isn't really a matter of internal
+  // consistency and therefore we prioritize a consistent user experience over
+  // purity.
+  return diagnostic.trim("\n.");
 }
 
 static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
@@ -68,42 +86,6 @@ void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   }
 }
 
-void CommandReturnObject::AppendMessageWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  GetOutputStream() << sstrm.GetString();
-}
-
-void CommandReturnObject::AppendNoteWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  note(GetOutputStream()) << sstrm.GetString();
-}
-
-void CommandReturnObject::AppendWarningWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  warning(GetErrorStream()) << sstrm.GetString();
-}
-
 void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
@@ -111,12 +93,14 @@ void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
 }
 
 void CommandReturnObject::AppendNote(llvm::StringRef in_string) {
+  in_string = validate_diagnostic(in_string);
   if (in_string.empty())
     return;
   note(GetOutputStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
+  in_string = validate_diagnostic(in_string);
   if (in_string.empty())
     return;
   warning(GetErrorStream()) << in_string.rtrim() << '\n';
@@ -129,6 +113,8 @@ void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   // Workaround to deal with already fully formatted compiler diagnostics.
   llvm::StringRef msg(in_string.rtrim());
   msg.consume_front("error: ");
+
+  // FIXME: We should call validate_diagnostic here.
   error(GetErrorStream()) << msg << '\n';
 }
 
@@ -171,15 +157,6 @@ std::string CommandReturnObject::GetErrorString(bool with_diagnostics) const {
 
 StructuredData::ObjectSP CommandReturnObject::GetErrorData() {
   return Serialize(m_diagnostics);
-}
-
-// Similar to AppendError, but do not prepend 'Status: ' to message, and don't
-// append "\n" to the end of it.
-
-void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {
-  SetStatus(eReturnStatusFailed);
-  assert(!in_string.empty() && "Expected a non-empty error message");
-  GetErrorStream() << in_string;
 }
 
 void CommandReturnObject::SetStatus(ReturnStatus status) { m_status = status; }

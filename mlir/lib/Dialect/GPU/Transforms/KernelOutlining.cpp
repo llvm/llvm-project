@@ -197,10 +197,9 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
       FunctionType::get(launchOp.getContext(), kernelOperandTypes, {});
   auto outlinedFunc = gpu::GPUFuncOp::create(
       builder, loc, kernelFnName, type,
-      TypeRange(ValueRange(launchOp.getWorkgroupAttributions())),
+      TypeRange(ValueRange(launchOp.getWorkgroupAttributionBBArgs())),
       TypeRange(ValueRange(launchOp.getPrivateAttributions())));
-  outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                        builder.getUnitAttr());
+  outlinedFunc.setKernel(true);
 
   // If we can infer bounds on the grid and/or block sizes from the arguments
   // to the launch op, propagate them to the generated kernel. This is safe
@@ -211,6 +210,10 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   if (auto gridBounds =
           maybeConstantDimsAttr(launchOp.getGridSizeOperandValues()))
     outlinedFunc.setKnownGridSizeAttr(gridBounds);
+  if (auto clusterSize = launchOp.getClusterSizeOperandValues()) {
+    if (auto clusterBounds = maybeConstantDimsAttr(*clusterSize))
+      outlinedFunc.setKnownClusterSizeAttr(clusterBounds);
+  }
 
   IRMapping map;
 
@@ -223,8 +226,8 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
 
   // Map memory attributions from the LaunOp op to the GPUFuncOp attributions.
   for (const auto &[launchArg, funcArg] :
-       llvm::zip(launchOp.getWorkgroupAttributions(),
-                 outlinedFunc.getWorkgroupAttributions()))
+       llvm::zip(launchOp.getWorkgroupAttributionBBArgs(),
+                 outlinedFunc.getWorkgroupAttributionBBArgs()))
     map.map(launchArg, funcArg);
   for (const auto &[launchArg, funcArg] :
        llvm::zip(launchOp.getPrivateAttributions(),
@@ -371,8 +374,11 @@ public:
         // Create nested module and insert outlinedFunc. The module will
         // originally get the same name as the function, but may be renamed on
         // insertion into the parent module.
-        auto kernelModule = createKernelModule(op, outlinedFunc, symbolTable);
-        symbolTable.insert(kernelModule, insertPt);
+        FailureOr<gpu::GPUModuleOp> kernelModule =
+            createKernelModule(op, outlinedFunc, symbolTable);
+        if (failed(kernelModule))
+          return WalkResult::interrupt();
+        symbolTable.insert(*kernelModule, insertPt);
 
         // Potentially changes signature, pulling in constants.
         convertToLaunchFuncOp(op, outlinedFunc, operands.getArrayRef());
@@ -392,9 +398,9 @@ public:
 
 private:
   /// Returns a gpu.module containing kernelFunc and all callees (recursive).
-  gpu::GPUModuleOp createKernelModule(gpu::LaunchOp gpuLaunchOp,
-                                      gpu::GPUFuncOp kernelFunc,
-                                      const SymbolTable &parentSymbolTable) {
+  FailureOr<gpu::GPUModuleOp>
+  createKernelModule(gpu::LaunchOp gpuLaunchOp, gpu::GPUFuncOp kernelFunc,
+                     const SymbolTable &parentSymbolTable) {
     // TODO: This code cannot use an OpBuilder because it must be inserted into
     // a SymbolTable by the caller. SymbolTable needs to be refactored to
     // prevent manual building of Ops with symbols in code using SymbolTables
@@ -431,12 +437,31 @@ private:
       if (std::optional<SymbolTable::UseRange> symbolUses =
               SymbolTable::getSymbolUses(symbolDefWorklist.pop_back_val())) {
         for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
+          // Nested symbol references (e.g. @M::@F) cannot be resolved inside
+          // the kernel module when @M exists in the parent: @M will not be
+          // available inside the outlined module after the transformation.
+          // Ignore references whose root does not exist in the parent, as those
+          // are phantom references (e.g. in unregistered-op attributes) that
+          // were already unresolvable and are simply copied as-is.
+          if (!symbolUse.getSymbolRef().getNestedReferences().empty() &&
+              parentSymbolTable.lookup(
+                  symbolUse.getSymbolRef().getRootReference())) {
+            symbolUse.getUser()->emitError("nested symbol reference '")
+                << symbolUse.getSymbolRef()
+                << "' cannot be resolved inside the outlined kernel module; "
+                   "gpu-kernel-outlining does not support cross-module symbol "
+                   "references inside gpu.launch bodies";
+            kernelModule->erase();
+            return failure();
+          }
           StringAttr symbolName = symbolUse.getSymbolRef().getLeafReference();
           if (symbolTable.lookup(symbolName))
             continue;
 
-          Operation *symbolDefClone =
-              parentSymbolTable.lookup(symbolName)->clone();
+          Operation *symbolDef = parentSymbolTable.lookup(symbolName);
+          if (!symbolDef)
+            continue;
+          Operation *symbolDefClone = symbolDef->clone();
           symbolDefWorklist.push_back(symbolDefClone);
           symbolTable.insert(symbolDefClone);
         }

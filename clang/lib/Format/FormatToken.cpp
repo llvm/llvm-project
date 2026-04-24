@@ -33,10 +33,10 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
-static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
-    "BINDABLE",   "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",
-    "NOTIFY",     "READ",     "REQUIRED",   "RESET", "REVISION",
-    "SCRIPTABLE", "STORED",   "USER",       "WRITE",
+static constexpr std::array<StringRef, 16> QtPropertyKeywords = {
+    "BINDABLE", "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",   "NOTIFY",
+    "OVERRIDE", "READ",     "REQUIRED",   "RESET", "REVISION", "SCRIPTABLE",
+    "STORED",   "USER",     "VIRTUAL",    "WRITE",
 };
 
 bool FormatToken::isQtProperty() const {
@@ -68,7 +68,7 @@ bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
   assert(MatchingParen);
   assert(MatchingParen->is(tok::l_brace));
   if (Style.Cpp11BracedListStyle == FormatStyle::BLS_Block ||
-      Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent) {
+      !Style.BreakBeforeCloseBracketBracedList) {
     return false;
   }
   const auto *LBrace = MatchingParen;
@@ -186,7 +186,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
   if (Style.Cpp11BracedListStyle != FormatStyle::BLS_Block &&
-      !Style.BinPackArguments &&
+      Style.PackArguments.BinPack == FormatStyle::BPAS_OnePerLine &&
       (Commas.size() < 19 || !Style.BinPackLongBracedList)) {
     return;
   }
@@ -198,7 +198,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
     return;
 
   // Column format doesn't really make sense if we don't align after brackets.
-  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign)
+  if (!Style.AlignAfterOpenBracket)
     return;
 
   FormatToken *ItemBegin = Token->Next;

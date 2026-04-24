@@ -420,6 +420,26 @@ static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
   return X;
 }
 
+static void populateReservedIdentifiers(StringSet<> &Set,
+                                        const MCRegisterInfo &MRI) {
+  // Register names: `call rsi` is misassembled as an indirect call.
+  for (unsigned i = 1, e = MRI.getNumRegs(); i < e; ++i)
+    if (const char *Name = MRI.getName(i))
+      if (Name[0])
+        Set.insert(StringRef(Name).lower());
+  // Keywords that GAS Intel syntax misparses as constants, modifiers, or
+  // pseudo-registers instead of symbol references (e.g., `call byte` calls
+  // address 1, not symbol "byte"; `call flat` errors out).
+  for (StringRef KW : {"byte", "word", "dword", "fword", "qword", "mmword",
+                       "tbyte", "oword", "xmmword", "ymmword", "zmmword",
+                       "offset", "flat", "near", "far", "short"})
+    Set.insert(KW);
+  // Operator keywords parsed by GAS/X86AsmParser in Intel mode.
+  for (StringRef KW : {"and", "eq", "ge", "gt", "le", "lt", "mod", "ne", "not",
+                       "or", "shl", "shr", "xor"})
+    Set.insert(KW);
+}
+
 static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TheTriple,
                                      const MCTargetOptions &Options) {
@@ -427,25 +447,41 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO()) {
-    if (is64Bit)
-      MAI = new X86_64MCAsmInfoDarwin(TheTriple);
-    else
-      MAI = new X86MCAsmInfoDarwin(TheTriple);
+    if (is64Bit) {
+      auto *P = new X86_64MCAsmInfoDarwin(TheTriple);
+      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+      MAI = P;
+    } else {
+      auto *P = new X86MCAsmInfoDarwin(TheTriple);
+      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+      MAI = P;
+    }
   } else if (TheTriple.isOSBinFormatELF()) {
     // Force the use of an ELF container.
-    MAI = new X86ELFMCAsmInfo(TheTriple);
+    auto *P = new X86ELFMCAsmInfo(TheTriple);
+    populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+    MAI = P;
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
              TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
-    if (Options.getAssemblyLanguage().equals_insensitive("masm"))
-      MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
-    else
-      MAI = new X86MCAsmInfoMicrosoft(TheTriple);
+    if (Options.getAssemblyLanguage().equals_insensitive("masm")) {
+      auto *P = new X86MCAsmInfoMicrosoftMASM(TheTriple);
+      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+      MAI = P;
+    } else {
+      auto *P = new X86MCAsmInfoMicrosoft(TheTriple);
+      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+      MAI = P;
+    }
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
+    auto *P = new X86MCAsmInfoGNUCOFF(TheTriple);
+    populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+    MAI = P;
   } else {
     // The default is ELF.
-    MAI = new X86ELFMCAsmInfo(TheTriple);
+    auto *P = new X86ELFMCAsmInfo(TheTriple);
+    populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
+    MAI = P;
   }
 
   // Initialize initial frame state.
@@ -491,7 +527,7 @@ namespace X86_MC {
 class X86MCInstrAnalysis : public MCInstrAnalysis {
   X86MCInstrAnalysis(const X86MCInstrAnalysis &) = delete;
   X86MCInstrAnalysis &operator=(const X86MCInstrAnalysis &) = delete;
-  virtual ~X86MCInstrAnalysis() = default;
+  ~X86MCInstrAnalysis() override = default;
 
 public:
   X86MCInstrAnalysis(const MCInstrInfo *MCII) : MCInstrAnalysis(MCII) {}
@@ -535,7 +571,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](unsigned RegID) {
+  auto ClearsSuperReg = [=](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is

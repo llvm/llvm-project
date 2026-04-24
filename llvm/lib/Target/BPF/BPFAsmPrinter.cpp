@@ -25,10 +25,12 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -85,6 +87,16 @@ bool BPFAsmPrinter::doFinalization(Module &M) {
       GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
       GV->dropAllReferences();
       GV->eraseFromParent();
+    }
+  }
+
+  for (GlobalObject &GO : M.global_objects()) {
+    if (!GO.hasExternalWeakLinkage())
+      continue;
+
+    if (!SawTrapCall && GO.getName() == BPF_TRAP) {
+      GO.eraseFromParent();
+      break;
     }
   }
 
@@ -160,6 +172,16 @@ bool BPFAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  if (MI->isCall()) {
+    for (const MachineOperand &Op : MI->operands()) {
+      if (Op.isGlobal()) {
+        if (const GlobalValue *GV = Op.getGlobal())
+          if (GV->getName() == BPF_TRAP)
+            SawTrapCall = true;
+      }
+    }
+  }
+
   BPF_MC::verifyInstructionPredicates(MI->getOpcode(),
                                       getSubtargetInfo().getFeatureBits());
 
@@ -170,6 +192,61 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCInstLowering.Lower(MI, TmpInst);
   }
   EmitToStreamer(*OutStreamer, TmpInst);
+}
+
+void BPFAsmPrinter::emitFunctionBodyEnd() {
+  // Emit .bpf_cleanup section with a flat table of
+  // (call_site, landing_pad) pairs.
+  const std::vector<LandingPadInfo> &LandingPads = MF->getLandingPads();
+  if (LandingPads.empty())
+    return;
+
+  MCContext &Ctx = OutContext;
+  auto *CleanupSec =
+      Ctx.getELFSection(".bpf_cleanup", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+  OutStreamer->switchSection(CleanupSec);
+
+  const auto &TypeInfos = MF->getTypeInfos();
+  const Function &F = MF->getFunction();
+  LLVMContext &LLVMCtx = F.getContext();
+
+  // Each landing pad has BeginLabels/EndLabels marking the invoke
+  // call sites that unwind to it.
+  for (const LandingPadInfo &LP : LandingPads) {
+    // BPF treats all landing pads as catch-all: the kernel redirects to
+    // the landing pad regardless of exception type. Reject type-specific
+    // catches and filters which would silently misbehave.
+    for (int TId : LP.TypeIds) {
+      if (TId > 0 && TypeInfos[TId - 1] != nullptr) {
+        LLVMCtx.diagnose(DiagnosticInfoUnsupported(
+            F, "BPF does not support type-specific exception catches yet"));
+        return;
+      }
+      if (TId < 0) {
+        LLVMCtx.diagnose(DiagnosticInfoUnsupported(
+            F, "BPF does not support exception filters yet"));
+        return;
+      }
+    }
+
+    MCSymbol *LPLabel = LP.LandingPadLabel;
+    if (!LPLabel)
+      continue;
+    for (unsigned i = 0, e = LP.BeginLabels.size(); i != e; ++i) {
+      MCSymbol *Begin = LP.BeginLabels[i];
+      MCSymbol *End = LP.EndLabels[i];
+
+      // Each entry is 3 x 4 bytes: begin, end, landing_pad.
+      // The invoke region [begin, end) may include argument setup
+      // before the call. The runtime checks begin <= PC < end.
+      OutStreamer->emitSymbolValue(Begin, 4);
+      OutStreamer->emitSymbolValue(End, 4);
+      OutStreamer->emitSymbolValue(LPLabel, 4);
+    }
+  }
+
+  // Switch back to the function's section.
+  OutStreamer->switchSection(MF->getSection());
 }
 
 MCSymbol *BPFAsmPrinter::getJTPublicSymbol(unsigned JTI) {
@@ -195,6 +272,10 @@ void BPFAsmPrinter::emitJumpTableInfo() {
 
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const Function &F = MF->getFunction();
+
+  MCSection *Sec = OutStreamer->getCurrentSectionOnly();
+  MCSymbol *SecStart = Sec->getBeginSymbol();
+
   MCSection *JTS = TLOF.getSectionForJumpTable(F, TM);
   assert(MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress);
   unsigned EntrySize = MJTI->getEntrySize(getDataLayout());
@@ -207,8 +288,10 @@ void BPFAsmPrinter::emitJumpTableInfo() {
     MCSymbol *JTStart = getJTPublicSymbol(JTI);
     OutStreamer->emitLabel(JTStart);
     for (const MachineBasicBlock *MBB : JTBBs) {
-      const MCExpr *LHS = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
-      OutStreamer->emitValue(LHS, EntrySize);
+      const MCExpr *Diff = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(MBB->getSymbol(), OutContext),
+          MCSymbolRefExpr::create(SecStart, OutContext), OutContext);
+      OutStreamer->emitValue(Diff, EntrySize);
     }
     const MCExpr *JTSize =
         MCConstantExpr::create(JTBBs.size() * EntrySize, OutContext);

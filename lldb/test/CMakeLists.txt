@@ -16,7 +16,7 @@ if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
 
   if(NOT WIN32)
     # We no longer vendor pexpect and it is not used on Windows.
-    list(APPEND pexpect)
+    list(APPEND useful_python_modules pexpect)
   endif()
 
   foreach(module ${useful_python_modules})
@@ -132,6 +132,11 @@ if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
 endif()
 
+if(TARGET darwin-mte-launcher)
+  add_lldb_test_dependency(darwin-mte-launcher)
+  set(LLDB_LAUNCHER ${LLVM_RUNTIME_OUTPUT_INTDIR}/darwin-mte-launcher${CMAKE_EXECUTABLE_SUFFIX})
+endif()
+
 if (LLDB_CAN_USE_LLDB_RPC_SERVER)
   add_lldb_test_dependency(lldb-rpc-generate-sources)
 endif()
@@ -245,11 +250,16 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(LLDB_IS_64_BITS 1)
 endif()
 
+if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
+  set(LLDB_USE_ARM64E_DEBUGSERVER ON)
+endif()
+
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
+  LLDB_ENABLE_MTE
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
   LLDB_ENABLE_LZMA
@@ -261,7 +271,8 @@ llvm_canonicalize_cmake_booleans(
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS
-  LLDB_BUILD_LLDBRPC)
+  LLDB_BUILD_LLDBRPC
+  LLDB_USE_ARM64E_DEBUGSERVER)
 
 # Configure the individual test suites.
 add_subdirectory(API)

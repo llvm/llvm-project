@@ -1284,6 +1284,7 @@ void PerfScriptReader::warnInvalidRange() {
   uint64_t TotalRangeNum = 0;
   uint64_t InstNotBoundary = 0;
   uint64_t UnmatchedRange = 0;
+  uint64_t RecoveredRange = 0;
   uint64_t RangeCrossFunc = 0;
   uint64_t BogusRange = 0;
 
@@ -1309,6 +1310,9 @@ void PerfScriptReader::warnInvalidRange() {
       continue;
     }
 
+    if (FRange->Func->NameStatus != DwarfNameStatus::Matched)
+      RecoveredRange += I.second;
+
     if (EndAddress >= FRange->EndAddress) {
       RangeCrossFunc += I.second;
       WarnInvalidRange(StartAddress, EndAddress, RangeCrossFuncMsg);
@@ -1328,6 +1332,9 @@ void PerfScriptReader::warnInvalidRange() {
   emitWarningSummary(
       UnmatchedRange, TotalRangeNum,
       "of samples are from ranges that do not belong to any functions.");
+  emitWarningSummary(RecoveredRange, TotalRangeNum,
+                     "of samples are from ranges that belong to functions "
+                     "recovered from symbol table.");
   emitWarningSummary(
       RangeCrossFunc, TotalRangeNum,
       "of samples are from ranges that do cross function boundaries.");
@@ -1335,6 +1342,48 @@ void PerfScriptReader::warnInvalidRange() {
       BogusRange, TotalRangeNum,
       "of samples are from ranges that have range start after or too far from "
       "range end acrossing the unconditinal jmp.");
+}
+
+void PerfScriptReader::warnIfBranchTargetMismatch() {
+  // Collect unique branch source and target addresses from LBR samples,
+  // then check what percentage don't match known instructions in the binary.
+
+  uint64_t MismatchedBranches = 0;
+  uint64_t MismatchedIndirectTargets = 0;
+  uint64_t MismatchedTargets = 0;
+  uint64_t TotalSamples = 0;
+
+  for (const auto &Item : AggregatedSamples) {
+    const PerfSample *Sample = Item.first.getPtr();
+    for (const LBREntry &LBR : Sample->LBRStack) {
+      uint64_t Source = LBR.Source;
+      uint64_t Target = LBR.Target;
+      if (Source == ExternalAddr || Target == ExternalAddr)
+        continue;
+      TotalSamples++;
+
+      // Validate Branch sources are Call/Branch/Indirect Branch
+      if (!Binary->addressIsTransfer(Source))
+        MismatchedBranches++;
+
+      // Validate Indirect Branch targets landed in code. This may over estimate
+      // the vaid targets only because there's no good way to determine jump
+      // table targets
+      if (Binary->addressIsIndirectBranch(Source)) {
+        if (!Binary->addressIsCode(Target))
+          MismatchedIndirectTargets++;
+      } else if (!Binary->addressIsBranchTarget(Target) &&
+                 !Binary->findFuncRangeForStartAddr(Target))
+        MismatchedTargets++;
+    }
+  }
+
+  emitWarningSummary(MismatchedBranches, TotalSamples,
+                     "of branch samples do not match the binary.");
+  emitWarningSummary(MismatchedTargets, TotalSamples,
+                     "of branch targets do not match the binary.");
+  emitWarningSummary(MismatchedIndirectTargets, TotalSamples,
+                     "of indirect branch targets do not match the binary.");
 }
 
 void PerfScriptReader::parsePerfTraces() {
@@ -1353,6 +1402,7 @@ void PerfScriptReader::parsePerfTraces() {
   // Generate unsymbolized profile.
   warnTruncatedStack();
   warnInvalidRange();
+  warnIfBranchTargetMismatch();
   generateUnsymbolizedProfile();
   AggregatedSamples.clear();
 

@@ -53,6 +53,7 @@ public:
     FT_Data,
     FT_Relaxable,
     FT_Align,
+    FT_PrefAlign,
     FT_Fill,
     FT_LEB,
     FT_Nops,
@@ -107,8 +108,10 @@ private:
   uint32_t VarContentEnd = 0;
   uint32_t VarFixupStart = 0;
 
+protected:
   const MCSubtargetInfo *STI = nullptr;
 
+private:
   // Optional variable-size tail used by various fragment types.
   union Tail {
     struct {
@@ -130,6 +133,19 @@ private:
       // Value to use for filling padding bytes.
       int64_t Fill;
     } align;
+    struct {
+      // Symbol denoting the end of the region; always non-null.
+      const MCSymbol *End;
+      // The preferred (maximum) alignment.
+      Align PreferredAlign;
+      // The alignment computed during relaxation.
+      Align ComputedAlign;
+      // If true, fill padding with target NOPs via writeNopData; the STI field
+      // holds the subtarget info needed.  If false, fill with Fill byte.
+      bool EmitNops;
+      // Fill byte used when !EmitNops.
+      uint8_t Fill;
+    } prefalign;
     struct {
       // True if this is a sleb128, false if uleb128.
       bool IsSigned;
@@ -266,6 +282,45 @@ public:
     return u.align.EmitNops;
   }
 
+  //== FT_PrefAlign functions
+  // Initialize an FT_PrefAlign fragment. The region starts at this fragment and
+  // ends at \p End. ComputedAlign is set during relaxation:
+  //   body_size < PrefAlign  => ComputedAlign = std::bit_ceil(body_size)
+  //   body_size >= PrefAlign => ComputedAlign = PrefAlign
+  void makePrefAlign(Align PrefAlign, const MCSymbol &End, bool EmitNops,
+                     uint8_t Fill) {
+    Kind = FT_PrefAlign;
+    u.prefalign.End = &End;
+    u.prefalign.PreferredAlign = PrefAlign;
+    u.prefalign.ComputedAlign = Align();
+    u.prefalign.EmitNops = EmitNops;
+    u.prefalign.Fill = Fill;
+  }
+  const MCSymbol &getPrefAlignEnd() const {
+    assert(Kind == FT_PrefAlign);
+    return *u.prefalign.End;
+  }
+  Align getPrefAlignPreferred() const {
+    assert(Kind == FT_PrefAlign);
+    return u.prefalign.PreferredAlign;
+  }
+  Align getPrefAlignComputed() const {
+    assert(Kind == FT_PrefAlign);
+    return u.prefalign.ComputedAlign;
+  }
+  void setPrefAlignComputed(Align A) {
+    assert(Kind == FT_PrefAlign);
+    u.prefalign.ComputedAlign = A;
+  }
+  bool getPrefAlignEmitNops() const {
+    assert(Kind == FT_PrefAlign);
+    return u.prefalign.EmitNops;
+  }
+  uint8_t getPrefAlignFill() const {
+    assert(Kind == FT_PrefAlign);
+    return u.prefalign.Fill;
+  }
+
   //== FT_LEB functions
   void makeLEB(bool IsSigned, const MCExpr *Value) {
     assert(Kind == FT_Data);
@@ -362,21 +417,18 @@ class MCNopsFragment : public MCFragment {
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
-  /// When emitting Nops some subtargets have specific nop encodings.
-  const MCSubtargetInfo &STI;
-
 public:
   MCNopsFragment(int64_t NumBytes, int64_t ControlledNopLength, SMLoc L,
                  const MCSubtargetInfo &STI)
       : MCFragment(FT_Nops), Size(NumBytes),
-        ControlledNopLength(ControlledNopLength), Loc(L), STI(STI) {}
+        ControlledNopLength(ControlledNopLength), Loc(L) {
+    this->STI = &STI;
+  }
 
   int64_t getNumBytes() const { return Size; }
   int64_t getControlledNopLength() const { return ControlledNopLength; }
 
   SMLoc getLoc() const { return Loc; }
-
-  const MCSubtargetInfo *getSubtargetInfo() const { return &STI; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Nops;
@@ -414,7 +466,6 @@ class MCSymbolIdFragment : public MCFragment {
 public:
   MCSymbolIdFragment(const MCSymbol *Sym) : MCFragment(FT_SymbolId), Sym(Sym) {}
 
-  const MCSymbol *getSymbol() { return Sym; }
   const MCSymbol *getSymbol() const { return Sym; }
 
   static bool classof(const MCFragment *F) {
@@ -490,12 +541,11 @@ class MCBoundaryAlignFragment : public MCFragment {
   /// is not meaningful before that.
   uint64_t Size = 0;
 
-  /// When emitting Nops some subtargets have specific nop encodings.
-  const MCSubtargetInfo &STI;
-
 public:
   MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)
-      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary), STI(STI) {}
+      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary) {
+    this->STI = &STI;
+  }
 
   uint64_t getSize() const { return Size; }
   void setSize(uint64_t Value) { Size = Value; }
@@ -508,8 +558,6 @@ public:
     assert(!F || getParent() == F->getParent());
     LastFragment = F;
   }
-
-  const MCSubtargetInfo *getSubtargetInfo() const { return &STI; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_BoundaryAlign;
@@ -543,7 +591,8 @@ public:
 private:
   // At parse time, this holds the fragment list of the current subsection. At
   // layout time, this holds the concatenated fragment lists of all subsections.
-  FragList *CurFragList;
+  // Null until the first fragment is added to this section.
+  FragList *CurFragList = nullptr;
   // In many object file formats, this denotes the section symbol. In Mach-O,
   // this denotes an optional temporary label at the section start.
   MCSymbol *Begin;

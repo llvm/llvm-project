@@ -113,13 +113,20 @@ private:
   ValueType Value;
 };
 
+/// Return true if \p Op is the annotation sentinel: a null MCInst operand
+/// that marks the start of BOLT annotations. Non-null MCInst operands
+/// (e.g. Hexagon duplex sub-instructions) are legitimate prime operands.
+inline bool isAnnotationSentinel(const MCOperand &Op) {
+  return Op.isInst() && Op.getInst() == nullptr;
+}
+
 /// Return a number of operands in \Inst excluding operands representing
 /// annotations.
 inline unsigned getNumPrimeOperands(const MCInst &Inst) {
   for (signed I = Inst.getNumOperands() - 1; I >= 0; --I) {
-    if (Inst.getOperand(I).isInst())
+    if (isAnnotationSentinel(Inst.getOperand(I)))
       return I;
-    if (!Inst.getOperand(I).isImm())
+    if (!Inst.getOperand(I).isInst() && !Inst.getOperand(I).isImm())
       return Inst.getNumOperands();
   }
   return Inst.getNumOperands();

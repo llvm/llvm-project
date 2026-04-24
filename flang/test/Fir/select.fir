@@ -67,3 +67,17 @@ func.func @h(%a : i32) -> i32 {
    // CHECK: ret i32
    return %x : i32
 }
+
+func.func @empty_cases(%arg0 : i32) {
+  fir.select %arg0 : i32 [unit, ^bb1]
+^bb1:  // pred: ^bb0
+  fir.call @crash() fastmath<contract> : () -> ()
+  fir.unreachable
+}
+func.func private @crash()
+
+//CHECK-LABEL: @empty_cases(i32 %0) {
+//CHECK:  br label %[[BLOCK:.*]]
+//CHECK: [[BLOCK]]:
+//CHECK:  call void @crash()
+//CHECK:  unreachable

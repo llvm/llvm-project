@@ -475,6 +475,12 @@ public:
     return usedAsProcedureHere_;
   }
   void set_usedAsProcedureHere(SourceName here) { usedAsProcedureHere_ = here; }
+  const std::vector<OpenACCRoutineInfo> &openACCRoutineInfos() const {
+    return openACCRoutineInfos_;
+  }
+  void add_openACCRoutineInfo(OpenACCRoutineInfo info) {
+    openACCRoutineInfos_.push_back(info);
+  }
 
 private:
   const Symbol *rawProcInterface_{nullptr};
@@ -482,6 +488,7 @@ private:
   std::optional<const Symbol *> init_;
   bool isCUDAKernel_{false};
   std::optional<SourceName> usedAsProcedureHere_;
+  std::vector<OpenACCRoutineInfo> openACCRoutineInfos_;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const ProcEntityDetails &);
 };
@@ -764,6 +771,22 @@ public:
         return true;
       }
     }
+    // For derived and class-derived types, match on the type symbol pointer.
+    if (type.category() == DeclTypeSpec::TypeDerived ||
+        type.category() == DeclTypeSpec::ClassDerived) {
+      const auto &rhs = type.derivedTypeSpec();
+      const auto &rhsSym = rhs.typeSymbol();
+      for (auto t : typeList_) {
+        if (t->category() == DeclTypeSpec::TypeDerived ||
+            t->category() == DeclTypeSpec::ClassDerived) {
+          const auto &lhs = t->derivedTypeSpec();
+          const auto &lhsSym = lhs.typeSymbol();
+          if (&lhsSym == &rhsSym) {
+            return true;
+          }
+        }
+      }
+    }
     return false;
   }
 
@@ -777,6 +800,24 @@ private:
   DeclVector declList_;
 };
 
+// Used for OpenMP DECLARE MAPPER, it holds the declaration constructs
+// so they can be serialized into module files and later re-parsed when
+// USE-associated.
+class MapperDetails {
+public:
+  using DeclVector = std::vector<const parser::OpenMPDeclarativeConstruct *>;
+
+  MapperDetails() = default;
+
+  void AddDecl(const parser::OpenMPDeclarativeConstruct *decl) {
+    declList_.emplace_back(decl);
+  }
+  const DeclVector &GetDeclList() const { return declList_; }
+
+private:
+  DeclVector declList_;
+};
+
 class UnknownDetails {};
 
 using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
@@ -784,7 +825,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     ObjectEntityDetails, ProcEntityDetails, AssocEntityDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
-    TypeParamDetails, MiscDetails, UserReductionDetails>;
+    TypeParamDetails, MiscDetails, UserReductionDetails, MapperDetails>;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 
@@ -830,6 +871,8 @@ public:
       OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr, OmpHasDeviceAddr,
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
+      // OpenMP special variables
+      OmpInVar, OmpOrigVar, OmpOutVar, OmpPrivVar,
       // OpenMP miscellaneous flags
       OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
       OmpAllocate, OmpDeclarativeAllocateDirective,

@@ -23,6 +23,13 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 
 .. _LIT Command Guide: https://llvm.org/docs/CommandGuide/lit.html
 
+Dependencies
+------------
+
+The libc++ test suite has a few optional dependencies. These can be installed
+with ``pip install -r libcxx/test/requirements.txt``. Installing these dependencies
+will ensure that the maximum number of tests can be run.
+
 Usage
 -----
 
@@ -451,7 +458,7 @@ Instead use:
 
 .. code-block:: cpp
 
-   // UNSUPPORTED: std-at-least-c++26
+   // REQUIRES: std-at-least-c++26
 
 There is no corresponding ``std-at-most-c++23``. This could be useful when
 tests are only valid for a small set of standard versions. For example, a

@@ -10,8 +10,22 @@ set(UBSAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 list(APPEND UBSAN_TEST_DEPS ubsan-minimal)
 
 foreach(arch ${UBSAN_TEST_ARCH})
+  set(UBSAN_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}-${OS_NAME}" UBSAN_TEST_CONFIG_SUFFIX)
   get_test_cc_for_arch(${arch} UBSAN_TEST_TARGET_CC UBSAN_TEST_TARGET_CFLAGS)
+
+  if(COMPILER_RT_GPU_BUILD)
+    if("${arch}" MATCHES "amdgcn")
+      list(APPEND UBSAN_TEST_TARGET_CFLAGS
+           -Wno-multi-gpu -flto -mcpu=native -nogpulib -startfiles -stdlib)
+    elseif("${arch}" MATCHES "nvptx")
+      list(APPEND UBSAN_TEST_TARGET_CFLAGS
+           -Wno-multi-gpu -flto -march=native -nogpulib -startfiles -stdlib)
+    endif()
+    list(APPEND UBSAN_TEST_TARGET_CFLAGS --target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
+    string(REPLACE ";" " " UBSAN_TEST_TARGET_CFLAGS "${UBSAN_TEST_TARGET_CFLAGS}")
+  endif()
+
   set(CONFIG_NAME ${arch})
   if(${arch} IN_LIST CFI_SUPPORTED_ARCH)
     set(UBSAN_TEST_HAS_CFI TRUE)

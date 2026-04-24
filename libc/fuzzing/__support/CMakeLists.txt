@@ -25,6 +25,15 @@ add_libc_fuzzer(
     -D__LIBC_EXPLICIT_SIMD_OPT
 )
 
+add_libc_fuzzer(
+  weak_avl_fuzz
+  SRCS
+    weak_avl_fuzz.cpp
+  DEPENDS
+    libc.src.__support.weak_avl
+    libc.src.__support.CPP.optional
+)
+
 # TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol
 # defined by GPU start.cpp files so for now we exclude this fuzzer on GPU.
 if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)

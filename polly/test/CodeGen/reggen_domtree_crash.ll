@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-parallel -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-parallel -S < %s | FileCheck %s
 
 ; CHECK: define ptr @ham(ptr %arg, i64 %arg1, i1 %arg2)
 

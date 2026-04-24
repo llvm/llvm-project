@@ -63,7 +63,7 @@ Format
 Warning suppression mappings uses the same format as
 :doc:`SanitizerSpecialCaseList`.
 
-Sections describe which diagnostic group's behaviour to change, e.g.
+Sections describe which diagnostic group's behavior to change, e.g.
 ``[unused]``. When a diagnostic is matched by multiple sections, the latest
 section takes precedence.
 
@@ -76,7 +76,7 @@ Source files are matched against these globs either:
 - as paths relative to the current working directory
 - as absolute paths.
 
-When a source file matches multiple globs in a section, the longest one takes
+When a source file matches multiple globs in a section, the last one takes
 precedence.
 
 .. code-block:: bash

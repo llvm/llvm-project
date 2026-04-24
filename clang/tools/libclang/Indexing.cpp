@@ -15,6 +15,7 @@
 #include "CXString.h"
 #include "CXTranslationUnit.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -350,11 +351,8 @@ public:
                                                  StringRef InFile) override {
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
 
-    if (!PPOpts.ImplicitPCHInclude.empty()) {
-      if (auto File =
-              CI.getFileManager().getOptionalFileRef(PPOpts.ImplicitPCHInclude))
-        DataConsumer->importedPCH(*File);
-    }
+    if (!PPOpts.ImplicitPCHInclude.empty())
+      DataConsumer->importedPCH(PPOpts.ImplicitPCHInclude);
 
     DataConsumer->setASTContext(CI.getASTContextPtr());
     Preprocessor &PP = CI.getPreprocessor();
@@ -694,7 +692,7 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
 
   ASTUnit::ConcurrencyCheck Check(*Unit);
 
-  if (OptionalFileEntryRef PCHFile = Unit->getPCHFile())
+  if (std::optional<StringRef> PCHFile = Unit->getPCHFile())
     DataConsumer.importedPCH(*PCHFile);
 
   FileManager &FileMgr = Unit->getFileManager();

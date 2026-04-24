@@ -21,7 +21,6 @@ define void @masked_store_nxv1i8(<vscale x 1 x i8> %val, ptr %a, <vscale x 1 x i
   call void @llvm.masked.store.v1i8.p0(<vscale x 1 x i8> %val, ptr %a, i32 1, <vscale x 1 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v1i8.p0(<vscale x 1 x i8>, ptr, i32, <vscale x 1 x i1>)
 
 define void @masked_store_nxv1i16(<vscale x 1 x i16> %val, ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; V-LABEL: masked_store_nxv1i16:
@@ -40,7 +39,6 @@ define void @masked_store_nxv1i16(<vscale x 1 x i16> %val, ptr %a, <vscale x 1 x
   call void @llvm.masked.store.v1i16.p0(<vscale x 1 x i16> %val, ptr %a, i32 2, <vscale x 1 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v1i16.p0(<vscale x 1 x i16>, ptr, i32, <vscale x 1 x i1>)
 
 define void @masked_store_nxv1i32(<vscale x 1 x i32> %val, ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; V-LABEL: masked_store_nxv1i32:
@@ -59,7 +57,6 @@ define void @masked_store_nxv1i32(<vscale x 1 x i32> %val, ptr %a, <vscale x 1 x
   call void @llvm.masked.store.v1i32.p0(<vscale x 1 x i32> %val, ptr %a, i32 4, <vscale x 1 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v1i32.p0(<vscale x 1 x i32>, ptr, i32, <vscale x 1 x i1>)
 
 define void @masked_store_nxv2i8(<vscale x 2 x i8> %val, ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv2i8:
@@ -70,7 +67,6 @@ define void @masked_store_nxv2i8(<vscale x 2 x i8> %val, ptr %a, <vscale x 2 x i
   call void @llvm.masked.store.v2i8.p0(<vscale x 2 x i8> %val, ptr %a, i32 1, <vscale x 2 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v2i8.p0(<vscale x 2 x i8>, ptr, i32, <vscale x 2 x i1>)
 
 define void @masked_store_nxv2i16(<vscale x 2 x i16> %val, ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv2i16:
@@ -81,7 +77,6 @@ define void @masked_store_nxv2i16(<vscale x 2 x i16> %val, ptr %a, <vscale x 2 x
   call void @llvm.masked.store.v2i16.p0(<vscale x 2 x i16> %val, ptr %a, i32 2, <vscale x 2 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v2i16.p0(<vscale x 2 x i16>, ptr, i32, <vscale x 2 x i1>)
 
 define void @masked_store_nxv2i32(<vscale x 2 x i32> %val, ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv2i32:
@@ -92,7 +87,6 @@ define void @masked_store_nxv2i32(<vscale x 2 x i32> %val, ptr %a, <vscale x 2 x
   call void @llvm.masked.store.v2i32.p0(<vscale x 2 x i32> %val, ptr %a, i32 4, <vscale x 2 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v2i32.p0(<vscale x 2 x i32>, ptr, i32, <vscale x 2 x i1>)
 
 define void @masked_store_nxv4i8(<vscale x 4 x i8> %val, ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv4i8:
@@ -103,7 +97,6 @@ define void @masked_store_nxv4i8(<vscale x 4 x i8> %val, ptr %a, <vscale x 4 x i
   call void @llvm.masked.store.v4i8.p0(<vscale x 4 x i8> %val, ptr %a, i32 1, <vscale x 4 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v4i8.p0(<vscale x 4 x i8>, ptr, i32, <vscale x 4 x i1>)
 
 define void @masked_store_nxv4i16(<vscale x 4 x i16> %val, ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv4i16:
@@ -114,7 +107,6 @@ define void @masked_store_nxv4i16(<vscale x 4 x i16> %val, ptr %a, <vscale x 4 x
   call void @llvm.masked.store.v4i16.p0(<vscale x 4 x i16> %val, ptr %a, i32 2, <vscale x 4 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v4i16.p0(<vscale x 4 x i16>, ptr, i32, <vscale x 4 x i1>)
 
 define void @masked_store_nxv4i32(<vscale x 4 x i32> %val, ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv4i32:
@@ -125,7 +117,6 @@ define void @masked_store_nxv4i32(<vscale x 4 x i32> %val, ptr %a, <vscale x 4 x
   call void @llvm.masked.store.v4i32.p0(<vscale x 4 x i32> %val, ptr %a, i32 4, <vscale x 4 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v4i32.p0(<vscale x 4 x i32>, ptr, i32, <vscale x 4 x i1>)
 
 define void @masked_store_nxv8i8(<vscale x 8 x i8> %val, ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv8i8:
@@ -136,7 +127,6 @@ define void @masked_store_nxv8i8(<vscale x 8 x i8> %val, ptr %a, <vscale x 8 x i
   call void @llvm.masked.store.v8i8.p0(<vscale x 8 x i8> %val, ptr %a, i32 1, <vscale x 8 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v8i8.p0(<vscale x 8 x i8>, ptr, i32, <vscale x 8 x i1>)
 
 define void @masked_store_nxv8i16(<vscale x 8 x i16> %val, ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv8i16:
@@ -147,7 +137,6 @@ define void @masked_store_nxv8i16(<vscale x 8 x i16> %val, ptr %a, <vscale x 8 x
   call void @llvm.masked.store.v8i16.p0(<vscale x 8 x i16> %val, ptr %a, i32 2, <vscale x 8 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v8i16.p0(<vscale x 8 x i16>, ptr, i32, <vscale x 8 x i1>)
 
 define void @masked_store_nxv8i32(<vscale x 8 x i32> %val, ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv8i32:
@@ -158,7 +147,6 @@ define void @masked_store_nxv8i32(<vscale x 8 x i32> %val, ptr %a, <vscale x 8 x
   call void @llvm.masked.store.v8i32.p0(<vscale x 8 x i32> %val, ptr %a, i32 4, <vscale x 8 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v8i32.p0(<vscale x 8 x i32>, ptr, i32, <vscale x 8 x i1>)
 
 define void @masked_store_nxv16i8(<vscale x 16 x i8> %val, ptr %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv16i8:
@@ -169,7 +157,6 @@ define void @masked_store_nxv16i8(<vscale x 16 x i8> %val, ptr %a, <vscale x 16 
   call void @llvm.masked.store.v16i8.p0(<vscale x 16 x i8> %val, ptr %a, i32 1, <vscale x 16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v16i8.p0(<vscale x 16 x i8>, ptr, i32, <vscale x 16 x i1>)
 
 define void @masked_store_nxv16i16(<vscale x 16 x i16> %val, ptr %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv16i16:
@@ -180,7 +167,6 @@ define void @masked_store_nxv16i16(<vscale x 16 x i16> %val, ptr %a, <vscale x 1
   call void @llvm.masked.store.v16i16.p0(<vscale x 16 x i16> %val, ptr %a, i32 2, <vscale x 16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v16i16.p0(<vscale x 16 x i16>, ptr, i32, <vscale x 16 x i1>)
 
 define void @masked_store_nxv16i32(<vscale x 16 x i32> %val, ptr %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv16i32:
@@ -191,7 +177,6 @@ define void @masked_store_nxv16i32(<vscale x 16 x i32> %val, ptr %a, <vscale x 1
   call void @llvm.masked.store.v16i32.p0(<vscale x 16 x i32> %val, ptr %a, i32 4, <vscale x 16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v16i32.p0(<vscale x 16 x i32>, ptr, i32, <vscale x 16 x i1>)
 
 define void @masked_store_nxv32i8(<vscale x 32 x i8> %val, ptr %a, <vscale x 32 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv32i8:
@@ -202,7 +187,6 @@ define void @masked_store_nxv32i8(<vscale x 32 x i8> %val, ptr %a, <vscale x 32 
   call void @llvm.masked.store.v32i8.p0(<vscale x 32 x i8> %val, ptr %a, i32 1, <vscale x 32 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v32i8.p0(<vscale x 32 x i8>, ptr, i32, <vscale x 32 x i1>)
 
 define void @masked_store_nxv32i16(<vscale x 32 x i16> %val, ptr %a, <vscale x 32 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv32i16:
@@ -213,7 +197,6 @@ define void @masked_store_nxv32i16(<vscale x 32 x i16> %val, ptr %a, <vscale x 3
   call void @llvm.masked.store.v32i16.p0(<vscale x 32 x i16> %val, ptr %a, i32 2, <vscale x 32 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v32i16.p0(<vscale x 32 x i16>, ptr, i32, <vscale x 32 x i1>)
 
 define void @masked_store_nxv64i8(<vscale x 64 x i8> %val, ptr %a, <vscale x 64 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv64i8:
@@ -224,7 +207,6 @@ define void @masked_store_nxv64i8(<vscale x 64 x i8> %val, ptr %a, <vscale x 64 
   call void @llvm.masked.store.v64i8.p0(<vscale x 64 x i8> %val, ptr %a, i32 4, <vscale x 64 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v64i8.p0(<vscale x 64 x i8>, ptr, i32, <vscale x 64 x i1>)
 
 define void @masked_store_zero_mask(<vscale x 2 x i8> %val, ptr %a) nounwind {
 ; CHECK-LABEL: masked_store_zero_mask:

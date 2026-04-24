@@ -300,7 +300,7 @@ def BSR64rm  : RI<0xBD, MRMSrcMem, (outs GR64:$dst), (ins GR64:$fallback, i64mem
 } // Defs = [EFLAGS]
 
 let SchedRW = [WriteMicrocoded] in {
-let Defs = [EDI,ESI], Uses = [EDI,ESI,DF] in {
+let Defs = [EDI,ESI], Uses = [EDI,ESI,DF], mayLoad = 1, mayStore = 1 in {
 def MOVSB : I<0xA4, RawFrmDstSrc, (outs), (ins dstidx8:$dst, srcidx8:$src),
               "movsb\t{$src, $dst|$dst, $src}", []>;
 def MOVSW : I<0xA5, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
@@ -312,35 +312,35 @@ def MOVSQ : RI<0xA5, RawFrmDstSrc, (outs), (ins dstidx64:$dst, srcidx64:$src),
                Requires<[In64BitMode]>;
 }
 
-let Defs = [EDI], Uses = [AL,EDI,DF] in
+let Defs = [EDI], Uses = [AL,EDI,DF], mayStore = 1 in
 def STOSB : I<0xAA, RawFrmDst, (outs), (ins dstidx8:$dst),
               "stosb\t{%al, $dst|$dst, al}", []>;
-let Defs = [EDI], Uses = [AX,EDI,DF] in
+let Defs = [EDI], Uses = [AX,EDI,DF], mayStore = 1 in
 def STOSW : I<0xAB, RawFrmDst, (outs), (ins dstidx16:$dst),
               "stosw\t{%ax, $dst|$dst, ax}", []>, OpSize16;
-let Defs = [EDI], Uses = [EAX,EDI,DF] in
+let Defs = [EDI], Uses = [EAX,EDI,DF], mayStore = 1 in
 def STOSL : I<0xAB, RawFrmDst, (outs), (ins dstidx32:$dst),
               "stos{l|d}\t{%eax, $dst|$dst, eax}", []>, OpSize32;
-let Defs = [RDI], Uses = [RAX,RDI,DF] in
+let Defs = [RDI], Uses = [RAX,RDI,DF], mayStore = 1 in
 def STOSQ : RI<0xAB, RawFrmDst, (outs), (ins dstidx64:$dst),
                "stosq\t{%rax, $dst|$dst, rax}", []>,
                Requires<[In64BitMode]>;
 
-let Defs = [EDI,EFLAGS], Uses = [AL,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [AL,EDI,DF], mayLoad = 1 in
 def SCASB : I<0xAE, RawFrmDst, (outs), (ins dstidx8:$dst),
               "scasb\t{$dst, %al|al, $dst}", []>;
-let Defs = [EDI,EFLAGS], Uses = [AX,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [AX,EDI,DF], mayLoad = 1 in
 def SCASW : I<0xAF, RawFrmDst, (outs), (ins dstidx16:$dst),
               "scasw\t{$dst, %ax|ax, $dst}", []>, OpSize16;
-let Defs = [EDI,EFLAGS], Uses = [EAX,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [EAX,EDI,DF], mayLoad = 1 in
 def SCASL : I<0xAF, RawFrmDst, (outs), (ins dstidx32:$dst),
               "scas{l|d}\t{$dst, %eax|eax, $dst}", []>, OpSize32;
-let Defs = [EDI,EFLAGS], Uses = [RAX,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [RAX,EDI,DF], mayLoad = 1 in
 def SCASQ : RI<0xAF, RawFrmDst, (outs), (ins dstidx64:$dst),
                "scasq\t{$dst, %rax|rax, $dst}", []>,
                Requires<[In64BitMode]>;
 
-let Defs = [EDI,ESI,EFLAGS], Uses = [EDI,ESI,DF] in {
+let Defs = [EDI,ESI,EFLAGS], Uses = [EDI,ESI,DF], mayLoad = 1 in {
 def CMPSB : I<0xA6, RawFrmDstSrc, (outs), (ins dstidx8:$dst, srcidx8:$src),
               "cmpsb\t{$dst, $src|$src, $dst}", []>;
 def CMPSW : I<0xA7, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
@@ -982,7 +982,7 @@ def REPNE_PREFIX : I<0xF2, PrefixByte, (outs),  (ins), "repne", []>;
 }
 
 // String manipulation instructions
-let SchedRW = [WriteMicrocoded] in {
+let SchedRW = [WriteMicrocoded], mayLoad = 1 in {
 let Defs = [AL,ESI], Uses = [ESI,DF] in
 def LODSB : I<0xAC, RawFrmSrc, (outs), (ins srcidx8:$src),
               "lodsb\t{$src, %al|al, $src}", []>;
@@ -1340,23 +1340,19 @@ def AndMask64 : ImmLeaf<i64, [{
 let Predicates = [HasBMI, NoBMI2, NoTBM, NoEGPR] in {
   def : Pat<(and GR64:$src, AndMask64:$mask),
             (BEXTR64rr GR64:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+              (SUBREG_TO_REG (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
   def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
             (BEXTR64rm addr:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+              (SUBREG_TO_REG (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
 }
 
 let Predicates = [HasBMI, NoBMI2, NoTBM, HasEGPR] in {
   def : Pat<(and GR64:$src, AndMask64:$mask),
             (BEXTR64rr_EVEX GR64:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+              (SUBREG_TO_REG (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
   def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
             (BEXTR64rm_EVEX addr:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+              (SUBREG_TO_REG (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
 }
 
 // Use BZHI for 64-bit 'and' with large immediate 'mask'.

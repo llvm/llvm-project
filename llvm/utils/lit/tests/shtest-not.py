@@ -1,6 +1,6 @@
 # Check the not command
 
-# RUN: not %{lit} -a -v %{inputs}/shtest-not \
+# RUN: not %{lit} -a %{inputs}/shtest-not \
 # RUN: | FileCheck -match-full-lines %s
 #
 # END.
