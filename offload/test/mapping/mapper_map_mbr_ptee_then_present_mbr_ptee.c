@@ -31,11 +31,13 @@ int main() {
   print_status(&s1.x, "x");         // CHECK: x is present
   print_status(&s1.dummy, "dummy"); // CHECK: dummy is not present
   print_status(&s1.p, "p");         // CHECK: p is not present
-  print_status(&s1.p[0], "p[0]");   // CHECK: p[0] is not present
+  print_status(&s1.p[0], "p[0]");   // CHECK: p[0] is present
   printf("\n");
 
   // This present check should pass.
 #pragma omp target enter data map(present, alloc : s1)
+
+#pragma omp target exit data map(delete: s1)
   printf("After deleting\n");
   print_status(&s1.x, "x");         // CHECK: x is not present
   print_status(&s1.dummy, "dummy"); // CHECK: dummy is not present

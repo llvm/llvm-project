@@ -21,7 +21,7 @@ S s1;
 
 void print_status(void *p, const char *name) {
   int present = omp_target_is_present(p, omp_get_default_device());
-  printf("%s is %spresent\n", name, present ? "" : "not ");
+  fprintf(stderr, "%s is %spresent\n", name, present ? "" : "not ");
 }
 
 int main() {
@@ -41,14 +41,9 @@ int main() {
   // This present check should fail!
 
   // clang-format off
-  // CHECK: omptarget message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
+  // CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
   // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
   // clang-format on
 
 #pragma omp target enter data map(present, alloc : s1)
-  printf("After deleting\n");
-  print_status(&s1.x, "x");
-  print_status(&s1.dummy, "dummy");
-  print_status(&s1.p, "p");
-  print_status(&s1.p[0], "p[0]");
 }
