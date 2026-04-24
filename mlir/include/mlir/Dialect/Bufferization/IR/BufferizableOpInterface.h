@@ -269,6 +269,14 @@ struct BufferizationOptions {
   /// Parameters: tensor type, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
       TensorType, Attribute memorySpace, const BufferizationOptions &)>;
+  /// Build a MemRefLayoutAttrInterface from the encoding of `tensorType`.
+  /// Called whenever bufferization materializes a memref for a tensor value
+  /// (function arguments, `bufferization.alloc_tensor`, generic tensor-like
+  /// conversion fallback). Returning `nullptr` keeps the default layout
+  /// (identity or fully-dynamic, depending on the call site). The hook must
+  /// not change rank / shape / element type of the result.
+  using TensorEncodingToMemRefLayoutFn =
+      std::function<MemRefLayoutAttrInterface(TensorType)>;
   // Produce a MemorySpace attribute from a tensor type
   using DefaultMemorySpaceFn =
       std::function<std::optional<Attribute>(TensorType t)>;
@@ -363,6 +371,14 @@ struct BufferizationOptions {
   // failure to determine memory space for a tensor type).
   DefaultMemorySpaceFn defaultMemorySpaceFn =
       [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
+
+  /// Hook to derive a MemRef layout from a tensor encoding.
+  /// The default implementation returns the tensor encoding itself when it
+  /// already implements `MemRefLayoutAttrInterface`, and `{}` otherwise; this
+  /// makes `tensor<..., #layout>` naturally map to `memref<..., #layout>`.
+  /// Downstream callers can override the hook to provide custom mapping for
+  /// dialect-specific encodings.
+  TensorEncodingToMemRefLayoutFn tensorEncodingToMemRefLayoutFn = nullptr;
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.

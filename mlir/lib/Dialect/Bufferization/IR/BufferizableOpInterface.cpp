@@ -370,12 +370,24 @@ defaultUnknownTypeConverter(TensorType tensorType, Attribute memorySpace,
   return getMemRefTypeWithFullyDynamicLayout(tensorType, memorySpace);
 }
 
+/// Default tensor-encoding to memref-layout hook: if the tensor is a
+/// `RankedTensorType` whose encoding already implements
+/// `MemRefLayoutAttrInterface`, use it directly. Downstream callers can
+/// override the hook on `BufferizationOptions` to customize this mapping.
+MemRefLayoutAttrInterface defaultTensorEncodingToMemRefLayout(TensorType t) {
+  auto rtt = dyn_cast<RankedTensorType>(t);
+  if (!rtt)
+    return {};
+  return dyn_cast_or_null<MemRefLayoutAttrInterface>(rtt.getEncoding());
+}
+
 } // namespace
 
 // Default constructor for BufferizationOptions.
 BufferizationOptions::BufferizationOptions()
     : functionArgTypeConverterFn(defaultFunctionArgTypeConverter),
-      unknownTypeConverterFn(defaultUnknownTypeConverter) {}
+      unknownTypeConverterFn(defaultUnknownTypeConverter),
+      tensorEncodingToMemRefLayoutFn(defaultTensorEncodingToMemRefLayout) {}
 
 bool BufferizationOptions::isOpAllowed(Operation *op) const {
   // Special case: If function boundary bufferization is deactivated, do not
