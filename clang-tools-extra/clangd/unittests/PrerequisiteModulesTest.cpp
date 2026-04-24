@@ -544,6 +544,49 @@ export int nn = 43;
   EXPECT_TRUE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
 }
 
+TEST_F(PrerequisiteModulesTests, CanReuseWithTransitiveNamedModuleImports) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("N.cppm", R"cpp(
+export module N;
+export inline constexpr int n = 1;
+  )cpp");
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+import N;
+export inline constexpr int m = n + 1;
+  )cpp");
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export inline constexpr int a = m + 1;
+  )cpp");
+
+  CDB.addFile("Use.cpp", R"cpp(
+import A;
+int use() { return a; }
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  auto UseInfo = Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  ASSERT_TRUE(UseInfo);
+
+  HeaderSearchOptions HSOpts;
+  UseInfo->adjustHeaderSearchOptions(HSOpts);
+  EXPECT_TRUE(HSOpts.PrebuiltModuleFiles.count("A"));
+  EXPECT_TRUE(HSOpts.PrebuiltModuleFiles.count("M"));
+  EXPECT_TRUE(HSOpts.PrebuiltModuleFiles.count("N"));
+
+  auto Invocation =
+      buildCompilerInvocation(getInputs("Use.cpp", CDB), DiagConsumer);
+  ASSERT_TRUE(Invocation);
+
+  EXPECT_TRUE(UseInfo->canReuse(*Invocation, FS.view(TestDir)));
+}
+
 // An End-to-End test for modules.
 TEST_F(PrerequisiteModulesTests, ParsedASTTest) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
