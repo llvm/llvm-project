@@ -2177,10 +2177,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vsubd_u64:
   case NEON::BI__builtin_neon_vqdmlalh_s16:
   case NEON::BI__builtin_neon_vqdmlslh_s16:
-  case NEON::BI__builtin_neon_vqshlud_n_s64: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vqshlud_n_s64: {
     cir::IntType int64Type = builder.getSInt64Ty();
     ops[1] = builder.getSInt64(getZExtIntValueFromConstOp(ops[1]), loc);
     return emitNeonCall(cgm, builder, {int64Type, int64Type}, ops,
@@ -2189,9 +2190,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   }
   case NEON::BI__builtin_neon_vqshld_n_u64:
   case NEON::BI__builtin_neon_vqshld_n_s64: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
     cir::IntType int64Type = builtinID == NEON::BI__builtin_neon_vqshld_n_u64
                                  ? builder.getUInt64Ty()
                                  : builder.getSInt64Ty();
