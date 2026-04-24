@@ -146,6 +146,8 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
   AllSUs.remove(SU);
   PrioritySUs.remove(SU);
 
+  // BufferSize of 0 or 1 implies that each SU uses the HardwareUnit for
+  // BlockingCycles
   if (BufferSize <= 1 || (ScheduledSUs.size() % BufferSize == 0))
     TotalCycles -= BlockingCycles;
 
@@ -175,6 +177,8 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
 }
 
 void HardwareUnitInfo::finalizeCycles() {
+  // BufferSize of 0 or 1 implies that each SU uses the HardwareUnit for
+  // BlockingCycles
   if (BufferSize <= 1 || AllSUs.empty())
     return;
 
@@ -716,7 +720,8 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
         *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
     HardwareUnitInfo *HWUI = Heurs.getHWUIFromFlavor(Flavor);
 
-    if (HWUI->getBufferSize() <= 1)
+    // A BufferSize of 0 means "unlimited" buffer, thus we will never fill it.
+    if (HWUI->getBufferSize() == 0)
       return 0;
 
     // getBufferAvailableCycle assumes top-down scheduling.
