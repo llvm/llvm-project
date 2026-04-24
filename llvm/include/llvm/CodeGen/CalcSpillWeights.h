@@ -77,6 +77,13 @@ class VirtRegMap;
                              const TargetRegisterInfo &TRI,
                              const MachineRegisterInfo &MRI);
 
+    /// Returns true if the hint \p PhysHint for virtual register \p VReg is
+    /// unsatisfiable because the physreg live range already overlaps the
+    /// vreg live range, meaning the hint can never be fulfilled.
+    static bool isUnsatisfiableHint(Register VReg, MCRegister PhysHint,
+                                    LiveIntervals &LIS,
+                                    const TargetRegisterInfo &TRI);
+
     /// Determine if all values in LI are rematerializable.
     static bool isRematerializable(const LiveInterval &LI,
                                    const LiveIntervals &LIS,
