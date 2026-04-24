@@ -79,12 +79,38 @@ Where:
 - `r` — Aggregated fall-through originating at an external return (no checks
   performed for fall-through start).
 
+Internally, all branch/fall-through formats are represented as traces, with the
+following field mapping:
+- `B <start> <end>` -> `T <start> <end> BR_ONLY`
+- `F <start> <end>` -> `T FT_ONLY <start> <end>`
+- `f <start> <end>` -> `T FT_EXTERNAL_ORIGIN <start> <end>`
+- `r <start> <end>` -> `R FT_EXTERNAL_RETURN <start> <end>`
+
+The constants have the following values and can be specified directly:
+- `BR_ONLY`/`FT_ONLY`: UINT64_MAX: ffffffffffffffff or -1
+- `FT_EXTERNAL_ORIGIN`: UINT64_MAX-1: fffffffffffffffe or -2
+- `FT_EXTERNAL_RETURN`: UINT64_MAX-2: fffffffffffffffd or -3
+
+e.g. `T <branch> <target> -1` is a branch trace with unknown fall-through, useful
+for representing top-of-brstack entries having no valid fall-through. Note that
+such traces can be extended with an average fall-through length by passing
+`--impute-trace-fall-through`.
+
+`R`/`r` mark a fall-through originating at a return so it can be extended back
+to cover the call site, improving profile continuity. The hint is only needed
+for external returns (e.g. from a PLT call), where the return instruction can't
+be disassembled to tell a return from an ordinary jump.
+
+
 ### Location format
 
-Locations have the format `[<buildid>:]<offset>`:
-- `<offset>` — Hex offset from the object base load address.
+Locations have the format `[<buildid>:]<addr>`:
+- `<addr>` — Hex vaddr (non-PIE) or offset from the object base load address (PIE).
 - `<buildid>:<offset>` — Offset within the object identified by `<buildid>`.
 - `X:<addr>` — External address (outside the profiled binary).
+
+Base load address is the address of the first `PT_LOAD` segment in the binary, which
+may not be the same as the segment containing code address.
 
 ### Examples
 
