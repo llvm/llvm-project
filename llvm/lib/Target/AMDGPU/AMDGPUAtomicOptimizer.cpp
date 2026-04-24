@@ -88,8 +88,7 @@ private:
                        BasicBlock *ComputeLoop, BasicBlock *ComputeEnd) const;
 
   void optimizeAtomic(Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
-                      bool ValDivergent, bool IsLDS,
-                      unsigned DPPThreshold) const;
+                      bool ValDivergent, bool IsLDS) const;
 
   Value *optimizeAtomicImpl(IRBuilder<> &B, Instruction &I,
                             AtomicRMWInst::BinOp Op, unsigned ValIdx,
@@ -170,14 +169,8 @@ bool AMDGPUAtomicOptimizerImpl::run() {
   if (ToReplace.empty())
     return false;
 
-  unsigned DPPThreshold = 0;
-  int AttrVal = F.getFnAttributeAsParsedInteger(
-      "amdgpu-atomic-optimizer-dpp-lds-threshold", 0);
-  if (AttrVal > 0)
-    DPPThreshold = static_cast<unsigned>(AttrVal);
-
   for (auto &[I, Op, ValIdx, ValDivergent, IsLDS] : ToReplace)
-    optimizeAtomic(*I, Op, ValIdx, ValDivergent, IsLDS, DPPThreshold);
+    optimizeAtomic(*I, Op, ValIdx, ValDivergent, IsLDS);
   ToReplace.clear();
   return true;
 }
@@ -664,13 +657,21 @@ static Value *buildMul(IRBuilder<> &B, Value *LHS, Value *RHS) {
 void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
                                                AtomicRMWInst::BinOp Op,
                                                unsigned ValIdx,
-                                               bool ValDivergent, bool IsLDS,
-                                               unsigned DPPThreshold) const {
-  // If the threshold is >= wavefront size, DPP is never profitable — skip
-  // the atomic optimization entirely for this instruction.
-  if (IsLDS && ValDivergent && ScanImpl == ScanOptions::DPP &&
-      DPPThreshold >= ST.getWavefrontSize())
-    return;
+                                               bool ValDivergent,
+                                               bool IsLDS) const {
+  // Check !amdgpu.atomic.lds.dpp metadata for per-atomic DPP control.
+  //   !{!"none"}    – skip DPP optimization entirely for this atomic.
+  //   !{!"dynamic"} – use a dynamic active-lane-count branch.
+  StringRef LDSDPPMode;
+  if (IsLDS && ValDivergent && ScanImpl == ScanOptions::DPP) {
+    if (MDNode *MD = I.getMetadata("amdgpu.atomic.lds.dpp")) {
+      if (MD->getNumOperands() == 1)
+        if (auto *S = dyn_cast<MDString>(MD->getOperand(0)))
+          LDSDPPMode = S->getString();
+      if (LDSDPPMode == "none")
+        return;
+    }
+  }
 
   // Start building just before the instruction.
   IRBuilder<> B(&I);
@@ -705,9 +706,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   }
 
   Value *Result = nullptr;
-  if (IsLDS && ValDivergent && ScanImpl == ScanOptions::DPP &&
-      DPPThreshold > 0) {
-    Result = optimizeAtomicWithDynamicThreshold(B, I, Op, ValIdx, DPPThreshold);
+  if (LDSDPPMode == "dynamic") {
+    constexpr unsigned DynamicThreshold = 5;
+    Result =
+        optimizeAtomicWithDynamicThreshold(B, I, Op, ValIdx, DynamicThreshold);
   } else {
     Result = optimizeAtomicImpl(B, I, Op, ValIdx, ValDivergent);
   }

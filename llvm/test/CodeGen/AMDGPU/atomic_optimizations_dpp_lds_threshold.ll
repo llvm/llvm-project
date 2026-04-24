@@ -4,24 +4,19 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1064 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX900 %s
 ;
-; Test the "amdgpu-atomic-optimizer-dpp-lds-threshold" function attribute,
-; which controls dynamic DPP vs no-opt branching for LDS atomics.
+; Test the !amdgpu.atomic.lds.dpp instruction metadata, which controls
+; the DPP-based atomic optimization for LDS atomics.
 ;
-; Threshold=5: use DPP only when active lanes > 5, otherwise each lane does
-;   its own atomic.
-; Threshold=32: on wave32 this disables DPP entirely (>= wavefront size).
-; Threshold=64: on wave64 this disables DPP entirely (>= wavefront size).
+; !{!"dynamic"}: use DPP only when active lanes > 5 (hardcoded),
+;   otherwise each lane does its own atomic.
+; !{!"none"}: skip DPP optimization entirely for this atomic.
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
 @local_var32 = addrspace(3) global i32 undef, align 4
 
-attributes #0 = { "amdgpu-atomic-optimizer-dpp-lds-threshold"="5" }
-attributes #1 = { "amdgpu-atomic-optimizer-dpp-lds-threshold"="32" }
-attributes #2 = { "amdgpu-atomic-optimizer-dpp-lds-threshold"="64" }
-
 ; Test 1: divergent i32 add with result used -- dynamic threshold branch expected
-define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out) {
 ; GFX1032-LABEL: add_i32_varying:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s0, exec_lo
@@ -204,13 +199,13 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out) #0 {
 ; GFX900-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %lane acq_rel, !amdgpu.atomic.lds.dpp !0
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
 ; Test 2: divergent i32 sub with result used
-define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out) {
 ; GFX1032-LABEL: sub_i32_varying:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s0, exec_lo
@@ -393,7 +388,7 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out) #0 {
 ; GFX900-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw sub ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  %old = atomicrmw sub ptr addrspace(3) @local_var32, i32 %lane acq_rel, !amdgpu.atomic.lds.dpp !0
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
@@ -530,12 +525,12 @@ define amdgpu_kernel void @add_i32_varying_nouse() #0 {
 ; GFX900-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %lane acq_rel, !amdgpu.atomic.lds.dpp !0
   ret void
 }
 
-; Test 4: uniform i32 add -- should NOT be affected by threshold (not divergent)
-define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, i32 %additive) #0 {
+; Test 4: uniform i32 add with dynamic metadata -- metadata ignored (not divergent)
+define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, i32 %additive) {
 ; GFX1032-LABEL: add_i32_uniform:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_load_dword s0, s[4:5], 0x2c
@@ -627,13 +622,13 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, i32 %additive)
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX900-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %additive acq_rel
+  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %additive acq_rel, !amdgpu.atomic.lds.dpp !0
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
 ; Test 5: divergent float fadd with result used -- dynamic threshold branch expected
-define amdgpu_kernel void @fadd_f32_varying(ptr addrspace(1) %out) #0 {
+define amdgpu_kernel void @fadd_f32_varying(ptr addrspace(1) %out) {
 ; GFX1032-LABEL: fadd_f32_varying:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    v_cvt_f32_i32_e32 v0, v0
@@ -858,13 +853,13 @@ define amdgpu_kernel void @fadd_f32_varying(ptr addrspace(1) %out) #0 {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %conv = sitofp i32 %lane to float
-  %rmw = atomicrmw fadd ptr addrspace(3) @local_var32, float %conv syncscope("agent") acq_rel
+  %rmw = atomicrmw fadd ptr addrspace(3) @local_var32, float %conv syncscope("agent") acq_rel, !amdgpu.atomic.lds.dpp !0
   store float %rmw, ptr addrspace(1) %out
   ret void
 }
 
-; Test 6: divergent i32 add on GLOBAL memory -- should NOT be affected by threshold
-define amdgpu_kernel void @add_i32_varying_global(ptr addrspace(1) %out, ptr addrspace(1) %inout) #0 {
+; Test 6: divergent i32 add on GLOBAL memory -- should NOT be affected by metadata
+define amdgpu_kernel void @add_i32_varying_global(ptr addrspace(1) %out, ptr addrspace(1) %inout) {
 ; GFX1032-LABEL: add_i32_varying_global:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_or_saveexec_b32 s0, -1
@@ -1027,15 +1022,14 @@ define amdgpu_kernel void @add_i32_varying_global(ptr addrspace(1) %out, ptr add
 ; GFX900-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw add ptr addrspace(1) %inout, i32 %lane acq_rel
+  %old = atomicrmw add ptr addrspace(1) %inout, i32 %lane acq_rel, !amdgpu.atomic.lds.dpp !0
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-; Test 7: threshold=32 on wave32 (>= wavefront size) should avoid the dynamic
-; threshold branch.
-define amdgpu_kernel void @add_i32_varying_thresh32(ptr addrspace(1) %out) #1 {
-; GFX1032-LABEL: add_i32_varying_thresh32:
+; Test 7: !amdgpu.atomic.lds.dpp !{!"none"} disables DPP -- plain atomic expected
+define amdgpu_kernel void @add_i32_varying_no_lds_dpp(ptr addrspace(1) %out) {
+; GFX1032-LABEL: add_i32_varying_no_lds_dpp:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -1048,153 +1042,7 @@ define amdgpu_kernel void @add_i32_varying_thresh32(ptr addrspace(1) %out) #1 {
 ; GFX1032-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: add_i32_varying_thresh32:
-; GFX1064:       ; %bb.0: ; %entry
-; GFX1064-NEXT:    s_bcnt1_i32_b64 s0, exec
-; GFX1064-NEXT:    s_cmp_lt_u32 s0, 33
-; GFX1064-NEXT:    s_cbranch_scc0 .LBB6_2
-; GFX1064-NEXT:  ; %bb.1:
-; GFX1064-NEXT:    v_mov_b32_e32 v4, 0
-; GFX1064-NEXT:    ds_add_rtn_u32 v4, v4, v0
-; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    buffer_gl0_inv
-; GFX1064-NEXT:    s_cbranch_execz .LBB6_3
-; GFX1064-NEXT:    s_branch .LBB6_6
-; GFX1064-NEXT:  .LBB6_2:
-; GFX1064-NEXT:    ; implicit-def: $vgpr4
-; GFX1064-NEXT:  .LBB6_3:
-; GFX1064-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1064-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[0:1]
-; GFX1064-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX1064-NEXT:    v_permlanex16_b32 v2, v1, -1, -1
-; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v1, 31
-; GFX1064-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v1, 15
-; GFX1064-NEXT:    v_readlane_b32 s3, v1, 31
-; GFX1064-NEXT:    v_writelane_b32 v3, s2, 16
-; GFX1064-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX1064-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
-; GFX1064-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1064-NEXT:    v_readlane_b32 s2, v1, 63
-; GFX1064-NEXT:    v_readlane_b32 s6, v1, 47
-; GFX1064-NEXT:    v_writelane_b32 v3, s3, 32
-; GFX1064-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v4, exec_hi, v0
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1064-NEXT:    v_writelane_b32 v3, s6, 48
-; GFX1064-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
-; GFX1064-NEXT:    ; implicit-def: $vgpr4
-; GFX1064-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1064-NEXT:    s_cbranch_execz .LBB6_5
-; GFX1064-NEXT:  ; %bb.4:
-; GFX1064-NEXT:    v_mov_b32_e32 v4, s2
-; GFX1064-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1064-NEXT:    ds_add_rtn_u32 v4, v0, v4
-; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    buffer_gl0_inv
-; GFX1064-NEXT:  .LBB6_5:
-; GFX1064-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX1064-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX1064-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1064-NEXT:    v_mov_b32_e32 v0, v3
-; GFX1064-NEXT:    v_add_nc_u32_e32 v4, s0, v0
-; GFX1064-NEXT:  .LBB6_6:
-; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX1064-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX1064-NEXT:    s_mov_b32 s2, -1
-; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    buffer_store_dword v4, off, s[0:3], 0
-; GFX1064-NEXT:    s_endpgm
-;
-; GFX900-LABEL: add_i32_varying_thresh32:
-; GFX900:       ; %bb.0: ; %entry
-; GFX900-NEXT:    s_bcnt1_i32_b64 s0, exec
-; GFX900-NEXT:    s_cmp_lt_u32 s0, 33
-; GFX900-NEXT:    s_cbranch_scc0 .LBB6_2
-; GFX900-NEXT:  ; %bb.1:
-; GFX900-NEXT:    v_mov_b32_e32 v3, 0
-; GFX900-NEXT:    ds_add_rtn_u32 v3, v3, v0
-; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    s_cbranch_execz .LBB6_3
-; GFX900-NEXT:    s_branch .LBB6_6
-; GFX900-NEXT:  .LBB6_2:
-; GFX900-NEXT:    ; implicit-def: $vgpr3
-; GFX900-NEXT:  .LBB6_3:
-; GFX900-NEXT:    v_mov_b32_e32 v3, 0
-; GFX900-NEXT:    v_mbcnt_lo_u32_b32 v4, exec_lo, 0
-; GFX900-NEXT:    v_mbcnt_hi_u32_b32 v4, exec_hi, v4
-; GFX900-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX900-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[0:1]
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0
-; GFX900-NEXT:    s_nop 0
-; GFX900-NEXT:    v_add_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX900-NEXT:    s_nop 1
-; GFX900-NEXT:    v_add_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX900-NEXT:    s_nop 1
-; GFX900-NEXT:    v_add_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX900-NEXT:    s_nop 1
-; GFX900-NEXT:    v_add_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX900-NEXT:    s_nop 1
-; GFX900-NEXT:    v_add_u32_dpp v1, v1, v1 row_bcast:15 row_mask:0xa bank_mask:0xf
-; GFX900-NEXT:    s_nop 1
-; GFX900-NEXT:    v_add_u32_dpp v1, v1, v1 row_bcast:31 row_mask:0xc bank_mask:0xf
-; GFX900-NEXT:    v_readlane_b32 s2, v1, 63
-; GFX900-NEXT:    s_nop 0
-; GFX900-NEXT:    v_mov_b32_dpp v2, v1 wave_shr:1 row_mask:0xf bank_mask:0xf
-; GFX900-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
-; GFX900-NEXT:    ; implicit-def: $vgpr0
-; GFX900-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX900-NEXT:    s_cbranch_execz .LBB6_5
-; GFX900-NEXT:  ; %bb.4:
-; GFX900-NEXT:    v_mov_b32_e32 v0, s2
-; GFX900-NEXT:    ds_add_rtn_u32 v0, v3, v0
-; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:  .LBB6_5:
-; GFX900-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX900-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX900-NEXT:    v_mov_b32_e32 v0, v2
-; GFX900-NEXT:    v_add_u32_e32 v3, s0, v0
-; GFX900-NEXT:  .LBB6_6:
-; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX900-NEXT:    s_mov_b32 s3, 0xf000
-; GFX900-NEXT:    s_mov_b32 s2, -1
-; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    buffer_store_dword v3, off, s[0:3], 0
-; GFX900-NEXT:    s_endpgm
-entry:
-  %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %lane acq_rel
-  store i32 %old, ptr addrspace(1) %out
-  ret void
-}
-
-; Test 8: threshold=64 on wave64 (>= wavefront size) should avoid the dynamic
-; threshold branch.
-define amdgpu_kernel void @add_i32_varying_thresh64(ptr addrspace(1) %out) #2 {
-; GFX1032-LABEL: add_i32_varying_thresh64:
-; GFX1032:       ; %bb.0: ; %entry
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX1032-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX1032-NEXT:    s_mov_b32 s2, -1
-; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    ds_add_rtn_u32 v0, v1, v0
-; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    buffer_gl0_inv
-; GFX1032-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX1032-NEXT:    s_endpgm
-;
-; GFX1064-LABEL: add_i32_varying_thresh64:
+; GFX1064-LABEL: add_i32_varying_no_lds_dpp:
 ; GFX1064:       ; %bb.0: ; %entry
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -1207,7 +1055,7 @@ define amdgpu_kernel void @add_i32_varying_thresh64(ptr addrspace(1) %out) #2 {
 ; GFX1064-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX900-LABEL: add_i32_varying_thresh64:
+; GFX900-LABEL: add_i32_varying_no_lds_dpp:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -1220,7 +1068,10 @@ define amdgpu_kernel void @add_i32_varying_thresh64(ptr addrspace(1) %out) #2 {
 ; GFX900-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %lane acq_rel, !amdgpu.atomic.lds.dpp !1
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
+
+!0 = !{!"dynamic"}
+!1 = !{!"none"}
