@@ -59,6 +59,7 @@ struct MutableModes {
 // A single edit descriptor extracted from a FORMAT
 struct DataEdit {
   char descriptor; // capitalized: one of A, I, B, O, Z, F, E(N/S/X), D, G
+                   // AT uses descriptor 'A' with variation 'T'
 
   // Special internal data edit descriptors for list-directed & NAMELIST I/O
   RT_OFFLOAD_VAR_GROUP_BEGIN
@@ -76,7 +77,8 @@ struct DataEdit {
     return IsListDirected() && modes.inNamelist;
   }
 
-  char variation{'\0'}; // N, S, or X for EN, ES, EX; G/l for original G/list
+  char variation{
+      '\0'}; // N, S, or X for EN, ES, EX; T for AT; G/l for original G/list
   common::optional<int> width; // the 'w' field; optional for A
   common::optional<int> digits; // the 'm' or 'd' field
   common::optional<int> expoDigits; // 'Ee' field
