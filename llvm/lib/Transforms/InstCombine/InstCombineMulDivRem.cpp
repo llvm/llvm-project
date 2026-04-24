@@ -1275,8 +1275,8 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
   // X u/ (Y << Z) --> (X >> Z) u/ Y
   // The nuw flag ensures Y << Z == Y * 2^Z without overflow.
   // Requires one-use to avoid keeping the original shl alive.
-  if (!IsSigned && Op1->hasOneUse() &&
-      match(Op1, m_NUWShl(m_Value(Y), m_Value(Z)))) {
+  if (!IsSigned &&
+      match(Op1, m_OneUse(m_NUWShl(m_Value(Y), m_Value(Z))))) {
     Value *NewLShr = Builder.CreateLShr(Op0, Z, "", I.isExact());
     return Builder.CreateUDiv(NewLShr, Y, "", I.isExact());
   }
