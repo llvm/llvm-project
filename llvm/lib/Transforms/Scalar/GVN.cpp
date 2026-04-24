@@ -2806,9 +2806,8 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   this->LI = &LI;
   VN.setMemDep(MD);
   // Propagate the MSSA-enabled flag so the value-numbering paths in
-  // lookupOrAddCall() and computeLoadStoreVN() -- which gate on
-  // IsMSSAEnabled -- are actually reachable when the MSSA backend is
-  // selected.
+  // lookupOrAddCall() and computeLoadStoreVN(), which depends on whether
+  // IsMSSAEnabled is turned on.
   VN.setMemorySSA(MSSA, isMemorySSAEnabled());
   ORE = RunORE;
   InvalidBlockRPONumbers = true;
