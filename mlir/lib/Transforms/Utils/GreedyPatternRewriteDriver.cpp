@@ -781,7 +781,8 @@ void GreedyPatternRewriteDriver::notifyMatchFailure(
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// This driver simplfies all ops in a region.
+/// This driver simplfies all ops in a region. If a scope is set in the
+/// config, the provided region must be within that scope.
 class RegionPatternRewriteDriver : public GreedyPatternRewriteDriver {
 public:
   explicit RegionPatternRewriteDriver(MLIRContext *ctx,
@@ -807,6 +808,15 @@ RegionPatternRewriteDriver::RegionPatternRewriteDriver(
   if (config.getStrictness() != GreedyRewriteStrictness::AnyOp) {
     region.walk([&](Operation *op) { strictModeFilteredOps.insert(op); });
   }
+#ifndef NDEBUG
+  // Verify that the region is within the configured scope (if any).
+  if (Region *scope = config.getScope()) {
+    Region *r = &region;
+    while (r && r != scope)
+      r = r->getParentRegion();
+    assert(r && "provided region is not within the config scope");
+  }
+#endif
 }
 
 namespace {
