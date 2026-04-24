@@ -27,9 +27,6 @@
 extern "C" {
 #endif
 
-/**
- * Macro to determine whether a flag is set within uint8_t[8] types.
- */
 static inline bool hsa_flag_isset64(uint8_t *value, uint32_t bit) {
   unsigned int index = bit / 8;
   unsigned int subBit = bit % 8;
@@ -86,9 +83,6 @@ typedef enum hsa_amd_agent_info_s {
   HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES = 0xA114,
 } hsa_amd_agent_info_t;
 
-/**
- * Agent memory properties attributes
- */
 typedef enum hsa_amd_agent_memory_properties_s {
   HSA_AMD_MEMORY_PROPERTY_AGENT_IS_APU = (1 << 0),
 } hsa_amd_agent_memory_properties_t;
