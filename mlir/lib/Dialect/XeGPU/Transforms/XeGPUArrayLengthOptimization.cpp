@@ -12,6 +12,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Debug.h"
 
 namespace mlir {
 namespace xegpu {
@@ -21,7 +22,6 @@ namespace xegpu {
 } // namespace mlir
 
 #define DEBUG_TYPE "xegpu-array-length-optimization"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 using namespace mlir;
 
@@ -243,7 +243,7 @@ struct XeGPUArrayLengthOptimizationPass final
     xegpu::populateXeGPUArrayLengthOptimizationPatterns(patterns);
 
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-      DBGS() << "Array length optimization pass failed.\n";
+      LLVM_DEBUG(llvm::dbgs() << "Array length optimization pass failed.\n");
       return signalPassFailure();
     }
   }
