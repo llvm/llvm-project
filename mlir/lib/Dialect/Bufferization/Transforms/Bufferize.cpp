@@ -111,6 +111,13 @@ struct OneShotBufferizePass
       opt.unknownTypeConverterFn = [=](TensorType tensorType,
                                        Attribute memorySpace,
                                        const BufferizationOptions &options) {
+        if (options.tensorEncodingToMemRefLayoutFn) {
+          if (auto layout =
+                  options.tensorEncodingToMemRefLayoutFn(tensorType)) {
+            return cast<BaseMemRefType>(bufferization::getMemRefType(
+                tensorType, options, layout, memorySpace));
+          }
+        }
         if (unknownTypeConversionOption == LayoutMapOption::IdentityLayoutMap)
           return bufferization::getMemRefTypeWithStaticIdentityLayout(
               tensorType, memorySpace);
