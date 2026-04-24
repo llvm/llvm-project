@@ -15,6 +15,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -31,10 +34,8 @@ bool RISCVInlineAsmLowering::lowerAsmOperandForConstraint(
   switch (Constraint[0]) {
   case 'I': // 12-bit signed immediate operand.
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
-      unsigned ConstBitWidth = CI->getBitWidth();
-      if (ConstBitWidth <= 12) {
-        bool IsBool = ConstBitWidth == 1;
-        int64_t ExtVal = IsBool ? CI->getZExtValue() : CI->getSExtValue();
+      int64_t ExtVal = CI->getSExtValue();
+      if (isInt<12>(ExtVal)) {
         Ops.push_back(MachineOperand::CreateImm(ExtVal));
         return true;
       }
@@ -50,13 +51,12 @@ bool RISCVInlineAsmLowering::lowerAsmOperandForConstraint(
     return false;
   case 'K': // 5-bit unsigned immediate operand.
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
-      unsigned ConstBitWidth = CI->getBitWidth();
-      if (ConstBitWidth <= 5) {
-        bool IsBool = ConstBitWidth == 1;
-        int64_t ExtVal = IsBool ? CI->getZExtValue() : CI->getSExtValue();
+      uint64_t ExtVal = CI->getZExtValue();
+      if (isUInt<5>(ExtVal)) {
         Ops.push_back(MachineOperand::CreateImm(ExtVal));
         return true;
       }
+
     }
     return false;
   case 'S': // Alias for s.
