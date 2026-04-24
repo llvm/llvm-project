@@ -2,6 +2,9 @@
 
 #include <OffloadAPI.h>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include <atomic>
 #include <cassert>
 #include <cstddef>
@@ -10,11 +13,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-// This is the callback function we accept to override or instrument
-// entry-points. pParams is expected to be a pointer to the appropriate params_t
-// struct for the given entry point.
-typedef ol_result_t (*ol_mock_callback_t)(void *pParams);
 
 namespace mock {
 
@@ -56,41 +54,46 @@ template <class T> inline void releaseDummyHandle(T Handle) {
   auto DummyHandlePtr = reinterpret_cast<dummy_handle_t>(Handle);
   delete DummyHandlePtr;
 }
+} // namespace mock
 
-struct Callbacks {
-  void setCallback(std::string name, ol_mock_callback_t callback) {
-    replaceCallbacks[name] = callback;
-  }
+namespace unittest {
 
-  ol_mock_callback_t getCallback(std::string name) const {
-    auto callback = replaceCallbacks.find(name);
+class MockLiboffload {
+public:
+  MockLiboffload() { initDefault(); }
 
-    if (callback != replaceCallbacks.end()) {
-      return callback->second;
-    }
-    return nullptr;
-  }
+  MOCK_METHOD(ol_result_t, olInit, (const ol_init_args_t *));
+  MOCK_METHOD(ol_result_t, olShutDown, ());
+  MOCK_METHOD(ol_result_t, olGetPlatformInfoSize,
+              (ol_platform_handle_t, ol_platform_info_t, size_t *));
+  MOCK_METHOD(ol_result_t, olGetPlatformInfo,
+              (ol_platform_handle_t Platform, ol_platform_info_t PropName,
+               size_t PropSize, void *PropValue));
+  MOCK_METHOD(ol_result_t, olGetDeviceInfo,
+              (ol_device_handle_t Device, ol_device_info_t PropName,
+               size_t PropSize, void *PropValue));
+  MOCK_METHOD(ol_result_t, olGetDeviceInfoSize,
+              (ol_device_handle_t Device, ol_device_info_t PropName,
+               size_t *PropSizeRet));
+  MOCK_METHOD(ol_result_t, olIterateDevices,
+              (ol_device_iterate_cb_t Callback, void *UserData));
+  MOCK_METHOD(ol_result_t, olDestroyProgram, (ol_program_handle_t Program));
+  MOCK_METHOD(ol_result_t, olCreateQueue,
+              (ol_device_handle_t Device, ol_queue_handle_t *Queue));
+  MOCK_METHOD(ol_result_t, olDestroyQueue, (ol_queue_handle_t Queue));
 
-  void resetCallbacks() { replaceCallbacks.clear(); }
-  ol_error_struct_t *
-  getErrorUnimplementedFunction(const std::string &FunctionName) {
-    if (auto ErrorIt = errors.find(FunctionName); ErrorIt != errors.end())
-      return &ErrorIt->second.second;
-    auto [Iterator, Flag] = errors.insert(
-        {FunctionName,
-         {FunctionName + " is not implemented in mock OL library, add callback "
-                         "via setCAllback method.",
-          {}}});
-    assert(Flag);
-    auto &[MessageStr, ErrorStruct] = Iterator->second;
-    ErrorStruct = {OL_ERRC_UNIMPLEMENTED, MessageStr.c_str()};
-    return &ErrorStruct;
+  void initDefault();
+
+  ol_result_t makeEmptyStrError(ol_errc_t Code) {
+    auto [Iterator, Flag] =
+        Errors.emplace(std::make_pair(Code, ol_error_struct_t{Code, ""}));
+    return &Iterator->second;
   }
 
 private:
-  std::unordered_map<std::string, ol_mock_callback_t> replaceCallbacks;
-  std::unordered_map<std::string, std::pair<std::string, ol_error_struct_t>>
-      errors;
+  std::unordered_map<ol_errc_t, ol_error_struct_t> Errors;
+  ol_platform_handle_t DefaultPlatform;
+  ol_device_handle_t DefaultDevice{};
 };
 
 #ifndef _LIB_EXPORT
@@ -101,36 +104,18 @@ private:
 #  endif // _WIN32
 #endif   // _LIB_EXPORT
 
-_LIB_EXPORT Callbacks &getCallbacks();
-_LIB_EXPORT ol_error_struct_t *
-getErrorUnimplementedFunction(const std::string &FunctionName);
-
-} // namespace mock
-
-namespace unittest {
-
-class OffloadMock {
-public:
-  OffloadMock() = default;
-
-  OffloadMock(OffloadMock &&Other) = delete;
-  OffloadMock(const OffloadMock &) = delete;
-  OffloadMock &operator=(const OffloadMock &) = delete;
-  ~OffloadMock() {
-    // mock::getCallbacks() is an application lifetime object, we need to reset
-    // these between tests
-    mock::getCallbacks().resetCallbacks();
-  }
-
-  template <typename ParamType, typename... Args>
-  static ol_result_t callCallback(std::string FunctionName, Args &&...args) {
-    auto Callback = mock::getCallbacks().getCallback(FunctionName);
-    if (!Callback)
-      return mock::getErrorUnimplementedFunction(FunctionName);
-
-    ParamType params = {&args...};
-    return Callback(&params);
-  }
-};
+_LIB_EXPORT MockLiboffload &getMockLiboffload();
 
 } // namespace unittest
+
+class MockWrapper {
+public:
+  MockWrapper() : Mock(unittest::getMockLiboffload()) {}
+  ~MockWrapper() {
+    ::testing::Mock::VerifyAndClearExpectations(&Mock); // move to common
+  }
+  unittest::MockLiboffload &get() { return Mock; };
+
+private:
+  unittest::MockLiboffload &Mock;
+};

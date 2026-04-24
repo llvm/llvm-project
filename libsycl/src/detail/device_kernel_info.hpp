@@ -24,7 +24,6 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 class ProgramAndKernelManager;
-class MockDeviceKernelInfo;
 
 // TODO: Pointers to instances of this class are supported to be stored in
 // header function templates as a static variable to avoid repeated runtime

@@ -14,20 +14,13 @@
 
 using namespace sycl;
 
-// inline ur_result_t redefinedEventsWaitWithBarrier(void *pParams) {
-//   GEventsWaitCounter++;
-//   return UR_RESULT_SUCCESS;
-// }
-
 TEST(PlatformTest, APIGetPlatformsDefaultMock) {
-  // Use default callbacks.
-  unittest::OffloadMock mock;
   auto Platforms = sycl::platform::get_platforms();
-  ASSERT_EQ(Platforms.size(), 1);
+  ASSERT_EQ(Platforms.size(), 1u);
   EXPECT_EQ(Platforms[0].get_backend(), sycl::backend::level_zero);
 
   auto Devices = Platforms[0].get_devices();
-  ASSERT_EQ(Devices.size(), 1);
+  ASSERT_EQ(Devices.size(), 1u);
   EXPECT_EQ(Devices[0].get_backend(), sycl::backend::level_zero);
 
   EXPECT_FALSE(Devices[0].is_cpu());
@@ -35,19 +28,4 @@ TEST(PlatformTest, APIGetPlatformsDefaultMock) {
   EXPECT_TRUE(Devices[0].is_gpu());
 
   EXPECT_EQ(Devices[0].get_platform(), Platforms[0]);
-
-  // mock::getCallbacks().set_before_callback("urEnqueueEventsWaitWithBarrier",
-  //                                          &redefinedEventsWaitWithBarrier);
-
-  // context Ctx{Plt};
-  // queue InOrderQueue{Ctx, default_selector_v, property::queue::in_order()};
-
-  // auto buf = sycl::malloc_device<int>(1, InOrderQueue);
-  // event Evt = InOrderQueue.submit(
-  //     [&](sycl::handler &CGH) { CGH.memset(buf, 0, sizeof(buf[0])); });
-  // InOrderQueue.submit([&](sycl::handler &CGH) { CGH.host_task([=] {}); })
-  //     .wait();
-
-  // size_t expectedCount = 1u;
-  // EXPECT_EQ(GEventsWaitCounter, expectedCount);
 }
