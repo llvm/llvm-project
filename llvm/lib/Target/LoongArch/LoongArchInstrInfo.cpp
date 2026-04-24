@@ -203,7 +203,7 @@ Register LoongArchInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                                  TypeSize &MemBytes) const {
   switch (MI.getOpcode()) {
   default:
-    return 0;
+    return Register();
   case LoongArch::LD_W:
   case LoongArch::FLD_S:
     MemBytes = TypeSize::getFixed(4);
@@ -227,7 +227,7 @@ Register LoongArchInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     return MI.getOperand(0).getReg();
   }
 
-  return 0;
+  return Register();
 }
 
 Register LoongArchInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
@@ -241,7 +241,7 @@ Register LoongArchInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                                 TypeSize &MemBytes) const {
   switch (MI.getOpcode()) {
   default:
-    return 0;
+    return Register();
   case LoongArch::ST_W:
   case LoongArch::FST_S:
     MemBytes = TypeSize::getFixed(4);
@@ -265,7 +265,7 @@ Register LoongArchInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     return MI.getOperand(0).getReg();
   }
 
-  return 0;
+  return Register();
 }
 
 void LoongArchInstrInfo::movImm(MachineBasicBlock &MBB,
