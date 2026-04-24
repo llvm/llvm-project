@@ -101,6 +101,9 @@ struct DependencyScanningServiceOptions {
   bool AsyncScanModules = false;
   /// The build session timestamp for validate-once-per-build-session logic.
   std::time_t BuildSessionTimestamp; // = std::chrono::system_clock::now();
+  /// Whether to automatically flush the module cache from memory to disk at the
+  /// end of the service lifetime.
+  bool FlushModuleCache = true;
 };
 
 /// The dependency scanning service contains shared configuration and state that
@@ -109,6 +112,11 @@ class DependencyScanningService {
 public:
   explicit DependencyScanningService(DependencyScanningServiceOptions Opts)
       : Opts(std::move(Opts)) {}
+
+  ~DependencyScanningService() {
+    if (Opts.FlushModuleCache)
+      ModCacheEntries.flush();
+  }
 
   const DependencyScanningServiceOptions &getOpts() const { return Opts; }
 
