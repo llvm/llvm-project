@@ -3198,6 +3198,8 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_EXTEND:  Res = SoftPromoteHalfOp_FP_EXTEND(N); break;
   case ISD::SELECT_CC:  Res = SoftPromoteHalfOp_SELECT_CC(N, OpNo); break;
   case ISD::SETCC:      Res = SoftPromoteHalfOp_SETCC(N); break;
+  case ISD::INSERT_VECTOR_ELT:
+    Res = SoftPromoteHalfOp_INSERT_VECTOR_ELT(N); break;
   case ISD::STORE:      Res = SoftPromoteHalfOp_STORE(N, OpNo); break;
   case ISD::ATOMIC_STORE:
     Res = SoftPromoteHalfOp_ATOMIC_STORE(N, OpNo);
@@ -3349,6 +3351,15 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_SETCC(SDNode *N) {
   Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
 
   return DAG.getSetCC(SDLoc(N), N->getValueType(0), Op0, Op1, CCCode);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_INSERT_VECTOR_ELT(SDNode *N) {
+  SDValue NewVec = BitConvertVectorToIntegerVector(N->getOperand(0));
+  SDValue NewElt = GetSoftPromotedHalf(N->getOperand(1));
+  SDValue NewIns = DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N),
+                               NewVec.getValueType(), NewVec, NewElt,
+                               N->getOperand(2));
+  return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0), NewIns);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo) {
