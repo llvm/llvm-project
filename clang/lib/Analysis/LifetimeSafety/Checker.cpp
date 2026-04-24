@@ -143,8 +143,8 @@ public:
           AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
     };
     for (LoanID LID : EscapedLoans) {
-      // We do not have enough confidence to suggest annotation if the escaping
-      // storage is also moved, e.g. a shared_ptr constructed from a unique_ptr.
+      // Skip annotation suggestion for moved loans, as ownership transfer
+      // obscures the lifetime relationship (e.g., shared_ptr from unique_ptr).
       if (MovedLoans.getMovedLoans(OEF).lookup(LID))
         continue;
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
