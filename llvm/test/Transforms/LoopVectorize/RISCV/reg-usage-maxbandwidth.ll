@@ -1,14 +1,23 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v -vectorizer-maximize-bandwidth -debug-only=loop-vectorize,vplan -disable-output -S < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-REGS-VP
+; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v -debug-only=loop-vectorize,vplan -disable-output -S < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-REGS-LMUL-VP
 
 define i32 @dotp(ptr %a, ptr %b) {
-; CHECK-REGS-VP:      LV(REG): VF = vscale x 8
+; CHECK-REGS-VP:      LV(REG): VF = vscale x 16
 ; CHECK-REGS-VP-NEXT: LV(REG): Found max usage: 2 item
 ; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::VRRC, 12 registers
+; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::VRRC, 24 registers
 ; CHECK-REGS-VP-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK-REGS-VP:      LV: Selecting VF: vscale x 8.
+; CHECK-REGS-VP:      LV: Selecting VF: vscale x 16.
+;
+; CHECK-REGS-LMUL-VP:      LV(REG): VF = vscale x 4
+; CHECK-REGS-LMUL-VP-NEXT: LV(REG): Found max usage: 2 item
+; CHECK-REGS-LMUL-VP-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-LMUL-VP-NEXT: LV(REG): RegisterClass: RISCV::VRRC, 6 registers
+; CHECK-REGS-LMUL-VP-NEXT: LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-LMUL-VP-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-LMUL-VP:      LV: Selecting VF: vscale x 4.
 entry:
   br label %for.body
 

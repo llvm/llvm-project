@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+v -S --riscv-v-register-bit-width-lmul=1 | FileCheck %s -check-prefix=LMUL1
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+v -S --riscv-v-register-bit-width-lmul=2 | FileCheck %s -check-prefix=LMUL2
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+v -S --riscv-v-register-bit-width-lmul=4 | FileCheck %s -check-prefix=LMUL4
-; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+v -S --riscv-v-register-bit-width-lmul=8 -riscv-vector-primary-lmul-max=3 | FileCheck %s -check-prefix=LMUL8
+; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+v -S --riscv-v-register-bit-width-lmul=8 | FileCheck %s -check-prefix=LMUL8
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+v -S | FileCheck %s -check-prefix=LMUL2
 
 define void @load_store(ptr %p) {

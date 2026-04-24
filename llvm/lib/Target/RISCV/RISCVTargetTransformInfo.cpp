@@ -39,14 +39,6 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
-cl::opt<unsigned> VectorPrimaryLMULMaxExp(
-    "riscv-vector-primary-lmul-max",
-    cl::desc("Limit the exponent of maximum primary LMUL used by "
-             "LV autovectorized code."
-             "The default value is 0, it means LMUL=pow(2, 0)=1."
-             "Fractional LMULs are not supported."),
-    cl::init(0), cl::Hidden);
-
 static cl::opt<unsigned>
     RVVMinTripCount("riscv-v-min-trip-count",
                     cl::desc("Set the lower bound of a trip count to decide on "
@@ -355,12 +347,11 @@ RISCVTTIImpl::getMaxScalableVF(unsigned MaxWidthInBits) const {
     return ElementCount::get(0, false);
 
   MaxWidthInBits = std::max(8U, MaxWidthInBits);
-  unsigned LMULMax = 1 << std::min<unsigned>(VectorPrimaryLMULMaxExp, 3);
-  if (!VectorPrimaryLMULMaxExp.getNumOccurrences()) {
-    LMULMax = 4;
-    if (ST->getProcFamily() == RISCVSubtarget::SiFive7)
-      LMULMax = 8;
-  }
+  unsigned LMULMax =
+      llvm::bit_floor(std::clamp<unsigned>(RVVRegisterWidthLMUL, 1, 8));
+
+  if (!RVVRegisterWidthLMUL.getNumOccurrences())
+    return std::nullopt;
 
   return ElementCount::getScalable(LMULMax * RISCV::RVVBitsPerBlock /
                                    MaxWidthInBits);

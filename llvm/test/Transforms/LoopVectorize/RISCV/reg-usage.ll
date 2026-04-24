@@ -17,7 +17,7 @@
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL4
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -riscv-v-register-bit-width-lmul=8 -riscv-vector-primary-lmul-max=3 \
+; RUN:   -riscv-v-register-bit-width-lmul=8 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL8
 
 define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i32 signext %size, ptr noalias nocapture writeonly %result) {

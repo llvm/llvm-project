@@ -338,6 +338,12 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
 
   auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElementsPowerOf2);
   auto MaxSafeScalableVF = getMaxLegalScalableVF(MaxSafeElementsPowerOf2);
+  auto CollectMaxScalableVF = TTI.getMaxScalableVF(WidestType);
+  if (CollectMaxScalableVF) {
+    ElementCount MaxScalableVF = *CollectMaxScalableVF;
+    if (ElementCount::isKnownLT(MaxScalableVF, MaxSafeScalableVF))
+      MaxSafeScalableVF = MaxScalableVF;
+  }
 
   if (!Legal->isSafeForAnyVectorWidth())
     MaxSafeElements = MaxSafeElementsPowerOf2;
