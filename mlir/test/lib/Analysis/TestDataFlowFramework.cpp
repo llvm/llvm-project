@@ -80,6 +80,10 @@ public:
 
   using DataFlowAnalysis::DataFlowAnalysis;
 
+  static bool classof(const DataFlowAnalysis *a) {
+    return a->getTypeID() == TypeID::get<FooAnalysis>();
+  }
+
   LogicalResult initialize(Operation *top) override;
   LogicalResult visit(ProgramPoint *point) override;
 
@@ -143,6 +147,10 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(BarAnalysis)
 
   using DataFlowAnalysis::DataFlowAnalysis;
+
+  static bool classof(const DataFlowAnalysis *a) {
+    return a->getTypeID() == TypeID::get<BarAnalysis>();
+  }
 
   LogicalResult initialize(Operation *top) override;
   LogicalResult visit(ProgramPoint *point) override;
@@ -330,7 +338,7 @@ void TestStagedAnalysesPass::runOnOperation() {
   if (failed(solver.initializeAndRun(func)))
     return signalPassFailure();
   solver.load<BarAnalysis>();
-  if (failed(solver.initializeAndRunPendingAnalyses()))
+  if (failed(solver.initializeAndRun(func, llvm::IsaPred<BarAnalysis>)))
     return signalPassFailure();
 
   func.walk([&](Operation *op) {

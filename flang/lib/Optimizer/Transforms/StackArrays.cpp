@@ -156,6 +156,8 @@ public:
 class AllocationAnalysis
     : public mlir::dataflow::DenseForwardDataFlowAnalysis<LatticePoint> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AllocationAnalysis)
+
   using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
 
   mlir::LogicalResult visitOperation(mlir::Operation *op,
