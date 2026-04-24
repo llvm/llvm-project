@@ -19,6 +19,40 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+static llvm::StringRef getIntrinsicNameforWaveReduction(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  default:
+    llvm_unreachable("Unknown BuiltinID for wave reduction");
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u64:
+    return "amdgcn.wave.reduce.add";
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u64:
+    return "amdgcn.wave.reduce.sub";
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i64:
+    return "amdgcn.wave.reduce.min";
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u64:
+    return "amdgcn.wave.reduce.umin";
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i64:
+    return "amdgcn.wave.reduce.max";
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u64:
+    return "amdgcn.wave.reduce.umax";
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_and_b32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_and_b64:
+    return "amdgcn.wave.reduce.and";
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_or_b32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_or_b64:
+    return "amdgcn.wave.reduce.or";
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b64:
+    return "amdgcn.wave.reduce.xor";
+  }
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                                       const CallExpr *expr) {
@@ -41,10 +75,14 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_and_b64:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_or_b64:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b64: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    llvm::StringRef intrinsicName = getIntrinsicNameforWaveReduction(builtinId);
+    mlir::Value Value = emitScalarExpr(expr->getArg(0));
+    mlir::Value Strategy = emitScalarExpr(expr->getArg(1));
+    return cir::LLVMIntrinsicCallOp::create(
+               builder, getLoc(expr->getExprLoc()),
+               builder.getStringAttr(intrinsicName), Value.getType(),
+               {Value, Strategy})
+        .getResult();
   }
   case AMDGPU::BI__builtin_amdgcn_div_scale:
   case AMDGPU::BI__builtin_amdgcn_div_scalef: {
