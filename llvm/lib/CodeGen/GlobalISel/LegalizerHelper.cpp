@@ -1749,14 +1749,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       return UnableToLegalize;
     }
 
-    auto TmpReg = MIRBuilder.buildFPTrunc(NarrowTy, SrcReg).getReg(0);
+    auto TmpReg = MIRBuilder.buildFPTrunc(NarrowTy, SrcReg);
     if (MemSize == NarrowSize) {
       MIRBuilder.buildStore(TmpReg, PtrReg, MMO);
     } else if (MemSize < NarrowSize) {
-      MIRBuilder.buildInstr(TargetOpcode::G_FPTRUNCSTORE)
-          .addUse(TmpReg)
-          .addUse(PtrReg)
-          .addMemOperand(&MMO);
+      MIRBuilder.buildStoreInstr(TargetOpcode::G_FPTRUNCSTORE, TmpReg, PtrReg,
+                                 MMO);
     }
 
     StoreMI.eraseFromParent();

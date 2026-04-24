@@ -566,15 +566,18 @@ GlobalISelEmitter::getEquivNode(const Record &Equiv,
         (Predicate.isLoad() || Predicate.isAtomic()) &&
         Predicate.isSignExtLoad())
       return &Target.getInstruction(Equiv.getValueAsDef("IfSignExtend"));
+
     if (!Equiv.isValueUnset("IfZeroExtend") &&
         (Predicate.isLoad() || Predicate.isAtomic()) &&
         Predicate.isZeroExtLoad())
       return &Target.getInstruction(Equiv.getValueAsDef("IfZeroExtend"));
+
     if (!Equiv.isValueUnset("IfFPExtend") &&
         (Predicate.isLoad() || Predicate.isAtomic()) && IsAnyExtLoad &&
         Predicate.getMemoryVT() != nullptr &&
         getValueType(Predicate.getMemoryVT()).isFloatingPoint())
       return &Target.getInstruction(Equiv.getValueAsDef("IfFPExtend"));
+
     if (!Equiv.isValueUnset("IfFPTrunc") &&
         (Predicate.isStore() || Predicate.isAtomic()) && IsTruncStore &&
         Predicate.getMemoryVT() != nullptr &&

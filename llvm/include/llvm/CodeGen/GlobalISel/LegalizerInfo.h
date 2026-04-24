@@ -692,7 +692,7 @@ public:
       return *this;
     return actionIf(LegalizeAction::Legal,
                     LegalityPredicates::typePairAndMemDescInSet(
-                        typeIdx(0), typeIdx(1), /*MMOIdx*/ 0, TypesAndMemDesc));
+                        typeIdx(0), typeIdx(1), /*MMOIdx=*/0, TypesAndMemDesc));
   }
   /// The instruction is legal when type indexes 0 and 1 are both in the given
   /// list. That is, the type pair is in the cartesian product of the list.
