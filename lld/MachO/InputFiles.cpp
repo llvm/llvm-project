@@ -650,6 +650,17 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
   }
 }
 
+// ld64 never turns these labels into named atoms or symbol table entries.
+static bool shouldIgnoreLabel(const InputSection *isec, StringRef name) {
+  if (isCfStringSection(isec) || isClassRefsSection(isec) ||
+      isSelRefsSection(isec))
+    return true;
+  if ((isa<WordLiteralInputSection>(isec) || isa<CStringInputSection>(isec)) &&
+      isPrivateLabel(name))
+    return true;
+  return false;
+}
+
 template <class NList>
 static macho::Symbol *createDefined(const NList &sym, StringRef name,
                                     InputSection *isec, uint64_t value,
@@ -673,7 +684,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 
   assert(!(sym.n_desc & N_ARM_THUMB_DEF) && "ARM32 arch is not supported");
 
-  if (sym.n_type & N_EXT) {
+  if ((sym.n_type & N_EXT) && !shouldIgnoreLabel(isec, name)) {
     // -load_hidden makes us treat global symbols as linkage unit scoped.
     // Duplicates are reported but the symbol does not go in the export trie.
     bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
