@@ -11,6 +11,12 @@
 /// Try it a second time to reduce chance of false negatives.
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -x c-header -emit-pch -o %t.cmp %S/pragma-redefine-extname.h
 // RUN: diff %t %t.cmp >/dev/null
+/// Try it a third time to reduce chance of false negatives.
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux -x c-header -emit-pch -o %t.cmp %S/pragma-redefine-extname.h
+// RUN: diff %t %t.cmp >/dev/null
+/// Try it a fourth time to reduce chance of false negatives.
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux -x c-header -emit-pch -o %t.cmp %S/pragma-redefine-extname.h
+// RUN: diff %t %t.cmp >/dev/null
 
 // CHECK: define dso_local void @redeffunc2_ext
 // CHECK: call void @redeffunc1_ext
