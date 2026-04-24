@@ -74,7 +74,8 @@ class AArch64StackTaggingPreRALegacy : public MachineFunctionPass {
 public:
   static char ID;
   AArch64StackTaggingPreRALegacy() : MachineFunctionPass(ID) {
-    initializeAArch64StackTaggingPreRALegacyPass(*PassRegistry::getPassRegistry());
+    initializeAArch64StackTaggingPreRALegacyPass(
+        *PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -96,9 +97,11 @@ public:
 
 char AArch64StackTaggingPreRALegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(AArch64StackTaggingPreRALegacy, "aarch64-stack-tagging-pre-ra",
+INITIALIZE_PASS_BEGIN(AArch64StackTaggingPreRALegacy,
+                      "aarch64-stack-tagging-pre-ra",
                       "AArch64 Stack Tagging PreRA Pass", false, false)
-INITIALIZE_PASS_END(AArch64StackTaggingPreRALegacy, "aarch64-stack-tagging-pre-ra",
+INITIALIZE_PASS_END(AArch64StackTaggingPreRALegacy,
+                    "aarch64-stack-tagging-pre-ra",
                     "AArch64 Stack Tagging PreRA Pass", false, false)
 
 FunctionPass *llvm::createAArch64StackTaggingPreRALegacyPass() {
@@ -269,7 +272,8 @@ std::optional<int> AArch64StackTaggingPreRAImpl::findFirstSlotCandidate() {
   //   eliminated (see uncheckLoadsAndStores) so all remaining load/store
   //   instructions count.
   // - Any other instruction may benefit from being pinned to offset 0.
-  LLVM_DEBUG(dbgs() << "AArch64StackTaggingPreRAImpl::findFirstSlotCandidate\n");
+  LLVM_DEBUG(
+      dbgs() << "AArch64StackTaggingPreRAImpl::findFirstSlotCandidate\n");
   if (!ClFirstSlot)
     return std::nullopt;
 
