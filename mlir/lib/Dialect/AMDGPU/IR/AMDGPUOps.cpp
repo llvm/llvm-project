@@ -631,7 +631,7 @@ LogicalResult SparseMFMAOp::verify() {
   // handling and in the sparse-index layout:
   //   - gfx942 16-bit:              max ABID = 3, sparse idx = vector<4xi8>
   //   - gfx950 16-bit / gfx942 8-bit: max ABID = 1, sparse idx = vector<2xi16>
-  //   - gfx950 8-bit:  CBSZ/ABID ignored by hw,   sparse idx = vector<2xi16>
+  //   - gfx950 8-bit:  CBSZ/ABID ignored by hw,   sparse idx = i32
   uint32_t m = getM(), k = getK();
   bool is8BitSource = sparseElem.isFloat(8) || sparseElem.isInteger(8);
   bool is16BitGfx942 =
@@ -657,17 +657,22 @@ LogicalResult SparseMFMAOp::verify() {
              << maxAbid << "] for this variant";
   }
 
-  // Sparse-index vector type check: only the gfx942 16-bit variants pack the
-  // indices as <4xi8>; every other variant uses <2xi16>.
-  unsigned expectedIdxElems = is16BitGfx942 ? 4 : 2;
-  unsigned expectedIdxBits = is16BitGfx942 ? 8 : 16;
-  auto sparseIdxType = cast<VectorType>(getSparseIdx().getType());
-  if (sparseIdxType.getNumElements() != expectedIdxElems ||
-      !sparseIdxType.getElementType().isInteger(expectedIdxBits))
-    return emitOpError("expected vector<")
-           << expectedIdxElems << "xi" << expectedIdxBits
-           << "> sparse indices for this variant, but got "
-           << getSparseIdx().getType();
+  Type sparseIdxType = getSparseIdx().getType();
+  if (is8BitGfx950) {
+    if (!sparseIdxType.isInteger(32))
+      return emitOpError("expected i32 sparse indices for this variant "
+                         "(no internal set structure), but got ")
+             << sparseIdxType;
+  } else {
+    unsigned expectedIdxElems = is16BitGfx942 ? 4 : 2;
+    unsigned expectedIdxBits = is16BitGfx942 ? 8 : 16;
+    auto vecType = dyn_cast<VectorType>(sparseIdxType);
+    if (!vecType || vecType.getNumElements() != expectedIdxElems ||
+        !vecType.getElementType().isInteger(expectedIdxBits))
+      return emitOpError("expected vector<")
+             << expectedIdxElems << "xi" << expectedIdxBits
+             << "> sparse indices for this variant, but got " << sparseIdxType;
+  }
 
   int64_t expectedSourceElems = (getM() * getK()) / waveSize;
   if (denseLen != expectedSourceElems)

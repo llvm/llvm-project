@@ -530,17 +530,25 @@ func.func @sparse_mfma_abid_invalid_for_gfx950_16bit(%a: vector<8xf16>, %b: vect
 
 // -----
 
-func.func @sparse_mfma_gfx950_8bit_nonzero_cbsz(%a: vector<16xi8>, %b: vector<32xi8>, %c: vector<4xi32>, %idx: vector<2xi16>) -> vector<4xi32> {
+func.func @sparse_mfma_gfx950_8bit_nonzero_cbsz(%a: vector<16xi8>, %b: vector<32xi8>, %c: vector<4xi32>, %idx: i32) -> vector<4xi32> {
   // expected-error@+1 {{'amdgpu.sparse_mfma' op CBSZ must be 0 for this variant (field is ignored by hardware)}}
-  %d = amdgpu.sparse_mfma 16x16x128 %a * %b + %c sparse(%idx : vector<2xi16>) { abid = 0 : i32, cbsz = 1 : i32 } : vector<16xi8>, vector<32xi8>, vector<4xi32>
+  %d = amdgpu.sparse_mfma 16x16x128 %a * %b + %c sparse(%idx : i32) { abid = 0 : i32, cbsz = 1 : i32 } : vector<16xi8>, vector<32xi8>, vector<4xi32>
   func.return %d : vector<4xi32>
 }
 
 // -----
 
-func.func @sparse_mfma_gfx950_8bit_nonzero_abid(%a: vector<16xi8>, %b: vector<32xi8>, %c: vector<4xi32>, %idx: vector<2xi16>) -> vector<4xi32> {
+func.func @sparse_mfma_gfx950_8bit_nonzero_abid(%a: vector<16xi8>, %b: vector<32xi8>, %c: vector<4xi32>, %idx: i32) -> vector<4xi32> {
   // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be 0 for this variant (field is ignored by hardware)}}
-  %d = amdgpu.sparse_mfma 16x16x128 %a * %b + %c sparse(%idx : vector<2xi16>) { abid = 1 : i32, cbsz = 0 : i32 } : vector<16xi8>, vector<32xi8>, vector<4xi32>
+  %d = amdgpu.sparse_mfma 16x16x128 %a * %b + %c sparse(%idx : i32) { abid = 1 : i32, cbsz = 0 : i32 } : vector<16xi8>, vector<32xi8>, vector<4xi32>
+  func.return %d : vector<4xi32>
+}
+
+// -----
+
+func.func @sparse_mfma_wrong_idx_type_for_gfx950_8bit(%a: vector<16xi8>, %b: vector<32xi8>, %c: vector<4xi32>, %idx: vector<2xi16>) -> vector<4xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected i32 sparse indices for this variant (no internal set structure), but got 'vector<2xi16>'}}
+  %d = amdgpu.sparse_mfma 16x16x128 %a * %b + %c sparse(%idx : vector<2xi16>) : vector<16xi8>, vector<32xi8>, vector<4xi32>
   func.return %d : vector<4xi32>
 }
 

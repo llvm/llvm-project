@@ -938,7 +938,8 @@ def SMFMACOutTypes : AnyTypeOf<[
 
 def SMFMACIdxTypes : AnyTypeOf<[
     FixedVectorOfLengthAndType<[4], [I8]>,
-    FixedVectorOfLengthAndType<[2], [I16]>
+    FixedVectorOfLengthAndType<[2], [I16]>,
+    I32
 ]>;
 
 // scaled_mfma
@@ -1128,7 +1129,8 @@ def AMDGPU_SparseMFMAOp :
       - gfx942 8-bit (`(m,k)` in `{(16,64), (32,32)}`) and gfx950 16-bit
         (`(m,k)` in `{(16,64), (32,32)}`): 16 bits per lane, carried as
         `vector<2xi16>` (one 16-bit set per i16 element).
-      - gfx950 8-bit (`(m,k)` in `{(16,128), (32,64)}`): 32 bits per lane, carried as `vector<2xi16>`.
+      - gfx950 8-bit (`(m,k)` in `{(16,128), (32,64)}`): 32 bits per lane (a
+        full VGPR with no internal set structure), carried as `i32`.
 
     The `cbsz` and `abid` parameters select which index set within the VGPR is
     used:
@@ -1147,8 +1149,10 @@ def AMDGPU_SparseMFMAOp :
         : vector<8xi8>, vector<16xi8>, vector<4xi32>
 
       %2 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
-        { cbsz = 0 : i32, abid = 1 : i32 }
-        : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
+        : vector<8xf16>, vector<16xf16>, vector<4xf32>
+
+      %3 = amdgpu.sparse_mfma 16x16x128 %matA * %matB + %matC sparse(%idx : i32)
+        : vector<16xf8E4M3FN>, vector<32xf8E4M3FN>, vector<4xf32>
     ```
   }];
   let assemblyFormat = [{
