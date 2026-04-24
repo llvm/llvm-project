@@ -100,6 +100,12 @@ GlobalValue::GUID GlobalValue::getGUID() const {
   return *MaybeGUID;
 }
 
+GlobalValue::GUID GlobalValue::getGUIDOrFallback() const {
+  if (auto MaybeGUID = getGUIDIfAssigned(); MaybeGUID)
+    return *MaybeGUID;
+  return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+}
+
 std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
   // First check the metadata.
   auto *MD = getGUIDMetadata();

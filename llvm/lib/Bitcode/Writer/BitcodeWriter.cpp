@@ -4621,13 +4621,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
       /*WriteContextSizeInfoIndex*/ true, CallStackPos, CallStackCount);
 }
 
-static GlobalValue::GUID getOrComputeGUID(const GlobalValue &V) {
-  // The GUID might not be assigned if this module originates from an old
-  // bitcode file without GUID metadata.
-  auto MaybeGUID = V.getGUIDIfAssigned();
-  return MaybeGUID ? *MaybeGUID
-                   : GlobalValue::getGUIDAssumingExternalLinkage(V.getName());
-}
+
 
 // Collect the global value references in the given variable's initializer,
 // and emit them in a summary record.
@@ -4636,7 +4630,7 @@ void ModuleBitcodeWriterBase::writeModuleLevelReferences(
     unsigned FSModRefsAbbrev, unsigned FSModVTableRefsAbbrev) {
   // Be a little lenient here, to accomodate older files without GUIDs
   // already computed and assigned as metadata.
-  GlobalValue::GUID GUID = getOrComputeGUID(V);
+  GlobalValue::GUID GUID = V.getGUIDOrFallback();
 
   auto VI = Index->getValueInfo(GUID);
   if (!VI || VI.getSummaryList().empty()) {
@@ -4853,7 +4847,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
 
     // Be a little lenient here, to accomodate older files without GUIDs
     // already computed and assigned as metadata.
-    GlobalValue::GUID GUID = getOrComputeGUID(F);
+    GlobalValue::GUID GUID = F.getGUIDOrFallback();
 
     ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {
@@ -4887,7 +4881,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    GlobalValue::GUID GUID = getOrComputeGUID(F);
+    GlobalValue::GUID GUID = F.getGUIDOrFallback();
 
     ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {

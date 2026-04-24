@@ -338,19 +338,7 @@ selectCallee(const ModuleSummaryIndex &Index,
   return nullptr;
 }
 
-static GlobalValue::GUID getGUIDOrFallback(const GlobalValue &GV) {
-  // Modules compiled against the current version should have a GUID table
-  // and hence have the GUID available simply by calling getGUID(). But we
-  // want to support running on old bitcode files which have no embedded
-  // GUIDs. So if it's missing we fall back to computing the GUID with its
-  // current name / linkage type.
-  const auto MaybeGUID = GV.getGUIDIfAssigned();
-  return MaybeGUID ? *MaybeGUID
-                   : GlobalValue::getGUIDAssumingExternalLinkage(
-                         GlobalValue::getGlobalIdentifier(
-                             GV.getName(), GV.getLinkage(),
-                             GV.getParent()->getSourceFileName()));
-}
+
 
 namespace {
 
@@ -1694,7 +1682,7 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
   DenseSet<Comdat *> NonPrevailingComdats;
   auto FinalizeInModule = [&](GlobalValue &GV, bool Propagate = false) {
     // See if the global summary analysis computed a new resolved linkage.
-    const auto &GS = DefinedGlobals.find(getGUIDOrFallback(GV));
+    const auto &GS = DefinedGlobals.find(GV.getGUIDOrFallback());
     if (GS == DefinedGlobals.end())
       return;
 
@@ -1831,7 +1819,7 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
       return true;
 
     // Lookup the linkage recorded in the summaries during global analysis.
-    auto GS = DefinedGlobals.find(getGUIDOrFallback(GV));
+    auto GS = DefinedGlobals.find(GV.getGUIDOrFallback());
     if (GS == DefinedGlobals.end()) {
       // Must have been promoted (possibly conservatively). Find original
       // name so that we can access the correct summary and see if it can
@@ -1906,7 +1894,7 @@ Expected<bool> FunctionImporter::importFunctions(
   DenseSet<GlobalValue::GUID> MoveSymbolGUIDSet;
   MoveSymbolGUIDSet.insert_range(MoveSymbolGUID);
   for (auto &F : DestModule)
-    if (!F.isDeclaration() && MoveSymbolGUIDSet.contains(getGUIDOrFallback(F)))
+    if (!F.isDeclaration() && MoveSymbolGUIDSet.contains(F.getGUIDOrFallback()))
       F.deleteBody();
 
   IRMover Mover(DestModule);
@@ -1934,7 +1922,7 @@ Expected<bool> FunctionImporter::importFunctions(
       for (Function &F : *SrcModule) {
         if (!F.hasName())
           continue;
-        auto GUID = getGUIDOrFallback(F);
+        auto GUID = F.getGUIDOrFallback();
         auto MaybeImportType = ImportList.getImportType(ModName, GUID);
         bool ImportDefinition =
             MaybeImportType == GlobalValueSummary::Definition;
@@ -1974,7 +1962,7 @@ Expected<bool> FunctionImporter::importFunctions(
       for (GlobalVariable &GV : SrcModule->globals()) {
         if (!GV.hasName())
           continue;
-        auto GUID = getGUIDOrFallback(GV);
+        auto GUID = GV.getGUIDOrFallback();
         auto MaybeImportType = ImportList.getImportType(ModName, GUID);
         bool ImportDefinition =
             MaybeImportType == GlobalValueSummary::Definition;
@@ -1998,7 +1986,7 @@ Expected<bool> FunctionImporter::importFunctions(
       for (GlobalAlias &GA : SrcModule->aliases()) {
         if (!GA.hasName() || isa<GlobalIFunc>(GA.getAliaseeObject()))
           continue;
-        auto GUID = getGUIDOrFallback(GA);
+        auto GUID = GA.getGUIDOrFallback();
         auto MaybeImportType = ImportList.getImportType(ModName, GUID);
         bool ImportDefinition =
             MaybeImportType == GlobalValueSummary::Definition;
@@ -2021,7 +2009,7 @@ Expected<bool> FunctionImporter::importFunctions(
           assert(Fn);
           (void)Fn;
           LLVM_DEBUG(dbgs()
-                     << "Is importing aliasee fn " << getGUIDOrFallback(*GO)
+                     << "Is importing aliasee fn " << GO->getGUIDOrFallback()
                      << " " << GO->getName() << " from "
                      << SrcModule->getSourceFileName() << "\n");
           if (EnableImportMetadata || EnableMemProfContextDisambiguation) {

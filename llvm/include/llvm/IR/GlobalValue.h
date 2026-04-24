@@ -630,6 +630,14 @@ public:
   /// be available.
   std::optional<GUID> getGUIDIfAssigned() const;
 
+  /// Return the GUID for this value if it has been assigned, otherwise fall
+  /// back to computing it based on its current name and linkage.
+  ///
+  /// This is to be used in situations where we need a GUID but can't guarantee
+  /// that it's been computed. Notably, if we're reading from bitcode files
+  /// that might pre-date the storage of GUIDs in metadata.
+  GUID getGUIDOrFallback() const;
+
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.
   /// This

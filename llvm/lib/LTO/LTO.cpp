@@ -1139,12 +1139,7 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
   std::vector<GlobalValue *> Keep;
   for (GlobalValue *GV : Mod.Keep) {
     if (LivenessFromIndex) {
-      const auto MaybeGUID = GV->getGUIDIfAssigned();
-      const auto GUID =
-          MaybeGUID ? *MaybeGUID
-                    : GlobalValue::getGUIDAssumingExternalLinkage(
-                          GlobalValue::getGlobalIdentifier(
-                              GV->getName(), GlobalValue::ExternalLinkage, ""));
+      const auto GUID = GV->getGUIDOrFallback();
       if (!ThinLTO.CombinedIndex.isGUIDLive(GUID)) {
         if (Function *F = dyn_cast<Function>(GV)) {
           if (DiagnosticOutputFile) {

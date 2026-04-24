@@ -166,19 +166,7 @@ FunctionImportGlobalProcessing::getPromotedName(const GlobalValue *SGV) {
       ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
 }
 
-static GlobalValue::GUID getGUIDOrFallback(const GlobalValue &GV) {
-  // Modules compiled against the current version should have a GUID table
-  // and hence have the GUID available simply by calling getGUID(). But we
-  // want to support running on old bitcode files which have no embedded
-  // GUIDs. So if it's missing we fall back to computing the GUID with its
-  // current name / linkage type.
-  const auto MaybeGUID = GV.getGUIDIfAssigned();
-  return MaybeGUID ? *MaybeGUID
-                   : GlobalValue::getGUIDAssumingExternalLinkage(
-                         GlobalValue::getGlobalIdentifier(
-                             GV.getName(), GV.getLinkage(),
-                             GV.getParent()->getSourceFileName()));
-}
+
 
 GlobalValue::LinkageTypes
 FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
@@ -205,7 +193,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // and/or optimization, but are turned into declarations later
     // during the EliminateAvailableExternally pass.
     if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
-      return SymbolsToMove.contains(getGUIDOrFallback(*SGV))
+      return SymbolsToMove.contains(SGV->getGUIDOrFallback())
                  ? GlobalValue::ExternalLinkage
                  : GlobalValue::AvailableExternallyLinkage;
     // An imported external declaration stays external.
@@ -281,7 +269,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 
   ValueInfo VI;
   if (GV.hasName())
-    VI = ImportIndex.getValueInfo(getGUIDOrFallback(GV));
+    VI = ImportIndex.getValueInfo(GV.getGUIDOrFallback());
 
   // We should always have a ValueInfo (i.e. GV in index) for definitions when
   // we are exporting, and also when importing that value.
