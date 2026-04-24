@@ -6561,7 +6561,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (IsSYCL && types::isCXX(InputType) &&
         !Args.hasArg(options::OPT__SLASH_std) && !IsWindowsMSVC)
-      // For DPC++, we default to -std=c++17 for all compilations.  Use of -std
+      // For SYCL, we default to -std=c++17 for all compilations. Use of -std
       // on the command line will override. On Windows MSVC, this is handled
       // by the ImplyVCPPCXXVer path below.
       CmdArgs.push_back("-std=c++17");
@@ -7488,7 +7488,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (LanguageStandard.empty()) {
       if (IsSYCL)
-        // For DPC++, C++17 is the default.
+        // For SYCL, C++17 is the default.
         LanguageStandard = "-std=c++17";
       if (IsMSVC2015Compatible)
         LanguageStandard = "-std=c++14";
