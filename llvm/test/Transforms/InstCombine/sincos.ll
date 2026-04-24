@@ -334,16 +334,16 @@ define float @sincos_fmf_one_unset(float %x) {
 ; tighter accuracy bound -- getMostGenericFPMath picks the smaller ULP).
 define float @sincos_fpmath_metadata(float %x) {
 ; CHECK-LABEL: @sincos_fpmath_metadata(
-; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[S:%.*]] = extractvalue { float, float } [[SINCOS]], 0, !fpmath [[META0:![0-9]+]]
-; CHECK-NEXT:    [[C:%.*]] = extractvalue { float, float } [[SINCOS]], 1, !fpmath [[META0]]
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]]), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-NEXT:    [[C:%.*]] = extractvalue { float, float } [[SINCOS]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 ; CHECK-SHRINK-LABEL: @sincos_fpmath_metadata(
-; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
-; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0, !fpmath [[META0:![0-9]+]]
-; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1, !fpmath [[META0]]
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]]), !fpmath [[META0:![0-9]+]]
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
 ; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
 ; CHECK-SHRINK-NEXT:    ret float [[RES]]
 ;
