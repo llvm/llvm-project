@@ -197,7 +197,7 @@ RESOURCE<float> Buffer;
 
 // Load method
 
-// CHECK: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
+// CHECK: CXXMethodDecl {{.*}} Load 'const element_type (unsigned int) const'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
@@ -210,12 +210,12 @@ RESOURCE<float> Buffer;
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' lvalue .__handle {{.*}}
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // Load with status method
-// CHECK: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int)'
+// CHECK: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int) const'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
@@ -228,7 +228,7 @@ RESOURCE<float> Buffer;
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline

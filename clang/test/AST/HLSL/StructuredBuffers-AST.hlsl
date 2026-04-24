@@ -310,7 +310,7 @@ RESOURCE<float> Buffer;
 
 // Load method
 
-// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
+// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'const element_type (unsigned int) const'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
@@ -322,13 +322,13 @@ RESOURCE<float> Buffer;
 // CHECK-LOAD-SAME{LITERAL}: [[hlsl::resource_class(
 // CHECK-LOAD-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-LOAD-SAME: ' lvalue .__handle {{.*}}
-// CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // Load with status method
 
-// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int)'
+// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int) const'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: HLSLParamModifierAttr {{.*}} out
@@ -341,7 +341,7 @@ RESOURCE<float> Buffer;
 // CHECK-LOAD-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-LOAD-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-LOAD-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline

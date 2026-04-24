@@ -24,12 +24,21 @@ void UseConst(const RESOURCE buf, out uint val) {
     val = buf.Load(0);
 }
 
+void UseConstWithStatus(const RESOURCE buf, out uint val) {
+    uint status;
+    val = buf.Load(0, status);
+    val += status;
+}
+
 [numthreads(1,1,1)]
 void main() {
     const RESOURCE local = gBuf;
     uint val;
     UseConst(local, val);
-    // Write the loaded value to a separate buffer so it isn't dead-code
+    uint val2;
+    UseConstWithStatus(local, val2);
+    // Write the loaded values to a separate buffer so they aren't dead-code
     // eliminated.
     gOut.Store(0, val);
+    gOut.Store(4, val2);
 }
