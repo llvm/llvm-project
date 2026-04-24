@@ -1891,38 +1891,7 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 
 static LogicalResult
 vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
-                                   bool flatten1DDepthwiseConv) {
-  if (flatten1DDepthwiseConv) {
-    LDBG() << "Vectorization of flattened convs with dynamic shapes is not "
-              "supported";
-    return failure();
-  }
-
-  // Dynamic shapes are supported only for 1D depthwise convolutions on the
-  // canonical NWC / WC layouts (i.e. the channel dim is already trailing on
-  // LHS/RES; no pre-transpose is needed). Non-canonical layouts (NCW/CW)
-  // reach the depthwise vectorizer through a pre-transpose that cannot
-  // carry a `vector.mask`, so they require fully-static shapes.
-  FailureOr<Conv1DConfig> maybeConfig = classifyAs1DConv(conv);
-  if (failed(maybeConfig) || !maybeConfig->isDepthwise) {
-    LDBG() << "Not a 1D depthwise conv; dynamic shapes are not supported";
-    return failure();
-  }
-
-  // Only the trailing dim (channel for canonical layouts) may be dynamic.
-  // This rejects non-canonical layouts with a dynamic channel in the middle
-  // as a byproduct, since the middle dim shows up in `drop_back(1)`.
-  Value lhs = conv.getDpsInputOperand(0)->get();
-  ArrayRef<int64_t> lhsShape = cast<ShapedType>(lhs.getType()).getShape();
-  auto shapeWithoutCh = lhsShape.drop_back(1);
-  if (ShapedType::isDynamicShape(shapeWithoutCh)) {
-    LDBG() << "Dynamically-shaped op vectorization precondition failed: only "
-              "the trailing (channel) dim can be dynamic";
-    return failure();
-  }
-
-  return success();
-}
+                                   bool flatten1DDepthwiseConv);
 
 static LogicalResult
 vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
@@ -2401,6 +2370,41 @@ static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
   } else {
     if (rhsRank != 1 && rhsRank != 2 && rhsRank != 3)
       return failure();
+  }
+
+  return success();
+}
+
+static LogicalResult
+vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
+                                   bool flatten1DDepthwiseConv) {
+  if (flatten1DDepthwiseConv) {
+    LDBG() << "Vectorization of flattened convs with dynamic shapes is not "
+              "supported";
+    return failure();
+  }
+
+  // Dynamic shapes are supported only for 1D depthwise convolutions on the
+  // canonical NWC / WC layouts (i.e. the channel dim is already trailing on
+  // LHS/RES; no pre-transpose is needed). Non-canonical layouts (NCW/CW)
+  // reach the depthwise vectorizer through a pre-transpose that cannot
+  // carry a `vector.mask`, so they require fully-static shapes.
+  FailureOr<Conv1DConfig> maybeConfig = classifyAs1DConv(conv);
+  if (failed(maybeConfig) || !maybeConfig->isDepthwise) {
+    LDBG() << "Not a 1D depthwise conv; dynamic shapes are not supported";
+    return failure();
+  }
+
+  // Only the trailing dim (channel for canonical layouts) may be dynamic.
+  // This rejects non-canonical layouts with a dynamic channel in the middle
+  // as a byproduct, since the middle dim shows up in `drop_back(1)`.
+  Value lhs = conv.getDpsInputOperand(0)->get();
+  ArrayRef<int64_t> lhsShape = cast<ShapedType>(lhs.getType()).getShape();
+  auto shapeWithoutCh = lhsShape.drop_back(1);
+  if (ShapedType::isDynamicShape(shapeWithoutCh)) {
+    LDBG() << "Dynamically-shaped op vectorization precondition failed: only "
+              "the trailing (channel) dim can be dynamic";
+    return failure();
   }
 
   return success();
