@@ -40,6 +40,7 @@ Implementation Status
    sys/stat
    sys/statvfs
    sys/time
+   sys/uio
    sys/utsname
    sys/wait
    termios
