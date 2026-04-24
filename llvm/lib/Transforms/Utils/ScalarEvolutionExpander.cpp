@@ -338,10 +338,22 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
 
   // If we haven't found this binop, insert it.
   Builder.SetCurrentDebugLocation(Loc);
-  Value *Op =
-      Builder.CreateNoWrapBinOp(Opcode, LHS, RHS, bool(Flags & SCEV::FlagNUW),
-                                bool(Flags & SCEV::FlagNSW));
-  return Op;
+  bool IsNUW = any(Flags & SCEV::FlagNUW);
+  bool IsNSW = any(Flags & SCEV::FlagNSW);
+  // Don't use folder when expanding post-inc rewrites in LSRMode to preserve
+  // the rewrites.
+  if (LSRMode && !PostIncLoops.empty() &&
+      all_of(PostIncLoops, [&](const Loop *L) {
+        return !L->contains(Builder.GetInsertBlock());
+      })) {
+    auto *BO = BinaryOperator::Create(Opcode, LHS, RHS);
+    if (IsNUW)
+      BO->setHasNoUnsignedWrap();
+    if (IsNSW)
+      BO->setHasNoSignedWrap();
+    return Builder.Insert(BO);
+  }
+  return Builder.CreateNoWrapBinOp(Opcode, LHS, RHS, IsNUW, IsNSW);
 }
 
 /// expandAddToGEP - Expand an addition expression with a pointer type into

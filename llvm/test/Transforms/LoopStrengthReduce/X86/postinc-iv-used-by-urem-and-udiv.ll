@@ -105,7 +105,8 @@ define i32 @test_pr62852() {
 ; CHECK-NEXT:    br i1 [[CMP6_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT]])
-; CHECK-NEXT:    call void @use(i64 [[TMP0]])
+; CHECK-NEXT:    [[LSR_IV_NEXT2:%.*]] = add i64 [[INC_1]], -1
+; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = urem i32 [[DEC_1]], 53
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
