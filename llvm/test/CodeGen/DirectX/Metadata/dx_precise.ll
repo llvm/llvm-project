@@ -229,8 +229,8 @@ entry:
 
 define void @fast(float %p) {
 entry:
-  %1 = fadd fast float %p, 2.0
-  %2 = call float @llvm.dx.saturate.f32(float %1)
+  %1 = fadd float %p, 2.0
+  %2 = call fast float @llvm.dx.saturate.f32(float %1)
   ret void
 }
 ; CHECK: ![[SM]] = !{i32 1}

@@ -484,31 +484,6 @@ static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
   return;
 }
 
-static void setDXILMetadata(CallInst *CI, const OpCodeProperty *Prop) {
-  bool ShouldEmitPrecise = true;
-
-  for (const auto &Operand : CI->operands()) {
-    if (isa<FPMathOperator>(Operand) &&
-        cast<FPMathOperator>(Operand)->getFastMathFlags().isFast()) {
-      ShouldEmitPrecise = false;
-      break;
-    }
-  }
-
-  if (isa<FPMathOperator>(CI) && ShouldEmitPrecise) {
-
-    const StringRef Key = "dx.precise";
-    Module *M = CI->getModule();
-
-    LLVMContext &Ctx = M->getContext();
-    MDNode *One =
-        llvm::MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
-                                   llvm::Type::getInt32Ty(Ctx), 1)));
-
-    CI->setMetadata(Key, One);
-  }
-}
-
 namespace llvm {
 namespace dxil {
 
@@ -608,7 +583,6 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   // We then need to attach available function attributes
   setDXILAttributes(CI, OpCode, DXILVersion);
 
-  setDXILMetadata(CI, Prop);
   return CI;
 }
 
