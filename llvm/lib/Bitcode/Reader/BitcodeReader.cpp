@@ -4920,7 +4920,10 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       break;
     // MODULE_CODE_GUIDLIST: [i64 x N]
     case bitc::MODULE_CODE_GUIDLIST:
-      llvm::append_range(GUIDList, Record);
+        assert(Record.size() % 2 == 0);
+        GUIDList.reserve(GUIDList.size() + Record.size() / 2);
+        for (size_t i = 0; i < Record.size(); i += 2)
+          GUIDList.push_back(Record[i] << 32 | Record[i + 1]);
       break;
     /// MODULE_CODE_SOURCE_FILENAME: [namechar x N]
     case bitc::MODULE_CODE_SOURCE_FILENAME:
@@ -7568,7 +7571,10 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
           break;
         // MODULE_CODE_GUIDLIST: [i64 x N]
         case bitc::MODULE_CODE_GUIDLIST:
-          llvm::append_range(DefinedGUIDs, Record);
+            assert(Record.size() % 2 == 0);
+            DefinedGUIDs.reserve(DefinedGUIDs.size() + Record.size() / 2);
+            for (size_t i = 0; i < Record.size(); i += 2)
+              DefinedGUIDs.push_back(Record[i] << 32 | Record[i + 1]);
           break;
         // v1 GLOBALVAR: [pointer type, isconst,     initid,       linkage, ...]
         // v1 FUNCTION:  [type,         callingconv, isproto,      linkage, ...]

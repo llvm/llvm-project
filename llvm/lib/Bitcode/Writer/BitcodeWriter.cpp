@@ -4957,7 +4957,20 @@ void ModuleBitcodeWriterBase::writeGUIDList() {
     GUIDs[ValueID] = GUID;
   }
 
-  Stream.EmitRecord(bitc::MODULE_CODE_GUIDLIST, GUIDs);
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_GUIDLIST));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned GUIDListAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  SmallVector<uint32_t> RecordVals;
+  RecordVals.reserve(Max * 2);
+  for (auto GUID : GUIDs) {
+    RecordVals.push_back(static_cast<uint32_t>(GUID >> 32));
+    RecordVals.push_back(static_cast<uint32_t>(GUID));
+  }
+
+  Stream.EmitRecord(bitc::MODULE_CODE_GUIDLIST, RecordVals, GUIDListAbbrev);
 }
 
 /// Emit the combined summary section into the combined index file.
