@@ -159,15 +159,25 @@ extern "C" {
   uptr __asan_get_report_access_size();
 
   SANITIZER_INTERFACE_ATTRIBUTE
-  int __asan_get_report_src_address(uptr* out_addr, uptr* out_size);
+  uptr __asan_get_report_src_address(void);
   SANITIZER_INTERFACE_ATTRIBUTE
-  int __asan_get_report_dest_address(uptr* out_addr, uptr* out_size);
+  uptr __asan_get_report_src_size(void);
   SANITIZER_INTERFACE_ATTRIBUTE
-  int __asan_get_report_dealloc_address(uptr* out_addr, uptr* out_size);
+  uptr __asan_get_report_dest_address(void);
   SANITIZER_INTERFACE_ATTRIBUTE
-  int __asan_get_report_first_address(uptr* out_addr, uptr* out_size);
+  uptr __asan_get_report_dest_size(void);
   SANITIZER_INTERFACE_ATTRIBUTE
-  int __asan_get_report_second_address(uptr* out_addr, uptr* out_size);
+  uptr __asan_get_report_dealloc_address(void);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  uptr __asan_get_report_dealloc_size(void);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  uptr __asan_get_report_first_address(void);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  uptr __asan_get_report_first_size(void);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  uptr __asan_get_report_second_address(void);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  uptr __asan_get_report_second_size(void);
 
   SANITIZER_INTERFACE_ATTRIBUTE
   const char * __asan_get_report_description();
