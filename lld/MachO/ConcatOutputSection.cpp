@@ -155,7 +155,7 @@ bool TextOutputSection::needsThunks() const {
       // Pre-populate the thunkMap and memoize call site counts for every
       // InputSection and ThunkInfo. We do this for the benefit of
       // estimateBranchTargetThresholdVA().
-      ThunkInfo &thunkInfo = thunkMap[ThunkKey{sym, r.addend}];
+      ThunkInfo &thunkInfo = thunkMap[ThunkKey{sym, r.getAddend()}];
       // Knowing ThunkInfo call site count will help us know whether or not we
       // might need to create more for this referent at the time we are
       // estimating distance to __stubs in estimateBranchTargetThresholdVA().
@@ -351,16 +351,17 @@ void TextOutputSection::finalize() {
       uint64_t highVA = callVA + forwardBranchRange;
       // Calculate our call referent address
       auto *funcSym = cast<Symbol *>(r.referent);
-      ThunkInfo &thunkInfo = thunkMap[ThunkKey{funcSym, r.addend}];
+      int64_t addend = r.getAddend();
+      ThunkInfo &thunkInfo = thunkMap[ThunkKey{funcSym, addend}];
       // The referent is not reachable, so we need to use a thunk... unless we
       // are close enough to the end that branch target sections (__stubs,
       // __objc_stubs) are now within range of a simple forward branch -- BUT
       // only for zero-addend branches. The writer's resolveSymbolOffsetVA()
       // resolves non-zero-addend branches against the symbol body rather than
       // the stub, so __stubs reachability says nothing about whether such a
-      // call can be emitted directly. Hence the `r.addend == 0` guard below.
+      // call can be emitted directly. Hence the `addend == 0` guard below.
       // See INTERP check lines in arm64-thunk-branch-addend.s.
-      if (r.addend == 0 &&
+      if (addend == 0 &&
           (funcSym->isInStubs() ||
            (in.objcStubs && in.objcStubs->isNeeded() &&
             ObjCStubsSection::isObjCStubSymbol(funcSym))) &&
@@ -371,7 +372,7 @@ void TextOutputSection::finalize() {
       // Use the same resolution rules as the writer: for non-zero addends this
       // goes directly to the symbol body rather than any stub trampoline.
       // See INTERP check lines in arm64-thunk-branch-addend.s.
-      uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, r.addend);
+      uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, addend);
       ++thunkInfo.callSitesUsed;
       if (lowVA <= funcVA && funcVA <= highVA) {
         // The referent is reachable with a simple call instruction.
@@ -386,7 +387,7 @@ void TextOutputSection::finalize() {
           r.referent = thunkInfo.sym;
           // The thunk itself bakes in the addend, so the call-site reloc must
           // branch to the thunk start with no extra offset.
-          r.addend = 0;
+          r.setAddend(0);
           continue;
         }
       }
@@ -406,8 +407,8 @@ void TextOutputSection::finalize() {
       assert(thunkInfo.isec->live);
 
       std::string addendSuffix;
-      if (r.addend != 0)
-        addendSuffix = "+" + std::to_string(r.addend);
+      if (addend != 0)
+        addendSuffix = "+" + std::to_string(addend);
       StringRef thunkName =
           saver().save(funcSym->getName() + addendSuffix + ".thunk." +
                        std::to_string(thunkInfo.sequence++));
@@ -425,10 +426,10 @@ void TextOutputSection::finalize() {
             /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
       }
       thunkInfo.sym->used = true;
-      target->populateThunk(thunkInfo.isec, funcSym, r.addend);
+      target->populateThunk(thunkInfo.isec, funcSym, addend);
       // The thunk itself bakes in the addend, so the call-site reloc must
       // branch to the thunk start with no extra offset.
-      r.addend = 0;
+      r.setAddend(0);
       finalizeOne(thunkInfo.isec);
       thunks.push_back(thunkInfo.isec);
       ++thunkCount;

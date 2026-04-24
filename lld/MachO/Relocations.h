@@ -101,6 +101,13 @@ struct Relocation {
   int64_t getAddend() const {
     return hasAuth ? static_cast<int64_t>(authData.addend) : addend;
   }
+  // Write the addend without clobbering AuthInfo on AUTH relocations.
+  void setAddend(int64_t a) {
+    if (hasAuth)
+      authData.addend = static_cast<int32_t>(a);
+    else
+      addend = a;
+  }
 
   InputSection *getReferentInputSection() const;
 

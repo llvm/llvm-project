@@ -243,11 +243,11 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       const Relocation &minuend = relocs[++i];
       uint64_t minuendVA;
       if (const Symbol *toSym = minuend.referent.dyn_cast<Symbol *>())
-        minuendVA = toSym->getVA() + minuend.addend;
+        minuendVA = toSym->getVA() + minuend.getAddend();
       else {
         auto *referentIsec = cast<InputSection *>(minuend.referent);
         assert(!::shouldOmitFromOutput(referentIsec));
-        minuendVA = referentIsec->getVA(minuend.addend);
+        minuendVA = referentIsec->getVA(minuend.getAddend());
       }
       referentVA = minuendVA - fromSym->getVA();
     } else if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
