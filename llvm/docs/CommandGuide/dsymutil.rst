@@ -46,6 +46,11 @@ OPTIONS
  'profile'. Setting the DYLD_IMAGE_SUFFIX environment variable will
  cause dyld to load the specified variant at runtime.
 
+.. option:: --codesign <identity>
+
+ Code sign the dSYM bundle with the given signing identity after linking.
+ Cannot be used with :option:`--flat` or :option:`--no-output`.
+
 .. option:: --cas <path to CAS>
 
  Specify the path to a content addressable storage that dsymutil may used to
