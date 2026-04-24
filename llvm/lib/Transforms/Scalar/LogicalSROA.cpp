@@ -37,15 +37,15 @@ collectLifetimeIntrinsicsUsing(Instruction &I) {
   SmallVector<LifetimeIntrinsic *> Output;
 
   for (User *U : I.users()) {
-    if (auto LI = dyn_cast<LifetimeIntrinsic>(U))
-      Output.push_back(cast<LifetimeIntrinsic>(LI));
+    if (auto *LI = dyn_cast<LifetimeIntrinsic>(U))
+      Output.push_back(LI);
   }
 
   return Output;
 }
 
-// Returns true is all the users and derived users of the alloca
-// allow the alloca to be split.
+// Returns true if all direct and indirect users of the alloca
+// allow the split.
 static bool isAllocaSplittable(StructuredAllocaInst &SAI) {
   SmallVector<Value *> WorkList(SAI.users());
   DenseSet<Value *> Visited;
@@ -122,7 +122,7 @@ collectPerFieldSGEP(StructuredAllocaInst &SAI) {
   SmallVector<SmallVector<StructuredGEPInst *>> Output(ST->getNumElements());
 
   for (User *U : SAI.users()) {
-    if (dyn_cast<LifetimeIntrinsic>(U))
+    if (isa<LifetimeIntrinsic>(U))
       continue;
 
     auto *SGEP = cast<StructuredGEPInst>(U);
