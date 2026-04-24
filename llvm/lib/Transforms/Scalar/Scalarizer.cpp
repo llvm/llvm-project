@@ -711,7 +711,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
 
-  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
     return false;
 
   // unsigned NumElems = VT->getNumElements();
@@ -1083,7 +1083,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (!F)
       return false;
     Intrinsic::ID ID = F->getIntrinsicID();
-    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
       return false;
     // Note: Fall through means Operand is a`CallInst` and it is defined in
     // `isTriviallyScalarizable`.
@@ -1133,6 +1133,8 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 
   if (auto *CI = dyn_cast<ConstantInt>(ExtIdx)) {
     unsigned Idx = CI->getZExtValue();
+    if (Idx >= VS->VecTy->getNumElements())
+      return false;
     unsigned Fragment = Idx / VS->NumPacked;
     Value *Res = Op0[Fragment];
     bool IsPacked = VS->NumPacked > 1;

@@ -23,6 +23,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -154,6 +155,15 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
   case CmpInst::ICMP_SGE:
     return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));
   }
+}
+
+ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
+                                                   const ConstantRange &CR) {
+  ConstantRange Result = makeAllowedICmpRegion(Pred.dropSameSign(), CR);
+  if (!Pred.hasSameSign())
+    return Result;
+  return Result.intersectWith(
+      makeAllowedICmpRegion(Pred.getPreferredSignedPredicate(), CR));
 }
 
 ConstantRange ConstantRange::makeSatisfyingICmpRegion(CmpInst::Predicate Pred,
@@ -1862,16 +1872,16 @@ ConstantRange::ashr(const ConstantRange &Other) const {
   APInt max, min;
   if (getSignedMin().isNonNegative()) {
     // Upper and Lower of LHS are non-negative.
-    min = PosMin;
-    max = PosMax;
+    min = std::move(PosMin);
+    max = std::move(PosMax);
   } else if (getSignedMax().isNegative()) {
     // Upper and Lower of LHS are negative.
-    min = NegMin;
-    max = NegMax;
+    min = std::move(NegMin);
+    max = std::move(NegMax);
   } else {
     // Upper is non-negative and Lower is negative.
-    min = NegMin;
-    max = PosMax;
+    min = std::move(NegMin);
+    max = std::move(PosMax);
   }
   return getNonEmpty(std::move(min), std::move(max));
 }

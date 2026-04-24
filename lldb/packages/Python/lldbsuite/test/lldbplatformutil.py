@@ -166,11 +166,27 @@ def platformIsDarwin():
     return getPlatform() in getDarwinOSTriples()
 
 
+def getDarwinEmbeddedKernelVersion():
+    """Returns the major kernel version of the remote device via 'uname -r'."""
+    shell_cmd = lldb.SBPlatformShellCommand("uname -r")
+    err = lldb.selected_platform.Run(shell_cmd)
+    if err.Success():
+        output = shell_cmd.GetOutput()
+        if output:
+            try:
+                return int(output.strip().split(".")[0])
+            except ValueError:
+                pass
+    return 0
+
+
 def findMainThreadCheckerDylib():
     if not platformIsDarwin():
         return ""
 
     if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        if getDarwinEmbeddedKernelVersion() > 25:
+            return "/usr/lib/libMainThreadChecker.dylib"
         return "/Developer/usr/lib/libMainThreadChecker.dylib"
 
     with os.popen("xcode-select -p") as output:
@@ -187,6 +203,8 @@ def findBacktraceRecordingDylib():
         return ""
 
     if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        if getDarwinEmbeddedKernelVersion() > 25:
+            return "/usr/lib/libBacktraceRecording.dylib"
         return "/Developer/usr/lib/libBacktraceRecording.dylib"
 
     with os.popen("xcode-select -p") as output:
@@ -208,6 +226,9 @@ class _PlatformContext(object):
         self.shlib_path_separator = shlib_path_separator
         self.shlib_prefix = shlib_prefix
         self.shlib_extension = shlib_extension
+
+    def getFullLibName(self, base_name):
+        return f"{self.shlib_prefix}{base_name}.{self.shlib_extension}"
 
 
 def createPlatformContext():
@@ -326,7 +347,7 @@ def getDwarfVersion():
         return str(configuration.dwarf_version)
     if "clang" in getCompiler():
         try:
-            triple = builder_module().getTriple(getArchitecture())
+            triple = builder_module().getTriple()
             target = ["-target", triple] if triple else []
             driver_output = subprocess.check_output(
                 [getCompiler()] + target + "-g -c -x c - -o - -###".split(),

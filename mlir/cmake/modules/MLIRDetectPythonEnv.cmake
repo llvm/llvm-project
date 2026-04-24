@@ -1,5 +1,6 @@
 # Macros and functions related to detecting details of the Python environment.
 
+set(MLIR_MINIMUM_PYTHON_VERSION 3.10)
 # Finds and configures python packages needed to build MLIR Python bindings.
 macro(mlir_configure_python_dev_packages)
   if(NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES)
@@ -8,7 +9,7 @@ macro(mlir_configure_python_dev_packages)
       # package. This seems to work around cmake bugs searching only for
       # Development.Module in some environments. However, in other environments
       # it may interfere with the subsequent search for Development.Module.
-      find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
+      find_package(Python3 ${MLIR_MINIMUM_PYTHON_VERSION}
         COMPONENTS Interpreter Development)
     endif()
 
@@ -18,8 +19,11 @@ macro(mlir_configure_python_dev_packages)
     # Development.Module.
     # See https://pybind11.readthedocs.io/en/stable/compiling.html#findpython-mode
     set(_python_development_component Development.Module)
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      list(APPEND _python_development_component Development.SABIModule)
+    endif()
 
-    find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
+    find_package(Python3 ${MLIR_MINIMUM_PYTHON_VERSION}
       COMPONENTS Interpreter ${_python_development_component} REQUIRED)
 
     # We look for both Python3 and Python, the search algorithm should be
@@ -39,10 +43,13 @@ macro(mlir_configure_python_dev_packages)
 
     # It's a little silly to detect Python a second time, but nanobind's cmake
     # code looks for Python_ not Python3_.
-    find_package(Python ${LLVM_MINIMUM_PYTHON_VERSION}
+    find_package(Python ${MLIR_MINIMUM_PYTHON_VERSION}
       COMPONENTS Interpreter ${_python_development_component} REQUIRED)
 
     unset(_python_development_component)
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      message(STATUS "MLIR Python stable ABI (abi3) enabled")
+    endif()
     message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
     message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
     message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")
@@ -59,8 +66,7 @@ macro(mlir_configure_python_dev_packages)
         OUTPUT_VARIABLE PACKAGE_DIR
         ERROR_QUIET)
       if(NOT STATUS EQUAL "0")
-        message(STATUS "not found (install via 'pip install nanobind' or set nanobind_DIR)")
-        return()
+        message(FATAL_ERROR "not found (install via 'pip install nanobind' or set nanobind_DIR)")
       endif()
       message(STATUS "found (${PACKAGE_DIR})")
       set(nanobind_DIR "${PACKAGE_DIR}")
@@ -72,8 +78,7 @@ macro(mlir_configure_python_dev_packages)
         OUTPUT_VARIABLE PACKAGE_DIR
         ERROR_QUIET)
       if(NOT STATUS EQUAL "0")
-        message(STATUS "not found (install via 'pip install nanobind' or set nanobind_DIR)")
-        return()
+        message(FATAL_ERROR "not found (install via 'pip install nanobind' or set nanobind_DIR)")
       endif()
       set(nanobind_INCLUDE_DIR "${PACKAGE_DIR}")
     endif()

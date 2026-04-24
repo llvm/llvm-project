@@ -80,9 +80,9 @@ define void @test() #0 {
   ; Buffer<double> C1 = Array[10];
   ; Buffer<double> C2 = Array[20];
   %Array2_10_h = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 10, ptr @Array2.str)
   %Array2_20_h = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 20, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 20, ptr @Array2.str)
 
   ret void
 }

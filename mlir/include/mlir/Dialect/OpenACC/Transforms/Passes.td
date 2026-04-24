@@ -11,6 +11,26 @@
 
 include "mlir/Pass/PassBase.td"
 
+//===----------------------------------------------------------------------===//
+// Common options shared by multiple ACC passes
+//===----------------------------------------------------------------------===//
+
+def AccDeviceTypeOption : Option<"deviceType", "device-type",
+    "mlir::acc::DeviceType", "mlir::acc::DeviceType::None",
+    "Target device type. One use case is ensuring that device_type-specific "
+    "clauses are considered. Another is device-specific specializations.",
+    [{::llvm::cl::values(
+       clEnumValN(mlir::acc::DeviceType::None, "none", "none"),
+       clEnumValN(mlir::acc::DeviceType::Host, "host", "host"),
+       clEnumValN(mlir::acc::DeviceType::Multicore, "multicore", "multicore"),
+       clEnumValN(mlir::acc::DeviceType::Nvidia, "nvidia", "nvidia"),
+       clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
+    }]>;
+
+//===----------------------------------------------------------------------===//
+// Pass definitions
+//===----------------------------------------------------------------------===//
+
 def LegalizeDataValuesInRegion : Pass<"openacc-legalize-data-values", "mlir::func::FuncOp"> {
   let summary = "Legalizes SSA values in compute regions with results from data clause operations";
   let description = [{
@@ -120,20 +140,16 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
        while avoiding infinite recursion through proper tracking.
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
-  let options = [
-    Option<"deviceType", "device-type", "mlir::acc::DeviceType",
-           "mlir::acc::DeviceType::None",
-           "Target device type for implicit routine generation. "
-           "Ensures that `acc routine` device_type clauses are "
-           "properly considered not just default clauses.",
-           [{::llvm::cl::values(
-              clEnumValN(mlir::acc::DeviceType::None, "none", "none"),
-              clEnumValN(mlir::acc::DeviceType::Host, "host", "host"),
-              clEnumValN(mlir::acc::DeviceType::Multicore, "multicore", "multicore"),
-              clEnumValN(mlir::acc::DeviceType::Nvidia, "nvidia", "nvidia"),
-              clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
-           }]>
-  ];
+  let options = [ AccDeviceTypeOption ];
+}
+
+def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mlir::ModuleOp"> {
+  let summary = "Copy globals with acc.declare into the GPU module";
+  let description = [{
+    Copies globals that have the `acc.declare` attribute into the GPU module so
+    that device code can reference them.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::gpu::GPUDialect"];
 }
 
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
@@ -192,6 +208,293 @@ def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
     Option<"defaultTileSize", "default-tile-size", "int32_t", "32",
            "Default tile size to use for wildcard ('*') tile sizes">
   ];
+}
+
+def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::FuncOp"> {
+  let summary = "Strip OpenACC constructs inside device code";
+  let description = [{
+    In a specialized acc routine or compute construct, many OpenACC operations
+    do not make sense because they are host-side constructs. This pass removes
+    or transforms these operations appropriately.
+
+    The following operations are handled:
+    - Data entry ops (replaced with var): acc.attach, acc.copyin, acc.create,
+      acc.declare_device_resident, acc.declare_link, acc.deviceptr,
+      acc.get_deviceptr, acc.nocreate, acc.present, acc.update_device,
+      acc.use_device
+    - Data exit ops (erased): acc.copyout, acc.delete, acc.detach,
+      acc.update_host
+    - Structured data (inline region): acc.data, acc.host_data,
+      acc.kernel_environment
+    - Unstructured data (erased): acc.enter_data, acc.exit_data, acc.update,
+      acc.declare_enter, acc.declare_exit
+    - Compute constructs (inline region): acc.parallel, acc.serial, acc.kernels
+    - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
+def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {
+  let summary = "Convert OpenACC operations for host execution";
+  let description = [{
+    This pass converts OpenACC operations to host-compatible representations.
+    It serves as a conversion pass that transforms ACC constructs to enable
+    execution on the host rather than on accelerator devices.
+
+    There are two modes of operation:
+
+    1. Default mode (orphan operations only): Only orphan operations that are
+       not allowed outside compute regions are converted. Structured/unstructured
+       data constructs, compute constructs, and their associated data operations
+       are NOT removed.
+
+    2. Host fallback mode (enableHostFallback=true): ALL ACC operations within
+       the region are converted to host equivalents. This is used when the `if`
+       clause evaluates to false at runtime.
+
+    The following operations are handled:
+    - Atomic ops: converted to load/store operations
+    - Loop ops: converted to scf.for or scf.execute_region
+    - Data entry ops (orphan): replaced with var operand
+    - In host fallback mode: all data, compute, and runtime ops are removed
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect",
+      "mlir::scf::SCFDialect"];
+  let options = [
+    Option<"enableHostFallback", "enable-host-fallback", "bool", "false",
+           "Enable host fallback mode which converts ALL ACC operations, "
+           "not just orphan operations. Use this when the `if` clause "
+           "evaluates to false.">
+  ];
+}
+
+def ACCIfClauseLowering : Pass<"acc-if-clause-lowering", "mlir::func::FuncOp"> {
+  let summary = "Lower if clauses in ACC compute constructs";
+  let description = [{
+    This pass lowers OpenACC compute constructs (parallel, kernels, serial) with
+    `if` clauses using region specialization. It creates two execution paths:
+    device execution when the condition is true, host execution when false.
+
+    When an ACC compute construct has an `if` clause, the construct should only
+    execute on the device when the condition is true. If the condition is false,
+    the code should execute on the host instead. This pass transforms:
+
+    ```mlir
+    acc.parallel if(%cond) { ... }
+    ```
+
+    Into:
+
+    ```mlir
+    scf.if %cond {
+      // Device path: clone data ops, compute construct without if, exit ops
+      acc.parallel { ... }
+    } else {
+      // Host path: original region body with ACC ops converted to host
+    }
+    ```
+
+    The transformation handles:
+    - Data entry operations (acc.copyin, acc.create, etc.) are cloned to device path
+    - Data exit operations (acc.copyout, acc.delete, etc.) are cloned to device path
+    - The host path uses `populateACCHostFallbackPatterns` to convert ACC ops
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect",
+      "mlir::scf::SCFDialect"];
+}
+
+def OffloadLiveInValueCanonicalization : Pass<"offload-livein-value-canonicalization", "mlir::func::FuncOp"> {
+  let summary = "Canonicalize live-in values for regions destined for outlining";
+  let description = [{
+    This pass canonicalizes live-in values for regions destined for outlining.
+    It handles operations that produce synthetic types or values that cannot
+    be passed as arguments to outlined regions.
+
+    The pass performs the following transformations:
+
+    1. **Sinking**: Operations whose results are only used inside the region
+       are moved into the region. This reduces the number of live-in values
+       and keeps related operations together.
+
+    2. **Rematerialization**: Operations whose results are used both inside
+       and outside the region are cloned into the region. The uses inside
+       the region are updated to use the cloned operation's results.
+
+    Operations are considered candidates for these transformations if they
+    implement the `OutlineRematerializationOpInterface` or match constant
+    patterns. These operations typically produce synthetic types (shapes,
+    bounds, field indices) that cannot be passed as function arguments.
+
+    The pass iterates until convergence since canonicalizing one value may
+    expose new candidates (e.g., a bounds operation's operands may themselves
+    be constants that should be rematerialized).
+
+    Example transformation (rematerialization):
+    ```mlir
+    // Before:
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+    acc.parallel {
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds) -> ...
+      acc.yield
+    }
+    // %bounds is also used elsewhere
+
+    // After:
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+    acc.parallel {
+      %c0_clone = arith.constant 0 : index
+      %c10_clone = arith.constant 10 : index
+      %bounds_clone = acc.bounds lowerbound(%c0_clone : index) upperbound(%c10_clone : index)
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds_clone) -> ...
+      acc.yield
+    }
+    ```
+
+    Example transformation (sinking):
+    ```mlir
+    // Before:
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+    acc.parallel {
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds) -> ...
+      acc.yield
+    }
+    // %bounds is NOT used elsewhere
+
+    // After:
+    acc.parallel {
+      %c0 = arith.constant 0 : index
+      %c10 = arith.constant 10 : index
+      %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds) -> ...
+      acc.yield
+    }
+    ```
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
+def ACCRecipeMaterialization : Pass<"acc-recipe-materialization", "mlir::ModuleOp"> {
+  let summary = "Materialize OpenACC private, firstprivate and reduction recipes";
+  let description = [{
+    Materializes OpenACC privatization, firstprivate and reduction recipes by
+    cloning init, copy, combiner, and destroy into the construct. Replaces recipe
+    references with materialized values (including acc.reduction_init and
+    acc.reduction_combine_region for reductions) and removes unused recipe
+    symbols.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::arith::ArithDialect"];
+}
+
+def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"> {
+  let summary = "Verify values and symbols live into offload regions for legality";
+  let description = [{
+    This pass verifies that values and symbols used within OpenACC compute
+    constructs and other offload regions are legal for the target execution
+    model.
+
+    The pass performs two main checks:
+
+    1. **Live-in Value Verification**: Checks that all values that are live
+       into an offload region are valid for use in that region. This includes
+       checking that pointer-like and mappable types have appropriate data
+       clauses or device attributes.
+
+    2. **Symbol Use Verification**: Checks that all symbol references within
+       an offload region are valid for that region. This includes checking for
+       acc.routine declarations and acc.declare attributes.
+
+    The device_type option notes the target execution model:
+    - `none`, `nvidia`, `radeon`: Device execution (GPU offload)
+    - `host`, `multicore`: Host execution
+
+    When soft_check is enabled, the pass only emits debug messages for illegal
+    values/symbols instead of failing compilation. This is useful for
+    diagnostic purposes.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+  let options = [
+    AccDeviceTypeOption,
+    Option<"softCheck", "soft-check", "bool", "false",
+           "When true, illegal values are printed via LLVM_DEBUG instead of "
+           "failing compilation. Useful for diagnostic purposes.">
+  ];
+}
+
+def ACCComputeLowering : Pass<"acc-compute-lowering", "mlir::func::FuncOp"> {
+  let summary = "Lower ACC compute constructs to acc.compute_region";
+  let description = [{
+    Converts ACC frontend compute constructs (`acc.parallel`, `acc.kernels`,
+    `acc.serial`) to `acc.compute_region` wrapped in `acc.kernel_environment`.
+    Converts `acc.loop` to SCF parallel/for loops with parallel dimension
+    annotations.
+
+    The pass applies two phases of pattern rewrites:
+    1. Loop conversion: `acc.loop` is converted to `scf.parallel` or `scf.for`
+       while the parent compute construct is still present (needed to determine
+       loop conversion strategy).
+    2. Compute construct conversion: `acc.parallel`, `acc.kernels`, and
+       `acc.serial` are replaced by `acc.kernel_environment` containing
+       `acc.compute_region`.
+  }];
+  let dependentDialects = [
+    "mlir::acc::OpenACCDialect",
+    "mlir::arith::ArithDialect",
+    "mlir::scf::SCFDialect"
+  ];
+  let options = [ AccDeviceTypeOption ];
+}
+
+def ACCRoutineLowering : Pass<"acc-routine-lowering", "mlir::ModuleOp"> {
+  let summary = "Specialize `acc routine` functions for device";
+  let description = [{
+    This pass handles `acc routine` directive by creating specialized
+    functions with appropriate parallelism information that can be used for
+    eventual creation of device function.
+
+    For each acc.routine that is not bound by name, the pass creates a new
+    function (the "device" copy) whose body is a single acc.compute_region
+    containing a clone of the original (host) function body. Parallelism is
+    expressed by one acc.par_width derived from the routine's clauses (seq,
+    vector, worker, gang). The pass does not use acc.kernel_environment. It
+    sets acc.specialized_routine on the new function and updates the
+    acc.routine's func_name to point to it. For nohost routines, all uses of
+    the host symbol are replaced with the device symbol and the host function
+    is erased. Routines with bind(name) and external functions are skipped.
+  }];
+  let dependentDialects = [
+    "mlir::acc::OpenACCDialect",
+    "mlir::func::FuncDialect",
+    "mlir::scf::SCFDialect"
+  ];
+  let options = [ AccDeviceTypeOption ];
+}
+
+def ACCRoutineToGPUFunc : Pass<"acc-routine-to-gpu-func", "mlir::ModuleOp"> {
+  let summary = "Move ACC routine functions into the GPU module as gpu.func";
+  let description = [{
+    This pass moves functions associated with `acc routine` (and any callees
+    that must be present on the device) into the GPU module as `gpu.func`
+    operations.
+  }];
+  let dependentDialects = ["mlir::gpu::GPUDialect"];
+  let options = [ AccDeviceTypeOption ];
+}
+
+def ACCBindRoutine : Pass<"acc-bind-routine", "mlir::func::FuncOp"> {
+  let summary = "Apply bind clause to function calls in ACC compute regions";
+  let description = [{
+    For calls inside offload regions that target a function with an
+    `acc routine` directive and a `bind(name)` clause, rewrite the
+    call to use the bound symbol so device code calls the correct
+    call target.
+  }];
+  let options = [ AccDeviceTypeOption ];
 }
 
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

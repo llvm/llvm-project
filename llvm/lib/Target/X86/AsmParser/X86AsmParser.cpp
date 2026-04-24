@@ -4374,6 +4374,13 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     return Error(ErrorLoc, "immediate must be an integer in range [0, 15]",
                  EmptyRange, MatchingInlineAsm);
   }
+  case Match_InvalidImmUnsignedi6: {
+    SMLoc ErrorLoc = ((X86Operand &)*Operands[ErrorInfo]).getStartLoc();
+    if (ErrorLoc == SMLoc())
+      ErrorLoc = IDLoc;
+    return Error(ErrorLoc, "immediate must be an integer in range [0, 63]",
+                 EmptyRange, MatchingInlineAsm);
+  }
   case Match_MissingFeature:
     return ErrorMissingFeature(IDLoc, MissingFeatures, MatchingInlineAsm);
   case Match_InvalidOperand:
@@ -4738,6 +4745,14 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
                  EmptyRange, MatchingInlineAsm);
   }
 
+  if (llvm::count(Match, Match_InvalidImmUnsignedi6) == 1) {
+    SMLoc ErrorLoc = ((X86Operand &)*Operands[ErrorInfo]).getStartLoc();
+    if (ErrorLoc == SMLoc())
+      ErrorLoc = IDLoc;
+    return Error(ErrorLoc, "immediate must be an integer in range [0, 63]",
+                 EmptyRange, MatchingInlineAsm);
+  }
+
   // If all of these were an outright failure, report it in a useless way.
   return Error(IDLoc, "unknown instruction mnemonic", EmptyRange,
                MatchingInlineAsm);
@@ -4862,7 +4877,7 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
 
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   if (!Section) {
-    getStreamer().initSections(false, getSTI());
+    getStreamer().initSections(getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
   if (getContext().getAsmInfo()->useCodeAlign(*Section))

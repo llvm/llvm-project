@@ -8,12 +8,13 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   CodeGenTypes
   Core
-  Extensions
+  IPO
   IRPrinter
   IRReader
   MC
   MIRParser
   Passes
+  Plugins
   Remarks
   ScalarOpts
   SelectionDAG

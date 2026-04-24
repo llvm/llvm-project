@@ -1,4 +1,4 @@
-.. include:: ReleaseNotes/22.rst
+.. include:: ReleaseNotes/23.rst
 
 .. Make sure to reference the non-live release notes in a toctree to avoid Sphinx errors.
 .. toctree::
@@ -6,6 +6,7 @@
 
     ReleaseNotes/20
     ReleaseNotes/21
+    ReleaseNotes/22
 
 .. The release notes are in versioned files, but we make sure to keep publishing
 .. them in an unversioned ReleaseNotes.html page for external sites to reference.

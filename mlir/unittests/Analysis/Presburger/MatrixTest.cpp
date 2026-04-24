@@ -258,6 +258,57 @@ TEST(MatrixTest, computeHermiteNormalForm) {
   }
 }
 
+static void checkSmithNormalForm(const IntMatrix &mat) {
+  auto [u, d, v] = mat.computeSmithNormalForm();
+
+  // Check u and v are unimodular.
+  EXPECT_EQ(llvm::abs(u.determinant()), 1);
+  EXPECT_EQ(llvm::abs(v.determinant()), 1);
+
+  // Check u @ mat @ v = d (@ is matrix multiplication).
+  EXPECT_EQ(u.postMultiply(mat).postMultiply(v), d);
+
+  // Check d is diagonal, i.e. non-diagonal elements are zero.
+  for (unsigned i = 0, e = d.getNumRows(); i < e; i++) {
+    for (unsigned j = 0, f = d.getNumColumns(); j < f; j++) {
+      if (i != j)
+        EXPECT_EQ(d(i, j), 0);
+    }
+  }
+
+  // Check d(i, i) divides d(i + 1, i + 1).
+  unsigned end = std::min(d.getNumRows(), d.getNumColumns()) - 1;
+  unsigned i = 0;
+  for (; i < end; i++) {
+    if (d(i, i) == 0)
+      break;
+
+    EXPECT_EQ(d(i + 1, i + 1) % d(i, i), 0);
+  }
+  for (; i < end; i++)
+    EXPECT_EQ(d(i, i), 0);
+}
+
+TEST(MatrixTest, computeSmithNormalForm) {
+  {
+    IntMatrix mat =
+        makeIntMatrix(4, 3, {{2, 5, 8}, {3, 6, 9}, {4, 7, 1}, {5, 8, 2}});
+    checkSmithNormalForm(mat);
+  }
+
+  {
+    // Smith normal form of this matrix has trailing zeroes on the diagonal.
+    IntMatrix mat = makeIntMatrix(2, 3, {{6, 4, 2}, {3, 2, 0}});
+    checkSmithNormalForm(mat);
+  }
+
+  {
+    // 1x1 edge case.
+    IntMatrix mat = makeIntMatrix(1, 1, {{9}});
+    checkSmithNormalForm(mat);
+  }
+}
+
 TEST(MatrixTest, inverse) {
   IntMatrix mat1 = makeIntMatrix(2, 2, {{2, 1}, {7, 0}});
   EXPECT_EQ(mat1.determinant(), -7);

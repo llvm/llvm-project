@@ -37,21 +37,9 @@ define void @test4() {
   ret void
 }
 
-; DSE doesn't remove monotonic store.
+; DSE unordered store overwriting non-atomic store (allowed)
 define void @test5() {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    store atomic i32 2, ptr @x monotonic, align 4
-; CHECK-NEXT:    store i32 1, ptr @x, align 4
-; CHECK-NEXT:    ret void
-;
-  store atomic i32 2, ptr @x monotonic, align 4
-  store i32 1, ptr @x
-  ret void
-}
-
-; DSE unordered store overwriting non-atomic store (allowed)
-define void @test6() {
-; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    store atomic i32 1, ptr @x unordered, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -61,8 +49,8 @@ define void @test6() {
 }
 
 ; DSE no-op unordered atomic store (allowed)
-define void @test7() {
-; CHECK-LABEL: @test7(
+define void @test6() {
+; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    ret void
 ;
   %x = load atomic i32, ptr @x unordered, align 4
@@ -72,8 +60,8 @@ define void @test7() {
 
 ; DSE seq_cst store (be conservative; DSE doesn't have infrastructure
 ; to reason about atomic operations).
-define void @test8() {
-; CHECK-LABEL: @test8(
+define void @test7() {
+; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store atomic i32 0, ptr [[A]] seq_cst, align 4
 ; CHECK-NEXT:    ret void
@@ -85,8 +73,8 @@ define void @test8() {
 
 ; DSE and seq_cst load (be conservative; DSE doesn't have infrastructure
 ; to reason about atomic operations).
-define i32 @test9() {
-; CHECK-LABEL: @test9(
+define i32 @test8() {
+; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @randomop(ptr [[A]])
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
@@ -100,40 +88,11 @@ define i32 @test9() {
   ret i32 %x
 }
 
-; DSE across monotonic load (allowed if the monotonic load's address is NoAlias)
-define i32 @test10() {
-; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr @y monotonic, align 4
-; CHECK-NEXT:    store i32 1, ptr @x, align 4
-; CHECK-NEXT:    ret i32 [[X]]
-;
-  store i32 0, ptr @x
-  %x = load atomic i32, ptr @y monotonic, align 4
-  store i32 1, ptr @x
-  ret i32 %x
-}
-
-; DSE across monotonic load (blocked if the atomic load's address isn't NoAlias)
-define i32 @test11(ptr %ptr) {
-; CHECK-LABEL: @test11(
-; CHECK-NEXT:    store i32 0, ptr @x, align 4
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
-; CHECK-NEXT:    store i32 1, ptr @x, align 4
-; CHECK-NEXT:    ret i32 [[X]]
-;
-  store i32 0, ptr @x
-  %x = load atomic i32, ptr %ptr monotonic, align 4
-  store i32 1, ptr @x
-  ret i32 %x
-}
-
 ; DSE across monotonic store (allowed as long as the eliminated store isUnordered)
-define void @test12() {
-; CHECK-LABEL: @test12(
-; CHECK-NEXT:    store atomic i32 42, ptr @y monotonic, align 4
-; CHECK-NEXT:    store i32 1, ptr @x, align 4
-; CHECK-NEXT:    ret void
-;
+define void @test10() {
+; CHECK-LABEL: test10
+; CHECK-NOT: store i32 0
+; CHECK: store i32 1
   store i32 0, ptr @x
   store atomic i32 42, ptr @y monotonic, align 4
   store i32 1, ptr @x
@@ -141,8 +100,8 @@ define void @test12() {
 }
 
 ; DSE across monotonic load (forbidden since the eliminated store is atomic)
-define i32 @test13() {
-; CHECK-LABEL: @test13(
+define i32 @test11() {
+; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    store atomic i32 0, ptr @x monotonic, align 4
 ; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr @y monotonic, align 4
 ; CHECK-NEXT:    store atomic i32 1, ptr @x monotonic, align 4
@@ -155,8 +114,8 @@ define i32 @test13() {
 }
 
 ; DSE across monotonic store (forbidden since the eliminated store is atomic)
-define void @test14() {
-; CHECK-LABEL: @test14(
+define void @test12() {
+; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    store atomic i32 0, ptr @x monotonic, align 4
 ; CHECK-NEXT:    store atomic i32 42, ptr @y monotonic, align 4
 ; CHECK-NEXT:    store atomic i32 1, ptr @x monotonic, align 4
@@ -191,7 +150,7 @@ define i32 @test15() {
 define i64 @test_atomicrmw_0() {
 ; CHECK-LABEL: @test_atomicrmw_0(
 ; CHECK-NEXT:    store i64 1, ptr @z, align 8
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @z, i64 -1 monotonic, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @z, i64 -1 monotonic
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   store i64 1, ptr @z
@@ -203,7 +162,7 @@ define i64 @test_atomicrmw_0() {
 define i64 @test_atomicrmw_1() {
 ; CHECK-LABEL: @test_atomicrmw_1(
 ; CHECK-NEXT:    store i64 1, ptr @z, align 8
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @z, i64 -1 acq_rel, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @z, i64 -1 acq_rel
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   store i64 1, ptr @z
@@ -214,7 +173,7 @@ define i64 @test_atomicrmw_1() {
 ; Monotonic atomicrmw should not block eliminating no-aliasing stores.
 define i64 @test_atomicrmw_2() {
 ; CHECK-LABEL: @test_atomicrmw_2(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @a, i64 -1 monotonic, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @a, i64 -1 monotonic
 ; CHECK-NEXT:    store i64 2, ptr @z, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
@@ -228,7 +187,7 @@ define i64 @test_atomicrmw_2() {
 define i64 @test_atomicrmw_3() {
 ; CHECK-LABEL: @test_atomicrmw_3(
 ; CHECK-NEXT:    store i64 1, ptr @z, align 8
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @a, i64 -1 release, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @a, i64 -1 release
 ; CHECK-NEXT:    store i64 2, ptr @z, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
@@ -242,7 +201,7 @@ define i64 @test_atomicrmw_3() {
 define i64 @test_atomicrmw_4(ptr %ptr) {
 ; CHECK-LABEL: @test_atomicrmw_4(
 ; CHECK-NEXT:    store i64 1, ptr @z, align 8
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr [[PTR:%.*]], i64 -1 monotonic, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr [[PTR:%.*]], i64 -1 monotonic
 ; CHECK-NEXT:    store i64 2, ptr @z, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
@@ -256,7 +215,7 @@ define i64 @test_atomicrmw_4(ptr %ptr) {
 define i64 @test_atomicrmw_5() {
 ; CHECK-LABEL: @test_atomicrmw_5(
 ; CHECK-NEXT:    store i64 1, ptr @z, align 8
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @z, i64 -1 monotonic, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr @z, i64 -1 monotonic
 ; CHECK-NEXT:    store i64 2, ptr @z, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
@@ -270,7 +229,7 @@ define i64 @test_atomicrmw_5() {
 define { i32, i1} @test_cmpxchg_1() {
 ; CHECK-LABEL: @test_cmpxchg_1(
 ; CHECK-NEXT:    store i32 1, ptr @x, align 4
-; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr @x, i32 10, i32 20 seq_cst monotonic, align 4
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr @x, i32 10, i32 20 seq_cst monotonic
 ; CHECK-NEXT:    store i32 2, ptr @x, align 4
 ; CHECK-NEXT:    ret { i32, i1 } [[RET]]
 ;
@@ -283,7 +242,7 @@ define { i32, i1} @test_cmpxchg_1() {
 ; Monotonic cmpxchg should not block DSE for non-aliasing stores.
 define { i32, i1} @test_cmpxchg_2() {
 ; CHECK-LABEL: @test_cmpxchg_2(
-; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr @y, i32 10, i32 20 monotonic monotonic, align 4
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr @y, i32 10, i32 20 monotonic monotonic
 ; CHECK-NEXT:    store i32 2, ptr @x, align 4
 ; CHECK-NEXT:    ret { i32, i1 } [[RET]]
 ;
@@ -297,7 +256,7 @@ define { i32, i1} @test_cmpxchg_2() {
 define { i32, i1} @test_cmpxchg_3() {
 ; CHECK-LABEL: @test_cmpxchg_3(
 ; CHECK-NEXT:    store i32 1, ptr @x, align 4
-; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr @y, i32 10, i32 20 seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr @y, i32 10, i32 20 seq_cst seq_cst
 ; CHECK-NEXT:    store i32 2, ptr @x, align 4
 ; CHECK-NEXT:    ret { i32, i1 } [[RET]]
 ;
@@ -311,7 +270,7 @@ define { i32, i1} @test_cmpxchg_3() {
 define { i32, i1} @test_cmpxchg_4(ptr %ptr) {
 ; CHECK-LABEL: @test_cmpxchg_4(
 ; CHECK-NEXT:    store i32 1, ptr @x, align 4
-; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr [[PTR:%.*]], i32 10, i32 20 monotonic monotonic, align 4
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr [[PTR:%.*]], i32 10, i32 20 monotonic monotonic
 ; CHECK-NEXT:    store i32 2, ptr @x, align 4
 ; CHECK-NEXT:    ret { i32, i1 } [[RET]]
 ;
@@ -325,7 +284,7 @@ define { i32, i1} @test_cmpxchg_4(ptr %ptr) {
 define { i32, i1} @test_cmpxchg_5(ptr %ptr) {
 ; CHECK-LABEL: @test_cmpxchg_5(
 ; CHECK-NEXT:    store i32 1, ptr @x, align 4
-; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr @x, i32 10, i32 20 monotonic monotonic, align 4
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile ptr @x, i32 10, i32 20 monotonic monotonic
 ; CHECK-NEXT:    store i32 2, ptr @x, align 4
 ; CHECK-NEXT:    ret { i32, i1 } [[RET]]
 ;

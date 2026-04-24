@@ -366,7 +366,7 @@ void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
   IO.setContext(&Version);
 
   // Restore the YAML context on function exit.
-  auto RestoreContext = make_scope_exit([&]() { IO.setContext(OldContext); });
+  llvm::scope_exit RestoreContext([&]() { IO.setContext(OldContext); });
 
   // Shader stage is only included in binaries for v1 and later, but we always
   // include it since it simplifies parsing and file construction.

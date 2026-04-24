@@ -75,6 +75,7 @@ struct CFGProfile {
 // including CFG data (block and edge counts) and layout directives (clustering
 // and cloning paths).
 struct FunctionOptimizationProfile {
+  // This represents the raw input profile for one function.
   // BB Cluster information specified by `UniqueBBID`s.
   SmallVector<BBClusterInfo> ClusterInfo;
   // Paths to clone. A path a -> b -> c -> d implies cloning b, c, and d along
@@ -83,6 +84,20 @@ struct FunctionOptimizationProfile {
   SmallVector<SmallVector<unsigned>> ClonePaths;
   // Cfg profile data (block and edge frequencies).
   CFGProfile CFG;
+  // Code prefetch targets, specified by the callsite ID. The target is the code
+  // immediately following this callsite.
+  SmallVector<CallsiteID> PrefetchTargets;
+  // Code prefetch hints, specified by the injection site ID, the target
+  // function and the target site ID.
+  SmallVector<PrefetchHint> PrefetchHints;
+  // Node counts for each basic block.
+  DenseMap<UniqueBBID, uint64_t> NodeCounts;
+  // Edge counts for each edge.
+  DenseMap<UniqueBBID, DenseMap<UniqueBBID, uint64_t>> EdgeCounts;
+  // Hash for each basic block. The Hashes are stored for every original block
+  // (not cloned blocks), hence the map key being unsigned instead of
+  // UniqueBBID.
+  DenseMap<unsigned, uint64_t> BBHashes;
 };
 
 class BasicBlockSectionsProfileReader {
@@ -117,6 +132,15 @@ public:
       return nullptr;
     return &It->second.CFG;
   }
+
+  // Returns the prefetch targets (identified by their containing callsite IDs)
+  // for function `FuncName`.
+  SmallVector<CallsiteID>
+  getPrefetchTargetsForFunction(StringRef FuncName) const;
+
+  // Returns the prefetch hints to be injected in function `FuncName`.
+  SmallVector<PrefetchHint>
+  getPrefetchHintsForFunction(StringRef FuncName) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -199,16 +223,10 @@ public:
   BasicBlockSectionsProfileReader BBSPR;
 
   BasicBlockSectionsProfileReaderWrapperPass(const MemoryBuffer *Buf)
-      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader(Buf)) {
-    initializeBasicBlockSectionsProfileReaderWrapperPassPass(
-        *PassRegistry::getPassRegistry());
-  };
+      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader(Buf)) {}
 
   BasicBlockSectionsProfileReaderWrapperPass()
-      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader()) {
-    initializeBasicBlockSectionsProfileReaderWrapperPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader()) {}
 
   StringRef getPassName() const override {
     return "Basic Block Sections Profile Reader";
@@ -226,6 +244,12 @@ public:
 
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
+
+  SmallVector<CallsiteID>
+  getPrefetchTargetsForFunction(StringRef FuncName) const;
+
+  SmallVector<PrefetchHint>
+  getPrefetchHintsForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.

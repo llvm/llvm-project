@@ -29,7 +29,9 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <memory>
 #include <optional>
@@ -337,9 +339,9 @@ protected:
           // The request went past the stack, so handle that case:
           const uint32_t num_frames = thread->GetStackFrameCount();
           if (static_cast<int32_t>(num_frames - frame_idx) >
-              *m_options.relative_frame_offset)
-          frame_idx += *m_options.relative_frame_offset;
-          else {
+              *m_options.relative_frame_offset) {
+            frame_idx += *m_options.relative_frame_offset;
+          } else {
             if (frame_idx == num_frames - 1) {
               // If we are already at the top of the stack, just warn and don't
               // reset the frame.
@@ -353,7 +355,7 @@ protected:
     } else {
       if (command.GetArgumentCount() > 1) {
         result.AppendErrorWithFormat(
-            "too many arguments; expected frame-index, saw '%s'.\n",
+            "too many arguments; expected frame-index, saw '%s'",
             command[0].c_str());
         m_options.GenerateOptionUsage(
             result.GetErrorStream(), *this,
@@ -364,7 +366,7 @@ protected:
 
       if (command.GetArgumentCount() == 1) {
         if (command[0].ref().getAsInteger(0, frame_idx)) {
-          result.AppendErrorWithFormat("invalid frame index argument '%s'.",
+          result.AppendErrorWithFormat("invalid frame index argument '%s'",
                                        command[0].c_str());
           return;
         }
@@ -382,8 +384,7 @@ protected:
       m_exe_ctx.SetFrameSP(thread->GetSelectedFrame(SelectMostRelevantFrame));
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Frame index (%u) out of range.\n",
-                                   frame_idx);
+      result.AppendErrorWithFormat("Frame index (%u) out of range", frame_idx);
     }
   }
 
@@ -439,17 +440,23 @@ protected:
     if (!var_sp)
       return llvm::StringRef();
 
-    switch (var_sp->GetScope()) {
+    auto vt = var_sp->GetScope();
+    bool is_synthetic = IsSyntheticValueType(vt);
+    // Clear the bit so the rest works correctly.
+    if (is_synthetic)
+      vt = GetBaseValueType(vt);
+
+    switch (vt) {
     case eValueTypeVariableGlobal:
-      return "GLOBAL: ";
+      return is_synthetic ? "(synthetic) GLOBAL: " : "GLOBAL: ";
     case eValueTypeVariableStatic:
-      return "STATIC: ";
+      return is_synthetic ? "(synthetic) STATIC: " : "STATIC: ";
     case eValueTypeVariableArgument:
-      return "ARG: ";
+      return is_synthetic ? "(synthetic) ARG: " : "ARG: ";
     case eValueTypeVariableLocal:
-      return "LOCAL: ";
+      return is_synthetic ? "(synthetic) LOCAL: " : "LOCAL: ";
     case eValueTypeVariableThreadLocal:
-      return "THREAD: ";
+      return is_synthetic ? "(synthetic) THREAD: " : "THREAD: ";
     default:
       break;
     }
@@ -459,6 +466,14 @@ protected:
 
   /// Returns true if `scope` matches any of the options in `m_option_variable`.
   bool ScopeRequested(lldb::ValueType scope) {
+    // If it's a synthetic variable, check if we want to show those first.
+    bool is_synthetic = IsSyntheticValueType(scope);
+    if (is_synthetic) {
+      if (!m_option_variable.show_synthetic)
+        return false;
+
+      scope = GetBaseValueType(scope);
+    }
     switch (scope) {
     case eValueTypeVariableGlobal:
     case eValueTypeVariableStatic:
@@ -474,7 +489,10 @@ protected:
     case eValueTypeVariableThreadLocal:
     case eValueTypeVTable:
     case eValueTypeVTableEntry:
-      return false;
+      // The default for all other value types is is_synthetic. Aside from the
+      // modifiers above that should apply equally to synthetic and normal
+      // variables, any other synthetic variable we should default to showing.
+      return is_synthetic;
     }
     llvm_unreachable("Unexpected scope value");
   }
@@ -521,7 +539,8 @@ protected:
 
     Status error;
     VariableList *variable_list =
-        frame->GetVariableList(m_option_variable.show_globals, &error);
+        frame->GetVariableList(m_option_variable.show_globals,
+                               m_option_variable.show_synthetic, &error);
 
     if (error.Fail() && (!variable_list || variable_list->GetSize() == 0)) {
       result.AppendError(error.AsCString());
@@ -566,7 +585,7 @@ protected:
                   findUniqueRegexMatches(regex, regex_var_list, *variable_list);
               if (!results) {
                 result.AppendErrorWithFormat(
-                    "no variables matched the regular expression '%s'.",
+                    "no variables matched the regular expression '%s'",
                     entry.c_str());
                 continue;
               }
@@ -610,7 +629,8 @@ protected:
             uint32_t expr_path_options =
                 StackFrame::eExpressionPathOptionCheckPtrVsMember |
                 StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
-                StackFrame::eExpressionPathOptionsInspectAnonymousUnions;
+                StackFrame::eExpressionPathOptionsInspectAnonymousUnions |
+                StackFrame::eExpressionPathOptionsAllowVarUpdates;
             lldb::VariableSP var_sp;
             valobj_sp = frame->GetValueForVariableExpressionPath(
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
@@ -637,15 +657,28 @@ protected:
               Stream &output_stream = result.GetOutputStream();
               options.SetRootValueObjectName(
                   valobj_sp->GetParent() ? entry.c_str() : nullptr);
-              if (llvm::Error error = valobj_sp->Dump(output_stream, options))
-                result.AppendError(toString(std::move(error)));
+              // Check only the `error` argument, because doing
+              // `valobj_sp->GetError()` will update the value and potentially
+              // return a new error that happens during the update, even if
+              // `GetValueForVariableExpressionPath` reported no errors.
+              if (error.Fail()) {
+                result.SetStatus(eReturnStatusFailed);
+                result.SetError(error.takeError());
+              } else {
+                // If there is an error while updating the value, it will be
+                // printed here as the contents of the value, e.g.
+                // `(int) *((int*)0) = <parent is NULL>`
+                if (llvm::Error error = valobj_sp->Dump(output_stream, options))
+                  result.AppendError(toString(std::move(error)));
+              }
+
             } else {
               if (auto error_cstr = error.AsCString(nullptr))
                 result.AppendError(error_cstr);
               else
                 result.AppendErrorWithFormat(
                     "unable to find any variable expression path that matches "
-                    "'%s'.",
+                    "'%s'",
                     entry.c_str());
             }
           }
@@ -690,7 +723,7 @@ protected:
                 options.SetVariableFormatDisplayLanguage(
                     valobj_sp->GetPreferredDisplayLanguage());
                 options.SetRootValueObjectName(
-                    var_sp ? var_sp->GetName().AsCString() : nullptr);
+                    var_sp ? var_sp->GetName().AsCString(nullptr) : nullptr);
                 if (llvm::Error error =
                         valobj_sp->Dump(result.GetOutputStream(), options))
                   result.AppendError(toString(std::move(error)));
@@ -714,7 +747,8 @@ protected:
             options.SetFormat(m_option_format.GetFormat());
             options.SetVariableFormatDisplayLanguage(
                 rec_value_sp->GetPreferredDisplayLanguage());
-            options.SetRootValueObjectName(rec_value_sp->GetName().AsCString());
+            options.SetRootValueObjectName(
+                rec_value_sp->GetName().AsCString(nullptr));
             if (llvm::Error error =
                     rec_value_sp->Dump(result.GetOutputStream(), options))
               result.AppendError(toString(std::move(error)));
@@ -873,27 +907,26 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
                                                 CommandReturnObject &result) {
 #if LLDB_ENABLE_PYTHON
   if (m_options.m_class_name.empty()) {
-    result.AppendErrorWithFormat(
-        "%s needs a Python class name (-l argument).\n", m_cmd_name.c_str());
+    result.AppendErrorWithFormat("%s needs a Python class name (-l argument)",
+                                 m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_module.empty()) {
-    result.AppendErrorWithFormat("%s needs a module name (-s argument).\n",
+    result.AppendErrorWithFormat("%s needs a module name (-s argument)",
                                  m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_symbols.empty()) {
     result.AppendErrorWithFormat(
-        "%s needs at least one symbol name (-n argument).\n",
-        m_cmd_name.c_str());
+        "%s needs at least one symbol name (-n argument)", m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_regex && m_options.m_symbols.size() > 1) {
     result.AppendErrorWithFormat(
-        "%s needs only one symbol regular expression (-n argument).\n",
+        "%s needs only one symbol regular expression (-n argument)",
         m_cmd_name.c_str());
     return;
   }
@@ -902,7 +935,7 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
 
   if (interpreter &&
       !interpreter->CheckObjectExists(m_options.m_class_name.c_str())) {
-    result.AppendWarning("The provided class does not exist - please define it "
+    result.AppendWarning("the provided class does not exist - please define it "
                          "before attempting to use this frame recognizer");
   }
 
@@ -1016,7 +1049,7 @@ public:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     uint32_t recognizer_id;
     if (!llvm::to_integer(command.GetArgumentAtIndex(0), recognizer_id)) {
-      result.AppendErrorWithFormat("'%s' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%s' is not a valid recognizer id",
                                    command.GetArgumentAtIndex(0));
       return;
     }
@@ -1042,7 +1075,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, true)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1067,7 +1100,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, false)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1092,7 +1125,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.RemoveRecognizerWithID(recognizer_id)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1158,7 +1191,7 @@ protected:
     const char *frame_index_str = command.GetArgumentAtIndex(0);
     uint32_t frame_index;
     if (!llvm::to_integer(frame_index_str, frame_index)) {
-      result.AppendErrorWithFormat("'%s' is not a valid frame index.",
+      result.AppendErrorWithFormat("'%s' is not a valid frame index",
                                    frame_index_str);
       return;
     }
@@ -1175,7 +1208,7 @@ protected:
     }
     if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one frame index argument.\n", m_cmd_name.c_str());
+          "'%s' takes exactly one frame index argument", m_cmd_name.c_str());
       return;
     }
 

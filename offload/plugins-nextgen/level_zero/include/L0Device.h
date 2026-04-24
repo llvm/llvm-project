@@ -238,6 +238,10 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair.
   std::pair<uint32_t, uint32_t> findCopyOrdinal(bool LinkCopy = false);
 
+  /// Helper function to call global constructors or destructors.
+  Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
+                                 bool IsCtor);
+
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
@@ -274,6 +278,8 @@ public:
 
   const std::string_view getName() const { return DeviceName; }
   const char *getNameCStr() const { return DeviceName.c_str(); }
+
+  const char *getArchCStr() const;
 
   const std::string_view getZeId() const { return zeId; }
   const char *getZeIdCStr() const { return zeId.c_str(); }
@@ -554,9 +560,10 @@ public:
                             TargetAllocTy Kind) override;
   Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
 
+  /// This plugin does nothing to lock buffers. Do not return an error, just
+  /// return the same pointer as the device pointer.
   Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN,
-                         "dataLockImpl not supported");
+    return HstPtr;
   }
   Error dataUnlockImpl(void *HstPtr) override { return Plugin::success(); }
 
@@ -573,7 +580,8 @@ public:
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
                         bool ReleaseQueue) override;
-  Error queryAsyncImpl(__tgt_async_info &AsyncInfo) override;
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                       bool *IsQueueWorkCompleted) override;
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
@@ -622,6 +630,12 @@ public:
                          __func__);
   }
 
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
+    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
+                         __func__);
+  }
+
   Expected<InfoTreeNode> obtainInfoImpl() override;
   uint64_t getClockFrequency() const override { return getClockRate(); }
   uint64_t getHardwareParallelism() const override { return getTotalThreads(); }
@@ -635,6 +649,12 @@ public:
     return Plugin::success();
   }
   Expected<GenericKernelTy &> constructKernel(const char *Name) override;
+
+  Error callGlobalConstructors(GenericPluginTy &Plugin,
+                               DeviceImageTy &Image) override;
+
+  Error callGlobalDestructors(GenericPluginTy &Plugin,
+                              DeviceImageTy &Image) override;
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
 

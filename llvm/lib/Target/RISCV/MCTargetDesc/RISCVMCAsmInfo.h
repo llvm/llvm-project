@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCASMINFO_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCASMINFO_H
 
+#include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmInfoELF.h"
 #include "llvm/MC/MCFixup.h"
 
@@ -40,7 +41,10 @@ enum {
   // Specifiers mapping to distinct relocation types.
   S_LO = FirstTargetFixupKind,
   S_PCREL_LO,
+  S_PCREL_HI,
   S_TPREL_LO,
+  S_CALL_PLT,
+  S_GOT_HI,
   // Vendor-specific relocation types might conflict across vendors.
   // Refer to them using Specifier constants.
   S_QC_ABS20,
@@ -49,6 +53,13 @@ enum {
 Specifier parseSpecifierName(StringRef name);
 StringRef getSpecifierName(Specifier Kind);
 } // namespace RISCV
+
+class RISCVMCAsmInfoDarwin : public MCAsmInfoDarwin {
+public:
+  explicit RISCVMCAsmInfoDarwin();
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override;
+};
 
 } // namespace llvm
 

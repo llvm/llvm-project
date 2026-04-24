@@ -23,8 +23,8 @@ set(POLLY_COMPONENTS
     Analysis
     ipo
     MC
-    Extensions
     Passes
+    Plugins
     Linker
     IRReader
     Analysis
@@ -90,6 +90,10 @@ add_llvm_pass_plugin(Polly
   Transform/ManualOptimizer.cpp
   Transform/MatmulOptimizer.cpp
   ${POLLY_HEADER_FILES}
+
+  # Polly unconditionally uses -fno-rtti -fno-exceptions. This can be
+  # incompatible with PCH if LLVM is built with RTTI or exceptions.
+  DISABLE_PCH_REUSE
 
   LINK_COMPONENTS
   ${POLLY_COMPONENTS}

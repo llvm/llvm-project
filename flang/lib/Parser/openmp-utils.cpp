@@ -16,12 +16,42 @@
 #include "flang/Common/template.h"
 #include "flang/Common/visit.h"
 #include "flang/Parser/tools.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <tuple>
 #include <type_traits>
 #include <variant>
 
 namespace Fortran::parser::omp {
+
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPConstruct &x) {
+  return std::visit(
+      [](auto &&s) -> decltype(auto) {
+        return detail::DirectiveSpecificationScope::GetODS(s);
+      },
+      x.u);
+}
+
+const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
+    const OpenMPDeclarativeConstruct &x) {
+  return std::visit(
+      [](auto &&s) -> decltype(auto) {
+        return detail::DirectiveSpecificationScope::GetODS(s);
+      },
+      x.u);
+}
+
+std::string GetUpperName(llvm::omp::Clause id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
+
+std::string GetUpperName(llvm::omp::Directive id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
 
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x) {
   if (auto *y = std::get_if<SpecificationConstruct>(&x.u)) {
@@ -59,63 +89,6 @@ const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x) {
   return nullptr;
 }
 
-// Get the Label from a Statement<...> contained in an ExecutionPartConstruct,
-// or std::nullopt, if there is no Statement<...> contained in there.
-template <typename T>
-static std::optional<Label> GetStatementLabelHelper(const T &stmt) {
-  if constexpr (IsStatement<T>::value) {
-    return stmt.label;
-  } else if constexpr (WrapperTrait<T>) {
-    return GetStatementLabelHelper(stmt.v);
-  } else if constexpr (UnionTrait<T>) {
-    return common::visit(
-        [&](auto &&s) { return GetStatementLabelHelper(s); }, stmt.u);
-  }
-  return std::nullopt;
-}
-
-std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x) {
-  return GetStatementLabelHelper(x);
-}
-
-static std::optional<Label> GetFinalLabel(const Block &x) {
-  if (!x.empty()) {
-    const ExecutionPartConstruct &last{x.back()};
-    if (auto *omp{Unwrap<OpenMPConstruct>(last)}) {
-      return GetFinalLabel(*omp);
-    } else if (auto *doLoop{Unwrap<DoConstruct>(last)}) {
-      return GetFinalLabel(std::get<Block>(doLoop->t));
-    } else {
-      return GetStatementLabel(x.back());
-    }
-  } else {
-    return std::nullopt;
-  }
-}
-
-std::optional<Label> GetFinalLabel(const OpenMPConstruct &x) {
-  return common::visit(
-      [](auto &&s) -> std::optional<Label> {
-        using TypeS = llvm::remove_cvref_t<decltype(s)>;
-        if constexpr (std::is_same_v<TypeS, OpenMPSectionsConstruct>) {
-          auto &list{std::get<std::list<OpenMPConstruct>>(s.t)};
-          if (!list.empty()) {
-            return GetFinalLabel(list.back());
-          } else {
-            return std::nullopt;
-          }
-        } else if constexpr ( //
-            std::is_same_v<TypeS, OpenMPLoopConstruct> ||
-            std::is_same_v<TypeS, OpenMPSectionConstruct> ||
-            std::is_base_of_v<OmpBlockConstruct, TypeS>) {
-          return GetFinalLabel(std::get<Block>(s.t));
-        } else {
-          return std::nullopt;
-        }
-      },
-      x.u);
-}
-
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
   return common::visit([](auto &&s) { return GetOmpObjectList(s); }, clause.u);
 }
@@ -131,6 +104,16 @@ const OmpObjectList *GetOmpObjectList(const OmpClause::Depend &clause) {
 
 const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x) {
   return &std::get<OmpObjectList>(x.t);
+}
+
+const OmpClause *FindClause(
+    const OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId) {
+  for (auto &clause : spec.Clauses().v) {
+    if (clause.Id() == clauseId) {
+      return &clause;
+    }
+  }
+  return nullptr;
 }
 
 const BlockConstruct *GetFortranBlockConstruct(
@@ -211,53 +194,51 @@ OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x) {
   return info;
 }
 
-template <bool IsConst> LoopRange<IsConst>::LoopRange(QualReference x) {
-  if (auto *doLoop{Unwrap<DoConstruct>(x)}) {
-    Initialize(std::get<Block>(doLoop->t));
-  } else if (auto *omp{Unwrap<OpenMPLoopConstruct>(x)}) {
-    Initialize(std::get<Block>(omp->t));
+void ExecutionPartIterator::step() {
+  // Advance the iterator to the next legal position. If the current
+  // position is a DO-loop or a loop construct, step into it.
+  if (valid()) {
+    IteratorType where{at()};
+    if (auto *loop{GetOmpLoop(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
+    } else if (auto *loop{GetDoConstruct(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
+    } else {
+      ++stack_.back().location.at;
+    }
+    adjust();
   }
 }
 
-template <bool IsConst> void LoopRange<IsConst>::Initialize(QualBlock &body) {
-  using QualIterator = decltype(std::declval<QualBlock>().begin());
-  auto makeRange{[](auto &container) {
-    return llvm::make_range(container.begin(), container.end());
-  }};
+void ExecutionPartIterator::next() {
+  // Advance the iterator to the next legal position. If the current
+  // position is a DO-loop or a loop construct, step over it.
+  if (valid()) {
+    ++stack_.back().location.at;
+    adjust();
+  }
+}
 
-  std::vector<llvm::iterator_range<QualIterator>> nest{makeRange(body)};
-  do {
-    auto at{nest.back().begin()};
-    auto end{nest.back().end()};
-    nest.pop_back();
-    while (at != end) {
-      if (auto *block{Unwrap<BlockConstruct>(*at)}) {
-        nest.push_back(llvm::make_range(std::next(at), end));
-        nest.push_back(makeRange(std::get<Block>(block->t)));
-        break;
-      } else if (Unwrap<DoConstruct>(*at) || Unwrap<OpenMPLoopConstruct>(*at)) {
-        items.push_back(&*at);
+void ExecutionPartIterator::adjust() {
+  // If the iterator is not at a legal location, keep advancing it until
+  // it lands at a legal location or becomes invalid.
+  while (valid()) {
+    if (stack_.back().location.atEnd()) {
+      stack_.pop_back();
+      if (valid()) {
+        ++stack_.back().location.at;
       }
-      ++at;
+    } else if (auto *block{GetFortranBlockConstruct(*at())}) {
+      stack_.emplace_back(std::get<Block>(block->t), &*at());
+    } else {
+      break;
     }
-  } while (!nest.empty());
+  }
 }
 
-template <bool IsConst>
-auto LoopRange<IsConst>::iterator::operator++(int) -> iterator {
-  auto old = *this;
-  ++*this;
-  return old;
+bool LoopNestIterator::isLoop(const ExecutionPartConstruct &c) {
+  return Unwrap<OpenMPLoopConstruct>(c) != nullptr ||
+      Unwrap<DoConstruct>(c) != nullptr;
 }
-
-template <bool IsConst>
-auto LoopRange<IsConst>::iterator::operator--(int) -> iterator {
-  auto old = *this;
-  --*this;
-  return old;
-}
-
-template struct LoopRange<false>;
-template struct LoopRange<true>;
 
 } // namespace Fortran::parser::omp

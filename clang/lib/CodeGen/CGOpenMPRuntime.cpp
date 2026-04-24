@@ -815,6 +815,7 @@ void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
     Size = CGF.Builder.CreatePtrDiff(ElemType,
                                      OrigAddresses[N].second.getPointer(CGF),
                                      OrigAddresses[N].first.getPointer(CGF));
+    Size = CGF.Builder.CreateZExtOrTrunc(Size, ElemSizeOf->getType());
     Size = CGF.Builder.CreateNUWAdd(
         Size, llvm::ConstantInt::get(Size->getType(), /*V=*/1));
     SizeInChars = CGF.Builder.CreateNUWMul(Size, ElemSizeOf);
@@ -1099,6 +1100,8 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     Fn->removeFnAttr(llvm::Attribute::NoInline);
     Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
@@ -1526,6 +1529,7 @@ convertCaptureClause(const VarDecl *VD) {
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
     break;
   case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Enter:
+  case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Local:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter;
     break;
   case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Link:
@@ -1776,10 +1780,124 @@ void CGOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *FD,
     Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
   }
 
+  // Register the indirect Vtable:
+  // This is similar to OMPTargetGlobalVarEntryIndirect, except that the
+  // size field refers to the size of memory pointed to, not the size of
+  // the pointer symbol itself (which is implicitly the size of a pointer).
   OMPBuilder.OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
       Name, Addr, CGM.GetTargetTypeStoreSize(CGM.VoidPtrTy).getQuantity(),
       llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect,
       llvm::GlobalValue::WeakODRLinkage);
+}
+
+void CGOpenMPRuntime::registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
+                                                 const VarDecl *VD) {
+  // TODO: add logic to avoid duplicate vtable registrations per
+  // translation unit; though for external linkage, this should no
+  // longer be an issue - or at least we can avoid the issue by
+  // checking for an existing offloading entry.  But, perhaps the
+  // better approach is to defer emission of the vtables and offload
+  // entries until later (by tracking a list of items that need to be
+  // emitted).
+
+  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+
+  // Generate a new externally visible global to point to the
+  // internally visible vtable. Doing this allows us to keep the
+  // visibility and linkage of the associated vtable unchanged while
+  // allowing the runtime to access its value.  The externally
+  // visible global var needs to be emitted with a unique mangled
+  // name that won't conflict with similarly named (internal)
+  // vtables in other translation units.
+
+  // Register vtable with source location of dynamic object in map
+  // clause.
+  llvm::TargetRegionEntryInfo EntryInfo = getEntryInfoFromPresumedLoc(
+      CGM, OMPBuilder, VD->getCanonicalDecl()->getBeginLoc(),
+      VTable->getName());
+
+  llvm::GlobalVariable *Addr = VTable;
+  SmallString<128> AddrName;
+  OMPBuilder.OffloadInfoManager.getTargetRegionEntryFnName(AddrName, EntryInfo);
+  AddrName.append("addr");
+
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    Addr = new llvm::GlobalVariable(
+        CGM.getModule(), VTable->getType(),
+        /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, VTable,
+        AddrName,
+        /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+        CGM.getModule().getDataLayout().getDefaultGlobalsAddressSpace());
+    Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+  }
+  OMPBuilder.OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
+      AddrName, VTable,
+      CGM.getDataLayout().getTypeAllocSize(VTable->getInitializer()->getType()),
+      llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable,
+      llvm::GlobalValue::WeakODRLinkage);
+}
+
+void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
+                                            CXXRecordDecl *CXXRecord,
+                                            const VarDecl *VD) {
+  // Register C++ VTable to OpenMP Offload Entry if it's a new
+  // CXXRecordDecl.
+  if (CXXRecord && CXXRecord->isDynamicClass() &&
+      !CGM.getOpenMPRuntime().VTableDeclMap.contains(CXXRecord)) {
+    auto Res = CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
+    if (Res.second) {
+      CGM.EmitVTable(CXXRecord);
+      CodeGenVTables VTables = CGM.getVTables();
+      llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
+      assert(VTablesAddr && "Expected non-null VTable address");
+      CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
+      // Emit VTable for all the fields containing dynamic CXXRecord
+      for (const FieldDecl *Field : CXXRecord->fields()) {
+        if (CXXRecordDecl *RecordDecl = Field->getType()->getAsCXXRecordDecl())
+          emitAndRegisterVTable(CGM, RecordDecl, VD);
+      }
+      // Emit VTable for all dynamic parent class
+      for (CXXBaseSpecifier &Base : CXXRecord->bases()) {
+        if (CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl())
+          emitAndRegisterVTable(CGM, BaseDecl, VD);
+      }
+    }
+  }
+}
+
+void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
+  // Register VTable by scanning through the map clause of OpenMP target region.
+  // Get CXXRecordDecl and VarDecl from Expr.
+  auto GetVTableDecl = [](const Expr *E) {
+    QualType VDTy = E->getType();
+    CXXRecordDecl *CXXRecord = nullptr;
+    if (const auto *RefType = VDTy->getAs<LValueReferenceType>())
+      VDTy = RefType->getPointeeType();
+    if (VDTy->isPointerType())
+      CXXRecord = VDTy->getPointeeType()->getAsCXXRecordDecl();
+    else
+      CXXRecord = VDTy->getAsCXXRecordDecl();
+
+    const VarDecl *VD = nullptr;
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      VD = cast<VarDecl>(DRE->getDecl());
+    } else if (auto *MRE = dyn_cast<MemberExpr>(E)) {
+      if (auto *BaseDRE = dyn_cast<DeclRefExpr>(MRE->getBase())) {
+        if (auto *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl()))
+          VD = BaseVD;
+      }
+    }
+    return std::pair<CXXRecordDecl *, const VarDecl *>(CXXRecord, VD);
+  };
+  // Collect VTable from OpenMP map clause.
+  for (const auto *C : D.getClausesOfKind<OMPMapClause>()) {
+    for (const auto *E : C->varlist()) {
+      auto DeclPair = GetVTableDecl(E);
+      // Ensure VD is not null
+      if (DeclPair.second)
+        emitAndRegisterVTable(CGM, DeclPair.first, DeclPair.second);
+    }
+  }
 }
 
 Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
@@ -2156,6 +2274,8 @@ static llvm::Value *emitCopyprivateCopyFunction(
                                     llvm::GlobalValue::InternalLinkage, Name,
                                     &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
@@ -2845,6 +2965,13 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
     case llvm::OpenMPIRBuilder::EMIT_MD_GLOBAL_VAR_LINK_ERROR: {
       CGM.getDiags().Report(diag::err_target_var_offloading_entry_incorrect);
     } break;
+    case llvm::OpenMPIRBuilder::EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR: {
+      unsigned DiagID = CGM.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error, "Offloading entry for indirect declare "
+                                    "target variable is incorrect: the "
+                                    "address is invalid.");
+      CGM.getDiags().Report(DiagID);
+    } break;
     }
   };
 
@@ -3023,6 +3150,8 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
   auto *TaskEntry = llvm::Function::Create(
       TaskEntryTy, llvm::GlobalValue::InternalLinkage, Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskEntry, TaskEntryFnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    TaskEntry->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   TaskEntry->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), KmpInt32Ty, TaskEntry, TaskEntryFnInfo, Args,
@@ -3128,6 +3257,8 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
                              Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), DestructorFn,
                                     DestructorFnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    DestructorFn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   DestructorFn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), KmpInt32Ty, DestructorFn, DestructorFnInfo,
@@ -3231,6 +3362,9 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskPrivatesMap,
                                     TaskPrivatesMapFnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    TaskPrivatesMap->addFnAttr("sample-profile-suffix-elision-policy",
+                               "selected");
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::OptimizeNone);
@@ -3435,6 +3569,8 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
   auto *TaskDup = llvm::Function::Create(
       TaskDupTy, llvm::GlobalValue::InternalLinkage, Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskDup, TaskDupFnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    TaskDup->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   TaskDup->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, TaskDup, TaskDupFnInfo, Args, Loc,
@@ -3594,9 +3730,7 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
     llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
         UpAddrAddress.getElementType(), UpAddrAddress.emitRawPointer(CGF),
         /*Idx0=*/1);
-    llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGF.SizeTy);
-    llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGF.SizeTy);
-    SizeVal = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
+    SizeVal = CGF.Builder.CreatePtrDiff(UpAddr, Addr, "", /*IsNUW=*/true);
   } else {
     SizeVal = CGF.getTypeSize(Ty);
   }
@@ -3734,6 +3868,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     PriorityFlag = 0x20,
     DetachableFlag = 0x40,
     FreeAgentFlag = 0x80,
+    TransparentFlag = 0x100,
   };
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
@@ -3748,6 +3883,9 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     if (Kind == OMPC_THREADSET_omp_pool)
       Flags = Flags | FreeAgentFlag;
   }
+  if (D.getSingleClause<OMPTransparentClause>())
+    Flags |= TransparentFlag;
+
   if (Data.Priority.getInt())
     Flags = Flags | PriorityFlag;
   if (D.hasClausesOfKind<OMPDetachClause>())
@@ -4847,6 +4985,8 @@ llvm::Function *CGOpenMPRuntime::emitReductionFunction(
                                     llvm::GlobalValue::InternalLinkage, Name,
                                     &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
@@ -5560,6 +5700,8 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
@@ -5630,6 +5772,8 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
@@ -5698,6 +5842,8 @@ static llvm::Value *emitReduceFiniFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
@@ -6226,11 +6372,13 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
   CodeGenFunction CGF(CGM, true);
   llvm::OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
-      [&CGF, &D, &CodeGen](StringRef EntryFnName) {
+      [&CGF, &D, &CodeGen, this](StringRef EntryFnName) {
         const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
+        if (CGM.getLangOpts().OpenMPIsTargetDevice && !isGPU())
+          return CGF.GenerateOpenMPCapturedStmtFunctionAggregate(CS, D);
         return CGF.GenerateOpenMPCapturedStmtFunction(CS, D);
       };
 
@@ -6249,6 +6397,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         CGM.handleAMDGPUWavesPerEUAttr(OutlinedFn, Attr);
     }
   }
+  registerVTable(D);
 }
 
 /// Checks if the expression is constant or does not have non-trivial function
@@ -7162,6 +7311,7 @@ private:
     const ValueDecl *Mapper = nullptr;
     const Expr *VarRef = nullptr;
     bool ForDeviceAddr = false;
+    bool HasUdpFbNullify = false;
 
     MapInfo() = default;
     MapInfo(
@@ -7171,11 +7321,12 @@ private:
         ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
         bool ReturnDevicePointer, bool IsImplicit,
         const ValueDecl *Mapper = nullptr, const Expr *VarRef = nullptr,
-        bool ForDeviceAddr = false)
+        bool ForDeviceAddr = false, bool HasUdpFbNullify = false)
         : Components(Components), MapType(MapType), MapModifiers(MapModifiers),
           MotionModifiers(MotionModifiers),
           ReturnDevicePointer(ReturnDevicePointer), IsImplicit(IsImplicit),
-          Mapper(Mapper), VarRef(VarRef), ForDeviceAddr(ForDeviceAddr) {}
+          Mapper(Mapper), VarRef(VarRef), ForDeviceAddr(ForDeviceAddr),
+          HasUdpFbNullify(HasUdpFbNullify) {}
   };
 
   /// The target directive from where the mappable clauses were extracted. It
@@ -7507,8 +7658,7 @@ private:
     void copyUntilField(const FieldDecl *FD, Address ComponentLB) {
       llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
       llvm::Value *LBPtr = LB.emitRawPointer(CGF);
-      llvm::Value *Size =
-          CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr, LBPtr);
+      llvm::Value *Size = CGF.Builder.CreatePtrDiff(ComponentLBPtr, LBPtr);
       copySizedChunk(LBPtr, Size);
     }
 
@@ -7521,8 +7671,7 @@ private:
       }
       llvm::Value *LBPtr = LB.emitRawPointer(CGF);
       llvm::Value *Size = CGF.Builder.CreatePtrDiff(
-          CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
-          LBPtr);
+          CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF), LBPtr);
       copySizedChunk(LBPtr, Size);
     }
 
@@ -7533,7 +7682,7 @@ private:
       CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
       CombinedInfo.Pointers.push_back(Base);
       CombinedInfo.Sizes.push_back(
-          CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
+          CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/false));
       CombinedInfo.Types.push_back(Flags);
       CombinedInfo.Mappers.push_back(nullptr);
       CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize : 1);
@@ -7834,7 +7983,8 @@ private:
                 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
           if ((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
               ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+                *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
                CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())) {
             RequiresReference = true;
             BP = CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
@@ -7908,11 +8058,17 @@ private:
           if (!StrideExpr)
             return false;
 
+          assert(StrideExpr->getType()->isIntegerType() &&
+                 "Stride expression must be of integer type");
+
+          // If stride is not evaluatable as a constant, treat as
+          // non-contiguous.
           const auto Constant =
               StrideExpr->getIntegerConstantExpr(CGF.getContext());
           if (!Constant)
-            return false;
+            return true;
 
+          // Treat non-unitary strides as non-contiguous.
           return !Constant->isOne();
         });
 
@@ -8302,8 +8458,8 @@ private:
     // For supporting stride in array section, we need to initialize the first
     // dimension size as 1, first offset as 0, and first count as 1
     MapValuesArrayTy CurOffsets = {llvm::ConstantInt::get(CGF.CGM.Int64Ty, 0)};
-    MapValuesArrayTy CurCounts = {llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
-    MapValuesArrayTy CurStrides;
+    MapValuesArrayTy CurCounts;
+    MapValuesArrayTy CurStrides = {llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
     MapValuesArrayTy DimSizes{llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
     uint64_t ElementTypeSize;
 
@@ -8327,20 +8483,32 @@ private:
              "Should be either ConstantArray or VariableArray if not the "
              "first Component");
 
-      // Get element size if CurStrides is empty.
-      if (CurStrides.empty()) {
+      // Get element size if CurCounts is empty.
+      if (CurCounts.empty()) {
         const Type *ElementType = nullptr;
         if (CAT)
           ElementType = CAT->getElementType().getTypePtr();
         else if (VAT)
           ElementType = VAT->getElementType().getTypePtr();
-        else
-          assert(&Component == &*Components.begin() &&
-                 "Only expect pointer (non CAT or VAT) when this is the "
-                 "first Component");
-        // If ElementType is null, then it means the base is a pointer
-        // (neither CAT nor VAT) and we'll attempt to get ElementType again
-        // for next iteration.
+        else if (&Component == &*Components.begin()) {
+          // If the base is a raw pointer (e.g. T *data with data[a:b:c]),
+          // there was no earlier CAT/VAT/array handling to establish
+          // ElementType. Capture the pointee type now so that subsequent
+          // components (offset/length/stride) have a concrete element type to
+          // work with. This makes pointer-backed sections behave consistently
+          // with CAT/VAT/array bases.
+          if (const auto *PtrType = Ty->getAs<PointerType>())
+            ElementType = PtrType->getPointeeType().getTypePtr();
+        } else {
+          // Any component after the first should never have a raw pointer type;
+          // by this point. ElementType must already be known (set above or in
+          // prior array / CAT / VAT handling).
+          assert(!Ty->isPointerType() &&
+                 "Non-first components should not be raw pointers");
+        }
+
+        // At this stage, if ElementType was a base pointer and we are in the
+        // first iteration, it has been computed.
         if (ElementType) {
           // For the case that having pointer as base, we need to remove one
           // level of indirection.
@@ -8348,7 +8516,7 @@ private:
             ElementType = ElementType->getPointeeOrArrayElementType();
           ElementTypeSize =
               Context.getTypeSizeInChars(ElementType).getQuantity();
-          CurStrides.push_back(
+          CurCounts.push_back(
               llvm::ConstantInt::get(CGF.Int64Ty, ElementTypeSize));
         }
       }
@@ -8408,7 +8576,6 @@ private:
                                            CGF.Int64Ty,
                                            /*isSigned=*/false);
       }
-      CurOffsets.push_back(Offset);
 
       // Count
       const Expr *CountExpr = OASE->getLength();
@@ -8445,11 +8612,12 @@ private:
       CurCounts.push_back(Count);
 
       // Stride_n' = Stride_n * (D_0 * D_1 ... * D_n-1) * Unit size
+      // Offset_n' = Offset_n * (D_0 * D_1 ... * D_n-1) * Unit size
       // Take `int arr[5][5][5]` and `arr[0:2:2][1:2:1][0:2:2]` as an example:
       //              Offset      Count     Stride
-      //    D0          0           1         4    (int)    <- dummy dimension
+      //    D0          0           4         1    (int)    <- dummy dimension
       //    D1          0           2         8    (2 * (1) * 4)
-      //    D2          1           2         20   (1 * (1 * 5) * 4)
+      //    D2          100         2         20   (1 * (1 * 5) * 4)
       //    D3          0           2         200  (2 * (1 * 5 * 4) * 4)
       const Expr *StrideExpr = OASE->getStride();
       llvm::Value *Stride =
@@ -8462,6 +8630,10 @@ private:
         CurStrides.push_back(CGF.Builder.CreateNUWMul(DimProd, Stride));
       else
         CurStrides.push_back(DimProd);
+
+      Offset = CGF.Builder.CreateNUWMul(DimProd, Offset);
+      CurOffsets.push_back(Offset);
+
       if (DI != DimSizes.end())
         ++DI;
     }
@@ -8784,7 +8956,8 @@ private:
 
     auto &&UseDeviceDataCombinedInfoGen =
         [&UseDeviceDataCombinedInfo](const ValueDecl *VD, llvm::Value *Ptr,
-                                     CodeGenFunction &CGF, bool IsDevAddr) {
+                                     CodeGenFunction &CGF, bool IsDevAddr,
+                                     bool HasUdpFbNullify = false) {
           UseDeviceDataCombinedInfo.Exprs.push_back(VD);
           UseDeviceDataCombinedInfo.BasePointers.emplace_back(Ptr);
           UseDeviceDataCombinedInfo.DevicePtrDecls.emplace_back(VD);
@@ -8798,8 +8971,11 @@ private:
           UseDeviceDataCombinedInfo.Pointers.push_back(Ptr);
           UseDeviceDataCombinedInfo.Sizes.push_back(
               llvm::Constant::getNullValue(CGF.Int64Ty));
-          UseDeviceDataCombinedInfo.Types.push_back(
-              OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM);
+          OpenMPOffloadMappingFlags Flags =
+              OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+          if (HasUdpFbNullify)
+            Flags |= OpenMPOffloadMappingFlags::OMP_MAP_FB_NULLIFY;
+          UseDeviceDataCombinedInfo.Types.push_back(Flags);
           UseDeviceDataCombinedInfo.Mappers.push_back(nullptr);
         };
 
@@ -8808,7 +8984,8 @@ private:
             CodeGenFunction &CGF, const Expr *IE, const ValueDecl *VD,
             OMPClauseMappableExprCommon::MappableExprComponentListRef
                 Components,
-            bool IsDevAddr, bool IEIsAttachPtrForDevAddr = false) {
+            bool IsDevAddr, bool IEIsAttachPtrForDevAddr = false,
+            bool HasUdpFbNullify = false) {
           // We didn't find any match in our map information - generate a zero
           // size array section.
           llvm::Value *Ptr;
@@ -8828,13 +9005,14 @@ private:
           // equivalent to
           //   ... use_device_ptr(p)
           UseDeviceDataCombinedInfoGen(VD, Ptr, CGF, /*IsDevAddr=*/IsDevAddr &&
-                                                         !TreatDevAddrAsDevPtr);
+                                                         !TreatDevAddrAsDevPtr,
+                                       HasUdpFbNullify);
         };
 
-    auto &&IsMapInfoExist = [&Info, this](CodeGenFunction &CGF,
-                                          const ValueDecl *VD, const Expr *IE,
-                                          const Expr *DesiredAttachPtrExpr,
-                                          bool IsDevAddr) -> bool {
+    auto &&IsMapInfoExist =
+        [&Info, this](CodeGenFunction &CGF, const ValueDecl *VD, const Expr *IE,
+                      const Expr *DesiredAttachPtrExpr, bool IsDevAddr,
+                      bool HasUdpFbNullify = false) -> bool {
       // We potentially have map information for this declaration already.
       // Look for the first set of components that refer to it. If found,
       // return true.
@@ -8866,6 +9044,7 @@ private:
             if (IsDevAddr) {
               CI->ForDeviceAddr = true;
               CI->ReturnDevicePointer = true;
+              CI->HasUdpFbNullify = HasUdpFbNullify;
               Found = true;
               break;
             } else {
@@ -8882,6 +9061,7 @@ private:
                    VD == cast<DeclRefExpr>(AttachPtrExpr)->getDecl())) {
                 CI->ForDeviceAddr = IsDevAddr;
                 CI->ReturnDevicePointer = true;
+                CI->HasUdpFbNullify = HasUdpFbNullify;
                 Found = true;
                 break;
               }
@@ -8903,6 +9083,8 @@ private:
       const auto *C = dyn_cast<OMPUseDevicePtrClause>(Cl);
       if (!C)
         continue;
+      bool HasUdpFbNullify =
+          C->getFallbackModifier() == OMPC_USE_DEVICE_PTR_FALLBACK_fb_nullify;
       for (const auto L : C->component_lists()) {
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
             std::get<1>(L);
@@ -8922,9 +9104,10 @@ private:
             Components.front().getAssociatedExpression();
         if (IsMapInfoExist(CGF, VD, IE,
                            /*DesiredAttachPtrExpr=*/UDPOperandExpr,
-                           /*IsDevAddr=*/false))
+                           /*IsDevAddr=*/false, HasUdpFbNullify))
           continue;
-        MapInfoGen(CGF, IE, VD, Components, /*IsDevAddr=*/false);
+        MapInfoGen(CGF, IE, VD, Components, /*IsDevAddr=*/false,
+                   /*IEIsAttachPtrForDevAddr=*/false, HasUdpFbNullify);
       }
     }
 
@@ -9061,23 +9244,25 @@ private:
             // multiple values are added to any of the lists, the first value
             // added is being modified by the assignments below (not the last
             // value added).
+            auto SetDevicePointerInfo = [&](MapCombinedInfoTy &Info,
+                                            unsigned Idx) {
+              Info.DevicePtrDecls[Idx] = RelevantVD;
+              Info.DevicePointers[Idx] = L.ForDeviceAddr
+                                             ? DeviceInfoTy::Address
+                                             : DeviceInfoTy::Pointer;
+              Info.Types[Idx] |=
+                  OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+              if (L.HasUdpFbNullify)
+                Info.Types[Idx] |=
+                    OpenMPOffloadMappingFlags::OMP_MAP_FB_NULLIFY;
+            };
+
             if (StructBasePointersIdx <
-                GroupStructBaseCurInfo.BasePointers.size()) {
-              GroupStructBaseCurInfo.DevicePtrDecls[StructBasePointersIdx] =
-                  RelevantVD;
-              GroupStructBaseCurInfo.DevicePointers[StructBasePointersIdx] =
-                  L.ForDeviceAddr ? DeviceInfoTy::Address
-                                  : DeviceInfoTy::Pointer;
-              GroupStructBaseCurInfo.Types[StructBasePointersIdx] |=
-                  OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
-            } else {
-              GroupCurInfo.DevicePtrDecls[CurrentBasePointersIdx] = RelevantVD;
-              GroupCurInfo.DevicePointers[CurrentBasePointersIdx] =
-                  L.ForDeviceAddr ? DeviceInfoTy::Address
-                                  : DeviceInfoTy::Pointer;
-              GroupCurInfo.Types[CurrentBasePointersIdx] |=
-                  OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
-            }
+                GroupStructBaseCurInfo.BasePointers.size())
+              SetDevicePointerInfo(GroupStructBaseCurInfo,
+                                   StructBasePointersIdx);
+            else
+              SetDevicePointerInfo(GroupCurInfo, CurrentBasePointersIdx);
           }
         }
 
@@ -9090,12 +9275,20 @@ private:
         // If there is an entry in PartialStruct it means we have a struct with
         // individual members mapped. Emit an extra combined entry.
         if (PartialStruct.Base.isValid()) {
-          GroupUnionCurInfo.NonContigInfo.Dims.push_back(0);
+          // Prepend a synthetic dimension of length 1 to represent the
+          // aggregated struct object. Using 1 (not 0, as 0 produced an
+          //    incorrect non-contiguous descriptor (DimSize==1), causing the
+          //    non-contiguous motion clause path to be skipped.) is important:
+          //  * It preserves the correct rank so targetDataUpdate() computes
+          //    DimSize == 2 for cases like strided array sections originating
+          //    from user-defined mappers (e.g. test with s.data[0:8:2]).
+          GroupUnionCurInfo.NonContigInfo.Dims.insert(
+              GroupUnionCurInfo.NonContigInfo.Dims.begin(), 1);
           emitCombinedEntry(
               CurInfo, GroupUnionCurInfo.Types, PartialStruct, AttachInfo,
-              /*IsMapThis*/ !VD, OMPBuilder, VD,
+              /*IsMapThis=*/!VD, OMPBuilder, VD,
               /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size(),
-              /*NotTargetParam=*/true);
+              /*NotTargetParams=*/true);
         }
 
         // Append this group's results to the overall CurInfo in the correct
@@ -9252,7 +9445,7 @@ public:
           HBAddr.getElementType(), HB, /*Idx0=*/1);
       llvm::Value *CLAddr = CGF.Builder.CreatePointerCast(LB, CGF.VoidPtrTy);
       llvm::Value *CHAddr = CGF.Builder.CreatePointerCast(HAddr, CGF.VoidPtrTy);
-      llvm::Value *Diff = CGF.Builder.CreatePtrDiff(CGF.Int8Ty, CHAddr, CLAddr);
+      llvm::Value *Diff = CGF.Builder.CreatePtrDiff(CHAddr, CLAddr);
       llvm::Value *Size = CGF.Builder.CreateIntCast(Diff, CGF.Int64Ty,
                                                     /*isSigned=*/false);
       CombinedInfo.Sizes.push_back(Size);
@@ -10319,10 +10512,8 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///                                           void *base, void *begin,
 ///                                           int64_t size, int64_t type,
 ///                                           void *name = nullptr) {
-///   // Allocate space for an array section first or add a base/begin for
-///   // pointer dereference.
-///   if ((size > 1 || (base != begin && maptype.IsPtrAndObj)) &&
-///       !maptype.IsDelete)
+///   // Allocate space for an array section first.
+///   if ((size > 1 || (base != begin)) && !maptype.IsDelete)
 ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
 ///                                 size*sizeof(Ty), clearToFromMember(type));
 ///   // Map members.
@@ -10456,8 +10647,11 @@ emitTargetCallFallback(CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
       CapturedVars.clear();
       CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
     }
+    llvm::SmallVector<llvm::Value *, 16> Args(CapturedVars.begin(),
+                                              CapturedVars.end());
+    Args.push_back(llvm::Constant::getNullValue(CGF.Builder.getPtrTy()));
     OMPRuntime->emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn,
-                                         CapturedVars);
+                                         Args);
   }
 }
 
@@ -10694,6 +10888,22 @@ static void emitTargetCallKernelLaunch(
   CGOpenMPRuntime::TargetDataInfo Info;
   genMapInfo(D, CGF, CS, CapturedVars, OMPBuilder, CombinedInfo);
 
+  // Append a null entry for the implicit dyn_ptr argument.
+  using OpenMPOffloadMappingFlags = llvm::omp::OpenMPOffloadMappingFlags;
+  auto *NullPtr = llvm::Constant::getNullValue(CGF.Builder.getPtrTy());
+  CombinedInfo.BasePointers.push_back(NullPtr);
+  CombinedInfo.Pointers.push_back(NullPtr);
+  CombinedInfo.DevicePointers.push_back(
+      llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+  CombinedInfo.Sizes.push_back(CGF.Builder.getInt64(0));
+  CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
+                               OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+  if (!CombinedInfo.Names.empty())
+    CombinedInfo.Names.push_back(NullPtr);
+  CombinedInfo.Exprs.push_back(nullptr);
+  CombinedInfo.Mappers.push_back(nullptr);
+  CombinedInfo.DevicePtrDecls.push_back(nullptr);
+
   emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
                               /*IsNonContiguous=*/true, /*ForEndCall=*/false);
 
@@ -10882,6 +11092,17 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
                                                     StringRef ParentName) {
   if (!S)
     return;
+
+  // Register vtable from device for target data and target directives.
+  // Add this block here since scanForTargetRegionsFunctions ignores
+  // target data by checking if S is a executable directive (target).
+  if (auto *E = dyn_cast<OMPExecutableDirective>(S);
+      E && isOpenMPTargetDataManagementDirective(E->getDirectiveKind())) {
+    // Don't need to check if it's device compile
+    // since scanForTargetRegionsFunctions currently only called
+    // in device compilation.
+    registerVTable(*E);
+  }
 
   // Codegen OMP target directives that offload compute to the device.
   bool RequiresDeviceCodegen =
@@ -11105,7 +11326,8 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
           cast<VarDecl>(GD.getDecl()));
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
       ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-        *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+        *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+        *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
        HasRequiresUnifiedSharedMemory)) {
     DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
     return true;
@@ -11175,13 +11397,15 @@ void CGOpenMPRuntime::emitDeferredTargetDecls() const {
     if (!Res)
       continue;
     if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-         *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+         *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+         *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
         !HasRequiresUnifiedSharedMemory) {
       CGM.EmitGlobal(VD);
     } else {
       assert((*Res == OMPDeclareTargetDeclAttr::MT_Link ||
               ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+                *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
                HasRequiresUnifiedSharedMemory)) &&
              "Expected link clause or to clause with unified memory.");
       (void)CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
@@ -11640,27 +11864,9 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
   }
 }
 
-namespace {
-  /// Kind of parameter in a function with 'declare simd' directive.
-enum ParamKindTy {
-  Linear,
-  LinearRef,
-  LinearUVal,
-  LinearVal,
-  Uniform,
-  Vector,
-};
-/// Attribute set of the parameter.
-struct ParamAttrTy {
-  ParamKindTy Kind = Vector;
-  llvm::APSInt StrideOrArg;
-  llvm::APSInt Alignment;
-  bool HasVarStride = false;
-};
-} // namespace
-
-static unsigned evaluateCDTSize(const FunctionDecl *FD,
-                                ArrayRef<ParamAttrTy> ParamAttrs) {
+static unsigned
+evaluateCDTSize(const FunctionDecl *FD,
+                ArrayRef<llvm::OpenMPIRBuilder::DeclareSimdAttrTy> ParamAttrs) {
   // Every vector variant of a SIMD-enabled function has a vector length (VLEN).
   // If OpenMP clause "simdlen" is used, the VLEN is the value of the argument
   // of that clause. The VLEN value must be power of 2.
@@ -11690,13 +11896,15 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
   } else {
     unsigned Offset = 0;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      if (ParamAttrs[Offset].Kind == Vector)
+      if (ParamAttrs[Offset].Kind ==
+          llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector)
         CDT = C.getPointerType(C.getCanonicalTagType(MD->getParent()));
       ++Offset;
     }
     if (CDT.isNull()) {
       for (unsigned I = 0, E = FD->getNumParams(); I < E; ++I) {
-        if (ParamAttrs[I + Offset].Kind == Vector) {
+        if (ParamAttrs[I + Offset].Kind ==
+            llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector) {
           CDT = FD->getParamDecl(I)->getType();
           break;
         }
@@ -11711,107 +11919,6 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
   return C.getTypeSize(CDT);
 }
 
-/// Mangle the parameter part of the vector function name according to
-/// their OpenMP classification. The mangling function is defined in
-/// section 4.5 of the AAVFABI(2021Q1).
-static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  for (const auto &ParamAttr : ParamAttrs) {
-    switch (ParamAttr.Kind) {
-    case Linear:
-      Out << 'l';
-      break;
-    case LinearRef:
-      Out << 'R';
-      break;
-    case LinearUVal:
-      Out << 'U';
-      break;
-    case LinearVal:
-      Out << 'L';
-      break;
-    case Uniform:
-      Out << 'u';
-      break;
-    case Vector:
-      Out << 'v';
-      break;
-    }
-    if (ParamAttr.HasVarStride)
-      Out << "s" << ParamAttr.StrideOrArg;
-    else if (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef ||
-             ParamAttr.Kind == LinearUVal || ParamAttr.Kind == LinearVal) {
-      // Don't print the step value if it is not present or if it is
-      // equal to 1.
-      if (ParamAttr.StrideOrArg < 0)
-        Out << 'n' << -ParamAttr.StrideOrArg;
-      else if (ParamAttr.StrideOrArg != 1)
-        Out << ParamAttr.StrideOrArg;
-    }
-
-    if (!!ParamAttr.Alignment)
-      Out << 'a' << ParamAttr.Alignment;
-  }
-
-  return std::string(Out.str());
-}
-
-static void
-emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
-                           const llvm::APSInt &VLENVal,
-                           ArrayRef<ParamAttrTy> ParamAttrs,
-                           OMPDeclareSimdDeclAttr::BranchStateTy State) {
-  struct ISADataTy {
-    char ISA;
-    unsigned VecRegSize;
-  };
-  ISADataTy ISAData[] = {
-      {
-          'b', 128
-      }, // SSE
-      {
-          'c', 256
-      }, // AVX
-      {
-          'd', 256
-      }, // AVX2
-      {
-          'e', 512
-      }, // AVX512
-  };
-  llvm::SmallVector<char, 2> Masked;
-  switch (State) {
-  case OMPDeclareSimdDeclAttr::BS_Undefined:
-    Masked.push_back('N');
-    Masked.push_back('M');
-    break;
-  case OMPDeclareSimdDeclAttr::BS_Notinbranch:
-    Masked.push_back('N');
-    break;
-  case OMPDeclareSimdDeclAttr::BS_Inbranch:
-    Masked.push_back('M');
-    break;
-  }
-  for (char Mask : Masked) {
-    for (const ISADataTy &Data : ISAData) {
-      SmallString<256> Buffer;
-      llvm::raw_svector_ostream Out(Buffer);
-      Out << "_ZGV" << Data.ISA << Mask;
-      if (!VLENVal) {
-        unsigned NumElts = evaluateCDTSize(FD, ParamAttrs);
-        assert(NumElts && "Non-zero simdlen/cdtsize expected");
-        Out << llvm::APSInt::getUnsigned(Data.VecRegSize / NumElts);
-      } else {
-        Out << VLENVal;
-      }
-      Out << mangleVectorParameters(ParamAttrs);
-      Out << '_' << Fn->getName();
-      Fn->addFnAttr(Out.str());
-    }
-  }
-}
-
 // This are the Functions that are needed to mangle the name of the
 // vector functions generated by the compiler, according to the rules
 // defined in the "Vector Function ABI specifications for AArch64",
@@ -11819,19 +11926,22 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
 // https://developer.arm.com/products/software-development-tools/hpc/arm-compiler-for-hpc/vector-function-abi.
 
 /// Maps To Vector (MTV), as defined in 4.1.1 of the AAVFABI (2021Q1).
-static bool getAArch64MTV(QualType QT, ParamKindTy Kind) {
+static bool getAArch64MTV(QualType QT,
+                          llvm::OpenMPIRBuilder::DeclareSimdKindTy Kind) {
   QT = QT.getCanonicalType();
 
   if (QT->isVoidType())
     return false;
 
-  if (Kind == ParamKindTy::Uniform)
+  if (Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::Uniform)
     return false;
 
-  if (Kind == ParamKindTy::LinearUVal || Kind == ParamKindTy::LinearRef)
+  if (Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearUVal ||
+      Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef)
     return false;
 
-  if ((Kind == ParamKindTy::Linear || Kind == ParamKindTy::LinearVal) &&
+  if ((Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear ||
+       Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearVal) &&
       !QT->isReferenceType())
     return false;
 
@@ -11864,7 +11974,9 @@ static bool getAArch64PBV(QualType QT, ASTContext &C) {
 /// Computes the lane size (LS) of a return type or of an input parameter,
 /// as defined by `LS(P)` in 3.2.1 of the AAVFABI.
 /// TODO: Add support for references, section 3.2.1, item 1.
-static unsigned getAArch64LS(QualType QT, ParamKindTy Kind, ASTContext &C) {
+static unsigned getAArch64LS(QualType QT,
+                             llvm::OpenMPIRBuilder::DeclareSimdKindTy Kind,
+                             ASTContext &C) {
   if (!getAArch64MTV(QT, Kind) && QT.getCanonicalType()->isPointerType()) {
     QualType PTy = QT.getCanonicalType()->getPointeeType();
     if (getAArch64PBV(PTy, C))
@@ -11880,7 +11992,8 @@ static unsigned getAArch64LS(QualType QT, ParamKindTy Kind, ASTContext &C) {
 // signature of the scalar function, as defined in 3.2.2 of the
 // AAVFABI.
 static std::tuple<unsigned, unsigned, bool>
-getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
+getNDSWDS(const FunctionDecl *FD,
+          ArrayRef<llvm::OpenMPIRBuilder::DeclareSimdAttrTy> ParamAttrs) {
   QualType RetType = FD->getReturnType().getCanonicalType();
 
   ASTContext &C = FD->getASTContext();
@@ -11889,7 +12002,8 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
 
   llvm::SmallVector<unsigned, 8> Sizes;
   if (!RetType->isVoidType()) {
-    Sizes.push_back(getAArch64LS(RetType, ParamKindTy::Vector, C));
+    Sizes.push_back(getAArch64LS(
+        RetType, llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector, C));
     if (!getAArch64PBV(RetType, C) && getAArch64MTV(RetType, {}))
       OutputBecomesInput = true;
   }
@@ -11912,155 +12026,43 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
                          OutputBecomesInput);
 }
 
-// Function used to add the attribute. The parameter `VLEN` is
-// templated to allow the use of "x" when targeting scalable functions
-// for SVE.
-template <typename T>
-static void addAArch64VectorName(T VLEN, StringRef LMask, StringRef Prefix,
-                                 char ISA, StringRef ParSeq,
-                                 StringRef MangledName, bool OutputBecomesInput,
-                                 llvm::Function *Fn) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << Prefix << ISA << LMask << VLEN;
-  if (OutputBecomesInput)
-    Out << "v";
-  Out << ParSeq << "_" << MangledName;
-  Fn->addFnAttr(Out.str());
-}
-
-// Helper function to generate the Advanced SIMD names depending on
-// the value of the NDS when simdlen is not present.
-static void addAArch64AdvSIMDNDSNames(unsigned NDS, StringRef Mask,
-                                      StringRef Prefix, char ISA,
-                                      StringRef ParSeq, StringRef MangledName,
-                                      bool OutputBecomesInput,
-                                      llvm::Function *Fn) {
-  switch (NDS) {
-  case 8:
-    addAArch64VectorName(8, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    addAArch64VectorName(16, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    break;
-  case 16:
-    addAArch64VectorName(4, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    addAArch64VectorName(8, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    break;
-  case 32:
-    addAArch64VectorName(2, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    addAArch64VectorName(4, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    break;
-  case 64:
-  case 128:
-    addAArch64VectorName(2, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    break;
-  default:
-    llvm_unreachable("Scalar type is too wide.");
+static llvm::OpenMPIRBuilder::DeclareSimdBranch
+convertDeclareSimdBranch(OMPDeclareSimdDeclAttr::BranchStateTy State) {
+  switch (State) {
+  case OMPDeclareSimdDeclAttr::BS_Undefined:
+    return llvm::OpenMPIRBuilder::DeclareSimdBranch::Undefined;
+  case OMPDeclareSimdDeclAttr::BS_Inbranch:
+    return llvm::OpenMPIRBuilder::DeclareSimdBranch::Inbranch;
+  case OMPDeclareSimdDeclAttr::BS_Notinbranch:
+    return llvm::OpenMPIRBuilder::DeclareSimdBranch::Notinbranch;
   }
+  llvm_unreachable("unexpected declare simd branch state");
 }
 
-/// Emit vector function attributes for AArch64, as defined in the AAVFABI.
-static void emitAArch64DeclareSimdFunction(
-    CodeGenModule &CGM, const FunctionDecl *FD, unsigned UserVLEN,
-    ArrayRef<ParamAttrTy> ParamAttrs,
-    OMPDeclareSimdDeclAttr::BranchStateTy State, StringRef MangledName,
-    char ISA, unsigned VecRegSize, llvm::Function *Fn, SourceLocation SLoc) {
-
-  // Get basic data for building the vector signature.
-  const auto Data = getNDSWDS(FD, ParamAttrs);
-  const unsigned NDS = std::get<0>(Data);
-  const unsigned WDS = std::get<1>(Data);
-  const bool OutputBecomesInput = std::get<2>(Data);
-
-  // Check the values provided via `simdlen` by the user.
-  // 1. A `simdlen(1)` doesn't produce vector signatures,
+// Check the values provided via `simdlen` by the user.
+static bool validateAArch64Simdlen(CodeGenModule &CGM, SourceLocation SLoc,
+                                   unsigned UserVLEN, unsigned WDS, char ISA) {
+  // 1. A `simdlen(1)` doesn't produce vector signatures.
   if (UserVLEN == 1) {
     CGM.getDiags().Report(SLoc, diag::warn_simdlen_1_no_effect);
-    return;
+    return false;
   }
 
-  // 2. Section 3.3.1, item 1: user input must be a power of 2 for
-  // Advanced SIMD output.
+  // 2. Section 3.3.1, item 1: user input must be a power of 2 for Advanced
+  // SIMD.
   if (ISA == 'n' && UserVLEN && !llvm::isPowerOf2_32(UserVLEN)) {
     CGM.getDiags().Report(SLoc, diag::warn_simdlen_requires_power_of_2);
-    return;
+    return false;
   }
 
-  // 3. Section 3.4.1. SVE fixed lengh must obey the architectural
-  // limits.
-  if (ISA == 's' && UserVLEN != 0) {
-    if ((UserVLEN * WDS > 2048) || (UserVLEN * WDS % 128 != 0)) {
-      CGM.getDiags().Report(SLoc, diag::warn_simdlen_must_fit_lanes) << WDS;
-      return;
-    }
+  // 3. Section 3.4.1: SVE fixed length must obey the architectural limits.
+  if (ISA == 's' && UserVLEN != 0 &&
+      ((UserVLEN * WDS > 2048) || (UserVLEN * WDS % 128 != 0))) {
+    CGM.getDiags().Report(SLoc, diag::warn_simdlen_must_fit_lanes) << WDS;
+    return false;
   }
 
-  // Sort out parameter sequence.
-  const std::string ParSeq = mangleVectorParameters(ParamAttrs);
-  StringRef Prefix = "_ZGV";
-  // Generate simdlen from user input (if any).
-  if (UserVLEN) {
-    if (ISA == 's') {
-      // SVE generates only a masked function.
-      addAArch64VectorName(UserVLEN, "M", Prefix, ISA, ParSeq, MangledName,
-                           OutputBecomesInput, Fn);
-    } else {
-      assert(ISA == 'n' && "Expected ISA either 's' or 'n'.");
-      // Advanced SIMD generates one or two functions, depending on
-      // the `[not]inbranch` clause.
-      switch (State) {
-      case OMPDeclareSimdDeclAttr::BS_Undefined:
-        addAArch64VectorName(UserVLEN, "N", Prefix, ISA, ParSeq, MangledName,
-                             OutputBecomesInput, Fn);
-        addAArch64VectorName(UserVLEN, "M", Prefix, ISA, ParSeq, MangledName,
-                             OutputBecomesInput, Fn);
-        break;
-      case OMPDeclareSimdDeclAttr::BS_Notinbranch:
-        addAArch64VectorName(UserVLEN, "N", Prefix, ISA, ParSeq, MangledName,
-                             OutputBecomesInput, Fn);
-        break;
-      case OMPDeclareSimdDeclAttr::BS_Inbranch:
-        addAArch64VectorName(UserVLEN, "M", Prefix, ISA, ParSeq, MangledName,
-                             OutputBecomesInput, Fn);
-        break;
-      }
-    }
-  } else {
-    // If no user simdlen is provided, follow the AAVFABI rules for
-    // generating the vector length.
-    if (ISA == 's') {
-      // SVE, section 3.4.1, item 1.
-      addAArch64VectorName("x", "M", Prefix, ISA, ParSeq, MangledName,
-                           OutputBecomesInput, Fn);
-    } else {
-      assert(ISA == 'n' && "Expected ISA either 's' or 'n'.");
-      // Advanced SIMD, Section 3.3.1 of the AAVFABI, generates one or
-      // two vector names depending on the use of the clause
-      // `[not]inbranch`.
-      switch (State) {
-      case OMPDeclareSimdDeclAttr::BS_Undefined:
-        addAArch64AdvSIMDNDSNames(NDS, "N", Prefix, ISA, ParSeq, MangledName,
-                                  OutputBecomesInput, Fn);
-        addAArch64AdvSIMDNDSNames(NDS, "M", Prefix, ISA, ParSeq, MangledName,
-                                  OutputBecomesInput, Fn);
-        break;
-      case OMPDeclareSimdDeclAttr::BS_Notinbranch:
-        addAArch64AdvSIMDNDSNames(NDS, "N", Prefix, ISA, ParSeq, MangledName,
-                                  OutputBecomesInput, Fn);
-        break;
-      case OMPDeclareSimdDeclAttr::BS_Inbranch:
-        addAArch64AdvSIMDNDSNames(NDS, "M", Prefix, ISA, ParSeq, MangledName,
-                                  OutputBecomesInput, Fn);
-        break;
-      }
-    }
-  }
+  return true;
 }
 
 void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
@@ -12078,7 +12080,8 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
       ++ParamPos;
     }
     for (const auto *Attr : FD->specific_attrs<OMPDeclareSimdDeclAttr>()) {
-      llvm::SmallVector<ParamAttrTy, 8> ParamAttrs(ParamPositions.size());
+      llvm::SmallVector<llvm::OpenMPIRBuilder::DeclareSimdAttrTy, 8> ParamAttrs(
+          ParamPositions.size());
       // Mark uniform parameters.
       for (const Expr *E : Attr->uniforms()) {
         E = E->IgnoreParenImpCasts();
@@ -12092,7 +12095,8 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
           assert(It != ParamPositions.end() && "Function parameter not found");
           Pos = It->second;
         }
-        ParamAttrs[Pos].Kind = Uniform;
+        ParamAttrs[Pos].Kind =
+            llvm::OpenMPIRBuilder::DeclareSimdKindTy::Uniform;
       }
       // Get alignment info.
       auto *NI = Attr->alignments_begin();
@@ -12153,15 +12157,15 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
                     .getQuantity();
           }
         }
-        ParamAttrTy &ParamAttr = ParamAttrs[Pos];
+        llvm::OpenMPIRBuilder::DeclareSimdAttrTy &ParamAttr = ParamAttrs[Pos];
         if (*MI == OMPC_LINEAR_ref)
-          ParamAttr.Kind = LinearRef;
+          ParamAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef;
         else if (*MI == OMPC_LINEAR_uval)
-          ParamAttr.Kind = LinearUVal;
+          ParamAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearUVal;
         else if (IsReferenceType)
-          ParamAttr.Kind = LinearVal;
+          ParamAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearVal;
         else
-          ParamAttr.Kind = Linear;
+          ParamAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear;
         // Assuming a stride of 1, for `linear` without modifiers.
         ParamAttr.StrideOrArg = llvm::APSInt::getUnsigned(1);
         if (*SI) {
@@ -12186,7 +12190,10 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         // rescale the value of linear_step with the byte size of the
         // pointee type.
         if (!ParamAttr.HasVarStride &&
-            (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef))
+            (ParamAttr.Kind ==
+                 llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear ||
+             ParamAttr.Kind ==
+                 llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef))
           ParamAttr.StrideOrArg = ParamAttr.StrideOrArg * PtrRescalingFactor;
         ++SI;
         ++MI;
@@ -12198,18 +12205,29 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         VLENVal = VLENExpr->EvaluateKnownConstInt(C);
         ExprLoc = VLENExpr->getExprLoc();
       }
-      OMPDeclareSimdDeclAttr::BranchStateTy State = Attr->getBranchState();
+      llvm::OpenMPIRBuilder::DeclareSimdBranch State =
+          convertDeclareSimdBranch(Attr->getBranchState());
       if (CGM.getTriple().isX86()) {
-        emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
+        unsigned NumElts = evaluateCDTSize(FD, ParamAttrs);
+        assert(NumElts && "Non-zero simdlen/cdtsize expected");
+        OMPBuilder.emitX86DeclareSimdFunction(Fn, NumElts, VLENVal, ParamAttrs,
+                                              State);
       } else if (CGM.getTriple().getArch() == llvm::Triple::aarch64) {
         unsigned VLEN = VLENVal.getExtValue();
-        StringRef MangledName = Fn->getName();
-        if (CGM.getTarget().hasFeature("sve"))
-          emitAArch64DeclareSimdFunction(CGM, FD, VLEN, ParamAttrs, State,
-                                         MangledName, 's', 128, Fn, ExprLoc);
-        else if (CGM.getTarget().hasFeature("neon"))
-          emitAArch64DeclareSimdFunction(CGM, FD, VLEN, ParamAttrs, State,
-                                         MangledName, 'n', 128, Fn, ExprLoc);
+        // Get basic data for building the vector signature.
+        const auto Data = getNDSWDS(FD, ParamAttrs);
+        const unsigned NDS = std::get<0>(Data);
+        const unsigned WDS = std::get<1>(Data);
+        const bool OutputBecomesInput = std::get<2>(Data);
+        if (CGM.getTarget().hasFeature("sve")) {
+          if (validateAArch64Simdlen(CGM, ExprLoc, VLEN, WDS, 's'))
+            OMPBuilder.emitAArch64DeclareSimdFunction(
+                Fn, VLEN, ParamAttrs, State, 's', NDS, OutputBecomesInput);
+        } else if (CGM.getTarget().hasFeature("neon")) {
+          if (validateAArch64Simdlen(CGM, ExprLoc, VLEN, WDS, 'n'))
+            OMPBuilder.emitAArch64DeclareSimdFunction(
+                Fn, VLEN, ParamAttrs, State, 'n', NDS, OutputBecomesInput);
+        }
       }
     }
     FD = FD->getPreviousDecl();

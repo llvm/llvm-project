@@ -16,8 +16,11 @@
 
 #include "ABIInfo.h"
 #include "CIRGenTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
 #include <memory>
 #include <utility>
@@ -47,19 +50,18 @@ public:
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
 
+  /// Get target favored AST address space of a global variable for languages
+  /// other than OpenCL and CUDA.
+  /// If \p d is nullptr, returns the default target favored address space
+  /// for global variable.
+  virtual clang::LangAS getGlobalVarAddressSpace(CIRGenModule &cgm,
+                                                 const clang::VarDecl *d) const;
+
   /// Get the address space for alloca.
-  virtual cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
-    return {};
+  virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
+    return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
+                                          cir::LangAddressSpace::Default);
   }
-  /// Perform address space cast of an expression of pointer type.
-  /// \param V is the value to be casted to another address space.
-  /// \param DestTy is the destination pointer type.
-  /// \param srcAS is theaddress space of \p V.
-  /// \param IsNonNull is the flag indicating \p V is known to be non null.
-  virtual mlir::Value performAddrSpaceCast(CIRGenFunction &cgf, mlir::Value v,
-                                           cir::TargetAddressSpaceAttr srcAddr,
-                                           mlir::Type destTy,
-                                           bool isNonNull = false) const;
 
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic
@@ -104,9 +106,47 @@ public:
   /// may need to adjust the debugger-support code in Sema to do the
   /// right thing when calling a function with no know signature.
   virtual bool isNoProtoCallVariadic(const FunctionNoProtoType *fnType) const;
+
+  /// Provides a convenient hook to handle extra target-specific attributes
+  /// for the given global.
+  /// In OG, the function receives an llvm::GlobalValue. However, functions
+  /// and global variables are separate types in Clang IR, so we use a general
+  /// mlir::Operation*.
+  virtual void setTargetAttributes(const clang::Decl *decl,
+                                   mlir::Operation *global,
+                                   CIRGenModule &module) const {}
+
+  virtual bool isScalarizableAsmOperand(CIRGenFunction &cgf,
+                                        mlir::Type ty) const {
+    return false;
+  }
+
+  /// Corrects the MLIR type for a given constraint and "usual"
+  /// type.
+  ///
+  /// \returns A new MLIR type, possibly the same as the original
+  /// on success
+  virtual mlir::Type adjustInlineAsmType(CIRGenFunction &cgf,
+                                         llvm::StringRef constraint,
+                                         mlir::Type ty) const {
+    return ty;
+  }
 };
 
+std::unique_ptr<TargetCIRGenInfo>
+createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt);
+
+/// Check if AMDGPU protected visibility is required.
+bool requiresAMDGPUProtectedVisibility(const clang::Decl *d,
+                                       cir::VisibilityKind visibility);
+
+/// Set AMDGPU-specific function attributes for HIP kernels.
+void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
+                                       cir::FuncOp func, CIRGenModule &cgm);
+
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
+
+std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
 
 } // namespace clang::CIRGen
 

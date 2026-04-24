@@ -55,7 +55,7 @@ static void dump(const StructuredData::Dictionary &config, Stream &s) {
 
         s << "  " << key << ": ";
         if (StructuredData::Boolean *boolean = value_sp->GetAsBoolean())
-          s << (boolean ? "yes" : "no");
+          s << (boolean->GetValue() ? "yes" : "no");
         else if (StructuredData::Array *array = value_sp->GetAsArray())
           dump(*array, s);
         s << '\n';
@@ -65,7 +65,7 @@ static void dump(const StructuredData::Dictionary &config, Stream &s) {
 }
 
 void CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
-  result.AppendMessageWithFormat("%s\n", lldb_private::GetVersion());
+  result.AppendMessageWithFormatv("{0}", lldb_private::GetVersion());
 
   if (m_options.verbose)
     dump(*Debugger::GetBuildConfiguration(), result.GetOutputStream());

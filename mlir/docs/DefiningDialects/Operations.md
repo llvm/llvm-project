@@ -349,6 +349,10 @@ for example, in the case of array properties (which are stored as `SmallVector`s
 but use `ArrayRef` as an interface type), add the storage-type equivalent
 of the default value as the third argument.
 
+When using the `prop-dict` directive in an assembly format, the generated
+operation printing function will not print default-valued properties when the
+property value is equal to the default.
+
 To declare an optional property, use `OptionalProp<...>`.
 This wraps the underlying property in an `std::optional` and gives it a
 default value of `std::nullopt`.

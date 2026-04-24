@@ -8,7 +8,6 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
@@ -17,7 +16,7 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include <cstdint>
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
@@ -32,12 +31,10 @@ namespace lldb_dap {
 Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   // Initialize DAP debugger and related components if not sharing previously
   // launched debugger.
-  std::optional<int> debugger_id = args.debuggerId;
-  std::optional<lldb::user_id_t> target_id = args.targetId;
+  std::optional<DAPSession> session = args.session;
 
-  if (Error err = debugger_id && target_id
-                      ? dap.InitializeDebugger(*debugger_id, *target_id)
-                      : dap.InitializeDebugger())
+  if (Error err =
+          session ? dap.InitializeDebugger(*session) : dap.InitializeDebugger())
     return err;
 
   dap.SetConfiguration(args.configuration, /*is_attach=*/true);
@@ -54,19 +51,20 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     sys::fs::set_current_path(dap.configuration.debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json
-  if (llvm::Error err = dap.RunInitCommands())
+  if (Error err = dap.RunInitCommands())
     return err;
 
   dap.ConfigureSourceMaps();
 
   lldb::SBError error;
   lldb::SBTarget target;
-  if (target_id) {
+  if (session) {
     // Use the unique target ID to get the target.
-    target = dap.debugger.FindTargetByGloballyUniqueID(*target_id);
+    target = dap.debugger.FindTargetByGloballyUniqueID(session->targetId);
     if (!target.IsValid()) {
       error.SetErrorString(
-          llvm::formatv("invalid target_id {0} in attach config", *target_id)
+          llvm::formatv("invalid targetId {0} in attach config",
+                        session->targetId)
               .str()
               .c_str());
     }
@@ -74,10 +72,8 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     target = dap.CreateTarget(error);
   }
 
-  if (error.Fail())
-    return ToError(error);
-
-  dap.SetTarget(target);
+  if (target.IsValid())
+    dap.SetTarget(target);
 
   // Run any pre run LLDB commands the user specified in the launch.json
   if (Error err = dap.RunPreRunCommands())
@@ -85,12 +81,12 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
 
   if ((args.pid == LLDB_INVALID_PROCESS_ID ||
        args.gdbRemotePort == LLDB_DAP_INVALID_PORT) &&
-      args.waitFor) {
-    dap.SendOutput(OutputType::Console,
-                   llvm::formatv("Waiting to attach to \"{0}\"...",
-                                 dap.target.GetExecutable().GetFilename())
-                       .str());
-  }
+      args.waitFor && !args.configuration.program.empty())
+    dap.SendOutput(
+        OutputType::Console,
+        llvm::formatv("Waiting to attach to \"{0}\"...\n",
+                      llvm::sys::path::filename(dap.configuration.program))
+            .str());
 
   {
     // Perform the launch in synchronous mode so that we don't have to worry
@@ -123,7 +119,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       connect_url += std::to_string(args.gdbRemotePort);
       dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
                                error);
-    } else if (!target_id.has_value()) {
+    } else if (!session) {
       // Attach by pid or process name.
       lldb::SBAttachInfo attach_info;
       if (args.pid != LLDB_INVALID_PROCESS_ID)
@@ -131,8 +127,13 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       else if (!dap.configuration.program.empty())
         attach_info.SetExecutable(dap.configuration.program.data());
       attach_info.SetWaitForLaunch(args.waitFor, /*async=*/false);
-      dap.target.Attach(attach_info, error);
+      auto process = dap.target.Attach(attach_info, error);
+      // If we attached by name then we were using the 'Dummy' target, ensure
+      // we update to the real target.
+      if (process.IsValid())
+        dap.SetTarget(process.GetTarget());
     }
+
     if (error.Fail())
       return ToError(error);
   }
@@ -148,10 +149,6 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   dap.RunPostRunCommands();
 
   return Error::success();
-}
-
-void AttachRequestHandler::PostRun() const {
-  dap.SendJSON(CreateEventObject("initialized"));
 }
 
 } // namespace lldb_dap
