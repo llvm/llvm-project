@@ -558,6 +558,20 @@ def NVVM_CosOp : NVVM_SingleResultIntrinsicOp<"cos",
   let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
+def NVVM_Lg2Op : NVVM_SingleResultIntrinsicOp<"lg2",
+    [Pure, SameOperandsAndResultType]> {
+  let summary = "Base-2 logarithm (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the base-2 logarithm of the input
+    value. The `ftz` attribute, when set, flushes subnormal inputs and
+    results to sign-preserving zero.
+  }];
+  let arguments = (ins F32:$src,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
 def NVVM_Ex2Op : NVVM_SingleResultIntrinsicOp<"ex2",
     [Pure, SameOperandsAndResultType]> {
   let summary = "Base-2 exponential (fast approximation)";

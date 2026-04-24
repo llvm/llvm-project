@@ -3496,6 +3496,16 @@ SinOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
 }
 
 mlir::NVVM::IDArgPair
+Lg2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Lg2Op>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_lg2_approx_ftz_f
+                               : llvm::Intrinsic::nvvm_lg2_approx_f;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
 Ex2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                              llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::Ex2Op>(op);
