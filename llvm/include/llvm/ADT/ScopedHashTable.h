@@ -85,8 +85,8 @@ public:
   }
 
   template <typename AllocatorTy>
-  static void invalidate(ScopedHashTableVal<K, V> *&ThisEntry,
-                         AllocatorTy &Allocator) {
+  static void erase(ScopedHashTableVal<K, V> *&ThisEntry,
+                    AllocatorTy &Allocator) {
     ScopedHashTableVal<K, V> *ToDestroy = ThisEntry;
     ScopedHashTableVal<K, V> *NextInScope = ThisEntry->NextInScope;
     ScopedHashTableVal<K, V> *PrevInScope = ThisEntry->PreInScope;
@@ -120,7 +120,7 @@ public:
 
   ScopedHashTableScope *getParentScope() { return PrevScope; }
   const ScopedHashTableScope *getParentScope() const { return PrevScope; }
-  void invalidate(const K &key);
+  void erase(const K &key);
 
 private:
   friend class ScopedHashTable<K, V, KInfo, AllocatorTy>;
@@ -240,7 +240,7 @@ public:
     S->setLastValInScope(KeyEntry);
   }
 
-  void invalidate(const K &key) { CurScope->invalidate(key); }
+  void erase(const K &key) { CurScope->erase(key); }
 };
 
 /// ScopedHashTableScope ctor - Install this as the current scope for the hash
@@ -279,13 +279,22 @@ ScopedHashTableScope<K, V, KInfo, Allocator>::~ScopedHashTableScope() {
   }
 }
 
+// This method undoes the latest binding of the given key, effectively
+// reverting to the previous state for that key.
+// In the example at the beginning of this file, if we execute `HT.erase(0)`
+// immediately after `HT.insert(0, 42);`, then the value associated with key "0"
+// reverts to 0. This value is owned by "Scope1(HT)".
 template <typename K, typename V, typename KInfo, typename Allocator>
-void ScopedHashTableScope<K, V, KInfo, Allocator>::invalidate(const K &key) {
-  if (!HT.TopLevelMap.contains(key))
+void ScopedHashTableScope<K, V, KInfo, Allocator>::erase(const K &Key) {
+  auto I = HT.TopLevelMap.find(Key);
+  if (I == HT.TopLevelMap.end())
     return;
-  ScopedHashTableVal<K, V> *&ThisEntry = HT.TopLevelMap[key];
+  ScopedHashTableVal<K, V> *&ThisEntry = *I;
 
-  auto S = this;
+  // `ThisEntry` may be the LastValInScope of a parent scope rather than the
+  // current scope. We iterate through the scope chain to find the scope
+  // that owns ThisEntry as its LastValInScope and update it accordingly.
+  auto *S = this;
   while (S) {
     if (ThisEntry == S->LastValInScope) {
       S->LastValInScope = ThisEntry->getNextInScope();
@@ -294,8 +303,8 @@ void ScopedHashTableScope<K, V, KInfo, Allocator>::invalidate(const K &key) {
     S = S->PrevScope;
   }
   if (ThisEntry->getNextForKey() == nullptr)
-    HT.TopLevelMap.erase(key);
-  ScopedHashTableVal<K, V>::invalidate(ThisEntry, HT.getAllocator());
+    HT.TopLevelMap.erase(Key);
+  ScopedHashTableVal<K, V>::erase(ThisEntry, HT.getAllocator());
 }
 } // end namespace llvm
 
