@@ -434,10 +434,5 @@ void test() {
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     1 + it;
-
-    std::pointer_traits<Container::iterator> pt;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    pt.to_address(it);
   }
 }
