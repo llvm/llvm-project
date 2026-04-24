@@ -380,8 +380,6 @@ void OmpStructureChecker::CheckNestedConstruct(
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
-  loopStack_.push_back(&x);
-
   const parser::OmpDirectiveName &beginName{x.BeginDir().DirName()};
   PushContextAndClauseSets(beginName.source, beginName.v);
 
@@ -619,14 +617,6 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
     ExitDirectiveNest(SIMDNest);
   }
   dirContext_.pop_back();
-
-  assert(!loopStack_.empty() && "Expecting non-empty loop stack");
-#ifndef NDEBUG
-  const LoopConstruct &top{loopStack_.back()};
-  auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&top)};
-  assert(loopc != nullptr && *loopc == &x && "Mismatched loop constructs");
-#endif
-  loopStack_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
@@ -814,17 +804,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
 
 void OmpStructureChecker::Enter(const parser::DoConstruct &x) {
   Base::Enter(x);
-  loopStack_.push_back(&x);
+  constructStack_.push_back(&x);
 }
 
 void OmpStructureChecker::Leave(const parser::DoConstruct &x) {
-  assert(!loopStack_.empty() && "Expecting non-empty loop stack");
+  assert(!constructStack_.empty() && "Expecting non-empty construct stack");
 #ifndef NDEBUG
-  const LoopConstruct &top = loopStack_.back();
+  const LoopOrConstruct &top = constructStack_.back();
   auto *doc{std::get_if<const parser::DoConstruct *>(&top)};
-  assert(doc != nullptr && *doc == &x && "Mismatched loop constructs");
+  assert(doc != nullptr && *doc == &x && "Mismatched constructs");
 #endif
-  loopStack_.pop_back();
+  constructStack_.pop_back();
   Base::Leave(x);
 }
 
