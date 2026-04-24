@@ -35,10 +35,8 @@ int main() {
   printf("After mapping\n");
   print_status(&s2.s1.x, "x");         // CHECK: x is present
   print_status(&s2.s1.dummy, "dummy"); // CHECK: dummy is not present
-  // FIXME: These will be resolved once we enable ATTACH style maps for mappers.
-  print_status(&s2.s1.p, "p");       // EXPECTED: p is not present
-                                     // CHECK: p is present
-  print_status(&s2.s1.p[0], "p[0]"); // CHECK: p[0] is present
+  print_status(&s2.s1.p, "p");         // CHECK: p is not present
+  print_status(&s2.s1.p[0], "p[0]");   // CHECK: p[0] is present
   printf("\n");
 
 #pragma omp target exit data map(delete : s2)

@@ -43,11 +43,6 @@ int main() {
   print_status(&s1[1].p, "s1[1].p");         // CHECK: s1[1].p is present
   print_status(&s1[1].p[0], "s1[1].p[0]");   // CHECK: s1[1].p[0] is present
 
-#pragma omp target map(present, alloc : s1)
-  {
-    printf("%d %d\n", s1[0].x, s1[1].x);
-  }
-
   printf("\n");
 #pragma omp target exit data map(delete : s1)
   printf("After deleting\n");
