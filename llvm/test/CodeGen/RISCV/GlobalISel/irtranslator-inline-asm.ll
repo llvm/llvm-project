@@ -236,7 +236,6 @@ define float @test_multiple_register_outputs_same() #0 {
 
 ; RISC-V Specific constraints
 
-; TODO: Issue if anything other than i(2^x)
 define void @test_input_imm_K() {
   ; CHECK-LABEL: name: test_input_imm_K
   ; CHECK: bb.1 (%ir-block.0):
