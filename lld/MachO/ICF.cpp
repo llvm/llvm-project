@@ -593,9 +593,10 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
     //     safe_thunks logic is applied later at merge time based on the
     //     keepUnique flag.
     //   - Otherwise, keepUnique sections are not foldable.
-    bool isUnconditionallyCoalescedData = isCfStringSection(isec) ||
-                                          isClassRefsSection(isec) ||
-                                          isSelRefsSection(isec);
+    // Happens to match isFoldableWithAddendsRemoved today, but expresses a
+    // different intent (ld64's coalescing semantics, not addend stripping),
+    // so the two may diverge as either list grows.
+    bool isUnconditionallyCoalescedData = isFoldableWithAddendsRemoved;
     bool isSafeThunksCode =
         config->icfLevel == ICFLevel::safe_thunks && isCodeSec;
     bool keepUniqueAllowsFolding =
