@@ -73,10 +73,7 @@ private:
 class AArch64StackTaggingPreRALegacy : public MachineFunctionPass {
 public:
   static char ID;
-  AArch64StackTaggingPreRALegacy() : MachineFunctionPass(ID) {
-    initializeAArch64StackTaggingPreRALegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AArch64StackTaggingPreRALegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
