@@ -930,7 +930,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
 vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_type>& __a)
     : __layout_(__a) {
   if (__a == __x.__layout_.__alloc()) {
-    __layout_.__move_without_allocator(__x.__layout_);
+    __layout_.__move_assign_without_allocator(__x.__layout_);
   } else {
     typedef move_iterator<iterator> _Ip;
     __init_with_size(_Ip(__x.begin()), _Ip(__x.end()), __x.size());
@@ -952,7 +952,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
   __vdeallocate();
   __move_assign_alloc(__c); // this can throw
-  __layout_.__move_without_allocator(__c.__layout_);
+  __layout_.__move_assign_without_allocator(__c.__layout_);
 }
 
 template <class _Tp, class _Allocator>
