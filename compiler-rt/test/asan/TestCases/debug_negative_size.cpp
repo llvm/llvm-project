@@ -41,11 +41,11 @@ extern "C" void __asan_on_error() {
   fprintf(stderr, "%s\n", (present == 1) ? "report" : "");
   // CHECK: report
 
-  void *addr_src = __asan_get_report_src_address();
+  const void *addr_src = __asan_get_report_src_address();
   fprintf(stderr, "is_src: %d\n", !!addr_src);
   // CHECK: is_src: 0
 
-  void *addr_dest = __asan_get_report_dest_address();
+  const void *addr_dest = __asan_get_report_dest_address();
   size_t size_dest = __asan_get_report_dest_size();
   // We check size_dest + 1 because size_dest is -1 (as size_t), which varies
   // depending on the platform's size_t. Adding 1 should result in 0.

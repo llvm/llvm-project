@@ -178,7 +178,7 @@ size_t SANITIZER_CDECL __asan_get_report_access_size(void);
 /// (e.g., memcpy source, or the address being read from).
 ///
 /// \returns Returns the address if found. Otherwise returns 0.
-void *SANITIZER_CDECL __asan_get_report_src_address(void);
+const void *SANITIZER_CDECL __asan_get_report_src_address(void);
 
 /// Gets the source address range size involved in the current error.
 ///
@@ -189,7 +189,7 @@ size_t SANITIZER_CDECL __asan_get_report_src_size(void);
 /// (e.g., memcpy dest, or the address being written to).
 ///
 /// \returns Returns the address if found. Otherwise returns 0.
-void *SANITIZER_CDECL __asan_get_report_dest_address(void);
+const void *SANITIZER_CDECL __asan_get_report_dest_address(void);
 
 /// Gets the destination address range size involved in the current error.
 ///
@@ -200,7 +200,7 @@ size_t SANITIZER_CDECL __asan_get_report_dest_size(void);
 /// (lifetime is terminated).
 ///
 /// \returns Returns the address if found. Otherwise returns 0.
-void *SANITIZER_CDECL __asan_get_report_dealloc_address(void);
+const void *SANITIZER_CDECL __asan_get_report_dealloc_address(void);
 
 /// Gets the deallocated address range size involved in the current error.
 ///
@@ -211,13 +211,13 @@ size_t SANITIZER_CDECL __asan_get_report_dealloc_size(void);
 /// error (e.g., pointer comparison or ODR violation).
 ///
 /// \returns Returns the address if found. Otherwise returns 0.
-void *SANITIZER_CDECL __asan_get_report_first_address(void);
+const void *SANITIZER_CDECL __asan_get_report_first_address(void);
 
 /// Gets the second non-dereferenced operand address involved in the current
 /// error (e.g., pointer comparison or ODR violation).
 ///
 /// \returns Returns the address if found. Otherwise returns 0.
-void *SANITIZER_CDECL __asan_get_report_second_address(void);
+const void *SANITIZER_CDECL __asan_get_report_second_address(void);
 
 /// Gets the bug description of an ASan error (useful for calling from a
 /// debugger).

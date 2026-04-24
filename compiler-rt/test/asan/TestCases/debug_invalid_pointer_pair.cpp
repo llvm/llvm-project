@@ -53,14 +53,14 @@ extern "C" void __asan_on_error() {
   fprintf(stderr, "%s\n", (present == 1) ? "report" : "");
   // CHECK: report
 
-  void *addr_first = __asan_get_report_first_address();
-  fprintf(stderr, "is_first: %d, addr_first: " PTR_FMT "\n",
-          !!addr_first, addr_first);
+  const void *addr_first = __asan_get_report_first_address();
+  fprintf(stderr, "is_first: %d, addr_first: " PTR_FMT "\n", !!addr_first,
+          addr_first);
   // CHECK: is_first: 1, addr_first: 0x[[ADDR1]]
 
-  void *addr_second = __asan_get_report_second_address();
-  fprintf(stderr, "is_second: %d, addr_second: " PTR_FMT "\n",
-          !!addr_second, addr_second);
+  const void *addr_second = __asan_get_report_second_address();
+  fprintf(stderr, "is_second: %d, addr_second: " PTR_FMT "\n", !!addr_second,
+          addr_second);
   // CHECK: is_second: 1, addr_second: 0x[[ADDR2]]
 }
 

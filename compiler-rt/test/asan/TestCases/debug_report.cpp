@@ -66,13 +66,13 @@ __asan_on_error() {
   fprintf(stderr, "description: %s\n", description);
   // CHECK: description: heap-use-after-free
 
-  void *addr2 = __asan_get_report_dest_address();
+  const void *addr2 = __asan_get_report_dest_address();
   size_t size2 = __asan_get_report_dest_size();
   fprintf(stderr, "is_dest: %d, addr2: " PTR_FMT ", size2: %zu\n", !!addr2,
           addr2, size2);
   // CHECK: is_dest: 1, addr2: 0x[[ADDR]], size2: 1
 
-  void *addr_src = __asan_get_report_src_address();
+  const void *addr_src = __asan_get_report_src_address();
   fprintf(stderr, "is_src: %d\n", !!addr_src);
   // CHECK: is_src: 0
 }
