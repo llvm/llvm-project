@@ -3940,7 +3940,6 @@ static const struct Extension {
     {"sme-tmop", {AArch64::FeatureSME_TMOP}},
     {"lscp", {AArch64::FeatureLSCP}},
     {"tlbid", {AArch64::FeatureTLBID}},
-    {"mpamv2", {AArch64::FeatureMPAMv2}},
     {"mtetc", {AArch64::FeatureMTETC}},
     {"gcie", {AArch64::FeatureGCIE}},
     {"sme2p3", {AArch64::FeatureSME2p3}},
@@ -4033,9 +4032,9 @@ void AArch64AsmParser::createSysAlias(uint16_t Encoding, OperandVector &Operands
       AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));
 }
 
-/// parseSysAlias - The IC, DC, AT, TLBI, MLBI and GIC{R} and GSB instructions
-/// are simple aliases for the SYS instruction. Parse them specially so that
-/// we create a SYS MCInst.
+/// parseSysAlias - The IC, DC, AT, TLBI and GIC{R} and GSB instructions are
+/// simple aliases for the SYS instruction. Parse them specially so that we
+/// create a SYS MCInst.
 bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
                                    OperandVector &Operands) {
   if (Name.contains('.'))
@@ -4096,17 +4095,6 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (hasAll || hasTLBID)
       OptionalRegister = TLBI->RegUse == REG_OPTIONAL;
     createSysAlias(TLBI->Encoding, Operands, S);
-  } else if (Mnemonic == "mlbi") {
-    const AArch64MLBI::MLBI *MLBI = AArch64MLBI::lookupMLBIByName(Op);
-    if (!MLBI)
-      return TokError("invalid operand for MLBI instruction");
-    else if (!MLBI->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("MLBI " + std::string(MLBI->Name) + " requires: ");
-      setRequiredFeatureString(MLBI->getRequiredFeatures(), Str);
-      return TokError(Str);
-    }
-    ExpectRegister = MLBI->NeedsReg;
-    createSysAlias(MLBI->Encoding, Operands, S);
   } else if (Mnemonic == "gic") {
     const AArch64GIC::GIC *GIC = AArch64GIC::lookupGICByName(Op);
     if (!GIC)
@@ -5506,11 +5494,11 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   size_t Start = 0, Next = Name.find('.');
   StringRef Head = Name.slice(Start, Next);
 
-  // IC, DC, AT, TLBI, MLBI, PLBI, GIC{R}, GSB and Prediction invalidation
+  // IC, DC, AT, TLBI, PLBI, GIC{R}, GSB and Prediction invalidation
   // instructions are aliases for the SYS instruction.
   if (Head == "ic" || Head == "dc" || Head == "at" || Head == "tlbi" ||
       Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp" ||
-      Head == "mlbi" || Head == "plbi" || Head == "gic" || Head == "gsb")
+      Head == "plbi" || Head == "gic" || Head == "gsb")
     return parseSysAlias(Head, NameLoc, Operands);
 
   // GICR instructions are aliases for the SYSL instruction.
