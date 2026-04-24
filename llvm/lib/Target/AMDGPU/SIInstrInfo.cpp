@@ -10002,13 +10002,6 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
 }
 
-TargetInstrInfo::InstSizeVerifyMode
-SIInstrInfo::getInstSizeVerifyMode(const MachineInstr &MI) const {
-  if (MI.isBranch() && ST.hasOffset3fBug())
-    return InstSizeVerifyMode::NoVerify;
-  return InstSizeVerifyMode::ExactSize;
-}
-
 bool SIInstrInfo::mayAccessFlatAddressSpace(const MachineInstr &MI) const {
   if (!isFLAT(MI))
     return false;
