@@ -307,16 +307,10 @@ define i1 @copysign_normal_mag_not_normal(float %y) nounwind {
   ret i1 %res
 }
 
-; fold-to-true test, not fold now
 define i1 @copysign_normal_mag_is_normal(float %y) nounwind {
 ; CHECK-LABEL: copysign_normal_mag_is_normal:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 260096
-; CHECK-NEXT:    fmv.w.x fa5, a0
-; CHECK-NEXT:    fsgnj.s fa5, fa5, fa0
-; CHECK-NEXT:    fclass.s a0, fa5
-; CHECK-NEXT:    andi a0, a0, 66
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    ret
   %r = call float @llvm.copysign.f32(float 1.0, float %y)
   %res = call i1 @llvm.is.fpclass.f32(float %r, i32 264) ; 0x108 = +/-normal
