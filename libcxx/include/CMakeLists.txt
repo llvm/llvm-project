@@ -716,6 +716,7 @@ set(files
   __ranges/adjacent_view.h
   __ranges/all.h
   __ranges/as_rvalue_view.h
+  __ranges/cache_latest_view.h
   __ranges/chunk_by_view.h
   __ranges/common_view.h
   __ranges/concepts.h
