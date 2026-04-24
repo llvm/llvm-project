@@ -4998,7 +4998,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   const llvm::Triple *AuxTriple =
-      (IsCuda || IsHIP) ? TC.getAuxTriple() : nullptr;
+      (IsCuda || IsHIP || IsSYCL) ? TC.getAuxTriple() : nullptr;
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
   bool IsUEFI = RawTriple.isUEFI();
   bool IsIAMCU = RawTriple.isOSIAMCU();
@@ -7481,6 +7481,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++23preview", "-std=c++23")
                              .Case("c++latest", "-std=c++26")
                              .Default("");
+      if (IsSYCL) {
+        const LangStandard *LangStd =
+            LangStandard::getLangStandardForName(StdArg->getValue());
+        if (LangStd) {
+          // Use of /std: with 'C' is not supported for SYCL.
+          if (LangStd->getLanguage() == Language::C)
+            D.Diag(diag::err_drv_argument_not_allowed_with)
+                << StdArg->getAsString(Args) << "-fsycl";
+          // SYCL requires C++17 or later.
+          else if (LangStd->isCPlusPlus() && !LangStd->isCPlusPlus17())
+            D.Diag(diag::err_drv_sycl_requires_cxx17)
+                << StdArg->getAsString(Args);
+        }
+      }
       if (LanguageStandard.empty())
         D.Diag(clang::diag::warn_drv_unused_argument)
             << StdArg->getAsString(Args);
@@ -7490,7 +7504,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if (IsSYCL)
         // For SYCL, C++17 is the default.
         LanguageStandard = "-std=c++17";
-      if (IsMSVC2015Compatible)
+      else if (IsMSVC2015Compatible)
         LanguageStandard = "-std=c++14";
       else
         LanguageStandard = "-std=c++11";

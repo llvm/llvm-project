@@ -57,9 +57,9 @@
 // CHECK-MSVC-CXX14-ERROR: error: SYCL requires C++17 or later; '/std:c++14' is not supported
 
 // Test that C standards produce an error on Windows with clang-cl
-// RUN: not %clang_cl --target=x86_64-pc-windows-msvc -fsycl -TC -- %s 2>&1 | FileCheck %s --check-prefix=CHECK-MSVC-C-ERROR
+// RUN: not %clang_cl --target=x86_64-pc-windows-msvc -fsycl /std:c11 -- %s 2>&1 | FileCheck %s --check-prefix=CHECK-MSVC-C-ERROR
 
-// CHECK-MSVC-C-ERROR: error: invalid argument '-TC' not allowed with '-fsycl'
+// CHECK-MSVC-C-ERROR: error: invalid argument '/std:c11' not allowed with '-fsycl'
 
 // Test without SYCL - should not default to C++17
 // RUN: %clangxx -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SYCL
