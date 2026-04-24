@@ -1689,6 +1689,8 @@ protected:
     LazyBool is_shadow_stack = range_info.IsShadowStack();
     if (is_shadow_stack == eLazyBoolYes)
       result.AppendMessage("shadow stack: yes");
+    if (std::optional<unsigned> protection_key = range_info.GetProtectionKey())
+      result.AppendMessageWithFormatv("protection key: {0}", *protection_key);
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
