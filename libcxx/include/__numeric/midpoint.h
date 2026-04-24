@@ -41,10 +41,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_
     using _Ip = unsigned _BitInt(sizeof(_Tp) * 8 + 1);
     return (_Ip(__a) + _Ip(__b) + _Ip(__a > __b)) / 2;
   }
-#  else
-  if constexpr (is_unsigned_v<_Tp> && sizeof(_Tp) < sizeof(unsigned)) {
-    return ((unsigned)__a + (unsigned)__b + (unsigned)(__a > __b)) / 2;
-  }
 #  endif
   else {
     using _Up                = make_unsigned_t<_Tp>;
