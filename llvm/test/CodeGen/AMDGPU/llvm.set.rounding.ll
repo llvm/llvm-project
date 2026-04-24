@@ -1625,8 +1625,9 @@ define amdgpu_kernel void @get_rounding_after_set_rounding_1() {
 ; GFX6-NEXT:    s_add_i32 s1, s0, 4
 ; GFX6-NEXT:    s_cmp_lt_u32 s0, 4
 ; GFX6-NEXT:    s_cselect_b32 s4, s0, s1
-; GFX6-NEXT:    s_mov_b64 s[0:1], 0
+; GFX6-NEXT:    s_mov_b32 s0, 0
 ; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    s_mov_b32 s1, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
@@ -1645,8 +1646,9 @@ define amdgpu_kernel void @get_rounding_after_set_rounding_1() {
 ; GFX7-NEXT:    s_add_i32 s1, s0, 4
 ; GFX7-NEXT:    s_cmp_lt_u32 s0, 4
 ; GFX7-NEXT:    s_cselect_b32 s4, s0, s1
-; GFX7-NEXT:    s_mov_b64 s[0:1], 0
+; GFX7-NEXT:    s_mov_b32 s0, 0
 ; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_mov_b32 s1, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)

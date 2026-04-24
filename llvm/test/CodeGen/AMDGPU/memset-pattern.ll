@@ -994,37 +994,9 @@ define void @memset_pattern_i64_as7_len33_dynval(ptr addrspace(7) inreg align 16
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, s16, v0
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX942-SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v8, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v9, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v10, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v11, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v12, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v13, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v14, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v15, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v16, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v17, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v18, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v19, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v20, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v21, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v22, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v23, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v24, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v25, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v26, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v27, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v28, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v29, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v30, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v31, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v32, v1
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v33, v3
-; GFX942-SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX942-SDAG-NEXT:  .LBB14_1: ; %memset.pattern-expansion-main-body
 ; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1032,21 +1004,21 @@ define void @memset_pattern_i64_as7_len33_dynval(ptr addrspace(7) inreg align 16
 ; GFX942-SDAG-NEXT:    s_addc_u32 s5, s5, 0
 ; GFX942-SDAG-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[6:9], v1, s[0:3], 0 offen offset:16
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[10:13], v1, s[0:3], 0 offen offset:32
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[14:17], v1, s[0:3], 0 offen offset:48
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[18:21], v1, s[0:3], 0 offen offset:64
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[22:25], v1, s[0:3], 0 offen offset:80
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[26:29], v1, s[0:3], 0 offen offset:96
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[30:33], v1, s[0:3], 0 offen offset:112
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:16
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:32
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:48
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:64
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:80
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:96
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:112
 ; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:128
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[6:9], v1, s[0:3], 0 offen offset:144
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[10:13], v1, s[0:3], 0 offen offset:160
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[14:17], v1, s[0:3], 0 offen offset:176
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[18:21], v1, s[0:3], 0 offen offset:192
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[22:25], v1, s[0:3], 0 offen offset:208
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[26:29], v1, s[0:3], 0 offen offset:224
-; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[30:33], v1, s[0:3], 0 offen offset:240
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:144
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:160
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:176
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:192
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:208
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:224
+; GFX942-SDAG-NEXT:    buffer_store_dwordx4 v[2:5], v1, s[0:3], 0 offen offset:240
 ; GFX942-SDAG-NEXT:    v_add_u32_e32 v1, 0x2000, v1
 ; GFX942-SDAG-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX942-SDAG-NEXT:    s_cbranch_vccnz .LBB14_1

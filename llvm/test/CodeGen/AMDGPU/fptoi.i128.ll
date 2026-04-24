@@ -500,9 +500,9 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
-; GISEL-NEXT:    v_lshl_or_b32 v9, v0, 16, v0
-; GISEL-NEXT:    v_or3_b32 v7, v1, v2, 1
-; GISEL-NEXT:    v_or3_b32 v8, v0, v2, 0
+; GISEL-NEXT:    v_lshl_or_b32 v8, v0, 16, v0
+; GISEL-NEXT:    v_or3_b32 v9, v1, v2, 1
+; GISEL-NEXT:    v_or3_b32 v7, v0, v2, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x7fffff
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-NEXT:    v_and_or_b32 v4, v4, v0, v1
@@ -520,30 +520,30 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_sub_u32_e32 v2, 64, v14
 ; GISEL-NEXT:    v_cndmask_b32_e32 v15, 0, v0, vcc
 ; GISEL-NEXT:    v_lshrrev_b64 v[10:11], v2, v[4:5]
-; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v15, v9, 0
+; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v15, v8, 0
 ; GISEL-NEXT:    v_add_u32_e32 v6, 0xffffff2a, v6
 ; GISEL-NEXT:    v_lshlrev_b64 v[4:5], v6, v[4:5]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v6, 0, v1, vcc
-; GISEL-NEXT:    v_mad_u64_u32 v[12:13], s[4:5], v6, v8, v[2:3]
+; GISEL-NEXT:    v_mad_u64_u32 v[12:13], s[4:5], v6, v7, v[2:3]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v4, v10, vcc
 ; GISEL-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v14
 ; GISEL-NEXT:    v_cndmask_b32_e64 v4, v0, 0, s[4:5]
-; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v15, v7, 0
-; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v4, v7, v[12:13]
-; GISEL-NEXT:    v_mul_lo_u32 v10, v6, v9
-; GISEL-NEXT:    v_mul_lo_u32 v9, v15, v9
-; GISEL-NEXT:    v_mad_u64_u32 v[12:13], s[6:7], v15, v8, v[1:2]
-; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v6, v7, v[12:13]
-; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[8:9], v3, v9, s[8:9]
+; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v15, v9, 0
+; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v4, v9, v[12:13]
+; GISEL-NEXT:    v_mul_lo_u32 v10, v6, v8
+; GISEL-NEXT:    v_mul_lo_u32 v8, v15, v8
+; GISEL-NEXT:    v_mad_u64_u32 v[12:13], s[6:7], v15, v7, v[1:2]
+; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v6, v9, v[12:13]
+; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[8:9], v3, v8, s[8:9]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[6:7], v3, v10, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[9:10], s[6:7], v4, v8, v[3:4]
+; GISEL-NEXT:    v_mad_u64_u32 v[12:13], s[6:7], v4, v7, v[3:4]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v5, v11, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v5, v3, 0, s[4:5]
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
-; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v5, v7, v[9:10]
-; GISEL-NEXT:    ; implicit-def: $vgpr4
 ; GISEL-NEXT:    ; implicit-def: $vgpr7
+; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v5, v9, v[12:13]
+; GISEL-NEXT:    ; implicit-def: $vgpr4
 ; GISEL-NEXT:    ; implicit-def: $vgpr9
 ; GISEL-NEXT:  .LBB2_3: ; %Flow
 ; GISEL-NEXT:    s_andn2_saveexec_b64 s[4:5], s[12:13]
@@ -551,11 +551,11 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:  ; %bb.4: ; %fp-to-i-if-exp.small
 ; GISEL-NEXT:    v_sub_u32_e32 v0, 0x96, v6
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v6, v0, v4
-; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v6, v7, 0
-; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v6, v9, 0
-; GISEL-NEXT:    v_mul_lo_u32 v7, v6, v9
-; GISEL-NEXT:    v_mad_u64_u32 v[4:5], vcc, v6, v8, v[1:2]
-; GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v7, vcc
+; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v6, v9, 0
+; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v6, v8, 0
+; GISEL-NEXT:    v_mul_lo_u32 v8, v6, v8
+; GISEL-NEXT:    v_mad_u64_u32 v[4:5], vcc, v6, v7, v[1:2]
+; GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v8, vcc
 ; GISEL-NEXT:    v_mov_b32_e32 v1, v4
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v5
 ; GISEL-NEXT:  .LBB2_5: ; %Flow1

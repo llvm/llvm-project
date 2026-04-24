@@ -2362,18 +2362,19 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b64 s[4:5], 0
-; SI-NEXT:    s_mov_b32 s6, s2
+; SI-NEXT:    s_mov_b32 s4, 0
+; SI-NEXT:    s_mov_b32 s5, s4
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s6, s2
 ; SI-NEXT:    s_mov_b32 s7, s3
 ; SI-NEXT:    buffer_load_sbyte v1, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_cvt_f32_i32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_i32_e32 v3, v1
-; SI-NEXT:    v_xor_b32_e32 v0, v1, v0
 ; SI-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; SI-NEXT:    v_xor_b32_e32 v0, v1, v0
 ; SI-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; SI-NEXT:    v_or_b32_e32 v0, 1, v0
 ; SI-NEXT:    v_mul_f32_e32 v1, v3, v4
@@ -2391,18 +2392,19 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b64 s[4:5], 0
-; VI-NEXT:    s_mov_b32 s6, s2
+; VI-NEXT:    s_mov_b32 s4, 0
+; VI-NEXT:    s_mov_b32 s5, s4
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 s6, s2
 ; VI-NEXT:    s_mov_b32 s7, s3
 ; VI-NEXT:    buffer_load_sbyte v1, off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_i32_e32 v2, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_i32_e32 v3, v1
-; VI-NEXT:    v_xor_b32_e32 v0, v1, v0
 ; VI-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; VI-NEXT:    v_xor_b32_e32 v0, v1, v0
 ; VI-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; VI-NEXT:    v_or_b32_e32 v0, 1, v0
 ; VI-NEXT:    v_mul_f32_e32 v1, v3, v4

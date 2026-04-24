@@ -451,13 +451,15 @@ private:
                       SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeCondBranch(MachineInstr &MI);
 
-  bool optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter);
+  bool optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter,
+                                   bool AcceptSubReg = true);
   bool optimizeCoalescableCopy(MachineInstr &MI);
   bool optimizeUncoalescableCopy(MachineInstr &MI,
                                  SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeRecurrence(MachineInstr &PHI);
   bool findNextSource(const TargetRegisterClass *DefRC, unsigned DefSubReg,
-                      RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap);
+                      RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap,
+                      bool AcceptSubReg = true);
   bool isMoveImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
                        DenseMap<Register, MachineInstr *> &ImmDefMIs);
   bool foldImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
@@ -989,7 +991,8 @@ bool PeepholeOptimizer::optimizeCondBranch(MachineInstr &MI) {
 bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
                                        unsigned DefSubReg,
                                        RegSubRegPair RegSubReg,
-                                       RewriteMapTy &RewriteMap) {
+                                       RewriteMapTy &RewriteMap,
+                                       bool AcceptSubReg) {
   // Do not try to find a new source for a physical register.
   // So far we do not have any motivating example for doing that.
   // Thus, instead of maintaining untested code, we will revisit that if
@@ -1064,6 +1067,9 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       // We currently cannot deal with subreg operands on PHI instructions
       // (see insertPHI()).
       if (PHICount > 0 && CurSrcPair.SubReg != 0)
+        continue;
+
+      if (!AcceptSubReg && CurSrcPair.SubReg != 0)
         continue;
 
       // We found a suitable source, and are done with this chain.
@@ -1161,7 +1167,8 @@ getNewSource(MachineRegisterInfo *MRI, const TargetInstrInfo *TII,
   return RegSubRegPair(0, 0);
 }
 
-bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
+bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter,
+                                                    bool AcceptSubReg) {
   bool Changed = false;
   // Get the right rewriter for the current copy.
   // Rewrite each rewritable source.
@@ -1182,7 +1189,8 @@ bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
     RewriteMapTy RewriteMap;
     // Try to find a more suitable source. If we failed to do so, or get the
     // actual source, move to the next source.
-    if (!findNextSource(DefRC, Dst.SubReg, TrackPair, RewriteMap))
+    if (!findNextSource(DefRC, Dst.SubReg, TrackPair, RewriteMap,
+                        AcceptSubReg))
       continue;
 
     // Get the new source to rewrite. TODO: Only enable handling of multiple
@@ -1250,8 +1258,12 @@ bool PeepholeOptimizer::optimizeCoalescableCopy(MachineInstr &MI) {
     return optimizeCoalescableCopyImpl(InsertSubregRewriter(MI));
   case TargetOpcode::EXTRACT_SUBREG:
     return optimizeCoalescableCopyImpl(ExtractSubregRewriter(MI, *TII));
-  case TargetOpcode::REG_SEQUENCE:
-    return optimizeCoalescableCopyImpl(RegSequenceRewriter(MI));
+  case TargetOpcode::REG_SEQUENCE: {
+    // Subreg sources can increase register pressure by keeping
+    // multiple wide registers alive.
+    bool AcceptSubReg = false;
+    return optimizeCoalescableCopyImpl(RegSequenceRewriter(MI), AcceptSubReg);
+  }
   default:
     // Handle uncoalescable copy-like instructions.
     if (MI.isBitcast() || MI.isRegSequenceLike() || MI.isInsertSubregLike() ||

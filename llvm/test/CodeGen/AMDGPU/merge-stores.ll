@@ -1226,25 +1226,25 @@ define amdgpu_kernel void @copy_v3f32_align4(ptr addrspace(1) noalias %out, ptr 
 define amdgpu_kernel void @copy_v3f64_align4(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
 ; GCN-LABEL: copy_v3f64_align4:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_mov_b32 s6, -1
-; GCN-NEXT:    s_mov_b32 s10, s6
-; GCN-NEXT:    s_mov_b32 s11, s7
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s10, s2
+; GCN-NEXT:    s_mov_b32 s11, s3
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s8, s2
-; GCN-NEXT:    s_mov_b32 s9, s3
+; GCN-NEXT:    s_mov_b32 s8, s6
+; GCN-NEXT:    s_mov_b32 s9, s7
 ; GCN-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
 ; GCN-NEXT:    buffer_load_dwordx2 v[4:5], off, s[8:11], 0 offset:16
-; GCN-NEXT:    s_mov_b32 s4, s0
-; GCN-NEXT:    s_mov_b32 s5, s1
+; GCN-NEXT:    s_mov_b32 s0, s4
+; GCN-NEXT:    s_mov_b32 s1, s5
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_add_f64 v[2:3], v[2:3], 2.0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_f64 v[4:5], v[4:5], 4.0
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
-; GCN-NEXT:    buffer_store_dwordx2 v[4:5], off, s[4:7], 0 offset:16
-; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; GCN-NEXT:    buffer_store_dwordx2 v[4:5], off, s[0:3], 0 offset:16
+; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %vec = load <3 x double>, ptr addrspace(1) %in, align 4
   %fadd = fadd <3 x double> %vec, <double 1.0, double 2.0, double 4.0>

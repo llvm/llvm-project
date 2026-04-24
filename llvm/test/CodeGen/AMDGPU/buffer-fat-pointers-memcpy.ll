@@ -240,18 +240,18 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-GFX942-NEXT:    s_load_dword s7, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
 ; SDAG-GFX942-NEXT:    s_load_dword s15, s[4:5], 0x54
+; SDAG-GFX942-NEXT:    s_mov_b32 s16, 0
 ; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_mov_b32 s6, s3
+; SDAG-GFX942-NEXT:    s_mov_b32 s12, s9
 ; SDAG-GFX942-NEXT:    s_mov_b32 s4, s1
 ; SDAG-GFX942-NEXT:    s_mov_b32 s5, s2
-; SDAG-GFX942-NEXT:    s_mov_b32 s14, s11
-; SDAG-GFX942-NEXT:    s_mov_b32 s12, s9
+; SDAG-GFX942-NEXT:    s_mov_b32 s6, s3
 ; SDAG-GFX942-NEXT:    s_mov_b32 s13, s10
-; SDAG-GFX942-NEXT:    s_mov_b32 s1, 0
+; SDAG-GFX942-NEXT:    s_mov_b32 s14, s11
 ; SDAG-GFX942-NEXT:  .LBB0_1: ; %static-memcpy-expansion-main-body
 ; SDAG-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SDAG-GFX942-NEXT:    s_add_i32 s2, s0, s1
-; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s2
+; SDAG-GFX942-NEXT:    s_add_i32 s1, s0, s16
+; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s1
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[2:5], v0, s[4:7], 0 offen
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[6:9], v0, s[4:7], 0 offen offset:16
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[10:13], v0, s[4:7], 0 offen offset:32
@@ -268,10 +268,10 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[54:57], v0, s[4:7], 0 offen offset:208
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[58:61], v0, s[4:7], 0 offen offset:224
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 a[0:3], v0, s[4:7], 0 offen offset:240
-; SDAG-GFX942-NEXT:    s_add_i32 s2, s8, s1
-; SDAG-GFX942-NEXT:    s_addk_i32 s1, 0x100
-; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s2
-; SDAG-GFX942-NEXT:    s_cmpk_lt_u32 s1, 0x2000
+; SDAG-GFX942-NEXT:    s_add_i32 s1, s8, s16
+; SDAG-GFX942-NEXT:    s_addk_i32 s16, 0x100
+; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s1
+; SDAG-GFX942-NEXT:    s_cmpk_lt_u32 s16, 0x2000
 ; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v0, s[12:15], 0 offen
 ; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(15)
@@ -315,23 +315,23 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-GFX1100-NEXT:    s_load_b128 s[8:11], s[4:5], 0x44
 ; SDAG-GFX1100-NEXT:    s_load_b32 s7, s[4:5], 0x34
 ; SDAG-GFX1100-NEXT:    s_load_b32 s15, s[4:5], 0x54
+; SDAG-GFX1100-NEXT:    s_mov_b32 s16, 0
 ; SDAG-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    s_mov_b32 s6, s3
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s4, s1
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s5, s2
-; SDAG-GFX1100-NEXT:    s_mov_b32 s14, s11
+; SDAG-GFX1100-NEXT:    s_mov_b32 s6, s3
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s12, s9
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s13, s10
-; SDAG-GFX1100-NEXT:    s_mov_b32 s1, 0
+; SDAG-GFX1100-NEXT:    s_mov_b32 s14, s11
 ; SDAG-GFX1100-NEXT:  .LBB0_1: ; %static-memcpy-expansion-main-body
 ; SDAG-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; SDAG-GFX1100-NEXT:    s_add_i32 s2, s0, s1
-; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v60, s2
-; SDAG-GFX1100-NEXT:    s_add_i32 s2, s8, s1
-; SDAG-GFX1100-NEXT:    s_addk_i32 s1, 0x100
-; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v64, s2
-; SDAG-GFX1100-NEXT:    s_cmpk_lt_u32 s1, 0x2000
+; SDAG-GFX1100-NEXT:    s_add_i32 s1, s0, s16
+; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v60, s1
+; SDAG-GFX1100-NEXT:    s_add_i32 s1, s8, s16
+; SDAG-GFX1100-NEXT:    s_addk_i32 s16, 0x100
+; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v64, s1
+; SDAG-GFX1100-NEXT:    s_cmpk_lt_u32 s16, 0x2000
 ; SDAG-GFX1100-NEXT:    s_clause 0xf
 ; SDAG-GFX1100-NEXT:    buffer_load_b128 v[0:3], v60, s[4:7], 0 offen
 ; SDAG-GFX1100-NEXT:    buffer_load_b128 v[4:7], v60, s[4:7], 0 offen offset:16
@@ -388,25 +388,25 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; GISEL-GFX942-LABEL: memcpy_known:
 ; GISEL-GFX942:       ; %bb.0:
 ; GISEL-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX942-NEXT:    s_load_dword s7, s[4:5], 0x54
-; GISEL-GFX942-NEXT:    s_load_dword s11, s[4:5], 0x34
-; GISEL-GFX942-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x44
+; GISEL-GFX942-NEXT:    s_load_dword s7, s[4:5], 0x34
+; GISEL-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
+; GISEL-GFX942-NEXT:    s_load_dword s15, s[4:5], 0x54
 ; GISEL-GFX942-NEXT:    s_mov_b32 s16, 0
 ; GISEL-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX942-NEXT:    s_mov_b32 s8, s1
-; GISEL-GFX942-NEXT:    s_mov_b32 s9, s2
-; GISEL-GFX942-NEXT:    s_mov_b32 s10, s3
-; GISEL-GFX942-NEXT:    s_mov_b32 s4, s13
-; GISEL-GFX942-NEXT:    s_mov_b32 s5, s14
-; GISEL-GFX942-NEXT:    s_mov_b32 s6, s15
+; GISEL-GFX942-NEXT:    s_mov_b32 s12, s9
+; GISEL-GFX942-NEXT:    s_mov_b32 s4, s1
+; GISEL-GFX942-NEXT:    s_mov_b32 s5, s2
+; GISEL-GFX942-NEXT:    s_mov_b32 s6, s3
+; GISEL-GFX942-NEXT:    s_mov_b32 s13, s10
+; GISEL-GFX942-NEXT:    s_mov_b32 s14, s11
 ; GISEL-GFX942-NEXT:  .LBB0_1: ; %static-memcpy-expansion-main-body
 ; GISEL-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX942-NEXT:    s_add_i32 s1, s0, s16
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v60, s1
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[8:11], v60, s[8:11], 0 offen
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[4:7], v60, s[8:11], 0 offen offset:16
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[12:15], v60, s[8:11], 0 offen offset:32
-; GISEL-GFX942-NEXT:    s_add_i32 s2, s12, s16
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[8:11], v60, s[4:7], 0 offen
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[4:7], v60, s[4:7], 0 offen offset:16
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[12:15], v60, s[4:7], 0 offen offset:32
+; GISEL-GFX942-NEXT:    s_add_i32 s2, s8, s16
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-GFX942-NEXT:    s_addk_i32 s16, 0x100
 ; GISEL-GFX942-NEXT:    s_cmpk_lt_u32 s16, 0x2000
@@ -415,55 +415,55 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a1, v14 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a2, v13 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a3, v12 ; Reload Reuse
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[12:15], v60, s[8:11], 0 offen offset:48
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[16:19], v60, s[8:11], 0 offen offset:64
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[20:23], v60, s[8:11], 0 offen offset:80
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[24:27], v60, s[8:11], 0 offen offset:96
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[28:31], v60, s[8:11], 0 offen offset:112
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[32:35], v60, s[8:11], 0 offen offset:128
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[36:39], v60, s[8:11], 0 offen offset:144
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[40:43], v60, s[8:11], 0 offen offset:160
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[44:47], v60, s[8:11], 0 offen offset:176
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[48:51], v60, s[8:11], 0 offen offset:192
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[52:55], v60, s[8:11], 0 offen offset:208
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[56:59], v60, s[8:11], 0 offen offset:224
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[12:15], v60, s[4:7], 0 offen offset:48
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[16:19], v60, s[4:7], 0 offen offset:64
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[20:23], v60, s[4:7], 0 offen offset:80
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[24:27], v60, s[4:7], 0 offen offset:96
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[28:31], v60, s[4:7], 0 offen offset:112
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[32:35], v60, s[4:7], 0 offen offset:128
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[36:39], v60, s[4:7], 0 offen offset:144
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[40:43], v60, s[4:7], 0 offen offset:160
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[44:47], v60, s[4:7], 0 offen offset:176
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[48:51], v60, s[4:7], 0 offen offset:192
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[52:55], v60, s[4:7], 0 offen offset:208
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[56:59], v60, s[4:7], 0 offen offset:224
 ; GISEL-GFX942-NEXT:    s_nop 0
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[60:63], v60, s[8:11], 0 offen offset:240
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[60:63], v60, s[4:7], 0 offen offset:240
 ; GISEL-GFX942-NEXT:    s_nop 0
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[8:11], v0, s[4:7], 0 offen
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[4:7], v0, s[4:7], 0 offen offset:16
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[8:11], v0, s[12:15], 0 offen
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[4:7], v0, s[12:15], 0 offen offset:16
 ; GISEL-GFX942-NEXT:    s_nop 1
 ; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v5, a0 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v4, a1 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v3, a2 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v2, a3 ; Reload Reuse
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v0, s[4:7], 0 offen offset:32
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v0, s[12:15], 0 offen offset:32
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[12:15], v0, s[4:7], 0 offen offset:48
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[12:15], v0, s[12:15], 0 offen offset:48
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[16:19], v0, s[4:7], 0 offen offset:64
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[16:19], v0, s[12:15], 0 offen offset:64
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[20:23], v0, s[4:7], 0 offen offset:80
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[20:23], v0, s[12:15], 0 offen offset:80
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[24:27], v0, s[4:7], 0 offen offset:96
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[24:27], v0, s[12:15], 0 offen offset:96
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[28:31], v0, s[4:7], 0 offen offset:112
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[28:31], v0, s[12:15], 0 offen offset:112
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[32:35], v0, s[4:7], 0 offen offset:128
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[32:35], v0, s[12:15], 0 offen offset:128
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[36:39], v0, s[4:7], 0 offen offset:144
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[36:39], v0, s[12:15], 0 offen offset:144
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[40:43], v0, s[4:7], 0 offen offset:160
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[40:43], v0, s[12:15], 0 offen offset:160
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[44:47], v0, s[4:7], 0 offen offset:176
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[44:47], v0, s[12:15], 0 offen offset:176
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[48:51], v0, s[4:7], 0 offen offset:192
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[48:51], v0, s[12:15], 0 offen offset:192
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[52:55], v0, s[4:7], 0 offen offset:208
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[52:55], v0, s[12:15], 0 offen offset:208
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[56:59], v0, s[4:7], 0 offen offset:224
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[56:59], v0, s[12:15], 0 offen offset:224
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[60:63], v0, s[4:7], 0 offen offset:240
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[60:63], v0, s[12:15], 0 offen offset:240
 ; GISEL-GFX942-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GISEL-GFX942-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; GISEL-GFX942-NEXT:    s_endpgm
@@ -761,18 +761,18 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-GFX942-NEXT:    s_load_dword s7, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
 ; SDAG-GFX942-NEXT:    s_load_dword s15, s[4:5], 0x54
+; SDAG-GFX942-NEXT:    s_mov_b32 s16, 0
 ; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_mov_b32 s6, s3
+; SDAG-GFX942-NEXT:    s_mov_b32 s12, s9
 ; SDAG-GFX942-NEXT:    s_mov_b32 s4, s1
 ; SDAG-GFX942-NEXT:    s_mov_b32 s5, s2
-; SDAG-GFX942-NEXT:    s_mov_b32 s14, s11
-; SDAG-GFX942-NEXT:    s_mov_b32 s12, s9
+; SDAG-GFX942-NEXT:    s_mov_b32 s6, s3
 ; SDAG-GFX942-NEXT:    s_mov_b32 s13, s10
-; SDAG-GFX942-NEXT:    s_mov_b32 s1, 0
+; SDAG-GFX942-NEXT:    s_mov_b32 s14, s11
 ; SDAG-GFX942-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; SDAG-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SDAG-GFX942-NEXT:    s_add_i32 s2, s0, s1
-; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s2
+; SDAG-GFX942-NEXT:    s_add_i32 s1, s0, s16
+; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s1
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[2:5], v0, s[4:7], 0 offen
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[6:9], v0, s[4:7], 0 offen offset:16
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[10:13], v0, s[4:7], 0 offen offset:32
@@ -789,10 +789,10 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[54:57], v0, s[4:7], 0 offen offset:208
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 v[58:61], v0, s[4:7], 0 offen offset:224
 ; SDAG-GFX942-NEXT:    buffer_load_dwordx4 a[0:3], v0, s[4:7], 0 offen offset:240
-; SDAG-GFX942-NEXT:    s_add_i32 s2, s8, s1
-; SDAG-GFX942-NEXT:    s_addk_i32 s1, 0x100
-; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s2
-; SDAG-GFX942-NEXT:    s_cmpk_lt_u32 s1, 0x100
+; SDAG-GFX942-NEXT:    s_add_i32 s1, s8, s16
+; SDAG-GFX942-NEXT:    s_addk_i32 s16, 0x100
+; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s1
+; SDAG-GFX942-NEXT:    s_cmpk_lt_u32 s16, 0x100
 ; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v0, s[12:15], 0 offen
 ; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(15)
@@ -836,23 +836,23 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-GFX1100-NEXT:    s_load_b128 s[8:11], s[4:5], 0x44
 ; SDAG-GFX1100-NEXT:    s_load_b32 s7, s[4:5], 0x34
 ; SDAG-GFX1100-NEXT:    s_load_b32 s15, s[4:5], 0x54
+; SDAG-GFX1100-NEXT:    s_mov_b32 s16, 0
 ; SDAG-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    s_mov_b32 s6, s3
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s4, s1
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s5, s2
-; SDAG-GFX1100-NEXT:    s_mov_b32 s14, s11
+; SDAG-GFX1100-NEXT:    s_mov_b32 s6, s3
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s12, s9
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s13, s10
-; SDAG-GFX1100-NEXT:    s_mov_b32 s1, 0
+; SDAG-GFX1100-NEXT:    s_mov_b32 s14, s11
 ; SDAG-GFX1100-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; SDAG-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; SDAG-GFX1100-NEXT:    s_add_i32 s2, s0, s1
-; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v60, s2
-; SDAG-GFX1100-NEXT:    s_add_i32 s2, s8, s1
-; SDAG-GFX1100-NEXT:    s_addk_i32 s1, 0x100
-; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v64, s2
-; SDAG-GFX1100-NEXT:    s_cmpk_lt_u32 s1, 0x100
+; SDAG-GFX1100-NEXT:    s_add_i32 s1, s0, s16
+; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v60, s1
+; SDAG-GFX1100-NEXT:    s_add_i32 s1, s8, s16
+; SDAG-GFX1100-NEXT:    s_addk_i32 s16, 0x100
+; SDAG-GFX1100-NEXT:    v_mov_b32_e32 v64, s1
+; SDAG-GFX1100-NEXT:    s_cmpk_lt_u32 s16, 0x100
 ; SDAG-GFX1100-NEXT:    s_clause 0xf
 ; SDAG-GFX1100-NEXT:    buffer_load_b128 v[0:3], v60, s[4:7], 0 offen
 ; SDAG-GFX1100-NEXT:    buffer_load_b128 v[4:7], v60, s[4:7], 0 offen offset:16
@@ -909,25 +909,25 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; GISEL-GFX942-LABEL: memcpy_known_medium:
 ; GISEL-GFX942:       ; %bb.0:
 ; GISEL-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-GFX942-NEXT:    s_load_dword s7, s[4:5], 0x54
-; GISEL-GFX942-NEXT:    s_load_dword s11, s[4:5], 0x34
-; GISEL-GFX942-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x44
+; GISEL-GFX942-NEXT:    s_load_dword s7, s[4:5], 0x34
+; GISEL-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
+; GISEL-GFX942-NEXT:    s_load_dword s15, s[4:5], 0x54
 ; GISEL-GFX942-NEXT:    s_mov_b32 s16, 0
 ; GISEL-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX942-NEXT:    s_mov_b32 s8, s1
-; GISEL-GFX942-NEXT:    s_mov_b32 s9, s2
-; GISEL-GFX942-NEXT:    s_mov_b32 s10, s3
-; GISEL-GFX942-NEXT:    s_mov_b32 s4, s13
-; GISEL-GFX942-NEXT:    s_mov_b32 s5, s14
-; GISEL-GFX942-NEXT:    s_mov_b32 s6, s15
+; GISEL-GFX942-NEXT:    s_mov_b32 s12, s9
+; GISEL-GFX942-NEXT:    s_mov_b32 s4, s1
+; GISEL-GFX942-NEXT:    s_mov_b32 s5, s2
+; GISEL-GFX942-NEXT:    s_mov_b32 s6, s3
+; GISEL-GFX942-NEXT:    s_mov_b32 s13, s10
+; GISEL-GFX942-NEXT:    s_mov_b32 s14, s11
 ; GISEL-GFX942-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; GISEL-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX942-NEXT:    s_add_i32 s1, s0, s16
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v60, s1
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[8:11], v60, s[8:11], 0 offen
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[4:7], v60, s[8:11], 0 offen offset:16
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[12:15], v60, s[8:11], 0 offen offset:32
-; GISEL-GFX942-NEXT:    s_add_i32 s2, s12, s16
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[8:11], v60, s[4:7], 0 offen
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[4:7], v60, s[4:7], 0 offen offset:16
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[12:15], v60, s[4:7], 0 offen offset:32
+; GISEL-GFX942-NEXT:    s_add_i32 s2, s8, s16
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-GFX942-NEXT:    s_addk_i32 s16, 0x100
 ; GISEL-GFX942-NEXT:    s_cmpk_lt_u32 s16, 0x100
@@ -936,55 +936,55 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a1, v14 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a2, v13 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_write_b32 a3, v12 ; Reload Reuse
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[12:15], v60, s[8:11], 0 offen offset:48
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[16:19], v60, s[8:11], 0 offen offset:64
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[20:23], v60, s[8:11], 0 offen offset:80
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[24:27], v60, s[8:11], 0 offen offset:96
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[28:31], v60, s[8:11], 0 offen offset:112
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[32:35], v60, s[8:11], 0 offen offset:128
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[36:39], v60, s[8:11], 0 offen offset:144
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[40:43], v60, s[8:11], 0 offen offset:160
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[44:47], v60, s[8:11], 0 offen offset:176
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[48:51], v60, s[8:11], 0 offen offset:192
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[52:55], v60, s[8:11], 0 offen offset:208
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[56:59], v60, s[8:11], 0 offen offset:224
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[12:15], v60, s[4:7], 0 offen offset:48
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[16:19], v60, s[4:7], 0 offen offset:64
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[20:23], v60, s[4:7], 0 offen offset:80
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[24:27], v60, s[4:7], 0 offen offset:96
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[28:31], v60, s[4:7], 0 offen offset:112
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[32:35], v60, s[4:7], 0 offen offset:128
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[36:39], v60, s[4:7], 0 offen offset:144
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[40:43], v60, s[4:7], 0 offen offset:160
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[44:47], v60, s[4:7], 0 offen offset:176
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[48:51], v60, s[4:7], 0 offen offset:192
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[52:55], v60, s[4:7], 0 offen offset:208
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[56:59], v60, s[4:7], 0 offen offset:224
 ; GISEL-GFX942-NEXT:    s_nop 0
-; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[60:63], v60, s[8:11], 0 offen offset:240
+; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[60:63], v60, s[4:7], 0 offen offset:240
 ; GISEL-GFX942-NEXT:    s_nop 0
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[8:11], v0, s[4:7], 0 offen
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[4:7], v0, s[4:7], 0 offen offset:16
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[8:11], v0, s[12:15], 0 offen
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[4:7], v0, s[12:15], 0 offen offset:16
 ; GISEL-GFX942-NEXT:    s_nop 1
 ; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v5, a0 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v4, a1 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v3, a2 ; Reload Reuse
 ; GISEL-GFX942-NEXT:    v_accvgpr_read_b32 v2, a3 ; Reload Reuse
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v0, s[4:7], 0 offen offset:32
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v0, s[12:15], 0 offen offset:32
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[12:15], v0, s[4:7], 0 offen offset:48
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[12:15], v0, s[12:15], 0 offen offset:48
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[16:19], v0, s[4:7], 0 offen offset:64
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[16:19], v0, s[12:15], 0 offen offset:64
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[20:23], v0, s[4:7], 0 offen offset:80
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[20:23], v0, s[12:15], 0 offen offset:80
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[24:27], v0, s[4:7], 0 offen offset:96
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[24:27], v0, s[12:15], 0 offen offset:96
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[28:31], v0, s[4:7], 0 offen offset:112
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[28:31], v0, s[12:15], 0 offen offset:112
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[32:35], v0, s[4:7], 0 offen offset:128
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[32:35], v0, s[12:15], 0 offen offset:128
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[36:39], v0, s[4:7], 0 offen offset:144
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[36:39], v0, s[12:15], 0 offen offset:144
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[40:43], v0, s[4:7], 0 offen offset:160
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[40:43], v0, s[12:15], 0 offen offset:160
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[44:47], v0, s[4:7], 0 offen offset:176
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[44:47], v0, s[12:15], 0 offen offset:176
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[48:51], v0, s[4:7], 0 offen offset:192
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[48:51], v0, s[12:15], 0 offen offset:192
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[52:55], v0, s[4:7], 0 offen offset:208
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[52:55], v0, s[12:15], 0 offen offset:208
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[56:59], v0, s[4:7], 0 offen offset:224
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[56:59], v0, s[12:15], 0 offen offset:224
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(15)
-; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[60:63], v0, s[4:7], 0 offen offset:240
+; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[60:63], v0, s[12:15], 0 offen offset:240
 ; GISEL-GFX942-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GISEL-GFX942-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; GISEL-GFX942-NEXT:    s_endpgm
