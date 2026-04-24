@@ -242,8 +242,7 @@ struct LoweringPreparePass
 
   void emitGlobalGuardedDtorRegion(CIRBaseBuilderTy &builder,
                                    cir::GlobalOp global,
-                                   mlir::Region &dtorRegion,
-                                   bool tls,
+                                   mlir::Region &dtorRegion, bool tls,
                                    mlir::Block &entryBB) {
     // Create a variable that binds the atexit to this shared object.
     builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
@@ -2168,7 +2167,6 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
     }
   }
 }
-
 
 void LoweringPreparePass::runOnOperation() {
   mlir::Operation *op = getOperation();
