@@ -1832,6 +1832,8 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 18;
   if (MI.getOpcode() == TargetOpcode::PATCHABLE_RET)
     return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
+  if (MI.getOpcode() == TargetOpcode::BUNDLE)
+    return getInstBundleSize(MI);
 
   return MI.getDesc().getSize();
 }

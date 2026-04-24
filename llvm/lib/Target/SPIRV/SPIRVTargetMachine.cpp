@@ -11,13 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVTargetMachine.h"
+#include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVCBufferAccess.h"
+#include "SPIRVCtorDtorLowering.h"
 #include "SPIRVEmitIntrinsics.h"
 #include "SPIRVGlobalRegistry.h"
+#include "SPIRVLegalizeImplicitBinding.h"
+#include "SPIRVLegalizePointerCast.h"
 #include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVMergeRegionExitTargets.h"
 #include "SPIRVPushConstantAccess.h"
+#include "SPIRVRegularizer.h"
 #include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
@@ -56,15 +62,16 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVCBufferAccessLegacyPass(PR);
   initializeSPIRVPushConstantAccessLegacyPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
-  initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVLegalizePointerCastLegacyPass(PR);
   initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
-  initializeSPIRVRegularizerPass(PR);
+  initializeSPIRVRegularizerLegacyPass(PR);
   initializeSPIRVPreLegalizerPass(PR);
   initializeSPIRVPostLegalizerPass(PR);
-  initializeSPIRVMergeRegionExitTargetsPass(PR);
+  initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
   initializeSPIRVEmitIntrinsicsPass(PR);
   initializeSPIRVPrepareFunctionsPass(PR);
   initializeSPIRVPrepareGlobalsPass(PR);
+  initializeSPIRVLegalizeImplicitBindingLegacyPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
 }
 

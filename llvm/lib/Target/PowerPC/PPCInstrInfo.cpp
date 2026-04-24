@@ -3039,6 +3039,8 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     bool IsConditional = RetOpcode == PPC::BCCLR;
     return (8 + IsConditional) * 4;
   }
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
   default:
     return get(Opcode).getSize();
   }

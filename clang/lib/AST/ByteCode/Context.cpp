@@ -35,7 +35,7 @@ Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {
          "We're assuming 8 bit chars");
 }
 
-Context::~Context() {}
+Context::~Context() = default;
 
 bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());

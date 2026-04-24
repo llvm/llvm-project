@@ -89,6 +89,8 @@ public:
   LIBC_INLINE bool can_be_requeued() const {
     return !this->pshared && !this->robust;
   }
+
+  LIBC_INLINE bool is_robust() const { return this->robust; }
 };
 
 } // namespace LIBC_NAMESPACE_DECL

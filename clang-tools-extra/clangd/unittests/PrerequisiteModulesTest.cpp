@@ -20,9 +20,12 @@
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -1344,6 +1347,172 @@ export int AValue = MValue;
   llvm::sys::path::append(LockPath, ".locks", SourceHash);
 
   EXPECT_TRUE(llvm::sys::fs::exists(LockPath));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheGCRemovesOldStablePublishedModule) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  llvm::SmallString<256> OrphanPCMPath;
+  {
+    ModulesBuilder Builder(CDB);
+    auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+    ASSERT_TRUE(AInfo);
+    HeaderSearchOptions HS(TestDir);
+    AInfo->adjustHeaderSearchOptions(HS);
+    ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+    OrphanPCMPath = HS.PrebuiltModuleFiles["M"];
+    llvm::sys::path::remove_filename(OrphanPCMPath);
+    llvm::sys::path::append(OrphanPCMPath, "Orphan.pcm");
+
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(OrphanPCMPath, EC);
+    ASSERT_FALSE(EC);
+    OS << "orphan";
+    OS.close();
+    EXPECT_TRUE(llvm::sys::fs::exists(OrphanPCMPath));
+
+    int FD = -1;
+    ASSERT_FALSE(llvm::sys::fs::openFileForWrite(OrphanPCMPath, FD,
+                                                 llvm::sys::fs::CD_OpenExisting,
+                                                 llvm::sys::fs::OF_None));
+    auto CloseFD = llvm::scope_exit(
+        [&] { llvm::sys::Process::SafelyCloseFileDescriptor(FD); });
+    llvm::sys::TimePoint<> OldTime =
+        std::chrono::system_clock::now() - std::chrono::hours(24 * 5);
+    ASSERT_FALSE(llvm::sys::fs::setLastAccessAndModificationTime(FD, OldTime));
+  }
+
+  ModulesBuilder Builder(CDB);
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  EXPECT_FALSE(llvm::sys::fs::exists(OrphanPCMPath));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheGCKeepsRecentStablePublishedModule) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  llvm::SmallString<256> OrphanPCMPath;
+  {
+    ModulesBuilder Builder(CDB);
+    auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+    ASSERT_TRUE(AInfo);
+    HeaderSearchOptions HS(TestDir);
+    AInfo->adjustHeaderSearchOptions(HS);
+    ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+    OrphanPCMPath = HS.PrebuiltModuleFiles["M"];
+    llvm::sys::path::remove_filename(OrphanPCMPath);
+    llvm::sys::path::append(OrphanPCMPath, "Orphan.pcm");
+
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(OrphanPCMPath, EC);
+    ASSERT_FALSE(EC);
+    OS << "orphan";
+    OS.close();
+    EXPECT_TRUE(llvm::sys::fs::exists(OrphanPCMPath));
+  }
+
+  ModulesBuilder Builder(CDB);
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  EXPECT_TRUE(llvm::sys::fs::exists(OrphanPCMPath));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheGCRemovesOldVersionedModuleFile) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  llvm::SmallString<256> OldVersionedPCMPath;
+  {
+    ModulesBuilder Builder(CDB);
+    auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+    ASSERT_TRUE(AInfo);
+    HeaderSearchOptions HS(TestDir);
+    AInfo->adjustHeaderSearchOptions(HS);
+    ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+    OldVersionedPCMPath = HS.PrebuiltModuleFiles["M"];
+    ASSERT_TRUE(llvm::sys::fs::exists(OldVersionedPCMPath));
+
+    int FD = -1;
+    ASSERT_FALSE(llvm::sys::fs::openFileForWrite(OldVersionedPCMPath, FD,
+                                                 llvm::sys::fs::CD_OpenExisting,
+                                                 llvm::sys::fs::OF_None));
+    auto CloseFD = llvm::scope_exit(
+        [&] { llvm::sys::Process::SafelyCloseFileDescriptor(FD); });
+    llvm::sys::TimePoint<> OldTime =
+        std::chrono::system_clock::now() - std::chrono::hours(24 * 5);
+    ASSERT_FALSE(llvm::sys::fs::setLastAccessAndModificationTime(FD, OldTime));
+  }
+
+  ModulesBuilder Builder(CDB);
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  EXPECT_FALSE(llvm::sys::fs::exists(OldVersionedPCMPath));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheGCKeepsRecentVersionedModuleFile) {
+  PerFileModulesCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int MValue = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int AValue = MValue;
+  )cpp");
+
+  auto FirstBuilder = std::make_unique<ModulesBuilder>(CDB);
+  auto AInfo =
+      FirstBuilder->buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(AInfo);
+  HeaderSearchOptions HS(TestDir);
+  AInfo->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+  llvm::StringRef CopyOnReadPCMPath = HS.PrebuiltModuleFiles["M"];
+  ASSERT_TRUE(llvm::sys::fs::exists(CopyOnReadPCMPath));
+
+  ModulesBuilder SecondBuilder(CDB);
+  auto SecondInfo =
+      SecondBuilder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  ASSERT_TRUE(SecondInfo);
+  EXPECT_TRUE(llvm::sys::fs::exists(CopyOnReadPCMPath));
 }
 
 TEST_F(PrerequisiteModulesTests,

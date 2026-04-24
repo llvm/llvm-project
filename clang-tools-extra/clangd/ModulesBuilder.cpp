@@ -36,6 +36,12 @@ llvm::cl::opt<bool> DebugModulesBuilder(
                    "Remember to remove them later after debugging."),
     llvm::cl::init(false));
 
+llvm::cl::opt<unsigned> VersionedModuleFileGCThresholdSeconds(
+    "modules-builder-versioned-gc-threshold-seconds",
+    llvm::cl::desc("Delete versioned copy-on-read module files whose last "
+                   "access time is older than this many seconds."),
+    llvm::cl::init(3 * 24 * 60 * 60));
+
 //===----------------------------------------------------------------------===//
 // Persistent Module Cache Layout.
 //
@@ -947,6 +953,57 @@ llvm::SmallVector<std::string> getAllRequiredModules(PathRef RequiredSource,
   return ModuleNames;
 }
 
+/// Collects cache roots to scan during constructor-time GC.
+/// Scans one cache root and returns all `.pcm` files under it.
+std::vector<std::string> collectModuleFiles(PathRef CacheRoot) {
+  std::vector<std::string> Result;
+  std::error_code EC;
+  for (llvm::sys::fs::recursive_directory_iterator It(CacheRoot, EC), End;
+       It != End && !EC; It.increment(EC)) {
+    if (llvm::sys::path::extension(It->path()) != ".pcm")
+      continue;
+    Result.push_back(It->path());
+  }
+  if (EC)
+    log("Failed to scan module cache directory {0}: {1}", CacheRoot,
+        EC.message());
+  return Result;
+}
+
+/// Performs one GC pass over a persistent module cache root.
+void garbageCollectModuleCache(PathRef CacheRoot) {
+  for (const auto &ModuleFilePath : collectModuleFiles(CacheRoot)) {
+    llvm::sys::fs::file_status Status;
+    if (std::error_code EC = llvm::sys::fs::status(ModuleFilePath, Status)) {
+      log("Failed to stat cached module file {0} for GC: {1}", ModuleFilePath,
+          EC.message());
+      continue;
+    }
+
+    llvm::sys::TimePoint<> LastAccess = Status.getLastAccessedTime();
+    llvm::sys::TimePoint<> Now = std::chrono::system_clock::now();
+    if (LastAccess > Now)
+      continue;
+    auto Age =
+        std::chrono::duration_cast<std::chrono::seconds>(Now - LastAccess);
+    auto Threshold =
+        std::chrono::seconds(VersionedModuleFileGCThresholdSeconds);
+    if (Age <= Threshold)
+      continue;
+
+    if (!llvm::sys::fs::exists(ModuleFilePath))
+      continue;
+
+    constexpr llvm::StringLiteral Reason = "file older than GC threshold";
+    if (std::error_code EC = llvm::sys::fs::remove(ModuleFilePath)) {
+      log("Failed to remove cached module file {0} ({1}): {2}", ModuleFilePath,
+          Reason, EC.message());
+      continue;
+    }
+    log("Removed cached module file {0} ({1})", ModuleFilePath, Reason);
+  }
+}
+
 } // namespace
 
 class ModulesBuilder::ModulesBuilderImpl {
@@ -969,9 +1026,38 @@ private:
                              const ThreadsafeFS &TFS,
                              ReusablePrerequisiteModules &BuiltModuleFiles);
 
+  /// Runs GC once for the cache root owning a project root.
+  void garbageCollectModuleCacheForProjectRoot(PathRef ProjectRoot);
+
   ModuleFileCache Cache;
   ModuleNameToSourceCache ProjectModulesCache;
+  std::mutex GarbageCollectedProjectRootsMutex;
+  llvm::StringSet<> GarbageCollectedProjectRoots;
 };
+
+void ModulesBuilder::ModulesBuilderImpl::
+    garbageCollectModuleCacheForProjectRoot(PathRef ProjectRoot) {
+  if (ProjectRoot.empty())
+    return;
+  std::string NormalizedProjectRoot = normalizePathForCache(ProjectRoot);
+  {
+    // If the project root lives in GarbageCollectedProjectRoots, it implies
+    // we've already started GC on the cache root.
+    std::lock_guard<std::mutex> Lock(GarbageCollectedProjectRootsMutex);
+    if (!GarbageCollectedProjectRoots.insert(NormalizedProjectRoot).second)
+      return;
+  }
+
+  llvm::SmallString<256> CacheRoot(ProjectRoot);
+  llvm::sys::path::append(CacheRoot, ".cache", "clangd", "modules");
+  log("Running GC pass for clangd built module files under {0} with age "
+      "threshold {1} seconds (adjust with --modules-builder-versioned-gc-"
+      "threshold-seconds)",
+      CacheRoot, VersionedModuleFileGCThresholdSeconds);
+  garbageCollectModuleCache(CacheRoot);
+  log("Done running GC pass for clangd built module files under {0}",
+      CacheRoot);
+}
 
 void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
     StringRef ModuleName, PathRef ModuleUnitFileName, const ThreadsafeFS &TFS,
@@ -1053,6 +1139,9 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
     if (!Cmd)
       return llvm::createStringError(
           llvm::formatv("No compile command for {0}", ReqFileName));
+    if (auto PI = getCDB().getProjectInfo(ReqFileName);
+        PI && !PI->SourceRoot.empty())
+      garbageCollectModuleCacheForProjectRoot(PI->SourceRoot);
 
     const std::string CommandHash = getCompileCommandStringHash(*Cmd);
     const std::string PublishedModuleFilePath = getPublishedModuleFilePath(

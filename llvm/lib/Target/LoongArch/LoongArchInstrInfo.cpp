@@ -280,6 +280,8 @@ unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::PATCHABLE_TAIL_CALL:
     // Size of xray sled (branch + 11 nops).
     return 12 * 4;
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
   }
   return NumBytes;
 }

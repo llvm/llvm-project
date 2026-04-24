@@ -53,7 +53,7 @@ public:
     TestPoint,
     /// An origin that escapes the function scope (e.g., via return).
     OriginEscapes,
-    /// An origin is invalidated (e.g. vector resized).
+    /// An origin is invalidated (e.g. vector resized, `delete` called).
     InvalidateOrigin,
     /// All loans of an origin are cleared.
     KillOrigin,

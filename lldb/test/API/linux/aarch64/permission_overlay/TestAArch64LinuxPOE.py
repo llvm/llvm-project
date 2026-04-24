@@ -12,8 +12,8 @@ from lldbsuite.test import lldbutil
 class AArch64LinuxPOE(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    EXPECTED_POR = "por = 0x0000000001234567"
-    EXPECTED_POR_FIELDS = (
+    EXPECTED_POR_EL0 = "por_el0 = 0x0000000001234567"
+    EXPECTED_POR_EL0_FIELDS = (
         "         = {\n"
         "             Perm15 = No Access\n"
         "             Perm14 = No Access\n"
@@ -65,19 +65,42 @@ class AArch64LinuxPOE(TestBase):
             "register read --all",
             substrs=[
                 "Permission Overlay Registers",
-                f"{self.EXPECTED_POR}",
+                f"{self.EXPECTED_POR_EL0}",
             ],
         )
 
         if self.hasXMLSupport():
             self.expect(
-                "register read por",
-                substrs=[f"     {self.EXPECTED_POR}\n" + self.EXPECTED_POR_FIELDS],
+                "register read por_el0",
+                substrs=[f" {self.EXPECTED_POR_EL0}\n" + self.EXPECTED_POR_EL0_FIELDS],
             )
 
-        # POR should be restored after expression evaluation.
+        # POR_EL0 should be restored after expression evaluation.
         self.expect("expression expr_function()", substrs=["$0 = 1"])
-        self.expect("register read por", substrs=[self.EXPECTED_POR])
+        self.expect("register read por_el0", substrs=[self.EXPECTED_POR_EL0])
+
+        # Unmapped region has no key (not even default).
+        self.expect("memory region 0", substrs=["protection key:"], matching=False)
+
+        # The region has base permissions r-x, and overlay is r--. The result
+        # is that execution is disabled.
+        self.expect(
+            "memory region read_only_page",
+            substrs=["rw-", "protection key: 6 (r--, effective: r--)"],
+        )
+        # A region not assigned to a protection key has the default key 0. This
+        # key is rwx, but overlays cannot add permissions not already in the
+        # page table. So the execute permission is not enabled.
+        self.expect(
+            "memory region key_zero_page",
+            substrs=["rw-", "protection key: 0 (rwx, effective: rw-)"],
+        )
+
+        # Overlay permissions are on their own line.
+        self.expect(
+            "memory region --all",
+            patterns=["\nprotection key: [0-9]+ \([rwx-]{3}, effective: [rwx-]{3}\)\n"],
+        )
 
         # Not passing this to the application allows us to fix the permissions
         # using lldb, then continue to a normal exit.
@@ -102,7 +125,7 @@ class AArch64LinuxPOE(TestBase):
 
         # Allow writes so we can continue. This value has permission 6 changed
         # from read only (1) to write (4).
-        self.runCmd("register write por 0x4234567")
+        self.runCmd("register write por_el0 0x4234567")
 
         self.expect("continue", substrs=["exited with status = 0"])
 
@@ -118,12 +141,16 @@ class AArch64LinuxPOE(TestBase):
             "register read --all",
             substrs=[
                 "Permission Overlay Registers",
-                f"{self.EXPECTED_POR}",
+                f"{self.EXPECTED_POR_EL0}",
             ],
         )
 
         if self.hasXMLSupport():
             self.expect(
-                "register read por",
-                substrs=[f"     {self.EXPECTED_POR}\n" + self.EXPECTED_POR_FIELDS],
+                "register read por_el0",
+                substrs=[f" {self.EXPECTED_POR_EL0}\n" + self.EXPECTED_POR_EL0_FIELDS],
             )
+
+        # Protection keys are listed in /proc/<pid>/smaps, which is not included
+        # in core files.
+        self.expect("memory region --all", substrs=["protection key:"], matching=False)

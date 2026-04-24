@@ -6045,11 +6045,34 @@ CommandObject *ProcessGDBRemote::GetPluginCommandObject() {
   return m_command_sp.get();
 }
 
-void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(bool enable) {
-  GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
+void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(
+    bool enable, bool is_expression_fork) {
+  Log *log = GetLog(GDBRLog::Process);
+
+  // Resolve the expression-return sentinel address (_start) once. This is
+  // the same address ThreadPlanCallFunction uses as the return trap.
+  lldb::addr_t entry_addr = LLDB_INVALID_ADDRESS;
+  if (!enable && is_expression_fork) {
+    if (auto entry = GetTarget().GetEntryPointAddress())
+      entry_addr = entry->GetLoadAddress(&GetTarget());
+  }
+
+  GetBreakpointSiteList().ForEach([this, enable, entry_addr,
+                                   log](BreakpointSite *bp_site) {
     if (bp_site->IsEnabled() &&
         (bp_site->GetType() == BreakpointSite::eSoftware ||
          bp_site->GetType() == BreakpointSite::eExternal)) {
+      // During expression evaluation, retain the expression-return trap
+      // at _start in the forked child so it dies deterministically on
+      // SIGTRAP rather than executing _start with a corrupted stack.
+      if (entry_addr != LLDB_INVALID_ADDRESS &&
+          bp_site->GetLoadAddress() == entry_addr) {
+        LLDB_LOG(log,
+                 "DidForkSwitchSoftwareBreakpoints: retaining expression-"
+                 "return trap at {0:x} in forked child",
+                 bp_site->GetLoadAddress());
+        return;
+      }
       m_gdb_comm.SendGDBStoppointTypePacket(
           eBreakpointSoftware, enable, bp_site->GetLoadAddress(),
           GetSoftwareBreakpointTrapOpcode(bp_site), GetInterruptTimeout());
@@ -6078,8 +6101,31 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
   }
 }
 
-void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
+void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                               bool is_expression_fork) {
   Log *log = GetLog(GDBRLog::Process);
+
+  // During expression evaluation, force follow-parent regardless of which
+  // thread forked. The expression is running on the parent and following the
+  // child would cause the expression thread to vanish (the child has different
+  // thread IDs). Even if a *different* thread forks, switching to the child
+  // would destroy the expression thread's process context.
+  FollowForkMode follow_fork_mode = GetFollowForkMode();
+  bool overrode_follow_mode = false;
+  if (follow_fork_mode == eFollowChild &&
+      GetModIDRef().IsRunningExpression()) {
+    if (is_expression_fork) {
+      LLDB_LOG(log, "ProcessGDBRemote::DidFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation");
+    } else {
+      LLDB_LOG(log, "ProcessGDBRemote::DidFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation. Child process "
+                    "{0} is available for manual attachment.",
+               child_pid);
+    }
+    follow_fork_mode = eFollowParent;
+    overrode_follow_mode = true;
+  }
 
   lldb::pid_t parent_pid = m_gdb_comm.GetCurrentProcessID();
   // Any valid TID will suffice, thread-relevant actions will set a proper TID
@@ -6089,7 +6135,7 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   lldb::pid_t follow_pid, detach_pid;
   lldb::tid_t follow_tid, detach_tid;
 
-  switch (GetFollowForkMode()) {
+  switch (follow_fork_mode) {
   case eFollowParent:
     follow_pid = parent_pid;
     follow_tid = parent_tid;
@@ -6112,11 +6158,11 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
   // Disable all software breakpoints in the forked process.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
-    DidForkSwitchSoftwareBreakpoints(false);
+    DidForkSwitchSoftwareBreakpoints(false, is_expression_fork);
 
   // Remove hardware breakpoints / watchpoints from parent process if we're
   // following child.
-  if (GetFollowForkMode() == eFollowChild)
+  if (follow_fork_mode == eFollowChild)
     DidForkSwitchHardwareTraps(false);
 
   // Switch to the process that is going to be followed
@@ -6127,39 +6173,87 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   }
 
   LLDB_LOG(log, "Detaching process {0}", detach_pid);
-  Status error = m_gdb_comm.Detach(false, detach_pid);
+  // When we overrode follow-child because of a concurrent expression, try to
+  // keep the child stopped so the user can attach to it manually.
+  bool keep_stopped = overrode_follow_mode && !is_expression_fork;
+  Status error = m_gdb_comm.Detach(keep_stopped, detach_pid);
+  if (error.Fail() && keep_stopped) {
+    LLDB_LOG(log, "ProcessGDBRemote::DidFork() detach-and-stay-stopped not "
+                  "supported, falling back to normal detach");
+    keep_stopped = false;
+    error = m_gdb_comm.Detach(false, detach_pid);
+  }
   if (error.Fail()) {
     LLDB_LOG(log, "ProcessGDBRemote::DidFork() detach packet send failed: {0}",
              error.AsCString() ? error.AsCString() : "<unknown error>");
     return;
   }
 
+  // Notify the user via the async output channel when we overrode
+  // follow-fork-mode for a non-expression fork during expression evaluation.
+  if (overrode_follow_mode && !is_expression_fork) {
+    StreamUP output_up =
+        GetTarget().GetDebugger().GetAsyncOutputStream();
+    if (output_up) {
+      output_up->Printf("warning: follow-fork-mode 'child' was overridden to "
+                         "'parent' because an expression is being evaluated.\n"
+                         "Child process %" PRIu64
+                         " has been detached%s.\n"
+                         "You can attach to it with: process attach -p %" PRIu64
+                         "\n",
+                         child_pid,
+                         keep_stopped ? " and stopped" : " (running)",
+                         child_pid);
+      output_up->Flush();
+    }
+  }
+
   // Hardware breakpoints/watchpoints are not inherited implicitly,
   // so we need to readd them if we're following child.
-  if (GetFollowForkMode() == eFollowChild) {
+  if (follow_fork_mode == eFollowChild) {
     DidForkSwitchHardwareTraps(true);
     // Update our PID
     SetID(child_pid);
   }
 }
 
-void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
+void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                                bool is_expression_fork) {
   Log *log = GetLog(GDBRLog::Process);
 
   LLDB_LOG(
       log,
-      "ProcessGDBRemote::DidFork() called for child_pid: {0}, child_tid {1}",
+      "ProcessGDBRemote::DidVFork() called for child_pid: {0}, child_tid {1}",
       child_pid, child_tid);
   ++m_vfork_in_progress_count;
 
+  // See comment in DidFork(): force follow-parent during expression evaluation
+  // regardless of which thread triggered the vfork.
+  FollowForkMode follow_fork_mode = GetFollowForkMode();
+  bool overrode_follow_mode = false;
+  if (follow_fork_mode == eFollowChild &&
+      GetModIDRef().IsRunningExpression()) {
+    if (is_expression_fork) {
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation");
+    } else {
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() overriding follow-fork-mode "
+                    "to parent during expression evaluation. Child process "
+                    "{0} is available for manual attachment.",
+               child_pid);
+    }
+    follow_fork_mode = eFollowParent;
+    overrode_follow_mode = true;
+  }
+
   // Disable all software breakpoints for the duration of vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
-    DidForkSwitchSoftwareBreakpoints(false);
+    DidForkSwitchSoftwareBreakpoints(false, is_expression_fork);
 
   lldb::pid_t detach_pid;
   lldb::tid_t detach_tid;
 
-  switch (GetFollowForkMode()) {
+  switch (follow_fork_mode) {
   case eFollowParent:
     detach_pid = child_pid;
     detach_tid = child_tid;
@@ -6172,7 +6266,7 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
     // Switch to the parent process before detaching it.
     if (!m_gdb_comm.SetCurrentThread(detach_tid, detach_pid)) {
-      LLDB_LOG(log, "ProcessGDBRemote::DidFork() unable to set pid/tid");
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() unable to set pid/tid");
       return;
     }
 
@@ -6182,22 +6276,46 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
     // Switch to the child process.
     if (!m_gdb_comm.SetCurrentThread(child_tid, child_pid) ||
         !m_gdb_comm.SetCurrentThreadForRun(child_tid, child_pid)) {
-      LLDB_LOG(log, "ProcessGDBRemote::DidFork() unable to reset pid/tid");
+      LLDB_LOG(log, "ProcessGDBRemote::DidVFork() unable to reset pid/tid");
       return;
     }
     break;
   }
 
   LLDB_LOG(log, "Detaching process {0}", detach_pid);
-  Status error = m_gdb_comm.Detach(false, detach_pid);
+  bool keep_stopped = overrode_follow_mode && !is_expression_fork;
+  Status error = m_gdb_comm.Detach(keep_stopped, detach_pid);
+  if (error.Fail() && keep_stopped) {
+    LLDB_LOG(log, "ProcessGDBRemote::DidVFork() detach-and-stay-stopped not "
+                  "supported, falling back to normal detach");
+    keep_stopped = false;
+    error = m_gdb_comm.Detach(false, detach_pid);
+  }
   if (error.Fail()) {
       LLDB_LOG(log,
-               "ProcessGDBRemote::DidFork() detach packet send failed: {0}",
+               "ProcessGDBRemote::DidVFork() detach packet send failed: {0}",
                 error.AsCString() ? error.AsCString() : "<unknown error>");
       return;
   }
 
-  if (GetFollowForkMode() == eFollowChild) {
+  if (overrode_follow_mode && !is_expression_fork) {
+    StreamUP output_up =
+        GetTarget().GetDebugger().GetAsyncOutputStream();
+    if (output_up) {
+      output_up->Printf("warning: follow-fork-mode 'child' was overridden to "
+                         "'parent' because an expression is being evaluated.\n"
+                         "Child process %" PRIu64
+                         " has been detached%s.\n"
+                         "You can attach to it with: process attach -p %" PRIu64
+                         "\n",
+                         child_pid,
+                         keep_stopped ? " and stopped" : " (running)",
+                         child_pid);
+      output_up->Flush();
+    }
+  }
+
+  if (follow_fork_mode == eFollowChild) {
     // Update our PID
     SetID(child_pid);
   }

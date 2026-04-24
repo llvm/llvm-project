@@ -665,6 +665,9 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
   }
 
+  if (Opcode == TargetOpcode::BUNDLE)
+    return getInstBundleSize(MI);
+
   if (MI.getOpcode() == SP::GETPCX) {
     const TargetMachine &TM = MI.getParent()->getParent()->getTarget();
     if (TM.isPositionIndependent())

@@ -139,7 +139,7 @@ private:
   uint64_t m_fpmr_reg;
 
   struct poe_regs {
-    uint64_t por_reg;
+    uint64_t por_el0_reg;
   };
 
   struct poe_regs m_poe_regs;

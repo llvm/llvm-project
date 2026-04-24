@@ -753,6 +753,16 @@ public:
     return createShift(loc, lhs, rhs, false);
   }
 
+  /// Returns `void (T...)` as a cir::FuncType.
+  cir::FuncType getVoidFnTy(mlir::TypeRange argTypes = {}) {
+    return cir::FuncType::get(llvm::to_vector(argTypes), getVoidTy());
+  }
+
+  /// Returns `void (*)(T...)` as a cir::PointerType.
+  cir::PointerType getVoidFnPtrTy(mlir::TypeRange argTypes = {}) {
+    return getPointerTo(getVoidFnTy(argTypes));
+  }
+
   //
   // Block handling helpers
   // ----------------------

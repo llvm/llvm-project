@@ -1055,6 +1055,12 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
   case DataEdit::ListDirected:
     return EditListDirectedCharacterInput(io, x, lengthChars, edit);
   case 'A':
+    if (edit.variation == 'T') {
+      io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+          "'AT' edit descriptor may not be used for input");
+      return false;
+    }
+    break;
   case 'G':
     break;
   case 'B':

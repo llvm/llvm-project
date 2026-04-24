@@ -64,7 +64,7 @@ function func(x, n, init)
 !PARSE-TREE: | Expr = 'init'
 !PARSE-TREE: | | Designator -> DataRef -> Name = 'init'
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | OmpBeginLoopDirective
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = simd
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'red_add'

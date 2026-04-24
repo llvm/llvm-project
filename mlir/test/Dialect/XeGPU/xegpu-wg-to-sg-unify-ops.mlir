@@ -960,4 +960,28 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // CHECK-LABEL: @shape_cast_used_by_elementwise
+  gpu.func @shape_cast_used_by_elementwise(%dst: memref<1x1x16xf32>) {
+    // Regression test: shape_cast expanding unit dimensions can be used by elementwise ops
+    // This previously failed with "ShapeCast ops that expand unit dimensions and are used by
+    // non-broadcast operations are not supported."
+
+    // CHECK: vector.step : vector<16xindex>
+    // CHECK: vector.shape_cast {{.*}} : vector<16xindex> to vector<1x1x16xindex>
+    // CHECK: arith.addi {{.*}} : vector<1x1x16xindex>
+    // CHECK: xegpu.store {{.*}} : vector<1x1x16xf32>, i64, vector<1x1x16xindex>, vector<1x1x16xi1>
+    %step = vector.step : vector<16xindex>
+    %shape_cast = vector.shape_cast %step : vector<16xindex> to vector<1x1x16xindex>
+    %cst = arith.constant dense<10> : vector<1x1x16xindex>
+    %add = arith.addi %shape_cast, %cst : vector<1x1x16xindex>
+
+    %cst_val = arith.constant dense<1.0> : vector<1x1x16xf32>
+    %intptr = memref.extract_aligned_pointer_as_index %dst : memref<1x1x16xf32> -> index
+    %ptr = arith.index_cast %intptr : index to i64
+    %mask = arith.constant dense<true> : vector<1x1x16xi1>
+
+    xegpu.store %cst_val, %ptr[%add], %mask {layout = #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [1, 1, 16]>} : vector<1x1x16xf32>, i64, vector<1x1x16xindex>, vector<1x1x16xi1>
+    gpu.return
+  }
+
 }

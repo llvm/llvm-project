@@ -14,6 +14,7 @@ types:
   - type_name: off_t
   - type_name: pid_t
   - type_name: pthread_attr_t
+  - type_name: pthread_cond_t
   - type_name: pthread_condattr_t
   - type_name: pthread_key_t
   - type_name: pthread_mutex_t

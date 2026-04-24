@@ -365,3 +365,62 @@ if it wants to return to LLDB correctly.
 If it does not do this, the expression will fail and although most process
 state will be restored, GCS will be left enabled. Which means that the program
 is very unlikely to be able to progress.
+
+## Permission Overlay Extension (POE)
+
+The Permission Overlay Extension (FEAT_S1POE) enables userspace processes to
+change page permissions without using a syscall. This extension is
+used to implement Linux's [Memory Protection Keys](https://docs.kernel.org/core-api/protection-keys.html) feature on AArch64.
+
+This involves 3 components:
+* Memory protection keys. These are set in the page table and used as an index
+  into the overlay permissions.
+* The permissions set in the page table. These are the base permissions of the
+  memory.
+* Overlay permissions, stored in the `por_el0` register. These are applied on top
+  of the page table permissions. Overlay permissions cannot enable anything
+  that was not enabled in the page table. In other words, overlay permissions
+  can only keep, or remove permissions.
+
+LLDB users can read and write the `por_el0` register if they choose to, but for
+purely inspecting permissions, the `memory region` command is the better choice
+as it will show you all 3 things in one place.
+
+In the example below, we have violated a permission overlay:
+```
+(lldb) c
+Process 462 resuming
+Process 462 stopped
+<...> stop reason = signal SIGSEGV: failed protection key checks (fault address=0xffffff7d60000)
+<...>
+-> 106 	  read_only_page[0] = '?';
+```
+To inspect the permissions of `read_only_page`, use `memory region`:
+```
+(lldb) memory region read_only_page
+[0x000ffffff7d60000-0x000ffffff7d70000) rw-
+protection key: 6 (r--, effective: r--)
+```
+The first output line shows the base permissions from the page table (`rw-`).
+
+The page has protection key `6` attached to it, and LLDB shows us that permission
+overlay 6 is read only (`r--`). `effective: r--` is the result of overlaying
+that permission set onto the base permissions. Which removes the write
+permission, which is the cause of the signal.
+
+You can also see overlay `6` by reading the `por_el0` register:
+```
+(lldb) register read por_el0
+     por_el0 = 0x0000000001234567
+         = {
+<...>
+             Perm6 = Read
+```
+
+Writing to this register would have the same effect as using the pkey set
+function provided by your C library ([`pkey_set`](https://sourceware.org/glibc/manual/latest/html_node/Memory-Protection.html#Memory-Protection-Keys))
+for glibc).
+
+### Expression Evaluation
+
+The `por_el0` reigster is saved before, and restored after expression evaluation.
