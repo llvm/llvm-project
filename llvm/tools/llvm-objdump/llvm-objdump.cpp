@@ -3854,6 +3854,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   MachOOpt = InputArgs.hasArg(OBJDUMP_macho);
   MCPU = InputArgs.getLastArgValue(OBJDUMP_mcpu_EQ).str();
   MAttrs = commaSeparatedValues(InputArgs, OBJDUMP_mattr_EQ);
+  // Normalize each feature to have a '+' or '-' prefix.
+  for (std::string &M : MAttrs)
+    if (!M.empty() && M.front() != '+' && M.front() != '-')
+      M.insert(M.begin(), '+');
   ShowRawInsn = !InputArgs.hasArg(OBJDUMP_no_show_raw_insn);
   LeadingAddr = !InputArgs.hasArg(OBJDUMP_no_leading_addr);
   RawClangAST = InputArgs.hasArg(OBJDUMP_raw_clang_ast);
