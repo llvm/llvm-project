@@ -19,6 +19,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace llvm {
 
@@ -127,6 +128,34 @@ LLVM_ABI unsigned encodeVTYPE(VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
                               bool MaskAgnostic, bool AltFmt = false);
 
 LLVM_ABI unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt);
+
+inline static bool isValidIMELambda(unsigned Lambda) {
+  return Lambda == 0 || (isPowerOf2_32(Lambda) && Lambda <= 64);
+}
+
+LLVM_ABI unsigned encodeIMELambda(unsigned Lambda);
+
+LLVM_ABI std::optional<unsigned> decodeIMELambda(unsigned Encoding);
+
+LLVM_ABI uint64_t getIMEVTypeFieldsMask(unsigned XLen);
+
+LLVM_ABI uint64_t encodeIMEVTypeFields(unsigned XLen, unsigned Lambda,
+                                       bool AltFmtA, bool AltFmtB,
+                                       bool BlockSize16);
+
+LLVM_ABI uint64_t addIMEVTypeFields(uint64_t VType, unsigned XLen,
+                                    unsigned Lambda, bool AltFmtA, bool AltFmtB,
+                                    bool BlockSize16);
+
+LLVM_ABI unsigned getIMELambdaEncoding(uint64_t VType, unsigned XLen);
+
+LLVM_ABI std::optional<unsigned> getIMELambda(uint64_t VType, unsigned XLen);
+
+LLVM_ABI bool isIMEAltFmtA(uint64_t VType, unsigned XLen);
+
+LLVM_ABI bool isIMEAltFmtB(uint64_t VType, unsigned XLen);
+
+LLVM_ABI bool isIMEBlockSize16(uint64_t VType, unsigned XLen);
 
 inline static VLMUL getVLMUL(unsigned VType) {
   unsigned VLMul = VType & 0x7;
