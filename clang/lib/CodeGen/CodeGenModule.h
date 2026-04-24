@@ -55,6 +55,11 @@ class IndexedInstrProfReader;
 namespace vfs {
 class FileSystem;
 }
+
+namespace abi {
+class TargetInfo;
+class TypeBuilder;
+} // namespace abi
 }
 
 namespace clang {
@@ -362,6 +367,10 @@ private:
   std::unique_ptr<CodeGenTBAA> TBAA;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
+
+  /// Cached LLVMABI target lowering info, lazily constructed when the
+  /// experimental ABI lowering path is taken.
+  mutable std::unique_ptr<llvm::abi::TargetInfo> TheLLVMABITargetInfo;
 
   // This should not be moved earlier, since its initialization depends on some
   // of the previous reference members being already initialized and also checks
@@ -877,6 +886,16 @@ public:
   void maybeSetTrivialComdat(const Decl &D, llvm::GlobalObject &GO);
 
   const ABIInfo &getABIInfo();
+
+  /// Lazily build and return the LLVMABI library's TargetInfo for the current
+  /// target. Used by the experimental ABI lowering path
+  /// (-fexperimental-abi-lowering); only BPF is wired up today.
+  const llvm::abi::TargetInfo &getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB);
+
+  /// True when -fexperimental-abi-lowering is in effect AND the active target
+  /// has an LLVMABI implementation we can route to.
+  bool shouldUseLLVMABILowering() const;
+
   CGCXXABI &getCXXABI() const { return *ABI; }
   llvm::LLVMContext &getLLVMContext() { return VMContext; }
 

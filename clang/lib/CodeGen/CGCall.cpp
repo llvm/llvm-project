@@ -32,6 +32,9 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "llvm/ABI/FunctionInfo.h"
+#include "llvm/ABI/TargetInfo.h"
+#include "llvm/ABI/Types.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -830,6 +833,42 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 /// Arrange the argument and result information for an abstract value
 /// of a given function type.  This is the method which all of the
 /// above functions ultimately defer to.
+ABIArgInfo CodeGenTypes::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
+                                           QualType Type) {
+  switch (AbiInfo.getKind()) {
+  case llvm::abi::ArgInfo::Direct: {
+    llvm::Type *CoercedType = nullptr;
+    if (AbiInfo.getCoerceToType())
+      CoercedType = AbiReverseMapper.convertType(AbiInfo.getCoerceToType());
+    if (!CoercedType)
+      CoercedType = ConvertType(Type);
+    return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset());
+  }
+  case llvm::abi::ArgInfo::Extend: {
+    llvm::Type *CoercedType = nullptr;
+    if (AbiInfo.getCoerceToType())
+      CoercedType = AbiReverseMapper.convertType(AbiInfo.getCoerceToType());
+    if (!CoercedType)
+      CoercedType = ConvertType(Type);
+    if (AbiInfo.isSignExt())
+      return ABIArgInfo::getSignExtend(Type, CoercedType);
+    if (AbiInfo.isZeroExt())
+      return ABIArgInfo::getZeroExtend(Type, CoercedType);
+    return ABIArgInfo::getExtend(Type, CoercedType);
+  }
+  case llvm::abi::ArgInfo::Indirect: {
+    CharUnits Alignment =
+        CharUnits::fromQuantity(AbiInfo.getIndirectAlign().value());
+    return ABIArgInfo::getIndirect(Alignment, AbiInfo.getIndirectAddrSpace(),
+                                   AbiInfo.getIndirectByVal(),
+                                   AbiInfo.getIndirectRealign());
+  }
+  case llvm::abi::ArgInfo::Ignore:
+    return ABIArgInfo::getIgnore();
+  }
+  llvm_unreachable("Unexpected llvm::abi::ArgInfo kind");
+}
+
 const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     CanQualType resultType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
@@ -866,6 +905,11 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   assert(inserted && "Recursively being processed?");
 
   // Compute ABI information.
+  bool UseLLVMABI =
+      CGM.shouldUseLLVMABILowering() && info.getCC() != CC_Swift &&
+      info.getCC() != CC_SwiftAsync &&
+      !(info.getCC() == CC_DeviceKernel &&
+        (CC == llvm::CallingConv::SPIR_KERNEL || CC == llvm::CallingConv::C));
   if (info.getCC() == CC_DeviceKernel &&
       (CC == llvm::CallingConv::SPIR_KERNEL || CC == llvm::CallingConv::C)) {
     // Force target independent argument handling for the host visible
@@ -876,6 +920,31 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
+  } else if (UseLLVMABI) {
+    SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
+    MappedArgTypes.reserve(argTypes.size());
+    for (CanQualType ArgType : argTypes)
+      MappedArgTypes.push_back(AbiMapper.convertType(ArgType));
+
+    std::optional<unsigned> NumRequired;
+    if (required.allowsOptionalArgs())
+      NumRequired = required.getNumRequiredArgs();
+
+    llvm::abi::FunctionInfo *AbiFI = llvm::abi::FunctionInfo::create(
+        CC, AbiMapper.convertType(resultType), MappedArgTypes, NumRequired);
+
+    CGM.getLLVMABITargetInfo(AbiMapper.getTypeBuilder()).computeInfo(*AbiFI);
+
+    FI->getReturnInfo() =
+        convertABIArgInfo(AbiFI->getReturnInfo(), FI->getReturnType());
+
+    auto AbiArgs = AbiFI->arguments();
+    unsigned ArgIdx = 0;
+    for (auto &CGArg : FI->arguments()) {
+      assert(ArgIdx < AbiArgs.size() && "ABI arg count mismatch");
+      CGArg.info = convertABIArgInfo(AbiArgs[ArgIdx].Info, CGArg.type);
+      ++ArgIdx;
+    }
   } else {
     CGM.getABIInfo().computeInfo(*FI);
   }

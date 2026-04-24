@@ -14,10 +14,15 @@
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 
 #include "CGCall.h"
+#include "QualTypeMapper.h"
 #include "clang/Basic/ABI.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "llvm/ABI/ABITypeMapper.h"
+#include "llvm/ABI/FunctionInfo.h"
+#include "llvm/ABI/Types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Allocator.h"
 
 namespace llvm {
 class FunctionType;
@@ -91,6 +96,14 @@ class CodeGenTypes {
   static constexpr unsigned FunctionInfosLog2InitSize = 9;
   /// Helper for ConvertType.
   llvm::Type *ConvertFunctionTypeInternal(QualType FT);
+
+  /// Allocator and mappers used by the experimental LLVMABI-based lowering
+  /// path (gated on -fexperimental-abi-lowering). Constructed unconditionally
+  /// so the path can be entered without re-checking initialization, but the
+  /// caches stay empty when the flag is off.
+  mutable llvm::BumpPtrAllocator AbiAlloc;
+  mutable QualTypeMapper AbiMapper;
+  llvm::abi::ABITypeMapper AbiReverseMapper;
 
 public:
   CodeGenTypes(CodeGenModule &cgm);
@@ -272,6 +285,12 @@ public:
   const CGFunctionInfo &arrangeCXXMethodType(const CXXRecordDecl *RD,
                                              const FunctionProtoType *FTP,
                                              const CXXMethodDecl *MD);
+
+  /// Translate an llvm::abi::ArgInfo (computed by the LLVMABI library) into
+  /// the clang ABIArgInfo consumed by the rest of CodeGen. Used by the
+  /// experimental ABI lowering path.
+  ABIArgInfo convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
+                               QualType Type);
 
   /// "Arrange" the LLVM information for a call or type with the given
   /// signature.  This is largely an internal method; other clients
