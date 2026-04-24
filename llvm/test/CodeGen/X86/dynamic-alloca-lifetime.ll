@@ -19,10 +19,12 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
 define void @foo(i1 %cond1, i1 %cond2) #1 {
 entry:
   %bitmapBuffer = alloca [8192 x i8], align 1
+  call void @llvm.ssp.protected(ptr %bitmapBuffer)
   br i1 %cond1, label %end1, label %bb1
 
 bb1:
   %bitmapBuffer229 = alloca [8192 x i8], align 1
+  call void @llvm.ssp.protected(ptr %bitmapBuffer229)
   br i1 %cond2, label %end1, label %if.else130
 
 end1:
@@ -36,6 +38,7 @@ if.else130:                                       ; preds = %bb1
   br label %end1
 }
 
+declare void @llvm.ssp.protected(ptr)
 declare void @bar()
 
 attributes #0 = { nounwind }

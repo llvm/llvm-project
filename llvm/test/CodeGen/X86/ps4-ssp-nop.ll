@@ -22,6 +22,7 @@ define signext i8 @check_input(ptr %input) nounwind uwtable ssp {
 entry:
   %input.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
+  call void @llvm.ssp.protected(ptr %buf)
   store ptr %input, ptr %input.addr, align 8
   %0 = load ptr, ptr %input.addr, align 8
   %call = call ptr @strcpy(ptr %buf, ptr %0) nounwind
@@ -29,6 +30,7 @@ entry:
   ret i8 %1
 }
 
+declare void @llvm.ssp.protected(ptr)
 declare ptr @strcpy(ptr, ptr) nounwind
 
 define i32 @main() nounwind uwtable ssp {

@@ -146,6 +146,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    callq ___stack_chk_fail
 entry:
   %strs = alloca [1000 x [1001 x i8]], align 16
+  call void @llvm.ssp.protected(ptr %strs)
   br label %for.cond
 
 for.cond:
@@ -227,6 +228,8 @@ for.end40:
   %puts44 = call i32 @puts(ptr @.str3)
   ret i32 0
 }
+
+declare void @llvm.ssp.protected(ptr)
 
 declare ptr @memchr(ptr, i32, i64) nounwind readonly
 declare void @exit(i32) noreturn

@@ -2,6 +2,7 @@
 
 declare dso_local void @val_fn(<vscale x 4 x float>)
 declare dso_local void @ptr_fn(ptr)
+declare void @llvm.ssp.protected(ptr)
 
 ; An alloca of a scalable vector shouldn't trigger stack protection.
 
@@ -175,6 +176,7 @@ entry:
 define void @local_stack_alloc(i64 %val) #0 {
 entry:
   %char_arr = alloca [8 x i8], align 4
+  call void @llvm.ssp.protected(ptr %char_arr)
   %gep0 = getelementptr [8 x i8], ptr %char_arr, i64 0, i64 0
   store i8 0, ptr %gep0, align 8
   %large1 = alloca [4096 x i64], align 8

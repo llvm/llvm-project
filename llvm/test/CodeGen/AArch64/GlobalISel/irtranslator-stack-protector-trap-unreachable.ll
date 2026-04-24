@@ -8,6 +8,8 @@
 
 ;; Make sure we emit trap instructions after stack protector checks iff NoTrapAfterNoReturn is false.
 
+declare void @llvm.ssp.protected(ptr)
+
 define void @test() nounwind ssp {
   ; NO_TRAP_UNREACHABLE-LABEL: name: test
   ; NO_TRAP_UNREACHABLE: bb.1.entry:
@@ -73,6 +75,7 @@ define void @test() nounwind ssp {
   ; TRAP_UNREACHABLE-NEXT:   RET_ReallyLR
 entry:
   %buf = alloca [8 x i8]
+  call void @llvm.ssp.protected(ptr %buf)
   %result = call i32(ptr) @callee(ptr %buf) nounwind
   ret void
 }

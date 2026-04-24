@@ -4,10 +4,13 @@
 ;CHECK:  movq ___stack_chk_guard@GOTPCREL(%rip), [[R0:%[a-z0-9]+]]
 ;CHECK:  movq ([[R0]]), {{%[a-z0-9]+}}
 
+declare void @llvm.ssp.protected(ptr nocapture) nofree nosync nounwind memory(none)
+
 ; Function Attrs: nounwind ssp uwtable
 define i32 @test_stack_guard_remat() #0 {
 entry:
   %a1 = alloca [256 x i32], align 16
+  call void @llvm.ssp.protected(ptr %a1)
   call void @llvm.lifetime.start.p0(i64 1024, ptr %a1)
   call void @foo3(ptr %a1)
   call void asm sideeffect "foo2", "~{r12},~{r13},~{r14},~{r15},~{ebx},~{esi},~{edi},~{dirflag},~{fpsr},~{flags}"()

@@ -3,8 +3,11 @@
 
 @__stack_chk_guard = internal global [8 x i64] zeroinitializer, align 16
 
+declare void @llvm.ssp.protected(ptr nocapture) nofree nosync nounwind memory(none)
+
 define void @f() sspstrong {
   %tbl = alloca [4 x i64], align 16
+  call void @llvm.ssp.protected(ptr %tbl)
   ret void
 }
 

@@ -23,9 +23,12 @@
 ; NO_TRAP_UNREACHABLE-NOT: BRK 1
 ; NO_TRAP_UNREACHABLE-EMPTY:
 
+declare void @llvm.ssp.protected(ptr)
+
 define void @test() nounwind ssp {
 entry:
   %buf = alloca [8 x i8]
+  call void @llvm.ssp.protected(ptr %buf)
   %result = call i32(ptr) @callee(ptr %buf) nounwind
   ret void
 }

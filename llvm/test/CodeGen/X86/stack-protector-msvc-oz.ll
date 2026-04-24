@@ -102,6 +102,7 @@ define void @test(ptr %a) nounwind ssp minsize {
 entry:
  %a_addr = alloca ptr    ; <ptr> [#uses=2]
  %buf = alloca [8 x i8]    ; <ptr> [#uses=2]
+ call void @llvm.ssp.protected(ptr %buf)
  store ptr %a, ptr %a_addr
  %0 = load ptr, ptr %a_addr, align 4    ; <ptr> [#uses=1]
  %1 = call ptr @strcpy(ptr %buf, ptr %0) nounwind   ; <ptr> [#uses=0]
@@ -111,6 +112,8 @@ entry:
 return:    ; preds = %entry
  ret void
 }
+
+declare void @llvm.ssp.protected(ptr)
 
 declare ptr @strcpy(ptr, ptr) nounwind
 

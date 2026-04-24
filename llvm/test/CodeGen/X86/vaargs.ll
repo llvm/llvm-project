@@ -4,6 +4,8 @@ target triple = "x86_64-apple-macosx10.9.0"
 
 %struct.__va_list_tag = type { i32, i32, ptr, ptr }
 
+declare void @llvm.ssp.protected(ptr nocapture) nofree nosync nounwind memory(none)
+
 ; Check that vastart gets the right thing.
 define i32 @sum(i32 %count, ...) nounwind optsize ssp uwtable {
 ; CHECK:      testb   %al, %al
@@ -22,6 +24,7 @@ define i32 @sum(i32 %count, ...) nounwind optsize ssp uwtable {
 ; NO-FLAGS-NOT: %flags
 
   %ap = alloca [1 x %struct.__va_list_tag], align 16
+  call void @llvm.ssp.protected(ptr %ap)
   call void @llvm.va_start(ptr %ap)
   %1 = icmp sgt i32 %count, 0
   br i1 %1, label %.lr.ph, label %._crit_edge

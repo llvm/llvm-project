@@ -138,6 +138,7 @@ define ptr @foo() #0 personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.13:
   %1 = alloca [14 x i8], align 16
+  call void @llvm.ssp.protected(ptr %1)
   %2 = invoke i32 @"foo2"(ptr null, ptr null) #1
           to label %3 unwind label %4
 
@@ -154,6 +155,7 @@ define ptr @foo() #0 personality ptr @__gxx_personality_sj0 {
   unreachable
 }
 
+declare void @llvm.ssp.protected(ptr)
 declare i32 @__gxx_personality_sj0(...)
 declare i32 @foo2(ptr,ptr)
 declare void @foo3(ptr,ptr,ptr)

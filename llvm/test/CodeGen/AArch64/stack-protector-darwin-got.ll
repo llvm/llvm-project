@@ -3,6 +3,8 @@
 
 @.str = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 
+declare void @llvm.ssp.protected(ptr)
+
 ; Check we use the GOT to reference ___stack_chk_guard on Darwin
 
 define void @test(ptr %a) #0 {
@@ -56,6 +58,7 @@ define void @test(ptr %a) #0 {
 entry:
   %a.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
+  call void @llvm.ssp.protected(ptr %buf)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %buf, ptr %0)

@@ -41,6 +41,7 @@ define void @boofer(i32) #0 {
   %7 = call ptr @llvm.stacksave()
   store ptr %7, ptr %3, align 8
   %8 = alloca i32, i64 %6, align 16
+  call void @llvm.ssp.protected(ptr %8)
   store i64 %6, ptr %4, align 8
   %9 = load ptr, ptr %3, align 8
   call void @llvm.stackrestore(ptr %9)
@@ -60,6 +61,7 @@ define void @shibe(i32) #0 {
   %7 = call ptr @llvm.stacksave()
   store ptr %7, ptr %3, align 8
   %8 = alloca i32, i64 %6, align 16
+  call void @llvm.ssp.protected(ptr %8)
   store i64 %6, ptr %4, align 8
   %9 = load ptr, ptr %3, align 8
   call void @llvm.stackrestore(ptr %9)

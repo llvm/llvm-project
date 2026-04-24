@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=i386-pc-windows-msvc < %s -o - | FileCheck -check-prefix=MSVC-I386 %s
 ; RUN: llc -mtriple=x86_64-w64-mingw32 < %s -o - | FileCheck --check-prefix=MINGW-X64 %s
 ; RUN: llc -mtriple=x86_64-pc-cygwin < %s -o - | FileCheck --check-prefix=MINGW-X64 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=IGNORE_INTRIN %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=NO-VAR %s
 
 %struct.foo = type { [16 x i8] }
 %struct.foo.0 = type { [4 x i8] }
@@ -103,6 +103,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
+  call void @llvm.ssp.protected(ptr %buf)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %buf, ptr %0)
@@ -146,6 +147,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
+  call void @llvm.ssp.protected(ptr %buf)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %buf, ptr %0)
@@ -185,6 +187,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
+  call void @llvm.ssp.protected(ptr %buf)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %buf, ptr %0)
@@ -258,6 +261,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo, align 1
+  call void @llvm.ssp.protected(ptr %b)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %b, ptr %0)
@@ -297,6 +301,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo, align 1
+  call void @llvm.ssp.protected(ptr %b)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %b, ptr %0)
@@ -336,6 +341,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo, align 1
+  call void @llvm.ssp.protected(ptr %b)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %b, ptr %0)
@@ -452,6 +458,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %buf = alloca [4 x i8], align 1
+  call void @llvm.ssp.protected(ptr %buf)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %buf, ptr %0)
@@ -491,6 +498,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %buf = alloca [4 x i8], align 1
+  call void @llvm.ssp.protected(ptr %buf)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %buf, ptr %0)
@@ -607,6 +615,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo.0, align 1
+  call void @llvm.ssp.protected(ptr %b)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %b, ptr %0)
@@ -646,6 +655,7 @@ entry:
 
   %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo.0, align 1
+  call void @llvm.ssp.protected(ptr %b)
   store ptr %a, ptr %a.addr, align 8
   %0 = load ptr, ptr %a.addr, align 8
   %call = call ptr @strcpy(ptr %b, ptr %0)
@@ -3176,6 +3186,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca %class.A, align 1
+  call void @llvm.ssp.protected(ptr %a)
   %0 = load i8, ptr %a, align 1
   ret i8 %0
 }
@@ -3206,6 +3217,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca %class.A, align 1
+  call void @llvm.ssp.protected(ptr %a)
   %0 = load i8, ptr %a, align 1
   ret i8 %0
 }
@@ -3295,6 +3307,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %x = alloca %struct.deep, align 1
+  call void @llvm.ssp.protected(ptr %x)
   %0 = load i8, ptr %x, align 1
   ret i8 %0
 }
@@ -3325,6 +3338,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %x = alloca %struct.deep, align 1
+  call void @llvm.ssp.protected(ptr %x)
   %0 = load i8, ptr %x, align 1
   ret i8 %0
 }
@@ -3394,6 +3408,7 @@ entry:
   %0 = load i32, ptr %n.addr, align 4
   %conv = sext i32 %0 to i64
   %1 = alloca i8, i64 %conv
+  call void @llvm.ssp.protected(ptr %1)
   store ptr %1, ptr %a, align 8
   ret void
 }
@@ -3499,7 +3514,9 @@ entry:
 
 ; test25b: array of [4 x i32]
 ;          ssp attribute
-; Requires no protector, except for Darwin which _does_ require a protector.
+; Requires no protector. With the intrinsic-based approach, the Darwin
+; platform-specific type analysis (any array >= ssp-buffer-size) is not
+; applied without an explicit llvm.ssp.protected annotation.
 ; Function Attrs: ssp
 define i32 @test25b() #0 {
 entry:
@@ -3516,8 +3533,9 @@ entry:
 ; LINUX-KERNEL-X64: .cfi_endproc
 
 ; DARWIN-X64-LABEL: test25b:
-; DARWIN-X64: mov{{l|q}} ___stack_chk_guard
-; DARWIN-X64: callq ___stack_chk_fail
+; DARWIN-X64-NOT: mov{{l|q}} ___stack_chk_guard
+; DARWIN-X64-NOT: callq ___stack_chk_fail
+; DARWIN-X64: .cfi_endproc
 
 ; MSVC-I386-LABEL: test25b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
@@ -3558,6 +3576,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca [4 x i32], align 16
+  call void @llvm.ssp.protected(ptr %a)
   %0 = load i32, ptr %a, align 4
   ret i32 %0
 }
@@ -3588,6 +3607,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca [4 x i32], align 16
+  call void @llvm.ssp.protected(ptr %a)
   %0 = load i32, ptr %a, align 4
   ret i32 %0
 }
@@ -3740,6 +3760,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %test = alloca [33 x i8], align 16
+  call void @llvm.ssp.protected(ptr %test)
   %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %test)
   ret i32 %call
 }
@@ -3798,6 +3819,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %test = alloca [5 x i8], align 1
+  call void @llvm.ssp.protected(ptr %test)
   %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %test)
   ret i32 %call
 }
@@ -3864,6 +3886,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %test = alloca %struct.small_char, align 4
+  call void @llvm.ssp.protected(ptr %test)
   %test.coerce = alloca { i64, i8 }
   call void @llvm.memcpy.p0.p0.i64(ptr %test.coerce, ptr %test, i64 12, i1 false)
   %0 = getelementptr { i64, i8 }, ptr %test.coerce, i32 0, i32 0
@@ -3933,6 +3956,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
   %test = alloca ptr, align 8
   %0 = alloca i8, i64 5
+  call void @llvm.ssp.protected(ptr %0)
   store ptr %0, ptr %test, align 8
   %1 = load ptr, ptr %test, align 8
   %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %1)
@@ -3967,11 +3991,12 @@ entry:
 ; OPENBSD-AMD64-NEXT:  movl
 ; OPENBSD-AMD64-NEXT:  callq __stack_smash_handler
   %0 = alloca [5 x i8], align 1
+  call void @llvm.ssp.protected(ptr %0)
   ret void, !dbg !9
 }
 
 define i32 @IgnoreIntrinsicTest() #1 {
-; IGNORE_INTRIN: IgnoreIntrinsicTest:
+; NO-VAR: IgnoreIntrinsicTest:
   %1 = alloca i32, align 4
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
   store volatile i32 1, ptr %1, align 4
@@ -3979,8 +4004,8 @@ define i32 @IgnoreIntrinsicTest() #1 {
   %3 = mul nsw i32 %2, 42
   call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
   ret i32 %3
-; IGNORE_INTRIN-NOT: callq __stack_chk_fail
-; IGNORE_INTRIN:     .cfi_endproc
+; NO-VAR-NOT: callq __stack_chk_fail
+; NO-VAR:     .cfi_endproc
 }
 
 declare double @testi_aux()
@@ -3994,9 +4019,6 @@ declare void @_Z3exceptPi(ptr)
 declare i32 @__gxx_personality_v0(...)
 declare ptr @getp()
 declare i32 @dummy(...)
-declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 attributes #0 = { ssp }
 attributes #1 = { sspstrong }

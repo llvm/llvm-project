@@ -32,6 +32,7 @@ entry:
 ; CHECK-6M-DAG: str  [[REG]], [sp, #4]
 ; CHECK-6M-DAG: str  [[REG]], [sp]
   %buf = alloca [26 x i8], align 1
+  call void @llvm.ssp.protected(ptr %buf)
   call void @llvm.memset.p0.i32(ptr %buf, i8 0, i32 26, i1 false)
   call void @something(ptr %buf) nounwind
   ret void
@@ -90,3 +91,4 @@ for.end:
 declare void @something(ptr) nounwind
 declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
+declare void @llvm.ssp.protected(ptr)

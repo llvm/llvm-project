@@ -46,9 +46,11 @@ entry:
   %StackGuard = load ptr, ptr @__stack_chk_guard
   call void @llvm.stackprotector(ptr %StackGuard, ptr %StackGuardSlot)
   %container = alloca [32 x i8], align 1
+  call void @llvm.ssp.protected(ptr %container)
   call void @llvm.stackprotectorcheck(ptr @__stack_chk_guard)
   ret i32 -1
 }
 
 declare void @llvm.stackprotector(ptr, ptr) ssp
 declare void @llvm.stackprotectorcheck(ptr) ssp
+declare void @llvm.ssp.protected(ptr)

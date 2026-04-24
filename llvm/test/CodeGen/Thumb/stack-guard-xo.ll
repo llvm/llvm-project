@@ -94,6 +94,7 @@ define dso_local i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
   %buffer = alloca [9 x i8], align 1
+  call void @llvm.ssp.protected(ptr %buffer)
   store i32 0, ptr %retval, align 4
   %arrayidx = getelementptr inbounds [9 x i8], ptr %buffer, i32 0, i32 0
   %0 = load i8, ptr %arrayidx, align 1
@@ -289,6 +290,8 @@ entry:
   %spec.select = select i1 %tobool.not, i64 %sub3, i64 %and
   ret i64 %spec.select
 }
+
+declare void @llvm.ssp.protected(ptr)
 
 attributes #0 = { ssp "stack-protector-buffer-size"="8" }
 attributes #1 = {  sspreq }

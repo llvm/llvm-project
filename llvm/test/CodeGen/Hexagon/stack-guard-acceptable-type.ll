@@ -14,6 +14,7 @@ define zeroext i8 @f0(i32 %a0) #0 {
 b0:
   %v0 = alloca i32, align 4
   %v1 = alloca [64 x i8], align 8
+  call void @llvm.ssp.protected(ptr %v1)
   %v2 = alloca ptr, align 4
   store i32 %a0, ptr %v0, align 4
   store ptr @g0, ptr %v2, align 4
@@ -27,6 +28,8 @@ b0:
 
 ; Function Attrs: nounwind
 declare ptr @f1(ptr, ptr) #1
+
+declare void @llvm.ssp.protected(ptr)
 
 attributes #0 = { noinline nounwind ssp }
 attributes #1 = { nounwind }

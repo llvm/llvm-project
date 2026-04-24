@@ -216,10 +216,13 @@ define i32 @caller() #1 {
 define i32 @test29b() #2 {
 entry:
   %test = alloca [5 x i8], align 1
+  call void @llvm.ssp.protected(ptr %test)
   %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %test)
   ret i32 %call
 }
 
+
+declare void @llvm.ssp.protected(ptr)
 
 ; uselistorder directives
 uselistorder ptr @llvm.dbg.declare, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 18 }

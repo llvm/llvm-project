@@ -3,6 +3,8 @@
 
 @"\01LC" = internal constant [11 x i8] c"buf == %s\0A\00"		; <ptr> [#uses=1]
 
+declare void @llvm.ssp.protected(ptr)
+
 define void @test(ptr %a) nounwind ssp {
 ; WASM32-LABEL: test:
 ; WASM32:         .functype test (i32) -> ()
@@ -55,6 +57,7 @@ define void @test(ptr %a) nounwind ssp {
 entry:
 	%a_addr = alloca ptr		; <ptr> [#uses=2]
 	%buf = alloca [8 x i8]		; <ptr> [#uses=2]
+	call void @llvm.ssp.protected(ptr %buf)
   %"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
 	store ptr %a, ptr %a_addr
 	%0 = load ptr, ptr %a_addr, align 4		; <ptr> [#uses=1]
@@ -119,6 +122,7 @@ define i32 @test_return_i32(ptr %a) nounwind ssp {
 entry:
   %a_addr = alloca ptr    ; <ptr> [#uses=2]
   %buf = alloca [8 x i8]    ; <ptr> [#uses=2]
+  call void @llvm.ssp.protected(ptr %buf)
   %"alloca point" = bitcast i32 0 to i32    ; <i32> [#uses=0]
   store ptr %a, ptr %a_addr
   %0 = load ptr, ptr %a_addr, align 4    ; <ptr> [#uses=1]

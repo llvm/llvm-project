@@ -23,6 +23,7 @@
 ; Function Attrs: nounwind ssp
 define i32 @test_stack_guard_remat() #0 {
   %a1 = alloca [256 x i32], align 4
+  call void @llvm.ssp.protected(ptr %a1)
   call void @llvm.lifetime.start.p0(i64 1024, ptr %a1)
   call void @foo3(ptr %a1) #3
   call void asm sideeffect "foo2", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{sp},~{lr}"()
@@ -37,6 +38,8 @@ declare void @foo3(ptr)
 
 ; Function Attrs: nounwind
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+
+declare void @llvm.ssp.protected(ptr)
 
 attributes #0 = { nounwind ssp "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
