@@ -382,7 +382,7 @@ Module *Module::getPrivateModuleFragment() const {
 
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
   // All non-explicit submodules are exported.
-  for (Module *Mod: submodules())
+  for (Module *Mod : submodules())
     if (!Mod->IsExplicit)
       Exported.push_back(Mod);
 
