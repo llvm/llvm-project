@@ -468,7 +468,7 @@ public:
 
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __emplace_back_result_t emplace_back(_Args&&... __args) {
-    if (__layout_.__is_full()) [[likely]] {
+    if (!__layout_.__is_full()) [[likely]] {
       __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
     }
     else {
