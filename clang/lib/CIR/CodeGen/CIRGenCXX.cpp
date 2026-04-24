@@ -296,6 +296,10 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
   scope.setAsGlobalInit();
   builder.setInsertionPointToStart(block);
   mlir::Value getGlobal = builder.createGetGlobal(addr);
+  // If we're initializing a static local with a guard variable, set the flag
+  // that indicates that.
+  mlir::cast<cir::GetGlobalOp>(getGlobal.getDefiningOp())
+      .setStaticLocal(addr.getStaticLocalGuard().has_value());
 
   Address declAddr(getGlobal, getASTContext().getDeclAlign(varDecl));
   assert(performInit && "cannot have a constant initializer which needs "
