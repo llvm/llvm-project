@@ -1003,6 +1003,22 @@ def TLSModel : InheritableAttr {
   let Documentation = [TLSModelDocs];
 }
 
+def AnalyseAsClass : InheritableAttr {
+  let Spellings = [Clang<"analyse_as_class">];
+  let Args = [StringArgument<"ClassName">];
+  let Subjects = SubjectList<[Record],
+                             ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def AnalyseAsMethod : InheritableAttr {
+  let Spellings = [Clang<"analyse_as_method">];
+  let Args = [StringArgument<"MethodName">];
+  let Subjects = SubjectList<[CXXMethod],
+                             ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
 def AnalyzerNoReturn : InheritableAttr {
   // TODO: should this attribute be exposed with a [[]] spelling under the clang
   // vendor namespace, or should it use a vendor namespace specific to the
