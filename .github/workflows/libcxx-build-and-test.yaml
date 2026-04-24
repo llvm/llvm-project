@@ -144,6 +144,7 @@ jobs:
           'generic-hardening-mode-extensive-observe-semantic',
           'generic-hardening-mode-fast',
           'generic-hardening-mode-fast-with-abi-breaks',
+          'generic-llvm-libc',
           'generic-merged',
           'generic-modules-cxx17-lsv',
           'generic-no-exceptions',
