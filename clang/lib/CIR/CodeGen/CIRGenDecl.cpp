@@ -627,7 +627,8 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     // We have a constant initializer, but a nontrivial destructor. We still
     // need to perform a guarded "initialization" in order to register the
     // destructor.
-    cgm.errorNYI(d.getSourceRange(), "C++ guarded init");
+    emitCXXGuardedInit(d, gv, /*performInit=*/false);
+    gvAddr.setStaticLocal(true);
   }
 
   return gv;
@@ -896,7 +897,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
     QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
     assert(!cir::MissingFeatures::generateDebugInfo());
     if (ty->isVariablyModifiedType())
-      cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
+      emitVariablyModifiedType(ty);
     return;
   }
   case Decl::ImplicitConceptSpecialization:

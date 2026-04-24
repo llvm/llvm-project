@@ -168,6 +168,9 @@ struct FPFastMathDefaultInfoVector
 // during the translation to cope with aggregate flattening etc.
 FunctionType *getOriginalFunctionType(const Function &F);
 FunctionType *getOriginalFunctionType(const CallBase &CB);
+// This handles retrieving the original ASM constraints, which we had to spoof
+// into having a single output.
+StringRef getOriginalAsmConstraints(const CallBase &CB);
 } // namespace SPIRV
 
 // Add the given string as a series of integer operand, inserting null

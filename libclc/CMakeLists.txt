@@ -34,7 +34,7 @@ set( LIBCLC_TARGETS_ALL
   spirv64-mesa3d-
 )
 
-set(LIBCLC_TARGET ${LLVM_RUNTIMES_TARGET})
+set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
 if(NOT LIBCLC_TARGET)
   message(FATAL_ERROR "libclc target is empty\n")
@@ -264,6 +264,8 @@ add_libclc_library(libclc-${LIBCLC_TARGET}
   OUTPUT_FILENAME libclc
   PARENT_TARGET libclc-opencl-builtins
 )
+
+set(LIBCLC_UNRESOLVED_SYMBOL_TEST_TARGETS libclc-${LIBCLC_TARGET})
 
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)

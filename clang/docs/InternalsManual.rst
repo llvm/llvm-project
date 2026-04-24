@@ -3613,7 +3613,7 @@ Multiple occurrences accumulate prefixes.  For example,
 
 .. _diagnostic-location:
 
-Dianogstic Location
+Diagnostic Location
 ^^^^^^^^^^^^^^^^^^^
 Indicating that a line expects an error or a warning is easy. Put a comment
 on the line that has the diagnostic, use

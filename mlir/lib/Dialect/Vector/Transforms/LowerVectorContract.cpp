@@ -123,7 +123,8 @@ static Value reshapeStore(Location loc, Value val, Value result,
 static std::optional<Value>
 createContractArithOp(Location loc, Value x, Value y, Value acc,
                       vector::CombiningKind kind, PatternRewriter &rewriter,
-                      bool isInt, Value mask = Value()) {
+                      bool isInt, Value mask = Value(),
+                      arith::FastMathFlagsAttr fmf = {}) {
   using vector::CombiningKind;
   Value mul;
 
@@ -150,14 +151,13 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
         fma = selectPassthru(rewriter, mask, fma, acc);
       return fma;
     }
-    mul = arith::MulFOp::create(rewriter, loc, x, y);
+    mul = arith::MulFOp::create(rewriter, loc, x, y, fmf);
   }
 
   if (!acc)
     return std::optional<Value>(mul);
 
-  return makeArithReduction(rewriter, loc, kind, mul, acc,
-                            /*fastmath=*/nullptr, mask);
+  return makeArithReduction(rewriter, loc, kind, mul, acc, fmf, mask);
 }
 
 /// Return the positions of the reductions in the given map.
@@ -184,19 +184,21 @@ static std::optional<unsigned> getDimPosition(AffineMap map, unsigned dim) {
 /// Creates an AddIOp if `isInt` is true otherwise create an arith::AddFOp using
 /// operands `x` and `y`.
 static Value createAdd(Location loc, Value x, Value y, bool isInt,
-                       PatternRewriter &rewriter) {
+                       PatternRewriter &rewriter,
+                       arith::FastMathFlagsAttr fmf = {}) {
   if (isInt)
     return arith::AddIOp::create(rewriter, loc, x, y);
-  return arith::AddFOp::create(rewriter, loc, x, y);
+  return arith::AddFOp::create(rewriter, loc, x, y, fmf);
 }
 
 /// Creates a MulIOp if `isInt` is true otherwise create an MulFOp using
 /// operands `x and `y`.
 static Value createMul(Location loc, Value x, Value y, bool isInt,
-                       PatternRewriter &rewriter) {
+                       PatternRewriter &rewriter,
+                       arith::FastMathFlagsAttr fmf = {}) {
   if (isInt)
     return arith::MulIOp::create(rewriter, loc, x, y);
-  return arith::MulFOp::create(rewriter, loc, x, y);
+  return arith::MulFOp::create(rewriter, loc, x, y, fmf);
 }
 
 namespace {
@@ -705,6 +707,7 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
   Value res = arith::ConstantOp::create(rewriter, loc, dstType,
                                         rewriter.getZeroAttr(dstType));
   bool isInt = isa<IntegerType>(dstType.getElementType());
+  arith::FastMathFlagsAttr fmf = op.getFastmathAttr();
   llvm::SmallVector<Value> extractedCols;
   extractedCols.reserve(dstColumns);
   for (unsigned r = 0; r < dstRows; ++r) {
@@ -721,9 +724,10 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
       }
       Value extractedColRhs = extractedCols[c];
       Value product =
-          createMul(op.getLoc(), rowLhs, extractedColRhs, isInt, rewriter);
-      Value sum = vector::ReductionOp::create(
-          rewriter, op.getLoc(), vector::CombiningKind::ADD, product);
+          createMul(op.getLoc(), rowLhs, extractedColRhs, isInt, rewriter, fmf);
+      Value sum = vector::ReductionOp::create(rewriter, op.getLoc(),
+                                              vector::CombiningKind::ADD,
+                                              product, op.getFastmath());
 
       SmallVector<int64_t, 2> pos = rank == 1 ? SmallVector<int64_t, 2>{r}
                                               : SmallVector<int64_t, 2>{r, c};
@@ -731,7 +735,7 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
     }
   }
   if (auto acc = op.getAcc())
-    res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
+    res = createAdd(op.getLoc(), res, acc, isInt, rewriter, fmf);
   return res;
 }
 
@@ -845,7 +849,8 @@ struct ContractOpToElementwise
     newRhs = vector::ExtractOp::create(rewriter, loc, newRhs, rhsOffsets);
     std::optional<Value> result =
         createContractArithOp(loc, newLhs, newRhs, contractOp.getAcc(),
-                              contractOp.getKind(), rewriter, isInt);
+                              contractOp.getKind(), rewriter, isInt,
+                              /*mask=*/Value(), contractOp.getFastmathAttr());
     if (result)
       return *result;
 
@@ -1053,8 +1058,9 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
       lowMask = reshapeLoad(loc, mask, cast<VectorType>(mask.getType()),
                             iterIndex, d, rewriter);
 
-    Operation *lowContract = vector::ContractionOp::create(
-        rewriter, loc, lhs, rhs, acc, lowAffine, lowIter);
+    Operation *lowContract =
+        vector::ContractionOp::create(rewriter, loc, lhs, rhs, acc, lowAffine,
+                                      lowIter, op.getKind(), op.getFastmath());
     lowContract = maskOperation(rewriter, lowContract, lowMask);
     result = reshapeStore(loc, lowContract->getResult(0), result, resType,
                           resIndex, d, rewriter);
@@ -1099,13 +1105,16 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
     if (rhsType.getRank() != 1)
       return rewriter.notifyMatchFailure(
           op, "When LHS has rank 1, expected also RHS to have rank 1");
-    Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter);
+    arith::FastMathFlagsAttr fmf = op.getFastmathAttr();
+    Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter, fmf);
     auto kind = vector::CombiningKind::ADD;
 
     Value acc = op.getAcc();
     Operation *reductionOp =
-        acc ? vector::ReductionOp::create(rewriter, loc, kind, m, acc)
-            : vector::ReductionOp::create(rewriter, loc, kind, m);
+        acc ? vector::ReductionOp::create(rewriter, loc, kind, m, acc,
+                                          op.getFastmath())
+            : vector::ReductionOp::create(rewriter, loc, kind, m,
+                                          op.getFastmath());
     return maskOperation(rewriter, reductionOp, mask)->getResult(0);
   }
   // Construct new iterator types and affine map array attribute.
@@ -1130,7 +1139,8 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
                             iterIndex, d, rewriter);
 
     Operation *newContract = vector::ContractionOp::create(
-        rewriter, loc, lhs, rhs, result, lowAffine, lowIter);
+        rewriter, loc, lhs, rhs, result, lowAffine, lowIter, op.getKind(),
+        op.getFastmath());
     result = maskOperation(rewriter, newContract, newMask)->getResult(0);
   }
   return result;
