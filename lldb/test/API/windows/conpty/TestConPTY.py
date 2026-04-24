@@ -108,4 +108,4 @@ class ConPTYTestCase(TestBase):
         # Emitted by ConPTY during a full-screen init (no cursor inheritance).
         self.assertNotIn("\x1b[2J", output)  # clear screen
         self.assertNotIn("\x1b[3J", output)  # erase scrollback
-        self.assertNotIn("\x1b[H", output)   # cursor home
+        self.assertNotIn("\x1b[H", output)  # cursor home

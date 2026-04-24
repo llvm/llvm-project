@@ -88,8 +88,6 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
         std::error_code(GetLastError(), std::system_category()));
   }
 
-  DWORD mode = PIPE_NOWAIT;
-  SetNamedPipeHandleState(out_read, &mode, NULL, NULL);
   return llvm::Error::success();
 }
 
@@ -144,8 +142,9 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
     cursorCol = csbi.dwCursorPosition.X + 1;
   }
   HPCON hPC = INVALID_HANDLE_VALUE;
-  HRESULT hr = kernel32.CreatePseudoConsole(
-      consoleSize, hInputRead, hOutputWrite, PSEUDOCONSOLE_INHERIT_CURSOR, &hPC);
+  HRESULT hr =
+      kernel32.CreatePseudoConsole(consoleSize, hInputRead, hOutputWrite,
+                                   PSEUDOCONSOLE_INHERIT_CURSOR, &hPC);
   CloseHandle(hInputRead);
   CloseHandle(hOutputWrite);
 
@@ -168,8 +167,8 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   // and initialize without clearing the screen or overwriting LLDB's prompt.
   {
     char response[32];
-    int len = snprintf(response, sizeof(response), "\x1b[%d;%dR",
-                       cursorRow, cursorCol);
+    int len = snprintf(response, sizeof(response), "\x1b[%d;%dR", cursorRow,
+                       cursorCol);
     DWORD nwritten = 0;
     WriteFile(m_conpty_input, response, len, &nwritten, NULL);
   }

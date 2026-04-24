@@ -34,8 +34,7 @@ public:
   PseudoConsole &operator=(const PseudoConsole &) = delete;
   PseudoConsole &operator=(PseudoConsole &&) = delete;
 
-  /// Creates a named pipe pair for overlapped I/O. The read end is set to
-  /// non-blocking (PIPE_NOWAIT).
+  /// Creates a named pipe pair for overlapped I/O.
   /// On failure any handles that were successfully opened are closed and an
   /// error is returned.
   llvm::Error CreateOverlappedPipePair(HANDLE &out_read, HANDLE &out_write,
