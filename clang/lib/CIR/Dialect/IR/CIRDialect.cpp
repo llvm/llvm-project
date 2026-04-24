@@ -372,6 +372,29 @@ LogicalResult cir::BreakOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// LocalInitOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  cir::GlobalOp global = getReferencedGlobal(symbolTable);
+  if (!global)
+    return emitOpError("'")
+           << getGlobalName() << "' does not reference a valid cir.global";
+
+  if (getTls() && !global.getTlsModel())
+    return emitOpError("access to global not marked thread local");
+
+  bool isStaticLocal = getStaticLocal();
+  bool globalIsStaticLocal = global.getStaticLocalGuard().has_value();
+
+  if (isStaticLocal != globalIsStaticLocal)
+    return emitOpError("static_local attribute mismatch");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConditionOp
 //===----------------------------------------------------------------------===//
 
@@ -744,6 +767,11 @@ static bool isIntOrBoolCast(cir::CastOp op) {
          kind == cir::CastKind::int_to_bool || kind == cir::CastKind::integral;
 }
 
+static bool isCirFunctionPointerType(mlir::Type ty) {
+  const auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
+  return ptrTy && mlir::isa<cir::FuncType>(ptrTy.getPointee());
+}
+
 static Value tryFoldCastChain(cir::CastOp op) {
   cir::CastOp head = op, tail = op;
 
@@ -754,21 +782,37 @@ static Value tryFoldCastChain(cir::CastOp op) {
     op = head.getSrc().getDefiningOp<cir::CastOp>();
   }
 
-  if (head == tail)
+  if (head != tail) {
+    // if bool_to_int -> ...  -> int_to_bool: take the bool
+    // as we had it was before all casts
+    if (head.getKind() == cir::CastKind::bool_to_int &&
+        tail.getKind() == cir::CastKind::int_to_bool)
+      return head.getSrc();
+
+    // if int_to_bool -> ...  -> int_to_bool: take the result
+    // of the first one, as no other casts (and ext casts as well)
+    // don't change the first result
+    if (head.getKind() == cir::CastKind::int_to_bool &&
+        tail.getKind() == cir::CastKind::int_to_bool)
+      return head.getResult();
+
     return {};
+  }
 
-  // if bool_to_int -> ...  -> int_to_bool: take the bool
-  // as we had it was before all casts
-  if (head.getKind() == cir::CastKind::bool_to_int &&
-      tail.getKind() == cir::CastKind::int_to_bool)
-    return head.getSrc();
-
-  // if int_to_bool -> ...  -> int_to_bool: take the result
-  // of the first one, as no other casts (and ext casts as well)
-  // don't change the first result
-  if (head.getKind() == cir::CastKind::int_to_bool &&
-      tail.getKind() == cir::CastKind::int_to_bool)
-    return head.getResult();
+  // Bitcast round-trip on function pointers: T0 -> T1 -> T0 (e.g. no-proto
+  // redeclaration vs. actual prototype). Restrict to function pointers so
+  // other pointer bitcast chains are unchanged.
+  if (tail.getKind() == cir::CastKind::bitcast) {
+    auto *inner = tail.getSrc().getDefiningOp();
+    if (inner && isCirFunctionPointerType(tail.getType())) {
+      auto innerCast = mlir::dyn_cast<cir::CastOp>(inner);
+      if (innerCast && innerCast.getKind() == cir::CastKind::bitcast &&
+          innerCast.getSrc().getType() == tail.getType() &&
+          innerCast.getType() == tail.getSrc().getType()) {
+        return innerCast.getSrc();
+      }
+    }
+  }
 
   return {};
 }
@@ -1844,6 +1888,13 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
+  if ((getStaticLocalGuard().has_value() || getTlsModel()) &&
+      (!getCtorRegion().empty() || !getDtorRegion().empty()))
+    return emitOpError(
+        "Cannot have a thread-local or static-local global-op "
+        "with a constructor or destructor, they require in-function "
+        "initialization via LocalInitOp");
+
   // TODO(CIR): Many other checks for properties that haven't been upstreamed
   // yet.
 
@@ -2538,15 +2589,24 @@ mlir::LogicalResult cir::FuncOp::verify() {
 
   if (!isDeclaration() && getCoroutine()) {
     bool foundAwait = false;
+    int coroBodyCount = 0;
     this->walk([&](Operation *op) {
       if (auto await = dyn_cast<AwaitOp>(op)) {
         foundAwait = true;
-        return;
+      } else if (isa<CoroBodyOp>(op)) {
+        coroBodyCount++;
+        if (coroBodyCount > 1) {
+          return mlir::WalkResult::interrupt();
+        }
       }
+      return mlir::WalkResult::advance();
     });
     if (!foundAwait)
       return emitOpError()
              << "coroutine body must use at least one cir.await op";
+    if (coroBodyCount != 1)
+      return emitOpError()
+             << "coroutine function must have exactly one cir.body op";
   }
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
@@ -2959,6 +3019,48 @@ LogicalResult cir::AwaitOp::verify() {
   return success();
 }
 
+LogicalResult cir::CoReturnOp::verify() {
+  if (!getOperation()->getParentOfType<CoroBodyOp>())
+    return emitOpError("must be inside a cir.coro.body");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CoroBody
+//===----------------------------------------------------------------------===//
+
+void cir::CoroBodyOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor::parent());
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(&getBody()));
+}
+
+mlir::ValueRange
+cir::CoroBodyOp::getSuccessorInputs(RegionSuccessor successor) {
+  return ValueRange();
+}
+
+LogicalResult cir::CoroBodyOp::verify() {
+  if (!getOperation()->getParentOfType<FuncOp>().getCoroutine())
+    return emitOpError("enclosing function must be a coroutine");
+  return success();
+}
+
+void cir::CoroBodyOp::build(OpBuilder &builder, OperationState &result,
+                            BuilderCallbackRef bodyBuilder) {
+  assert(bodyBuilder &&
+         "the builder callback for 'CoroBodyOp' must be present");
+  OpBuilder::InsertionGuard guard(builder);
+
+  Region *bodyRegion = result.addRegion();
+  builder.createBlock(bodyRegion);
+  bodyBuilder(builder, result.location);
+}
+
 //===----------------------------------------------------------------------===//
 // CopyOp Definitions
 //===----------------------------------------------------------------------===//
@@ -2967,9 +3069,6 @@ LogicalResult cir::CopyOp::verify() {
   // A data layout is required for us to know the number of bytes to be copied.
   if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
     return emitError() << "missing data layout for pointee type";
-
-  if (getSrc() == getDst())
-    return emitError() << "source and destination are the same";
 
   if (getSkipTailPadding() &&
       !mlir::isa<cir::RecordType>(getType().getPointee()))
@@ -3685,7 +3784,7 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
                           [&](Value value) {
                             p.printOperand(value);
                             p << " : " << value.getType();
-                            if (*attrIt)
+                            if (mlir::isa<mlir::UnitAttr>(*attrIt))
                               p << " (maybe_memory)";
                             attrIt++;
                           });
@@ -3805,7 +3904,7 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
         size++;
 
         if (parser.parseOptionalLParen().failed()) {
-          operandAttrs.push_back(mlir::Attribute());
+          operandAttrs.push_back(mlir::DictionaryAttr::get(ctxt));
           return mlir::success();
         }
 
@@ -3848,11 +3947,11 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
   if (parser.parseOptionalKeyword("side_effects").succeeded())
     result.attributes.set("side_effects", UnitAttr::get(ctxt));
 
-  if (parser.parseOptionalArrow().succeeded() &&
-      parser.parseType(resType).failed())
+  if (parser.parseOptionalAttrDict(result.attributes).failed())
     return mlir::failure();
 
-  if (parser.parseOptionalAttrDict(result.attributes).failed())
+  if (parser.parseOptionalArrow().succeeded() &&
+      parser.parseType(resType).failed())
     return mlir::failure();
 
   result.attributes.set("asm_flavor", AsmFlavorAttr::get(ctxt, *flavor));

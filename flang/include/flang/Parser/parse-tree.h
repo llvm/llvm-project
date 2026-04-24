@@ -251,6 +251,8 @@ struct Call; // R1520 & R1521
 struct CallStmt; // R1521
 struct ProcedureDesignator; // R1522
 struct ActualArg; // R1524
+struct ConditionalArg; // F2023 R1526
+struct ConditionalArgTail; // F2023 R1526
 struct SeparateModuleSubprogram; // R1538
 struct EntryStmt; // R1541
 struct ReturnStmt; // R1542
@@ -3224,15 +3226,43 @@ struct ProcedureDesignator {
 // R1525 alt-return-spec -> * label
 WRAPPER_CLASS(AltReturnSpec, Label);
 
+// .NIL. (part of F2023 R1527)
+EMPTY_CLASS(ConditionalArgNil);
+
+// F2023 R1526 conditional-arg ->
+//   ( scalar-logical-expr ? consequent
+//     [ : scalar-logical-expr ? consequent ]...
+//     : consequent )
+// F2023 R1527 consequent -> consequent-arg | .NIL.
+// F2023 R1528 consequent-arg -> expr | variable
+struct ConditionalArg {
+  TUPLE_CLASS_BOILERPLATE(ConditionalArg);
+  struct Consequent { // F2023 R1527
+    UNION_CLASS_BOILERPLATE(Consequent);
+    // N.B. "variable" is parsed as "expr" and
+    // the distinction is determined by semantics.
+    std::variant<common::Indirection<Expr>, ConditionalArgNil> u;
+  };
+  std::tuple<ScalarLogicalExpr, Consequent,
+      common::Indirection<ConditionalArgTail>>
+      t;
+};
+
+struct ConditionalArgTail {
+  UNION_CLASS_BOILERPLATE(ConditionalArgTail);
+  std::variant<ConditionalArg, ConditionalArg::Consequent> u;
+};
+
 // R1524 actual-arg ->
 //         expr | variable | procedure-name | proc-component-ref |
-//         alt-return-spec
+//         alt-return-spec | conditional-arg
 struct ActualArg {
   WRAPPER_CLASS(PercentRef, Expr); // %REF(x) extension
   WRAPPER_CLASS(PercentVal, Expr); // %VAL(x) extension
   UNION_CLASS_BOILERPLATE(ActualArg);
   ActualArg(Expr &&x) : u{common::Indirection<Expr>(std::move(x))} {}
-  std::variant<common::Indirection<Expr>, AltReturnSpec, PercentRef, PercentVal>
+  std::variant<common::Indirection<Expr>, AltReturnSpec, PercentRef, PercentVal,
+      ConditionalArg>
       u;
 };
 
@@ -3344,7 +3374,9 @@ struct StmtFunctionStmt {
 // !DIR$ FORCEINLINE
 // !DIR$ INLINE
 // !DIR$ NOINLINE
+// !DIR$ INLINEALWAYS
 // !DIR$ IVDEP
+// !DIR$ SIMD
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3380,6 +3412,9 @@ struct CompilerDirective {
     WRAPPER_CLASS_BOILERPLATE(
         Prefetch, std::list<common::Indirection<Designator>>);
   };
+  struct InlineAlways {
+    WRAPPER_CLASS_BOILERPLATE(InlineAlways, std::optional<Name>);
+  };
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
   EMPTY_CLASS(NoUnrollAndJam);
@@ -3387,12 +3422,13 @@ struct CompilerDirective {
   EMPTY_CLASS(Inline);
   EMPTY_CLASS(NoInline);
   EMPTY_CLASS(IVDep);
+  EMPTY_CLASS(Simd);
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, VectorLength, std::list<NameValue>, Unroll, UnrollAndJam,
       Unrecognized, NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline,
-      NoInline, Prefetch, IVDep>
+      NoInline, InlineAlways, Prefetch, IVDep, Simd>
       u;
 };
 
@@ -5412,32 +5448,12 @@ struct OpenMPStandaloneConstruct {
       u;
 };
 
-struct OmpBeginLoopDirective : public OmpBeginDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpBeginLoopDirective, OmpBeginDirective);
-};
-
-struct OmpEndLoopDirective : public OmpEndDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpEndLoopDirective, OmpEndDirective);
-};
-
 // OpenMP directives enclosing do loop
-struct OpenMPLoopConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
-  OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-      : t({std::move(a), Block{}, std::nullopt}) {}
+struct OpenMPLoopConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct, OmpBlockConstruct);
 
-  const OmpBeginLoopDirective &BeginDir() const {
-    return std::get<OmpBeginLoopDirective>(t);
-  }
-  const std::optional<OmpEndLoopDirective> &EndDir() const {
-    return std::get<std::optional<OmpEndLoopDirective>>(t);
-  }
   const DoConstruct *GetNestedLoop() const;
   const OpenMPLoopConstruct *GetNestedConstruct() const;
-
-  CharBlock source;
-  std::tuple<OmpBeginLoopDirective, Block, std::optional<OmpEndLoopDirective>>
-      t;
 };
 
 // Lookahead class to identify execution-part OpenMP constructs without

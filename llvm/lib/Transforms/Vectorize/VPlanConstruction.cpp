@@ -431,6 +431,21 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
 
 /// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
 static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
+  // Get type info and debug location from the scalar phi corresponding to the
+  // canonical IV of the outermost (to be vectorized) loop. Only the outermost
+  // header will have a canonical IV. Other, nested loops are assigned a
+  // canonical IV of null type and debug location.
+  Type *CanIVTy = nullptr;
+  DebugLoc DL = DebugLoc::getUnknown();
+  auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  VPPhi *OutermostVPPhi = nullptr;
+  if (HeaderVPB == OutermostHeaderVPBB) {
+    OutermostVPPhi = cast<VPPhi>(&OutermostHeaderVPBB->front());
+    CanIVTy = OutermostVPPhi->getOperand(0)->getLiveInIRValue()->getType();
+    DL = OutermostVPPhi->getDebugLoc();
+  }
+
   auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
   auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
 
@@ -442,7 +457,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // successor order of blocks. Set region entry and exiting after both
   // HeaderVPB and LatchVPBB have been disconnected from their
   // predecessors/successors.
-  auto *R = Plan.createLoopRegion();
+  auto *R = Plan.createLoopRegion(CanIVTy, DL);
 
   // Transfer latch's successors to the region.
   VPBlockUtils::transferSuccessors(LatchVPBB, R);
@@ -450,6 +465,12 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
+
+  // Update canonical IV users for the outermost loop only.
+  if (OutermostVPPhi) {
+    OutermostVPPhi->replaceAllUsesWith(R->getCanonicalIV());
+    OutermostVPPhi->eraseFromParent();
+  }
 
   // All VPBB's reachable shallowly from HeaderVPB belong to the current region.
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
@@ -461,10 +482,8 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  auto *StartV = Plan.getConstantInt(IdxTy, 0);
-
-  // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
-  auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
+  // Add a VPPhi for the canonical IV starting at 0 as first recipe in header.
+  auto *CanonicalIVPHI = new VPPhi(Plan.getConstantInt(IdxTy, 0), {}, DL);
   HeaderVPBB->insert(CanonicalIVPHI, HeaderVPBB->begin());
 
   // We are about to replace the branch to exit the region. Remove the original
@@ -753,8 +772,6 @@ void VPlanTransforms::createHeaderPhiRecipes(
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
-  assert(isa<VPCanonicalIVPHIRecipe>(HeaderVPBB->front()) &&
-         "first recipe must be canonical IV phi");
   for (VPRecipeBase &R : make_early_inc_range(drop_begin(HeaderVPBB->phis()))) {
     auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
@@ -930,6 +947,16 @@ void VPlanTransforms::createInLoopReductionRecipes(
         LinkVPBB->appendRecipe(RedRecipe);
 
       CurrentLink->replaceAllUsesWith(RedRecipe);
+      // Move any store recipes using the RedRecipe that appear before it in the
+      // same block to just after the RedRecipe.
+      for (VPUser *U : make_early_inc_range(RedRecipe->users())) {
+        auto *UserR = dyn_cast<VPRecipeBase>(U);
+        if (!UserR || UserR->getParent() != LinkVPBB)
+          continue;
+        if (!match(UserR, m_VPInstruction<Instruction::Store>()))
+          continue;
+        UserR->moveAfter(RedRecipe);
+      }
       ToDelete.push_back(CurrentLink);
       PreviousLink = RedRecipe;
     }
@@ -1071,7 +1098,9 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
 
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
-  for (VPBlockBase *HeaderVPB : vp_post_order_shallow(Plan.getEntry()))
+  PostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> POT(
+      Plan.getEntry());
+  for (VPBlockBase *HeaderVPB : POT)
     if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
       createLoopRegion(Plan, HeaderVPB);
 
@@ -1128,7 +1157,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   // TODO: Handle early exits via Plan.getExitBlocks()
   MapVector<VPValue *, SmallVector<VPUser *>> NeedsPhi;
   for (VPRecipeBase &R : Header->phis())
-    if (!isa<VPCanonicalIVPHIRecipe, VPWidenInductionRecipe>(R))
+    if (!isa<VPWidenInductionRecipe>(R))
       NeedsPhi[cast<VPHeaderPHIRecipe>(R).getBackedgeValue()].push_back(&R);
 
   VPValue *V;
@@ -1386,7 +1415,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       MinOrMaxNumReductionsToHandle;
   bool HasUnsupportedPhi = false;
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe, VPWidenIntOrFpInductionRecipe>(&R))
+    if (isa<VPWidenIntOrFpInductionRecipe>(&R))
       continue;
     auto *Cur = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!Cur) {
@@ -1606,8 +1635,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // Add mask phi.
     VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
-    auto *MaskPHI = new VPWidenPHIRecipe(nullptr, /*Start=*/Plan.getFalse());
-    Builder.insert(MaskPHI);
+    auto *MaskPHI = Builder.createWidenPhi(Plan.getFalse());
 
     // Add select for mask.
     Builder.setInsertPoint(SelectR);

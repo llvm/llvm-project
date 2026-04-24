@@ -17,10 +17,12 @@
 #include <optional>
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -3443,6 +3445,9 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::ConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
   target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+  mlir::configureOpenMPToLLVMConversionLegality(target, converter);
+  target.addLegalDialect<mlir::omp::OpenMPDialect>();
+  mlir::populateOpenMPToLLVMConversionPatterns(converter, patterns);
   target.addIllegalDialect<mlir::BuiltinDialect, cir::CIRDialect,
                            mlir::func::FuncDialect>();
 
@@ -3493,8 +3498,14 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
     // is always zero. The second offset tell us which member it will access.
     llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
     const mlir::Type elementTy = getTypeConverter()->convertType(recordTy);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, llResTy, elementTy,
-                                                   adaptor.getAddr(), offset);
+    // Struct member accesses are always inbounds and nuw: the base pointer
+    // is valid and the member offset is a positive, constant offset within
+    // the struct layout, so it cannot wrap. This matches LLVM's
+    // IRBuilder::CreateStructGEP.
+    mlir::LLVM::GEPNoWrapFlags flags =
+        mlir::LLVM::GEPNoWrapFlags::inbounds | mlir::LLVM::GEPNoWrapFlags::nuw;
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        op, llResTy, elementTy, adaptor.getAddr(), offset, flags);
     return mlir::success();
   }
   case cir::RecordType::Union:
@@ -4452,7 +4463,7 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
   // CIR operand type.
   for (auto const &[cirOpAttr, cirOp] :
        zip(op.getOperandAttrs(), cirOperands)) {
-    if (!cirOpAttr) {
+    if (!mlir::isa<mlir::UnitAttr>(cirOpAttr)) {
       opAttrs.push_back(mlir::Attribute());
       continue;
     }
@@ -4588,32 +4599,22 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
     cir::IndirectBrOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
 
-  llvm::SmallVector<mlir::Block *, 8> successors;
-  llvm::SmallVector<mlir::ValueRange, 8> succOperands;
-  bool poison = op.getPoison();
-  for (mlir::Block *succ : op->getSuccessors())
-    successors.push_back(succ);
+  mlir::Value targetAddr = adaptor.getAddr();
 
-  for (mlir::ValueRange operand : op.getSuccOperands()) {
-    succOperands.push_back(operand);
-  }
-
-  auto llvmPtrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  mlir::Value targetAddr;
-  if (!poison) {
-    targetAddr = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(),
-                                               llvmPtrType, adaptor.getAddr());
-  } else {
+  // If the poison attribute is set, use llvm.mlir.poison as the address.
+  // This happens when the block has no predecessors and is essentially
+  // unreachable. Do NOT erase the block argument directly, as that violates
+  // the MLIR dialect conversion framework contract (the framework tracks block
+  // arguments and will clean them up). A block with no predecessors simply
+  // produces no PHI node.
+  if (op.getPoison()) {
+    auto llvmPtrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
     targetAddr =
         mlir::LLVM::PoisonOp::create(rewriter, op->getLoc(), llvmPtrType);
-    // Remove the block argument to avoid generating an empty PHI during
-    // lowering.
-    op->getBlock()->eraseArgument(0);
   }
 
-  auto newOp = mlir::LLVM::IndirectBrOp::create(
-      rewriter, op.getLoc(), targetAddr, succOperands, successors);
-  rewriter.replaceOp(op, newOp);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::IndirectBrOp>(
+      op, targetAddr, adaptor.getSuccOperands(), op.getSuccessors());
   return mlir::success();
 }
 

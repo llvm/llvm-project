@@ -5938,9 +5938,11 @@ bool ASTReader::readASTFileControlBlock(
     ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
     unsigned ClientLoadCapabilities) {
   // Open the AST file.
+  off_t Size;
+  time_t ModTime;
   std::unique_ptr<llvm::MemoryBuffer> OwnedBuffer;
   llvm::MemoryBuffer *Buffer =
-      ModCache.getInMemoryModuleCache().lookupPCM(Filename);
+      ModCache.getInMemoryModuleCache().lookupPCM(Filename, Size, ModTime);
   if (!Buffer) {
     // FIXME: We should add the pcm to the InMemoryModuleCache if it could be
     // read again later, but we do not have the context here to determine if it
@@ -9746,9 +9748,9 @@ void ASTReader::ReadExtnameUndeclaredIdentifiers(
     IdentifierInfo *NameId =
         DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I]);
     IdentifierInfo *ExtnameId =
-        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I+1]);
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I + 1]);
     SourceLocation Loc =
-        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I+2]);
+        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I + 2]);
     AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
         getContext(), ExtnameId->getName(),
         AttributeCommonInfo(ExtnameId, SourceRange(Loc),

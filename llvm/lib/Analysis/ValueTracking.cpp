@@ -5459,7 +5459,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::powi: {
-      if ((InterestedClasses & fcNegative) == fcNone)
+      if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
         break;
 
       const Value *Exp = II->getArgOperand(1);
@@ -5469,11 +5469,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownBits(Exp, isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
                        ExponentKnownBits, Q, Depth + 1);
 
-      KnownFPClass KnownSrc;
-      if (ExponentKnownBits.isZero() || !ExponentKnownBits.isEven()) {
-        computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
-                            KnownSrc, Q, Depth + 1);
+      FPClassTest InterestedSrcs = fcNone;
+      if (InterestedClasses & fcNan)
+        InterestedSrcs |= fcNan;
+      if (!ExponentKnownBits.isZero()) {
+        if (InterestedClasses & fcInf)
+          InterestedSrcs |= fcFinite | fcInf;
+        if ((InterestedClasses & fcNegative) && !ExponentKnownBits.isEven())
+          InterestedSrcs |= fcNegative;
       }
+
+      KnownFPClass KnownSrc;
+      if (InterestedSrcs != fcNone)
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Q, Depth + 1);
 
       Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
       break;
@@ -7368,7 +7377,7 @@ llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
                                              const SimplifyQuery &SQ) {
   ConstantRange CR1 =
       ConstantRange::fromKnownBits(V.getKnownBits(SQ), ForSigned);
-  ConstantRange CR2 = computeConstantRange(V, ForSigned, SQ.IIQ.UseInstrInfo);
+  ConstantRange CR2 = computeConstantRange(V, ForSigned, SQ);
   ConstantRange::PreferredRangeType RangeType =
       ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
   return CR1.intersectWith(CR2, RangeType);
@@ -9661,12 +9670,12 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
     // further constraint the constant ranges. At the moment this leads to
     // several regressions related to not transforming `multi_use(A + C0) eq/ne
     // C1` (see discussion: D58633).
-    ConstantRange LCR = computeConstantRange(
-        L1, ICmpInst::isSigned(LPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
-        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
-    ConstantRange RCR = computeConstantRange(
-        R1, ICmpInst::isSigned(RPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
-        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
+    SimplifyQuery SQ(DL);
+    ConstantRange LCR = computeConstantRange(L1, ICmpInst::isSigned(LPred), SQ,
+                                             MaxAnalysisRecursionDepth - 1);
+    ConstantRange RCR = computeConstantRange(R1, ICmpInst::isSigned(RPred), SQ,
+                                             MaxAnalysisRecursionDepth - 1);
+
     // Even if L1/R1 are not both constant, we can still sometimes deduce
     // relationship from a single constant. For example X u> Y implies X != 0.
     if (auto R = isImpliedCondCommonOperandWithCR(LPred, LCR, RPred, RCR))
@@ -9851,15 +9860,11 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
 
   // Both LHS and RHS are icmps.
   if (RHSOp0->getType()->getScalarType()->isIntOrPtrTy()) {
-    if (const auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
-      return isImpliedCondICmps(LHSCmp->getCmpPredicate(),
-                                LHSCmp->getOperand(0), LHSCmp->getOperand(1),
-                                RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue);
-    const Value *V;
-    if (match(LHS, m_NUWTrunc(m_Value(V))))
-      return isImpliedCondICmps(CmpInst::ICMP_NE, V,
-                                ConstantInt::get(V->getType(), 0), RHSPred,
-                                RHSOp0, RHSOp1, DL, LHSIsTrue);
+    CmpPredicate LHSPred;
+    Value *LHSOp0, *LHSOp1;
+    if (match(LHS, m_ICmpLike(LHSPred, m_Value(LHSOp0), m_Value(LHSOp1))))
+      return isImpliedCondICmps(LHSPred, LHSOp0, LHSOp1, RHSPred, RHSOp0,
+                                RHSOp1, DL, LHSIsTrue);
   } else {
     assert(RHSOp0->getType()->isFPOrFPVectorTy() &&
            "Expected floating point type only!");
@@ -9897,10 +9902,11 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     InvertRHS = true;
   }
 
-  if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS)) {
-    if (auto Implied = isImpliedCondition(
-            LHS, RHSCmp->getCmpPredicate(), RHSCmp->getOperand(0),
-            RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
+  CmpPredicate RHSPred;
+  Value *RHSOp0, *RHSOp1;
+  if (match(RHS, m_ICmpLike(RHSPred, m_Value(RHSOp0), m_Value(RHSOp1)))) {
+    if (auto Implied = isImpliedCondition(LHS, RHSPred, RHSOp0, RHSOp1, DL,
+                                          LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
   }
@@ -9908,15 +9914,6 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     if (auto Implied = isImpliedCondition(
             LHS, RHSCmp->getPredicate(), RHSCmp->getOperand(0),
             RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
-      return InvertRHS ? !*Implied : *Implied;
-    return std::nullopt;
-  }
-
-  const Value *V;
-  if (match(RHS, m_NUWTrunc(m_Value(V)))) {
-    if (auto Implied = isImpliedCondition(LHS, CmpInst::ICMP_NE, V,
-                                          ConstantInt::get(V->getType(), 0), DL,
-                                          LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
   }
@@ -10407,9 +10404,7 @@ static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
 }
 
 ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
-                                         bool UseInstrInfo, AssumptionCache *AC,
-                                         const Instruction *CtxI,
-                                         const DominatorTree *DT,
+                                         const SimplifyQuery &SQ,
                                          unsigned Depth) {
   assert(V->getType()->isIntOrIntVectorTy() && "Expected integer instruction");
 
@@ -10420,23 +10415,22 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     return C->toConstantRange();
 
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
-  InstrInfoQuery IIQ(UseInstrInfo);
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);
     // TODO: Return ConstantRange.
-    setLimitsForBinOp(*BO, Lower, Upper, IIQ, ForSigned);
+    setLimitsForBinOp(*BO, Lower, Upper, SQ.IIQ, ForSigned);
     CR = ConstantRange::getNonEmpty(Lower, Upper);
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
-    CR = getRangeForIntrinsic(*II, UseInstrInfo);
+    CR = getRangeForIntrinsic(*II, SQ.IIQ.UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
-    ConstantRange CRTrue = computeConstantRange(
-        SI->getTrueValue(), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
-    ConstantRange CRFalse = computeConstantRange(
-        SI->getFalseValue(), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+    ConstantRange CRTrue =
+        computeConstantRange(SI->getTrueValue(), ForSigned, SQ, Depth + 1);
+    ConstantRange CRFalse =
+        computeConstantRange(SI->getFalseValue(), ForSigned, SQ, Depth + 1);
     CR = CRTrue.unionWith(CRFalse);
-    CR = CR.intersectWith(getRangeForSelectPattern(*SI, IIQ));
+    CR = CR.intersectWith(getRangeForSelectPattern(*SI, SQ.IIQ));
   } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);
@@ -10448,7 +10442,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       CR = *Range;
 
   if (auto *I = dyn_cast<Instruction>(V)) {
-    if (auto *Range = IIQ.getMetadata(I, LLVMContext::MD_range))
+    if (auto *Range = SQ.IIQ.getMetadata(I, LLVMContext::MD_range))
       CR = CR.intersectWith(getConstantRangeFromMetadata(*Range));
 
     Value *FrexpSrc;
@@ -10462,9 +10456,6 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       // It should be possible to implement this for any type, but this logic
       // only computes the range assuming standard subnormal handling.
       if (APFloat::isIEEELikeFP(FltSem)) {
-        const DataLayout &DL = I->getFunction()->getDataLayout();
-        SimplifyQuery SQ(DL, nullptr, DT, AC, CtxI, UseInstrInfo);
-
         KnownFPClass KnownSrc =
             computeKnownFPClass(FrexpSrc, fcSubnormal, SQ, Depth + 1);
 
@@ -10484,18 +10475,18 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     }
   }
 
-  if (CtxI && AC) {
+  if (SQ.CxtI && SQ.AC) {
     // Try to restrict the range based on information from assumptions.
-    for (auto &AssumeVH : AC->assumptionsFor(V)) {
+    for (auto &AssumeVH : SQ.AC->assumptionsFor(V)) {
       if (!AssumeVH)
         continue;
       CallInst *I = cast<CallInst>(AssumeVH);
-      assert(I->getParent()->getParent() == CtxI->getParent()->getParent() &&
+      assert(I->getParent()->getParent() == SQ.CxtI->getParent()->getParent() &&
              "Got assumption for the wrong function!");
       assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
-      if (!isValidAssumeForContext(I, CtxI, DT))
+      if (!isValidAssumeForContext(I, SQ.CxtI, SQ.DT))
         continue;
       Value *Arg = I->getArgOperand(0);
       ICmpInst *Cmp = dyn_cast<ICmpInst>(Arg);
@@ -10504,10 +10495,10 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         continue;
       // TODO: Set "ForSigned" parameter via Cmp->isSigned()?
       ConstantRange RHS =
-          computeConstantRange(Cmp->getOperand(1), /* ForSigned */ false,
-                               UseInstrInfo, AC, I, DT, Depth + 1);
+          computeConstantRange(Cmp->getOperand(1), /*ForSigned=*/false,
+                               SQ.getWithInstruction(I), Depth + 1);
       CR = CR.intersectWith(
-          ConstantRange::makeAllowedICmpRegion(Cmp->getPredicate(), RHS));
+          ConstantRange::makeAllowedICmpRegion(Cmp->getCmpPredicate(), RHS));
     }
   }
 

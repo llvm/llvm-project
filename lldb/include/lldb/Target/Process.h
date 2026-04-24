@@ -111,6 +111,7 @@ public:
   bool GetOSPluginReportsAllThreads() const;
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
+  Args GetAlwaysRunThreadNames() const;
   FollowForkMode GetFollowForkMode() const;
   bool TrackMemoryCacheChanges() const;
 
@@ -1027,10 +1028,12 @@ public:
   virtual void DoDidExec() {}
 
   /// Called after a reported fork.
-  virtual void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {}
+  virtual void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                       bool is_expression_fork = false) {}
 
   /// Called after a reported vfork.
-  virtual void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {}
+  virtual void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                        bool is_expression_fork = false) {}
 
   /// Called after reported vfork completion.
   virtual void DidVForkDone() {}
@@ -3230,9 +3233,10 @@ protected:
   struct PrivateStateThread {
     PrivateStateThread(Process &process, lldb::StateType public_state,
                        lldb::StateType private_state,
-                       llvm::StringRef thread_name)
+                       llvm::StringRef thread_name, bool is_override = false)
         : m_process(process), m_public_state(public_state),
-          m_private_state(private_state), m_thread_name(thread_name) {}
+          m_private_state(private_state), m_is_override(is_override),
+          m_thread_name(thread_name) {}
     // This returns false if we couldn't start up the thread.  If that happens,
     // you won't be doing any debugging today.
     bool StartupThread();
@@ -3249,6 +3253,8 @@ protected:
     }
 
     bool IsRunning() { return m_is_running; }
+
+    bool IsOverride() const { return m_is_override; }
 
     void SetThreadName(llvm::StringRef new_name) { m_thread_name = new_name; }
 
@@ -3319,6 +3325,7 @@ protected:
     ProcessRunLock m_public_run_lock;
     ProcessRunLock m_private_run_lock;
     bool m_is_running = false;
+    bool m_is_override = false;
     ///< This will be the thread name given to the Private State HostThread when
     ///< it gets spun up.
     std::string m_thread_name;
@@ -3561,7 +3568,7 @@ private:
   // Starts up the private state thread that will watch for events from the
   // debugee.
 
-  lldb::thread_result_t RunPrivateStateThread();
+  lldb::thread_result_t RunPrivateStateThread(bool is_override);
 
 protected:
   void HandlePrivateEvent(lldb::EventSP &event_sp);
@@ -3655,6 +3662,28 @@ public:
     if (m_process)
       m_process->SetRunningUtilityFunction(false);
   }
+};
+
+/// RAII guard that marks the current thread as a private state thread.
+///
+/// When RunThreadPlan detects it is running on the private state thread, it
+/// spins up an override thread and reassigns m_current_private_state_thread_sp
+/// to it. The original PST continues processing events via DoOnRemoval
+/// callbacks, but CurrentThreadIsPrivateStateThread() no longer recognizes it.
+/// This guard sets a thread_local flag so that GetStackFrameList can identify
+/// the original PST and return parent frames instead of provider-augmented
+/// frames.
+struct PrivateStateThreadGuard {
+  PrivateStateThreadGuard() { g_is_private_state_thread = true; }
+  ~PrivateStateThreadGuard() { g_is_private_state_thread = false; }
+  static bool IsPrivateStateThread() { return g_is_private_state_thread; }
+
+  // Non-copyable, non-movable.
+  PrivateStateThreadGuard(const PrivateStateThreadGuard &) = delete;
+  PrivateStateThreadGuard &operator=(const PrivateStateThreadGuard &) = delete;
+
+private:
+  static thread_local bool g_is_private_state_thread;
 };
 
 } // namespace lldb_private

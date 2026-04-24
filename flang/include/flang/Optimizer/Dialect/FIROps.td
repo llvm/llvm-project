@@ -567,6 +567,16 @@ def fir_ZeroOp : fir_OneResultOp<"zero_bits", [Pure]> {
   let assemblyFormat = "type($intype) attr-dict";
 }
 
+def fir_FakeUseOp : fir_Op<"fake_use", []> {
+  let summary = "fake use of values to extend their lifetime";
+  let description = [{
+    This operation is used to keep values alive for debug information purposes.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$args);
+  let assemblyFormat = "$args attr-dict `:` type($args)";
+}
+
 //===----------------------------------------------------------------------===//
 // Terminator operations
 //===----------------------------------------------------------------------===//
@@ -1252,6 +1262,8 @@ def fir_BoxEleSizeOp : fir_SimpleOneResultOp<"box_elesize", [NoMemoryEffect]> {
   let arguments = (ins BoxOrClassType:$val);
 
   let results = (outs AnyIntegerLike);
+
+  let hasCanonicalizer = 1;
 }
 
 def fir_BoxTypeCodeOp : fir_SimpleOneResultOp<"box_typecode", [NoMemoryEffect]>
@@ -3308,6 +3320,29 @@ def fir_UseStmtOp
 }
 
 def ImplicitFirTerminator : SingleBlockImplicitTerminator<"FirEndOp">;
+
+def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
+    MemoryEffects<[MemWrite<DebuggingResource>]>,
+    IsolatedFromAbove,
+    ImplicitFirTerminator
+  ]> {
+  let summary = "USE statements inside a Fortran module";
+  let description = [{
+    Records the Fortran `USE` statements that appear in a module's specification
+    part for debug metadata.
+
+    The region holds one `fir.use_stmt` per `USE`, in program order. This
+    operation has no runtime effect. It is emitted only when full debug
+    information is requested.
+  }];
+
+  let arguments = (ins StrAttr:$module_name);
+  let regions = (region SizedRegion<1>:$uses);
+
+  let assemblyFormat = [{
+    $module_name attr-dict-with-keyword $uses
+  }];
+}
 
 def fir_TypeInfoOp : fir_Op<"type_info",
     [IsolatedFromAbove, Symbol, ImplicitFirTerminator]> {

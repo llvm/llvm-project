@@ -1010,7 +1010,7 @@ makeAtomicReductionGen(omp::DeclareReductionOp decl,
 static OwningDataPtrPtrReductionGen
 makeRefDataPtrGen(omp::DeclareReductionOp decl, llvm::IRBuilderBase &builder,
                   LLVM::ModuleTranslation &moduleTranslation, bool isByRef) {
-  if (!isByRef)
+  if (!isByRef || decl.getDataPtrPtrRegion().empty())
     return OwningDataPtrPtrReductionGen();
 
   OwningDataPtrPtrReductionGen refDataPtrGen =
@@ -1975,13 +1975,25 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
+static omp::DistributeOp
+getDistributeCapturingTeamsReduction(omp::TeamsOp teamsOp) {
+  // Early return if we found more than one distribute op or if we can't find
+  // any distribute op in the teams region.
+  omp::DistributeOp distOp;
+  WalkResult walk = teamsOp.getRegion().walk([&](omp::DistributeOp op) {
+    if (distOp)
+      return WalkResult::interrupt();
+    distOp = op;
+    return WalkResult::skip();
+  });
+  if (walk.wasInterrupted() || !distOp)
+    return {};
+
   auto iface =
       llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(teamsOp.getOperation());
   // Check that all uses of the reduction block arg has the same distribute op
   // parent.
   llvm::SmallVector<mlir::Operation *> debugUses;
-  Operation *distOp = nullptr;
   for (auto ra : iface.getReductionBlockArgs())
     for (auto &use : ra.getUses()) {
       auto *useOp = use.getOwner();
@@ -1990,17 +2002,8 @@ static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
         debugUses.push_back(useOp);
         continue;
       }
-
-      auto currentDistOp = useOp->getParentOfType<omp::DistributeOp>();
-      // Use is not inside a distribute op - return false
-      if (!currentDistOp)
-        return false;
-      // Multiple distribute operations - return false
-      Operation *currentOp = currentDistOp.getOperation();
-      if (distOp && (distOp != currentOp))
-        return false;
-
-      distOp = currentOp;
+      if (!distOp->isProperAncestor(useOp))
+        return {};
     }
 
   // If we are going to use distribute reduction then remove any debug uses of
@@ -2008,7 +2011,7 @@ static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
   // any mapped value in moduleTranslation and will eventually error out.
   for (auto *use : debugUses)
     use->erase();
-  return true;
+  return distOp;
 }
 
 // Convert an OpenMP Teams construct to LLVM IR using OpenMPIRBuilder
@@ -2029,7 +2032,7 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
 
   // Only do teams reduction if there is no distribute op that captures the
   // reduction instead.
-  bool doTeamsReduction = !teamsReductionContainedInDistribute(op);
+  bool doTeamsReduction = !getDistributeCapturingTeamsReduction(op);
   if (doTeamsReduction) {
     isByRef = getIsByRef(op.getReductionByref());
 
@@ -6322,10 +6325,10 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   /// Process teams op reduction in distribute if the reduction is contained in
-  /// the distribute op.
+  /// this specific distribute op.
   omp::TeamsOp teamsOp = opInst.getParentOfType<omp::TeamsOp>();
   bool doDistributeReduction =
-      teamsOp ? teamsReductionContainedInDistribute(teamsOp) : false;
+      teamsOp && getDistributeCapturingTeamsReduction(teamsOp) == distributeOp;
 
   DenseMap<Value, llvm::Value *> reductionVariableMap;
   unsigned numReductionVars = teamsOp ? teamsOp.getNumReductionVars() : 0;

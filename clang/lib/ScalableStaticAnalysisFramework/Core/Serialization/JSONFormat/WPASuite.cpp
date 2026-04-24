@@ -150,7 +150,7 @@ llvm::Expected<WPASuite> JSONFormat::readWPASuite(llvm::StringRef Path) {
           .build();
     }
 
-    auto ExpectedIdTable = entityIdTableFromJSON(*IdTableArray);
+    auto ExpectedIdTable = luEntityIdTableFromJSON(*IdTableArray);
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
@@ -189,7 +189,7 @@ llvm::Error JSONFormat::writeWPASuite(const WPASuite &Suite,
                                       llvm::StringRef Path) {
   Object RootObject;
 
-  RootObject["id_table"] = entityIdTableToJSON(getIdTable(Suite));
+  RootObject["id_table"] = luEntityIdTableToJSON(getIdTable(Suite));
 
   auto ExpectedResults = analysisResultMapToJSON(getData(Suite));
   if (!ExpectedResults) {

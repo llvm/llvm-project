@@ -416,6 +416,32 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 
     auto [resultType, extractedElements] = *reductionInfo;
     Location loc = reduceOp->getLoc();
+
+    // Handle boolean reductions with spirv.Any / spirv.All.
+    if (resultType.isInteger(1)) {
+      vector::CombiningKind kind = reduceOp.getKind();
+
+      if (kind == vector::CombiningKind::OR) {
+        Value result = spirv::AnyOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalOrOp::create(rewriter, loc, resultType, result,
+                                              acc);
+        rewriter.replaceOp(reduceOp, result);
+        return success();
+      }
+
+      if (kind == vector::CombiningKind::AND) {
+        Value result = spirv::AllOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalAndOp::create(rewriter, loc, resultType,
+                                               result, acc);
+        rewriter.replaceOp(reduceOp, result);
+        return success();
+      }
+    }
+
     Value result = extractedElements.front();
     for (Value next : llvm::drop_begin(extractedElements)) {
       switch (reduceOp.getKind()) {
@@ -435,22 +461,28 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
     result = fop::create(rewriter, loc, resultType, result, next);             \
     break
 
+#define INT_CASE(kind, iop)                                                    \
+  case vector::CombiningKind::kind:                                            \
+    assert(isa<IntegerType>(resultType));                                      \
+    result = spirv::iop::create(rewriter, loc, resultType, result, next);      \
+    break
+
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
         INT_AND_FLOAT_CASE(MUL, IMulOp, FMulOp);
         INT_OR_FLOAT_CASE(MINUI, SPIRVUMinOp);
         INT_OR_FLOAT_CASE(MINSI, SPIRVSMinOp);
         INT_OR_FLOAT_CASE(MAXUI, SPIRVUMaxOp);
         INT_OR_FLOAT_CASE(MAXSI, SPIRVSMaxOp);
+        INT_CASE(AND, BitwiseAndOp);
+        INT_CASE(OR, BitwiseOrOp);
+        INT_CASE(XOR, BitwiseXorOp);
 
-      case vector::CombiningKind::AND:
-      case vector::CombiningKind::OR:
-      case vector::CombiningKind::XOR:
-        return rewriter.notifyMatchFailure(reduceOp, "unimplemented");
       default:
         return rewriter.notifyMatchFailure(reduceOp, "not handled here");
       }
 #undef INT_AND_FLOAT_CASE
 #undef INT_OR_FLOAT_CASE
+#undef INT_CASE
     }
 
     rewriter.replaceOp(reduceOp, result);

@@ -278,3 +278,11 @@ li s10, 0x11111111
 # CHECK-S-OBJ-NOALIAS: pli.h s11, 1
 # CHECK-S-OBJ: pli.h s11, 1
 li s11, 0x00010001
+
+# CHECK-S-OBJ-NOALIAS: plui.h t3, -508
+# CHECK-S-OBJ: plui.h t3, -508
+li t3, 0x81008100
+
+# CHECK-S-OBJ-NOALIAS: lui t4, 524296
+# CHECK-S-OBJ: lui t4, 524296
+li t4, 0x80008000
