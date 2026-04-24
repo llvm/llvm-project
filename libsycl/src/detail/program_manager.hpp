@@ -97,8 +97,10 @@ private:
   // contain multiple device images, each owned by its own DeviceImageManager.
   // Controls lifetime of device image managers and, through them, parsed
   // OffloadBinary objects.
-  std::unordered_map<const void *,
-                     std::vector<std::unique_ptr<DeviceImageManager>>>
+  using BinaryStartKey = const void *;
+  using DeviceImageManagerVec =
+      std::vector<std::unique_ptr<DeviceImageManager>>;
+  std::unordered_map<BinaryStartKey, DeviceImageManagerVec>
       MDeviceImageManagers;
 
   // All work with device images and data related to it must be wrapped with a

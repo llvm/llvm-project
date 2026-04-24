@@ -36,7 +36,7 @@ void ProgramAndKernelManager::registerFatBin(const void *BinaryStart,
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                           "Failed to parse OffloadBinary");
 
-  std::vector<std::unique_ptr<DeviceImageManager>> Images;
+  DeviceImageManagerVec Images;
   Images.reserve(BinOrErr->size());
 
   std::lock_guard<std::mutex> Guard(MDataCollectionMutex);

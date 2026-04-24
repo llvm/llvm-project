@@ -36,6 +36,7 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
@@ -547,17 +548,15 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     Images.emplace_back(std::move(TheImage));
   }
 
-  // Write the final output into file.
-  int FD = -1;
-  if (std::error_code EC = sys::fs::openFileForWrite(OutputFile, FD))
-    return errorCodeToError(EC);
-  llvm::raw_fd_ostream FS(FD, /*shouldClose=*/true);
-
   llvm::SmallString<0> Buffer = OffloadBinary::write(Images);
   if (Buffer.size() % OffloadBinary::getAlignment() != 0)
     return createStringError("Offload binary has invalid size alignment");
-  FS << Buffer;
-  return Error::success();
+
+  auto OutputOrErr = FileOutputBuffer::create(OutputFile, Buffer.size());
+  if (!OutputOrErr)
+    return OutputOrErr.takeError();
+  llvm::copy(Buffer, (*OutputOrErr)->getBufferStart());
+  return (*OutputOrErr)->commit();
 }
 
 } // namespace
