@@ -283,6 +283,24 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
                      std::string("unimplemented AArch64 builtin call: ") +
                          cgf.getContext().BuiltinInfo.getName(info.BuiltinID));
     break;
+  case NEON::BI__builtin_neon_vminv_s8:
+  case NEON::BI__builtin_neon_vminvq_s8:
+  case NEON::BI__builtin_neon_vminv_s16:
+  case NEON::BI__builtin_neon_vminvq_s16:
+  case NEON::BI__builtin_neon_vminv_s32:
+  case NEON::BI__builtin_neon_vminvq_s32:
+  case NEON::BI__builtin_neon_vminv_u8:
+  case NEON::BI__builtin_neon_vminvq_u8:
+  case NEON::BI__builtin_neon_vminv_u16:
+  case NEON::BI__builtin_neon_vminvq_u16:
+  case NEON::BI__builtin_neon_vminv_u32:
+  case NEON::BI__builtin_neon_vminvq_u32:
+  case NEON::BI__builtin_neon_vminv_f32:
+  case NEON::BI__builtin_neon_vminvq_f32:
+  case NEON::BI__builtin_neon_vminvq_f64:
+  case NEON::BI__builtin_neon_vminnmv_f32:
+  case NEON::BI__builtin_neon_vminnmvq_f32:
+  case NEON::BI__builtin_neon_vminnmvq_f64:
   case NEON::BI__builtin_neon_vabdd_f64:
   case NEON::BI__builtin_neon_vabds_f32:
   case NEON::BI__builtin_neon_vshld_s64:
@@ -291,6 +309,14 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vpminqd_f64:
   case NEON::BI__builtin_neon_vpminnms_f32:
   case NEON::BI__builtin_neon_vpminnmqd_f64:
+  case NEON::BI__builtin_neon_vcvts_n_f32_s32:
+  case NEON::BI__builtin_neon_vcvts_n_f32_u32:
+  case NEON::BI__builtin_neon_vcvts_n_s32_f32:
+  case NEON::BI__builtin_neon_vcvts_n_u32_f32:
+  case NEON::BI__builtin_neon_vcvtd_n_f64_s64:
+  case NEON::BI__builtin_neon_vcvtd_n_f64_u64:
+  case NEON::BI__builtin_neon_vcvtd_n_s64_f64:
+  case NEON::BI__builtin_neon_vcvtd_n_u64_f64:
     return emitNeonCall(cgf.cgm, cgf.getBuilder(),
                         {cgf.convertType(expr->getArg(0)->getType())}, ops,
                         llvmIntrName, cgf.convertType(expr->getType()), loc);

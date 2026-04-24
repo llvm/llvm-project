@@ -7408,7 +7408,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
 }
 
 bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
-                                       Type *ScalarTy, Align CommonAlignment,
+                                       Type *BaseTy, Align CommonAlignment,
                                        SmallVectorImpl<unsigned> &SortedIndices,
                                        StridedPtrInfo &SPtrInfo,
                                        bool IsLoad) const {
@@ -7448,19 +7448,22 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // be if all the checks pass. Check if this type is legal for the target.
   const unsigned Sz = PointerOps.size();
   unsigned VecSz = Sz;
-  Type *NewScalarTy = ScalarTy;
+  Type *NewScalarTy = BaseTy;
   if (NumOffsets > 1) {
     if (Sz % NumOffsets != 0)
       return false;
     VecSz = Sz / NumOffsets;
+  }
+  if (NumOffsets > 1 || BaseTy->isVectorTy())
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
-        DL->getTypeSizeInBits(ScalarTy).getFixedValue() * NumOffsets);
-  }
+        DL->getTypeSizeInBits(BaseTy).getFixedValue() * NumOffsets);
   FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
   unsigned MinProfitableStridedOps =
       IsLoad ? MinProfitableStridedLoads : MinProfitableStridedStores;
-  if (Sz <= MinProfitableStridedOps || !TTI->isTypeLegal(StridedLoadTy) ||
+  const unsigned BaseTyNumElts = getNumElements(BaseTy);
+  if (Sz * BaseTyNumElts <= MinProfitableStridedOps ||
+      !TTI->isTypeLegal(StridedLoadTy) ||
       !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
     return false;
 
@@ -7475,8 +7478,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   sort(SortedOffsetsV);
 
   if (NumOffsets > 1) {
+    int64_t BaseBytes = DL->getTypeStoreSize(BaseTy);
     for (int I : seq<int>(1, SortedOffsetsV.size())) {
-      if (SortedOffsetsV[I] - SortedOffsetsV[I - 1] != 1)
+      if (SortedOffsetsV[I] - SortedOffsetsV[I - 1] != BaseBytes)
         return false;
     }
   }
@@ -7568,7 +7572,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
   SmallVector<int64_t> Coeffs0(VecSz);
   SmallVector<unsigned> SortedIndicesForOffset0;
-  const SCEV *Stride0 = calculateRtStride(PointerOps0, ScalarTy, *DL, *SE,
+  const SCEV *Stride0 = calculateRtStride(PointerOps0, BaseTy, *DL, *SE,
                                           SortedIndicesForOffset0, Coeffs0);
   if (!Stride0)
     return false;
@@ -7595,9 +7599,8 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         OffsetToPointerOpIdxMap[Offset].first;
     ArrayRef<unsigned> IndicesInAllPointerOps =
         OffsetToPointerOpIdxMap[Offset].second;
-    const SCEV *StrideWithinGroup =
-        calculateRtStride(PointerOpsForOffset, ScalarTy, *DL, *SE,
-                          SortedIndicesForOffset, Coeffs);
+    const SCEV *StrideWithinGroup = calculateRtStride(
+        PointerOpsForOffset, BaseTy, *DL, *SE, SortedIndicesForOffset, Coeffs);
 
     if (!StrideWithinGroup || StrideWithinGroup != Stride0)
       return false;
@@ -14754,7 +14757,8 @@ void BoUpSLP::transformNodes() {
     case Instruction::FAdd: {
       // Check if possible to convert (a*b)+c to fma.
       if (E.State != TreeEntry::Vectorize ||
-          !E.getOperations().isAddSubLikeOp())
+          !E.getOperations().isAddSubLikeOp() ||
+          E.getOperations().isAltShuffle())
         break;
       const TreeEntry *LHS = getOperandEntry(&E, 0);
       const TreeEntry *RHS = getOperandEntry(&E, 1);
@@ -20377,7 +20381,8 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
                                       MaybeAlign());
       Builder.SetInsertPoint(LastInst->getParent(), Res->getIterator());
       eraseInstruction(Res);
-      LastInstructionToPos.try_emplace(LastInst, Res);
+      if (E->State != TreeEntry::SplitVectorize)
+        LastInstructionToPos.try_emplace(LastInst, Res);
     }
   }
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
@@ -23886,15 +23891,24 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         EI.UserTE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
         EI.UserTE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI;
     if (IsNonSchedulableWithParentPhiNode) {
-      SmallSet<std::pair<Value *, Value *>, 4> Values;
-      for (const auto [Idx, V] :
-           enumerate(EI.UserTE->UserTreeIndex.UserTE->Scalars)) {
+      ArrayRef<Value *> PhiScalars = EI.UserTE->UserTreeIndex.UserTE->Scalars;
+      for (const auto [Idx, V] : enumerate(PhiScalars)) {
         Value *Op = EI.UserTE->UserTreeIndex.UserTE->getOperand(
             EI.UserTE->UserTreeIndex.EdgeIdx)[Idx];
         auto *I = dyn_cast<Instruction>(Op);
         if (!I || !isCommutative(I))
           continue;
-        if (!Values.insert(std::make_pair(V, Op)).second)
+        // Bail out only when I has a user that is an instruction outside the
+        // grandparent PHI's Scalars. Multiple uses that all land in the same
+        // vectorized PHI are tracked by the existing dependency machinery;
+        // uses outside it (e.g. a scalar PHI in a different block) break the
+        // scheduler's dep accounting for non-schedulable copyable bundles.
+        if (I->hasOneUse())
+          continue;
+        if (any_of(I->users(), [&](User *U) {
+              auto *UI = dyn_cast<Instruction>(U);
+              return UI && !is_contained(PhiScalars, UI);
+            }))
           return std::nullopt;
       }
     } else {
@@ -24845,6 +24859,19 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
         if (PickedInst->getNextNode() != LastScheduledInst)
           PickedInst->moveAfter(LastScheduledInst->getPrevNode());
         LastScheduledInst = PickedInst;
+      }
+      if (Bundle->getTreeEntry()->hasCopyableElements()) {
+        Instruction *MainOp = Bundle->getTreeEntry()->getMainOp();
+        for (Value *V : Bundle->getTreeEntry()->Scalars) {
+          auto *I = dyn_cast<Instruction>(V);
+          if (!I)
+            continue;
+          if (!I->hasOneUse() && Bundle->getTreeEntry()->isCopyableElement(I) &&
+              I->getParent() == MainOp->getParent() &&
+              doesNotNeedToBeScheduled(I) &&
+              !Bundle->getTreeEntry()->getOperations().isNonSchedulable(I))
+            I->moveBeforePreserving(LastScheduledInst->getIterator());
+        }
       }
       EntryToLastInstruction.try_emplace(Bundle->getTreeEntry(),
                                          LastScheduledInst);

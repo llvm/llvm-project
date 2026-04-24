@@ -85,6 +85,8 @@ public:
   bool Enter(const parser::EndFunctionStmt &);
   bool Enter(const parser::BlockConstruct &);
   void Leave(const parser::BlockConstruct &);
+  void Enter(const parser::InternalSubprogram &);
+  void Enter(const parser::ModuleSubprogram &);
 
   void Enter(const parser::SpecificationPart &);
   void Leave(const parser::SpecificationPart &);
@@ -103,8 +105,6 @@ public:
 
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
-  void Enter(const parser::OmpEndLoopDirective &);
-  void Leave(const parser::OmpEndLoopDirective &);
 
   void Enter(const parser::OpenMPAssumeConstruct &);
   void Leave(const parser::OpenMPAssumeConstruct &);
@@ -180,10 +180,23 @@ public:
   void Enter(const parser::OmpContextSelector &);
   void Leave(const parser::OmpContextSelector &);
 
+  template <typename A> void Enter(const parser::Statement<A> &);
+  void Leave(const parser::GotoStmt &);
+  void Leave(const parser::ComputedGotoStmt &);
+  void Leave(const parser::ArithmeticIfStmt &);
+  void Leave(const parser::AssignedGotoStmt &);
+  void Leave(const parser::AltReturnSpec &);
+  void Leave(const parser::ErrLabel &);
+  void Leave(const parser::EndLabel &);
+  void Leave(const parser::EorLabel &);
+
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
 private:
+  using LoopOrConstruct = std::variant<const parser::DoConstruct *,
+      const parser::OpenMPConstruct *>;
+
   // Most of these functions are defined in check-omp-structure.cpp, but
   // some groups have their own files.
 
@@ -272,8 +285,15 @@ private:
   void CheckVariableListItem(const SymbolSourceMap &symbols);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
+  void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
   void AnalyzeObject(const parser::OmpObject &object);
   void AnalyzeObjects(const parser::OmpObjectList &objects);
+
+  const parser::OpenMPConstruct *GetCurrentConstruct() const;
+  void CheckSourceLabel(const parser::Label &);
+  void CheckLabelContext(const parser::CharBlock, const parser::CharBlock,
+      const parser::OpenMPConstruct *, const parser::OpenMPConstruct *);
+  void ClearLabels();
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
@@ -400,14 +420,15 @@ private:
   parser::CharBlock visitedAtomicSource_;
   SymbolSourceMap deferredNonVariables_;
 
-  using LoopConstruct = std::variant<const parser::DoConstruct *,
-      const parser::OpenMPLoopConstruct *>;
-  std::vector<LoopConstruct> loopStack_;
+  // Stack of nested DO loops and OpenMP constructs.
+  // This is used to verify DO loop nest for DOACROSS, and branches into
+  // and out of OpenMP constructs.
+  std::vector<LoopOrConstruct> constructStack_;
   // Scopes for scoping units.
   std::vector<const Scope *> scopeStack_;
   // Stack of directive specifications (except for SECTION).
   // This is to allow visitor functions to see all specified clauses, since
-  // they are only recorded in DirContext as they are processed.
+  // they are only recorded in DirectiveContext as they are processed.
   std::vector<const parser::OmpDirectiveSpecification *> dirStack_;
 
   enum class PartKind : int {
@@ -417,7 +438,38 @@ private:
     ExecutionPart,
   };
   std::vector<PartKind> partStack_;
+
+  std::multimap<const parser::Label,
+      std::pair<parser::CharBlock, const parser::OpenMPConstruct *>>
+      sourceLabels_;
+  std::map<const parser::Label,
+      std::pair<parser::CharBlock, const parser::OpenMPConstruct *>>
+      targetLabels_;
+  parser::CharBlock currentStatementSource_;
 };
+
+template <typename A>
+void OmpStructureChecker::Enter(const parser::Statement<A> &statement) {
+  currentStatementSource_ = statement.source;
+  // Keep track of the labels in all the labelled statements
+  if (statement.label) {
+    auto label{statement.label.value()};
+    // Get the context to check if the labelled statement is in an
+    // enclosing OpenMP construct
+    auto *thisConstruct{GetCurrentConstruct()};
+    targetLabels_.emplace(
+        label, std::make_pair(currentStatementSource_, thisConstruct));
+    // Check if a statement that causes a jump to the 'label'
+    // has already been encountered
+    auto range{sourceLabels_.equal_range(label)};
+    for (auto it{range.first}; it != range.second; ++it) {
+      // Check if both the statement with 'label' and the statement that
+      // causes a jump to the 'label' are in the same scope
+      CheckLabelContext(it->second.first, currentStatementSource_,
+          it->second.second, thisConstruct);
+    }
+  }
+}
 
 /// Find a duplicate entry in the range, and return an iterator to it.
 /// If there are no duplicate entries, return nullopt.

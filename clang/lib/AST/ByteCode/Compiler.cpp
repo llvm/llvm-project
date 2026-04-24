@@ -2608,22 +2608,16 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (DiscardResult)
     return this->discard(Base);
 
-  // MemberExprs are almost always lvalues, in which case we don't need to
-  // do the load. But sometimes they aren't.
-  const auto maybeLoadValue = [&]() -> bool {
-    if (E->isGLValue())
-      return true;
-    if (OptPrimType T = classify(E))
-      return this->emitLoadPop(*T, E);
-    return false;
-  };
-
   if (const auto *VD = dyn_cast<VarDecl>(Member)) {
     // I am almost confident in saying that a var decl must be static
-    // and therefore registered as a global variable. But this will probably
-    // turn out to be wrong some time in the future, as always.
-    if (auto GlobalIndex = P.getGlobal(VD))
-      return this->emitGetPtrGlobal(*GlobalIndex, E) && maybeLoadValue();
+    // and therefore registered as a global variable.
+    if (auto GlobalIndex = P.getGlobal(VD)) {
+      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+        return false;
+      if (Member->getType()->isReferenceType())
+        return this->emitLoadPopPtr(E);
+      return true;
+    }
     return false;
   }
 
@@ -2644,6 +2638,17 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (!R)
     return false;
   const Record::Field *F = R->getField(FD);
+
+  // MemberExprs are almost always lvalues, in which case we don't need to
+  // do the load. But sometimes they aren't.
+  const auto maybeLoadValue = [&]() -> bool {
+    if (E->isGLValue())
+      return true;
+    if (OptPrimType T = classify(E))
+      return this->emitLoadPop(*T, E);
+    return false;
+  };
+
   // Leave a pointer to the field on the stack.
   if (F->Decl->getType()->isReferenceType())
     return this->emitGetFieldPop(PT_Ptr, F->Offset, E) && maybeLoadValue();
@@ -6737,12 +6742,13 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
                                     initNeedsOverridenLoc(Init));
-      assert(IFD->getChainingSize() >= 2);
+      unsigned ChainSize = IFD->getChainingSize();
+      assert(ChainSize >= 2);
 
       unsigned NestedFieldOffset = 0;
       const Record::Field *NestedField = nullptr;
-      for (const NamedDecl *ND : IFD->chain()) {
-        const auto *FD = cast<FieldDecl>(ND);
+      for (unsigned I = 0; I != ChainSize; ++I) {
+        const auto *FD = cast<FieldDecl>(IFD->chain()[I]);
         const Record *FieldRecord = this->P.getOrCreateRecord(FD->getParent());
         assert(FieldRecord);
 
@@ -6751,12 +6757,13 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         IsUnion = IsUnion || FieldRecord->isUnion();
 
         NestedFieldOffset += NestedField->Offset;
+
+        // Add a new InitChainLink for the record, but not for the final field.
+        if (I != ChainSize - 1)
+          InitStack.push_back(InitLink::Field(NestedField->Offset));
       }
       assert(NestedField);
 
-      unsigned FirstLinkOffset =
-          R->getField(cast<FieldDecl>(IFD->chain()[0]))->Offset;
-      InitLinkScope<Emitter> ILS(this, InitLink::Field(FirstLinkOffset));
       InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(InitExpr));
       if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr,
                                 IsUnion))
@@ -6776,6 +6783,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         if (!this->emitFinishInitPop(InitExpr))
           return false;
       }
+
+      InitStack.pop_back_n(ChainSize - 1);
 
     } else {
       assert(Init->isDelegatingInitializer());

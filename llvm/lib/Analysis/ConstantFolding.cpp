@@ -672,8 +672,11 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   return false;
 }
 
+/// OrigLoadTy is the original type being loaded, while LoadTy is the type
+/// currently being folded (which may be integer type mapped from OrigLoadTy).
 Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
-                                       int64_t Offset, const DataLayout &DL) {
+                                       Type *OrigLoadTy, int64_t Offset,
+                                       const DataLayout &DL) {
   // Bail out early. Not expect to load from scalable global variable.
   if (isa<ScalableVectorType>(LoadTy))
     return nullptr;
@@ -692,7 +695,8 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
 
     Type *MapTy = Type::getIntNTy(C->getContext(),
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
-    if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, Offset, DL)) {
+    if (Constant *Res =
+            FoldReinterpretLoadFromConst(C, MapTy, OrigLoadTy, Offset, DL)) {
       if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
         // Materializing a zero can be done trivially without a bitcast
         return Constant::getNullValue(LoadTy);
@@ -713,7 +717,13 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
   }
 
   unsigned BytesLoaded = (IntType->getBitWidth() + 7) / 8;
-  if (BytesLoaded > 32 || BytesLoaded == 0)
+  // Allow folding of large type loads (e.g. <16 x double>).
+  if (BytesLoaded > 128 || BytesLoaded == 0)
+    return nullptr;
+
+  // For scalar integer load, use smaller limit to avoid regression during
+  // memcmp expansion. Codegen may generate inefficient string operations.
+  if (BytesLoaded > 32 && OrigLoadTy->isIntegerTy())
     return nullptr;
 
   // If we're not accessing anything in this constant, the result is undefined.
@@ -729,8 +739,8 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
   if (Offset >= (int64_t)InitializerSize.getFixedValue())
     return PoisonValue::get(IntType);
 
-  unsigned char RawBytes[32] = {0};
-  unsigned char *CurPtr = RawBytes;
+  SmallVector<unsigned char, 64> RawBytes(BytesLoaded);
+  unsigned char *CurPtr = RawBytes.data();
   unsigned BytesLeft = BytesLoaded;
 
   // If we're loading off the beginning of the global, some bytes may be valid.
@@ -842,7 +852,7 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
   // Try hard to fold loads from bitcasted strange and non-type-safe things.
   if (Offset.getSignificantBits() <= 64)
     if (Constant *Result =
-            FoldReinterpretLoadFromConst(C, Ty, Offset.getSExtValue(), DL))
+            FoldReinterpretLoadFromConst(C, Ty, Ty, Offset.getSExtValue(), DL))
       return Result;
 
   return nullptr;
@@ -1440,20 +1450,18 @@ Constant *llvm::ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
   return ConstantFoldBinaryInstruction(Opcode, LHS, RHS);
 }
 
-static ConstantFP *flushDenormalConstant(Type *Ty, const APFloat &APF,
-                                         DenormalMode::DenormalModeKind Mode) {
+static Constant *flushDenormalConstant(Type *Ty, const APFloat &APF,
+                                       DenormalMode::DenormalModeKind Mode) {
   switch (Mode) {
   case DenormalMode::Dynamic:
     return nullptr;
   case DenormalMode::IEEE:
-    return ConstantFP::get(Ty->getContext(), APF);
+    return ConstantFP::get(Ty, APF);
   case DenormalMode::PreserveSign:
     return ConstantFP::get(
-        Ty->getContext(),
-        APFloat::getZero(APF.getSemantics(), APF.isNegative()));
+        Ty, APFloat::getZero(APF.getSemantics(), APF.isNegative()));
   case DenormalMode::PositiveZero:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat::getZero(APF.getSemantics(), false));
+    return ConstantFP::get(Ty, APFloat::getZero(APF.getSemantics(), false));
   default:
     break;
   }
@@ -1470,9 +1478,9 @@ static DenormalMode getInstrDenormalMode(const Instruction *CtxI, Type *Ty) {
       Ty->getScalarType()->getFltSemantics());
 }
 
-static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
-                                           const Instruction *Inst,
-                                           bool IsOutput) {
+static Constant *flushDenormalConstantFP(ConstantFP *CFP,
+                                         const Instruction *Inst,
+                                         bool IsOutput) {
   const APFloat &APF = CFP->getValueAPF();
   if (!APF.isDenormal())
     return CFP;
@@ -1494,7 +1502,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   VectorType *VecTy = dyn_cast<VectorType>(Ty);
   if (VecTy) {
     if (auto *Splat = dyn_cast_or_null<ConstantFP>(Operand->getSplatValue())) {
-      ConstantFP *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
+      Constant *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
       if (!Folded)
         return nullptr;
       return ConstantVector::getSplat(VecTy->getElementCount(), Folded);
@@ -1519,7 +1527,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
       if (!CFP)
         return nullptr;
 
-      ConstantFP *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
+      Constant *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
       if (!Folded)
         return nullptr;
       NewElts.push_back(Folded);
@@ -1536,7 +1544,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
         NewElts.push_back(ConstantFP::get(Ty, Elt));
       } else {
         DenormalMode Mode = getInstrDenormalMode(Inst, Ty);
-        ConstantFP *Folded =
+        Constant *Folded =
             flushDenormalConstant(Ty, Elt, IsOutput ? Mode.Output : Mode.Input);
         if (!Folded)
           return nullptr;
@@ -2119,7 +2127,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "log10f" || Name == "logb" || Name == "logbf" ||
            Name == "log1p" || Name == "log1pf";
   case 'n':
-    return Name == "nearbyint" || Name == "nearbyintf";
+    return Name == "nearbyint" || Name == "nearbyintf" || Name == "nextafter" ||
+           Name == "nextafterf" || Name == "nexttoward" ||
+           Name == "nexttowardf";
   case 'p':
     return Name == "pow" || Name == "powf";
   case 'r':
@@ -3284,6 +3294,45 @@ static Constant *evaluateCompare(const APFloat &Op1, const APFloat &Op2,
   return nullptr;
 }
 
+static Constant *ConstantFoldNextToward(const APFloat &Op0, const APFloat &Op1,
+                                        const Type *RetTy) {
+  assert(RetTy != nullptr);
+  bool LosesInfo;
+
+  if (Op1.isSignaling())
+    return nullptr;
+  if (Op1.isNaN()) {
+    APFloat Ret(Op1);
+    Ret.convert(RetTy->getFltSemantics(), detail::rmNearestTiesToEven,
+                &LosesInfo);
+    return ConstantFP::get(RetTy->getContext(), Ret);
+  }
+
+  // Recall that the second argument of nexttoward is always a long double,
+  // so we may need to promote the first argument for comparisons to be valid.
+  APFloat PromotedOp0(Op0);
+  PromotedOp0.convert(Op1.getSemantics(), detail::rmNearestTiesToEven,
+                      &LosesInfo);
+  assert(!LosesInfo && "Unexpected lossy promotion");
+  const APFloat::cmpResult Result = PromotedOp0.compare(Op1);
+
+  // When equal, the standard says we must return the second argument.
+  // This allows nice behavior such as nexttoward(0.0, -0.0) = -0.0 and
+  // nexttoward(-0.0, 0.0) = 0.0
+  if (Result == detail::cmpEqual) {
+    APFloat Ret(Op1);
+    Ret.convert(RetTy->getFltSemantics(), detail::rmNearestTiesToEven,
+                &LosesInfo);
+    return ConstantFP::get(RetTy->getContext(), Ret);
+  }
+
+  APFloat Next(Op0);
+  Next.next(/*nextDown=*/Result == APFloat::cmpGreaterThan);
+  if (Next.isZero() || Next.isDenormal() || Next.isSignaling())
+    return nullptr;
+  return ConstantFP::get(RetTy->getContext(), Next);
+}
+
 static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
                                       ArrayRef<Constant *> Operands,
                                       const TargetLibraryInfo *TLI) {
@@ -3342,6 +3391,13 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   case LibFunc_atan2f_finite:
     if (TLI->has(Func))
       return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
+    break;
+  case LibFunc_nextafter:
+  case LibFunc_nextafterf:
+  case LibFunc_nexttoward:
+  case LibFunc_nexttowardf:
+    if (TLI->has(Func))
+      return ConstantFoldNextToward(Op1V, Op2V, Ty);
     break;
   }
 
@@ -4821,6 +4877,14 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         // may occur, so allow for that possibility.
         return !Op0.isZero() || !Op1.isZero();
 
+      case LibFunc_nextafter:
+      case LibFunc_nextafterf:
+      case LibFunc_nextafterl:
+      case LibFunc_nexttoward:
+      case LibFunc_nexttowardf:
+      case LibFunc_nexttowardl: {
+        return ConstantFoldNextToward(Op0, Op1, F->getReturnType()) != nullptr;
+      }
       default:
         break;
       }

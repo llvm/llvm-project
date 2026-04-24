@@ -68,8 +68,7 @@ class CUFDeviceFuncTransform
         gpu::GPUFuncOp::create(builder, loc, funcOp.getName(), type,
                                mlir::TypeRange{}, mlir::TypeRange{});
     if (isGlobal)
-      deviceFuncOp->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                            builder.getUnitAttr());
+      deviceFuncOp.setKernel(true);
 
     mlir::Region &deviceFuncBody = deviceFuncOp.getBody();
     mlir::Block &entryBlock = deviceFuncBody.front();
