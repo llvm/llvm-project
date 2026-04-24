@@ -1470,14 +1470,16 @@ class RISCVISATargetCache {
   StringMap<std::unique_ptr<DisassemblerTarget>> Cache;
 
 public:
-  // Returns a DisassemblerTarget configured for ISAStr, layered on top of
-  // Base's feature string.  Base already encodes Tag_RISCV_arch, --mattr,
-  // and --mcpu, and the codegen-emitted initial "$x<ISA>" mapping symbol
-  // only captures module-level features; layering preserves function-level
-  // target-features and explicit --mattr overrides when the mapping symbol
-  // is a strict subset.  Falls back to &Base when ISAStr is empty or cannot
-  // be parsed; a parse failure is cached so the same bad string is consumed
-  // only once.
+  // Returns a DisassemblerTarget configured for ISAStr.  Feature priority in
+  // the returned target is (low -> high): Tag_RISCV_arch, the mapping-symbol
+  // ISA, then --mattr, so an explicit --mattr on the command line overrides
+  // both the attribute-recorded arch and the mapping symbol.  If appending
+  // --mattr on top of the mapping symbol would create a conflicting feature
+  // set (e.g. mapping symbol rv64if combined with --mattr=+zfinx), the
+  // --mattr layer is dropped for this region and only the mapping symbol
+  // (layered on Tag_RISCV_arch) is used.  Falls back to &Base when ISAStr is
+  // empty or cannot be parsed; a parse failure is cached so the same bad
+  // string is consumed only once.
   DisassemblerTarget *get(DisassemblerTarget &Base, StringRef ISAStr) {
     if (ISAStr.empty())
       return &Base;
@@ -1487,13 +1489,44 @@ public:
       // RISC-V arch string like "rv64i2p1_m2p0_a2p1_c2p0_v1p0_...".
       auto ParseResult = RISCVISAInfo::parseNormalizedArchString(ISAStr);
       if (ParseResult) {
+        std::vector<std::string> ISAFeatures = (*ParseResult)->toFeatures();
+        // Base's feature string already contains Tag_RISCV_arch followed by
+        // --mattr.  Appending the mapping-symbol features here puts the
+        // mapping symbol above both; the --mattr re-layering below then puts
+        // --mattr back on top as the highest-priority source.
         SubtargetFeatures Features(Base.SubtargetInfo->getFeatureString());
         // toFeatures() only emits the extensions from Exts (i, m, f, ...),
         // not the base-ISA XLEN.  Derive 64bit from getXLen() so mapping
         // symbols that switch XLEN (e.g. rv64 inside an rv32 triple) reach
         // the decoder correctly.
         Features.AddFeature("64bit", (*ParseResult)->getXLen() == 64);
-        Features.addFeaturesVector((*ParseResult)->toFeatures());
+        Features.addFeaturesVector(ISAFeatures);
+        // Try to re-apply --mattr on top of the mapping symbol.  Validate by
+        // running the combined feature set through parseFeatures, which runs
+        // postProcessAndChecking and catches mutually-exclusive pairs such
+        // as f/zfinx.  On conflict, silently drop --mattr for this region
+        // rather than producing an inconsistent decoder.
+        if (!MAttrs.empty()) {
+          std::vector<std::string> Combined = std::move(ISAFeatures);
+          // parseFeatures asserts each element starts with '+' or '-'; users
+          // may pass --mattr=zcmp (implicit '+'), so normalize before
+          // forwarding.
+          for (const std::string &M : MAttrs) {
+            if (M.empty())
+              continue;
+            if (M.front() == '+' || M.front() == '-')
+              Combined.push_back(M);
+            else
+              Combined.push_back("+" + M);
+          }
+          if (auto Check = RISCVISAInfo::parseFeatures(
+                  (*ParseResult)->getXLen(), Combined)) {
+            for (const std::string &M : MAttrs)
+              Features.AddFeature(M);
+          } else {
+            consumeError(Check.takeError());
+          }
+        }
         It->second = std::make_unique<DisassemblerTarget>(Base, Features);
       } else {
         // Parse failed: leave the slot null so every future query for this
