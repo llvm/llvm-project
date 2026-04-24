@@ -9,12 +9,15 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.gdbclientutils import *
 
 
 @skipUnlessDarwin  # Remove once lldbsever support is implemented.
 @skipIfOutOfTreeDebugserver
+@skipIf(archs=no_match(["x86_64", "arm64", "aarch64"]))
 class TestMultiBreakpoint(TestBase):
     def send_packet(self, packet_str):
+        packet_str = escape_binary(packet_str)
         self.runCmd(f"process plugin packet send '{packet_str}'", check=False)
         output = self.res.GetOutput()
         reply = output.split("\n")
@@ -189,3 +192,12 @@ class TestMultiBreakpoint(TestBase):
         array = [f"z0,{addr_b},{bp_kind}"]
         reply = self.send_packet(make_packet(array))
         self.assertMultiResponse(reply, ["error"])
+
+        # --- A failure in the middle should not prevent later requests from succeeding ---
+        array = [
+            f"Z0,{addr_a},{bp_kind}",
+            f"z0,{addr_b},{bp_kind}",
+            f"z0,{addr_a},{bp_kind}",
+        ]
+        reply = self.send_packet(make_packet(array))
+        self.assertMultiResponse(reply, ["OK", "error", "OK"])
