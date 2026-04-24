@@ -732,10 +732,9 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   auto PhysPressure = constructPhysRegPressure();
   assert(CurPressure == VirtPressure + PhysPressure ||
          (dbgs() << "Pressure mismatch in recede()\nMI: " << MI
-                 << "Tracked: " << print(CurPressure)
-                 << "Expected: " << print(VirtPressure + PhysPressure)
-                 << "Virt: " << print(VirtPressure)
-                 << "Phys: " << print(PhysPressure),
+                 << "Tracked: " << print(CurPressure) << "Expected: "
+                 << print(VirtPressure + PhysPressure) << "Virt: "
+                 << print(VirtPressure) << "Phys: " << print(PhysPressure),
           false));
 }
 
