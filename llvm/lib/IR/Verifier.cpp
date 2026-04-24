@@ -5921,38 +5921,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   // Verify that the intrinsic prototype lines up with what the .td files
   // describe.
   FunctionType *IFTy = IF->getFunctionType();
-  bool IsVarArg = IFTy->isVarArg();
-
-  SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(ID, Table);
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
   // Walk the descriptors to extract overloaded types.
-  SmallVector<Type *, 4> ArgTys;
-  Intrinsic::MatchIntrinsicTypesResult Res =
-      Intrinsic::matchIntrinsicSignature(IFTy, TableRef, ArgTys);
-  Check(Res != Intrinsic::MatchIntrinsicTypes_NoMatchRet,
-        "Intrinsic has incorrect return type!", IF);
-  Check(Res != Intrinsic::MatchIntrinsicTypes_NoMatchArg,
-        "Intrinsic has incorrect argument type!", IF);
-
-  // Verify if the intrinsic call matches the vararg property.
-  if (IsVarArg)
-    Check(!Intrinsic::matchIntrinsicVarArg(IsVarArg, TableRef),
-          "Intrinsic was not defined with variable arguments!", IF);
-  else
-    Check(!Intrinsic::matchIntrinsicVarArg(IsVarArg, TableRef),
-          "Callsite was not defined with variable arguments!", IF);
-
-  // All descriptors should be absorbed by now.
-  Check(TableRef.empty(), "Intrinsic has too few arguments!", IF);
+  std::string ErrMsg;
+  raw_string_ostream ErrOS(ErrMsg);
+  SmallVector<Type *, 4> OverloadTys;
+  bool IsValid = Intrinsic::isSignatureValid(ID, IFTy, OverloadTys, ErrOS);
+  Check(IsValid, ErrMsg, IF);
 
   // Now that we have the intrinsic ID and the actual argument types (and we
   // know they are legal for the intrinsic!) get the intrinsic name through the
   // usual means.  This allows us to verify the mangling of argument types into
   // the name.
   const std::string ExpectedName =
-      Intrinsic::getName(ID, ArgTys, IF->getParent(), IFTy);
+      Intrinsic::getName(ID, OverloadTys, IF->getParent(), IFTy);
   Check(ExpectedName == IF->getName(),
         "Intrinsic name not mangled correctly for type arguments! "
         "Should be: " +
@@ -6638,14 +6620,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::vector_reduce_umin: {
     Type *ArgTy = Call.getArgOperand(0)->getType();
     Check(ArgTy->isIntOrIntVectorTy() && ArgTy->isVectorTy(),
-          "Intrinsic has incorrect argument type!");
+          "intrinsic has incorrect argument type!");
     break;
   }
   case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_reduce_fmin: {
     Type *ArgTy = Call.getArgOperand(0)->getType();
     Check(ArgTy->isFPOrFPVectorTy() && ArgTy->isVectorTy(),
-          "Intrinsic has incorrect argument type!");
+          "intrinsic has incorrect argument type!");
     break;
   }
   case Intrinsic::vector_reduce_fadd:
@@ -6654,7 +6636,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // second argument is the vector to be reduced.
     Type *ArgTy = Call.getArgOperand(1)->getType();
     Check(ArgTy->isFPOrFPVectorTy() && ArgTy->isVectorTy(),
-          "Intrinsic has incorrect argument type!");
+          "intrinsic has incorrect argument type!");
     break;
   }
   case Intrinsic::smul_fix:

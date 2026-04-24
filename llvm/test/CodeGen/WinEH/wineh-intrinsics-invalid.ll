@@ -11,7 +11,7 @@ declare void @f()
 ;T1:   call ptr @llvm.eh.exceptionpointer.p0(i32 0)
 ;T1:   ret void
 ;T1: }
-;CHECK1: Intrinsic has incorrect argument type!
+;CHECK1: intrinsic has incorrect argument type!
 ;CHECK1-NEXT: ptr @llvm.eh.exceptionpointer.p0
 
 ;T2: declare ptr @llvm.eh.exceptionpointer.p0(token)
