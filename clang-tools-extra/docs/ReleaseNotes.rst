@@ -513,7 +513,7 @@ Changes in existing checks
     `MinimumBindingNameLength` and `IgnoredBindingNames` respectively, are
     added to configure the behavior of the check regarding this new identifier
     kind. By default, names with at least 2 characters are required and the
-    only expection allowed is `_`.
+    only exception allowed is `_`.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
