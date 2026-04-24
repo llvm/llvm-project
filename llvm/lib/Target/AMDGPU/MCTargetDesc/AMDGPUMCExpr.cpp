@@ -16,6 +16,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <functional>
 #include <optional>
 
 using namespace llvm;
@@ -99,27 +100,28 @@ static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
   }
 }
 
+static bool
+evaluateMCExprs(ArrayRef<const MCExpr *> Exprs, const MCAssembler *Asm,
+                std::initializer_list<std::reference_wrapper<uint64_t>> Vals) {
+  return llvm::all_of(llvm::zip_equal(Exprs, Vals), [&](const auto &Pair) {
+    auto [Expr, ValRef] = Pair;
+    uint64_t &Val = ValRef.get();
+    MCValue MCVal;
+    if (!Expr->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
+      return false;
+    Val = MCVal.getConstant();
+    return true;
+  });
+}
+
 bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
                                       const MCAssembler *Asm) const {
-  auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
-    MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
-      return false;
-
-    ConstantValue = MCVal.getConstant();
-    return true;
-  };
-
   assert(Args.size() == 3 &&
          "AMDGPUMCExpr Argument count incorrect for ExtraSGPRs");
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   uint64_t VCCUsed = 0, FlatScrUsed = 0, XNACKUsed = 0;
 
-  bool Success = TryGetMCExprValue(Args[2], XNACKUsed);
-
-  assert(Success && "Arguments 3 for ExtraSGPRs should be a known constant");
-  if (!Success || !TryGetMCExprValue(Args[0], VCCUsed) ||
-      !TryGetMCExprValue(Args[1], FlatScrUsed))
+  if (!evaluateMCExprs(Args, Asm, {VCCUsed, FlatScrUsed, XNACKUsed}))
     return false;
 
   uint64_t ExtraSGPRs = IsaInfo::getNumExtraSGPRs(
@@ -130,14 +132,6 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
 
 bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
                                         const MCAssembler *Asm) const {
-  auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
-    MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
-      return false;
-
-    ConstantValue = MCVal.getConstant();
-    return true;
-  };
   assert(Args.size() == 2 &&
          "AMDGPUMCExpr Argument count incorrect for TotalNumVGPRs");
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
@@ -145,8 +139,7 @@ bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
 
   bool Has90AInsts = AMDGPU::isGFX90A(*STI);
 
-  if (!TryGetMCExprValue(Args[0], NumAGPR) ||
-      !TryGetMCExprValue(Args[1], NumVGPR))
+  if (!evaluateMCExprs(Args, Asm, {NumAGPR, NumVGPR}))
     return false;
 
   uint64_t TotalNum = Has90AInsts && NumAGPR ? alignTo(NumVGPR, 4) + NumAGPR
@@ -156,19 +149,10 @@ bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
 }
 
 bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
-  auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
-    MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
-      return false;
-
-    ConstantValue = MCVal.getConstant();
-    return true;
-  };
-
   assert(Args.size() == 2 &&
          "AMDGPUMCExpr Argument count incorrect for AlignTo");
   uint64_t Value = 0, Align = 0;
-  if (!TryGetMCExprValue(Args[0], Value) || !TryGetMCExprValue(Args[1], Align))
+  if (!evaluateMCExprs(Args, Asm, {Value, Align}))
     return false;
 
   Res = MCValue::get(alignTo(Value, Align));
@@ -177,30 +161,18 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
 
 bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
                                      const MCAssembler *Asm) const {
-  auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
-    MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
-      return false;
-
-    ConstantValue = MCVal.getConstant();
-    return true;
-  };
   assert(Args.size() == 7 &&
          "AMDGPUMCExpr Argument count incorrect for Occupancy");
   uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, Generation,
       NumSGPRs, NumVGPRs;
 
-  bool Success = true;
-  Success &= TryGetMCExprValue(Args[0], MaxWaves);
-  Success &= TryGetMCExprValue(Args[1], Granule);
-  Success &= TryGetMCExprValue(Args[2], TargetTotalNumVGPRs);
-  Success &= TryGetMCExprValue(Args[3], Generation);
-  Success &= TryGetMCExprValue(Args[4], InitOccupancy);
+  bool Success = evaluateMCExprs(
+      Args.slice(0, 5), Asm,
+      {MaxWaves, Granule, TargetTotalNumVGPRs, Generation, InitOccupancy});
 
   assert(Success && "Arguments 1 to 5 for Occupancy should be known constants");
 
-  if (!Success || !TryGetMCExprValue(Args[5], NumSGPRs) ||
-      !TryGetMCExprValue(Args[6], NumVGPRs))
+  if (!Success || !evaluateMCExprs(Args.slice(5, 2), Asm, {NumSGPRs, NumVGPRs}))
     return false;
 
   unsigned Occupancy = InitOccupancy;
