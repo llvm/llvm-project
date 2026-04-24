@@ -45,3 +45,17 @@ void test() {
 }
 // CHECK-LABEL:define {{.*}} void @"_ZN8GH1476501fILi42EEEvvQrqXLNS_3$_0EEE"()
 }
+
+namespace GH123854
+{
+
+template <class T>
+constexpr auto f() {
+  return [] () requires requires (T x) { x; } {};
+}
+
+void test() {
+  f<int>()();
+}
+// CHECK-LABEL:define {{.*}} void @_ZZN8GH1238541fIiEEDavENKUlvE_clEvQrQT__Xfp_E
+}

@@ -2526,7 +2526,7 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     if (BitfieldSize.isInvalid())
       SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
   } else if (Tok.is(tok::kw_requires)) {
-    ParseTrailingRequiresClause(DeclaratorInfo);
+    ParseTrailingRequiresClauseWithScope(DeclaratorInfo);
   } else {
     ParseOptionalCXX11VirtSpecifierSeq(
         VS, getCurrentClass().IsInterface,
@@ -4098,10 +4098,8 @@ TypeResult Parser::ParseTrailingReturnType(SourceRange &Range,
                                    : DeclaratorContext::TrailingReturn);
 }
 
-void Parser::ParseTrailingRequiresClause(Declarator &D) {
+void Parser::ParseTrailingRequiresClauseWithScope(Declarator &D) {
   assert(Tok.is(tok::kw_requires) && "expected requires");
-
-  SourceLocation RequiresKWLoc = ConsumeToken();
 
   // C++23 [basic.scope.namespace]p1:
   //   For each non-friend redeclaration or specialization whose target scope
@@ -4121,11 +4119,22 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
   if (SS.isValid() && Actions.ShouldEnterDeclaratorScope(getCurScope(), SS))
     DeclScopeObj.EnterDeclaratorScope();
 
-  ExprResult TrailingRequiresClause;
   ParseScope ParamScope(this, Scope::DeclScope |
                                   Scope::FunctionDeclarationScope |
                                   Scope::FunctionPrototypeScope);
 
+  ParseTrailingRequiresClause(D);
+}
+
+void Parser::ParseTrailingRequiresClause(Declarator &D) {
+  assert(Tok.is(tok::kw_requires) && "expected requires");
+  assert(
+      getCurScope()->isFunctionPrototypeScope() &&
+      "trailing requires-clause must be parsed in a function prototype scope");
+
+  SourceLocation RequiresKWLoc = ConsumeToken();
+
+  ExprResult TrailingRequiresClause;
   Actions.ActOnStartTrailingRequiresClause(getCurScope(), D);
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
