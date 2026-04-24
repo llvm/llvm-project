@@ -6976,8 +6976,7 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     auto Plan = tryToBuildVPlanWithVPRecipes(
-        std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange,
-        LVer ? &*LVer : nullptr);
+        std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange);
     VF = SubRange.End;
 
     if (!Plan)
@@ -7004,8 +7003,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   }
 }
 
-VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
-    VPlanPtr Plan, VFRange &Range, LoopVersioning *LVer) {
+VPlanPtr
+LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
+                                                       VFRange &Range) {
 
   // For outer loops, the plan only needs basic recipe conversion and induction
   // live-out optimization; the full inner-loop recipe building below does not

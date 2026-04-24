@@ -2117,6 +2117,9 @@ private:
               [&](const Fortran::parser::CompilerDirective::ForceInline &) {
                 stmt.typedCall->setAlwaysInline(true);
               },
+              [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
+                stmt.typedCall->setAlwaysInline(true);
+              },
               [&](const Fortran::parser::CompilerDirective::Inline &) {
                 stmt.typedCall->setInlineHint(true);
               },
@@ -2466,6 +2469,9 @@ private:
                   callOp.setInlineAttr(fir::FortranInlineEnum::inline_hint);
                 },
                 [&](const Fortran::parser::CompilerDirective::ForceInline &) {
+                  callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
+                },
+                [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
                   callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
                 },
                 [&](const auto &) {}},
@@ -3557,6 +3563,18 @@ private:
       e->dirs.push_back(&dir);
   }
 
+  void markCurrentFuncAsAlwaysInline(
+      const Fortran::parser::CompilerDirective::InlineAlways &dir) {
+    mlir::func::FuncOp func = builder->getFunction();
+    if (currentFunctionUnit && !currentFunctionUnit->isMainProgram()) {
+      const std::string symName =
+          currentFunctionUnit->getSubprogramSymbol().name().ToString();
+      if (dir.v->ToString() == symName) {
+        func->setAttr("llvm.always_inline", builder->getUnitAttr());
+      }
+    }
+  }
+
   void
   attachInliningDirectiveToStmt(const Fortran::parser::CompilerDirective &dir,
                                 Fortran::lower::pft::Evaluation *e) {
@@ -3634,6 +3652,13 @@ private:
             },
             [&](const Fortran::parser::CompilerDirective::IVDep &) {
               attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::InlineAlways
+                    &inlineAlways) {
+              if (inlineAlways.v.has_value())
+                markCurrentFuncAsAlwaysInline(inlineAlways);
+              else
+                attachInliningDirectiveToStmt(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::Simd &) {
               attachDirectiveToLoop(dir, &eval);
@@ -6366,7 +6391,6 @@ private:
   void genFIR(const Fortran::parser::IfStmt &) {}              // nop
   void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
   void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
   void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
   void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}  // nop

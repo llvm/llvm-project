@@ -863,8 +863,7 @@ private:
   /// maximum VF for which no plan could be built. Each VPlan is built starting
   /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
   /// original scalar loop.
-  VPlanPtr tryToBuildVPlanWithVPRecipes(VPlanPtr InitialPlan, VFRange &Range,
-                                        LoopVersioning *LVer);
+  VPlanPtr tryToBuildVPlanWithVPRecipes(VPlanPtr InitialPlan, VFRange &Range);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is

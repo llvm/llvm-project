@@ -3374,6 +3374,7 @@ struct StmtFunctionStmt {
 // !DIR$ FORCEINLINE
 // !DIR$ INLINE
 // !DIR$ NOINLINE
+// !DIR$ INLINEALWAYS
 // !DIR$ IVDEP
 // !DIR$ SIMD
 // !DIR$ <anything else>
@@ -3411,6 +3412,9 @@ struct CompilerDirective {
     WRAPPER_CLASS_BOILERPLATE(
         Prefetch, std::list<common::Indirection<Designator>>);
   };
+  struct InlineAlways {
+    WRAPPER_CLASS_BOILERPLATE(InlineAlways, std::optional<Name>);
+  };
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
   EMPTY_CLASS(NoUnrollAndJam);
@@ -3424,7 +3428,7 @@ struct CompilerDirective {
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, VectorLength, std::list<NameValue>, Unroll, UnrollAndJam,
       Unrecognized, NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline,
-      NoInline, Prefetch, IVDep, Simd>
+      NoInline, InlineAlways, Prefetch, IVDep, Simd>
       u;
 };
 
@@ -5444,32 +5448,12 @@ struct OpenMPStandaloneConstruct {
       u;
 };
 
-struct OmpBeginLoopDirective : public OmpBeginDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpBeginLoopDirective, OmpBeginDirective);
-};
-
-struct OmpEndLoopDirective : public OmpEndDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpEndLoopDirective, OmpEndDirective);
-};
-
 // OpenMP directives enclosing do loop
-struct OpenMPLoopConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
-  OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-      : t({std::move(a), Block{}, std::nullopt}) {}
+struct OpenMPLoopConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct, OmpBlockConstruct);
 
-  const OmpBeginLoopDirective &BeginDir() const {
-    return std::get<OmpBeginLoopDirective>(t);
-  }
-  const std::optional<OmpEndLoopDirective> &EndDir() const {
-    return std::get<std::optional<OmpEndLoopDirective>>(t);
-  }
   const DoConstruct *GetNestedLoop() const;
   const OpenMPLoopConstruct *GetNestedConstruct() const;
-
-  CharBlock source;
-  std::tuple<OmpBeginLoopDirective, Block, std::optional<OmpEndLoopDirective>>
-      t;
 };
 
 // Lookahead class to identify execution-part OpenMP constructs without
