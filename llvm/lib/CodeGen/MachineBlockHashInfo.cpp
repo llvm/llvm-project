@@ -38,13 +38,16 @@ static uint64_t hashBlock(const MachineBasicBlock &MBB, bool HashOperands) {
 }
 
 /// Fold a 64-bit integer to a 16-bit one.
-static uint16_t fold_64_to_16(const uint64_t Value) {
+static constexpr uint16_t fold_64_to_16(const uint64_t Value) {
   uint16_t Res = static_cast<uint16_t>(Value);
   Res ^= static_cast<uint16_t>(Value >> 16);
   Res ^= static_cast<uint16_t>(Value >> 32);
   Res ^= static_cast<uint16_t>(Value >> 48);
   return Res;
 }
+
+static_assert(fold_64_to_16(1) == 1);
+static_assert(fold_64_to_16(12345678) == 25074);
 
 INITIALIZE_PASS(MachineBlockHashInfo, "machine-block-hash",
                 "Machine Block Hash Analysis", true, true)
