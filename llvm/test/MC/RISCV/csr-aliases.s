@@ -11,6 +11,12 @@
 # RUN:     | llvm-objdump -d --mattr=+zfinx - \
 # RUN:     | FileCheck -check-prefix=CHECK-EXT-F %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=-f < %s \
+# RUN:     | llvm-objdump -d --mattr=+f - \
+# RUN:     | FileCheck -check-prefix=CHECK-EXT-F %s
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=-f < %s \
+# RUN:     | llvm-objdump -d --mattr=-f - \
+# RUN:     | FileCheck -check-prefix=CHECK-EXT-F-OFF %s
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+f < %s \
 # RUN:     | llvm-objdump -d --mattr=-f - \
 # RUN:     | FileCheck -check-prefix=CHECK-EXT-F-OFF %s
 
@@ -27,6 +33,12 @@
 # RUN:     | llvm-objdump -d --mattr=+zfinx - \
 # RUN:     | FileCheck -check-prefix=CHECK-EXT-F %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=-f < %s \
+# RUN:     | llvm-objdump -d --mattr=+f - \
+# RUN:     | FileCheck -check-prefix=CHECK-EXT-F %s
+# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=-f < %s \
+# RUN:     | llvm-objdump -d --mattr=-f - \
+# RUN:     | FileCheck -check-prefix=CHECK-EXT-F-OFF %s
+# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+f < %s \
 # RUN:     | llvm-objdump -d --mattr=-f - \
 # RUN:     | FileCheck -check-prefix=CHECK-EXT-F-OFF %s
 
