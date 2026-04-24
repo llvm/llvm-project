@@ -1422,6 +1422,17 @@ defm SVMINP_U : SInstPairwise<"svminp",   "UcUsUiUl",     "aarch64_sve_uminp", [
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2.3 - Add pairwise within quadword vector segments
+
+let SVETargetGuard = "sve2p3|sme2p3", SMETargetGuard = "sve2p3|sme2p3" in {
+def SVADDQP   : SInst<"svaddqp[_{d}]", "ddd", "csilUcUsUiUl", MergeNone, "aarch64_sve_addqp",
+                    [VerifyRuntimeMode]>;
+def SVADDSUBP : SInst<"svaddsubp[_{d}]", "ddd", "csilUcUsUiUl", MergeNone, "aarch64_sve_addsubp",
+                    [VerifyRuntimeMode]>;
+def SVSUBP    : SInst<"svsubp[_{d}]", "dPdd", "csilUcUsUiUl", MergeNone, "aarch64_sve_subp", [VerifyRuntimeMode]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Widening pairwise arithmetic
 
 let SVETargetGuard = "sve2|sme" in {
