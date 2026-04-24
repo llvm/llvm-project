@@ -543,6 +543,21 @@ def NVVM_SinOp : NVVM_SingleResultIntrinsicOp<"sin",
   let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
+
+def NVVM_CosOp : NVVM_SingleResultIntrinsicOp<"cos",
+    [Pure, SameOperandsAndResultType]> {
+  let summary = "Cosine (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the cosine of the input value (in
+    radians). The `ftz` attribute, when set, flushes subnormal inputs
+    and results to sign-preserving zero.
+  }];
+  let arguments = (ins F32:$src,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
