@@ -438,7 +438,12 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>C++ identifier syntax using UAX 31</td>
       <td><a href="https://wg21.link/P1949R7">P1949R7</a> (<a href="#dr">DR</a>)</td>
-      <td class="full" align="center">Clang 14</td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 14 (Partial)</summary>
+          Clang supports Unicode identifiers but does not check that they are NFC-normalized.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Mixed string literal concatenation</td>
