@@ -55,6 +55,7 @@ if (SPHINX_FOUND)
       locale
       net/if
       netinet/in
+      poll
       pthread
       setjmp
       signal
@@ -65,6 +66,7 @@ if (SPHINX_FOUND)
       strings
       sys/mman
       sys/resource
+      sys/select
       sys/socket
       sys/stat
       sys/statvfs
