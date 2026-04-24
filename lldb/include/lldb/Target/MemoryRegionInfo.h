@@ -51,8 +51,6 @@ public:
 
   LazyBool IsShadowStack() const { return m_is_shadow_stack; }
 
-  std::optional<unsigned> GetProtectionKey() const { return m_protection_key; }
-
   void SetReadable(LazyBool val) { m_read = val; }
 
   void SetWritable(LazyBool val) { m_write = val; }
@@ -80,11 +78,6 @@ public:
 
   MemoryRegionInfo &SetIsShadowStack(LazyBool val) {
     m_is_shadow_stack = val;
-    return *this;
-  }
-
-  MemoryRegionInfo &SetProtectionKey(std::optional<unsigned> key) {
-    m_protection_key = key;
     return *this;
   }
 
@@ -121,8 +114,7 @@ public:
            m_memory_tagged == rhs.m_memory_tagged &&
            m_pagesize == rhs.m_pagesize &&
            m_is_stack_memory == rhs.m_is_stack_memory &&
-           m_is_shadow_stack == rhs.m_is_shadow_stack &&
-           m_protection_key == rhs.m_protection_key;
+           m_is_shadow_stack == rhs.m_is_shadow_stack;
   }
 
   bool operator!=(const MemoryRegionInfo &rhs) const { return !(*this == rhs); }
@@ -165,7 +157,6 @@ protected:
   LazyBool m_memory_tagged = eLazyBoolDontKnow;
   LazyBool m_is_stack_memory = eLazyBoolDontKnow;
   LazyBool m_is_shadow_stack = eLazyBoolDontKnow;
-  std::optional<unsigned> m_protection_key = std::nullopt;
   int m_pagesize = 0;
   std::optional<std::vector<lldb::addr_t>> m_dirty_pages;
 };
