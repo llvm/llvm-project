@@ -86,8 +86,7 @@ public:
     return Visit(pe->getReplacement());
   }
   mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
-    cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoawaitExpr");
-    return {};
+    return cgf.emitCoawaitExpr(*s).getComplexValue();
   }
   mlir::Value VisitCoyieldExpr(CoyieldExpr *s) {
     cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoyieldExpr");
