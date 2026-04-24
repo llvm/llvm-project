@@ -155,8 +155,6 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
   // directly.
   cir::FuncOp fnOp;
   if (record && (canRegisterDestructor || cgm.getCodeGenOpts().CXAAtExit)) {
-    if (vd->getTLSKind())
-      cgm.errorNYI(vd->getSourceRange(), "TLS destructor");
     assert(!record->hasTrivialDestructor());
     assert(!cir::MissingFeatures::openCL());
     CXXDestructorDecl *dtor = record->getDestructor();
@@ -343,16 +341,11 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
 void CIRGenModule::emitCXXStaticLocalVarDeclInit(const VarDecl *varDecl,
                                                  cir::GlobalOp addr,
                                                  bool performInit) {
-  assert(varDecl->isStaticLocal() ||
-         varDecl->getTLSKind() != VarDecl::TLS_None);
+  assert(varDecl->isStaticLocal());
 
-  if (varDecl->getTLSKind() != VarDecl::TLS_None)
-    errorNYI(varDecl->getSourceRange(),
-             "TLS not implemented for static-local init");
-
-  auto initOp = cir::LocalInitOp::create(
-      builder, addr->getLoc(), addr.getSymNameAttr(),
-      varDecl->getTLSKind() != VarDecl::TLS_None, varDecl->isStaticLocal());
+  auto initOp =
+      cir::LocalInitOp::create(builder, addr->getLoc(), addr.getSymNameAttr(),
+                               varDecl->getTLSKind() != VarDecl::TLS_None);
 
   emitCXXSpecialVarDeclInit(varDecl, addr, performInit, initOp.getCtorRegion(),
                             initOp.getDtorRegion());

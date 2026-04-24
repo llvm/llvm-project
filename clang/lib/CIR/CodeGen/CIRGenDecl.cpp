@@ -459,7 +459,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
     gv.setComdat(true);
 
   if (d.getTLSKind())
-    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: TLS");
+    setTLSMode(gv, d);
 
   setGVProperties(gv, &d);
 
@@ -642,7 +642,8 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   cir::GlobalOp globalOp = cgm.getOrCreateStaticVarDecl(d, linkage);
   // TODO(cir): we should have a way to represent global ops as values without
   // having to emit a get global op. Sometimes these emissions are not used.
-  mlir::Value addr = builder.createGetGlobal(globalOp);
+  mlir::Value addr =
+      builder.createGetGlobal(globalOp, d.getTLSKind() != VarDecl::TLS_None);
   auto getAddrOp = addr.getDefiningOp<cir::GetGlobalOp>();
   assert(getAddrOp && "expected cir::GetGlobalOp");
 

@@ -385,10 +385,7 @@ cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getTls() && !global.getTlsModel())
     return emitOpError("access to global not marked thread local");
 
-  bool isStaticLocal = getStaticLocal();
-  bool globalIsStaticLocal = global.getStaticLocalGuard().has_value();
-
-  if (isStaticLocal != globalIsStaticLocal)
+  if (!global.getStaticLocalGuard().has_value())
     return emitOpError("static_local attribute mismatch");
 
   return success();
