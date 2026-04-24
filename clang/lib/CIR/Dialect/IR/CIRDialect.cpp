@@ -3049,9 +3049,6 @@ LogicalResult cir::CopyOp::verify() {
   if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
     return emitError() << "missing data layout for pointee type";
 
-  if (getSrc() == getDst())
-    return emitError() << "source and destination are the same";
-
   if (getSkipTailPadding() &&
       !mlir::isa<cir::RecordType>(getType().getPointee()))
     return emitError()
