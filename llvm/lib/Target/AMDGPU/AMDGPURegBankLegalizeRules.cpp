@@ -16,6 +16,7 @@
 #include "AMDGPURegBankLegalizeRules.h"
 #include "AMDGPUInstrInfo.h"
 #include "GCNSubtarget.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -2457,21 +2458,64 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr32}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr32}});
 
-  // TODO: Add handling for GFX90A+ which should use VGPRs instead of AGPRs.
+  // Predicates to check if we want to use the VGPR form or the AGPR form
+  // for an MFMA / SMFMAC intrinsic on gfx90a+.
+  Predicate needAGPR([](const MachineInstr &MI) -> bool {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    unsigned MinNumRegsRequired = DstSize / 32;
+    const SIMachineFunctionInfo *Info =
+        MI.getMF()->getInfo<SIMachineFunctionInfo>();
+    return Info->selectAGPRFormMFMA(MinNumRegsRequired);
+  });
+  Predicate needVGPR = !needAGPR;
+
   bool HasGFX90AInsts = ST->hasGFX90AInsts();
-  addRulesForIOpcs({amdgcn_mfma_f32_32x32x1f32,  amdgcn_mfma_f32_16x16x1f32,
-                    amdgcn_mfma_f32_4x4x1f32,    amdgcn_mfma_f32_32x32x2f32,
-                    amdgcn_mfma_f32_16x16x4f32,  amdgcn_mfma_f32_32x32x4f16,
-                    amdgcn_mfma_f32_16x16x4f16,  amdgcn_mfma_f32_4x4x4f16,
-                    amdgcn_mfma_f32_32x32x8f16,  amdgcn_mfma_f32_16x16x16f16,
-                    amdgcn_mfma_i32_32x32x4i8,   amdgcn_mfma_i32_16x16x4i8,
-                    amdgcn_mfma_i32_4x4x4i8,     amdgcn_mfma_i32_32x32x8i8,
-                    amdgcn_mfma_i32_16x16x16i8,  amdgcn_mfma_f32_32x32x2bf16,
-                    amdgcn_mfma_f32_16x16x2bf16, amdgcn_mfma_f32_4x4x2bf16,
-                    amdgcn_mfma_f32_32x32x4bf16, amdgcn_mfma_f32_16x16x8bf16})
+  addRulesForIOpcs(
+      {amdgcn_mfma_f32_32x32x1f32,       amdgcn_mfma_f32_16x16x1f32,
+       amdgcn_mfma_f32_4x4x1f32,         amdgcn_mfma_f32_32x32x2f32,
+       amdgcn_mfma_f32_16x16x4f32,       amdgcn_mfma_f32_32x32x4f16,
+       amdgcn_mfma_f32_16x16x4f16,       amdgcn_mfma_f32_4x4x4f16,
+       amdgcn_mfma_f32_32x32x8f16,       amdgcn_mfma_f32_16x16x16f16,
+       amdgcn_mfma_i32_32x32x4i8,        amdgcn_mfma_i32_16x16x4i8,
+       amdgcn_mfma_i32_4x4x4i8,          amdgcn_mfma_i32_32x32x8i8,
+       amdgcn_mfma_i32_16x16x16i8,       amdgcn_mfma_f32_32x32x2bf16,
+       amdgcn_mfma_f32_16x16x2bf16,      amdgcn_mfma_f32_4x4x2bf16,
+       amdgcn_mfma_f32_32x32x4bf16,      amdgcn_mfma_f32_16x16x8bf16,
+       amdgcn_mfma_f32_32x32x4bf16_1k,   amdgcn_mfma_f32_16x16x4bf16_1k,
+       amdgcn_mfma_f32_4x4x4bf16_1k,     amdgcn_mfma_f32_32x32x8bf16_1k,
+       amdgcn_mfma_f32_16x16x16bf16_1k,  amdgcn_mfma_f64_16x16x4f64,
+       amdgcn_mfma_f64_4x4x4f64,         amdgcn_mfma_i32_16x16x32_i8,
+       amdgcn_mfma_i32_32x32x16_i8,      amdgcn_mfma_f32_16x16x8_xf32,
+       amdgcn_mfma_f32_32x32x4_xf32,     amdgcn_mfma_f32_16x16x32_bf8_bf8,
+       amdgcn_mfma_f32_16x16x32_bf8_fp8, amdgcn_mfma_f32_16x16x32_fp8_bf8,
+       amdgcn_mfma_f32_16x16x32_fp8_fp8, amdgcn_mfma_f32_32x32x16_bf8_bf8,
+       amdgcn_mfma_f32_32x32x16_bf8_fp8, amdgcn_mfma_f32_32x32x16_fp8_bf8,
+       amdgcn_mfma_f32_32x32x16_fp8_fp8})
       .Any({{DivAnyTy},
             {{AgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy}}},
-           !HasGFX90AInsts);
+           !HasGFX90AInsts)
+      .Any({{{DivAnyTy}, needVGPR},
+            {{VgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, VgprAnyTy}}},
+           HasGFX90AInsts)
+      .Any({{{DivAnyTy}, needAGPR},
+            {{AgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy}}},
+           HasGFX90AInsts);
+
+  addRulesForIOpcs(
+      {amdgcn_smfmac_f32_16x16x32_f16, amdgcn_smfmac_f32_32x32x16_f16,
+       amdgcn_smfmac_f32_16x16x32_bf16, amdgcn_smfmac_f32_32x32x16_bf16,
+       amdgcn_smfmac_i32_16x16x64_i8, amdgcn_smfmac_i32_32x32x32_i8,
+       amdgcn_smfmac_f32_16x16x64_bf8_bf8, amdgcn_smfmac_f32_16x16x64_bf8_fp8,
+       amdgcn_smfmac_f32_16x16x64_fp8_bf8, amdgcn_smfmac_f32_16x16x64_fp8_fp8,
+       amdgcn_smfmac_f32_32x32x32_bf8_bf8, amdgcn_smfmac_f32_32x32x32_bf8_fp8,
+       amdgcn_smfmac_f32_32x32x32_fp8_bf8, amdgcn_smfmac_f32_32x32x32_fp8_fp8})
+      .Any(
+          {{{DivAnyTy}, needVGPR},
+           {{VgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, VgprAnyTy, VgprAnyTy}}})
+      .Any({{{DivAnyTy}, needAGPR},
+            {{AgprAnyTy},
+             {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy, VgprAnyTy}}});
 
   // WMMA/SWMMAC intrinsics: all register operands map to VGPR.
   addRulesForIOpcs(
