@@ -107,8 +107,7 @@ void CompileUnit::markEverythingAsKept() {
         case dwarf::DW_OP_const4s:
         case dwarf::DW_OP_const8s:
           if (NextIt == Expression.end() ||
-              (NextIt->getCode() != dwarf::DW_OP_form_tls_address &&
-               NextIt->getCode() != dwarf::DW_OP_GNU_push_tls_address))
+              !dwarf::isTlsAddressCode(NextIt->getCode()))
             break;
           [[fallthrough]];
         case dwarf::DW_OP_constx:
