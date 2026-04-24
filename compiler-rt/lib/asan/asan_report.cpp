@@ -691,20 +691,12 @@ uptr __asan_get_report_first_address() {
   return 0;
 }
 
-uptr __asan_get_report_first_size() {
-  return 0;
-}
-
 uptr __asan_get_report_second_address() {
   ErrorDescription& err = ScopedInErrorReport::CurrentError();
   if (err.kind == kErrorKindInvalidPointerPair)
     return err.InvalidPointerPair.addr2_description.Address();
   if (err.kind == kErrorKindODRViolation)
     return err.ODRViolation.global2.beg;
-  return 0;
-}
-
-uptr __asan_get_report_second_size() {
   return 0;
 }
 

@@ -173,11 +173,7 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE
   uptr __asan_get_report_first_address(void);
   SANITIZER_INTERFACE_ATTRIBUTE
-  uptr __asan_get_report_first_size(void);
-  SANITIZER_INTERFACE_ATTRIBUTE
   uptr __asan_get_report_second_address(void);
-  SANITIZER_INTERFACE_ATTRIBUTE
-  uptr __asan_get_report_second_size(void);
 
   SANITIZER_INTERFACE_ATTRIBUTE
   const char * __asan_get_report_description();

@@ -213,23 +213,11 @@ size_t SANITIZER_CDECL __asan_get_report_dealloc_size(void);
 /// \returns Returns the address if found. Otherwise returns 0.
 void *SANITIZER_CDECL __asan_get_report_first_address(void);
 
-/// Gets the first non-dereferenced operand address range size involved in the
-/// current error.
-///
-/// \returns Returns the size in bytes.
-size_t SANITIZER_CDECL __asan_get_report_first_size(void);
-
 /// Gets the second non-dereferenced operand address involved in the current
 /// error (e.g., pointer comparison or ODR violation).
 ///
 /// \returns Returns the address if found. Otherwise returns 0.
 void *SANITIZER_CDECL __asan_get_report_second_address(void);
-
-/// Gets the second non-dereferenced operand address range size involved in the
-/// current error.
-///
-/// \returns Returns the size in bytes.
-size_t SANITIZER_CDECL __asan_get_report_second_size(void);
 
 /// Gets the bug description of an ASan error (useful for calling from a
 /// debugger).
