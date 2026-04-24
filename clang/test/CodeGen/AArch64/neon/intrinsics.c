@@ -43,8 +43,9 @@ int64_t test_vqshlud_n_s64(int64_t a) {
 // LLVM-LABEL: @test_vqshld_n_u64(
 // CIR-LABEL: @test_vqshld_n_u64(
 uint64_t test_vqshld_n_u64(uint64_t a) {
-// CIR:   [[CONST:%.*]] = cir.const #cir.int<63> : !u64i
-// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqshl" {{%.*}}, [[CONST]] : (!u64i, !u64i) -> !u64i
+// CIR:   [[CONST:%.*]] = cir.const #cir.int<63> : !s64i
+// CIR:   [[CAST:%.*]] = cir.cast bitcast [[CONST]] : !s64i -> !u64i
+// CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqshl" {{%.*}}, [[CAST]] : (!u64i, !u64i) -> !u64i
 
 // LLVM-SAME: i64 {{.*}}[[A:%.*]])
 // LLVM:      [[VQSHLD_N_U64:%.*]] = call i64 @llvm.aarch64.neon.uqshl.i64(i64 [[A]], i64 63)
