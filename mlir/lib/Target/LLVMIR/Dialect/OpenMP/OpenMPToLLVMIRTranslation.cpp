@@ -5160,6 +5160,7 @@ static void collectMapDataFromMapOperands(
                        mapData.BaseType.back(), builder, moduleTranslation));
     mapData.MapClause.push_back(mapOp.getOperation());
     mapData.Types.push_back(convertClauseMapFlags(mapOp.getMapType()));
+    mapData.DontAddMemberOfInMapper.push_back(false);
     mapData.Names.push_back(LLVM::createMappingInformation(
         mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
     mapData.DevicePointers.push_back(llvm::OpenMPIRBuilder::DeviceInfoTy::None);
@@ -5210,6 +5211,7 @@ static void collectMapDataFromMapOperands(
         mapData.MapClause.push_back(mapOp.getOperation());
         mapData.Types.push_back(
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM);
+        mapData.DontAddMemberOfInMapper.push_back(false);
         mapData.Names.push_back(LLVM::createMappingInformation(
             mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
         mapData.DevicePointers.push_back(devInfoTy);
@@ -5248,6 +5250,7 @@ static void collectMapDataFromMapOperands(
       // rematerialized, so the address of the decriptor for a given object
       // may change from one place to another.
       mapData.Types.push_back(mapType);
+      mapData.DontAddMemberOfInMapper.push_back(false);
       // Technically it's possible for a non-descriptor mapping to have
       // both has-device-addr and ALWAYS, so lookup the mapper in case it
       // exists.
@@ -5264,6 +5267,7 @@ static void collectMapDataFromMapOperands(
       mapData.Types.push_back(
           isDevicePtr ? mapType
                       : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+      mapData.DontAddMemberOfInMapper.push_back(false);
       mapData.Mappers.push_back(nullptr);
     }
     mapData.Names.push_back(LLVM::createMappingInformation(
@@ -7279,6 +7283,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     combinedInfos.Types.push_back(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+    combinedInfos.DontAddMemberOfInMapper.push_back(false);
     if (!combinedInfos.Names.empty())
       combinedInfos.Names.push_back(nullPtr);
     combinedInfos.Mappers.push_back(nullptr);

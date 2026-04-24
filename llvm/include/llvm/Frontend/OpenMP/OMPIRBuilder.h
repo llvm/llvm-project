@@ -2821,6 +2821,7 @@ public:
   using MapNamesArrayTy = SmallVector<Constant *, 4>;
   using MapDimArrayTy = SmallVector<uint64_t, 4>;
   using MapNonContiguousArrayTy = SmallVector<MapValuesArrayTy, 4>;
+  using MapSkipMemberOfArrayTy = SmallVector<bool, 4>;
 
   /// This structure contains combined information generated for mappable
   /// clauses, including base pointers, pointers, sizes, map types, user-defined
@@ -2839,6 +2840,10 @@ public:
     MapValuesArrayTy Sizes;
     MapFlagsArrayTy Types;
     MapNamesArrayTy Names;
+    /// When true, emitUserDefinedMapper must not add a new
+    /// outer MEMBER_OF for this entry (unless there's already a MEMBER_OF set,
+    /// in which case it gets shifted/adjusted).
+    MapSkipMemberOfArrayTy DontAddMemberOfInMapper;
     StructNonContiguousInfo NonContigInfo;
 
     /// Append arrays in \a CurInfo.
@@ -2851,6 +2856,8 @@ public:
       Sizes.append(CurInfo.Sizes.begin(), CurInfo.Sizes.end());
       Types.append(CurInfo.Types.begin(), CurInfo.Types.end());
       Names.append(CurInfo.Names.begin(), CurInfo.Names.end());
+      DontAddMemberOfInMapper.append(CurInfo.DontAddMemberOfInMapper.begin(),
+                                     CurInfo.DontAddMemberOfInMapper.end());
       NonContigInfo.Dims.append(CurInfo.NonContigInfo.Dims.begin(),
                                 CurInfo.NonContigInfo.Dims.end());
       NonContigInfo.Offsets.append(CurInfo.NonContigInfo.Offsets.begin(),
