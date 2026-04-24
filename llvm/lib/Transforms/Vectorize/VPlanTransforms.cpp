@@ -2485,7 +2485,6 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
 bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
                                                   VPBuilder &LoopBuilder) {
   VPDominatorTree VPDT(Plan);
-  VPTypeAnalysis TypeInfo(Plan);
 
   SmallVector<VPFirstOrderRecurrencePHIRecipe *> RecurrencePhis;
   for (VPRecipeBase &R :
@@ -2527,32 +2526,6 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // Set the first operand of RecurSplice to FOR again, after replacing
     // all users.
     RecurSplice->setOperand(0, FOR);
-
-    // Check for users extracting at the penultimate active lane of the FOR.
-    // If only a single lane is active in the current iteration, we need to
-    // select the last element from the previous iteration (from the FOR phi
-    // directly).
-    for (VPUser *U : RecurSplice->users()) {
-      if (!match(U, m_ExtractLane(m_LastActiveLane(m_VPValue()),
-                                  m_Specific(RecurSplice))))
-        continue;
-
-      VPBuilder B(cast<VPInstruction>(U));
-      VPValue *LastActiveLane = cast<VPInstruction>(U)->getOperand(0);
-      Type *Ty = TypeInfo.inferScalarType(LastActiveLane);
-      VPValue *Zero = Plan.getConstantInt(Ty, 0);
-      VPValue *One = Plan.getConstantInt(Ty, 1);
-      VPValue *PenultimateIndex = B.createSub(LastActiveLane, One);
-      VPValue *PenultimateLastIter =
-          B.createNaryOp(VPInstruction::ExtractLane,
-                         {PenultimateIndex, FOR->getBackedgeValue()});
-      VPValue *LastPrevIter =
-          B.createNaryOp(VPInstruction::ExtractLastLane, FOR);
-
-      VPValue *Cmp = B.createICmp(CmpInst::ICMP_EQ, LastActiveLane, Zero);
-      VPValue *Sel = B.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
-      cast<VPInstruction>(U)->replaceAllUsesWith(Sel);
-    }
   }
   return true;
 }
