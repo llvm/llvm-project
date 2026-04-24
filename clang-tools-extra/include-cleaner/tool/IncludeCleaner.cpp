@@ -45,7 +45,7 @@ easier to reason about and modify.
 The tool operates on *working* source code. This means it can suggest including
 headers that are only indirectly included, but cannot suggest those that are
 missing entirely. (clang-include-fixer can do this).
-)");
+)";
 
 cl::OptionCategory IncludeCleaner("clang-include-cleaner");
 
