@@ -158,17 +158,16 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE
   uptr __asan_get_report_access_size();
 
-  typedef enum {
-    __asan_address_info_none = 0,
-    __asan_address_info_src = 1,
-    __asan_address_info_dest = 2,
-    __asan_address_info_dealloc = 3,
-    __asan_address_info_first = 4,
-    __asan_address_info_second = 5,
-  } __asan_address_info_type;
-
   SANITIZER_INTERFACE_ATTRIBUTE
-  int __asan_get_report_address_info(int type, uptr* out_addr, uptr* out_size);
+  int __asan_get_report_src_address(uptr* out_addr, uptr* out_size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  int __asan_get_report_dest_address(uptr* out_addr, uptr* out_size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  int __asan_get_report_dealloc_address(uptr* out_addr, uptr* out_size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  int __asan_get_report_first_address(uptr* out_addr, uptr* out_size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  int __asan_get_report_second_address(uptr* out_addr, uptr* out_size);
 
   SANITIZER_INTERFACE_ATTRIBUTE
   const char * __asan_get_report_description();

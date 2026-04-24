@@ -610,103 +610,119 @@ uptr __asan_get_report_access_size() {
   return 0;
 }
 
-int __asan_get_report_address_info(int type, uptr* out_addr, uptr* out_size) {
+int __asan_get_report_src_address(uptr* out_addr, uptr* out_size) {
   ErrorDescription& err = ScopedInErrorReport::CurrentError();
-  uptr addr = 0;
-  uptr size = 0;
-  bool found = false;
-  switch (type) {
-    case __asan_address_info_src:
-      if (err.kind == kErrorKindGeneric && !err.Generic.is_write) {
-        addr = err.Generic.addr_description.Address();
-        size = err.Generic.access_size;
-        found = true;
-      } else if (err.kind == kErrorKindStringFunctionMemoryRangesOverlap) {
-        addr =
-            err.StringFunctionMemoryRangesOverlap.addr2_description.Address();
-        size = err.StringFunctionMemoryRangesOverlap.length2;
-        found = true;
-      } else if (err.kind == kErrorKindStringFunctionSizeOverflow &&
-                 !err.StringFunctionSizeOverflow.is_write) {
-        addr = err.StringFunctionSizeOverflow.addr_description.Address();
-        size = err.StringFunctionSizeOverflow.size;
-        found = true;
-      } else if (err.kind == kErrorKindMallocUsableSizeNotOwned) {
-        addr = err.MallocUsableSizeNotOwned.addr_description.Address();
-        size = 0;
-        found = true;
-      } else if (err.kind == kErrorKindSanitizerGetAllocatedSizeNotOwned) {
-        addr = err.SanitizerGetAllocatedSizeNotOwned.addr_description.Address();
-        size = 0;
-        found = true;
-      }
-      break;
-    case __asan_address_info_dest:
-      if (err.kind == kErrorKindGeneric && err.Generic.is_write) {
-        addr = err.Generic.addr_description.Address();
-        size = err.Generic.access_size;
-        found = true;
-      } else if (err.kind == kErrorKindStringFunctionMemoryRangesOverlap) {
-        addr =
-            err.StringFunctionMemoryRangesOverlap.addr1_description.Address();
-        size = err.StringFunctionMemoryRangesOverlap.length1;
-        found = true;
-      } else if (err.kind == kErrorKindStringFunctionSizeOverflow &&
-                 err.StringFunctionSizeOverflow.is_write) {
-        addr = err.StringFunctionSizeOverflow.addr_description.Address();
-        size = err.StringFunctionSizeOverflow.size;
-        found = true;
-      }
-      break;
-    case __asan_address_info_dealloc:
-      if (err.kind == kErrorKindDoubleFree) {
-        addr = err.DoubleFree.addr_description.addr;
-        size = 0;
-        found = true;
-      } else if (err.kind == kErrorKindNewDeleteTypeMismatch) {
-        addr = err.NewDeleteTypeMismatch.addr_description.addr;
-        size = err.NewDeleteTypeMismatch.delete_size;
-        found = true;
-      } else if (err.kind == kErrorKindFreeNotMalloced) {
-        addr = err.FreeNotMalloced.addr_description.Address();
-        size = 0;
-        found = true;
-      } else if (err.kind == kErrorKindAllocTypeMismatch) {
-        addr = err.AllocTypeMismatch.addr_description.Address();
-        size = 0;
-        found = true;
-      }
-      break;
-    case __asan_address_info_first:
-      if (err.kind == kErrorKindInvalidPointerPair) {
-        addr = err.InvalidPointerPair.addr1_description.Address();
-        size = 0;
-        found = true;
-      } else if (err.kind == kErrorKindODRViolation) {
-        addr = err.ODRViolation.global1.beg;
-        size = 0;
-        found = true;
-      }
-      break;
-    case __asan_address_info_second:
-      if (err.kind == kErrorKindInvalidPointerPair) {
-        addr = err.InvalidPointerPair.addr2_description.Address();
-        size = 0;
-        found = true;
-      } else if (err.kind == kErrorKindODRViolation) {
-        addr = err.ODRViolation.global2.beg;
-        size = 0;
-        found = true;
-      }
-      break;
+  if (err.kind == kErrorKindGeneric && !err.Generic.is_write) {
+    if (out_addr) *out_addr = err.Generic.addr_description.Address();
+    if (out_size) *out_size = err.Generic.access_size;
+    return 1;
   }
-  if (!found)
-    return 0;
-  if (out_addr)
-    *out_addr = addr;
-  if (out_size)
-    *out_size = size;
-  return 1;
+  if (err.kind == kErrorKindStringFunctionMemoryRangesOverlap) {
+    if (out_addr)
+      *out_addr =
+          err.StringFunctionMemoryRangesOverlap.addr2_description.Address();
+    if (out_size) *out_size = err.StringFunctionMemoryRangesOverlap.length2;
+    return 1;
+  }
+  if (err.kind == kErrorKindStringFunctionSizeOverflow &&
+      !err.StringFunctionSizeOverflow.is_write) {
+    if (out_addr)
+      *out_addr = err.StringFunctionSizeOverflow.addr_description.Address();
+    if (out_size) *out_size = err.StringFunctionSizeOverflow.size;
+    return 1;
+  }
+  if (err.kind == kErrorKindMallocUsableSizeNotOwned) {
+    if (out_addr)
+      *out_addr = err.MallocUsableSizeNotOwned.addr_description.Address();
+    if (out_size) *out_size = 0;
+    return 1;
+  }
+  if (err.kind == kErrorKindSanitizerGetAllocatedSizeNotOwned) {
+    if (out_addr)
+      *out_addr = err.SanitizerGetAllocatedSizeNotOwned.addr_description.Address();
+    if (out_size) *out_size = 0;
+    return 1;
+  }
+  return 0;
+}
+
+int __asan_get_report_dest_address(uptr* out_addr, uptr* out_size) {
+  ErrorDescription& err = ScopedInErrorReport::CurrentError();
+  if (err.kind == kErrorKindGeneric && err.Generic.is_write) {
+    if (out_addr) *out_addr = err.Generic.addr_description.Address();
+    if (out_size) *out_size = err.Generic.access_size;
+    return 1;
+  }
+  if (err.kind == kErrorKindStringFunctionMemoryRangesOverlap) {
+    if (out_addr)
+      *out_addr =
+          err.StringFunctionMemoryRangesOverlap.addr1_description.Address();
+    if (out_size) *out_size = err.StringFunctionMemoryRangesOverlap.length1;
+    return 1;
+  }
+  if (err.kind == kErrorKindStringFunctionSizeOverflow &&
+      err.StringFunctionSizeOverflow.is_write) {
+    if (out_addr)
+      *out_addr = err.StringFunctionSizeOverflow.addr_description.Address();
+    if (out_size) *out_size = err.StringFunctionSizeOverflow.size;
+    return 1;
+  }
+  return 0;
+}
+
+int __asan_get_report_dealloc_address(uptr* out_addr, uptr* out_size) {
+  ErrorDescription& err = ScopedInErrorReport::CurrentError();
+  if (err.kind == kErrorKindDoubleFree) {
+    if (out_addr) *out_addr = err.DoubleFree.addr_description.addr;
+    if (out_size) *out_size = 0;
+    return 1;
+  }
+  if (err.kind == kErrorKindNewDeleteTypeMismatch) {
+    if (out_addr) *out_addr = err.NewDeleteTypeMismatch.addr_description.addr;
+    if (out_size) *out_size = err.NewDeleteTypeMismatch.delete_size;
+    return 1;
+  }
+  if (err.kind == kErrorKindFreeNotMalloced) {
+    if (out_addr) *out_addr = err.FreeNotMalloced.addr_description.Address();
+    if (out_size) *out_size = 0;
+    return 1;
+  }
+  if (err.kind == kErrorKindAllocTypeMismatch) {
+    if (out_addr) *out_addr = err.AllocTypeMismatch.addr_description.Address();
+    if (out_size) *out_size = 0;
+    return 1;
+  }
+  return 0;
+}
+
+int __asan_get_report_first_address(uptr* out_addr, uptr* out_size) {
+  ErrorDescription& err = ScopedInErrorReport::CurrentError();
+  if (err.kind == kErrorKindInvalidPointerPair) {
+    if (out_addr) *out_addr = err.InvalidPointerPair.addr1_description.Address();
+    if (out_size) *out_size = 0;
+    return 1;
+  }
+  if (err.kind == kErrorKindODRViolation) {
+    if (out_addr) *out_addr = err.ODRViolation.global1.beg;
+    if (out_size) *out_size = 0;
+    return 1;
+  }
+  return 0;
+}
+
+int __asan_get_report_second_address(uptr* out_addr, uptr* out_size) {
+  ErrorDescription& err = ScopedInErrorReport::CurrentError();
+  if (err.kind == kErrorKindInvalidPointerPair) {
+    if (out_addr) *out_addr = err.InvalidPointerPair.addr2_description.Address();
+    if (out_size) *out_size = 0;
+    return 1;
+  }
+  if (err.kind == kErrorKindODRViolation) {
+    if (out_addr) *out_addr = err.ODRViolation.global2.beg;
+    if (out_size) *out_size = 0;
+    return 1;
+  }
+  return 0;
 }
 
 const char *__asan_get_report_description() {

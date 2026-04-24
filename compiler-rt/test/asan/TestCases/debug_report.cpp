@@ -68,16 +68,14 @@ __asan_on_error() {
 
   void *addr2 = NULL;
   size_t size2 = 0;
-  int is_dest =
-      __asan_get_report_address_info(__asan_address_info_dest, &addr2, &size2);
+  int is_dest = __asan_get_report_dest_address(&addr2, &size2);
   fprintf(stderr, "is_dest: %d, addr2: " PTR_FMT ", size2: %zu\n", is_dest,
           addr2, size2);
   // CHECK: is_dest: 1, addr2: 0x[[ADDR]], size2: 1
 
-  int is_none =
-      __asan_get_report_address_info(__asan_address_info_none, &addr2, &size2);
-  fprintf(stderr, "is_none: %d\n", is_none);
-  // CHECK: is_none: 0
+  int is_src = __asan_get_report_src_address(&addr2, &size2);
+  fprintf(stderr, "is_src: %d\n", is_src);
+  // CHECK: is_src: 0
 }
 
 // CHECK: AddressSanitizer: heap-use-after-free on address {{0x0*}}[[ADDR]] at pc {{0x0*}}[[PC]] bp {{0x0*}}[[BP]] sp {{0x0*}}[[SP]]

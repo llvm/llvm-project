@@ -43,15 +43,13 @@ extern "C" void __asan_on_error() {
 
   void *addr_src = NULL;
   size_t size_src = 0;
-  int is_src = __asan_get_report_address_info(__asan_address_info_src,
-                                              &addr_src, &size_src);
+  int is_src = __asan_get_report_src_address(&addr_src, &size_src);
   fprintf(stderr, "is_src: %d\n", is_src);
   // CHECK: is_src: 0
 
   void *addr_dest = NULL;
   size_t size_dest = 0;
-  int is_dest = __asan_get_report_address_info(__asan_address_info_dest,
-                                               &addr_dest, &size_dest);
+  int is_dest = __asan_get_report_dest_address(&addr_dest, &size_dest);
   // We check size_dest + 1 because size_dest is -1 (as size_t), which varies
   // depending on the platform's size_t. Adding 1 should result in 0.
   fprintf(stderr, "is_dest: %d, addr_dest: " PTR_FMT ", size_dest+1: %zu\n",

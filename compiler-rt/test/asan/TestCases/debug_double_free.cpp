@@ -53,8 +53,7 @@ __asan_on_error() {
 
   void *addr_dealloc = NULL;
   size_t size_dealloc = 0xbad;
-  int is_dealloc = __asan_get_report_address_info(__asan_address_info_dealloc,
-                                                  &addr_dealloc, &size_dealloc);
+  int is_dealloc = __asan_get_report_dealloc_address(&addr_dealloc, &size_dealloc);
   fprintf(stderr,
           "is_dealloc: %d, addr_dealloc: " PTR_FMT ", size_dealloc: %zu\n",
           is_dealloc, addr_dealloc, size_dealloc);
