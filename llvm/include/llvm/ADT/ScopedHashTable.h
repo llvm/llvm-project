@@ -289,7 +289,7 @@ void ScopedHashTableScope<K, V, KInfo, Allocator>::erase(const K &Key) {
   auto I = HT.TopLevelMap.find(Key);
   if (I == HT.TopLevelMap.end())
     return;
-  ScopedHashTableVal<K, V> *&ThisEntry = *I;
+  ScopedHashTableVal<K, V> *&ThisEntry = I->second;
 
   // `ThisEntry` may be the LastValInScope of a parent scope rather than the
   // current scope. We iterate through the scope chain to find the scope
