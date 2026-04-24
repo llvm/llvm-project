@@ -2383,4 +2383,4 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
 // compile time performance.
 def optnone_combines : GICombineGroup<[trivial_combines,
     ptr_add_immed_chain, combines_for_extload,
-    not_cmp_fold, opt_brcond_by_inverting_cond, combine_concat_vector]>;
+    not_cmp_fold, combine_concat_vector]>;
