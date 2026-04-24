@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! Test AT edit descriptor (Fortran 202X)
+! Test AT edit descriptor (Fortran 2023)
 
   character(10) :: str
   character(kind=2,len=10) :: str2
@@ -33,7 +33,13 @@
   !ERROR: 'AT' edit descriptor does not accept a width value
   write(*, '(AT10)') str
   !ERROR: 'AT' edit descriptor does not accept a width value
+  !ERROR: Unexpected '.' in format expression
   write(*, '(AT10.2)') str
+
+  ! AT with width on input produces two independent errors.
+  !ERROR: 'AT' edit descriptor does not accept a width value
+  !ERROR: 'AT' edit descriptor must not be used for input
+  read(*, '(AT10)') str
 
   ! FORMAT statements are standalone; the compiler cannot know if they will
   ! be used with READ or WRITE, so no compile-time error is expected here.

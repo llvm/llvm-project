@@ -1063,10 +1063,11 @@ TEST(IOApiTests, ATEditDescriptorOutput) {
         << "A test: expected 'hi        ' got '" << got << "'";
   }
 
-  // Multiple AT descriptors
+  // Multiple AT descriptors; '#' marker pins the output position so the
+  // trimmed width is verified without manual blank-stripping.
   {
     char buffer[800];
-    const char *format{"(AT,1X,AT)"};
+    const char *format{"(AT,1X,AT,'#')"};
     auto cookie{IONAME(BeginInternalFormattedOutput)(
         buffer, sizeof buffer, format, std::strlen(format))};
     EXPECT_TRUE(IONAME(OutputAscii)(cookie, "abc   ", 6));
@@ -1078,7 +1079,7 @@ TEST(IOApiTests, ATEditDescriptorOutput) {
     if (lastNonBlank != std::string::npos) {
       got.resize(lastNonBlank + 1);
     }
-    EXPECT_TRUE(CompareFormattedStrings("abc def", got))
-        << "Multiple AT test: expected 'abc def' got '" << got << "'";
+    EXPECT_TRUE(CompareFormattedStrings("abc def#", got))
+        << "Multiple AT test: expected 'abc def#' got '" << got << "'";
   }
 }
