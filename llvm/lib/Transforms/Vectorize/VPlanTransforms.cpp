@@ -6738,6 +6738,29 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   VPValue *ExitValue = cast_or_null<VPInstruction>(
       findUserOf(WidenRecipe, m_Select(m_VPValue(Cond), m_Specific(WidenRecipe),
                                        m_Specific(RdxPhi))));
+
+  // Look for a VPBlendRecipe user of the WidenRecipe. When the reduction is
+  // gated by an `if` in the loop body, the blend merges the updated value
+  // (WidenRecipe) and the unchanged phi value (RdxPhi).
+  if (!ExitValue) {
+    for (VPUser *U : WidenRecipe->users()) {
+      auto *Blend = dyn_cast<VPBlendRecipe>(cast<VPRecipeBase>(U));
+      if (!Blend || Blend->getNumIncomingValues() != 2)
+        continue;
+      VPValue *V0 = Blend->getIncomingValue(0);
+      VPValue *V1 = Blend->getIncomingValue(1);
+
+      if ((V0 == WidenRecipe) && (V1 == RdxPhi) ||
+          (V1 == WidenRecipe) && (V0 == RdxPhi)) {
+        // Use the mask of the WidenRecipe incoming as the reduction condition.
+        unsigned maskIdx = (V0 == WidenRecipe) ? 0 : 1;
+        Cond = Blend->getMask(maskIdx);
+        ExitValue = Blend;
+        break;
+      }
+    }
+  }
+
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
                        RdxPhi->getBackedgeValue() == ExitValue;
   assert((!ExitValue || IsLastInChain) &&
@@ -6967,6 +6990,19 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   VPValue *ExitValue = RdxResult->getOperand(0);
   match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
+  // Check for a reduction in the operand of a Blend.
+  if (auto *Blend = dyn_cast<VPBlendRecipe>(ExitValue)) {
+    if(Blend->getNumIncomingValues() == 2) {
+      VPValue *V0 = Blend->getIncomingValue(0);
+      VPValue *V1 = Blend->getIncomingValue(1);
+
+      if (V0 == RedPhiR)
+        ExitValue = V1;
+      if (V1 == RedPhiR)
+        ExitValue = V0;
+    }
+  }
+
   SmallVector<VPPartialReductionChain> Chain;
   RecurKind RK = RedPhiR->getRecurrenceKind();
   Type *PhiType = RedPhiR->getScalarType();
@@ -7092,6 +7128,19 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       auto UseIsValid = [&, RedPhiR = RedPhiR](VPUser *U) {
         if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(U))
           return PhiR == RedPhiR;
+
+        // Predicated reductions introduced by an 'if' inside the loop
+        // will be represented by a VPBlendRecipe with two incoming values,
+        // the reduction PHI and the reduction Bin Op.
+        if (auto *Blend = dyn_cast<VPBlendRecipe>(U)) {
+          if (Blend->getNumIncomingValues() != 2)
+            return false;
+
+          VPValue *V0 = Blend->getIncomingValue(0);
+          VPValue *V1 = Blend->getIncomingValue(1);
+          return (V0 == Chain.ReductionBinOp && V1 == RedPhiR) || (V1 == Chain.ReductionBinOp && V0 == RedPhiR);
+        }
+
         auto *R = cast<VPSingleDefRecipe>(U);
         return Chain.ScaleFactor == ScaledReductionMap.lookup_or(R, 0) ||
                match(R, m_ComputeReductionResult(
