@@ -5184,12 +5184,9 @@ SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
       *DAG.getContext(), Src.getValueType().getVectorElementType());
 
   // Round the floating-point value into a floating-point register with the
-  // current rounding mode.
+  // current rounding mode and convert to an integer.
   SDValue FOp = DAG.getNode(ISD::FRINT, DL, CastVT, Src);
-
-  // Truncate the rounded floating point to an integer.
-  return DAG.getNode(ISD::FP_TO_SINT_SAT, DL, VT, FOp,
-                     DAG.getValueType(VT.getVectorElementType()));
+  return DAG.getFreeze(DAG.getNode(ISD::FP_TO_SINT, DL, VT, FOp));
 }
 
 SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
