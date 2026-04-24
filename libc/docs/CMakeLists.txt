@@ -45,6 +45,7 @@ if (SPHINX_FOUND)
       cpio
       ctype
       dirent
+      dlfcn
       endian
       errno
       fcntl

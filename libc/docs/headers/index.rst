@@ -11,6 +11,7 @@ Implementation Status
    cpio
    ctype
    dirent
+   dlfcn
    endian
    errno
    fcntl
