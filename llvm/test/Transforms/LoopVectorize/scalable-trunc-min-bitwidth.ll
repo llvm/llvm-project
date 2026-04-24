@@ -32,8 +32,6 @@ define void @trunc_minimal_bitwidth(ptr %bptr, ptr noalias %hptr, i32 %val, i64 
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[BPTR:%.*]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP7]] to i32
 ; CHECK-NEXT:    [[CONV21:%.*]] = trunc i32 [[VAL]] to i16
 ; CHECK-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i16, ptr [[HPTR]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i16 [[CONV21]], ptr [[ARRAYIDX23]], align 2
@@ -48,8 +46,6 @@ entry:
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %0 = load i8, ptr %bptr, align 1
-  %conv = zext i8 %0 to i32
   %conv21 = trunc i32 %val to i16
   %arrayidx23 = getelementptr inbounds i16, ptr %hptr, i64 %indvars.iv
   store i16 %conv21, ptr %arrayidx23, align 2
