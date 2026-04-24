@@ -124,6 +124,12 @@ Clang Python Bindings Potentially Breaking Changes
   be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a
   future release.
 
+OpenCL Potentially Breaking Changes
+-----------------------------------
+- Clang now diagnoses zero-length arrays as errors in OpenCL. OpenCL C 3.0
+  section 6.11.d states that "Variable length arrays and structures with
+  flexible (or unsized) arrays are not supported."
+
 What's New in Clang |release|?
 ==============================
 
