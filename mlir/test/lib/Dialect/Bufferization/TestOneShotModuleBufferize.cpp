@@ -66,6 +66,11 @@ struct TestOneShotModuleBufferizePass
               MemRefType::get(tensorType.getShape(),
                               tensorType.getElementType(), layout, memSpace));
         };
+    opt.createMemRefLayoutFn = [&](TensorType tensor) {
+      assert(isa<RankedTensorType>(tensor) && "tests only builtin tensors");
+      auto tensorType = cast<RankedTensorType>(tensor);
+      return getMemRefLayoutForTensorEncoding(tensorType);
+    };
 
     bufferization::BufferizationState bufferizationState;
 
