@@ -60,8 +60,8 @@ constexpr bool test() {
 
   using Iter = std::vector<int>::iterator;
 
-  auto begin    = vec.begin();
-  auto end      = vec.end();
+  auto begin = vec.begin();
+  auto end   = vec.end();
 
   using Base = RandomAccessView<Iter>;
   static_assert(std::ranges::random_access_range<Base>);
