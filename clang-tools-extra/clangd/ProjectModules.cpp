@@ -1,4 +1,5 @@
-//===------------------ ProjectModules.h -------------------------*- C++-*-===//
+//===------------------ ProjectModules.cpp -------------------------*-
+//C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -231,7 +232,7 @@ private:
   CommandMangler Mangler;
 };
 
-std::unique_ptr<ProjectModules> scanningProjectModules(
+std::unique_ptr<ProjectModules> getProjectModules(
     std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
     const ThreadsafeFS &TFS) {
   return std::make_unique<ScanningAllProjectModules>(CDB, TFS);
