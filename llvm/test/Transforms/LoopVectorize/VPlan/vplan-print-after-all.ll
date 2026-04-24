@@ -25,11 +25,11 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createPartialReductions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToAbstractRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInterleaveGroups
-; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::dropPoisonGeneratingRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::hoistPredicatedLoads
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::sinkPredicatedStores
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::truncateToMinimalBitwidths
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan for loop in 'foo' after removeRedundantCanonicalIVs
 ; CHECK: VPlan for loop in 'foo' after removeRedundantInductionCasts
 ; CHECK: VPlan for loop in 'foo' after reassociateHeaderMask
