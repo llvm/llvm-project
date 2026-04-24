@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -73,6 +74,11 @@ static cl::opt<bool> SimplifyMIR(
 
 static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
                                     cl::desc("Print MIR debug-locations"));
+
+static cl::opt<bool> EmitVRMState(
+    "mir-emit-vrm", cl::Hidden, cl::init(false),
+    cl::desc("Serialize VirtRegMap state (split-from, assigned-phys) into "
+             "MIR YAML when a VirtRegMap is available"));
 
 namespace {
 
@@ -143,7 +149,8 @@ static void printMBB(raw_ostream &OS, MFPrintState &State,
                      const MachineBasicBlock &MBB);
 static void convertMRI(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
                        const MachineRegisterInfo &RegInfo,
-                       const TargetRegisterInfo *TRI);
+                       const TargetRegisterInfo *TRI,
+                       const VirtRegMap *VRM);
 static void convertMCP(yaml::MachineFunction &MF,
                        const MachineConstantPool &ConstantPool);
 static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
@@ -175,7 +182,7 @@ static void convertPrefetchTargets(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF);
 
 static void printMF(raw_ostream &OS, MFGetterFnT Fn,
-                    const MachineFunction &MF) {
+                    const MachineFunction &MF, const VirtRegMap *VRM) {
   MFPrintState State(std::move(Fn), MF);
 
   State.RegisterMaskIds = initRegisterMaskIds(MF);
@@ -206,7 +213,8 @@ static void printMF(raw_ostream &OS, MFGetterFnT Fn,
   YamlMF.IsSSA = Props.hasIsSSA();
   YamlMF.NoVRegs = Props.hasNoVRegs();
 
-  convertMRI(YamlMF, MF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
+  convertMRI(YamlMF, MF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo(),
+             VRM);
   MachineModuleSlotTracker &MST = State.MST;
   MST.incorporateFunction(MF.getFunction());
   convertMFI(MST, YamlMF.FrameInfo, MF.getFrameInfo(),
@@ -306,7 +314,8 @@ static void printRegFlags(Register Reg,
 
 static void convertMRI(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
                        const MachineRegisterInfo &RegInfo,
-                       const TargetRegisterInfo *TRI) {
+                       const TargetRegisterInfo *TRI,
+                       const VirtRegMap *VRM) {
   YamlMF.TracksRegLiveness = RegInfo.tracksLiveness();
 
   // Print the virtual register definitions.
@@ -321,6 +330,17 @@ static void convertMRI(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
     printRegFlags(Reg, VReg.RegisterFlags, MF, TRI);
+    if (EmitVRMState && VRM) {
+      Register Orig = VRM->getPreSplitReg(Reg);
+      if (Orig && Orig != Reg) {
+        raw_string_ostream OS(VReg.SplitFrom.Value);
+        OS << printReg(Orig, TRI);
+      }
+      if (VRM->hasPhys(Reg)) {
+        raw_string_ostream OS(VReg.AssignedPhys.Value);
+        OS << printReg(VRM->getPhys(Reg), TRI);
+      }
+    }
     YamlMF.VirtualRegisters.push_back(std::move(VReg));
   }
 
@@ -1070,12 +1090,14 @@ void llvm::printMIR(raw_ostream &OS, const Module &M) {
 }
 
 void llvm::printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
-                    const MachineFunction &MF) {
-  printMF(OS, [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
+                    const MachineFunction &MF, const VirtRegMap *VRM) {
+  printMF(
+      OS, [&](const Function &F) { return MMI.getMachineFunction(F); }, MF,
+      VRM);
 }
 
 void llvm::printMIR(raw_ostream &OS, FunctionAnalysisManager &FAM,
-                    const MachineFunction &MF) {
+                    const MachineFunction &MF, const VirtRegMap *VRM) {
   printMF(
       OS,
       [&](const Function &F) {
@@ -1083,5 +1105,5 @@ void llvm::printMIR(raw_ostream &OS, FunctionAnalysisManager &FAM,
                        const_cast<Function &>(F))
                     .getMF();
       },
-      MF);
+      MF, VRM);
 }

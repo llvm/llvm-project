@@ -203,12 +203,20 @@ struct VirtualRegisterDefinition {
   StringValue Class;
   StringValue PreferredRegister;
   std::vector<FlowStringValue> RegisterFlags;
+  // VirtRegMap state (gated on -mir-emit-vrm during printing).
+  // SplitFrom: id-form virtual register only (e.g. '%0'); physregs and named
+  //            vregs are rejected by the parser.
+  // AssignedPhys: physical register only (e.g. '$vgpr5'); vregs are rejected.
+  StringValue SplitFrom;
+  StringValue AssignedPhys;
 
   // TODO: Serialize the target specific register hints.
 
   bool operator==(const VirtualRegisterDefinition &Other) const {
     return ID == Other.ID && Class == Other.Class &&
-           PreferredRegister == Other.PreferredRegister;
+           PreferredRegister == Other.PreferredRegister &&
+           SplitFrom == Other.SplitFrom &&
+           AssignedPhys == Other.AssignedPhys;
   }
 };
 
@@ -220,6 +228,15 @@ template <> struct MappingTraits<VirtualRegisterDefinition> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("flags", Reg.RegisterFlags,
                        std::vector<FlowStringValue>());
+    // VirtRegMap state: only round-tripped when set (gated on -mir-emit-vrm
+    // during printing). MIRPrinter sets WriteDefaultValues=true unless
+    // -simplify-mir is passed, so a plain mapOptional with an empty default
+    // would still emit the keys and change every existing test's output.
+    // Skip the call on output when empty to keep them off entirely.
+    if (!YamlIO.outputting() || !Reg.SplitFrom.Value.empty())
+      YamlIO.mapOptional("split-from", Reg.SplitFrom, StringValue());
+    if (!YamlIO.outputting() || !Reg.AssignedPhys.Value.empty())
+      YamlIO.mapOptional("assigned-phys", Reg.AssignedPhys, StringValue());
   }
 
   static const bool flow = true;

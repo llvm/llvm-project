@@ -130,6 +130,19 @@ struct LLVM_ABI MachineFunctionInfo {
       const {
     return nullptr;
   }
+
+  // Stashed on the generic MFI base so MIRParser can carry VirtRegMap state
+  // (split-from, assigned-phys) across passes until VirtRegMap::init() drains
+  // it. Generic so any target benefits without subclassing.
+  // NOTE: target subclasses' clone() overrides do not copy this field; if a
+  // function is cloned before VirtRegMap runs, the stash is lost. Acceptable
+  // for the experimental scope (transient parser state).
+  struct PendingVRegMapping {
+    Register VReg;
+    Register SplitFrom;       // empty if absent
+    MCRegister AssignedPhys;  // empty if absent
+  };
+  SmallVector<PendingVRegMapping, 0> PendingVRegMappings;
 };
 
 /// Properties which a MachineFunction may have at a given point in time.

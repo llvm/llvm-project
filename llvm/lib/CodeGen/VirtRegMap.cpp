@@ -74,6 +74,21 @@ void VirtRegMap::init(MachineFunction &mf) {
   Virt2ShapeMap.clear();
 
   grow();
+
+  // Drain any VirtRegMap state stashed by MIRParser on the generic
+  // MachineFunctionInfo base. Must run after grow() so that Virt2*Map have
+  // capacity for every vreg referenced by the stash.
+  if (auto *MFI = mf.getInfo<MachineFunctionInfo>()) {
+    for (const auto &P : MFI->PendingVRegMappings) {
+      if (P.AssignedPhys)
+        assignVirt2Phys(P.VReg, P.AssignedPhys);
+      // Guard against self-reference; the parser also rejects this, but a
+      // belt-and-braces check keeps Virt2SplitMap meaningful.
+      if (P.SplitFrom && P.SplitFrom != P.VReg)
+        setIsSplitFromReg(P.VReg, P.SplitFrom);
+    }
+    MFI->PendingVRegMappings.clear();
+  }
 }
 
 void VirtRegMap::grow() {
