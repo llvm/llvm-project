@@ -2401,8 +2401,13 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   for (unsigned I = 0; I < IncludedCount; ++I) {
     uint32_t LocalSMID =
         endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
-    if (!FE)
+
+    if (!FE) {
+      // We skip a header if it cannot be found on disk, since in this case
+      // it cannot be included or imported from a translation unit. Importing
+      // such a header will cause a file not found error.
       continue;
+    }
 
     if (LocalSMID == 0) {
       PP.markIncludedOnTopLevel(*FE);
