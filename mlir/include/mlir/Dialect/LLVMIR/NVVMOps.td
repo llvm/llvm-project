@@ -531,8 +531,8 @@ def NVVM_SinOp : NVVM_SingleResultIntrinsicOp<"sin",
   let summary = "Sine (fast approximation)";
   let description = [{
     Computes a fast approximation of the sine of the input value (in radians).
-    Lowers to PTX `sin.approx{.ftz}.f32`. The `ftz` attribute, when set,
-    flushes subnormal inputs and results to sign-preserving zero.
+    The `ftz` attribute, when set, flushes subnormal inputs and results to 
+    sign-preserving zero.
 
     For more information, see PTX ISA:
     [sin](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sin)
