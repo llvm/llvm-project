@@ -2110,11 +2110,14 @@ void SwiftASTContext::AddExtraClangCC1Args(
       else
         ++it;
     }
-    invocation.getFrontendOpts().ModuleFiles.erase(
-        llvm::remove_if(invocation.getFrontendOpts().ModuleFiles,
-                        [&](const auto &mod) { return !CheckFileExists(mod); }),
-        invocation.getFrontendOpts().ModuleFiles.end());
+    llvm::erase_if(invocation.getFrontendOpts().ModuleFiles,
+                   [&](const auto &mod) { return !CheckFileExists(mod); });
   }
+
+  // Remove -Werror flags.
+  llvm::erase_if(
+      invocation.getDiagnosticOpts().Warnings,
+      [](StringRef Warning) { return Warning.starts_with("error"); });
 
   invocation.generateCC1CommandLine(
       [&](const llvm::Twine &arg) { dest.push_back(arg.str()); });

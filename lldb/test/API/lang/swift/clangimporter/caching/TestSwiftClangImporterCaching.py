@@ -34,5 +34,6 @@ class TestSwiftClangImporterCaching(TestBase):
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -DADDED=1
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -DEXTRA=1
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift") Module import remark: loaded module 'ClangA'
+#       CHECK-NOT: -Werror
 #       CHECK-NOT: -cc1
 #       CHECK-NOT: Clang error
