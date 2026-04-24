@@ -1112,7 +1112,7 @@ bool X86AsmBackend::finishLayout() const {
       // of the resulting code.  If we later find a reason to expand
       // particular instructions over others, we can adjust.
       unsigned RemainingSize = Asm->computeFragmentSize(F) - F.getFixedSize();
-      padInstsBackward(Relaxable, RemainingSize);
+      Changed |= padInstsBackward(Relaxable, RemainingSize);
 
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would
