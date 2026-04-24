@@ -946,6 +946,31 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     return emitHLSLConstructAggregate(DestType, Elements, E);
   }
 
+  case CK_ToUnion: {
+    const FieldDecl *UnionField = E->getTargetUnionField();
+    const Record *R = this->getRecord(E->getType());
+    assert(R);
+    const Record::Field *RF = R->getField(UnionField);
+    QualType FieldType = RF->Decl->getType();
+
+    if (OptPrimType PT = classify(FieldType)) {
+      if (!this->visit(SubExpr))
+        return false;
+      if (RF->isBitField())
+        return this->emitInitBitFieldActivate(*PT, RF->Offset, RF->bitWidth(),
+                                              E);
+      return this->emitInitFieldActivate(*PT, RF->Offset, E);
+    }
+
+    if (!this->emitGetPtrField(RF->Offset, E))
+      return false;
+    if (!this->emitActivate(E))
+      return false;
+    if (!this->visitInitializer(SubExpr))
+      return false;
+    return this->emitPopPtr(E);
+  }
+
   default:
     return this->emitInvalid(E);
   }
@@ -2608,22 +2633,16 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (DiscardResult)
     return this->discard(Base);
 
-  // MemberExprs are almost always lvalues, in which case we don't need to
-  // do the load. But sometimes they aren't.
-  const auto maybeLoadValue = [&]() -> bool {
-    if (E->isGLValue())
-      return true;
-    if (OptPrimType T = classify(E))
-      return this->emitLoadPop(*T, E);
-    return false;
-  };
-
   if (const auto *VD = dyn_cast<VarDecl>(Member)) {
     // I am almost confident in saying that a var decl must be static
-    // and therefore registered as a global variable. But this will probably
-    // turn out to be wrong some time in the future, as always.
-    if (auto GlobalIndex = P.getGlobal(VD))
-      return this->emitGetPtrGlobal(*GlobalIndex, E) && maybeLoadValue();
+    // and therefore registered as a global variable.
+    if (auto GlobalIndex = P.getGlobal(VD)) {
+      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+        return false;
+      if (Member->getType()->isReferenceType())
+        return this->emitLoadPopPtr(E);
+      return true;
+    }
     return false;
   }
 
@@ -2644,6 +2663,17 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (!R)
     return false;
   const Record::Field *F = R->getField(FD);
+
+  // MemberExprs are almost always lvalues, in which case we don't need to
+  // do the load. But sometimes they aren't.
+  const auto maybeLoadValue = [&]() -> bool {
+    if (E->isGLValue())
+      return true;
+    if (OptPrimType T = classify(E))
+      return this->emitLoadPop(*T, E);
+    return false;
+  };
+
   // Leave a pointer to the field on the stack.
   if (F->Decl->getType()->isReferenceType())
     return this->emitGetFieldPop(PT_Ptr, F->Offset, E) && maybeLoadValue();
