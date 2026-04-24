@@ -129,7 +129,8 @@ public:
 
   bool run(MachineFunction &MF) {
     ST = &MF.getSubtarget<GCNSubtarget>();
-    if (!AMDGPU::hasVOPD(*ST) || !ST->isWave32())
+    if (!AMDGPU::hasVOPD(*ST) || !ST->isWave32() ||
+        MF.getFunction().hasFnAttribute("amdgpu-no-vopd"))
       return false;
     LLVM_DEBUG(dbgs() << "CreateVOPD Pass:\n");
 

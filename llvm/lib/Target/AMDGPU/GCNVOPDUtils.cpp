@@ -236,6 +236,10 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       LLVM_DEBUG(dbgs() << "Target does not support VOPDPairingMutation\n");
       return;
     }
+    if (DAG->MF.getFunction().hasFnAttribute("amdgpu-no-vopd")) {
+      LLVM_DEBUG(dbgs() << "VOPD formation has been disabled\n");
+      return;
+    }
 
     std::vector<SUnit>::iterator ISUI, JSUI;
     for (ISUI = DAG->SUnits.begin(); ISUI != DAG->SUnits.end(); ++ISUI) {

@@ -2249,6 +2249,12 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       (enabled by default).
 
                                                       Relevant for GFX10+.
+
+     "amdgpu-no-vopd"                                 Disable formation of vopd instructions
+                                                      (vopd formation is enabled by default for targets that
+                                                      support it).
+
+                                                      Relevent for GFX11+.
      ================================================ ==========================================================
 
 Calling Conventions
