@@ -113,8 +113,6 @@ entry:
 }
 
 define <4 x bfloat> @zipeven_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
-;
-;
 ; CHECK-LABEL: zipeven_v4bf16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu

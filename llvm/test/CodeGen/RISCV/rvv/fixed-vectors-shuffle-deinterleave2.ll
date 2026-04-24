@@ -174,9 +174,6 @@ entry:
 }
 
 define void @vnsrl_0_bfloat(ptr %in, ptr %out) {
-;
-;
-;
 ; V-LABEL: vnsrl_0_bfloat:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
@@ -263,9 +260,6 @@ entry:
 }
 
 define void @vnsrl_16_bfloat(ptr %in, ptr %out) {
-;
-;
-;
 ; V-LABEL: vnsrl_16_bfloat:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
@@ -1298,9 +1292,6 @@ entry:
 }
 
 define void @vnsrl_0_bfloat_two_source(ptr %in0, ptr %in1, ptr %out) {
-;
-;
-;
 ; V-LABEL: vnsrl_0_bfloat_two_source:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
@@ -1421,9 +1412,6 @@ entry:
 }
 
 define void @vnsrl_16_bfloat_two_source(ptr %in0, ptr %in1, ptr %out) {
-;
-;
-;
 ; V-LABEL: vnsrl_16_bfloat_two_source:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma

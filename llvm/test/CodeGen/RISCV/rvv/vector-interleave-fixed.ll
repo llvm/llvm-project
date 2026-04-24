@@ -1095,9 +1095,6 @@ define <4 x half> @vector_interleave_v4f16_v2f16(<2 x half> %a, <2 x half> %b) {
 }
 
 define <4 x bfloat> @vector_interleave_v4bf16_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b) {
-;
-;
-;
 ; CHECK-LABEL: vector_interleave_v4bf16_v2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -1170,9 +1167,6 @@ define <8 x half> @vector_interleave_v8f16_v4f16(<4 x half> %a, <4 x half> %b) {
 }
 
 define <8 x bfloat> @vector_interleave_v8bf16_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
-;
-;
-;
 ; CHECK-LABEL: vector_interleave_v8bf16_v4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -1287,9 +1281,6 @@ define <16 x half> @vector_interleave_v16f16_v8f16(<8 x half> %a, <8 x half> %b)
 }
 
 define <16 x bfloat> @vector_interleave_v16bf16_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
-;
-;
-;
 ; CHECK-LABEL: vector_interleave_v16bf16_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -1793,9 +1784,6 @@ define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b
 }
 
 define <10 x bfloat> @vector_interleave5_v10bf16_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c, <2 x bfloat> %d, <2 x bfloat> %e) nounwind {
-;
-;
-;
 ; CHECK-LABEL: vector_interleave5_v10bf16_v2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
@@ -2080,9 +2068,6 @@ define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b
 }
 
 define <12 x bfloat> @vector_interleave6_v12bf16_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c, <2 x bfloat> %d, <2 x bfloat> %e, <2 x bfloat> %f) nounwind {
-;
-;
-;
 ; CHECK-LABEL: vector_interleave6_v12bf16_v2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
@@ -2395,9 +2380,6 @@ define <7 x half> @vector_interleave7_v7f16_v1f16(<1 x half> %a, <1 x half> %b, 
 }
 
 define <7 x bfloat> @vector_interleave7_v7bf16_v1bf16(<1 x bfloat> %a, <1 x bfloat> %b, <1 x bfloat> %c, <1 x bfloat> %d, <1 x bfloat> %e, <1 x bfloat> %f, <1 x bfloat> %g) nounwind {
-;
-;
-;
 ; CHECK-LABEL: vector_interleave7_v7bf16_v1bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
@@ -2738,9 +2720,6 @@ define <8 x half> @vector_interleave8_v8f16_v1f16(<1 x half> %a, <1 x half> %b, 
 }
 
 define <8 x bfloat> @vector_interleave8_v8bf16_v1bf16(<1 x bfloat> %a, <1 x bfloat> %b, <1 x bfloat> %c, <1 x bfloat> %d, <1 x bfloat> %e, <1 x bfloat> %f, <1 x bfloat> %g, <1 x bfloat> %h) nounwind {
-;
-;
-;
 ; CHECK-LABEL: vector_interleave8_v8bf16_v1bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
