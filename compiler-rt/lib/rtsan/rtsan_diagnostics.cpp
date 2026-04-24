@@ -91,6 +91,5 @@ void __rtsan::PrintDiagnostics(const DiagnosticsInfo &info) {
 void __rtsan::PrintErrorSummary(const DiagnosticsInfo &info,
                                 const BufferedStackTrace &stack) {
   ScopedErrorReportLock::CheckLocked();
-
   ReportErrorSummary(GetErrorTypeStr(info), &stack);
 }
