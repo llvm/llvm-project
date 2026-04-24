@@ -775,6 +775,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                     "error",
                     "dirty-pages",
                     "type",
+                    "protection-key",
                 ],
             )
             self.assertIsNotNone(val)
