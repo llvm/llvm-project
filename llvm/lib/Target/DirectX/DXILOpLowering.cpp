@@ -108,7 +108,8 @@ public:
   }
 
   bool isFast(FastMathFlags Flags) {
-    // HLSL Fast Math doesn't enable AllowContract flag;
+    // HLSL Fast Math doesn't enable AllowContract flag; This can be
+    // removed when we enable it in the future.
     return Flags.allowReassoc() && Flags.noNaNs() && Flags.noInfs() &&
            Flags.noSignedZeros() && Flags.allowReciprocal() &&
            Flags.approxFunc();
