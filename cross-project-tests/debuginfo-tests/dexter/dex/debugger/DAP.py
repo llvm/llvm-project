@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 from enum import Enum
+from typing import Optional
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -51,10 +52,11 @@ class DAPMessageLogger:
         self.out_handle = None
         self.open = False
         self.lock = threading.Lock()
-        self.start_time: None | float = None
+        self.start_time: Optional[float] = None
 
     def _custom_enter(self):
         self.open = True
+        self.start_time = time.time()
         if self.log_file is None:
             return
         if self.log_file == "-":
@@ -64,7 +66,6 @@ class DAPMessageLogger:
             self.out_handle = sys.stderr
             return
         self.out_handle = open(self.log_file, "w+", encoding="utf-8")
-        self.start_time = time.time()
 
     def _custom_exit(self):
         if (
