@@ -1177,7 +1177,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VECREDUCE_FMIN,
         ISD::VECREDUCE_FMAX,
         ISD::VECREDUCE_FMINIMUM,
-        ISD::VECREDUCE_FMAXIMUM};
+        ISD::VECREDUCE_FMAXIMUM,
+        ISD::FCANONICALIZE};
 
     // TODO: Make more of these ops legal.
     static const unsigned ZvfbfaPromoteOps[] = {ISD::FDIV,
@@ -1233,6 +1234,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
+
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
 
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
 
@@ -1330,6 +1333,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
 
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
+
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
         setOperationAction(ZvfhminZvfbfminPromoteOps, VT, Custom);
@@ -1385,6 +1390,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
+
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
@@ -1739,7 +1746,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
                             ISD::FROUNDEVEN, ISD::FRINT, ISD::LRINT,
                             ISD::LLRINT, ISD::LROUND, ISD::LLROUND,
-                            ISD::FNEARBYINT},
+                            ISD::FNEARBYINT, ISD::FCANONICALIZE},
                            VT, Custom);
 
         setCondCodeAction(VFPCCToExpand, VT, Expand);
@@ -8335,6 +8342,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
+  case ISD::FCANONICALIZE: {
+    MVT VT = Op.getSimpleValueType();
+    assert(VT.isFixedLengthVector() && "Unexpected type");
+    SDLoc DL(Op);
+    MVT ContainerVT = getContainerForFixedLengthVector(VT);
+    SDValue Src =
+        convertToScalableVector(ContainerVT, Op.getOperand(0), DAG, Subtarget);
+    SDValue Res = DAG.getNode(ISD::FCANONICALIZE, DL, ContainerVT, Src);
+    return convertFromScalableVector(VT, Res, DAG, Subtarget);
+  }
   case ISD::LRINT:
   case ISD::LLRINT:
   case ISD::LROUND:
