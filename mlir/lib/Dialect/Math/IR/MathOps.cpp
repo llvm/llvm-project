@@ -776,6 +776,34 @@ OpFoldResult math::TruncOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+//===----------------------------------------------------------------------===//
+// FPowIOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::FPowIOp::fold(FoldAdaptor adaptor) {
+  return constFoldBinaryOpConditional<FloatAttr, IntegerAttr>(
+      adaptor.getOperands(),
+      [](const APFloat &base, const APInt &exp) -> std::optional<APFloat> {
+        const llvm::fltSemantics &sem = base.getSemantics();
+        // Fold when the exponent is exactly representable in the
+        // floating-point type of the base.
+        APFloat fExp(sem);
+        if (fExp.convertFromAPInt(exp, /*isSigned=*/true,
+                                  APFloat::rmNearestTiesToEven) !=
+            APFloat::opOK)
+          return {};
+
+        switch (APFloat::SemanticsToEnum(sem)) {
+        case APFloat::Semantics::S_IEEEdouble:
+          return APFloat(pow(base.convertToDouble(), fExp.convertToDouble()));
+        case APFloat::Semantics::S_IEEEsingle:
+          return APFloat(powf(base.convertToFloat(), fExp.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
 /// Materialize an integer or floating point constant.
 Operation *math::MathDialect::materializeConstant(OpBuilder &builder,
                                                   Attribute value, Type type,
