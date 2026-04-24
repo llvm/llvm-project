@@ -2181,6 +2181,7 @@ module std [system] {
       export std_core.type_traits.decay // the macro expansion uses that trait
     }
     module cmp                             { header "__utility/cmp.h" }
+    module constant_wrapper                { header "__utility/constant_wrapper.h" }
     module convert_to_integral             { header "__utility/convert_to_integral.h" }
     module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }
     module element_count                   { header "__utility/element_count.h" }
