@@ -39,6 +39,12 @@ LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
+/// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
+/// OpResult of of the given operation. If the operation contains regions, it is
+/// also applied recursively to the contained operations operation.
+/// TODO: To be replaced by recoverTemporaryLayouts()
+void recoverTemporaryLayoutsDeprecated(Operation *op);
+
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
 /// lacks a layout attribute.

@@ -1382,9 +1382,16 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     SmallVector<int64_t> laneData = parentLayout.getEffectiveLaneDataAsInt();
     auto order = parentLayout.getOrder();
 
-    // Divide last dimension by scaling factor
-    if (!sgData.empty())
-      sgData.back() = sgData.back() / scaleFactor;
+    // For subgroup layouts, compute sg_data based on scale shape / sg_layout
+    if (!sgLayout.empty() && !sgData.empty()) {
+      // sg_data = scale_shape / sg_layout
+      if (scaleShape.size() >= 2) {
+        sgData[rank - 2] = scaleShape[rank - 2] / sgLayout[rank - 2];
+        sgData[rank - 1] = scaleShape[rank - 1] / sgLayout[rank - 1];
+      } else if (scaleShape.size() == 1) {
+        sgData[rank - 1] = scaleShape[0] / sgLayout[rank - 1];
+      }
+    }
 
     // For inst_data only layouts (no lane info), create a simple inst_data layout for scales
     // The scale dimensions are much smaller, so we use the scale shape directly
