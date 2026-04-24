@@ -81,6 +81,11 @@ int main(void) {
   const int prot = PROT_READ | PROT_WRITE | PROT_EXEC;
   const int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
+  // This page will have the default key 0.
+  char *key_zero_page = mmap(NULL, page_size, prot, flags, -1, 0);
+  if (key_zero_page == MAP_FAILED)
+    exit(2);
+
   // Later we will use this to cause a protection key fault.
   char *read_only_page = NULL;
 

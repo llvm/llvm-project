@@ -3961,17 +3961,18 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
         thenType->AsFortran(), elseType->AsFortran());
     return std::nullopt;
   }
-  if (thenCat == TypeCategory::Derived &&
-      (thenType->IsPolymorphic() || elseType->IsPolymorphic())) {
-    Say("Conditional expressions with polymorphic types (CLASS) are not yet supported"_todo_en_US);
-    return std::nullopt;
-  }
-  if (thenCat == TypeCategory::Derived &&
-      !AreSameDerivedType(
-          thenType->GetDerivedTypeSpec(), elseType->GetDerivedTypeSpec())) {
-    Say("All values in conditional expression must be the same derived type; have %s and %s"_err_en_US,
-        thenType->AsFortran(), elseType->AsFortran());
-    return std::nullopt;
+  if (thenCat == TypeCategory::Derived) {
+    if (thenType->IsUnlimitedPolymorphic() ||
+        elseType->IsUnlimitedPolymorphic()) {
+      Say("Unlimited polymorphic types (CLASS(*)) not allowed in conditional expression"_err_en_US);
+      return std::nullopt;
+    }
+    if (!AreSameDerivedType(
+            thenType->GetDerivedTypeSpec(), elseType->GetDerivedTypeSpec())) {
+      Say("All values in conditional expression must be the same derived type; have %s and %s"_err_en_US,
+          thenType->AsFortran(), elseType->AsFortran());
+      return std::nullopt;
+    }
   }
 
   // Dispatch on the else-expr to recover the concrete kind type T.
@@ -4771,6 +4772,10 @@ void ArgumentAnalyzer::Analyze(
             if (actual.has_value()) {
               actual->set_isPercentVal();
             }
+          },
+          [&](const parser::ConditionalArg &) {
+            context_.Say(
+                "Fortran 2023 conditional arguments are not yet supported"_todo_en_US);
           },
       },
       std::get<parser::ActualArg>(arg.t).u);
