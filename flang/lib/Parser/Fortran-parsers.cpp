@@ -1339,8 +1339,11 @@ constexpr auto forceinlineDir{
     "FORCEINLINE" >> construct<CompilerDirective::ForceInline>()};
 constexpr auto noinlineDir{
     "NOINLINE" >> construct<CompilerDirective::NoInline>()};
+constexpr auto inlinealwaysDir{
+    "INLINEALWAYS" >> construct<CompilerDirective::InlineAlways>(maybe(name))};
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
+constexpr auto simd{"SIMD" >> construct<CompilerDirective::Simd>()};
 TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1355,7 +1358,9 @@ TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
                 construct<CompilerDirective>(nounroll) ||
                 construct<CompilerDirective>(noinlineDir) ||
                 construct<CompilerDirective>(forceinlineDir) ||
+                construct<CompilerDirective>(inlinealwaysDir) ||
                 construct<CompilerDirective>(inlineDir) ||
+                construct<CompilerDirective>(simd) ||
                 construct<CompilerDirective>(ivdep) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
