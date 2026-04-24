@@ -1,7 +1,5 @@
 ; RUN: opt -S -passes=spirv-merge-region-exits -mtriple=spirv-unknown-vulkan-compute < %s | FileCheck %s
 
-target triple = "spirv-unknown-vulkan1.3-compute"
-
 ; A loop with two distinct exit targets (exit_a, exit_b). The pass
 ; should merge them into a single new.exit block dispatched via a
 ; switch on a stored discriminator value.

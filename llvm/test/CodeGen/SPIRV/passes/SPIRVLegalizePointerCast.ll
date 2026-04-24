@@ -4,8 +4,6 @@
 ;
 ; RUN: opt -S -passes='spirv-emit-intrinsics,function(spirv-legalize-pointer-cast)' -mtriple=spirv-unknown-vulkan-compute < %s | FileCheck %s
 
-target triple = "spirv-unknown-vulkan1.3-compute"
-
 @M = internal addrspace(10) global [4 x <2 x float>] zeroinitializer, align 4
 @OUT = internal addrspace(10) global float zeroinitializer, align 4
 

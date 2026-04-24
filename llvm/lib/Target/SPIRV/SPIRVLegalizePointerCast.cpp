@@ -566,15 +566,15 @@ private:
 class SPIRVLegalizePointerCastLegacy : public FunctionPass {
 public:
   static char ID;
-  SPIRVLegalizePointerCastLegacy(SPIRVTargetMachine *TM)
+  SPIRVLegalizePointerCastLegacy(const SPIRVTargetMachine &TM)
       : FunctionPass(ID), TM(TM) {}
 
   bool runOnFunction(Function &F) override {
-    return SPIRVLegalizePointerCastImpl(*TM).run(F);
+    return SPIRVLegalizePointerCastImpl(TM).run(F);
   }
 
 private:
-  SPIRVTargetMachine *TM = nullptr;
+  const SPIRVTargetMachine &TM;
 };
 } // namespace
 
@@ -585,9 +585,9 @@ PreservedAnalyses SPIRVLegalizePointerCast::run(Function &F,
 }
 
 char SPIRVLegalizePointerCastLegacy::ID = 0;
-INITIALIZE_PASS(SPIRVLegalizePointerCastLegacy, "spirv-legalize-bitcast",
-                "SPIRV legalize bitcast pass", false, false)
+INITIALIZE_PASS(SPIRVLegalizePointerCastLegacy, "spirv-legalize-pointer-cast",
+                "SPIRV legalize pointer cast pass", false, false)
 
 FunctionPass *llvm::createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM) {
-  return new SPIRVLegalizePointerCastLegacy(TM);
+  return new SPIRVLegalizePointerCastLegacy(*TM);
 }
