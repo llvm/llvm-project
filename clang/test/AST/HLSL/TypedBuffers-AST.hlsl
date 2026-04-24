@@ -197,7 +197,7 @@ RESOURCE<float> Buffer;
 
 // Load method
 
-// CHECK: CXXMethodDecl {{.*}} Load 'const element_type (unsigned int) const'
+// CHECK: CXXMethodDecl {{.*}} Load 'element_type (unsigned int) const'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt

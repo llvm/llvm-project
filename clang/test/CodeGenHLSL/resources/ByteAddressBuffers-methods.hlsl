@@ -19,8 +19,8 @@ export float TestLoad() {
 // CHECK: define {{.*}} float @TestLoad()()
 // CHECK: call {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int) const(ptr {{.*}} @Buf, i32 noundef 0)
 // CHECK: call {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int) const(ptr {{.*}} @RWBuf, i32 noundef 4)
-// CHECK: call {{.*}} float @float const hlsl::ByteAddressBuffer::Load<float>(unsigned int) const(ptr {{.*}} @Buf, i32 noundef 20)
-// CHECK: call {{.*}} <4 x float> @float vector[4] const hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int) const(ptr {{.*}} @RWBuf, i32 noundef 24)
+// CHECK: call {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int) const(ptr {{.*}} @Buf, i32 noundef 20)
+// CHECK: call {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int) const(ptr {{.*}} @RWBuf, i32 noundef 24)
 // CHECK: add
 // CHECK: ret float
 
@@ -40,7 +40,7 @@ export float TestLoad() {
 // CHECK-NEXT: %[[VEC:.*]] = load <4 x i32>, ptr %[[PTR]]
 // CHECK-NEXT: ret <4 x i32> %[[VEC]]
 
-// CHECK: define {{.*}} float @float const hlsl::ByteAddressBuffer::Load<float>(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -48,7 +48,7 @@ export float TestLoad() {
 // CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
 // CHECK-NEXT: ret float %[[VAL]]
 
-// CHECK: define {{.*}} <4 x float> @float vector[4] const hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr

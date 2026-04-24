@@ -154,7 +154,7 @@ RESOURCE Buffer;
 
 // Load methods
 
-// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'const unsigned int (unsigned int) const'
+// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'unsigned int (unsigned int) const'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
@@ -189,7 +189,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXScalarValueInitExpr {{.*}} 'unsigned int *'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-LOAD: CXXMethodDecl {{.*}} Load2 'vector<unsigned int, 2> const (unsigned int) const'
+// CHECK-LOAD: CXXMethodDecl {{.*}} Load2 'vector<unsigned int, 2> (unsigned int) const'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
@@ -224,7 +224,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXScalarValueInitExpr {{.*}} 'vector<unsigned int, 2> *'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-LOAD: CXXMethodDecl {{.*}} Load3 'vector<unsigned int, 3> const (unsigned int) const'
+// CHECK-LOAD: CXXMethodDecl {{.*}} Load3 'vector<unsigned int, 3> (unsigned int) const'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
@@ -259,7 +259,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXScalarValueInitExpr {{.*}} 'vector<unsigned int, 3> *'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-LOAD: CXXMethodDecl {{.*}} Load4 'vector<unsigned int, 4> const (unsigned int) const'
+// CHECK-LOAD: CXXMethodDecl {{.*}} Load4 'vector<unsigned int, 4> (unsigned int) const'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
@@ -294,7 +294,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXScalarValueInitExpr {{.*}} 'vector<unsigned int, 4> *'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'const element_type (unsigned int) const'
+// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int) const'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
