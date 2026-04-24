@@ -176,23 +176,20 @@ class SPIRVLegalizePointerCast : public FunctionPass {
                                  BasePtr};
     Args.push_back(B.getInt32(0)); // Pointer offset
 
-    while (CurrentTy && !isCompatibleMemoryLayout(TargetElemType, CurrentTy)) {
+    while (!isCompatibleMemoryLayout(TargetElemType, CurrentTy)) {
       if (auto *ST = dyn_cast<StructType>(CurrentTy)) {
         if (ST->getNumElements() == 0)
-          break;
+          return std::nullopt;
         CurrentTy = ST->getTypeAtIndex(0u);
       } else if (auto *AT = dyn_cast<ArrayType>(CurrentTy)) {
         CurrentTy = AT->getElementType();
       } else if (auto *VT = dyn_cast<FixedVectorType>(CurrentTy)) {
         CurrentTy = VT->getElementType();
       } else {
-        break;
+        return std::nullopt;
       }
       Args.push_back(B.getInt32(0));
     }
-
-    if (!CurrentTy || !isCompatibleMemoryLayout(TargetElemType, CurrentTy))
-      return std::nullopt;
 
     Value *GEP = BasePtr;
     if (Args.size() > 3) {
