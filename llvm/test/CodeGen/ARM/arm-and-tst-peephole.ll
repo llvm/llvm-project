@@ -334,14 +334,10 @@ define i32 @test_tst_assessment(i32 %a, i32 %b) {
 ;
 ; THUMB-LABEL: test_tst_assessment:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    movs r2, r0
-; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    movs r2, #1
+; THUMB-NEXT:    ands r1, r2
 ; THUMB-NEXT:    ands r0, r2
-; THUMB-NEXT:    lsls r1, r1, #31
-; THUMB-NEXT:    beq .LBB2_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    subs r0, r0, #1
-; THUMB-NEXT:  .LBB2_2:
+; THUMB-NEXT:    subs r0, r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; T2-LABEL: test_tst_assessment:
@@ -377,12 +373,11 @@ define i32 @thumb_select_identity_or(i32 %x, i32 %y, i32 %z) {
 ;
 ; THUMB-LABEL: thumb_select_identity_or:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    beq .LBB3_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    orrs r1, r2
-; THUMB-NEXT:  .LBB3_2:
-; THUMB-NEXT:    movs r0, r1
+; THUMB-NEXT:    movs r3, #1
+; THUMB-NEXT:    ands r3, r0
+; THUMB-NEXT:    rsbs r0, r3, #0
+; THUMB-NEXT:    ands r0, r2
+; THUMB-NEXT:    orrs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; T2-LABEL: thumb_select_identity_or:
@@ -417,12 +412,11 @@ define i32 @thumb_select_identity_xor(i32 %x, i32 %y, i32 %z) {
 ;
 ; THUMB-LABEL: thumb_select_identity_xor:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    beq .LBB4_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    eors r1, r2
-; THUMB-NEXT:  .LBB4_2:
-; THUMB-NEXT:    movs r0, r1
+; THUMB-NEXT:    movs r3, #1
+; THUMB-NEXT:    ands r3, r0
+; THUMB-NEXT:    rsbs r0, r3, #0
+; THUMB-NEXT:    ands r0, r2
+; THUMB-NEXT:    eors r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; T2-LABEL: thumb_select_identity_xor:
@@ -457,12 +451,11 @@ define i32 @thumb_select_identity_add(i32 %x, i32 %y, i32 %z) {
 ;
 ; THUMB-LABEL: thumb_select_identity_add:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    beq .LBB5_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    adds r1, r1, r2
-; THUMB-NEXT:  .LBB5_2:
-; THUMB-NEXT:    movs r0, r1
+; THUMB-NEXT:    movs r3, #1
+; THUMB-NEXT:    ands r3, r0
+; THUMB-NEXT:    rsbs r0, r3, #0
+; THUMB-NEXT:    ands r0, r2
+; THUMB-NEXT:    adds r0, r1, r0
 ; THUMB-NEXT:    bx lr
 ;
 ; T2-LABEL: thumb_select_identity_add:
@@ -497,12 +490,11 @@ define i32 @thumb_select_identity_sub(i32 %x, i32 %y, i32 %z) {
 ;
 ; THUMB-LABEL: thumb_select_identity_sub:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    beq .LBB6_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    subs r1, r1, r2
-; THUMB-NEXT:  .LBB6_2:
-; THUMB-NEXT:    movs r0, r1
+; THUMB-NEXT:    movs r3, #1
+; THUMB-NEXT:    ands r3, r0
+; THUMB-NEXT:    rsbs r0, r3, #0
+; THUMB-NEXT:    ands r0, r2
+; THUMB-NEXT:    subs r0, r1, r0
 ; THUMB-NEXT:    bx lr
 ;
 ; T2-LABEL: thumb_select_identity_sub:
@@ -537,11 +529,11 @@ define i32 @thumb_select_identity_shl(i32 %x, i32 %y, i32 %z) {
 ;
 ; THUMB-LABEL: thumb_select_identity_shl:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    beq .LBB7_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    lsls r1, r2
-; THUMB-NEXT:  .LBB7_2:
+; THUMB-NEXT:    movs r3, #1
+; THUMB-NEXT:    ands r3, r0
+; THUMB-NEXT:    rsbs r0, r3, #0
+; THUMB-NEXT:    ands r0, r2
+; THUMB-NEXT:    lsls r1, r0
 ; THUMB-NEXT:    movs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
@@ -577,11 +569,11 @@ define i32 @thumb_select_identity_sra(i32 %x, i32 %y, i32 %z) {
 ;
 ; THUMB-LABEL: thumb_select_identity_sra:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    beq .LBB8_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    asrs r1, r2
-; THUMB-NEXT:  .LBB8_2:
+; THUMB-NEXT:    movs r3, #1
+; THUMB-NEXT:    ands r3, r0
+; THUMB-NEXT:    rsbs r0, r3, #0
+; THUMB-NEXT:    ands r0, r2
+; THUMB-NEXT:    asrs r1, r0
 ; THUMB-NEXT:    movs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
@@ -617,11 +609,11 @@ define i32 @thumb_select_identity_srl(i32 %x, i32 %y, i32 %z) {
 ;
 ; THUMB-LABEL: thumb_select_identity_srl:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    beq .LBB9_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    lsrs r1, r2
-; THUMB-NEXT:  .LBB9_2:
+; THUMB-NEXT:    movs r3, #1
+; THUMB-NEXT:    ands r3, r0
+; THUMB-NEXT:    rsbs r0, r3, #0
+; THUMB-NEXT:    ands r0, r2
+; THUMB-NEXT:    lsrs r1, r0
 ; THUMB-NEXT:    movs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
