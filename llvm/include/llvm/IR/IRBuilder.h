@@ -244,7 +244,14 @@ public:
   }
 
   /// Set location information used by debugging information.
-  void SetCurrentDebugLocation(DebugLoc L) {
+  void SetCurrentDebugLocation(const DebugLoc &L) {
+    // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
+    // to include optional introspection data for use in Debugify.
+    StoredDL = L;
+  }
+
+  /// Set location information used by debugging information.
+  void SetCurrentDebugLocation(DebugLoc &&L) {
     // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
     // to include optional introspection data for use in Debugify.
     StoredDL = std::move(L);
@@ -1034,6 +1041,12 @@ public:
   CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Args,
                             FMFSource FMFSource = {}, const Twine &Name = "") {
     return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
+  }
+
+  /// Create call to the fabs intrinsic.
+  CallInst *CreateFAbs(Value *V, FMFSource FMFSource = {},
+                       const Twine &Name = "") {
+    return CreateUnaryIntrinsic(Intrinsic::fabs, V, FMFSource, Name);
   }
 
   /// Create call to the minnum intrinsic.
