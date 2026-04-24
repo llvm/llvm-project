@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -58,37 +57,6 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op) {
                  llvm::all_of(op->getResults(), nonNegativePred));
 }
 } // namespace mlir::dataflow
-
-void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
-  Lattice::onUpdate(solver);
-
-  // If the integer range can be narrowed to a constant, update the constant
-  // value of the SSA value.
-  std::optional<APInt> constant = getValue().getValue().getConstantValue();
-  auto value = cast<Value>(anchor);
-  auto *cv = solver->getOrCreateState<Lattice<ConstantValue>>(value);
-  if (!constant)
-    return solver->propagateIfChanged(
-        cv, cv->join(ConstantValue::getUnknownConstant()));
-
-  Dialect *dialect;
-  if (auto *parent = value.getDefiningOp())
-    dialect = parent->getDialect();
-  else
-    dialect = value.getParentBlock()->getParentOp()->getDialect();
-
-  Attribute cstAttr;
-  if (isa<IntegerType, IndexType>(value.getType())) {
-    cstAttr = IntegerAttr::get(value.getType(), *constant);
-  } else if (auto shapedTy = dyn_cast<ShapedType>(value.getType())) {
-    cstAttr = SplatElementsAttr::get(shapedTy, *constant);
-  } else {
-    llvm::report_fatal_error(
-        Twine("FIXME: Don't know how to create a constant for this type: ") +
-        mlir::debugString(value.getType()));
-  }
-  solver->propagateIfChanged(cv, cv->join(ConstantValue(cstAttr, dialect)));
-}
 
 LogicalResult IntegerRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const IntegerValueRangeLattice *> operands,
