@@ -1924,11 +1924,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.DIBugsReportFilePath = "";
   }
 
-  if (LangOpts->Kernel &&
-      !Args.hasFlag(OPT_fdelete_null_pointer_checks,
-                    OPT_fno_delete_null_pointer_checks, false))
-    Opts.NullPointerIsValid = true;
-
   Opts.NewStructPathTBAA = !Args.hasArg(OPT_no_struct_path_tbaa) &&
                            Args.hasArg(OPT_new_struct_path_tbaa);
   Opts.OptimizeSize = getOptimizationLevelSize(Args);
