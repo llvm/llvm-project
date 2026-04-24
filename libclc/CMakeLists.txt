@@ -34,7 +34,7 @@ set( LIBCLC_TARGETS_ALL
   spirv64-mesa3d-
 )
 
-set(LIBCLC_TARGET ${LLVM_RUNTIMES_TARGET})
+set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
 if(NOT LIBCLC_TARGET)
   message(FATAL_ERROR "libclc target is empty\n")
