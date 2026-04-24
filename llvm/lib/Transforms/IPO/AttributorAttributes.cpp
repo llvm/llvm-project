@@ -3349,6 +3349,17 @@ struct AAWillReturnImpl : public AAWillReturn {
                                            UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
+    auto CheckForVolatile = [&](Instruction &I) {
+      // Volatile operations are not willreturn.
+      return !I.isVolatile();
+    };
+    if (!A.checkForAllInstructions(CheckForVolatile, *this,
+                                   {Instruction::Load, Instruction::Store,
+                                    Instruction::AtomicCmpXchg,
+                                    Instruction::AtomicRMW},
+                                   UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
     return ChangeStatus::UNCHANGED;
   }
 
