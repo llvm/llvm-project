@@ -82,15 +82,25 @@ class AArch64LinuxPOE(TestBase):
         # Unmapped region has no key (not even default).
         self.expect("memory region 0", substrs=["protection key:"], matching=False)
 
-        # The region has base permissions rwx, which is what we see here.
+        # The region has base permissions r-x, and overlay is r--. The result
+        # is that execution is disabled.
         self.expect(
-            "memory region read_only_page", substrs=["rwx", "protection key: 6"]
+            "memory region read_only_page",
+            substrs=["rw-", "protection key: 6 (r--, effective: r--)"],
         )
-        # A region not assigned to a protection key has the default key 0.
-        self.expect("memory region key_zero_page", substrs=["rwx", "protection key: 0"])
+        # A region not assigned to a protection key has the default key 0. This
+        # key is rwx, but overlays cannot add permissions not already in the
+        # page table. So the execute permission is not enabled.
+        self.expect(
+            "memory region key_zero_page",
+            substrs=["rw-", "protection key: 0 (rwx, effective: rw-)"],
+        )
 
-        # Protection keys should be on their own line.
-        self.expect("memory region --all", patterns=["\nprotection key: [0-9]+\n"])
+        # Overlay permissions are on their own line.
+        self.expect(
+            "memory region --all",
+            patterns=["\nprotection key: [0-9]+ \([rwx-]{3}, effective: [rwx-]{3}\)\n"],
+        )
 
         # Not passing this to the application allows us to fix the permissions
         # using lldb, then continue to a normal exit.

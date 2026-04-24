@@ -1689,8 +1689,28 @@ protected:
     LazyBool is_shadow_stack = range_info.IsShadowStack();
     if (is_shadow_stack == eLazyBoolYes)
       result.AppendMessage("shadow stack: yes");
-    if (std::optional<unsigned> protection_key = range_info.GetProtectionKey())
-      result.AppendMessageWithFormatv("protection key: {0}", *protection_key);
+    if (std::optional<unsigned> protection_key =
+            range_info.GetProtectionKey()) {
+      Stream &strm = result.GetOutputStream();
+      strm << llvm::formatv("protection key: {0}", *protection_key);
+
+      if (const lldb::ABISP &abi = target.GetProcessSP()->GetABI()) {
+        if (auto permissions = abi->GetMemoryPermissions(
+                *m_exe_ctx.GetRegisterContext(), *protection_key,
+                range_info.GetLLDBPermissions())) {
+          strm << llvm::formatv(
+              " ({0}{1}{2}, effective: {3}{4}{5})",
+              permissions->overlay & lldb::ePermissionsReadable ? 'r' : '-',
+              permissions->overlay & lldb::ePermissionsWritable ? 'w' : '-',
+              permissions->overlay & lldb::ePermissionsExecutable ? 'x' : '-',
+              permissions->effective & lldb::ePermissionsReadable ? 'r' : '-',
+              permissions->effective & lldb::ePermissionsWritable ? 'w' : '-',
+              permissions->effective & lldb::ePermissionsExecutable ? 'x'
+                                                                    : '-');
+        }
+      }
+      strm.PutChar('\n');
+    }
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
