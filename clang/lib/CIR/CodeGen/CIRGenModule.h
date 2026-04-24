@@ -578,6 +578,14 @@ public:
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
+  /// Helper function for the below two that will create the
+  /// constructor/destructor in specified regions, rather than in the GlobalOp.
+  void emitCXXSpecialVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                 bool performInit, mlir::Region &ctorRegion,
+                                 mlir::Region &dtorRegion);
+  /// Emit the function that initializes the specified static-local variable.
+  void emitCXXStaticLocalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                     bool performInit);
   /// Emit the function that initializes the specified global
   void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
                                 bool performInit);

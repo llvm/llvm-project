@@ -372,6 +372,29 @@ LogicalResult cir::BreakOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// LocalInitOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  cir::GlobalOp global = getReferencedGlobal(symbolTable);
+  if (!global)
+    return emitOpError("'")
+           << getGlobalName() << "' does not reference a valid cir.global";
+
+  if (getTls() && !global.getTlsModel())
+    return emitOpError("access to global not marked thread local");
+
+  bool isStaticLocal = getStaticLocal();
+  bool globalIsStaticLocal = global.getStaticLocalGuard().has_value();
+
+  if (isStaticLocal != globalIsStaticLocal)
+    return emitOpError("static_local attribute mismatch");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConditionOp
 //===----------------------------------------------------------------------===//
 
@@ -1843,6 +1866,13 @@ mlir::LogicalResult cir::GlobalOp::verify() {
             .failed())
       return failure();
   }
+
+  if ((getStaticLocalGuard().has_value() || getTlsModel()) &&
+      (!getCtorRegion().empty() || !getDtorRegion().empty()))
+    return emitOpError(
+        "Cannot have a thread-local or static-local global-op "
+        "with a constructor or destructor, they require in-function "
+        "initialization via LocalInitOp");
 
   // TODO(CIR): Many other checks for properties that haven't been upstreamed
   // yet.
