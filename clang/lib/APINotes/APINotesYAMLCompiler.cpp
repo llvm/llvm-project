@@ -470,6 +470,7 @@ struct Function {
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
   SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
+  bool UnsafeBufferUsage = false;
   /* TO_UPSTREAM(BoundsSafety) ON */
   std::optional<BoundsSafetyNotes> ReturnBoundsSafety;
   /* TO_UPSTREAM(BoundsSafety) OFF */
@@ -498,6 +499,7 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
                    StringRef(""));
     IO.mapOptional("SwiftSafety", F.SafetyKind, SwiftSafetyKind::None);
+    IO.mapOptional("UnsafeBufferUsage", F.UnsafeBufferUsage, false);
     /* TO_UPSTREAM(BoundsSafety) ON */
     IO.mapOptional("BoundsSafety", F.ReturnBoundsSafety);
     /* TO_UPSTREAM(BoundsSafety) OFF */
@@ -1180,6 +1182,7 @@ public:
     FI.ResultType = std::string(Function.ResultType);
     FI.SwiftReturnOwnership = std::string(Function.SwiftReturnOwnership);
     FI.setRetainCountConvention(Function.RetainCountConvention);
+    FI.UnsafeBufferUsage = Function.UnsafeBufferUsage;
   }
 
   void convertTagContext(std::optional<Context> ParentContext, const Tag &T,
