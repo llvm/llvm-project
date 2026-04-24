@@ -52,6 +52,13 @@ bool AArch64MCSymbolizer::tryAddingSymbolicOperand(
       return true;
     }
 
+    if (BC.MIB->isADRP(Inst)) {
+      uint64_t TargetPage = (InstAddress & ~0xFFFULL) + (Value << 12);
+      auto [Sym, Offset] = BC.handleAddressRef(TargetPage, Function, true);
+      addOperand(Sym, Offset, 0);
+      return true;
+    }
+
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring relocation at 0x"
                       << Twine::utohexstr(InstAddress) << '\n');
   }
@@ -111,6 +118,11 @@ AArch64MCSymbolizer::adjustRelocation(const Relocation &Rel,
       return std::nullopt;
     }
   }
+
+  // Handle TLSDESC -> IE relaxation where the linker places ADRP at the
+  // ADD slot (e.g. mold). The TLSDESC_ADD_LO12 relocation is stale.
+  if (BC.MIB->isADRP(Inst) && Rel.Type == ELF::R_AARCH64_TLSDESC_ADD_LO12)
+    return std::nullopt;
 
   if (!Relocation::isGOT(Rel.Type))
     return Rel;
