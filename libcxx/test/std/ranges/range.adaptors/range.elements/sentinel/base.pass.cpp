@@ -28,7 +28,7 @@ constexpr bool test() {
   using EleSent   = std::ranges::sentinel_t<EleRange>;
 
   const EleRange ev;
-  const EleSent st = ev.end();
+  const EleSent st                       = ev.end();
   std::same_as<Sent> decltype(auto) base = st.base();
   assert(base.i == 5);
 

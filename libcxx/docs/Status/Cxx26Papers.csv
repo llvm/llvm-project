@@ -188,7 +188,7 @@
 "`P4140R0 <https://wg21.link/P4140R0>`__","Proposed resolution for US70-126: allow incomplete types in type_order","2026-03 (Croydon)","","","`#189595 <https://github.com/llvm/llvm-project/issues/189595>`__",""
 "`P3373R4 <https://wg21.link/P3373R4>`__","Of Operation States and Their Lifetimes","2026-03 (Croydon)","","","`#189597 <https://github.com/llvm/llvm-project/issues/189597>`__",""
 "`P3986R1 <https://wg21.link/P3986R1>`__","A Wording Strategy for Inlinable Receivers","2026-03 (Croydon)","","","`#189598 <https://github.com/llvm/llvm-project/issues/189598>`__",""
-"`P3059R2 <https://wg21.link/P3059R2>`__","Making user-defined constructors of view iterators/sentinels private","2026-03 (Croydon)","","","`#189599 <https://github.com/llvm/llvm-project/issues/189599>`__",""
+"`P3059R2 <https://wg21.link/P3059R2>`__","Making user-defined constructors of view iterators/sentinels private","2026-03 (Croydon)","|Complete|","23","`#189599 <https://github.com/llvm/llvm-project/issues/189599>`__",""
 "`P3725R3 <https://wg21.link/P3725R3>`__","Filter View Extensions for Safer Use, Rev 3","2026-03 (Croydon)","","","`#189601 <https://github.com/llvm/llvm-project/issues/189601>`__",""
 "`P3828R1 <https://wg21.link/P3828R1>`__","Rename the to_input view to as_input","2026-03 (Croydon)","","","`#189602 <https://github.com/llvm/llvm-project/issues/189602>`__",""
 "`P3795R2 <https://wg21.link/P3795R2>`__","Miscellaneous Reflection Cleanup","2026-03 (Croydon)","","","`#189603 <https://github.com/llvm/llvm-project/issues/189603>`__",""

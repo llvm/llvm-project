@@ -16,7 +16,7 @@
 #include "../types.h"
 
 struct Iter : ForwardIterBase<Iter> {
-  int i = 0;
+  int i            = 0;
   constexpr Iter() = default;
   constexpr Iter(int ii) : i(ii) {}
   constexpr int operator*() const { return i; }
@@ -42,28 +42,28 @@ constexpr bool test() {
 
   // const &
   {
-    const SplitIter it = sv.begin();
+    const SplitIter it                     = sv.begin();
     std::same_as<Iter> decltype(auto) base = it.base();
     assert(base.i == 5);
   }
 
   // &
   {
-    SplitIter it = sv.begin();
+    SplitIter it                           = sv.begin();
     std::same_as<Iter> decltype(auto) base = it.base();
     assert(base.i == 5);
   }
 
   // &&
   {
-    SplitIter it = sv.begin();
+    SplitIter it                           = sv.begin();
     std::same_as<Iter> decltype(auto) base = std::move(it).base();
     assert(base.i == 5);
   }
 
   // const &&
   {
-    const SplitIter it = sv.begin();
+    const SplitIter it                     = sv.begin();
     std::same_as<Iter> decltype(auto) base = std::move(it).base();
     assert(base.i == 5);
   }

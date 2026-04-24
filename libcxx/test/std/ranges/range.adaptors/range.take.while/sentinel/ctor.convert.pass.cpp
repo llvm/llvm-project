@@ -107,7 +107,7 @@ constexpr bool test() {
     static_assert(!std::same_as<Sentinel, ConstSentinel>);
 
     R r{TestRng{}, pred};
-    Sentinel s1 = r.end();
+    Sentinel s1      = r.end();
     ConstSentinel s2 = s1;
 
     int i     = 10;
@@ -141,7 +141,7 @@ constexpr bool test() {
     static_assert(!std::same_as<Sentinel, ConstSentinel>);
 
     R r{Rng{}, TestPred{}};
-    Sentinel s1 = r.end();
+    Sentinel s1      = r.end();
     ConstSentinel s2 = s1;
     assert(s2.base().i == 0);
   }

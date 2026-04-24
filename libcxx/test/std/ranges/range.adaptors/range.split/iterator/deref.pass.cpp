@@ -17,7 +17,7 @@
 #include "../types.h"
 
 struct Iter : ForwardIterBase<Iter> {
-  int i = 0;
+  int i            = 0;
   constexpr Iter() = default;
   constexpr Iter(int ii) : i(ii) {}
   constexpr int operator*() const { return i; }
@@ -37,9 +37,8 @@ constexpr bool test() {
   using SplitView = std::ranges::split_view<std::ranges::subrange<Iter>, std::ranges::subrange<Iter>>;
   using SplitIter = std::ranges::iterator_t<SplitView>;
 
-  SplitView sv{std::ranges::subrange<Iter>{Iter{5}, Iter{8}},
-               std::ranges::subrange<Iter>{Iter{7}, Iter{8}}};
-  const SplitIter it = sv.begin();
+  SplitView sv{std::ranges::subrange<Iter>{Iter{5}, Iter{8}}, std::ranges::subrange<Iter>{Iter{7}, Iter{8}}};
+  const SplitIter it                                             = sv.begin();
   std::same_as<std::ranges::subrange<Iter>> decltype(auto) value = *it;
   assert(value.begin().i == 5);
   assert(value.end().i == 7);
