@@ -375,6 +375,12 @@ LogicalResult cir::BreakOp::verify() {
 // LocalInitOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult cir::LocalInitOp::verify() {
+  if (!getOperation()->getParentOfType<FuncOp>())
+    return emitOpError("must be inside of a 'cir.func'");
+  return success();
+}
+
 LogicalResult
 cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   cir::GlobalOp global = getReferencedGlobal(symbolTable);

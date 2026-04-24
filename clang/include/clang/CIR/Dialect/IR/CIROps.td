@@ -3813,8 +3813,7 @@ def CIR_FuncOp : CIR_Op<"func", [
 //===----------------------------------------------------------------------===//
 
 def CIR_LocalInitOp : CIR_Op<"local_init", [
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments,
-  ParentOneOf<["cir::FuncOp"]>
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments
 ]> {
   let summary = "initialize a static or thread local object";
   let description = [{
@@ -3823,8 +3822,8 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
     variable. This will be handled during lowering-prepare to include the
     guard variables correctly for the variable.
 
-    This operation also represents static local thread local variables, which is
-    represented by the 'tls' flag.
+    This operation may also represent a static local thread local variable,
+    which would be indicated by the 'tls' flag.
 
     Example:
     ```
@@ -3869,6 +3868,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
