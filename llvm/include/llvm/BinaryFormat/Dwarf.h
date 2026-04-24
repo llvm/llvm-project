@@ -1091,7 +1091,7 @@ LLVM_ABI std::optional<unsigned> OperationOperands(LocationAtom O);
 /// depending on the argument) or unknown.
 LLVM_ABI std::optional<unsigned> OperationArity(LocationAtom O);
 
-inline bool isTlsAddressCode(uint8_t O) {
+inline bool isTlsAddressOp(uint8_t O) {
   return O == DW_OP_form_tls_address || O == DW_OP_GNU_push_tls_address;
 }
 

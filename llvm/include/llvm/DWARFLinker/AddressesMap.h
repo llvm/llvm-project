@@ -159,7 +159,7 @@ public:
       case dwarf::DW_OP_const4s:
       case dwarf::DW_OP_const8s:
         if (NextIt == Expression.end() ||
-            !dwarf::isTlsAddressCode(NextIt->getCode()))
+            !dwarf::isTlsAddressOp(NextIt->getCode()))
           break;
         [[fallthrough]];
       case dwarf::DW_OP_addr: {
