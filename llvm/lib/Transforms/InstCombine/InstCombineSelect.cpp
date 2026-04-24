@@ -3373,7 +3373,9 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
 
   Value *Y = SI.getFalseValue();
   Value *InnerSel = SI.getTrueValue();
-  // Match a select that returns X when X is not NaN, and Y otherwise.
+
+  // Match a select that returns X when X is not NaN, and Y otherwise:
+  //   select (fcmp ord X, 0.0), X, Y
   Value *X;
   if (!match(InnerSel,
              m_Select(m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(X),
@@ -3381,24 +3383,42 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
                       m_Deferred(X), m_Specific(Y))))
     return nullptr;
 
-  if (!match(Cmp0, m_OneUse(m_FAbs(m_Specific(InnerSel))))) {
-    if (!match(Cmp1, m_OneUse(m_FAbs(m_Specific(InnerSel)))))
+  Instruction *FAbsI;
+  auto MatchFAbsOfInnerSel = [&](Value *V) {
+    return match(V,
+                 m_OneUse(m_Instruction(FAbsI, m_FAbs(m_Specific(InnerSel)))));
+  };
+
+  if (!MatchFAbsOfInnerSel(Cmp0)) {
+    if (!MatchFAbsOfInnerSel(Cmp1))
       return nullptr;
 
     std::swap(Cmp0, Cmp1);
     Pred = CmpInst::getSwappedPredicate(Pred);
   }
 
-  Value *NewAbs = IC.Builder.CreateFAbs(X);
+  FastMathFlags FAbsFMF = FAbsI->getFastMathFlags();
+  FastMathFlags CmpFMF = OuterCmp->getFastMathFlags();
 
-  // Do not preserve nnan on the new fcmp: when X is NaN, the old compare
-  // evaluated fabs(Y), while the new compare evaluates fabs(X).
-  FastMathFlags NewCmpFMF = OuterCmp->getFastMathFlags();
+  FastMathFlags CommonRewriteFMF =
+      FastMathFlags::intersectRewrite(FAbsFMF, CmpFMF);
+
+  auto ValueFMF = [](FastMathFlags FMF) {
+    // unionValue with FastMathFlags() drops all rewriter based flags
+    return FastMathFlags::unionValue(FMF, FastMathFlags());
+  };
+
+  FastMathFlags NewFAbsFMF = CommonRewriteFMF | ValueFMF(FAbsFMF);
+  FastMathFlags NewCmpFMF = CommonRewriteFMF | ValueFMF(CmpFMF);
+
+  // When X is NaN, the old code evaluated fabs(Y), while the new code evaluates
+  // fabs(X). Do not preserve nnan on either newly-created instruction.
+  NewFAbsFMF.setNoNaNs(false);
   NewCmpFMF.setNoNaNs(false);
 
+  Value *NewAbs = IC.Builder.CreateFAbs(X, FMFSource(NewFAbsFMF));
   Value *NewCmp =
       IC.Builder.CreateFCmpFMF(Pred, NewAbs, Cmp1, FMFSource(NewCmpFMF));
-
   Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
   return IC.replaceInstUsesWith(SI, NewSel);
 }

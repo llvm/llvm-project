@@ -424,7 +424,7 @@ define double @test_fcmp_ord_select_fabs_fcmp_nnan_one_select_var_var(double %x,
 
 define double @test_fcmp_ord_select_fabs_rhs_fcmp_ogt_select_var_var(double %x, double %y, double %k) {
 ; CHECK-LABEL: @test_fcmp_ord_select_fabs_rhs_fcmp_ogt_select_var_var(
-; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = call ninf double @llvm.fabs.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf olt double [[ABS]], [[K:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select nnan i1 [[CMP]], double [[X]], double [[Y:%.*]]
 ; CHECK-NEXT:    ret double [[SEL]]
@@ -481,6 +481,51 @@ define <2 x double> @test_fcmp_ord_select_fabs_fcmp_nnan_one_select_v2f64(<2 x d
   %cmp2 = fcmp nnan one <2 x double> %abs, <double 0x7FF0000000000000, double 0x7FF0000000000000>
   %sel2 = select <2 x i1> %cmp2, <2 x double> %sel1, <2 x double> %y
   ret <2 x double> %sel2
+}
+
+define double @test_fcmp_ord_select_fabs_fcmp_fabs_only_ninf(double %x, double %y, double %k) {
+; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_fabs_only_ninf(
+; CHECK-NEXT:    [[ABS:%.*]] = call ninf double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ABS]], [[K:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp1 = fcmp ord double %x, 0.000000e+00
+  %sel1 = select i1 %cmp1, double %x, double %y
+  %abs = call ninf double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp one double %abs, %k
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
+}
+
+define double @test_fcmp_ord_select_fabs_fcmp_cmp_only_ninf(double %x, double %y, double %k) {
+; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_cmp_only_ninf(
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf one double [[ABS]], [[K:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp1 = fcmp ord double %x, 0.000000e+00
+  %sel1 = select i1 %cmp1, double %x, double %y
+  %abs = call double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp ninf one double %abs, %k
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
+}
+
+define double @test_fcmp_ord_select_fabs_fcmp_intersect_drop_nnan(double %x, double %y, double %k) {
+; CHECK-LABEL: @test_fcmp_ord_select_fabs_fcmp_intersect_drop_nnan(
+; CHECK-NEXT:    [[ABS:%.*]] = call ninf double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf one double [[ABS]], [[K:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[X]], double [[Y:%.*]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp1 = fcmp ord double %x, 0.000000e+00
+  %sel1 = select i1 %cmp1, double %x, double %y
+  %abs = call nnan ninf double @llvm.fabs.f64(double %sel1)
+  %cmp2 = fcmp nnan ninf one double %abs, %k
+  %sel2 = select i1 %cmp2, double %sel1, double %y
+  ret double %sel2
 }
 
 ; Make sure that we recognize the SPF correctly.
