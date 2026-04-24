@@ -1731,18 +1731,6 @@ public:
     return true;
   }
   void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
-  bool Pre(const parser::OmpBeginLoopDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpBeginLoopDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  bool Pre(const parser::OmpEndLoopDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpEndLoopDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
 
   void Post(const parser::OmpTypeName &);
   bool Pre(const parser::OmpStylizedDeclaration &);

@@ -17,7 +17,7 @@ end
 !UNPARSE: !$OMP END DO
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
@@ -41,7 +41,7 @@ end
 !UNPARSE: !$OMP END DO
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
@@ -67,7 +67,7 @@ end
 !UNPARSE: !$OMP END DO
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
