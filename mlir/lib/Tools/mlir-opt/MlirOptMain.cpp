@@ -707,7 +707,7 @@ std::string mlir::registerCLIOptions(llvm::StringRef toolName,
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();
   {
     llvm::raw_string_ostream os(helpHeader);
-    interleaveComma(registry.getDialectNames(), os,
+    interleaveComma(registry.getRegisteredDialectNames(), os,
                     [&](auto name) { os << name; });
   }
   return helpHeader;
@@ -735,7 +735,7 @@ mlir::registerAndParseCLIOptions(int argc, char **argv,
 
 static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
   llvm::outs() << "Available Dialects: ";
-  interleave(registry.getDialectNames(), llvm::outs(), ",");
+  interleave(registry.getRegisteredDialectNames(), llvm::outs(), ",");
   llvm::outs() << "\n";
   return success();
 }

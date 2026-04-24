@@ -106,6 +106,29 @@ public:
   uint64_t getMBBHash(const MachineBasicBlock &MBB) const;
 };
 
+class MachineBlockHashInfoAnalysis
+    : public AnalysisInfoMixin<MachineBlockHashInfoAnalysis> {
+  friend AnalysisInfoMixin<MachineBlockHashInfoAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineBlockHashInfoResult;
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Printer pass for the \c MachineBlockHashInfoAnalysis results.
+class MachineBlockHashInfoPrinterPass
+    : public PassInfoMixin<MachineBlockHashInfoPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineBlockHashInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+/// Legacy MachineFunctionPass for MachineBlockHashInfo.
 class MachineBlockHashInfo : public MachineFunctionPass {
   MachineBlockHashInfoResult Result;
 

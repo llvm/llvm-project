@@ -58,6 +58,11 @@ static cl::opt<uint32_t> NumThreadsOpt("num-threads",
 static cl::opt<int32_t> DeviceIdOpt("device-id", cl::desc("Set the device id."),
                                     cl::init(-1), cl::cat(ReplayOptions));
 
+static cl::opt<uint32_t>
+    RepetitionsOpt("repetitions",
+                   cl::desc("Set the number of replay repetitions."),
+                   cl::init(1), cl::cat(ReplayOptions));
+
 template <typename... ArgsTy>
 Error createErr(const char *ErrFmt, ArgsTy &&...Args) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(), ErrFmt,
@@ -132,12 +137,14 @@ Error verifyReplayOutput(StringRef RecordOutputFilename,
     return createErr("replay device memory failed to verify");
 
   // Sucessfully verified.
-  outs() << TOOL_PREFIX << "Replay device memory verified\n";
   return Error::success();
 }
 
 /// Replay the kernel and return whether verification occurred.
 Error replayKernel() {
+  if (RepetitionsOpt == 0)
+    return createErr("invalid number of repetitions");
+
   // Load the kernel descriptor JSON file.
   auto KernelDescrBufferOrErr =
       MemoryBuffer::getFile(JsonFilename, /*isText=*/true,
@@ -240,15 +247,8 @@ Error replayKernel() {
     return createErr("failed to read the globals file");
   auto GlobalsBuffer = std::move(GlobalsBufferOrErr.get());
 
-  // On AMD for currently unknown reasons we cannot copy memory mapped data to
-  // device. This is a work-around.
-  uint8_t *RecordedGlobals = new uint8_t[GlobalsBuffer->getBufferSize()];
-  std::memcpy(RecordedGlobals,
-              const_cast<char *>(GlobalsBuffer->getBuffer().data()),
-              GlobalsBuffer->getBufferSize());
-
-  void *BufferPtr = (void *)RecordedGlobals;
-  uint32_t NumGlobals = *((uint32_t *)(BufferPtr));
+  const void *BufferPtr = const_cast<char *>(GlobalsBuffer->getBufferStart());
+  uint32_t NumGlobals = *((const uint32_t *)(BufferPtr));
   BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
   SmallVector<llvm::offloading::EntryTy> OffloadEntries(
@@ -268,14 +268,15 @@ Error replayKernel() {
     Global.Address = static_cast<char *>(OffloadEntries[0].Address) + I + 1;
 
     // Setup the offload entry using the information from the file.
-    uint32_t NameSize = *((uint32_t *)(BufferPtr));
+    uint32_t NameSize = *((const uint32_t *)(BufferPtr));
     BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
-    uint64_t Size = *((uint64_t *)(BufferPtr));
+    uint64_t Size = *((const uint64_t *)(BufferPtr));
     BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint64_t));
     Global.Size = Size;
-    Global.SymbolName = (char *)BufferPtr;
+    Global.SymbolName =
+        const_cast<char *>(static_cast<const char *>(BufferPtr));
     BufferPtr = utils::advancePtr(BufferPtr, NameSize);
-    Global.AuxAddr = BufferPtr;
+    Global.AuxAddr = const_cast<void *>(BufferPtr);
     BufferPtr = utils::advancePtr(BufferPtr, Size);
   }
 
@@ -320,24 +321,24 @@ Error replayKernel() {
     return createErr("failed to read the kernel record input file");
   auto RecordInputBuffer = std::move(RecordInputBufferOrErr.get());
 
-  // On AMD for currently unknown reasons we cannot copy memory mapped data to
-  // device. This is a work-around.
-  uint8_t *RecordedData = new uint8_t[RecordInputBuffer->getBufferSize()];
-  std::memcpy(RecordedData,
-              const_cast<char *>(RecordInputBuffer->getBuffer().data()),
-              RecordInputBuffer->getBufferSize());
-
   KernelReplayOutcomeTy Outcome;
-  Rc = __tgt_target_kernel_replay(
-      /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
-      (char *)RecordedData, RecordInputBuffer->getBufferSize(),
-      NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
-      TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
-      LoopTripCount, &Outcome);
-  if (Rc != OMP_TGT_SUCCESS)
-    return createErr("failed to replay kernel");
 
-  delete[] RecordedData;
+  // Perform the kernel replay and verification (if needed) for each repetition.
+  for (uint32_t R = 1; R <= RepetitionsOpt; ++R) {
+    Rc = __tgt_target_kernel_replay(
+        /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
+        const_cast<char *>(RecordInputBuffer->getBufferStart()),
+        R > 0 ? Outcome.ReplayDeviceAlloc : nullptr,
+        RecordInputBuffer->getBufferSize(),
+        NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
+        TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
+        LoopTripCount, &Outcome);
+    if (Rc != OMP_TGT_SUCCESS)
+      return createErr("failed to replay kernel");
+
+    outs() << TOOL_PREFIX << " Replay time (" << R
+           << "): " << Outcome.KernelReplayTimeNs << " ns\n";
+  }
 
   // Verify the replay output if requested.
   if (VerifyOpt) {
@@ -345,10 +346,15 @@ Error replayKernel() {
       return createErr("replay output file was not generated");
 
     Filepath.replace_extension("record_output");
-    return verifyReplayOutput(Filepath.c_str(), Outcome.OutputFilepath.c_str());
-  }
+    if (auto Err = verifyReplayOutput(Filepath.c_str(),
+                                      Outcome.OutputFilepath.c_str()))
+      return Err;
 
-  outs() << TOOL_PREFIX << "Replay finished (verification skipped)\n";
+    // The verification was successful.
+    outs() << TOOL_PREFIX << " Replay done, device memory verified\n";
+  } else {
+    outs() << TOOL_PREFIX << " Replay done, verification skipped\n";
+  }
   return Error::success();
 }
 

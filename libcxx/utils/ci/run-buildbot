@@ -448,6 +448,26 @@ generic-hardening-mode-debug)
     check-runtimes
     check-abi-list
 ;;
+generic-llvm-libc)
+    clean
+
+    # Install kernel headers from a known-good Linux kernel version to ensure
+    # the test is hermetic.
+    export LINUX_VERSION=7.0.1
+    mkdir -p "${BUILD_DIR}"
+    curl -L "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-${LINUX_VERSION}.tar.xz" --output "${BUILD_DIR}/linux.tar.xz"
+    tar -xf "${BUILD_DIR}/linux.tar.xz" -C "${BUILD_DIR}"
+    make LLVM=1 INSTALL_HDR_PATH="${BUILD_DIR}/linux-install" -C "${BUILD_DIR}/linux-${LINUX_VERSION}" headers_install
+
+    generate-cmake-base -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-llvm-libc.cmake" \
+                        -DLIBCXX_TEST_CONFIG="llvm-libc++-llvm-libc.cfg.in" \
+                        -DLIBCXXABI_TEST_CONFIG="llvm-libc++abi-llvm-libc.cfg.in" \
+                        -DLIBC_KERNEL_HEADERS="${BUILD_DIR}/linux-install/include"
+    # Ensure we have the builtins archive built as we pass it in explicitly in
+    # the test config.
+    ninja -vC "${BUILD_DIR}" libclang_rt.builtins-x86_64.a
+    check-runtimes
+;;
 #
 # Module builds
 #

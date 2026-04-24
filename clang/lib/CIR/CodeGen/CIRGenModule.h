@@ -120,7 +120,8 @@ private:
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
   void constructFunctionArgumentAttributes(
-      const CIRGenFunctionInfo &info, bool isThunk,
+      const CIRGenFunctionInfo &info, const clang::Decl *targetDecl,
+      bool isThunk, bool attrOnCallSite,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
   /// return value might have been discarded.
@@ -756,8 +757,7 @@ public:
   cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
-                                                    GVALinkage linkage,
-                                                    bool isConstantVariable);
+                                                    GVALinkage linkage);
   void setFunctionLinkage(GlobalDecl gd, cir::FuncOp f) {
     cir::GlobalLinkageKind l = getFunctionLinkage(gd);
     f.setLinkageAttr(cir::GlobalLinkageKindAttr::get(&getMLIRContext(), l));
@@ -765,8 +765,7 @@ public:
                                            getMLIRVisibilityFromCIRLinkage(l));
   }
 
-  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
-                                                    bool isConstant);
+  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd);
 
   void addReplacement(llvm::StringRef name, mlir::Operation *op);
 

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -587,6 +588,15 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
             return mlir::isa<ACC_DATA_ENTRY_OPS>(u);
           }))
         return mlir::failure();
+      // Don't pull in rebox defined outside a cuf.kernel when the array_coor
+      // is inside that kernel. CUF codegen converts such a rebox into a
+      // managed-memory descriptor (via _FortranACUFAllocDescriptor) that the
+      // kernel needs to receive as its argument; folding the rebox away would
+      // leave the kernel capturing the host-side descriptor directly, causing
+      // illegal device dereferences at runtime.
+      if (auto kernel = op->getParentOfType<cuf::KernelOp>())
+        if (reboxOp->getParentOfType<cuf::KernelOp>() != kernel)
+          return mlir::failure();
       boxedMemref = reboxOp.getBox();
       boxedShape = reboxOp.getShape();
       // Avoid pulling in rebox that performs reshaping.
