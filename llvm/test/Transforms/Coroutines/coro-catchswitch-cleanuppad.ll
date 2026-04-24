@@ -5,7 +5,7 @@
 declare i32 @__CxxFrameHandler3(...)
 define ptr @f2(i1 %val) presplitcoroutine personality ptr @__CxxFrameHandler3 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f2, ptr null)
   %valueA = call i32 @f();
   %valueB = call i32 @f();
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
