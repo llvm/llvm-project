@@ -424,20 +424,20 @@ Issues deemed to not require coordinated action before disclosing publicly
    `GHSA-m967-6j3p-jrwc <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-m967-6j3p-jrwc>`_ |br|
    There has been an agreement that the proof of concept had undefined
    behavior which makes it out of scope according to
-   `the LLVM thread model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
 3. “\[clangd\] heap-use-after-free in clangd when generating diagnostics” |br|
    Details are available at
    `GHSA-5426-9r4h-7whf <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-5426-9r4h-7whf>`_ |br|
    It has been agreed this report fell out of scope because it was caused by
    untrusted inputs, as described in
-   `the LLVM thread model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
 4. “A compiler optimization bug may cause signed integer overflow detection
    be bypassed” |br|
    Details are available at
    `GHSA-w6jm-h8j9-q33r <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-w6jm-h8j9-q33r>`_ |br|
    There has been an agreement that the PoC had undefined behavior which makes
    it out of scope according to
-   `the LLVM thread model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
 5. “libomp: Crash (OOB Write / ASan BUS Error) involving omp\_init\_lock under
    high concurrency” |br|
    Details are available at
@@ -450,12 +450,12 @@ Issues deemed to not require coordinated action before disclosing publicly
    `GHSA-8j9r-qc4r-q9fh <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-8j9r-qc4r-q9fh>`_ |br|
    This report fell out of scope because it was caused by untrusted inputs,
    as described in
-   `the LLVM thread model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
 7. “\[clangd/clang\] heap-buffer-overflow in clang/lib/Sema/SemaExprCXX.cpp:9144” |br|
    Details are available at
    `GHSA-qq8q-r524-8vw9 <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-qq8q-r524-8vw9>`_ |br|
    This issue and the following 3 were concluded to be outside of the
-   `LLVM thread model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   `LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
 8. “\[clangd\] heap-buffer-overflow in clang/lib/Sema/SemaExprCXX.cpp:8876” |br|
    Details are available at
    `GHSA-3xm9-vccr-fxx5 <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-3xm9-vccr-fxx5>`_
