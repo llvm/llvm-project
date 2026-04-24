@@ -22,12 +22,30 @@ int main(int argc, char *argv[]) {
   }
 
   if (argc < 4)
-    fail("usage: hotswap-rewrite <elf_file> <source_isa> <target_isa> [--zero-size]");
+    fail("usage: hotswap-rewrite <elf_file> <source_isa> <target_isa> "
+         "[--zero-size | --output <path>]");
 
   const char *ElfFile = argv[1];
   const char *SourceISA = argv[2];
   const char *TargetISA = argv[3];
-  int ZeroSize = (argc > 4 && strcmp(argv[4], "--zero-size") == 0);
+
+  // Optional trailing flags. They are mutually exclusive; --zero-size is
+  // used by the negative tests that exercise INVALID_ARGUMENT paths;
+  // --output <path> is used by the e2e test to save the rewrite output
+  // for inspection by llvm-readelf / llvm-objdump.
+  int ZeroSize = 0;
+  const char *OutputPath = NULL;
+  if (argc > 4) {
+    if (strcmp(argv[4], "--zero-size") == 0) {
+      ZeroSize = 1;
+    } else if (strcmp(argv[4], "--output") == 0) {
+      if (argc < 6)
+        fail("--output requires a path argument");
+      OutputPath = argv[5];
+    } else {
+      fail("unknown flag '%s'", argv[4]);
+    }
+  }
 
   char *ElfBuf;
   size_t ElfSize = (size_t)setBuf(ElfFile, &ElfBuf);
@@ -65,6 +83,9 @@ int main(int argc, char *argv[]) {
 
   if (memcmp(OutBuf, ElfBuf, ElfSize) != 0)
     fail("output content differs from input");
+
+  if (OutputPath)
+    dumpData(OutputData, OutputPath);
 
   free(OutBuf);
   amd_comgr_(release_data(OutputData));
