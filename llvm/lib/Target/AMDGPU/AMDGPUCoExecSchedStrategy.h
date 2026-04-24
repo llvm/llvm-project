@@ -178,9 +178,23 @@ private:
   /// instructions on other HardwareUnits.
   bool ProducesCoexecWindow = false;
   /// How many instructions can be held simultaneously for this HardwareUnit.
-  /// A value of 0 or 1 means that there is no buffer.
+  /// A value of 0 means there is no limit.
+  ///
+  /// This may approximate the hardware. For example, for LDS instructions
+  /// it is a well-known phenomena that oversubscribing the LDS unit results in
+  /// longer latency for the LDS instructions. While it is true that there is a
+  /// hard limit to the amount of simulatenous in-flight LDS instructions, good
+  /// scheduling would also cool off the LDS to avoid other forms of hardware
+  /// contention and increasing LDS latency. Thus, we limit the amount of LDS
+  /// instructions we are willing to schedule close together, though this does
+  /// not correspond 1:1 with a hardware mechanism.
   unsigned BufferSize = 0;
   /// How many cycles it takes for an instruction to clear the buffer.
+  ///
+  /// Again, this may be an apprxoimation. For example, for memory FIFOs, the
+  /// actual amount of cycles it will take to clear it is dependent on how
+  /// quickly prior instructions evacuate the FIFO, which is based on runtime
+  /// behavior which is not modelled in the compiler.
   unsigned BufferCycles = 0;
 
 public:
@@ -210,7 +224,7 @@ public:
   /// \returns the next cycle where there is space in the buffer.
   unsigned getBufferAvailableCycle(unsigned CurrCycle) {
     // There is no buffer.
-    if (BufferSize <= 1)
+    if (BufferSize == 0)
       return CurrCycle;
 
     // Buffer is available now.
@@ -265,7 +279,7 @@ public:
   /// the list of PrioritySUs.
   void markScheduled(SUnit *SU, unsigned BlockingCycles);
   /// After we've collected all the region pressure for this HWUI, correct for
-  /// any specifics of the behavior of this resource. For example, if we the
+  /// any specifics of the behavior of this resource. For example, if the
   /// HardwareUnit can hold N instructions simultaneously, then there is no
   /// penalty for scheduling N instructions back to back.
   void finalizeCycles();
