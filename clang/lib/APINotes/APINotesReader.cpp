@@ -378,6 +378,9 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
   ReadCommonEntityInfo(Data, Info);
 
   uint8_t Payload = endian::readNext<uint8_t, llvm::endianness::little>(Data);
+  if (Payload & 0x1)
+    Info.UnsafeBufferUsage = 1;
+  Payload >>= 0x1;
   if (auto RawConvention = Payload & 0x7) {
     auto Convention = static_cast<RetainCountConventionKind>(RawConvention - 1);
     Info.setRetainCountConvention(Convention);
