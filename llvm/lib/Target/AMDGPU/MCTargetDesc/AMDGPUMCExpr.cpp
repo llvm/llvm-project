@@ -104,8 +104,8 @@ static bool
 evaluateMCExprs(ArrayRef<const MCExpr *> Exprs, const MCAssembler *Asm,
                 std::initializer_list<std::reference_wrapper<uint64_t>> Vals) {
   return llvm::all_of(llvm::zip_equal(Exprs, Vals), [&](const auto &Pair) {
-    const MCExpr *Expr = std::get<0>(Pair);
-    uint64_t &Val = std::get<1>(Pair).get();
+    auto [Expr, ValRef] = Pair;
+    uint64_t &Val = ValRef.get();
     MCValue MCVal;
     if (!Expr->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
       return false;
