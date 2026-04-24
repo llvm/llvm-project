@@ -453,16 +453,14 @@ static bool tryToRecognizePopCount1(Instruction &I) {
   // For "(x & M) + ((x >> S) & M)" patterns, both AND masks may be narrowed.
   // Require subsets of BaseMask and prove any implied missing bits are zero.
   auto narrowAddPairMasksOk = [&](const APInt &BaseMask, unsigned ShiftAmt,
-                                  Value *Val, const APInt *AndMask1,
-                                  const APInt *AndMask2) -> bool {
-    if (!AndMask1->isSubsetOf(BaseMask) || !AndMask2->isSubsetOf(BaseMask))
+                                  Value *Val, const APInt &AndMask1,
+                                  const APInt &AndMask2) -> bool {
+    if (!AndMask1.isSubsetOf(BaseMask) || !AndMask2.isSubsetOf(BaseMask))
       return false;
-    APInt NeededShifted = (BaseMask & ~*AndMask1).shl(ShiftAmt);
-    APInt NeededUnshifted = BaseMask & ~*AndMask2;
+    APInt NeededShifted = (BaseMask & ~AndMask1).shl(ShiftAmt);
+    APInt NeededUnshifted = BaseMask & ~AndMask2;
     APInt AllNeeded = NeededShifted | NeededUnshifted;
-    if (!AllNeeded.isZero() && !MaskedValueIsZero(Val, AllNeeded, SQ))
-      return false;
-    return true;
+    return AllNeeded.isZero() || MaskedValueIsZero(Val, AllNeeded, SQ);
   };
 
   Value *ShiftOp;
@@ -477,7 +475,7 @@ static bool tryToRecognizePopCount1(Instruction &I) {
               m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
                             m_APInt(AndMask1)),
                       m_And(m_Deferred(ShiftOp), m_APInt(AndMask2))))) {
-      if (!narrowAddPairMasksOk(Mask, I / 2, ShiftOp, AndMask1, AndMask2))
+      if (!narrowAddPairMasksOk(Mask, I / 2, ShiftOp, *AndMask1, *AndMask2))
         return false;
     }
     // Matching "(uWord & Mask) + (uWord>>I/2)".
@@ -498,7 +496,7 @@ static bool tryToRecognizePopCount1(Instruction &I) {
                                   m_APInt(AndMask1)),
                             m_And(m_Deferred(ShiftOp), m_APInt(AndMask2)))))
     return false;
-  if (!narrowAddPairMasksOk(Mask33, 2, ShiftOp, AndMask1, AndMask2))
+  if (!narrowAddPairMasksOk(Mask33, 2, ShiftOp, *AndMask1, *AndMask2))
     return false;
 
   Start = ShiftOp;
@@ -510,7 +508,7 @@ static bool tryToRecognizePopCount1(Instruction &I) {
                                   m_APInt(AndMask1)),
                             m_And(m_Deferred(Root), m_APInt(AndMask2)))))
     return false;
-  if (!narrowAddPairMasksOk(Mask55, 1, Root, AndMask1, AndMask2))
+  if (!narrowAddPairMasksOk(Mask55, 1, Root, *AndMask1, *AndMask2))
     return false;
 
   replaceWithPopCount(I, Root);
