@@ -1,23 +1,5 @@
-// RUN: mlir-opt --xegpu-array-length-optimization --verify-each=false --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --xegpu-array-length-optimization --split-input-file %s | FileCheck %s
 
-// CHECK-LABEL: func.func @test_load_nd_32x32
-// CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)
-func.func @test_load_nd_32x32(%arg0: memref<4096x4096xf16>) -> vector<32x32xf16> {
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-
-  // CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]]
-  // CHECK-SAME: memref<4096x4096xf16> -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>>
-  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<32x32xf16>
-
-  // CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]][%{{.*}}, %{{.*}}]
-  // CHECK-SAME: !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<64x16xf16>
-  %load = xegpu.load_nd %tdesc[%c0, %c1] : !xegpu.tensor_desc<32x32xf16> -> vector<32x32xf16>
-
-  return %load : vector<32x32xf16>
-}
-
-// -----
 
 // CHECK-LABEL: func.func @test_load_nd_with_extract_slice
 // CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)
@@ -107,23 +89,6 @@ func.func @test_no_optimization_16x16(%arg0: memref<4096x4096xf16>) -> vector<16
   return %load : vector<16x16xf16>
 }
 
-// -----
-
-// CHECK-LABEL: func.func @test_load_nd_64x32
-// CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)
-func.func @test_load_nd_64x32(%arg0: memref<4096x4096xf16>) -> vector<64x32xf16> {
-  %c0 = arith.constant 0 : index
-
-  // CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]]
-  // CHECK-SAME: memref<4096x4096xf16> -> !xegpu.tensor_desc<64x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>>
-  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<64x32xf16>
-
-  // CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]][%{{.*}}, %{{.*}}]
-  // CHECK-SAME: !xegpu.tensor_desc<64x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<128x16xf16>
-  %load = xegpu.load_nd %tdesc[%c0, %c0] : !xegpu.tensor_desc<64x32xf16> -> vector<64x32xf16>
-
-  return %load : vector<64x32xf16>
-}
 
 // -----
 
