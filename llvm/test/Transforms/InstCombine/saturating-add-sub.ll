@@ -1056,9 +1056,9 @@ define i8 @test_scalar_usub_urem_must_zero(i8 %a) {
 ; We have a constant range for the LHS, but only known bits for the RHS
 define i8 @test_scalar_usub_add_nuw_known_bits(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_scalar_usub_add_nuw_known_bits(
-; CHECK-NEXT:    [[AA:%.*]] = add nuw i8 [[A:%.*]], 10
 ; CHECK-NEXT:    [[BB:%.*]] = and i8 [[B:%.*]], 7
-; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[AA]], [[BB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[A:%.*]], [[BB]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 10
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %aa = add nuw i8 %a, 10
@@ -1134,9 +1134,9 @@ define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat3(<2 x i8> %a) {
 
 define i8 @test_scalar_ssub_add_nsw_no_ov(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_scalar_ssub_add_nsw_no_ov(
-; CHECK-NEXT:    [[AA:%.*]] = add nsw i8 [[A:%.*]], 7
 ; CHECK-NEXT:    [[BB:%.*]] = and i8 [[B:%.*]], 7
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[AA]], [[BB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[A:%.*]], [[BB]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 7
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %aa = add nsw i8 %a, 7
@@ -1160,9 +1160,9 @@ define i8 @test_scalar_ssub_add_nsw_may_ov(i8 %a, i8 %b) {
 
 define <2 x i8> @test_vector_ssub_add_nsw_no_ov_splat(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @test_vector_ssub_add_nsw_no_ov_splat(
-; CHECK-NEXT:    [[AA:%.*]] = add nsw <2 x i8> [[A:%.*]], splat (i8 7)
 ; CHECK-NEXT:    [[BB:%.*]] = and <2 x i8> [[B:%.*]], splat (i8 7)
-; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> [[AA]], [[BB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i8> [[A:%.*]], [[BB]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], splat (i8 7)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %aa = add nsw <2 x i8> %a, <i8 7, i8 7>
@@ -1173,9 +1173,9 @@ define <2 x i8> @test_vector_ssub_add_nsw_no_ov_splat(<2 x i8> %a, <2 x i8> %b) 
 
 define <2 x i8> @test_vector_ssub_add_nsw_no_ov_nonsplat1(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @test_vector_ssub_add_nsw_no_ov_nonsplat1(
-; CHECK-NEXT:    [[AA:%.*]] = add nsw <2 x i8> [[A:%.*]], splat (i8 7)
 ; CHECK-NEXT:    [[BB:%.*]] = and <2 x i8> [[B:%.*]], <i8 7, i8 6>
-; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> [[AA]], [[BB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i8> [[A:%.*]], [[BB]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], splat (i8 7)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %aa = add nsw <2 x i8> %a, <i8 7, i8 7>

@@ -126,9 +126,9 @@ define i8 @t3_c0(i8 %y, i8 %z) {
 
 define i8 @t4_c1(i8 %x, i8 %z) {
 ; CHECK-LABEL: @t4_c1(
-; CHECK-NEXT:    [[I0:%.*]] = add i8 [[X:%.*]], -42
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[I0]], [[Z:%.*]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[I0:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = add i8 [[R]], -42
+; CHECK-NEXT:    ret i8 [[R1]]
 ;
   %i0 = sub i8 %x, 42
   %r = sub i8 %i0, %z

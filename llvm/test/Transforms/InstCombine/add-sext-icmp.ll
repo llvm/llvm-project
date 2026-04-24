@@ -37,10 +37,10 @@ define i32 @add_sext_icmp_commutative(i32 %A) {
 define i32 @add_sext_icmp_negative_constant(i32 %A) {
 ; CHECK-LABEL: define i32 @add_sext_icmp_negative_constant(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 2
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 2
@@ -53,10 +53,9 @@ define i32 @add_sext_icmp_negative_constant(i32 %A) {
 define i32 @add_sext_icmp_negative_pred(i32 %A) {
 ; CHECK-LABEL: define i32 @add_sext_icmp_negative_pred(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], 1
+; CHECK-NEXT:    [[ADD2:%.*]] = select i1 [[ICMP]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 1
@@ -86,11 +85,11 @@ define i32 @add_sext_icmp_multi_use_add2(i32 %A) {
 define i32 @add_sext_icmp_multi_use_sext(i32 %A) {
 ; CHECK-LABEL: define i32 @add_sext_icmp_multi_use_sext(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[SEXT]])
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 1
@@ -104,11 +103,11 @@ define i32 @add_sext_icmp_multi_use_sext(i32 %A) {
 define i32 @add_sext_icmp_multi_use_icmp(i32 %A) {
 ; CHECK-LABEL: define i32 @add_sext_icmp_multi_use_icmp(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
 ; CHECK-NEXT:    call void @use(i1 [[ICMP]])
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 1

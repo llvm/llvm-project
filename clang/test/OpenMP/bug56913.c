@@ -22,7 +22,7 @@ void loop(int n) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @j, align 4, !tbaa [[INT_TBAA2:![0-9]+]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[J]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    store ptr [[J]], ptr @u, align 8, !tbaa [[INTPTR_TBAA6:![0-9]+]], !llvm.access.group [[ACC_GRP9:![0-9]+]]
-// CHECK-NEXT:    [[INC_LE:%.*]] = add i32 [[TMP0]], [[N]]
+// CHECK-NEXT:    [[INC_LE:%.*]] = add i32 [[N]], [[TMP0]]
 // CHECK-NEXT:    store i32 [[INC_LE]], ptr [[J]], align 4, !tbaa [[INT_TBAA2]]
 // CHECK-NEXT:    store i32 [[INC_LE]], ptr @j, align 4, !tbaa [[INT_TBAA2]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[J]]) #[[ATTR2]]

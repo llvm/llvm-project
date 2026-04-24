@@ -156,13 +156,13 @@ define i32 @reduction_func(ptr nocapture %A, i32 %n) readonly {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 30)
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[VEC_PHI]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP3]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP4]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP4]], splat (i32 2)
+; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP8]], <4 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -176,17 +176,17 @@ define i32 @reduction_func(ptr nocapture %A, i32 %n) readonly {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_INC:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[SUM_011:%.*]] = phi i32 [ [[SUM_1:%.*]], %[[FOR_INC]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = phi i32 [ [[SUM_1:%.*]], %[[FOR_INC]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP7]], 30
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[IF_THEN:.*]], label %[[FOR_INC]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUM_011]], 2
 ; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[ADD]], [[TMP7]]
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[ADD4]], 2
 ; CHECK-NEXT:    br label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
-; CHECK-NEXT:    [[SUM_1]] = phi i32 [ [[ADD4]], %[[IF_THEN]] ], [ [[SUM_011]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_1]] = phi i32 [ [[ADD5]], %[[IF_THEN]] ], [ [[ADD]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]]

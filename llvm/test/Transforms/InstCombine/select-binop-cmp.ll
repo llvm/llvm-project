@@ -1237,9 +1237,9 @@ define i32 @select_replace_nested_extra_use(i32 %x, i32 %y, i32 %z) {
 define i32 @select_replace_nested_no_simplify(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_nested_no_simplify(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[Y:%.*]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[Z:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[ADD]], i32 [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[ADD]], -1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[ADD1]], i32 [[SUB]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %c = icmp eq i32 %x, 1

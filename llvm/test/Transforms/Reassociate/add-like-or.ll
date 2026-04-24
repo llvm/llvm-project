@@ -33,9 +33,9 @@ define i32 @test1(i32 %a, i32 %b) {
 ; we *can* convert the `or` into an `add`.
 define i32 @test2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[X_NUMLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), [[RNG0:!range !.*]]
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[X_NUMLZ]], -32
-; CHECK-NEXT:    [[RES_PLUS_ONE:%.*]] = add i32 [[RES]], [[Y:%.*]]
+; CHECK-NEXT:    [[X_NUMLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[Y:%.*]], [[X_NUMLZ]]
+; CHECK-NEXT:    [[RES_PLUS_ONE:%.*]] = add i32 [[RES]], -32
 ; CHECK-NEXT:    ret i32 [[RES_PLUS_ONE]]
 ;
   %x.numlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true), !range !0
@@ -47,9 +47,9 @@ define i32 @test2(i32 %x, i32 %y) {
 ; And that allows reassociation in general.
 define i32 @test3(i32 %x, i32 %bit) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[X_NUMLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), [[RNG0]]
-; CHECK-NEXT:    [[BIT_PLUS_ONE:%.*]] = add i32 [[BIT:%.*]], -31
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[BIT_PLUS_ONE]], [[X_NUMLZ]]
+; CHECK-NEXT:    [[X_NUMLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[BIT_PLUS_ONE:%.*]] = add i32 [[X_NUMLZ]], [[BIT:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[BIT_PLUS_ONE]], -31
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %x.numlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true), !range !0
@@ -62,9 +62,9 @@ define i32 @test3(i32 %x, i32 %bit) {
 ; Test that disjoint allow reassociation.
 define i32 @test4(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[C_PLUS_ONE:%.*]] = add i32 [[C]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[C_PLUS_ONE]]
+; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 [[B:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %c = or disjoint i32 %a, %b
   %c.plus.one = add i32 %c, 1

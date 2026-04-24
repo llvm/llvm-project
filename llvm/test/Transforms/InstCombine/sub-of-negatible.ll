@@ -276,8 +276,8 @@ define i8 @sub_from_constant_of_sub_from_constant_multi_use(i8 %x) {
 define i8 @sub_from_variable_of_sub_from_constant(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @sub_from_variable_of_sub_from_constant(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[S_NEG:%.*]] = add i8 [[X]], -42
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[S_NEG]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -42
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub i8 42, %x
@@ -1160,8 +1160,8 @@ define i8 @add_via_or_with_no_common_bits_set(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Y]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1_NEG:%.*]] = shl i8 [[Y]], 2
-; CHECK-NEXT:    [[T2_NEG:%.*]] = add i8 [[T1_NEG]], -3
-; CHECK-NEXT:    [[T3:%.*]] = add i8 [[T2_NEG]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[T1_NEG]], [[X]]
+; CHECK-NEXT:    [[T3:%.*]] = add i8 [[TMP1]], -3
 ; CHECK-NEXT:    ret i8 [[T3]]
 ;
   %t0 = sub i8 0, %y

@@ -1478,7 +1478,7 @@ static Instruction *factorizeMathWithShlOps(BinaryOperator &I,
   // TODO: Also handle mul by doubling the shift amount?
   assert((I.getOpcode() == Instruction::Add ||
           I.getOpcode() == Instruction::Sub) &&
-         "Expected add/sub");
+         "Expecting add/sub instruction");
   auto *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0));
   auto *Op1 = dyn_cast<BinaryOperator>(I.getOperand(1));
   if (!Op0 || !Op1 || !(Op0->hasOneUse() || Op1->hasOneUse()))
@@ -1546,6 +1546,34 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
     return BinaryOperator::CreateMul(X, Y);
 
   return nullptr;
+}
+
+/// Canonicalize a nested add by sinking an inner RHS constant outward.
+/// Only handle inner adds to stay compatible with Reassociate.
+///   (X + C) + Y  ->  (X + Y) + C
+///   (X + C) - Y  ->  (X - Y) + C
+static Instruction *
+canonicalizeNestedAddSubWithConstant(BinaryOperator &I,
+                                     InstCombiner::BuilderTy &Builder) {
+  assert((I.getOpcode() == Instruction::Add ||
+          I.getOpcode() == Instruction::Sub) &&
+         "Expecting add/sub instruction");
+
+  Value *Y = I.getOperand(1);
+  if (isa<Constant>(Y))
+    return nullptr;
+
+  auto *Inner = dyn_cast<BinaryOperator>(I.getOperand(0));
+  if (!Inner || !Inner->hasOneUse())
+    return nullptr;
+
+  Value *X;
+  Constant *C;
+  if (!match(Inner, m_Add(m_Value(X), m_ImmConstant(C))))
+    return nullptr;
+
+  Value *XY = Builder.CreateBinOp(I.getOpcode(), X, Y);
+  return BinaryOperator::CreateAdd(XY, C);
 }
 
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
@@ -1956,6 +1984,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return Res;
 
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
+    return Res;
+
+  if (Instruction *Res = canonicalizeNestedAddSubWithConstant(I, Builder))
     return Res;
 
   // Re-enqueue users of the induction variable of add recurrence if we infer
@@ -3008,6 +3039,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       }
     }
   }
+
+  if (Instruction *Res = canonicalizeNestedAddSubWithConstant(I, Builder))
+    return Res;
 
   return TryToNarrowDeduceFlags();
 }

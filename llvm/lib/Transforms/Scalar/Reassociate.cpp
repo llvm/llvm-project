@@ -966,7 +966,7 @@ static BinaryOperator *convertOrWithNoCommonBitsToAdd(Instruction *Or) {
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
 static bool ShouldBreakUpSubtract(Instruction *Sub) {
   // If this is a negation, we can't split it up!
-  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value()))) 
+  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value())))
     return false;
 
   // Don't breakup X - undef.
@@ -2357,6 +2357,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     return;
   }
 
+  bool PreserveCSEPair = false;
   if (Ops.size() > 2 && Ops.size() <= GlobalReassociateLimit) {
     // Find the pair with the highest count in the pairmap and move it to the
     // back of the list so that it can later be CSE'd.
@@ -2473,10 +2474,35 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
       Ops.erase(&Ops[BestPair.first]);
       Ops.push_back(Op0);
       Ops.push_back(Op1);
+      PreserveCSEPair = true;
     }
   }
   LLVM_DEBUG(dbgs() << "RAOut after CSE reorder:\t"; PrintOps(I, Ops);
              dbgs() << '\n');
+
+  // For scalar integer add trees with a single constant operand, hoist it
+  // outside to the outermost add:
+  //   (X + C) + Y -> (X + Y) + C
+  //
+  // If the CSE-driven reordering already picked a profitable first
+  // sub-expression, keep that materialization instead of overriding it with
+  // the add-specific canonical form.
+  if (!PreserveCSEPair && I->getOpcode() == Instruction::Add &&
+      Ops.size() > 2 && I->getType()->isIntegerTy() &&
+      isa<ConstantInt>(Ops.back().Op)) {
+    bool HasOtherConstant = false;
+    for (unsigned Idx = 0, End = Ops.size() - 1; Idx != End; ++Idx) {
+      if (isa<ConstantInt>(Ops[Idx].Op)) {
+        HasOtherConstant = true;
+        break;
+      }
+    }
+    if (!HasOtherConstant) {
+      ValueEntry ConstOp = Ops.pop_back_val();
+      Ops.insert(Ops.begin(), ConstOp);
+    }
+  }
+
   // Now that we ordered and optimized the expressions, splat them back into
   // the expression tree, removing any unneeded nodes.
   RewriteExprTree(I, Ops, Flags);

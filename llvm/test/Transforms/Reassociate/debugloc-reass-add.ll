@@ -11,8 +11,7 @@ define void @foo(i32 %0) {
 ; CHECK-NEXT:    br label %[[FOR_COND23:.*]]
 ; CHECK:       [[FOR_COND23]]:
 ; CHECK-NEXT:    [[SUB59:%.*]] = sub i32 0, 0
-; CHECK-NEXT:    [[MUL68:%.*]] = mul i32 0, [[TMP0]]
-; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i32 [[MUL68]], [[TMP0]], !dbg [[DBG3:![0-9]+]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i32 0, [[TMP0]], !dbg [[DBG3:![0-9]+]]
 ; CHECK-NEXT:    [[REASS_MUL1:%.*]] = mul i32 [[REASS_ADD]], [[SUB59]], !dbg [[DBG3]]
 ; CHECK-NEXT:    [[REASS_MUL:%.*]] = add i32 [[REASS_MUL1]], 1, !dbg [[DBG3]]
 ; CHECK-NEXT:    [[CONV95:%.*]] = trunc i32 [[REASS_MUL]] to i16
@@ -47,7 +46,7 @@ for.cond23:                                       ; preds = %for.cond23, %entry
 !7 = !{null}
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
-; CHECK: [[META1]] = !DIFile(filename: "test.c", directory: {{.*}})
+; CHECK: [[META1]] = !DIFile(filename: "{{.*}}test.c", directory: {{.*}})
 ; CHECK: [[DBG3]] = !DILocation(line: 15, column: 50, scope: [[META4:![0-9]+]])
 ; CHECK: [[META4]] = distinct !DISubprogram(name: "foo", scope: [[META1]], file: [[META1]], line: 14, type: [[META5:![0-9]+]], scopeLine: 14, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META7:![0-9]+]])
 ; CHECK: [[META5]] = distinct !DISubroutineType(types: [[META6:![0-9]+]])

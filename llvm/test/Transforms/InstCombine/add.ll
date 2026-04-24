@@ -2294,6 +2294,32 @@ define i8 @add_xor_and_var_extra_use(i8 noundef %x, i8 noundef %y) {
   ret i8 %add
 }
 
+define i1 @add_sub_eq(i32 %A, i32 %B) {
+; CHECK-LABEL: @add_sub_eq(
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[EQ]]
+;
+  %add = add i32 %A, 1
+  %sub = sub i32 %add, %B
+  %eq = icmp eq i32 %sub, 1
+  ret i1 %eq
+}
+
+define i1 @add_sub_eq_use(i32 %A, i32 %B) {
+; CHECK-LABEL: @add_sub_eq_use(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    call void @use(i32 [[SUB]])
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[EQ]]
+;
+  %add = add i32 %A, 1
+  %sub = sub i32 %add, %B
+  call void @use(i32 %sub)
+  %eq = icmp eq i32 %sub, 1
+  ret i1 %eq
+}
+
 define i32 @add_add_add(i32 %A, i32 %B, i32 %C, i32 %D) {
 ; CHECK-LABEL: @add_add_add(
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
