@@ -343,7 +343,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
 
   PM->RTLsMtx.unlock();
 
-  bool IsAPU = Plugins.size() > 0;
+  bool IsAPU = false;
 
   bool UseAutoZeroCopy = false;
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
@@ -352,6 +352,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   if (ExclusiveDevicesAccessor->size() > 0) {
     auto &Device = *(*ExclusiveDevicesAccessor)[0];
     UseAutoZeroCopy = Device.useAutoZeroCopy();
+    IsAPU = Device.checkIfAPU();
   }
 
   if (UseAutoZeroCopy)
