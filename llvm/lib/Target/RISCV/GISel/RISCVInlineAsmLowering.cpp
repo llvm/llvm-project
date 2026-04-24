@@ -14,10 +14,9 @@
 #include "RISCVInlineAsmLowering.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -56,7 +55,6 @@ bool RISCVInlineAsmLowering::lowerAsmOperandForConstraint(
         Ops.push_back(MachineOperand::CreateImm(ExtVal));
         return true;
       }
-
     }
     return false;
   case 'S': // Alias for s.
