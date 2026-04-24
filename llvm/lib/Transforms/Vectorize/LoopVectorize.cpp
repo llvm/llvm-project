@@ -6266,6 +6266,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
          "Trying to execute plan with unsupported UF");
   if (BestVPlan.hasEarlyExit())
     ++LoopsEarlyExitVectorized;
+
+  VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
+      BestVPlan, *PSE.getSE(), CM.TTI, Config.CostKind, BestVF, BestUF,
+      CM.ValuesToIgnore);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);

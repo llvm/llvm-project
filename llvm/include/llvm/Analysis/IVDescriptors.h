@@ -380,6 +380,10 @@ public:
   /// Default constructor - creates an invalid induction.
   InductionDescriptor() = default;
 
+  LLVM_ABI InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
+                               BinaryOperator *InductionBinOp = nullptr,
+                               SmallVectorImpl<Instruction *> *Casts = nullptr);
+
   Value *getStartValue() const { return StartValue; }
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
@@ -440,11 +444,6 @@ public:
   ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
 private:
-  /// Private constructor - used by \c isInductionPHI.
-  InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
-                      BinaryOperator *InductionBinOp = nullptr,
-                      SmallVectorImpl<Instruction *> *Casts = nullptr);
-
   /// Start value.
   TrackingVH<Value> StartValue;
   /// Induction kind.

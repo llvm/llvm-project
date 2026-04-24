@@ -691,6 +691,73 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
   }
 }
 
+void VPlanTransforms::replaceWidenCanonicalIVWithWidenIV(
+    VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+    TargetTransformInfo::TargetCostKind CostKind, ElementCount VF, unsigned UF,
+    const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (!LoopRegion || Plan.hasScalarVFOnly())
+    return;
+
+  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
+  auto *WideCanIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(CanonicalIV);
+  if (!WideCanIV)
+    return;
+
+  // If a canonical VPWidenIntOrFpInductionRecipe already exists, reuse it.
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : Header->phis()) {
+    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!WideIV || !WideIV->isCanonical())
+      continue;
+    // The canonical wide IV is used to compute the header mask, hence all
+    // lanes will be used. Drop poison-generating flags.
+    WideIV->dropPoisonGeneratingFlags();
+    WideCanIV->replaceAllUsesWith(WideIV);
+    WideCanIV->eraseFromParent();
+    return;
+  }
+
+  // Otherwise, introduce a new VPWidenIntOrFpInductionRecipe if profitable.
+  if (vputils::onlyFirstLaneUsed(WideCanIV) ||
+      vputils::onlyScalarValuesUsed(WideCanIV))
+    return;
+
+  Type *CanIVTy = LoopRegion->getCanonicalIVType();
+  auto *VecTy = VectorType::get(CanIVTy, VF);
+  InstructionCost BroadcastCost = TTI.getShuffleCost(
+      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, {}, CostKind);
+  InstructionCost PHICost = TTI.getCFInstrCost(Instruction::PHI, CostKind);
+  if (PHICost > BroadcastCost)
+    return;
+
+  // Bail out if the additional wide induction phi increase the expected spill
+  // cost.
+  VPRegisterUsage UnrolledBase =
+      calculateRegisterUsageForPlan(Plan, {VF}, TTI, ValuesToIgnore)[0];
+  for (auto &Pair : UnrolledBase.MaxLocalUsers)
+    Pair.second *= UF;
+  unsigned RegClass = TTI.getRegisterClassForType(/*Vector=*/true, VecTy);
+  VPRegisterUsage Projected = UnrolledBase;
+  Projected.MaxLocalUsers[RegClass] += 1;
+  if (Projected.spillCost(TTI, CostKind) >
+      UnrolledBase.spillCost(TTI, CostKind))
+    return;
+
+  Constant *Zero = ConstantInt::get(CanIVTy, 0);
+  InductionDescriptor ID(Zero, InductionDescriptor::IK_IntInduction,
+                         SE.getOne(CanIVTy));
+  VPIRValue *StartV = Plan.getZero(CanIVTy);
+  VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
+  auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
+      /*IV=*/nullptr, StartV, StepV, &Plan.getVF(), ID,
+      VPIRFlags::WrapFlagsTy(/*HasNUW=*/false, /*HasNSW=*/false),
+      WideCanIV->getDebugLoc());
+  NewWideIV->insertBefore(&*Header->getFirstNonPhi());
+  WideCanIV->replaceAllUsesWith(NewWideIV);
+  WideCanIV->eraseFromParent();
+}
+
 /// Returns true if \p R is dead and can be removed.
 static bool isDeadRecipe(VPRecipeBase &R) {
   // Do remove conditional assume instructions as their conditions may be
