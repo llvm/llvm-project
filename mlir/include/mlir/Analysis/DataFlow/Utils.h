@@ -26,9 +26,7 @@ namespace dataflow {
 /// `DeadCodeAnalysis` and `SparseConstantPropagation` have a circular
 /// co-dependency: SCP only propagates along live CFG edges (produced by DCA),
 /// and DCA refines branches using `Lattice<ConstantValue>` (produced by SCP).
-/// Only SCP's dep on DCA is declared (inherited from the sparse forward driver
-/// base); DCA works without SCP at reduced precision, so clients are free to
-/// substitute another `Lattice<ConstantValue>` producer.
+/// This helper loads both analyses to satisfy their declared dependencies.
 ///
 /// This helper is intended to be an interim fix until a more robust solution
 /// can be implemented in the DataFlow framework directly. See

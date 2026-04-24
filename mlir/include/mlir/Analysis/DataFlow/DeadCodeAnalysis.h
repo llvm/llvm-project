@@ -175,13 +175,9 @@ public:
 /// function.
 ///
 /// This analysis reads `Lattice<ConstantValue>` state to refine branches on
-/// constant conditions. The producer of that lattice is *not* declared as a
-/// hard dependency: if no producer is loaded, operand constants remain
-/// uninitialized and `DeadCodeAnalysis` conservatively marks all successors
-/// live (still correct, just less precise). Pair with
-/// `SparseConstantPropagation` (see `loadBaselineAnalyses` in
-/// `mlir/Analysis/DataFlow/Utils.h`) or a custom `Lattice<ConstantValue>`
-/// producer for best precision.
+/// constant conditions. It requires `SparseConstantPropagation` to initialize
+/// those lattices to either known constants or unknown values; otherwise,
+/// uninitialized branch operands can prevent successors from being marked live.
 class DeadCodeAnalysis : public DataFlowAnalysis {
 public:
   explicit DeadCodeAnalysis(DataFlowSolver &solver);
@@ -193,6 +189,8 @@ public:
   /// Visit an operation with control-flow semantics and deduce which of its
   /// successors are live.
   LogicalResult visit(ProgramPoint *point) override;
+
+  void getDependentAnalyses(AnalysisDependencies &deps) const override;
 
 private:
   /// Find and mark symbol callables with potentially unknown callsites as
