@@ -186,6 +186,16 @@ define i1 @extract_scalable_fabs_isneg(<vscale x 4 x float> %a0) nounwind {
   ret i1 %res
 }
 
+define i1 @fabs_is_nonneg_or_nan(float %x) nounwind {
+; CHECK-LABEL: fabs_is_nonneg_or_nan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %a = call float @llvm.fabs.f32(float %x)
+  %res = call i1 @llvm.is.fpclass.f32(float %a, i32 963)  ; 0x3C3 = any positive | nan
+  ret i1 %res
+}
+
 define <vscale x 4 x i1> @splat_constant_is_pos_normal() {
 ; CHECK-LABEL: splat_constant_is_pos_normal:
 ; CHECK:       # %bb.0:
