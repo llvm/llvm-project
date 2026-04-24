@@ -313,6 +313,7 @@ Value *MakeBinaryAtomicValue(
 
   llvm::Value *Result =
       CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering);
+  cast<llvm::AtomicRMWInst>(Result)->setVolatile(CGF.CGM.getLangOpts().Kernel);
   return EmitFromInt(CGF, Result, T, ValueType);
 }
 
