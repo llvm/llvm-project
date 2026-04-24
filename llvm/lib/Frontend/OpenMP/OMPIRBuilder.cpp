@@ -10118,15 +10118,15 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
         CurMapType, ModifierBitMask, "omp.maptype.with.modifiers");
 
     // ATTACH entries must not receive map-type-modifying bits: ATTACH|ALWAYS is
-    // reserved for the attach(always) map-type modifier, and other modifier bits
-    // (DELETE, CLOSE, PRESENT) have no meaning for an ATTACH entry.
+    // reserved for the attach(always) map-type modifier, and other modifier
+    // bits (DELETE, CLOSE, PRESENT) have no meaning for an ATTACH entry.
     constexpr uint64_t AttachBit =
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
     Value *FinalMapType =
         (RawType & AttachBit) ? CurMapType : CurMapTypeWithModifiers;
 
-    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg,  CurBeginArg,
+    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg,   CurBeginArg,
                                CurSizeArg,   FinalMapType, CurNameArg};
 
     auto ChildMapperFn = CustomMapperCB(I);
