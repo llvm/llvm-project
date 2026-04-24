@@ -74,53 +74,55 @@ endfunction ()
 
 # Workarounds for older versions of CMake not recognizing FLang. Hence, we
 # cannot use CMAKE_Fortran_COMPILER_ID.
-cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
-  # CMake 3.24 is the first version of CMake that directly recognizes Flang.
-  # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
-  if (CMAKE_VERSION VERSION_LESS "3.24")
-    include(CMakeForceCompiler)
-    CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
+if (CMAKE_Fortran_COMPILER)
+  cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
+  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+    # CMake 3.24 is the first version of CMake that directly recognizes Flang.
+    # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
+    if (CMAKE_VERSION VERSION_LESS "3.24")
+      include(CMakeForceCompiler)
+      CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
 
-    set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
-    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+      set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
+      set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 
-    set(CMAKE_Fortran_SUBMODULE_SEP "-")
-    set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
+      set(CMAKE_Fortran_SUBMODULE_SEP "-")
+      set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
 
-    set(CMAKE_Fortran_PREPROCESS_SOURCE
-        "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
+      set(CMAKE_Fortran_PREPROCESS_SOURCE
+          "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
 
-    set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
-    set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
+      set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
+      set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
 
-    set(CMAKE_Fortran_MODDIR_FLAG "-J")
+      set(CMAKE_Fortran_MODDIR_FLAG "-J")
 
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
-    set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
+      set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
+      set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
+      set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
 
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
+      set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
+      set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
 
-    set(CMAKE_Fortran_VERBOSE_FLAG "-v")
+      set(CMAKE_Fortran_VERBOSE_FLAG "-v")
 
-    set(CMAKE_Fortran_LINK_MODE DRIVER)
-  endif ()
+      set(CMAKE_Fortran_LINK_MODE DRIVER)
+    endif ()
 
-  # Optimization flags are only passed after CMake 3.27.4
-  # https://gitlab.kitware.com/cmake/cmake/-/commit/1140087adea98bd8d8974e4c18979f4949b52c34
-  if (CMAKE_VERSION VERSION_LESS "3.27.4")
-    string(APPEND CMAKE_Fortran_FLAGS_DEBUG_INIT " -O0 -g")
-    string(APPEND CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT " -O2 -g")
-    string(APPEND CMAKE_Fortran_FLAGS_RELEASE_INIT " -O3")
-  endif ()
+    # Optimization flags are only passed after CMake 3.27.4
+    # https://gitlab.kitware.com/cmake/cmake/-/commit/1140087adea98bd8d8974e4c18979f4949b52c34
+    if (CMAKE_VERSION VERSION_LESS "3.27.4")
+      string(APPEND CMAKE_Fortran_FLAGS_DEBUG_INIT " -O0 -g")
+      string(APPEND CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT " -O2 -g")
+      string(APPEND CMAKE_Fortran_FLAGS_RELEASE_INIT " -O3")
+    endif ()
 
-  # Only CMake 3.28+ pass --target= to Flang. But for cross-compiling, including
-  # to nvptx amd amdgpu targets, passing the target triple is essential.
-  # https://gitlab.kitware.com/cmake/cmake/-/commit/e9af7b968756e72553296ecdcde6f36606a0babf
-  if (CMAKE_VERSION VERSION_LESS "3.28")
-    set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
+    # Only CMake 3.28+ pass --target= to Flang. But for cross-compiling, including
+    # to nvptx amd amdgpu targets, passing the target triple is essential.
+    # https://gitlab.kitware.com/cmake/cmake/-/commit/e9af7b968756e72553296ecdcde6f36606a0babf
+    if (CMAKE_VERSION VERSION_LESS "3.28")
+      set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
+    endif ()
   endif ()
 endif ()
 
