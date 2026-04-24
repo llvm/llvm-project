@@ -3855,8 +3855,9 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   MCPU = InputArgs.getLastArgValue(OBJDUMP_mcpu_EQ).str();
   MAttrs = commaSeparatedValues(InputArgs, OBJDUMP_mattr_EQ);
   // Normalize each feature to have a '+' or '-' prefix.
+  // "help" is a sentinel handled separately; leave it untouched.
   for (std::string &M : MAttrs)
-    if (!M.empty() && M.front() != '+' && M.front() != '-')
+    if (!M.empty() && M.front() != '+' && M.front() != '-' && M != "help")
       M.insert(M.begin(), '+');
   ShowRawInsn = !InputArgs.hasArg(OBJDUMP_no_show_raw_insn);
   LeadingAddr = !InputArgs.hasArg(OBJDUMP_no_leading_addr);
