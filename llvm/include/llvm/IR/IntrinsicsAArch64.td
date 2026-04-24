@@ -2834,11 +2834,6 @@ def int_aarch64_sve_fp8_fmmla
   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                           [LLVMMatchType<0>, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
                           [IntrReadMem, IntrInaccessibleMemOnly]>;
-def int_aarch64_sve_bfmmla_bf16
-  : DefaultAttrsIntrinsic<[llvm_nxv8bf16_ty],
-                          [llvm_nxv8bf16_ty, llvm_nxv8bf16_ty,
-                           llvm_nxv8bf16_ty],
-                          [IntrNoMem]>;
 
 //
 // SVE ACLE: 7.2. BFloat16 extensions

@@ -260,7 +260,7 @@ let SVETargetGuard = "bf16", SMETargetGuard = InvalidMode in {
 }
 
 let SVETargetGuard = "sve-b16mm", SMETargetGuard = InvalidMode in {
-  def SVMMLA_BF16 : SInst<"svmmla[_bf16]", "dddd", "b", MergeNone, "aarch64_sve_bfmmla_bf16", [IsOverloadNone]>;
+  def SVMMLA_BF16 : SInst<"svmmla[_bf16]", "dddd", "b", MergeNone, "aarch64_sve_fmmla", [IsOverloadFirstandLast]>;
 }
 
 let SVETargetGuard = "bf16", SMETargetGuard = "bf16" in {

@@ -18,13 +18,13 @@
 // CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_bf16(
 // CHECK-SAME: <vscale x 8 x bfloat> [[ACC:%.*]], <vscale x 8 x bfloat> [[A:%.*]], <vscale x 8 x bfloat> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.bfmmla.bf16(<vscale x 8 x bfloat> [[ACC]], <vscale x 8 x bfloat> [[A]], <vscale x 8 x bfloat> [[B]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmmla.nxv8bf16.nxv8bf16(<vscale x 8 x bfloat> [[ACC]], <vscale x 8 x bfloat> [[A]], <vscale x 8 x bfloat> [[B]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 // CPP-CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @_Z9test_bf16u14__SVBfloat16_tS_S_(
 // CPP-CHECK-SAME: <vscale x 8 x bfloat> [[ACC:%.*]], <vscale x 8 x bfloat> [[A:%.*]], <vscale x 8 x bfloat> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.bfmmla.bf16(<vscale x 8 x bfloat> [[ACC]], <vscale x 8 x bfloat> [[A]], <vscale x 8 x bfloat> [[B]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmmla.nxv8bf16.nxv8bf16(<vscale x 8 x bfloat> [[ACC]], <vscale x 8 x bfloat> [[A]], <vscale x 8 x bfloat> [[B]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 svbfloat16_t test_bf16(svbfloat16_t acc, svbfloat16_t a, svbfloat16_t b) {

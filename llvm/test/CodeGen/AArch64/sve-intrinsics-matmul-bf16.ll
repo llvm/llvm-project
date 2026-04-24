@@ -7,6 +7,6 @@ define <vscale x 8 x bfloat> @bfmmla_bf16(<vscale x 8 x bfloat> %acc, <vscale x 
 ; CHECK-NEXT:    bfmmla z0.h, z1.h, z2.h
 ; CHECK-NEXT:    ret
 entry:
-  %out = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.bfmmla.bf16(<vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
+  %out = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmmla.nxv8bf16.nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
   ret <vscale x 8 x bfloat> %out
 }
