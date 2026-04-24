@@ -24179,8 +24179,13 @@ static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
   EVT LocVT = VA.getLocVT();
   SDValue Val;
   const TargetRegisterClass *RC = TLI.getRegClassFor(LocVT.getSimpleVT());
-  Register VReg = RegInfo.createVirtualRegister(RC);
-  RegInfo.addLiveIn(VA.getLocReg(), VReg);
+  Register VReg;
+  if (RegInfo.isLiveIn(VA.getLocReg()))
+    VReg = RegInfo.getLiveInVirtReg(VA.getLocReg());
+  else {
+    VReg = RegInfo.createVirtualRegister(RC);
+    RegInfo.addLiveIn(VA.getLocReg(), VReg);
+  }
   Val = DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
 
   // If input is sign extended from 32 bits, note it for the SExtWRemoval pass.

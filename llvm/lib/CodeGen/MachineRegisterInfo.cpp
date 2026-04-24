@@ -498,13 +498,26 @@ MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
         LiveIns.erase(LiveIns.begin() + i);
         --i; --e;
       } else {
-        // Emit a copy.
-        BuildMI(*EntryMBB, EntryMBB->begin(), DebugLoc(),
-                TII.get(TargetOpcode::COPY), LiveIns[i].second)
-          .addReg(LiveIns[i].first);
-
-        // Add the register to the entry block live-in set.
-        EntryMBB->addLiveIn(LiveIns[i].first);
+        MachineInstr *CopyMI = getUniqueVRegDef(LiveIns[i].second);
+        if (!CopyMI) {
+          // Emit a copy.
+          BuildMI(*EntryMBB, EntryMBB->begin(), DebugLoc(),
+                  TII.get(TargetOpcode::COPY), LiveIns[i].second)
+              .addReg(LiveIns[i].first);
+        } else {
+          assert(CopyMI->isCopy() && "There is already instruction that's "
+                                     "emitted but it's not a COPY");
+          assert(CopyMI->getOperand(1).getReg() == LiveIns[i].first &&
+                 "The copy that has already been emitted is not copying the "
+                 "right physical register");
+          assert(CopyMI->getParent() == EntryMBB &&
+                 "The copy that has already been emitted is not in the entry "
+                 "block");
+        }
+        if (!EntryMBB->isLiveIn(LiveIns[i].first)) {
+          // Add the register to the entry block live-in set.
+          EntryMBB->addLiveIn(LiveIns[i].first);
+        }
       }
     } else {
       // Add the register to the entry block live-in set.
