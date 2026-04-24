@@ -22,7 +22,6 @@
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
-#include <dirent.h>
 #include <sstream>
 #include <string>
 #include <sys/ptrace.h>
@@ -319,30 +318,30 @@ llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
                                                     size_t data_size) {
   int ret = 0;
   Log *log = GetLog(POSIXLog::Ptrace);
-  // for PTT_*
-  const char procdir[] = "/proc/";
-  const char lwpdir[] = "/lwp/";
-  std::string process_task_dir = procdir + std::to_string(pid) + lwpdir;
-  DIR *dirproc = opendir(process_task_dir.c_str());
-
   // PTT_* requests require a thread ID (TID).
   // Each entry under /proc/<pid>/lwp/ represents a thread,
   // and the directory name corresponds to its thread ID (TID).
   // A process may contain multiple threads.
   // TODO: With multi-threading support, iterate over all entries to enumerate
   // available TIDs and retrieve the target debugging thread ID.
+  llvm::SmallString<128> proc_lwp_dir;
+  llvm::sys::path::append(proc_lwp_dir, "/proc/", std::to_string(pid), "/lwp/");
+
   lldb::tid_t tid = 0;
-  if (dirproc) {
-    struct dirent *direntry = nullptr;
-    while ((direntry = readdir(dirproc)) != nullptr) {
-      if (strcmp(direntry->d_name, ".") == 0 ||
-          strcmp(direntry->d_name, "..") == 0) {
+  std::error_code ec;
+  bool result;
+  if (!llvm::sys::fs::is_directory(proc_lwp_dir, result) && result) {
+    for (sys::fs::directory_iterator it(proc_lwp_dir, ec), end;
+         it != end && !ec; it.increment(ec)) {
+      llvm::StringRef name = llvm::sys::path::filename(it->path());
+
+      if (name == "." || name == "..")
         continue;
+
+      if (!name.getAsInteger(10, tid)) {
+        break;
       }
-      tid = atoi(direntry->d_name);
-      break;
     }
-    closedir(dirproc);
   }
 
   switch (req) {
