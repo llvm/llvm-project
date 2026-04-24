@@ -76,10 +76,16 @@ int main(void) {
   // Which leaves 7 keys available for programs to allocate.
 
   const size_t page_size = (size_t)sysconf(_SC_PAGESIZE);
-  // pkeys can only subtract from the set of permissions in the page table,
-  // so we set the page table to allow everything.
-  const int prot = PROT_READ | PROT_WRITE | PROT_EXEC;
+  // pkeys can only subtract from the set of permissions in the page table.
+  // So we leave out execute here to check later that an overlay does not
+  // enable execution.
+  const int prot = PROT_READ | PROT_WRITE;
   const int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+
+  // This page will have the default key 0.
+  char *key_zero_page = mmap(NULL, page_size, prot, flags, -1, 0);
+  if (key_zero_page == MAP_FAILED)
+    exit(2);
 
   // Later we will use this to cause a protection key fault.
   char *read_only_page = NULL;

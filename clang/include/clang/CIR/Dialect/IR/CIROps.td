@@ -954,9 +954,9 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "DoWhileOp",
-  "ForOp", "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp", "TryOp",
-  "WhileOp"
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroBodyOp",
+  "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
+  "TernaryOp", "TryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -2865,8 +2865,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$section
                        );
 
-  let regions = (region MaxSizedRegion<1>:$ctorRegion,
-                        MaxSizedRegion<1>:$dtorRegion);
+  let regions = (region AnyRegion:$ctorRegion,
+                        AnyRegion:$dtorRegion);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
@@ -3804,6 +3804,68 @@ def CIR_FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
+// LocalInitOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LocalInitOp : CIR_Op<"local_init", [
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments,
+  ParentOneOf<["cir::FuncOp"]>,
+  HasAtMostOneOfAttrs<["tls", "static_local"]>
+]> {
+  let summary = "initialize a static or thread local object";
+  let description = [{
+    The 'cir.local_init' operation has no result, but is responsible for
+    containing the regions to initialize and destroy the static local
+    variable. This will be handled during lowering-prepare to include the
+    guard variables correctly for the variable.
+
+    Example:
+    ```
+    cir.local_init static_local @GlobalName ctor {
+      %4 = cir.get_global static_local @GlobalName : !cir.ptr<!rec_CtorDtor>
+      %5 = cir.call @_Z5get_iv() : () -> !s32i
+      cir.call @_ZN8CtorDtorC1Ei(%4, %5) : !cir.ptr<!rec_CtorDtor>
+      cir.yield
+    }, dtor {
+      %4 = cir.get_global static_local @_ZZ3foovE8localCD2 :
+                                                  !cir.ptr<!rec_CtorDtor>
+      cir.call @_ZN8CtorDtorD1Ev(%4) : (!cir.ptr<!rec_CtorDtor>) -> ()
+      cir.yield
+    }
+  }];
+  let arguments = (ins
+    FlatSymbolRefAttr : $globalName,
+    UnitAttr : $tls,
+    UnitAttr : $static_local
+  );
+
+  let regions = (region
+    MaxSizedRegion<1>:$ctorRegion,
+    MaxSizedRegion<1>:$dtorRegion
+  );
+
+  let assemblyFormat = [{
+    (`thread_local` $tls^)?
+    (`static_local` $static_local^)?
+    $globalName attr-dict
+    (`ctor` $ctorRegion^)?
+    (`dtor` $dtorRegion^)?
+  }];
+
+  let extraClassDeclaration = [{
+    /// Look up the cir.global this op references. Returns null if the symbol
+    /// is absent or is not a cir.global, callers that run after verification
+    /// can assume non-null.
+    cir::GlobalOp getReferencedGlobal(mlir::SymbolTableCollection &tables) {
+      return llvm::dyn_cast_or_null<cir::GlobalOp>(
+          tables.lookupNearestSymbolFrom(*this, getGlobalNameAttr()));
+}
+}];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMIntrinsicCallOp
 //===----------------------------------------------------------------------===//
 
@@ -4156,6 +4218,70 @@ def CIR_AwaitOp : CIR_Op<"await",[
 
   let hasVerifier = 1;
 }
+//===----------------------------------------------------------------------===//
+// CoroBody
+//===----------------------------------------------------------------------===//
+def CIR_CoroBodyOp : CIR_Op<"coro.body", [
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
+  RecursiveMemoryEffects
+]> {
+  let summary = "Region containing the user-authored coroutine body";
+  let description = [{
+    The `cir.coro.body` operation models the region where the user-authored
+    coroutine code is emitted.
+
+    This operation serves as a structural boundary separating the coroutine
+    setup and teardown logic (e.g. initial suspend, final suspend, and cleanup)
+    from the user-provided statements inside the coroutine.
+
+    The body region contains the code corresponding to the original function
+    body, including `co_await` and `co_return` expressions. In particular,
+    `cir.co_return` operations inside this region mark coroutine exit points
+    and introduce structured control flow that transfers execution to the
+    final suspend point of the coroutine.
+  }];
+
+  let regions = (region AnyRegion:$body);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins "BuilderCallbackRef":$bodyBuilder)>
+  ];
+
+  let assemblyFormat = [{
+    $body attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CoReturnOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoReturnOp : CIR_Op<"co_return", [
+  ReturnLike, Pure, Terminator
+]> {
+  let summary = "Coroutine return operation";
+  let description = [{
+    The `cir.co_return` operation models a coroutine return point inside a
+    `cir.coro.body` region.
+    This operation is expected to appear only within a `cir.coro.body` region,
+    but it may be nested within other operations or regions inside that body.
+  }];
+
+  let assemblyFormat = [{
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+
+  let hasLLVMLowering = false;
+}
+
 
 //===----------------------------------------------------------------------===//
 // CopyOp
