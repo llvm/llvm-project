@@ -24,6 +24,7 @@
 #include "flang/Runtime/CUDA/pointer.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/allocator-registry-consts.h"
+#include "flang/Runtime/pointer.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Matchers.h"
@@ -383,12 +384,17 @@ struct CUFDeallocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
+    bool isPointer = op.getPointer();
+
     if (op.getHasDoubleDescriptor()) {
       // Deallocation for module variable are done with custom runtime entry
       // point so the descriptors can be synchronized.
       mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableDeallocate)>(
-              loc, builder);
+          isPointer
+              ? fir::runtime::getRuntimeFunc<mkRTKey(CUFPointerDeallocate)>(
+                    loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableDeallocate)>(
+                    loc, builder);
       return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
     }
 
@@ -396,8 +402,11 @@ struct CUFDeallocateOpConversion
     // AllocatableDeallocate as the dedicated deallocator is set in the
     // descriptor before the call.
     mlir::func::FuncOp func =
-        fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(loc,
-                                                                     builder);
+        isPointer
+            ? fir::runtime::getRuntimeFunc<mkRTKey(PointerDeallocate)>(loc,
+                                                                       builder)
+            : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(
+                  loc, builder);
     return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
   }
 };

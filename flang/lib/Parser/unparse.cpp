@@ -900,6 +900,17 @@ public:
   void Unparse(const Expr::OR &x) { Walk(x.t, ".OR."); }
   void Unparse(const Expr::EQV &x) { Walk(x.t, ".EQV."); }
   void Unparse(const Expr::NEQV &x) { Walk(x.t, ".NEQV."); }
+  void Unparse(const ConditionalExpr &x) { // F2023 R1002
+    // Note: chained conditionals produce extra parentheses due to recursive
+    // else-expr unparsing; the result is still valid.
+    Put("( ");
+    Walk(std::get<0>(x.t)); // scalar-logical-expr
+    Put(" ? ");
+    Walk(std::get<1>(x.t)); // then-expr
+    Put(" : ");
+    Walk(std::get<2>(x.t)); // else-expr
+    Put(" )");
+  }
   void Unparse(const Expr::ComplexConstructor &x) {
     Put('('), Walk(x.t, ","), Put(')');
   }
@@ -1547,6 +1558,9 @@ public:
       FMT(RP);
       FMT(DC);
       FMT(DP);
+      FMT(LZ);
+      FMT(LZS);
+      FMT(LZP);
 #undef FMT
     case format::ControlEditDesc::Kind::Dollar:
       Put('$');
@@ -1725,6 +1739,27 @@ public:
   void Unparse(const ActualArg::PercentVal &x) {
     Word("%VAL("), Walk(x.v), Put(')');
   }
+  void UnparseConditionalArgBody(const ConditionalArg &x) {
+    Walk(std::get<ScalarLogicalExpr>(x.t));
+    Put(" ? ");
+    Walk(std::get<ConditionalArg::Consequent>(x.t));
+    Put(" : ");
+    Walk(std::get<common::Indirection<ConditionalArgTail>>(x.t));
+  }
+  void Unparse(const ConditionalArg &x) { // F2023 R1526
+    Put("( ");
+    UnparseConditionalArgBody(x);
+    Put(" )");
+  }
+  void Unparse(const ConditionalArgTail &x) {
+    common::visit(
+        common::visitors{
+            [&](const ConditionalArg &y) { UnparseConditionalArgBody(y); },
+            [&](const ConditionalArg::Consequent &y) { Walk(y); },
+        },
+        x.u);
+  }
+  void Post(const ConditionalArgNil &) { Word(".NIL."); } // part of F2023 R1527
   void Before(const AltReturnSpec &) { // R1525
     Put('*');
   }
@@ -1872,6 +1907,7 @@ public:
               Word("!DIR$ NOINLINE");
             },
             [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
+            [&](const CompilerDirective::Simd &) { Word("!DIR$ SIMD"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());

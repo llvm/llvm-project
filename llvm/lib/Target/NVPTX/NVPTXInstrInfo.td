@@ -55,6 +55,10 @@ def CvtRN_RELU     : PatLeaf<(i32 0x45)>;
 def CvtRZ_RELU     : PatLeaf<(i32 0x46)>;
 def CvtRS_RELU     : PatLeaf<(i32 0x4A)>;
 
+def CvtNONE_SATFINITE  : PatLeaf<(i32 0x80)>;
+def CvtRN_SATFINITE   : PatLeaf<(i32 0x85)>;
+def CvtRN_RELU_SATFINITE : PatLeaf<(i32 0xC5)>;
+
 def CvtMode : Operand<i32> {
   let PrintMethod = "printCvtMode";
 }
@@ -666,15 +670,22 @@ let hasSideEffects = false in {
 
   defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
   defm CVT_e5m2x2 : CVT_TO_F8X2<"e5m2">;
+  
+  multiclass CVT_F8x2_TO_FP16x2<string F8Name> {
+    def f16x2_ # F8Name # x2 :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.f16x2." # F8Name # "x2">,
+      Requires<[hasPTX<81>, hasSM<89>]>;
+    def bf16x2_ # F8Name # x2_scale :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F8Name # "x2">,
+      Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
+  }
 
-  class CVT_f16x2_fp8<string F8Name> :
-    BasicFlagsNVPTXInst<(outs B32:$dst),
-              (ins B16:$src), (ins CvtMode:$mode),
-              "cvt${mode:base}${mode:relu}.f16x2." # F8Name # "x2">,
-    Requires<[hasPTX<81>, hasSM<89>]>;
-
-  def CVT_f16x2_e4m3x2 : CVT_f16x2_fp8<"e4m3">;
-  def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
+  defm CVT_ : CVT_F8x2_TO_FP16x2<"e4m3">;
+  defm CVT_ : CVT_F8x2_TO_FP16x2<"e5m2">;
   
   class CVT_TO_FP8X4<string F8Name> :
     NVPTXInst<(outs B32:$dst),
@@ -723,11 +734,21 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
 }
 
   // FP6 conversions.
-  foreach type = ["e2m3x2", "e3m2x2"] in {
-    def CVT_f16x2_ # type : BasicFlagsNVPTXInst<(outs B32:$dst),
-                                      (ins B16:$src), (ins CvtMode:$mode),
-                                      "cvt${mode:base}${mode:relu}.f16x2." # type>;
+  multiclass CVT_F6x2_TO_FP16x2<string F6Name> {
+    def f16x2_ # F6Name # x2 :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.f16x2." # F6Name # "x2">,
+      Requires<[callSubtarget<"hasNarrowFPConversionSupport">]>;
+    def bf16x2_ # F6Name # x2_scale :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F6Name # "x2">,
+      Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
   }
+
+  defm CVT_ : CVT_F6x2_TO_FP16x2<"e2m3">;
+  defm CVT_ : CVT_F6x2_TO_FP16x2<"e3m2">;
   
   class CVT_TO_FP6X4<string F6Name> :
     NVPTXInst<(outs B32:$dst),
@@ -772,6 +793,16 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
                  "cvt.u8.u16 \t%e2m1x2_in, $src; \n\t",
                  "cvt${mode:base}${mode:relu}.f16x2.e2m1x2 \t$dst, %e2m1x2_in; \n\t",
                  "}}"), []>;
+
+  def CVT_bf16x2_e2m1x2_scale :
+    NVPTXInst<(outs B32:$dst),
+              (ins B16:$src1, B16:$src2, CvtMode:$mode),
+              "{{ \n\t" #
+              ".reg .b8 \t%e2m1x2_in; \n\t" #
+              "cvt.u8.u16 \t%e2m1x2_in, $src1; \n\t" #
+              "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2.e2m1x2 \t$dst, %e2m1x2_in, $src2; \n\t" #
+              "}}", []>,
+    Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
                  
   def CVT_e2m1x4_f32x4_rs_sf :
     NVPTXInst<(outs B16:$dst),
@@ -2027,7 +2058,7 @@ def : Pat<(f16 (uint_to_fp i64:$a)), (CVT_f16_u64 $a, CvtRN)>;
 
 // sint -> bf16
 let Predicates = [hasPTX<78>, hasSM<90>] in {
-  def : Pat<(bf16 (sint_to_fp i1:$a)), (CVT_bf16_s32 (SELP_b32ii 1, 0, $a), CvtRN)>;
+  def : Pat<(bf16 (sint_to_fp i1:$a)), (CVT_bf16_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i16:$a)), (CVT_bf16_s16 $a, CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i32:$a)), (CVT_bf16_s32 $a, CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i64:$a)), (CVT_bf16_s64 $a, CvtRN)>;

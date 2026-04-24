@@ -15,8 +15,6 @@
 ; CHECK:  DC XL4'00000008'
 ; CHECK:  ENTRY void_test
 ; CHECK: L#func_end0 DS 0H
-; CHECK: stdin#C CSECT
-; CHECK: C_CODE64 CATTR
 ; CHECK: * PPA1
 ; CHECK: L#PPA1_void_test_0 DS 0H
 ; CHECK: * Version
@@ -42,7 +40,7 @@
 ; CHECK: * Length/4 of Parms
 ; CHECK:  DC XL2'0000'
 ; CHECK: * Length of Code
-; CHECK:  DC AD(L#func_end0-L#EPM_void_test_0)
+; CHECK:  DC AD(L#void_test_end_0-L#EPM_void_test_0)
 ; CHECK: * Length of Name
 ; CHECK:  DC XL2'0009'
 ; CHECK: * Name of Function

@@ -658,7 +658,6 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
         return llvm::ConstantAggregateZero::get(arrayType);
       }
       if (llvm::ConstantDataSequential::isElementTypeCompatible(elementType)) {
-        // TODO: Handle all compatible types. This code only handles integer.
         if (isa<llvm::IntegerType>(elementType)) {
           if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
             if (ci->getBitWidth() == 8) {
@@ -680,6 +679,26 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
               SmallVector<int64_t> constants(numElements, ci->getZExtValue());
               return llvm::ConstantDataArray::get(elementType->getContext(),
                                                   constants);
+            }
+          }
+        }
+        if (elementType->isFloatingPointTy()) {
+          if (llvm::ConstantFP *cfp = dyn_cast<llvm::ConstantFP>(child)) {
+            APInt bitPattern = cfp->getValueAPF().bitcastToAPInt();
+            uint64_t value = bitPattern.getZExtValue();
+            // TODO: This code only handles 16, 32, and 64 bit floats. Handle
+            // all compatible types, fp8, fp4, etc.
+            if (bitPattern.getBitWidth() == 16) {
+              SmallVector<uint16_t> constants(numElements, value);
+              return llvm::ConstantDataArray::getFP(elementType, constants);
+            }
+            if (bitPattern.getBitWidth() == 32) {
+              SmallVector<uint32_t> constants(numElements, value);
+              return llvm::ConstantDataArray::getFP(elementType, constants);
+            }
+            if (bitPattern.getBitWidth() == 64) {
+              SmallVector<uint64_t> constants(numElements, value);
+              return llvm::ConstantDataArray::getFP(elementType, constants);
             }
           }
         }
@@ -990,9 +1009,8 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
 
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.
-LogicalResult ModuleTranslation::convertOperation(Operation &op,
-                                                  llvm::IRBuilderBase &builder,
-                                                  bool recordInsertions) {
+LogicalResult ModuleTranslation::convertOperationImpl(
+    Operation &op, llvm::IRBuilderBase &builder, bool recordInsertions) {
   const LLVMTranslationDialectInterface *opIface = iface.getInterfaceFor(&op);
   if (!opIface)
     return op.emitError("cannot be converted to LLVM IR: missing "
@@ -1052,7 +1070,7 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
     builder.SetCurrentDebugLocation(
         debugTranslation->translateLoc(op.getLoc(), subprogram));
 
-    if (failed(convertOperation(op, builder, recordInsertions)))
+    if (failed(convertOperationImpl(op, builder, recordInsertions)))
       return failure();
 
     // Set the branch weight metadata on the translated instruction.
@@ -1563,6 +1581,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   if (auto preferVectorWidth = func.getPreferVectorWidth())
     llvmFunc->addFnAttr("prefer-vector-width", *preferVectorWidth);
+
+  if (func.getUseSampleProfile())
+    llvmFunc->addFnAttr("use-sample-profile");
 
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(

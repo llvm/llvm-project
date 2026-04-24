@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clc/workitem/clc_get_work_dim.h"
 #include <amdhsa_abi.h>
-#include <clc/workitem/clc_get_work_dim.h>
 
 _CLC_OVERLOAD _CLC_DEF uint __clc_get_work_dim() {
   __constant amdhsa_implicit_kernarg_v5 *implicit_args =

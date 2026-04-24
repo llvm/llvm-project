@@ -340,10 +340,7 @@ define i1 @uitofp_add(i32 %arg0) {
 
 define i1 @uitofp_add_big(i1024 %arg0) {
 ; CHECK-LABEL: @uitofp_add_big(
-; CHECK-NEXT:    [[OP:%.*]] = uitofp i1024 [[ARG0:%.*]] to double
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[OP]], [[OP]]
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[ADD]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op = uitofp i1024 %arg0 to double
   %add = fadd double %op, %op
@@ -552,6 +549,26 @@ normal:
 unwind:
   landingpad ptr cleanup
   resume ptr null
+}
+
+; tan(x) is never NaN when x is finite and not NaN (tan(±Inf) = NaN).
+define i1 @isKnownNeverNaN_tan_nonan_noinf(double nofpclass(nan inf) %x) {
+; CHECK-LABEL: @isKnownNeverNaN_tan_nonan_noinf(
+; CHECK-NEXT:    ret i1 false
+;
+  %e = call double @llvm.tan.f64(double %x)
+  %r = fcmp uno double %e, 0.0
+  ret i1 %r
+}
+
+; atan2 is never NaN when neither operand is NaN.
+define i1 @isKnownNeverNaN_atan2_nonan(double nofpclass(nan) %x, double nofpclass(nan) %y) {
+; CHECK-LABEL: @isKnownNeverNaN_atan2_nonan(
+; CHECK-NEXT:    ret i1 false
+;
+  %e = call double @llvm.atan2.f64(double %x, double %y)
+  %r = fcmp uno double %e, 0.0
+  ret i1 %r
 }
 
 ; This should not fold to false because fmul 0 * inf = nan

@@ -26,6 +26,7 @@
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -319,6 +320,15 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
 
   RemarksSection = Ctx->getMachOSection(
       "__LLVM", "__remarks", MachO::S_ATTR_DEBUG, SectionKind::getMetadata());
+
+  PseudoProbeSection =
+      Ctx->getMachOSection("__PSEUDO_PROBE", "__probes",
+                           MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
+                           SectionKind::getMetadata());
+  PseudoProbeDescSection =
+      Ctx->getMachOSection("__PSEUDO_PROBE", "__probe_descs",
+                           MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
+                           SectionKind::getMetadata());
 
   // The architecture of dsymutil makes it very difficult to copy the Swift
   // reflection metadata sections into the __TEXT segment, so dsymutil creates
@@ -1256,23 +1266,42 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
 
 MCSection *
 MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
-  if (Ctx->getObjectFileType() != MCContext::IsELF)
-    return nullptr;
+  constexpr StringLiteral Name = ".llvm_bb_addr_map";
+  if (Ctx->getObjectFileType() == MCContext::IsELF) {
+    const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
+    unsigned Flags = ELF::SHF_LINK_ORDER;
+    StringRef GroupName;
+    if (const MCSymbol *Group = ElfSec.getGroup()) {
+      GroupName = Group->getName();
+      Flags |= ELF::SHF_GROUP;
+    }
 
-  const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
-  unsigned Flags = ELF::SHF_LINK_ORDER;
-  StringRef GroupName;
-  if (const MCSymbol *Group = ElfSec.getGroup()) {
-    GroupName = Group->getName();
-    Flags |= ELF::SHF_GROUP;
+    // Use the text section's begin symbol and unique ID to create a separate
+    // .llvm_bb_addr_map section associated with every unique text section.
+    return Ctx->getELFSection(
+        Name, ELF::SHT_LLVM_BB_ADDR_MAP, Flags, 0, GroupName, true,
+        ElfSec.getUniqueID(),
+        static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
+  } else if (Ctx->getObjectFileType() == MCContext::IsCOFF) {
+    StringRef COMDATSymName;
+    int Selection = 0;
+    unsigned Characteristics = COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                               COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                               COFF::IMAGE_SCN_MEM_READ;
+    const auto &COFFSec = static_cast<const MCSectionCOFF &>(TextSec);
+    if (const MCSymbol *COMDATSym = COFFSec.getCOMDATSymbol()) {
+      if (!Ctx->getAsmInfo()->hasCOFFAssociativeComdats())
+        report_fatal_error("BB address map requires associative COMDAT "
+                           "support for COMDAT functions");
+      COMDATSymName = COMDATSym->getName();
+      Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
+      Selection = COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+    }
+    return Ctx->getCOFFSection(Name, Characteristics, COMDATSymName, Selection,
+                               COFFSec.getUniqueID());
   }
 
-  // Use the text section's begin symbol and unique ID to create a separate
-  // .llvm_bb_addr_map section associated with every unique text section.
-  return Ctx->getELFSection(
-      ".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP, Flags, 0, GroupName, true,
-      ElfSec.getUniqueID(),
-      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
+  return nullptr;
 }
 
 MCSection *

@@ -2080,11 +2080,19 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
     defm vaesz   : RVVOutBuiltinSetZvk<HasVV=0>;
   }
 
-  // zvknha and zvknhb has duplicated intrinsic but they don't imply each other,
-  // so we need to handle it manually in SemaRISCV.cpp.
-  defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
-  defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"il">;
-  defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"il">;
+  // zvknha
+  let RequiredFeatures = ["zvknha"] in {
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"i">;
+  }
+
+  // zvknhb
+  let RequiredFeatures = ["zvknhb"] in {
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"l">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"l">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"l">;
+  }
 
   // zvksed
   let RequiredFeatures = ["zvksed"] in {
@@ -2124,4 +2132,22 @@ let RequiredFeatures = ["zvdot4a8i"] in {
       : RVVVDOTA4QBuiltinSet<[["vv", "v", "vvUvUv"],
                               ["vx", "v", "vvUvUe"]]>;
   defm vdota4us : RVVVDOTA4QBuiltinSet<[["vx", "v", "vvUvUe"]]>;
+}
+
+// Zvzip
+let UnMaskedPolicyScheme = HasPassthruOperand in {
+  let RequiredFeatures = ["zvzip"] in {
+    // Signed and floating type
+    defm vzip : RVVOutOp0BuiltinSet<"vzip", "csilxfdy", [["vv", "d", "dvv"]]>;
+    defm vunzipe : RVVOutOp0BuiltinSet<"vunzipe", "csilxfdy", [["v", "v", "vd"]]>;
+    defm vunzipo : RVVOutOp0BuiltinSet<"vunzipo", "csilxfdy", [["v", "v", "vd"]]>;
+    defm vpaire : RVVOutBuiltinSet<"vpaire", "csilxfdy", [["vv", "v", "vvv"]]>;
+    defm vpairo : RVVOutBuiltinSet<"vpairo", "csilxfdy", [["vv", "v", "vvv"]]>;
+    // Unsigned
+    defm vzip : RVVOutOp0BuiltinSet<"vzip", "csil", [["vv", "Ud", "UdUvUv"]]>;
+    defm vunzipe : RVVOutOp0BuiltinSet<"vunzipe", "csil", [["v", "Uv", "UvUd"]]>;
+    defm vunzipo : RVVOutOp0BuiltinSet<"vunzipo", "csil", [["v", "Uv", "UvUd"]]>;
+    defm vpaire : RVVOutBuiltinSet<"vpaire", "csil", [["vv", "Uv", "UvUvUv"]]>;
+    defm vpairo : RVVOutBuiltinSet<"vpairo", "csil", [["vv", "Uv", "UvUvUv"]]>;
+  }
 }

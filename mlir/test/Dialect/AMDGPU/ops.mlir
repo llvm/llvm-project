@@ -681,6 +681,36 @@ func.func @gather_to_lds_0d(%mem1 : memref<f16>, %smem1 : memref<f16, #gpu.addre
   func.return
 }
 
+// CHECK-LABEL: func @global_load_async_to_lds
+func.func @global_load_async_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf32, #gpu.address_space<global>>, %mem2 : memref<32x32xf32, #gpu.address_space<global>>, %smem1 : memref<32xf32, #gpu.address_space<workgroup>>, %smem2 : memref<32x32xf32, #gpu.address_space<workgroup>>, %mask : i1) {
+  // CHECK: amdgpu.global_load_async_to_lds %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
+  // CHECK: amdgpu.global_load_async_to_lds %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
+  // CHECK: amdgpu.global_load_async_to_lds %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
+  // CHECK: amdgpu.global_load_async_to_lds %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}], %{{.*}}
+  amdgpu.global_load_async_to_lds %mem2[%idx1, %idx2], %smem2[%idx1, %idx2]
+    : f32, memref<32x32xf32, #gpu.address_space<global>>,
+      memref<32x32xf32, #gpu.address_space<workgroup>>
+  amdgpu.global_load_async_to_lds %mem1[%idx1], %smem2[%idx1, %idx2]
+    : f32, memref<32xf32, #gpu.address_space<global>>,
+      memref<32x32xf32, #gpu.address_space<workgroup>>
+  amdgpu.global_load_async_to_lds %mem2[%idx1, %idx2], %smem2[%idx1, %idx2]
+    : vector<2xf32>, memref<32x32xf32, #gpu.address_space<global>>,
+      memref<32x32xf32, #gpu.address_space<workgroup>>
+  amdgpu.global_load_async_to_lds %mem2[%idx1, %idx2], %smem2[%idx1, %idx2], %mask
+    : f32, memref<32x32xf32, #gpu.address_space<global>>,
+      memref<32x32xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// CHECK-LABEL: func @global_load_async_to_lds_0d
+func.func @global_load_async_to_lds_0d(%mem1 : memref<f32, #gpu.address_space<global>>, %smem1 : memref<f32, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.global_load_async_to_lds %{{.*}}[], %{{.*}}[]
+  amdgpu.global_load_async_to_lds %mem1[], %smem1[]
+    : f32, memref<f32, #gpu.address_space<global>>,
+      memref<f32, #gpu.address_space<workgroup>>
+  func.return
+}
+
 // CHECK-LABEL: func @memory_counter_wait
 func.func @memory_counter_wait() {
   // CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
@@ -834,4 +864,78 @@ func.func @ds_barrier_ops(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.addres
   // CHECK: [[PARITY:%.*]] = amdgpu.ds_barrier_state_phase_parity [[STATE]] : !amdgpu.ds_barrier_state -> i1
   %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
   func.return
+}
+
+// CHECK-LABEL: func @dot_f16_f32
+func.func @dot_f16_f32(%a: vector<2xf16>, %b: vector<2xf16>, %c: f32) -> f32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<2xf16>, vector<2xf16>, f32
+  %r = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f32
+  // CHECK: amdgpu.dot {{.*}} {clamp} : vector<2xf16>, vector<2xf16>, f32
+  %s = amdgpu.dot %a * %b + %c {clamp} : vector<2xf16>, vector<2xf16>, f32
+  func.return %r : f32
+}
+
+// CHECK-LABEL: func @dot_f16_f16
+func.func @dot_f16_f16(%a: vector<2xf16>, %b: vector<2xf16>, %c: f16) -> f16 {
+  // CHECK: amdgpu.dot {{.*}} : vector<2xf16>, vector<2xf16>, f16
+  %r = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f16
+  func.return %r : f16
+}
+
+// CHECK-LABEL: func @dot_bf16
+func.func @dot_bf16(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: f32, %d: bf16) {
+  // CHECK: amdgpu.dot {{.*}} {clamp} : vector<2xbf16>, vector<2xbf16>, f32
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<2xbf16>, vector<2xbf16>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<2xbf16>, vector<2xbf16>, bf16
+  %s = amdgpu.dot %a * %b + %d : vector<2xbf16>, vector<2xbf16>, bf16
+  func.return
+}
+
+// CHECK-LABEL: func @dot_i16
+func.func @dot_i16(%a: vector<2xi16>, %b: vector<2xi16>, %c: i32) -> i32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<2xi16>, vector<2xi16>, i32
+  %r = amdgpu.dot %a * %b + %c : vector<2xi16>, vector<2xi16>, i32
+  // CHECK: amdgpu.dot {{.*}} {clamp} : vector<2xi16>, vector<2xi16>, i32
+  %s = amdgpu.dot %a * %b + %c {clamp} : vector<2xi16>, vector<2xi16>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedA, unsignedB} : vector<2xi16>, vector<2xi16>, i32
+  %t = amdgpu.dot %a * %b + %c {unsignedA, unsignedB} : vector<2xi16>, vector<2xi16>, i32
+  func.return %r : i32
+}
+
+// CHECK-LABEL: func @dot_i8
+func.func @dot_i8(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) -> i32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<4xi8>, vector<4xi8>, i32
+  %r = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: amdgpu.dot {{.*}} {clamp, unsignedA, unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  %s = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp} : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  %t = amdgpu.dot %a * %b + %c {unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedA} : vector<4xi8>, vector<4xi8>, i32
+  %u = amdgpu.dot %a * %b + %c {unsignedA} : vector<4xi8>, vector<4xi8>, i32
+  func.return %r : i32
+}
+
+// CHECK-LABEL: func @dot_i4
+func.func @dot_i4(%a: vector<8xi4>, %b: vector<8xi4>, %c: i32) -> i32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<8xi4>, vector<8xi4>, i32
+  %r = amdgpu.dot %a * %b + %c : vector<8xi4>, vector<8xi4>, i32
+  // CHECK: amdgpu.dot {{.*}} {clamp, unsignedA, unsignedB} : vector<8xi4>, vector<8xi4>, i32
+  %s = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp} : vector<8xi4>, vector<8xi4>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedA} : vector<8xi4>, vector<8xi4>, i32
+  %t = amdgpu.dot %a * %b + %c {unsignedA} : vector<8xi4>, vector<8xi4>, i32
+  func.return %r : i32
+}
+
+// CHECK-LABEL: func @dot_fp8
+func.func @dot_fp8(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>,
+                   %e: vector<4xf8E5M2>, %c: f32) -> f32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f32
+  %r0 = amdgpu.dot %a * %a + %c : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+  %r1 = amdgpu.dot %a * %e + %c : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E5M2>, vector<4xf8E4M3FN>, f32
+  %r2 = amdgpu.dot %e * %a + %c : vector<4xf8E5M2>, vector<4xf8E4M3FN>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E5M2>, vector<4xf8E5M2>, f32
+  %r3 = amdgpu.dot %e * %e + %c : vector<4xf8E5M2>, vector<4xf8E5M2>, f32
+  func.return %r0 : f32
 }

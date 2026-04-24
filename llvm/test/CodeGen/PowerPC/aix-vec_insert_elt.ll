@@ -165,14 +165,14 @@ define <2 x i64> @testDoubleword(<2 x i64> %a, i64 %b, i64 %idx) {
 ;
 ; CHECK-32-LABEL: testDoubleword:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    add 5, 6, 6
 ; CHECK-32-NEXT:    addi 7, 1, -32
+; CHECK-32-NEXT:    rlwinm 5, 6, 3, 28, 28
 ; CHECK-32-NEXT:    stxv 34, -32(1)
-; CHECK-32-NEXT:    rlwinm 6, 5, 2, 28, 29
-; CHECK-32-NEXT:    stwx 3, 7, 6
-; CHECK-32-NEXT:    addi 3, 5, 1
+; CHECK-32-NEXT:    stwx 3, 7, 5
+; CHECK-32-NEXT:    slwi 3, 6, 1
 ; CHECK-32-NEXT:    addi 5, 1, -16
 ; CHECK-32-NEXT:    lxv 0, -32(1)
+; CHECK-32-NEXT:    addi 3, 3, 1
 ; CHECK-32-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-32-NEXT:    stxv 0, -16(1)
 ; CHECK-32-NEXT:    stwx 4, 5, 3
@@ -187,8 +187,8 @@ define <2 x i64> @testDoubleword(<2 x i64> %a, i64 %b, i64 %idx) {
 ;
 ; CHECK-32-P10-LABEL: testDoubleword:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    add 5, 6, 6
-; CHECK-32-P10-NEXT:    slwi 6, 5, 2
+; CHECK-32-P10-NEXT:    slwi 5, 6, 1
+; CHECK-32-P10-NEXT:    slwi 6, 6, 3
 ; CHECK-32-P10-NEXT:    vinswlx 2, 6, 3
 ; CHECK-32-P10-NEXT:    addi 3, 5, 1
 ; CHECK-32-P10-NEXT:    slwi 3, 3, 2

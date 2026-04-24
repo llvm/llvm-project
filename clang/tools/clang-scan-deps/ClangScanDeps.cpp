@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
@@ -91,7 +92,6 @@ static std::string CompilationDB;
 static std::optional<std::string> ModuleNames;
 static std::vector<std::string> ModuleDepTargets;
 static std::string TranslationUnitFile;
-static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
 static bool AsyncScanModules;
@@ -215,8 +215,6 @@ static void ParseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_tu_buffer_path_EQ))
     TranslationUnitFile = A->getValue();
-
-  DeprecatedDriverCommand = Args.hasArg(OPT_deprecated_driver_command);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_resource_dir_recipe_EQ)) {
     auto Kind =
@@ -1034,6 +1032,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
         if (!MakeformatOutputPath.empty() && !MakeformatOutput.empty() &&
             !HadErrors) {
+          llvm::SmallString<256> FullDepPath;
           static std::mutex Lock;
           // With compilation database, we may open different files
           // concurrently or we may write the same file concurrently. So we
@@ -1042,16 +1041,37 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           static llvm::StringMap<llvm::raw_fd_ostream> OSs;
           std::unique_lock<std::mutex> LockGuard(Lock);
 
-          auto OSIter = OSs.find(MakeformatOutputPath);
+          if (llvm::sys::path::is_absolute(MakeformatOutputPath))
+            FullDepPath = MakeformatOutputPath;
+          else
+            llvm::sys::path::append(FullDepPath, CWD, MakeformatOutputPath);
+
+          if (llvm::StringRef Parent =
+                  llvm::sys::path::parent_path(FullDepPath);
+              !Parent.empty()) {
+            if (std::error_code DirEC =
+                    llvm::sys::fs::create_directories(Parent)) {
+              llvm::errs() << "Failed to create directory \"" << Parent
+                           << "\" for P1689 make format output: "
+                           << DirEC.message() << "\n";
+              HadErrors = true;
+              continue;
+            }
+          }
+
+          auto OSIter = OSs.find(FullDepPath);
           if (OSIter == OSs.end()) {
             std::error_code EC;
-            OSIter = OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath,
-                                     EC, llvm::sys::fs::OF_Text)
-                         .first;
-            if (EC)
+            auto Emplaced = OSs.try_emplace(FullDepPath.str(), FullDepPath, EC,
+                                            llvm::sys::fs::OF_Text);
+            OSIter = Emplaced.first;
+            if (EC) {
+              OSs.erase(OSIter);
               llvm::errs() << "Failed to open P1689 make format output file \""
-                           << MakeformatOutputPath << "\" for " << EC.message()
-                           << "\n";
+                           << FullDepPath << "\" for " << EC.message() << "\n";
+              HadErrors = true;
+              continue;
+            }
           }
 
           SharedStream MakeformatOS(OSIter->second);

@@ -1197,9 +1197,10 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
 
   if (isIndirectReturn) {
     CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(
-        Align, /*AddrSpace=*/CGM.getDataLayout().getAllocaAddrSpace(),
-        /*ByVal=*/false);
+    LangAS SRetAS = CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
+    unsigned AS = CGM.getContext().getTargetAddressSpace(SRetAS);
+    FI.getReturnInfo() =
+        ABIArgInfo::getIndirect(Align, /*AddrSpace=*/AS, /*ByVal=*/false);
 
     // MSVC always passes `this` before the `sret` parameter.
     FI.getReturnInfo().setSRetAfterThis(FI.isInstanceMethod());
@@ -4107,7 +4108,7 @@ void MicrosoftCXXABI::emitCXXStructor(GlobalDecl GD) {
     return;
 
   if (GD.getDtorType() == Dtor_VectorDeleting &&
-      !getContext().classNeedsVectorDeletingDestructor(dtor->getParent())) {
+      !CGM.classNeedsVectorDestructor(dtor->getParent())) {
     // Create GlobalDecl object with the correct type for the scalar
     // deleting destructor.
     GlobalDecl ScalarDtorGD(dtor, Dtor_Deleting);

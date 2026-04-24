@@ -10,6 +10,8 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/Utils.h"
@@ -603,6 +605,9 @@ bool CompilerInstanceWithContext::computeDependencies(
   CB->EndOfMainFile();
 
   if (!ModResult)
+    return false;
+
+  if (CI.getDiagnostics().hasErrorOccurred())
     return false;
 
   MDC->applyDiscoveredDependencies(ModuleInvocation);

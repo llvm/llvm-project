@@ -251,6 +251,8 @@ struct Call; // R1520 & R1521
 struct CallStmt; // R1521
 struct ProcedureDesignator; // R1522
 struct ActualArg; // R1524
+struct ConditionalArg; // F2023 R1526
+struct ConditionalArgTail; // F2023 R1526
 struct SeparateModuleSubprogram; // R1538
 struct EntryStmt; // R1541
 struct ReturnStmt; // R1542
@@ -1678,6 +1680,17 @@ struct ImageSelector {
   std::tuple<std::list<Cosubscript>, std::list<ImageSelectorSpec>> t;
 };
 
+// F2023 R1002 conditional-expr ->
+//   ( scalar-logical-expr ? expr
+//     [ : scalar-logical-expr ? expr ]...
+//     : expr )
+struct ConditionalExpr {
+  TUPLE_CLASS_BOILERPLATE(ConditionalExpr);
+  std::tuple<ScalarLogicalExpr, common::Indirection<Expr>,
+      common::Indirection<Expr>>
+      t;
+};
+
 // R1001 - R1022 expressions
 struct Expr {
   UNION_CLASS_BOILERPLATE(Expr);
@@ -1776,11 +1789,12 @@ struct Expr {
   CharBlock source;
 
   std::variant<common::Indirection<CharLiteralConstantSubstring>,
-      LiteralConstant, common::Indirection<Designator>, ArrayConstructor,
-      StructureConstructor, common::Indirection<FunctionReference>, Parentheses,
-      UnaryPlus, Negate, NOT, PercentLoc, DefinedUnary, Power, Multiply, Divide,
-      Add, Subtract, Concat, LT, LE, EQ, NE, GE, GT, AND, OR, EQV, NEQV,
-      DefinedBinary, ComplexConstructor, common::Indirection<SubstringInquiry>>
+      LiteralConstant, ConditionalExpr, common::Indirection<Designator>,
+      ArrayConstructor, StructureConstructor,
+      common::Indirection<FunctionReference>, Parentheses, UnaryPlus, Negate,
+      NOT, PercentLoc, DefinedUnary, Power, Multiply, Divide, Add, Subtract,
+      Concat, LT, LE, EQ, NE, GE, GT, AND, OR, EQV, NEQV, DefinedBinary,
+      ComplexConstructor, common::Indirection<SubstringInquiry>>
       u;
 };
 
@@ -2630,6 +2644,7 @@ using FileNameExpr = ScalarDefaultCharExpr;
 //         ENCODING = scalar-default-char-expr | ERR = label |
 //         FILE = file-name-expr | FORM = scalar-default-char-expr |
 //         IOMSG = iomsg-variable | IOSTAT = scalar-int-variable |
+//         LEADING_ZERO = scalar-default-char-expr |
 //         NEWUNIT = scalar-int-variable | PAD = scalar-default-char-expr |
 //         POSITION = scalar-default-char-expr | RECL = scalar-int-expr |
 //         ROUND = scalar-default-char-expr | SIGN = scalar-default-char-expr |
@@ -2644,7 +2659,7 @@ struct ConnectSpec {
   UNION_CLASS_BOILERPLATE(ConnectSpec);
   struct CharExpr {
     ENUM_CLASS(Kind, Access, Action, Asynchronous, Blank, Decimal, Delim,
-        Encoding, Form, Pad, Position, Round, Sign,
+        Encoding, Form, Leading_Zero, Pad, Position, Round, Sign,
         /* extensions: */ Carriagecontrol, Convert, Dispose)
     TUPLE_CLASS_BOILERPLATE(CharExpr);
     std::tuple<Kind, ScalarDefaultCharExpr> t;
@@ -2692,7 +2707,9 @@ WRAPPER_CLASS(IdVariable, ScalarIntVariable);
 //         DECIMAL = scalar-default-char-expr |
 //         DELIM = scalar-default-char-expr | END = label | EOR = label |
 //         ERR = label | ID = id-variable | IOMSG = iomsg-variable |
-//         IOSTAT = scalar-int-variable | PAD = scalar-default-char-expr |
+//         IOSTAT = scalar-int-variable |
+//         LEADING_ZERO = scalar-default-char-expr |
+//         PAD = scalar-default-char-expr |
 //         POS = scalar-int-expr | REC = scalar-int-expr |
 //         ROUND = scalar-default-char-expr | SIGN = scalar-default-char-expr |
 //         SIZE = scalar-int-variable
@@ -2701,7 +2718,8 @@ WRAPPER_CLASS(EorLabel, Label);
 struct IoControlSpec {
   UNION_CLASS_BOILERPLATE(IoControlSpec);
   struct CharExpr {
-    ENUM_CLASS(Kind, Advance, Blank, Decimal, Delim, Pad, Round, Sign)
+    ENUM_CLASS(
+        Kind, Advance, Blank, Decimal, Delim, Leading_Zero, Pad, Round, Sign)
     TUPLE_CLASS_BOILERPLATE(CharExpr);
     std::tuple<Kind, ScalarDefaultCharExpr> t;
   };
@@ -2837,6 +2855,7 @@ WRAPPER_CLASS(FlushStmt, std::list<PositionOrFlushSpec>);
 //         FORMATTED = scalar-default-char-variable |
 //         ID = scalar-int-expr | IOMSG = iomsg-variable |
 //         IOSTAT = scalar-int-variable |
+//         LEADING_ZERO = scalar-default-char-variable |
 //         NAME = scalar-default-char-variable |
 //         NAMED = scalar-logical-variable |
 //         NEXTREC = scalar-int-variable | NUMBER = scalar-int-variable |
@@ -2861,8 +2880,9 @@ struct InquireSpec {
   UNION_CLASS_BOILERPLATE(InquireSpec);
   struct CharVar {
     ENUM_CLASS(Kind, Access, Action, Asynchronous, Blank, Decimal, Delim,
-        Direct, Encoding, Form, Formatted, Iomsg, Name, Pad, Position, Read,
-        Readwrite, Round, Sequential, Sign, Stream, Status, Unformatted, Write,
+        Direct, Encoding, Form, Formatted, Iomsg, Leading_Zero, Name, Pad,
+        Position, Read, Readwrite, Round, Sequential, Sign, Stream, Status,
+        Unformatted, Write,
         /* extensions: */ Carriagecontrol, Convert, Dispose)
     TUPLE_CLASS_BOILERPLATE(CharVar);
     std::tuple<Kind, ScalarDefaultCharVariable> t;
@@ -3206,15 +3226,43 @@ struct ProcedureDesignator {
 // R1525 alt-return-spec -> * label
 WRAPPER_CLASS(AltReturnSpec, Label);
 
+// .NIL. (part of F2023 R1527)
+EMPTY_CLASS(ConditionalArgNil);
+
+// F2023 R1526 conditional-arg ->
+//   ( scalar-logical-expr ? consequent
+//     [ : scalar-logical-expr ? consequent ]...
+//     : consequent )
+// F2023 R1527 consequent -> consequent-arg | .NIL.
+// F2023 R1528 consequent-arg -> expr | variable
+struct ConditionalArg {
+  TUPLE_CLASS_BOILERPLATE(ConditionalArg);
+  struct Consequent { // F2023 R1527
+    UNION_CLASS_BOILERPLATE(Consequent);
+    // N.B. "variable" is parsed as "expr" and
+    // the distinction is determined by semantics.
+    std::variant<common::Indirection<Expr>, ConditionalArgNil> u;
+  };
+  std::tuple<ScalarLogicalExpr, Consequent,
+      common::Indirection<ConditionalArgTail>>
+      t;
+};
+
+struct ConditionalArgTail {
+  UNION_CLASS_BOILERPLATE(ConditionalArgTail);
+  std::variant<ConditionalArg, ConditionalArg::Consequent> u;
+};
+
 // R1524 actual-arg ->
 //         expr | variable | procedure-name | proc-component-ref |
-//         alt-return-spec
+//         alt-return-spec | conditional-arg
 struct ActualArg {
   WRAPPER_CLASS(PercentRef, Expr); // %REF(x) extension
   WRAPPER_CLASS(PercentVal, Expr); // %VAL(x) extension
   UNION_CLASS_BOILERPLATE(ActualArg);
   ActualArg(Expr &&x) : u{common::Indirection<Expr>(std::move(x))} {}
-  std::variant<common::Indirection<Expr>, AltReturnSpec, PercentRef, PercentVal>
+  std::variant<common::Indirection<Expr>, AltReturnSpec, PercentRef, PercentVal,
+      ConditionalArg>
       u;
 };
 
@@ -3327,6 +3375,7 @@ struct StmtFunctionStmt {
 // !DIR$ INLINE
 // !DIR$ NOINLINE
 // !DIR$ IVDEP
+// !DIR$ SIMD
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3369,12 +3418,13 @@ struct CompilerDirective {
   EMPTY_CLASS(Inline);
   EMPTY_CLASS(NoInline);
   EMPTY_CLASS(IVDep);
+  EMPTY_CLASS(Simd);
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, VectorLength, std::list<NameValue>, Unroll, UnrollAndJam,
       Unrecognized, NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline,
-      NoInline, Prefetch, IVDep>
+      NoInline, Prefetch, IVDep, Simd>
       u;
 };
 

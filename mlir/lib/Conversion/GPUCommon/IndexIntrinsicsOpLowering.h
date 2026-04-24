@@ -16,7 +16,9 @@
 namespace mlir {
 namespace gpu {
 namespace index_lowering {
-enum class IndexKind : uint32_t { Other = 0, Block = 1, Grid = 2, Cluster = 3 };
+// Alias so existing call sites don't need updating.
+using IndexKind = gpu::DimensionKind;
+
 enum class IntrType : uint32_t {
   None = 0,
   Id = 1,
@@ -27,7 +29,9 @@ enum class IntrType : uint32_t {
 /// are found. `bitWidth` controls the width of the returned range.
 /// Checks the provided upper_bound from the op (highest priority), inherent
 /// attrs on enclosing `gpu.func`s, and discardable attributes on other
-/// enclosing function ops (lowest priority).
+/// enclosing function ops (lowest priority). However, in the case where
+/// a dimension is known to have a constant value, returns a range indicating
+/// that value.
 LLVM::ConstantRangeAttr getIndexOpRange(Operation *op, gpu::Dimension dim,
                                         std::optional<uint32_t> opUpperBound,
                                         IndexKind indexKind, IntrType intrType,

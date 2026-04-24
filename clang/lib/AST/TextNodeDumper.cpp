@@ -2227,17 +2227,33 @@ void TextNodeDumper::VisitSubstTemplateTypeParmPackType(
   VisitTemplateTypeParmDecl(T->getReplacedParameter());
 }
 
-void TextNodeDumper::VisitAutoType(const AutoType *T) {
-  if (T->isDecltypeAuto())
-    OS << " decltype(auto)";
-  if (!T->isDeduced())
+void TextNodeDumper::VisitDeducedType(const DeducedType *T) {
+  switch (T->getDeducedKind()) {
+  case DeducedKind::Undeduced:
     OS << " undeduced";
+    break;
+  case DeducedKind::Deduced:
+    break;
+  case DeducedKind::DeducedAsDependent:
+    OS << " deduced-as-dependent";
+    break;
+  case DeducedKind::DeducedAsPack:
+    OS << " deduced-as-pack";
+    break;
+  }
+}
+
+void TextNodeDumper::VisitAutoType(const AutoType *T) {
+  VisitDeducedType(T);
+  // Not necessary to dump the keyword since it's spelled plainly in the printed
+  // type anyway.
   if (T->isConstrained())
     dumpDeclRef(T->getTypeConstraintConcept());
 }
 
 void TextNodeDumper::VisitDeducedTemplateSpecializationType(
     const DeducedTemplateSpecializationType *T) {
+  VisitDeducedType(T);
   dumpTemplateName(T->getTemplateName(), "name");
 }
 
@@ -2918,6 +2934,19 @@ void TextNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
 void TextNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *D) {
   OS << ' ';
   dumpAccessSpecifier(D->getAccess());
+}
+
+void TextNodeDumper::VisitExplicitInstantiationDecl(
+    const ExplicitInstantiationDecl *D) {
+  dumpTemplateSpecializationKind(D->getTemplateSpecializationKind());
+  if (D->isExternTemplate())
+    OS << " extern";
+  if (D->getQualifierLoc())
+    dumpNestedNameSpecifier(D->getQualifierLoc().getNestedNameSpecifier());
+  if (const NamedDecl *Spec = D->getSpecialization()) {
+    OS << " '" << Spec->getDeclName() << "'";
+    dumpDeclRef(Spec);
+  }
 }
 
 void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
