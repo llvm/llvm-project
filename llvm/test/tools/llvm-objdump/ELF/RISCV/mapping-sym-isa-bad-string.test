@@ -2,13 +2,19 @@
 ## and must not silently produce a wrong decode.  The cache should remember
 ## the parse failure so repeated accesses do not keep consuming the error,
 ## and decoding must fall back to the base target (which here includes V via
-## Tag_RISCV_arch), so the V instruction still decodes correctly.
+## Tag_RISCV_arch), so the V instruction still decodes correctly.  A warning
+## should be emitted exactly once per bad string so the user understands why
+## the fallback kicked in.
 ##
 ## This needs yaml2obj because llvm-mc only ever emits well-formed
 ## normalized arch strings.
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-objdump -d -M no-aliases --no-show-raw-insn %t.o | FileCheck %s
+# RUN: llvm-objdump -d -M no-aliases --no-show-raw-insn %t.o 2>%t.err \
+# RUN:   | FileCheck %s
+# RUN: FileCheck --check-prefix=WARN --implicit-check-not=warning: %s < %t.err
+
+# WARN: warning: {{.*}}: could not parse ISA mapping symbol '$xbogus_not_a_real_arch_string':{{.*}}; falling back to default disassembler
 
 # CHECK-LABEL: <.text>:
 ## 0x003676d7 = vsetvli a3, a2, e8, m8, tu, mu — requires V.  The mapping

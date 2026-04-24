@@ -1468,8 +1468,11 @@ class RISCVISATargetCache {
   // configured for that ISA.  A null unique_ptr caches a parse failure so
   // we do not re-parse the same invalid string.
   StringMap<std::unique_ptr<DisassemblerTarget>> Cache;
+  StringRef FileName;
 
 public:
+  explicit RISCVISATargetCache(StringRef FileName) : FileName(FileName) {}
+
   // Returns a DisassemblerTarget configured for ISAStr.  Feature priority in
   // the returned target is (low -> high): Tag_RISCV_arch, the mapping-symbol
   // ISA, then --mattr, so an explicit --mattr on the command line overrides
@@ -1518,9 +1521,14 @@ public:
         }
         It->second = std::make_unique<DisassemblerTarget>(Base, Features);
       } else {
-        // Parse failed: leave the slot null so every future query for this
-        // same string falls back to Base (Tag_RISCV_arch / --mattr).
-        consumeError(ParseResult.takeError());
+        // Parse failed: warn so the user understands why the region falls
+        // back to the default decoder, then leave the slot null so every
+        // future query for this same string falls back to Base
+        // (Tag_RISCV_arch / --mattr) without re-parsing or re-warning.
+        reportWarning("could not parse ISA mapping symbol '$x" + ISAStr +
+                          "': " + toString(ParseResult.takeError()) +
+                          "; falling back to default disassembler",
+                      FileName);
       }
     }
     return It->second ? It->second.get() : &Base;
@@ -1879,21 +1887,23 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   // pretty print the symbols while disassembling.
   std::map<SectionRef, SectionSymbolsTy> AllSymbols;
   std::map<SectionRef, SmallVector<MappingSymbolPair, 0>> AllMappingSymbols;
-  // Owns the ISA-specific DisassemblerTargets referenced from
-  // AllRISCVISAMappingSymbols so each unique arch string is parsed at most
-  // once per disassembly pass.  Declared before AllRISCVISAMappingSymbols so
-  // the raw DisassemblerTarget * entries in that map never outlive the
-  // objects they point at.
-  RISCVISATargetCache ISATargets;
-  // Per-section RISC-V ISA mapping symbols: (offset, DisassemblerTarget *)
-  // pairs for "$x<ISAString>" symbols.  The DisassemblerTarget is resolved
-  // once when the symbol is collected and reused for every instruction in the
-  // region, avoiding repeated ISA-string lookups during disassembly.
-  std::map<SectionRef,
-           SmallVector<std::pair<uint64_t, DisassemblerTarget *>, 0>>
+  // ISA-specific DisassemblerTargets and per-section "$x<ISA>" mapping-symbol
+  // indexes.  Only allocated for RISC-V ELF objects so non-RISC-V disassembly
+  // does not carry the (otherwise unused) containers.  ISATargets is declared
+  // before AllRISCVISAMappingSymbols so the raw DisassemblerTarget * entries
+  // in that map never outlive the objects they point at.
+  using RISCVISASymSection =
+      SmallVector<std::pair<uint64_t, DisassemblerTarget *>, 0>;
+  std::unique_ptr<RISCVISATargetCache> ISATargets;
+  std::unique_ptr<std::map<SectionRef, RISCVISASymSection>>
       AllRISCVISAMappingSymbols;
   SectionSymbolsTy AbsoluteSymbols;
   const StringRef FileName = Obj.getFileName();
+  if (isRISCVElf(Obj)) {
+    ISATargets = std::make_unique<RISCVISATargetCache>(FileName);
+    AllRISCVISAMappingSymbols =
+        std::make_unique<std::map<SectionRef, RISCVISASymSection>>();
+  }
   const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(&Obj);
   for (const SymbolRef &Symbol : Obj.symbols()) {
     Expected<StringRef> NameOrErr = Symbol.getName();
@@ -1928,9 +1938,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             // DisassemblerTarget once and record the pointer so per-instruction
             // lookups are a single binary search.
             if (isRISCVElf(Obj) && Name[0] == 'x' && Name.size() > 1)
-              AllRISCVISAMappingSymbols[*SecI].emplace_back(
+              (*AllRISCVISAMappingSymbols)[*SecI].emplace_back(
                   Address - SectionAddr,
-                  ISATargets.get(PrimaryTarget, Name.substr(1)));
+                  ISATargets->get(PrimaryTarget, Name.substr(1)));
             AllSymbols[*SecI].push_back(
                 createSymbolInfo(Obj, Symbol, /*MappingSymbol=*/true));
           }
@@ -2113,7 +2123,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     SectionSymbolsTy &Symbols = AllSymbols[Section];
     auto &MappingSymbols = AllMappingSymbols[Section];
     llvm::sort(MappingSymbols);
-    auto &RISCVISASyms = AllRISCVISAMappingSymbols[Section];
+    RISCVISASymSection EmptyRISCVISASyms;
+    auto &RISCVISASyms = AllRISCVISAMappingSymbols
+                             ? (*AllRISCVISAMappingSymbols)[Section]
+                             : EmptyRISCVISASyms;
     llvm::sort(RISCVISASyms);
 
     ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(
