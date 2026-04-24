@@ -2568,8 +2568,7 @@ define <2 x fp128> @loaddup_str_v2fp128(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v2fp128:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr q0, [x0]
-; CHECK-SD-NEXT:    adrp x8, .LCPI155_0
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI155_0]
+; CHECK-SD-NEXT:    movi d2, #0000000000000000
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    str q2, [x0]
 ; CHECK-SD-NEXT:    ret
@@ -2630,8 +2629,7 @@ define <3 x fp128> @loaddup_str_v3fp128(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v3fp128:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr q0, [x0]
-; CHECK-SD-NEXT:    adrp x8, .LCPI159_0
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI159_0]
+; CHECK-SD-NEXT:    movi d3, #0000000000000000
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    mov v2.16b, v0.16b
 ; CHECK-SD-NEXT:    str q3, [x0]
@@ -2697,8 +2695,7 @@ define <4 x fp128> @loaddup_str_v4fp128(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v4fp128:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr q0, [x0]
-; CHECK-SD-NEXT:    adrp x8, .LCPI163_0
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI163_0]
+; CHECK-SD-NEXT:    movi d4, #0000000000000000
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    mov v2.16b, v0.16b
 ; CHECK-SD-NEXT:    mov v3.16b, v0.16b

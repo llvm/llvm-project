@@ -125,10 +125,9 @@ define <1 x double> @convert_single_fp_vector_constant(i1 %cmp) {
 ; CHECK-SD-LABEL: convert_single_fp_vector_constant:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    mov x8, #4607182418800017408 // =0x3ff0000000000000
-; CHECK-SD-NEXT:    csetm x9, ne
-; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    fmov d1, x9
+; CHECK-SD-NEXT:    fmov d0, #1.00000000
+; CHECK-SD-NEXT:    csetm x8, ne
+; CHECK-SD-NEXT:    fmov d1, x8
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    ret
 ;
@@ -158,12 +157,19 @@ define <2 x double> @poszero_v2f64(<2 x double> %a) {
 }
 
 define <2 x double> @negzero_v2f64(<2 x double> %a) {
-; CHECK-LABEL: negzero_v2f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    fneg v1.2d, v1.2d
-; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: negzero_v2f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi d1, #0000000000000000
+; CHECK-SD-NEXT:    fneg v1.2d, v1.2d
+; CHECK-SD-NEXT:    fmul v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: negzero_v2f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    fneg v1.2d, v1.2d
+; CHECK-GI-NEXT:    fmul v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    ret
   %b = fmul <2 x double> %a, <double -0.0, double -0.0>
   ret <2 x double> %b
 }

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64RegisterBankInfo.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -379,13 +380,10 @@ static bool preferGPRForFPImm(const MachineInstr &MI,
   const APFloat Imm = MI.getOperand(1).getFPImm()->getValueAPF();
   const APInt ImmBits = Imm.bitcastToAPInt();
 
-  // Check if we can encode this as a movi. Note, we only have one pattern so
-  // far for movis, hence the one check.
-  if (Size == 32) {
-    uint64_t Val = APInt::getSplat(64, ImmBits).getZExtValue();
-    if (AArch64_AM::isAdvSIMDModImmType4(Val))
-      return false;
-  }
+  // Check if we can encode this as a movi.
+  SmallVector<AArch64_IMM::ImmInsnModel> Insn;
+  if (AArch64_IMM::expandVectorMOVImm(APInt::getSplat(64, ImmBits), &STI, Insn))
+    return false;
 
   // We want to use GPR when the value cannot be encoded as the immediate value
   // of a fmov and when it will not result in a constant pool load. As

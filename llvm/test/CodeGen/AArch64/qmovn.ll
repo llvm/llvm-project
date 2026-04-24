@@ -638,7 +638,8 @@ define <4 x i16> @sminsmax_range_unsigned_i64_to_i16(<2 x i16> %x, <2 x i64> %y)
 ; CHECK-SD-NEXT:    movi v3.2d, #0x0000000000ffff
 ; CHECK-SD-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    cmgt v2.2d, v3.2d, v1.2d
-; CHECK-SD-NEXT:    bif v1.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    orn v1.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    ret
@@ -707,8 +708,9 @@ define <4 x i16> @umin_range_unsigned_i64_to_i16(<2 x i16> %x, <2 x i64> %y) {
 ; CHECK-SD-LABEL: umin_range_unsigned_i64_to_i16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v2.2d, #0x0000000000ffff
-; CHECK-SD-NEXT:    cmhi v3.2d, v2.2d, v1.2d
-; CHECK-SD-NEXT:    bif v1.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    cmhi v2.2d, v2.2d, v1.2d
+; CHECK-SD-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    orn v1.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    ret

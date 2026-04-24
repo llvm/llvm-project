@@ -93,12 +93,19 @@ define <4 x float> @nabsv4f32(<4 x float> %a) {
 }
 
 define <2 x double> @nabsv2d64(<2 x double> %a) {
-; CHECK-LABEL: nabsv2d64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    fneg v1.2d, v1.2d
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: nabsv2d64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi d1, #0000000000000000
+; CHECK-SD-NEXT:    fneg v1.2d, v1.2d
+; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: nabsv2d64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    fneg v1.2d, v1.2d
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %conv = bitcast <2 x double> %a to <2 x i64>
   %and = or <2 x i64> %conv, <i64 -9223372036854775808, i64 -9223372036854775808>
   %conv1 = bitcast <2 x i64> %and to <2 x double>

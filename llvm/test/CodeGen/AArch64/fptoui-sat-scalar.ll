@@ -762,17 +762,16 @@ define i32 @test_unsigned_f128_i32(fp128 %f) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    adrp x8, .LCPI30_0
+; CHECK-SD-NEXT:    movi d1, #0000000000000000
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
 ; CHECK-SD-NEXT:    bl __getf2
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __fixunstfsi
-; CHECK-SD-NEXT:    adrp x8, .LCPI30_1
+; CHECK-SD-NEXT:    adrp x8, .LCPI30_0
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    cmp w19, #0
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
 ; CHECK-SD-NEXT:    csel w19, wzr, w0, mi
 ; CHECK-SD-NEXT:    bl __gttf2
 ; CHECK-SD-NEXT:    cmp w0, #0

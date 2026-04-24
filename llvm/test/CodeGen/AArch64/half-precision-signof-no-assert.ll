@@ -10,12 +10,11 @@ define ptr @fn(ptr %in, ptr %out) {
 ; CHECK-SD:       // %bb.0: // %fn
 ; CHECK-SD-NEXT:    ldr d1, [x0]
 ; CHECK-SD-NEXT:    movi v0.4h, #60, lsl #8
-; CHECK-SD-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-SD-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-SD-NEXT:    fcmgt v2.4s, v1.4s, #0.0
 ; CHECK-SD-NEXT:    fcmlt v1.4s, v1.4s, #0.0
 ; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ldr h2, [x8, :lo12:.LCPI0_0]
+; CHECK-SD-NEXT:    movi v2.4h, #60, lsl #8
 ; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-SD-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    movi d1, #0000000000000000

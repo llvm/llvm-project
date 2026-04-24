@@ -916,7 +916,7 @@ define <2 x i64> @clmul_v2i64_neon(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEON-NEXT:    dup v4.2d, x3
 ; CHECK-NEON-NEXT:    eor v2.16b, v2.16b, v16.16b
 ; CHECK-NEON-NEXT:    and v3.16b, v1.16b, v17.16b
-; CHECK-NEON-NEXT:    movi v17.2d, #0000000000000000
+; CHECK-NEON-NEXT:    movi d17, #0000000000000000
 ; CHECK-NEON-NEXT:    dup v16.2d, x20
 ; CHECK-NEON-NEXT:    mul x15, x8, x25
 ; CHECK-NEON-NEXT:    mov v5.d[1], x21
@@ -1028,442 +1028,441 @@ define <1 x i64> @clmul_v1i64_neon(<1 x i64> %x, <1 x i64> %y) {
 ; CHECK-NEON-NEXT:    mov w10, #8 // =0x8
 ; CHECK-NEON-NEXT:    fmov d2, x8
 ; CHECK-NEON-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEON-NEXT:    mov w11, #16 // =0x10
 ; CHECK-NEON-NEXT:    fmov d3, x8
 ; CHECK-NEON-NEXT:    fmov x8, d0
 ; CHECK-NEON-NEXT:    fmov d0, x9
+; CHECK-NEON-NEXT:    mov w14, #64 // =0x40
 ; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
 ; CHECK-NEON-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov x9, d2
 ; CHECK-NEON-NEXT:    fmov d2, x10
-; CHECK-NEON-NEXT:    mov w10, #16 // =0x10
-; CHECK-NEON-NEXT:    mul x14, x8, x9
-; CHECK-NEON-NEXT:    fmov x9, d3
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mul x15, x8, x9
-; CHECK-NEON-NEXT:    fmov x9, d0
-; CHECK-NEON-NEXT:    fmov d0, x10
-; CHECK-NEON-NEXT:    fmov x10, d2
-; CHECK-NEON-NEXT:    fmov d3, x14
-; CHECK-NEON-NEXT:    mul x12, x8, x9
-; CHECK-NEON-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-NEON-NEXT:    mov w9, #32 // =0x20
-; CHECK-NEON-NEXT:    fmov d2, x9
-; CHECK-NEON-NEXT:    mov w9, #64 // =0x40
-; CHECK-NEON-NEXT:    mul x11, x8, x10
-; CHECK-NEON-NEXT:    fmov d4, x15
-; CHECK-NEON-NEXT:    fmov x10, d0
-; CHECK-NEON-NEXT:    fmov d0, x9
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov d5, x12
-; CHECK-NEON-NEXT:    eor v3.8b, v4.8b, v3.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x10
-; CHECK-NEON-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-NEON-NEXT:    mov w10, #128 // =0x80
-; CHECK-NEON-NEXT:    fmov x13, d2
-; CHECK-NEON-NEXT:    fmov d2, x10
-; CHECK-NEON-NEXT:    mov w10, #256 // =0x100
-; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    fmov x14, d0
-; CHECK-NEON-NEXT:    fmov d0, x10
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    mul x10, x8, x14
-; CHECK-NEON-NEXT:    mov w14, #512 // =0x200
-; CHECK-NEON-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-NEON-NEXT:    fmov x15, d2
-; CHECK-NEON-NEXT:    fmov d2, x14
 ; CHECK-NEON-NEXT:    fmov x12, d0
-; CHECK-NEON-NEXT:    mul x14, x8, x15
+; CHECK-NEON-NEXT:    fmov d0, x11
+; CHECK-NEON-NEXT:    fmov x10, d3
 ; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mov w15, #1024 // =0x400
-; CHECK-NEON-NEXT:    fmov d0, x15
-; CHECK-NEON-NEXT:    mov w15, #2048 // =0x800
-; CHECK-NEON-NEXT:    fmov d7, x10
-; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    mov w10, #16384 // =0x4000
-; CHECK-NEON-NEXT:    fmov x11, d2
-; CHECK-NEON-NEXT:    fmov d2, x15
-; CHECK-NEON-NEXT:    mov w15, #4096 // =0x1000
+; CHECK-NEON-NEXT:    mul x9, x8, x9
 ; CHECK-NEON-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-NEON-NEXT:    fmov d4, x15
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    mov w12, #32 // =0x20
+; CHECK-NEON-NEXT:    fmov x13, d2
+; CHECK-NEON-NEXT:    fmov d2, x12
+; CHECK-NEON-NEXT:    mul x10, x8, x10
 ; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    fmov x15, d0
-; CHECK-NEON-NEXT:    eor v0.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    mov w13, #8192 // =0x2000
-; CHECK-NEON-NEXT:    fmov x9, d2
-; CHECK-NEON-NEXT:    eor v0.8b, v3.8b, v0.8b
-; CHECK-NEON-NEXT:    fmov d3, x10
-; CHECK-NEON-NEXT:    mul x15, x8, x15
-; CHECK-NEON-NEXT:    eor v2.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d5, x14
-; CHECK-NEON-NEXT:    fmov x14, d4
-; CHECK-NEON-NEXT:    fmov d4, x13
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
-; CHECK-NEON-NEXT:    mul x12, x8, x14
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v7.8b
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    fmov x11, d3
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x9
-; CHECK-NEON-NEXT:    mov w9, #32768 // =0x8000
-; CHECK-NEON-NEXT:    fmov d5, x15
-; CHECK-NEON-NEXT:    fmov d7, x12
-; CHECK-NEON-NEXT:    fmov d3, x9
-; CHECK-NEON-NEXT:    mul x9, x8, x11
-; CHECK-NEON-NEXT:    mov w11, #65536 // =0x10000
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
-; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v7.8b
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov x11, d3
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mov w10, #131072 // =0x20000
-; CHECK-NEON-NEXT:    fmov d3, x10
-; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    mov w11, #262144 // =0x40000
-; CHECK-NEON-NEXT:    eor v5.8b, v6.8b, v5.8b
-; CHECK-NEON-NEXT:    and v6.8b, v1.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov d3, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov w11, #524288 // =0x80000
-; CHECK-NEON-NEXT:    fmov x12, d6
-; CHECK-NEON-NEXT:    eor v3.8b, v5.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    fmov d6, x10
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    mov w12, #1048576 // =0x100000
-; CHECK-NEON-NEXT:    and v5.8b, v1.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    fmov d4, x12
-; CHECK-NEON-NEXT:    mov w12, #4194304 // =0x400000
-; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d7, x9
-; CHECK-NEON-NEXT:    fmov x9, d5
-; CHECK-NEON-NEXT:    fmov d5, x12
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    fmov d16, x11
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    mul x12, x8, x9
-; CHECK-NEON-NEXT:    mov w9, #8388608 // =0x800000
-; CHECK-NEON-NEXT:    and v5.8b, v1.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov x13, d5
-; CHECK-NEON-NEXT:    fmov d16, x10
-; CHECK-NEON-NEXT:    mul x9, x8, x11
-; CHECK-NEON-NEXT:    mov w11, #16777216 // =0x1000000
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    mov w11, #2097152 // =0x200000
-; CHECK-NEON-NEXT:    fmov d3, x12
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v16.8b
-; CHECK-NEON-NEXT:    movi v16.2s, #128, lsl #24
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    and v5.8b, v1.8b, v5.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v7.8b, v3.8b
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    mul x11, x8, x10
-; CHECK-NEON-NEXT:    fmov x10, d5
-; CHECK-NEON-NEXT:    fmov d5, x13
-; CHECK-NEON-NEXT:    fmov x14, d4
-; CHECK-NEON-NEXT:    mul x12, x8, x10
-; CHECK-NEON-NEXT:    mov w10, #33554432 // =0x2000000
-; CHECK-NEON-NEXT:    fmov d4, x10
-; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    mov w11, #134217728 // =0x8000000
-; CHECK-NEON-NEXT:    mul x10, x8, x14
-; CHECK-NEON-NEXT:    mov w14, #67108864 // =0x4000000
-; CHECK-NEON-NEXT:    fmov d7, x14
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    and v6.8b, v1.8b, v7.8b
-; CHECK-NEON-NEXT:    fmov d7, x12
-; CHECK-NEON-NEXT:    fmov x12, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    fmov x13, d6
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v7.8b
-; CHECK-NEON-NEXT:    fneg d7, d16
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    mov w12, #536870912 // =0x20000000
-; CHECK-NEON-NEXT:    fmov d6, x12
 ; CHECK-NEON-NEXT:    mul x12, x8, x13
-; CHECK-NEON-NEXT:    mov w13, #1073741824 // =0x40000000
-; CHECK-NEON-NEXT:    fmov x14, d4
-; CHECK-NEON-NEXT:    fmov d4, x13
-; CHECK-NEON-NEXT:    and v6.8b, v1.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x13, x8, x14
-; CHECK-NEON-NEXT:    mov w14, #268435456 // =0x10000000
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x15, d6
-; CHECK-NEON-NEXT:    fmov d6, x14
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov x11, #4294967296 // =0x100000000
-; CHECK-NEON-NEXT:    mul x14, x8, x15
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov x13, d0
+; CHECK-NEON-NEXT:    fmov d0, x14
+; CHECK-NEON-NEXT:    fmov x14, d2
+; CHECK-NEON-NEXT:    mul x13, x8, x13
+; CHECK-NEON-NEXT:    fmov d2, x9
+; CHECK-NEON-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    fmov d3, x10
+; CHECK-NEON-NEXT:    mov w10, #128 // =0x80
+; CHECK-NEON-NEXT:    fmov d4, x12
 ; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    fmov x10, d2
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v7.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    fmov x11, d2
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    fmov d7, x9
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x14
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x11
-; CHECK-NEON-NEXT:    mov x11, #8589934592 // =0x200000000
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x10
-; CHECK-NEON-NEXT:    mov x14, #1152921504606846976 // =0x1000000000000000
-; CHECK-NEON-NEXT:    fmov x10, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    mov x11, #17179869184 // =0x400000000
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v7.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    mov w10, #256 // =0x100
+; CHECK-NEON-NEXT:    mul x14, x8, x14
+; CHECK-NEON-NEXT:    fmov x9, d0
+; CHECK-NEON-NEXT:    fmov d0, x11
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d3, x13
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x14
+; CHECK-NEON-NEXT:    eor v0.8b, v2.8b, v0.8b
+; CHECK-NEON-NEXT:    fmov d2, x10
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    mov w9, #512 // =0x200
 ; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    fmov d6, x9
-; CHECK-NEON-NEXT:    mov x9, #34359738368 // =0x800000000
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov x10, d4
+; CHECK-NEON-NEXT:    fmov d4, x9
+; CHECK-NEON-NEXT:    mov w9, #2048 // =0x800
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
 ; CHECK-NEON-NEXT:    fmov x11, d2
 ; CHECK-NEON-NEXT:    fmov d2, x9
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x10
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    mul x9, x8, x11
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mov x11, #68719476736 // =0x1000000000
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov x11, #137438953472 // =0x2000000000
+; CHECK-NEON-NEXT:    mov w9, #4096 // =0x1000
+; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
 ; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov x12, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d6, x9
-; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d3, x9
+; CHECK-NEON-NEXT:    mul x11, x8, x11
 ; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mov x12, #274877906944 // =0x4000000000
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x12
-; CHECK-NEON-NEXT:    mov x12, #549755813888 // =0x8000000000
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d3, x10
-; CHECK-NEON-NEXT:    fmov d6, x14
-; CHECK-NEON-NEXT:    fmov x13, d2
-; CHECK-NEON-NEXT:    fmov d2, x12
-; CHECK-NEON-NEXT:    mov x14, #2305843009213693952 // =0x2000000000000000
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    eor v3.8b, v5.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov x12, d4
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    fmov x10, d2
+; CHECK-NEON-NEXT:    mul x9, x8, x12
+; CHECK-NEON-NEXT:    mov w12, #1024 // =0x400
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    mov w12, #8192 // =0x2000
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v5.8b
 ; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    mul x12, x8, x13
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mov x13, #1099511627776 // =0x10000000000
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    fmov d4, x13
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov x11, d2
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    mul x9, x8, x11
-; CHECK-NEON-NEXT:    mov x11, #2199023255552 // =0x20000000000
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    fmov x11, d2
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x12
-; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    mov x11, #4398046511104 // =0x40000000000
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    fmov x9, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    mov x11, #8796093022208 // =0x80000000000
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mov x10, #17592186044416 // =0x100000000000
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x11, d2
-; CHECK-NEON-NEXT:    fmov d2, x10
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mov x11, #35184372088832 // =0x200000000000
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov x11, #70368744177664 // =0x400000000000
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    fmov x12, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mov x12, #140737488355328 // =0x800000000000
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    fmov d4, x12
-; CHECK-NEON-NEXT:    mov x12, #281474976710656 // =0x1000000000000
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d3, x12
+; CHECK-NEON-NEXT:    mov w12, #16384 // =0x4000
 ; CHECK-NEON-NEXT:    fmov x13, d2
+; CHECK-NEON-NEXT:    mul x11, x8, x11
 ; CHECK-NEON-NEXT:    fmov d2, x12
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x10
 ; CHECK-NEON-NEXT:    mul x12, x8, x13
-; CHECK-NEON-NEXT:    mov x13, #562949953421312 // =0x2000000000000
+; CHECK-NEON-NEXT:    mov w13, #32768 // =0x8000
 ; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x13
-; CHECK-NEON-NEXT:    mov x13, #1125899906842624 // =0x4000000000000
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x10, d3
+; CHECK-NEON-NEXT:    fmov d3, x13
+; CHECK-NEON-NEXT:    mov w13, #65536 // =0x10000
+; CHECK-NEON-NEXT:    fmov d6, x11
 ; CHECK-NEON-NEXT:    fmov x11, d2
 ; CHECK-NEON-NEXT:    fmov d2, x13
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    mov w13, #131072 // =0x20000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x9
 ; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
 ; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    fmov d4, x12
-; CHECK-NEON-NEXT:    mov x12, #2251799813685248 // =0x8000000000000
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x12
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    fmov x12, d2
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    mov x11, #4503599627370496 // =0x10000000000000
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    mul x9, x8, x12
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    fmov x14, d3
+; CHECK-NEON-NEXT:    fmov d3, x13
+; CHECK-NEON-NEXT:    mov w13, #262144 // =0x40000
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x10
 ; CHECK-NEON-NEXT:    fmov x10, d2
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x14
+; CHECK-NEON-NEXT:    eor v2.8b, v5.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    fmov d3, x13
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x9
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    mov w12, #524288 // =0x80000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    fmov x9, d3
+; CHECK-NEON-NEXT:    mov w10, #1048576 // =0x100000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d3, x10
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x11
+; CHECK-NEON-NEXT:    mov w11, #4194304 // =0x400000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    mov x11, #9007199254740992 // =0x20000000000000
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    mov w9, #8388608 // =0x800000
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d3, x9
+; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x10
+; CHECK-NEON-NEXT:    mul x9, x8, x11
+; CHECK-NEON-NEXT:    mov w11, #2097152 // =0x200000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov x10, d2
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    mul x11, x8, x10
+; CHECK-NEON-NEXT:    mov w10, #16777216 // =0x1000000
+; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d3, x10
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    mul x10, x8, x12
+; CHECK-NEON-NEXT:    mov w12, #33554432 // =0x2000000
+; CHECK-NEON-NEXT:    fmov x9, d2
+; CHECK-NEON-NEXT:    fmov d2, x12
+; CHECK-NEON-NEXT:    mov w12, #67108864 // =0x4000000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    and v6.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    fmov d3, x12
+; CHECK-NEON-NEXT:    movi v5.2s, #128, lsl #24
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    fmov x12, d6
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    mul x11, x8, x13
+; CHECK-NEON-NEXT:    mov w13, #536870912 // =0x20000000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d7, x13
+; CHECK-NEON-NEXT:    mov w13, #1073741824 // =0x40000000
+; CHECK-NEON-NEXT:    fneg d5, d5
+; CHECK-NEON-NEXT:    mul x10, x8, x12
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    mov w13, #134217728 // =0x8000000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v7.8b
+; CHECK-NEON-NEXT:    and v6.8b, v1.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d7, x11
+; CHECK-NEON-NEXT:    and v5.8b, v1.8b, v5.8b
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d3, x13
+; CHECK-NEON-NEXT:    fmov x13, d6
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x9
+; CHECK-NEON-NEXT:    mov w9, #268435456 // =0x10000000
+; CHECK-NEON-NEXT:    fmov x14, d5
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d6, x9
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x12
+; CHECK-NEON-NEXT:    mul x9, x8, x13
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    mul x14, x8, x14
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x13
+; CHECK-NEON-NEXT:    mov x13, #4294967296 // =0x100000000
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d5, x13
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    fmov d6, x9
+; CHECK-NEON-NEXT:    mov x9, #8589934592 // =0x200000000
+; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    mul x11, x8, x13
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    mov x10, #17179869184 // =0x400000000
+; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x9
+; CHECK-NEON-NEXT:    fmov x9, d3
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v6.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    fmov d6, x14
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    fmov d3, x10
+; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d7, x9
+; CHECK-NEON-NEXT:    mov x9, #68719476736 // =0x1000000000
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x12
+; CHECK-NEON-NEXT:    mov x12, #34359738368 // =0x800000000
+; CHECK-NEON-NEXT:    fmov d6, x12
+; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d3, x9
+; CHECK-NEON-NEXT:    and v6.8b, v1.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d7, x10
+; CHECK-NEON-NEXT:    mul x9, x8, x11
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mov x11, #137438953472 // =0x2000000000
+; CHECK-NEON-NEXT:    fmov x10, d6
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    mov x11, #274877906944 // =0x4000000000
+; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, #2.00000000
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    and v6.8b, v1.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d4, x9
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mov x12, #549755813888 // =0x8000000000
+; CHECK-NEON-NEXT:    fmov x9, d6
+; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x10
+; CHECK-NEON-NEXT:    mul x10, x8, x12
+; CHECK-NEON-NEXT:    mov x12, #1099511627776 // =0x10000000000
+; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d4, x12
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    mov x11, #2199023255552 // =0x20000000000
+; CHECK-NEON-NEXT:    mul x9, x8, x12
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    fmov x10, d3
+; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    mov x11, #4398046511104 // =0x40000000000
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v4.8b
 ; CHECK-NEON-NEXT:    fmov d4, x11
 ; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    mov x9, #18014398509481984 // =0x40000000000000
+; CHECK-NEON-NEXT:    mov x9, #8796093022208 // =0x80000000000
 ; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x11, d2
-; CHECK-NEON-NEXT:    fmov d2, x9
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d3, x9
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
 ; CHECK-NEON-NEXT:    fmov d5, x10
 ; CHECK-NEON-NEXT:    fmov x10, d4
 ; CHECK-NEON-NEXT:    mul x9, x8, x11
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mov x11, #36028797018963968 // =0x80000000000000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mov x11, #17592186044416 // =0x100000000000
 ; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x12, x8, x10
-; CHECK-NEON-NEXT:    mov x10, #72057594037927936 // =0x100000000000000
-; CHECK-NEON-NEXT:    fmov x11, d2
-; CHECK-NEON-NEXT:    fmov d2, x10
+; CHECK-NEON-NEXT:    mov x11, #35184372088832 // =0x200000000000
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    fmov d3, x11
 ; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
 ; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mov x11, #144115188075855872 // =0x200000000000000
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mov x12, #70368744177664 // =0x400000000000
 ; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov x11, #288230376151711744 // =0x400000000000000
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x12
-; CHECK-NEON-NEXT:    fmov x13, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
+; CHECK-NEON-NEXT:    fmov d4, x12
+; CHECK-NEON-NEXT:    mov x12, #140737488355328 // =0x800000000000
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x10
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    fmov d3, x12
 ; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
 ; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mul x11, x8, x13
-; CHECK-NEON-NEXT:    mov x13, #576460752303423488 // =0x800000000000000
-; CHECK-NEON-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov x12, d4
-; CHECK-NEON-NEXT:    fmov d4, x13
 ; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x14
-; CHECK-NEON-NEXT:    mov x14, #4611686018427387904 // =0x4000000000000000
-; CHECK-NEON-NEXT:    fmov x13, d2
-; CHECK-NEON-NEXT:    movi d2, #0000000000000000
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    mul x12, x8, x13
+; CHECK-NEON-NEXT:    mov x13, #281474976710656 // =0x1000000000000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov x10, d4
+; CHECK-NEON-NEXT:    fmov d4, x13
+; CHECK-NEON-NEXT:    mov x13, #562949953421312 // =0x2000000000000
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d3, x13
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x9, d4
+; CHECK-NEON-NEXT:    fmov d4, x12
+; CHECK-NEON-NEXT:    mov x12, #1125899906842624 // =0x4000000000000
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x12
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    mov x11, #2251799813685248 // =0x8000000000000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    mul x10, x8, x12
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x9
+; CHECK-NEON-NEXT:    fmov x9, d3
+; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    mov x11, #4503599627370496 // =0x10000000000000
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d5, x10
+; CHECK-NEON-NEXT:    mov x10, #9007199254740992 // =0x20000000000000
+; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d3, x10
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    fmov x9, d4
+; CHECK-NEON-NEXT:    mul x10, x8, x11
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mov x11, #18014398509481984 // =0x40000000000000
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    mov x11, #36028797018963968 // =0x80000000000000
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d5, x10
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mov x12, #72057594037927936 // =0x100000000000000
+; CHECK-NEON-NEXT:    fmov x10, d4
+; CHECK-NEON-NEXT:    fmov d4, x12
+; CHECK-NEON-NEXT:    mov x12, #144115188075855872 // =0x200000000000000
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    fmov d3, x12
+; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x13
+; CHECK-NEON-NEXT:    mov x13, #288230376151711744 // =0x400000000000000
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov x12, d4
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    fmov d5, x13
+; CHECK-NEON-NEXT:    mov x13, #576460752303423488 // =0x800000000000000
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    fmov x12, d3
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x13
+; CHECK-NEON-NEXT:    mov x13, #1152921504606846976 // =0x1000000000000000
+; CHECK-NEON-NEXT:    movi d5, #0000000000000000
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov x10, d3
+; CHECK-NEON-NEXT:    fmov d3, x13
+; CHECK-NEON-NEXT:    mov x13, #2305843009213693952 // =0x2000000000000000
 ; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
 ; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    and v5.8b, v1.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x10, x8, x13
-; CHECK-NEON-NEXT:    fmov x13, d4
-; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v6.8b
-; CHECK-NEON-NEXT:    fneg d2, d2
-; CHECK-NEON-NEXT:    fmov d6, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x14
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov x14, d5
-; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    fneg d5, d5
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    fmov d4, x13
+; CHECK-NEON-NEXT:    mul x13, x8, x14
 ; CHECK-NEON-NEXT:    and v4.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov d2, x12
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x14, d3
+; CHECK-NEON-NEXT:    fmov d3, x9
+; CHECK-NEON-NEXT:    mul x9, x8, x14
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v3.8b
+; CHECK-NEON-NEXT:    and v3.8b, v1.8b, v7.8b
+; CHECK-NEON-NEXT:    and v1.8b, v1.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
 ; CHECK-NEON-NEXT:    mul x11, x8, x14
-; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov x12, d4
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov x12, d3
 ; CHECK-NEON-NEXT:    fmov d3, x10
 ; CHECK-NEON-NEXT:    fmov x10, d1
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
 ; CHECK-NEON-NEXT:    fmov d1, x13
 ; CHECK-NEON-NEXT:    mul x12, x8, x12
 ; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v3.8b
 ; CHECK-NEON-NEXT:    eor v1.8b, v2.8b, v1.8b
 ; CHECK-NEON-NEXT:    fmov d2, x9
-; CHECK-NEON-NEXT:    mul x8, x8, x10
 ; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    mul x8, x8, x10
 ; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v2.8b
 ; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov d2, x12
@@ -6452,7 +6451,7 @@ define <2 x i64> @clmulr_v2i64_neon(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEON-NEXT:    eor v2.16b, v3.16b, v2.16b
 ; CHECK-NEON-NEXT:    mov v17.d[1], x0
 ; CHECK-NEON-NEXT:    eor v5.16b, v6.16b, v21.16b
-; CHECK-NEON-NEXT:    movi v6.2d, #0000000000000000
+; CHECK-NEON-NEXT:    movi d6, #0000000000000000
 ; CHECK-NEON-NEXT:    mul x0, x9, x2
 ; CHECK-NEON-NEXT:    fmov x2, d16
 ; CHECK-NEON-NEXT:    fmov v16.2d, #2.00000000
@@ -6565,7 +6564,9 @@ define <1 x i64> @clmulr_v1i64_neon(<1 x i64> %a, <1 x i64> %b) nounwind {
 ; CHECK-NEON-NEXT:    mov w12, #32 // =0x20
 ; CHECK-NEON-NEXT:    mov w13, #64 // =0x40
 ; CHECK-NEON-NEXT:    mov w14, #128 // =0x80
+; CHECK-NEON-NEXT:    mov w16, #512 // =0x200
 ; CHECK-NEON-NEXT:    mov w15, #256 // =0x100
+; CHECK-NEON-NEXT:    movi d18, #0000000000000000
 ; CHECK-NEON-NEXT:    rbit v0.8b, v1.8b
 ; CHECK-NEON-NEXT:    fmov d1, x8
 ; CHECK-NEON-NEXT:    mov w8, #1 // =0x1
@@ -6582,11 +6583,8 @@ define <1 x i64> @clmulr_v1i64_neon(<1 x i64> %a, <1 x i64> %b) nounwind {
 ; CHECK-NEON-NEXT:    fmov x10, d3
 ; CHECK-NEON-NEXT:    fmov d3, x11
 ; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov d4, x14
-; CHECK-NEON-NEXT:    mov w14, #512 // =0x200
 ; CHECK-NEON-NEXT:    fmov x11, d1
 ; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    fmov d5, x14
 ; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov d3, x12
 ; CHECK-NEON-NEXT:    fmov x12, d2
@@ -6595,412 +6593,412 @@ define <1 x i64> @clmulr_v1i64_neon(<1 x i64> %a, <1 x i64> %b) nounwind {
 ; CHECK-NEON-NEXT:    fmov d3, x13
 ; CHECK-NEON-NEXT:    fmov x13, d1
 ; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    fmov d4, x9
 ; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d3, x14
 ; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    fmov d3, x15
 ; CHECK-NEON-NEXT:    fmov x14, d2
-; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    mov w15, #1024 // =0x400
 ; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    fmov x9, d1
-; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov x10, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    fmov d6, x12
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d3, x16
+; CHECK-NEON-NEXT:    fmov x17, d1
+; CHECK-NEON-NEXT:    fmov d1, x15
+; CHECK-NEON-NEXT:    fmov d5, x11
 ; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    mov w11, #2048 // =0x800
-; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d5, x15
-; CHECK-NEON-NEXT:    fmov x12, d3
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    fmov d3, x11
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    fmov x12, d1
-; CHECK-NEON-NEXT:    fmov d1, x13
-; CHECK-NEON-NEXT:    mov w13, #4096 // =0x1000
-; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov d4, x14
-; CHECK-NEON-NEXT:    fmov x14, d5
-; CHECK-NEON-NEXT:    fmov d5, x13
-; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    mov w11, #8192 // =0x2000
-; CHECK-NEON-NEXT:    fmov x10, d3
-; CHECK-NEON-NEXT:    mul x13, x8, x14
-; CHECK-NEON-NEXT:    eor v3.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov w11, #16384 // =0x4000
 ; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    eor v1.8b, v2.8b, v1.8b
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d3, x10
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    mov w9, #32768 // =0x8000
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x10
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    mov w10, #65536 // =0x10000
-; CHECK-NEON-NEXT:    fmov d2, x10
-; CHECK-NEON-NEXT:    mov w10, #131072 // =0x20000
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    fmov d4, x10
-; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    mov w11, #262144 // =0x40000
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mov w12, #4096 // =0x1000
 ; CHECK-NEON-NEXT:    fmov x9, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    mov w11, #524288 // =0x80000
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov x12, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov w11, #1048576 // =0x100000
-; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x10, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    mul x13, x8, x10
-; CHECK-NEON-NEXT:    mov w10, #2097152 // =0x200000
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v5.8b
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov d3, x10
-; CHECK-NEON-NEXT:    mov w10, #4194304 // =0x400000
+; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    mov w10, #2048 // =0x800
+; CHECK-NEON-NEXT:    mul x15, x8, x17
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v6.8b
 ; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    fmov x9, d6
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x10, x8, x9
-; CHECK-NEON-NEXT:    mov w9, #8388608 // =0x800000
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov x12, d3
-; CHECK-NEON-NEXT:    fmov d3, x9
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    fmov x14, d5
-; CHECK-NEON-NEXT:    mul x9, x8, x12
-; CHECK-NEON-NEXT:    mov w12, #16777216 // =0x1000000
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov d5, x12
-; CHECK-NEON-NEXT:    mov w12, #33554432 // =0x2000000
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    fmov x13, d3
-; CHECK-NEON-NEXT:    fmov d3, x12
-; CHECK-NEON-NEXT:    mov w12, #67108864 // =0x4000000
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d4, x12
-; CHECK-NEON-NEXT:    fmov x15, d5
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x11, d7
-; CHECK-NEON-NEXT:    fmov d7, x14
-; CHECK-NEON-NEXT:    mul x12, x8, x15
-; CHECK-NEON-NEXT:    mov w15, #134217728 // =0x8000000
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d6, x15
-; CHECK-NEON-NEXT:    mov w15, #536870912 // =0x20000000
-; CHECK-NEON-NEXT:    fmov x14, d4
-; CHECK-NEON-NEXT:    fmov d16, x13
-; CHECK-NEON-NEXT:    fmov d17, x15
-; CHECK-NEON-NEXT:    movi v4.2s, #128, lsl #24
-; CHECK-NEON-NEXT:    mov w15, #1073741824 // =0x40000000
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x13, x8, x14
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov d16, x15
-; CHECK-NEON-NEXT:    mov w15, #268435456 // =0x10000000
-; CHECK-NEON-NEXT:    fmov x14, d6
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fneg d4, d4
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov d5, x15
-; CHECK-NEON-NEXT:    fmov x15, d6
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    mul x12, x8, x15
-; CHECK-NEON-NEXT:    eor v2.8b, v7.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov x15, d16
-; CHECK-NEON-NEXT:    fmov d6, x10
-; CHECK-NEON-NEXT:    mul x10, x8, x15
-; CHECK-NEON-NEXT:    mov x15, #4294967296 // =0x100000000
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    fmov x11, d5
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x15
-; CHECK-NEON-NEXT:    fmov d7, x12
-; CHECK-NEON-NEXT:    mov x15, #281474976710656 // =0x1000000000000
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    mov x13, #8589934592 // =0x200000000
+; CHECK-NEON-NEXT:    fmov x10, d1
+; CHECK-NEON-NEXT:    fmov x11, d2
+; CHECK-NEON-NEXT:    fmov d2, x13
 ; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d17, x13
-; CHECK-NEON-NEXT:    fmov d16, x10
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    mov x13, #549755813888 // =0x8000000000
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x14
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    mov x14, #17592186044416 // =0x100000000000
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v16.8b
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v3.8b
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x9
-; CHECK-NEON-NEXT:    mov x9, #17179869184 // =0x400000000
+; CHECK-NEON-NEXT:    mov w13, #8192 // =0x2000
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x12
+; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x14
 ; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    eor v6.8b, v7.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x11
+; CHECK-NEON-NEXT:    mov w12, #1024 // =0x400
 ; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    mov x11, #34359738368 // =0x800000000
-; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    mul x11, x8, x11
 ; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mov x10, #137438953472 // =0x2000000000
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    fmov d4, x10
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    eor v5.8b, v6.8b, v5.8b
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    fmov x12, d1
 ; CHECK-NEON-NEXT:    fmov d6, x9
-; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    mov x11, #274877906944 // =0x4000000000
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    fmov d4, x13
+; CHECK-NEON-NEXT:    fmov d7, x10
+; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    mov w13, #16384 // =0x4000
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    fmov d5, x15
 ; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x9, d3
+; CHECK-NEON-NEXT:    mul x9, x8, x14
+; CHECK-NEON-NEXT:    mov w14, #32768 // =0x8000
+; CHECK-NEON-NEXT:    fmov x10, d1
+; CHECK-NEON-NEXT:    eor v1.8b, v6.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    fmov d7, x14
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x13, d4
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x9
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x11, x8, x13
+; CHECK-NEON-NEXT:    fmov x9, d4
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x12
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    mov w11, #65536 // =0x10000
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    mov w11, #131072 // =0x20000
+; CHECK-NEON-NEXT:    eor v3.8b, v6.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v1.8b, v2.8b, v1.8b
+; CHECK-NEON-NEXT:    fmov d2, x9
+; CHECK-NEON-NEXT:    mov w9, #262144 // =0x40000
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x10
+; CHECK-NEON-NEXT:    fmov x10, d4
+; CHECK-NEON-NEXT:    fmov d4, x9
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x10
+; CHECK-NEON-NEXT:    mov w10, #524288 // =0x80000
+; CHECK-NEON-NEXT:    fmov d3, x10
+; CHECK-NEON-NEXT:    mov w10, #1048576 // =0x100000
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    fmov x12, d4
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    mov w10, #2097152 // =0x200000
+; CHECK-NEON-NEXT:    fmov d2, x10
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    mov w10, #4194304 // =0x400000
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    fmov d3, x9
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    fmov x9, d4
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    fmov x11, d2
+; CHECK-NEON-NEXT:    mul x13, x8, x13
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    mul x10, x8, x9
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mov w9, #8388608 // =0x800000
+; CHECK-NEON-NEXT:    fmov d2, x9
+; CHECK-NEON-NEXT:    mul x9, x8, x11
+; CHECK-NEON-NEXT:    mov w11, #16777216 // =0x1000000
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    fmov d5, x13
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x11, x8, x14
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mov w14, #33554432 // =0x2000000
+; CHECK-NEON-NEXT:    fmov x12, d2
+; CHECK-NEON-NEXT:    fmov d2, x14
+; CHECK-NEON-NEXT:    mov w14, #67108864 // =0x4000000
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x15, d4
+; CHECK-NEON-NEXT:    fmov d4, x14
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    mul x13, x8, x15
+; CHECK-NEON-NEXT:    mov w15, #134217728 // =0x8000000
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov x14, d2
+; CHECK-NEON-NEXT:    fmov d7, x15
+; CHECK-NEON-NEXT:    mov w15, #536870912 // =0x20000000
+; CHECK-NEON-NEXT:    fmov d5, x15
+; CHECK-NEON-NEXT:    mov w15, #1073741824 // =0x40000000
+; CHECK-NEON-NEXT:    movi v2.2s, #128, lsl #24
+; CHECK-NEON-NEXT:    mul x11, x8, x14
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x12
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d16, x13
+; CHECK-NEON-NEXT:    fneg d2, d2
+; CHECK-NEON-NEXT:    mov w13, #268435456 // =0x10000000
+; CHECK-NEON-NEXT:    fmov x12, d4
+; CHECK-NEON-NEXT:    fmov d4, x15
+; CHECK-NEON-NEXT:    mov x15, #4294967296 // =0x100000000
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x10
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    mul x14, x8, x14
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    eor v5.8b, v6.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov x13, d4
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x15
+; CHECK-NEON-NEXT:    fmov x15, d2
+; CHECK-NEON-NEXT:    fmov d2, x11
+; CHECK-NEON-NEXT:    mul x13, x8, x13
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v5.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d5, x14
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    mov x10, #8589934592 // =0x200000000
+; CHECK-NEON-NEXT:    mul x11, x8, x15
+; CHECK-NEON-NEXT:    fmov d7, x13
+; CHECK-NEON-NEXT:    fmov x13, d6
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    mul x14, x8, x14
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    mov x12, #1099511627776 // =0x10000000000
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x9
+; CHECK-NEON-NEXT:    mov x9, #17179869184 // =0x400000000
+; CHECK-NEON-NEXT:    mul x10, x8, x13
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d17, x9
+; CHECK-NEON-NEXT:    fmov d16, x11
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d5, x14
+; CHECK-NEON-NEXT:    mov x14, #562949953421312 // =0x2000000000000
+; CHECK-NEON-NEXT:    fmov x9, d6
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v17.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d7, x10
+; CHECK-NEON-NEXT:    mov x10, #34359738368 // =0x800000000
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    fmov x11, d6
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x11
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    mov x11, #137438953472 // =0x2000000000
+; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    mov x9, #274877906944 // =0x4000000000
+; CHECK-NEON-NEXT:    fmov x11, d6
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    mul x9, x8, x11
+; CHECK-NEON-NEXT:    mov x11, #549755813888 // =0x8000000000
+; CHECK-NEON-NEXT:    fmov x10, d3
 ; CHECK-NEON-NEXT:    fmov d3, x11
 ; CHECK-NEON-NEXT:    mov x11, #68719476736 // =0x1000000000
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    mov x13, #1099511627776 // =0x10000000000
-; CHECK-NEON-NEXT:    fmov x12, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    fmov d7, x10
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x12, d3
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    eor v2.8b, v5.8b, v7.8b
-; CHECK-NEON-NEXT:    fmov d7, x14
-; CHECK-NEON-NEXT:    mov x14, #35184372088832 // =0x200000000000
-; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov x10, d3
-; CHECK-NEON-NEXT:    fmov d3, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov x11, #2199023255552 // =0x20000000000
-; CHECK-NEON-NEXT:    mul x13, x8, x10
-; CHECK-NEON-NEXT:    fmov x10, d6
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
 ; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    mov x11, #4398046511104 // =0x40000000000
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov d5, x12
-; CHECK-NEON-NEXT:    fmov d3, x11
-; CHECK-NEON-NEXT:    mul x12, x8, x10
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x10, x8, x9
-; CHECK-NEON-NEXT:    fmov d6, x13
 ; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    mov x9, #8796093022208 // =0x80000000000
+; CHECK-NEON-NEXT:    mul x10, x8, x10
 ; CHECK-NEON-NEXT:    fmov x11, d5
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    fmov x12, d3
-; CHECK-NEON-NEXT:    mul x9, x8, x11
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mov x11, #70368744177664 // =0x400000000000
-; CHECK-NEON-NEXT:    fmov d3, x11
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v7.8b
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    mov x12, #140737488355328 // =0x800000000000
-; CHECK-NEON-NEXT:    fmov x13, d5
-; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d2, x9
+; CHECK-NEON-NEXT:    fmov x9, d3
+; CHECK-NEON-NEXT:    fmov d3, x12
+; CHECK-NEON-NEXT:    mov x12, #2199023255552 // =0x20000000000
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    mov x10, #4398046511104 // =0x40000000000
+; CHECK-NEON-NEXT:    mul x13, x8, x9
+; CHECK-NEON-NEXT:    fmov x9, d5
 ; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov d16, x9
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x12, x8, x13
-; CHECK-NEON-NEXT:    fmov x13, d3
-; CHECK-NEON-NEXT:    fmov d3, x14
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov x14, d5
-; CHECK-NEON-NEXT:    fmov d5, x15
-; CHECK-NEON-NEXT:    mov x15, #562949953421312 // =0x2000000000000
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    fmov d7, x15
-; CHECK-NEON-NEXT:    fmov x15, d6
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    fmov x11, d3
 ; CHECK-NEON-NEXT:    fmov d3, x10
 ; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x15
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov x10, d5
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    fmov x11, d6
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    mov x13, #1125899906842624 // =0x4000000000000
-; CHECK-NEON-NEXT:    fmov d16, x13
-; CHECK-NEON-NEXT:    mov x13, #2251799813685248 // =0x8000000000000
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mul x15, x8, x10
-; CHECK-NEON-NEXT:    fmov x10, d7
-; CHECK-NEON-NEXT:    fmov d7, x14
-; CHECK-NEON-NEXT:    fmov d17, x13
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    mul x14, x8, x10
-; CHECK-NEON-NEXT:    eor v7.8b, v6.8b, v7.8b
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
 ; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    mov x11, #4503599627370496 // =0x10000000000000
-; CHECK-NEON-NEXT:    fmov x12, d16
-; CHECK-NEON-NEXT:    fmov d16, x11
-; CHECK-NEON-NEXT:    fmov d18, x15
-; CHECK-NEON-NEXT:    mov x15, #288230376151711744 // =0x400000000000000
-; CHECK-NEON-NEXT:    fmov x13, d17
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    mov x11, #70368744177664 // =0x400000000000
+; CHECK-NEON-NEXT:    fmov x12, d5
+; CHECK-NEON-NEXT:    fmov d5, x11
 ; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    mov x12, #9007199254740992 // =0x20000000000000
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov d17, x12
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d18, x14
-; CHECK-NEON-NEXT:    mul x12, x8, x13
-; CHECK-NEON-NEXT:    mov x13, #72057594037927936 // =0x100000000000000
-; CHECK-NEON-NEXT:    fmov x14, d16
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fmov d16, x13
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d18, x11
-; CHECK-NEON-NEXT:    mul x13, x8, x14
-; CHECK-NEON-NEXT:    mov x14, #144115188075855872 // =0x200000000000000
-; CHECK-NEON-NEXT:    fmov x11, d17
-; CHECK-NEON-NEXT:    fmov d17, x14
-; CHECK-NEON-NEXT:    mov x14, #18014398509481984 // =0x40000000000000
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d18, x14
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fmov x14, d16
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d18, x12
-; CHECK-NEON-NEXT:    fmov x12, d17
-; CHECK-NEON-NEXT:    fmov d17, x15
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    mul x15, x8, x12
-; CHECK-NEON-NEXT:    mov x12, #576460752303423488 // =0x800000000000000
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fmov d5, x12
-; CHECK-NEON-NEXT:    fmov x12, d16
-; CHECK-NEON-NEXT:    fmov d6, x14
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    eor v5.8b, v7.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d7, x13
-; CHECK-NEON-NEXT:    fmov x13, d17
-; CHECK-NEON-NEXT:    fmov d16, x15
-; CHECK-NEON-NEXT:    mov x15, #1152921504606846976 // =0x1000000000000000
-; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    fmov x14, d3
-; CHECK-NEON-NEXT:    eor v3.8b, v5.8b, v7.8b
-; CHECK-NEON-NEXT:    fmov d5, x15
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    mov x15, #2305843009213693952 // =0x2000000000000000
-; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov d7, x15
-; CHECK-NEON-NEXT:    mov x15, #36028797018963968 // =0x80000000000000
-; CHECK-NEON-NEXT:    movi d16, #0000000000000000
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d17, x15
-; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
-; CHECK-NEON-NEXT:    fmov d18, x13
-; CHECK-NEON-NEXT:    fmov x13, d5
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fneg d16, d16
-; CHECK-NEON-NEXT:    fmov d5, x14
-; CHECK-NEON-NEXT:    mov x14, #4611686018427387904 // =0x4000000000000000
-; CHECK-NEON-NEXT:    fmov x15, d7
-; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v18.8b
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    fmov d7, x14
-; CHECK-NEON-NEXT:    fmov x14, d17
-; CHECK-NEON-NEXT:    fmov d17, x9
-; CHECK-NEON-NEXT:    mul x15, x8, x15
-; CHECK-NEON-NEXT:    eor v5.8b, v6.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
-; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v17.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x14
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v6.8b
 ; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    mov x12, #140737488355328 // =0x800000000000
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d3, x12
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    mul x12, x8, x13
+; CHECK-NEON-NEXT:    mov x13, #281474976710656 // =0x1000000000000
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    fmov d5, x13
+; CHECK-NEON-NEXT:    mov x13, #8796093022208 // =0x80000000000
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    fmov d7, x11
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x9
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov x9, d5
+; CHECK-NEON-NEXT:    fmov d5, x14
+; CHECK-NEON-NEXT:    mov x14, #1125899906842624 // =0x4000000000000
+; CHECK-NEON-NEXT:    mul x13, x8, x13
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d7, x14
+; CHECK-NEON-NEXT:    fmov d3, x10
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d16, x13
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    mov x13, #2251799813685248 // =0x8000000000000
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x12
+; CHECK-NEON-NEXT:    mov x12, #17592186044416 // =0x100000000000
+; CHECK-NEON-NEXT:    fmov d17, x9
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d16, x13
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    fmov x9, d5
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x11
+; CHECK-NEON-NEXT:    mov x11, #35184372088832 // =0x200000000000
+; CHECK-NEON-NEXT:    mov x13, #9007199254740992 // =0x20000000000000
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d16, x12
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v17.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    mov x12, #4503599627370496 // =0x10000000000000
+; CHECK-NEON-NEXT:    fmov d17, x10
+; CHECK-NEON-NEXT:    fmov d6, x12
+; CHECK-NEON-NEXT:    mov x12, #72057594037927936 // =0x100000000000000
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    eor v17.8b, v3.8b, v17.8b
+; CHECK-NEON-NEXT:    eor v3.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x12
+; CHECK-NEON-NEXT:    mul x11, x8, x10
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x10, d16
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x10
+; CHECK-NEON-NEXT:    fmov x10, d4
+; CHECK-NEON-NEXT:    eor v5.8b, v17.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x12, d6
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    mov x11, #144115188075855872 // =0x200000000000000
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x13
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    mov x12, #18014398509481984 // =0x40000000000000
+; CHECK-NEON-NEXT:    fmov x13, d5
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov x14, d6
+; CHECK-NEON-NEXT:    mul x12, x8, x13
+; CHECK-NEON-NEXT:    mov x13, #288230376151711744 // =0x400000000000000
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    fmov d16, x11
 ; CHECK-NEON-NEXT:    fmov x11, d7
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
+; CHECK-NEON-NEXT:    mul x13, x8, x14
+; CHECK-NEON-NEXT:    mov x14, #576460752303423488 // =0x800000000000000
+; CHECK-NEON-NEXT:    fmov d7, x14
+; CHECK-NEON-NEXT:    mov x14, #36028797018963968 // =0x80000000000000
+; CHECK-NEON-NEXT:    fmov x15, d5
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d5, x14
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v16.8b
+; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov x14, d6
+; CHECK-NEON-NEXT:    fmov d6, x12
+; CHECK-NEON-NEXT:    fmov d17, x13
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x13, d7
+; CHECK-NEON-NEXT:    mul x12, x8, x14
+; CHECK-NEON-NEXT:    mov x14, #1152921504606846976 // =0x1000000000000000
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v17.8b
+; CHECK-NEON-NEXT:    fmov d7, x14
+; CHECK-NEON-NEXT:    mov x14, #2305843009213693952 // =0x2000000000000000
+; CHECK-NEON-NEXT:    fmov d17, x14
+; CHECK-NEON-NEXT:    mul x13, x8, x13
+; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    mul x14, x8, x15
+; CHECK-NEON-NEXT:    fmov d19, x12
+; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
+; CHECK-NEON-NEXT:    fmov x12, d7
+; CHECK-NEON-NEXT:    fmov d7, #2.00000000
+; CHECK-NEON-NEXT:    fmov d16, x13
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v19.8b
+; CHECK-NEON-NEXT:    fmov x15, d17
+; CHECK-NEON-NEXT:    fneg d17, d18
+; CHECK-NEON-NEXT:    fmov x13, d5
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x9
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d16, x11
+; CHECK-NEON-NEXT:    mul x15, x8, x15
+; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v17.8b
+; CHECK-NEON-NEXT:    fmov x11, d5
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v7.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x13
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    eor v5.8b, v6.8b, v5.8b
 ; CHECK-NEON-NEXT:    fmov d6, x10
 ; CHECK-NEON-NEXT:    mul x10, x8, x11
 ; CHECK-NEON-NEXT:    fmov x11, d0
 ; CHECK-NEON-NEXT:    fmov d0, x15
-; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d4, x12
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d3, x14
 ; CHECK-NEON-NEXT:    mul x8, x8, x11
 ; CHECK-NEON-NEXT:    eor v0.8b, v5.8b, v0.8b
 ; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v3.8b, v4.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov d4, x9
 ; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
 ; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b
@@ -8004,7 +8002,7 @@ define <2 x i64> @clmulh_v2i64_neon(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEON-NEXT:    eor v2.16b, v3.16b, v2.16b
 ; CHECK-NEON-NEXT:    mov v17.d[1], x0
 ; CHECK-NEON-NEXT:    eor v5.16b, v6.16b, v21.16b
-; CHECK-NEON-NEXT:    movi v6.2d, #0000000000000000
+; CHECK-NEON-NEXT:    movi d6, #0000000000000000
 ; CHECK-NEON-NEXT:    mul x0, x9, x2
 ; CHECK-NEON-NEXT:    fmov x2, d16
 ; CHECK-NEON-NEXT:    fmov v16.2d, #2.00000000
@@ -8119,7 +8117,9 @@ define <1 x i64> @clmulh_v1i64_neon(<1 x i64> %a, <1 x i64> %b) nounwind {
 ; CHECK-NEON-NEXT:    mov w12, #32 // =0x20
 ; CHECK-NEON-NEXT:    mov w13, #64 // =0x40
 ; CHECK-NEON-NEXT:    mov w14, #128 // =0x80
+; CHECK-NEON-NEXT:    mov w16, #512 // =0x200
 ; CHECK-NEON-NEXT:    mov w15, #256 // =0x100
+; CHECK-NEON-NEXT:    movi d18, #0000000000000000
 ; CHECK-NEON-NEXT:    rbit v0.8b, v1.8b
 ; CHECK-NEON-NEXT:    fmov d1, x8
 ; CHECK-NEON-NEXT:    mov w8, #1 // =0x1
@@ -8136,11 +8136,8 @@ define <1 x i64> @clmulh_v1i64_neon(<1 x i64> %a, <1 x i64> %b) nounwind {
 ; CHECK-NEON-NEXT:    fmov x10, d3
 ; CHECK-NEON-NEXT:    fmov d3, x11
 ; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov d4, x14
-; CHECK-NEON-NEXT:    mov w14, #512 // =0x200
 ; CHECK-NEON-NEXT:    fmov x11, d1
 ; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    fmov d5, x14
 ; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov d3, x12
 ; CHECK-NEON-NEXT:    fmov x12, d2
@@ -8149,412 +8146,412 @@ define <1 x i64> @clmulh_v1i64_neon(<1 x i64> %a, <1 x i64> %b) nounwind {
 ; CHECK-NEON-NEXT:    fmov d3, x13
 ; CHECK-NEON-NEXT:    fmov x13, d1
 ; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    fmov d4, x9
 ; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d3, x14
 ; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    fmov d3, x15
 ; CHECK-NEON-NEXT:    fmov x14, d2
-; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    mov w15, #1024 // =0x400
 ; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    fmov x9, d1
-; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov x10, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    fmov d6, x12
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d3, x16
+; CHECK-NEON-NEXT:    fmov x17, d1
+; CHECK-NEON-NEXT:    fmov d1, x15
+; CHECK-NEON-NEXT:    fmov d5, x11
 ; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    mov w11, #2048 // =0x800
-; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d5, x15
-; CHECK-NEON-NEXT:    fmov x12, d3
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    fmov d3, x11
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    fmov x12, d1
-; CHECK-NEON-NEXT:    fmov d1, x13
-; CHECK-NEON-NEXT:    mov w13, #4096 // =0x1000
-; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v2.8b
-; CHECK-NEON-NEXT:    fmov d4, x14
-; CHECK-NEON-NEXT:    fmov x14, d5
-; CHECK-NEON-NEXT:    fmov d5, x13
-; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v4.8b
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    mov w11, #8192 // =0x2000
-; CHECK-NEON-NEXT:    fmov x10, d3
-; CHECK-NEON-NEXT:    mul x13, x8, x14
-; CHECK-NEON-NEXT:    eor v3.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov w11, #16384 // =0x4000
 ; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    eor v1.8b, v2.8b, v1.8b
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d3, x10
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    mov w9, #32768 // =0x8000
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x10
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    mov w10, #65536 // =0x10000
-; CHECK-NEON-NEXT:    fmov d2, x10
-; CHECK-NEON-NEXT:    mov w10, #131072 // =0x20000
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    fmov d4, x10
-; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    mov w11, #262144 // =0x40000
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mov w12, #4096 // =0x1000
 ; CHECK-NEON-NEXT:    fmov x9, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    mov w11, #524288 // =0x80000
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov x12, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov w11, #1048576 // =0x100000
-; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x10, d2
-; CHECK-NEON-NEXT:    fmov d2, x11
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    mul x13, x8, x10
-; CHECK-NEON-NEXT:    mov w10, #2097152 // =0x200000
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v2.8b
-; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v5.8b
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov d3, x10
-; CHECK-NEON-NEXT:    mov w10, #4194304 // =0x400000
+; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    mov w10, #2048 // =0x800
+; CHECK-NEON-NEXT:    mul x15, x8, x17
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v6.8b
 ; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    fmov x9, d6
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x10, x8, x9
-; CHECK-NEON-NEXT:    mov w9, #8388608 // =0x800000
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov x12, d3
-; CHECK-NEON-NEXT:    fmov d3, x9
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    fmov x14, d5
-; CHECK-NEON-NEXT:    mul x9, x8, x12
-; CHECK-NEON-NEXT:    mov w12, #16777216 // =0x1000000
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov d5, x12
-; CHECK-NEON-NEXT:    mov w12, #33554432 // =0x2000000
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    fmov x13, d3
-; CHECK-NEON-NEXT:    fmov d3, x12
-; CHECK-NEON-NEXT:    mov w12, #67108864 // =0x4000000
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    eor v3.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d4, x12
-; CHECK-NEON-NEXT:    fmov x15, d5
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x11, d7
-; CHECK-NEON-NEXT:    fmov d7, x14
-; CHECK-NEON-NEXT:    mul x12, x8, x15
-; CHECK-NEON-NEXT:    mov w15, #134217728 // =0x8000000
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d6, x15
-; CHECK-NEON-NEXT:    mov w15, #536870912 // =0x20000000
-; CHECK-NEON-NEXT:    fmov x14, d4
-; CHECK-NEON-NEXT:    fmov d16, x13
-; CHECK-NEON-NEXT:    fmov d17, x15
-; CHECK-NEON-NEXT:    movi v4.2s, #128, lsl #24
-; CHECK-NEON-NEXT:    mov w15, #1073741824 // =0x40000000
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x13, x8, x14
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov d16, x15
-; CHECK-NEON-NEXT:    mov w15, #268435456 // =0x10000000
-; CHECK-NEON-NEXT:    fmov x14, d6
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fneg d4, d4
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov d5, x15
-; CHECK-NEON-NEXT:    fmov x15, d6
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    mul x12, x8, x15
-; CHECK-NEON-NEXT:    eor v2.8b, v7.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov x15, d16
-; CHECK-NEON-NEXT:    fmov d6, x10
-; CHECK-NEON-NEXT:    mul x10, x8, x15
-; CHECK-NEON-NEXT:    mov x15, #4294967296 // =0x100000000
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    fmov x11, d5
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x15
-; CHECK-NEON-NEXT:    fmov d7, x12
-; CHECK-NEON-NEXT:    mov x15, #281474976710656 // =0x1000000000000
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    mov x13, #8589934592 // =0x200000000
+; CHECK-NEON-NEXT:    fmov x10, d1
+; CHECK-NEON-NEXT:    fmov x11, d2
+; CHECK-NEON-NEXT:    fmov d2, x13
 ; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov d17, x13
-; CHECK-NEON-NEXT:    fmov d16, x10
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-NEON-NEXT:    mov x13, #549755813888 // =0x8000000000
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x14
-; CHECK-NEON-NEXT:    fmov x10, d4
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    mov x14, #17592186044416 // =0x100000000000
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v16.8b
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v3.8b
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x9
-; CHECK-NEON-NEXT:    mov x9, #17179869184 // =0x400000000
+; CHECK-NEON-NEXT:    mov w13, #8192 // =0x2000
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x12
+; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x14
 ; CHECK-NEON-NEXT:    mul x10, x8, x10
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    fmov d4, x9
-; CHECK-NEON-NEXT:    eor v6.8b, v7.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x11
+; CHECK-NEON-NEXT:    mov w12, #1024 // =0x400
 ; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    mov x11, #34359738368 // =0x800000000
-; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    mul x11, x8, x11
 ; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    mov x10, #137438953472 // =0x2000000000
-; CHECK-NEON-NEXT:    fmov x11, d4
-; CHECK-NEON-NEXT:    fmov d4, x10
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    eor v5.8b, v6.8b, v5.8b
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    fmov x12, d1
 ; CHECK-NEON-NEXT:    fmov d6, x9
-; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    mov x11, #274877906944 // =0x4000000000
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    fmov d4, x13
+; CHECK-NEON-NEXT:    fmov d7, x10
+; CHECK-NEON-NEXT:    and v1.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    mov w13, #16384 // =0x4000
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    fmov d5, x15
 ; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x9, d3
+; CHECK-NEON-NEXT:    mul x9, x8, x14
+; CHECK-NEON-NEXT:    mov w14, #32768 // =0x8000
+; CHECK-NEON-NEXT:    fmov x10, d1
+; CHECK-NEON-NEXT:    eor v1.8b, v6.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    fmov d7, x14
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x13, d4
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x9
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x11, x8, x13
+; CHECK-NEON-NEXT:    fmov x9, d4
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x12
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    mov w11, #65536 // =0x10000
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    mov w11, #131072 // =0x20000
+; CHECK-NEON-NEXT:    eor v3.8b, v6.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v1.8b, v2.8b, v1.8b
+; CHECK-NEON-NEXT:    fmov d2, x9
+; CHECK-NEON-NEXT:    mov w9, #262144 // =0x40000
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x10
+; CHECK-NEON-NEXT:    fmov x10, d4
+; CHECK-NEON-NEXT:    fmov d4, x9
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x10
+; CHECK-NEON-NEXT:    mov w10, #524288 // =0x80000
+; CHECK-NEON-NEXT:    fmov d3, x10
+; CHECK-NEON-NEXT:    mov w10, #1048576 // =0x100000
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    fmov x12, d4
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    mov w10, #2097152 // =0x200000
+; CHECK-NEON-NEXT:    fmov d2, x10
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    mov w10, #4194304 // =0x400000
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    fmov d3, x9
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    fmov x9, d4
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    fmov x11, d2
+; CHECK-NEON-NEXT:    mul x13, x8, x13
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    mul x10, x8, x9
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mov w9, #8388608 // =0x800000
+; CHECK-NEON-NEXT:    fmov d2, x9
+; CHECK-NEON-NEXT:    mul x9, x8, x11
+; CHECK-NEON-NEXT:    mov w11, #16777216 // =0x1000000
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    fmov d5, x13
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x11, x8, x14
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    mov w14, #33554432 // =0x2000000
+; CHECK-NEON-NEXT:    fmov x12, d2
+; CHECK-NEON-NEXT:    fmov d2, x14
+; CHECK-NEON-NEXT:    mov w14, #67108864 // =0x4000000
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x15, d4
+; CHECK-NEON-NEXT:    fmov d4, x14
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    mul x13, x8, x15
+; CHECK-NEON-NEXT:    mov w15, #134217728 // =0x8000000
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    fmov x14, d2
+; CHECK-NEON-NEXT:    fmov d7, x15
+; CHECK-NEON-NEXT:    mov w15, #536870912 // =0x20000000
+; CHECK-NEON-NEXT:    fmov d5, x15
+; CHECK-NEON-NEXT:    mov w15, #1073741824 // =0x40000000
+; CHECK-NEON-NEXT:    movi v2.2s, #128, lsl #24
+; CHECK-NEON-NEXT:    mul x11, x8, x14
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x12
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d16, x13
+; CHECK-NEON-NEXT:    fneg d2, d2
+; CHECK-NEON-NEXT:    mov w13, #268435456 // =0x10000000
+; CHECK-NEON-NEXT:    fmov x12, d4
+; CHECK-NEON-NEXT:    fmov d4, x15
+; CHECK-NEON-NEXT:    mov x15, #4294967296 // =0x100000000
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x10
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    mul x14, x8, x14
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
+; CHECK-NEON-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    eor v5.8b, v6.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov x13, d4
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x15
+; CHECK-NEON-NEXT:    fmov x15, d2
+; CHECK-NEON-NEXT:    fmov d2, x11
+; CHECK-NEON-NEXT:    mul x13, x8, x13
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v5.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d5, x14
+; CHECK-NEON-NEXT:    fmov x14, d4
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    mov x10, #8589934592 // =0x200000000
+; CHECK-NEON-NEXT:    mul x11, x8, x15
+; CHECK-NEON-NEXT:    fmov d7, x13
+; CHECK-NEON-NEXT:    fmov x13, d6
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    mul x14, x8, x14
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    mov x12, #1099511627776 // =0x10000000000
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x9
+; CHECK-NEON-NEXT:    mov x9, #17179869184 // =0x400000000
+; CHECK-NEON-NEXT:    mul x10, x8, x13
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d17, x9
+; CHECK-NEON-NEXT:    fmov d16, x11
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d5, x14
+; CHECK-NEON-NEXT:    mov x14, #562949953421312 // =0x2000000000000
+; CHECK-NEON-NEXT:    fmov x9, d6
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v17.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d7, x10
+; CHECK-NEON-NEXT:    mov x10, #34359738368 // =0x800000000
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    fmov x11, d6
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x11
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    mov x11, #137438953472 // =0x2000000000
+; CHECK-NEON-NEXT:    fmov d3, x11
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    mov x9, #274877906944 // =0x4000000000
+; CHECK-NEON-NEXT:    fmov x11, d6
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    mul x9, x8, x11
+; CHECK-NEON-NEXT:    mov x11, #549755813888 // =0x8000000000
+; CHECK-NEON-NEXT:    fmov x10, d3
 ; CHECK-NEON-NEXT:    fmov d3, x11
 ; CHECK-NEON-NEXT:    mov x11, #68719476736 // =0x1000000000
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    mov x13, #1099511627776 // =0x10000000000
-; CHECK-NEON-NEXT:    fmov x12, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x9
-; CHECK-NEON-NEXT:    fmov d7, x10
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v4.8b
-; CHECK-NEON-NEXT:    fmov x12, d3
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    eor v2.8b, v5.8b, v7.8b
-; CHECK-NEON-NEXT:    fmov d7, x14
-; CHECK-NEON-NEXT:    mov x14, #35184372088832 // =0x200000000000
-; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov x10, d3
-; CHECK-NEON-NEXT:    fmov d3, x9
-; CHECK-NEON-NEXT:    fmov x9, d4
-; CHECK-NEON-NEXT:    fmov d4, x11
-; CHECK-NEON-NEXT:    mov x11, #2199023255552 // =0x20000000000
-; CHECK-NEON-NEXT:    mul x13, x8, x10
-; CHECK-NEON-NEXT:    fmov x10, d6
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
 ; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    mov x11, #4398046511104 // =0x40000000000
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov d5, x12
-; CHECK-NEON-NEXT:    fmov d3, x11
-; CHECK-NEON-NEXT:    mul x12, x8, x10
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x10, x8, x9
-; CHECK-NEON-NEXT:    fmov d6, x13
 ; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    mov x9, #8796093022208 // =0x80000000000
+; CHECK-NEON-NEXT:    mul x10, x8, x10
 ; CHECK-NEON-NEXT:    fmov x11, d5
-; CHECK-NEON-NEXT:    fmov d5, x9
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    fmov x12, d3
-; CHECK-NEON-NEXT:    mul x9, x8, x11
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mov x11, #70368744177664 // =0x400000000000
-; CHECK-NEON-NEXT:    fmov d3, x11
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v7.8b
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    mov x12, #140737488355328 // =0x800000000000
-; CHECK-NEON-NEXT:    fmov x13, d5
-; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d2, x9
+; CHECK-NEON-NEXT:    fmov x9, d3
+; CHECK-NEON-NEXT:    fmov d3, x12
+; CHECK-NEON-NEXT:    mov x12, #2199023255552 // =0x20000000000
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d4, x10
+; CHECK-NEON-NEXT:    mov x10, #4398046511104 // =0x40000000000
+; CHECK-NEON-NEXT:    mul x13, x8, x9
+; CHECK-NEON-NEXT:    fmov x9, d5
 ; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov d16, x9
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x12, x8, x13
-; CHECK-NEON-NEXT:    fmov x13, d3
-; CHECK-NEON-NEXT:    fmov d3, x14
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov x14, d5
-; CHECK-NEON-NEXT:    fmov d5, x15
-; CHECK-NEON-NEXT:    mov x15, #562949953421312 // =0x2000000000000
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    fmov d7, x15
-; CHECK-NEON-NEXT:    fmov x15, d6
-; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    fmov x11, d3
 ; CHECK-NEON-NEXT:    fmov d3, x10
 ; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x15
-; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEON-NEXT:    fmov x10, d5
-; CHECK-NEON-NEXT:    fmov d5, x11
-; CHECK-NEON-NEXT:    fmov x11, d6
-; CHECK-NEON-NEXT:    fmov d6, x13
-; CHECK-NEON-NEXT:    mov x13, #1125899906842624 // =0x4000000000000
-; CHECK-NEON-NEXT:    fmov d16, x13
-; CHECK-NEON-NEXT:    mov x13, #2251799813685248 // =0x8000000000000
-; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-NEON-NEXT:    mul x15, x8, x10
-; CHECK-NEON-NEXT:    fmov x10, d7
-; CHECK-NEON-NEXT:    fmov d7, x14
-; CHECK-NEON-NEXT:    fmov d17, x13
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    mul x14, x8, x10
-; CHECK-NEON-NEXT:    eor v7.8b, v6.8b, v7.8b
-; CHECK-NEON-NEXT:    fmov d6, x12
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
 ; CHECK-NEON-NEXT:    mul x10, x8, x11
-; CHECK-NEON-NEXT:    mov x11, #4503599627370496 // =0x10000000000000
-; CHECK-NEON-NEXT:    fmov x12, d16
-; CHECK-NEON-NEXT:    fmov d16, x11
-; CHECK-NEON-NEXT:    fmov d18, x15
-; CHECK-NEON-NEXT:    mov x15, #288230376151711744 // =0x400000000000000
-; CHECK-NEON-NEXT:    fmov x13, d17
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    mov x11, #70368744177664 // =0x400000000000
+; CHECK-NEON-NEXT:    fmov x12, d5
+; CHECK-NEON-NEXT:    fmov d5, x11
 ; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    mul x11, x8, x12
-; CHECK-NEON-NEXT:    mov x12, #9007199254740992 // =0x20000000000000
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov d17, x12
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d18, x14
-; CHECK-NEON-NEXT:    mul x12, x8, x13
-; CHECK-NEON-NEXT:    mov x13, #72057594037927936 // =0x100000000000000
-; CHECK-NEON-NEXT:    fmov x14, d16
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fmov d16, x13
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d18, x11
-; CHECK-NEON-NEXT:    mul x13, x8, x14
-; CHECK-NEON-NEXT:    mov x14, #144115188075855872 // =0x200000000000000
-; CHECK-NEON-NEXT:    fmov x11, d17
-; CHECK-NEON-NEXT:    fmov d17, x14
-; CHECK-NEON-NEXT:    mov x14, #18014398509481984 // =0x40000000000000
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d18, x14
-; CHECK-NEON-NEXT:    mul x11, x8, x11
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fmov x14, d16
-; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d18, x12
-; CHECK-NEON-NEXT:    fmov x12, d17
-; CHECK-NEON-NEXT:    fmov d17, x15
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    mul x15, x8, x12
-; CHECK-NEON-NEXT:    mov x12, #576460752303423488 // =0x800000000000000
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fmov d5, x12
-; CHECK-NEON-NEXT:    fmov x12, d16
-; CHECK-NEON-NEXT:    fmov d6, x14
-; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    eor v5.8b, v7.8b, v18.8b
-; CHECK-NEON-NEXT:    fmov d7, x13
-; CHECK-NEON-NEXT:    fmov x13, d17
-; CHECK-NEON-NEXT:    fmov d16, x15
-; CHECK-NEON-NEXT:    mov x15, #1152921504606846976 // =0x1000000000000000
-; CHECK-NEON-NEXT:    mul x12, x8, x12
-; CHECK-NEON-NEXT:    fmov x14, d3
-; CHECK-NEON-NEXT:    eor v3.8b, v5.8b, v7.8b
-; CHECK-NEON-NEXT:    fmov d5, x15
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    mov x15, #2305843009213693952 // =0x2000000000000000
-; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v16.8b
-; CHECK-NEON-NEXT:    fmov d7, x15
-; CHECK-NEON-NEXT:    mov x15, #36028797018963968 // =0x80000000000000
-; CHECK-NEON-NEXT:    movi d16, #0000000000000000
-; CHECK-NEON-NEXT:    mul x14, x8, x14
-; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d17, x15
-; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
-; CHECK-NEON-NEXT:    fmov d18, x13
-; CHECK-NEON-NEXT:    fmov x13, d5
-; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
-; CHECK-NEON-NEXT:    fneg d16, d16
-; CHECK-NEON-NEXT:    fmov d5, x14
-; CHECK-NEON-NEXT:    mov x14, #4611686018427387904 // =0x4000000000000000
-; CHECK-NEON-NEXT:    fmov x15, d7
-; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v18.8b
-; CHECK-NEON-NEXT:    mul x13, x8, x13
-; CHECK-NEON-NEXT:    fmov d7, x14
-; CHECK-NEON-NEXT:    fmov x14, d17
-; CHECK-NEON-NEXT:    fmov d17, x9
-; CHECK-NEON-NEXT:    mul x15, x8, x15
-; CHECK-NEON-NEXT:    eor v5.8b, v6.8b, v5.8b
-; CHECK-NEON-NEXT:    fmov d6, x11
-; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
-; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v16.8b
-; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v17.8b
-; CHECK-NEON-NEXT:    mul x9, x8, x14
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v6.8b
 ; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    mov x12, #140737488355328 // =0x800000000000
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d3, x12
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x10
+; CHECK-NEON-NEXT:    mul x12, x8, x13
+; CHECK-NEON-NEXT:    mov x13, #281474976710656 // =0x1000000000000
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    fmov d5, x13
+; CHECK-NEON-NEXT:    mov x13, #8796093022208 // =0x80000000000
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    fmov d7, x11
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    fmov x13, d3
+; CHECK-NEON-NEXT:    and v3.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d6, x9
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov x9, d5
+; CHECK-NEON-NEXT:    fmov d5, x14
+; CHECK-NEON-NEXT:    mov x14, #1125899906842624 // =0x4000000000000
+; CHECK-NEON-NEXT:    mul x13, x8, x13
+; CHECK-NEON-NEXT:    fmov x11, d3
+; CHECK-NEON-NEXT:    fmov d7, x14
+; CHECK-NEON-NEXT:    fmov d3, x10
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v6.8b
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    fmov d16, x13
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    mov x13, #2251799813685248 // =0x8000000000000
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x12
+; CHECK-NEON-NEXT:    mov x12, #17592186044416 // =0x100000000000
+; CHECK-NEON-NEXT:    fmov d17, x9
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d16, x13
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    fmov x9, d5
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x11
+; CHECK-NEON-NEXT:    mov x11, #35184372088832 // =0x200000000000
+; CHECK-NEON-NEXT:    mov x13, #9007199254740992 // =0x20000000000000
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d16, x12
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v17.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x9
+; CHECK-NEON-NEXT:    mov x12, #4503599627370496 // =0x10000000000000
+; CHECK-NEON-NEXT:    fmov d17, x10
+; CHECK-NEON-NEXT:    fmov d6, x12
+; CHECK-NEON-NEXT:    mov x12, #72057594037927936 // =0x100000000000000
+; CHECK-NEON-NEXT:    fmov x10, d5
+; CHECK-NEON-NEXT:    and v16.8b, v0.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d5, x11
+; CHECK-NEON-NEXT:    eor v17.8b, v3.8b, v17.8b
+; CHECK-NEON-NEXT:    eor v3.8b, v4.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x12
+; CHECK-NEON-NEXT:    mul x11, x8, x10
+; CHECK-NEON-NEXT:    and v4.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x10, d16
+; CHECK-NEON-NEXT:    fmov d5, x9
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x10
+; CHECK-NEON-NEXT:    fmov x10, d4
+; CHECK-NEON-NEXT:    eor v5.8b, v17.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x12, d6
+; CHECK-NEON-NEXT:    fmov d4, x11
+; CHECK-NEON-NEXT:    mov x11, #144115188075855872 // =0x200000000000000
+; CHECK-NEON-NEXT:    fmov d6, x11
+; CHECK-NEON-NEXT:    mul x10, x8, x10
+; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x13
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    mul x11, x8, x12
+; CHECK-NEON-NEXT:    mov x12, #18014398509481984 // =0x40000000000000
+; CHECK-NEON-NEXT:    fmov x13, d5
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov x14, d6
+; CHECK-NEON-NEXT:    mul x12, x8, x13
+; CHECK-NEON-NEXT:    mov x13, #288230376151711744 // =0x400000000000000
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov d6, x13
+; CHECK-NEON-NEXT:    fmov d16, x11
 ; CHECK-NEON-NEXT:    fmov x11, d7
-; CHECK-NEON-NEXT:    eor v5.8b, v5.8b, v6.8b
+; CHECK-NEON-NEXT:    mul x13, x8, x14
+; CHECK-NEON-NEXT:    mov x14, #576460752303423488 // =0x800000000000000
+; CHECK-NEON-NEXT:    fmov d7, x14
+; CHECK-NEON-NEXT:    mov x14, #36028797018963968 // =0x80000000000000
+; CHECK-NEON-NEXT:    fmov x15, d5
+; CHECK-NEON-NEXT:    and v6.8b, v0.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d5, x14
+; CHECK-NEON-NEXT:    mul x11, x8, x11
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v16.8b
+; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov x14, d6
+; CHECK-NEON-NEXT:    fmov d6, x12
+; CHECK-NEON-NEXT:    fmov d17, x13
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v5.8b
+; CHECK-NEON-NEXT:    fmov x13, d7
+; CHECK-NEON-NEXT:    mul x12, x8, x14
+; CHECK-NEON-NEXT:    mov x14, #1152921504606846976 // =0x1000000000000000
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v17.8b
+; CHECK-NEON-NEXT:    fmov d7, x14
+; CHECK-NEON-NEXT:    mov x14, #2305843009213693952 // =0x2000000000000000
+; CHECK-NEON-NEXT:    fmov d17, x14
+; CHECK-NEON-NEXT:    mul x13, x8, x13
+; CHECK-NEON-NEXT:    and v7.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    mul x14, x8, x15
+; CHECK-NEON-NEXT:    fmov d19, x12
+; CHECK-NEON-NEXT:    and v17.8b, v0.8b, v17.8b
+; CHECK-NEON-NEXT:    fmov x12, d7
+; CHECK-NEON-NEXT:    fmov d7, #2.00000000
+; CHECK-NEON-NEXT:    fmov d16, x13
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v19.8b
+; CHECK-NEON-NEXT:    fmov x15, d17
+; CHECK-NEON-NEXT:    fneg d17, d18
+; CHECK-NEON-NEXT:    fmov x13, d5
+; CHECK-NEON-NEXT:    mul x12, x8, x12
+; CHECK-NEON-NEXT:    and v5.8b, v0.8b, v7.8b
+; CHECK-NEON-NEXT:    fmov d7, x9
+; CHECK-NEON-NEXT:    eor v6.8b, v6.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d16, x11
+; CHECK-NEON-NEXT:    mul x15, x8, x15
+; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v17.8b
+; CHECK-NEON-NEXT:    fmov x11, d5
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v7.8b
+; CHECK-NEON-NEXT:    mul x9, x8, x13
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v16.8b
+; CHECK-NEON-NEXT:    fmov d5, x12
+; CHECK-NEON-NEXT:    eor v5.8b, v6.8b, v5.8b
 ; CHECK-NEON-NEXT:    fmov d6, x10
 ; CHECK-NEON-NEXT:    mul x10, x8, x11
 ; CHECK-NEON-NEXT:    fmov x11, d0
 ; CHECK-NEON-NEXT:    fmov d0, x15
-; CHECK-NEON-NEXT:    eor v2.8b, v4.8b, v6.8b
-; CHECK-NEON-NEXT:    fmov d4, x12
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v6.8b
+; CHECK-NEON-NEXT:    fmov d3, x14
 ; CHECK-NEON-NEXT:    mul x8, x8, x11
 ; CHECK-NEON-NEXT:    eor v0.8b, v5.8b, v0.8b
 ; CHECK-NEON-NEXT:    fmov d5, x10
-; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v3.8b, v4.8b, v3.8b
 ; CHECK-NEON-NEXT:    fmov d4, x9
 ; CHECK-NEON-NEXT:    eor v1.8b, v1.8b, v2.8b
 ; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v5.8b

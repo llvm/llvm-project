@@ -761,12 +761,11 @@ define void @test_fccmp(half %in, ptr %out) {
 ; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-CVT-SD-NEXT:    fcvt s1, h0
 ; CHECK-CVT-SD-NEXT:    fmov s2, #5.00000000
-; CHECK-CVT-SD-NEXT:    adrp x8, .LCPI29_0
+; CHECK-CVT-SD-NEXT:    movi v3.4h, #69, lsl #8
 ; CHECK-CVT-SD-NEXT:    fcmp s1, s2
 ; CHECK-CVT-SD-NEXT:    fmov s2, #8.00000000
 ; CHECK-CVT-SD-NEXT:    fccmp s1, s2, #4, mi
-; CHECK-CVT-SD-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
-; CHECK-CVT-SD-NEXT:    fcsel s0, s0, s1, gt
+; CHECK-CVT-SD-NEXT:    fcsel s0, s0, s3, gt
 ; CHECK-CVT-SD-NEXT:    str h0, [x0]
 ; CHECK-CVT-SD-NEXT:    ret
 ;
@@ -785,13 +784,12 @@ define void @test_fccmp(half %in, ptr %out) {
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-CVT-GI-NEXT:    fcvt s1, h0
 ; CHECK-CVT-GI-NEXT:    fmov s2, #5.00000000
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI29_0
 ; CHECK-CVT-GI-NEXT:    fmov s3, #8.00000000
-; CHECK-CVT-GI-NEXT:    fcmp s1, s2
-; CHECK-CVT-GI-NEXT:    ldr h2, [x8, :lo12:.LCPI29_0]
 ; CHECK-CVT-GI-NEXT:    fmov w8, s0
-; CHECK-CVT-GI-NEXT:    fmov w9, s2
+; CHECK-CVT-GI-NEXT:    fcmp s1, s2
+; CHECK-CVT-GI-NEXT:    movi v2.4h, #69, lsl #8
 ; CHECK-CVT-GI-NEXT:    fccmp s1, s3, #4, mi
+; CHECK-CVT-GI-NEXT:    fmov w9, s2
 ; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, gt
 ; CHECK-CVT-GI-NEXT:    strh w8, [x0]
 ; CHECK-CVT-GI-NEXT:    ret
