@@ -107,7 +107,7 @@ define void @narrow_v4i32_underaligned(ptr %p) {
 ;------------------------------------------------------------
 
 define void @all_defined(ptr %p) {
-; CHECK-LABEL: define void @_all_defined(
+; CHECK-LABEL: define void @all_defined(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -122,7 +122,7 @@ define void @all_defined(ptr %p) {
 ;------------------------------------------------------------
 
 define void @defined_in_middle(ptr %p) {
-; CHECK-LABEL: define void @_defined_in_middle(
+; CHECK-LABEL: define void @defined_in_middle(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store <4 x i32> <i32 undef, i32 7, i32 undef, i32 undef>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -132,7 +132,7 @@ define void @defined_in_middle(ptr %p) {
 }
 
 define void @undef_in_middle(ptr %p) {
-; CHECK-LABEL: define void @_undef_in_middle(
+; CHECK-LABEL: define void @undef_in_middle(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store <4 x i32> <i32 1, i32 undef, i32 3, i32 undef>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -147,7 +147,7 @@ define void @undef_in_middle(ptr %p) {
 ;------------------------------------------------------------
 
 define void @undef_prefix(ptr %p) {
-; CHECK-LABEL: define void @_undef_prefix(
+; CHECK-LABEL: define void @undef_prefix(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store <4 x i32> <i32 undef, i32 undef, i32 undef, i32 7>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -161,7 +161,7 @@ define void @undef_prefix(ptr %p) {
 ;------------------------------------------------------------
 
 define void @volatile(ptr %p) {
-; CHECK-LABEL: define void @_volatile(
+; CHECK-LABEL: define void @volatile(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store volatile <4 x i32> <i32 7, i32 undef, i32 undef, i32 undef>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -190,7 +190,7 @@ define void @_atomic(ptr %p) {
 ;------------------------------------------------------------
 
 define void @nonconstant_insertelement(ptr %p, float %x) {
-; CHECK-LABEL: define void @_nonconstant_insertelement(
+; CHECK-LABEL: define void @nonconstant_insertelement(
 ; CHECK-SAME: ptr [[P:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x float> <float poison, float undef, float undef, float undef>, float [[X]], i64 0
 ; CHECK-NEXT:    store <4 x float> [[V]], ptr [[P]], align 16
