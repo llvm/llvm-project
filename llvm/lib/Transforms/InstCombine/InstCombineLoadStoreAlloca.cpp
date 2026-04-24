@@ -666,6 +666,39 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
   return NewStore;
 }
 
+/// Return the scalar or shorter vector formed by the non-empty defined prefix of
+/// \p C if the remaining lanes are all undef/poison.
+static Constant *getDefinedPrefix(Constant *C, FixedVectorType *VTy) {
+  unsigned NumElts = VTy->getNumElements();
+  SmallVector<Constant *, 8> PrefixElts;
+  PrefixElts.reserve(NumElts);
+  bool SawUndef = false;
+
+  for (unsigned I = 0; I != NumElts; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (!Elt)
+      return nullptr;
+
+    if (isa<UndefValue>(Elt)) {
+      SawUndef = true;
+      continue;
+    }
+
+    if (SawUndef)
+      return nullptr;
+
+    PrefixElts.push_back(Elt);
+  }
+
+  if (!SawUndef || PrefixElts.empty())
+    return nullptr;
+
+  if (PrefixElts.size() == 1)
+    return PrefixElts.front();
+
+  return ConstantVector::get(PrefixElts);
+}
+
 /// Combine loads to match the type of their uses' value after looking
 /// through intervening bitcasts.
 ///
@@ -1584,6 +1617,24 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
     return replaceOperand(
         SI, 0,
         ConstantExpr::getBitCast(C, Type::getIntFromByteType(C->getType())));
+
+  // Narrow a store of a constant vector with a non-empty defined prefix
+  // followed by undef/poison:
+  //   store <N x T> <V0, ..., V(K-1), undef, ..., undef>, ptr P, align A
+  // becomes
+  //   store <K x T> <V0, ..., V(K-1)>, ptr P, align A    (K >  1)
+  //   store T V0,                    ptr P, align A    (K == 1)
+  // FIXME: This is also technically incorrect because it might overwrite a poison
+  // value. Change to PoisonValue once #52930 is resolved.
+  if (SI.isSimple()) {
+    auto *VTy = dyn_cast<FixedVectorType>(Val->getType());
+    auto *C = dyn_cast<Constant>(Val);
+    if (VTy && C)
+      if (Constant *NarrowVal = getDefinedPrefix(C, VTy)) {
+        combineStoreToNewValue(*this, SI, NarrowVal);
+        return eraseInstFromFunction(SI);
+      }
+  }
 
   if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))

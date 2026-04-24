@@ -7,13 +7,13 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 
 ;------------------------------------------------------------
-; Positive: prefix of one defined lane, rest undef.
+; prefix of one defined lane, rest undef.
 ;------------------------------------------------------------
 
 define void @narrow_v4f32_one_defined_prefix(ptr %p) {
 ; CHECK-LABEL: define void @narrow_v4f32_one_defined_prefix(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store <4 x float> <float 1.000000e+00, float undef, float undef, float undef>, ptr [[P]], align 16
+; CHECK-NEXT:    store float 1.000000e+00, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   store <4 x float> <float 1.000000e+00, float undef, float undef, float undef>, ptr %p, align 16
@@ -23,7 +23,7 @@ define void @narrow_v4f32_one_defined_prefix(ptr %p) {
 define void @narrow_v4i32_one_defined_prefix(ptr %p) {
 ; CHECK-LABEL: define void @narrow_v4i32_one_defined_prefix(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 7, i32 undef, i32 undef, i32 undef>, ptr [[P]], align 16
+; CHECK-NEXT:    store i32 7, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   store <4 x i32> <i32 7, i32 undef, i32 undef, i32 undef>, ptr %p, align 16
@@ -33,7 +33,7 @@ define void @narrow_v4i32_one_defined_prefix(ptr %p) {
 define void @narrow_v2i64_one_defined_prefix(ptr %p) {
 ; CHECK-LABEL: define void @narrow_v2i64_one_defined_prefix(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store <2 x i64> <i64 42, i64 undef>, ptr [[P]], align 16
+; CHECK-NEXT:    store i64 42, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   store <2 x i64> <i64 42, i64 undef>, ptr %p, align 16
@@ -43,7 +43,7 @@ define void @narrow_v2i64_one_defined_prefix(ptr %p) {
 define void @narrow_v8i8_one_defined_prefix(ptr %p) {
 ; CHECK-LABEL: define void @narrow_v8i8_one_defined_prefix(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store <8 x i8> <i8 9, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, ptr [[P]], align 8
+; CHECK-NEXT:    store i8 9, ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   store <8 x i8> <i8 9, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, ptr %p, align 8
@@ -51,13 +51,13 @@ define void @narrow_v8i8_one_defined_prefix(ptr %p) {
 }
 
 ;------------------------------------------------------------
-; Positive: defined prefix of length > 1.
+; defined prefix of length > 1.
 ;------------------------------------------------------------
 
 define void @narrow_v4i32_two_defined_prefix(ptr %p) {
 ; CHECK-LABEL: define void @narrow_v4i32_two_defined_prefix(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 undef, i32 undef>, ptr [[P]], align 16
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   store <4 x i32> <i32 1, i32 2, i32 undef, i32 undef>, ptr %p, align 16
@@ -67,7 +67,7 @@ define void @narrow_v4i32_two_defined_prefix(ptr %p) {
 define void @narrow_v4i32_three_defined_prefix(ptr %p) {
 ; CHECK-LABEL: define void @narrow_v4i32_three_defined_prefix(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 undef>, ptr [[P]], align 16
+; CHECK-NEXT:    store <3 x i32> <i32 1, i32 2, i32 3>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   store <4 x i32> <i32 1, i32 2, i32 3, i32 undef>, ptr %p, align 16
@@ -75,15 +75,13 @@ define void @narrow_v4i32_three_defined_prefix(ptr %p) {
 }
 
 ;------------------------------------------------------------
-; Positive: prefix of one defined lane, rest poison.
-; (Matches existing `store undef, ptr -> noop` convention that also applies to
-; poison via isa<UndefValue>.)
+; prefix of one defined lane, rest poison.
 ;------------------------------------------------------------
 
 define void @narrow_v4i32_poison_suffix(ptr %p) {
 ; CHECK-LABEL: define void @narrow_v4i32_poison_suffix(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 7, i32 poison, i32 poison, i32 poison>, ptr [[P]], align 16
+; CHECK-NEXT:    store i32 7, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   store <4 x i32> <i32 7, i32 poison, i32 poison, i32 poison>, ptr %p, align 16
@@ -91,13 +89,13 @@ define void @narrow_v4i32_poison_suffix(ptr %p) {
 }
 
 ;------------------------------------------------------------
-; Positive: underaligned store is still narrowable; alignment carries over.
+; underaligned store is still narrowable; alignment carries over.
 ;------------------------------------------------------------
 
 define void @narrow_v4i32_underaligned(ptr %p) {
 ; CHECK-LABEL: define void @narrow_v4i32_underaligned(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 7, i32 undef, i32 undef, i32 undef>, ptr [[P]], align 1
+; CHECK-NEXT:    store i32 7, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store <4 x i32> <i32 7, i32 undef, i32 undef, i32 undef>, ptr %p, align 1
@@ -105,11 +103,11 @@ define void @narrow_v4i32_underaligned(ptr %p) {
 }
 
 ;------------------------------------------------------------
-; Negative: all lanes defined -- nothing to narrow.
+; all lanes defined -- nothing to narrow.
 ;------------------------------------------------------------
 
-define void @negative_all_defined(ptr %p) {
-; CHECK-LABEL: define void @negative_all_defined(
+define void @all_defined(ptr %p) {
+; CHECK-LABEL: define void @_all_defined(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -119,12 +117,12 @@ define void @negative_all_defined(ptr %p) {
 }
 
 ;------------------------------------------------------------
-; Negative: defined lane in the middle, undef on both sides.
+; defined lane in the middle, undef on both sides.
 ; We only narrow when the undef forms a trailing suffix.
 ;------------------------------------------------------------
 
-define void @negative_defined_in_middle(ptr %p) {
-; CHECK-LABEL: define void @negative_defined_in_middle(
+define void @defined_in_middle(ptr %p) {
+; CHECK-LABEL: define void @_defined_in_middle(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store <4 x i32> <i32 undef, i32 7, i32 undef, i32 undef>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -133,8 +131,8 @@ define void @negative_defined_in_middle(ptr %p) {
   ret void
 }
 
-define void @negative_undef_in_middle(ptr %p) {
-; CHECK-LABEL: define void @negative_undef_in_middle(
+define void @undef_in_middle(ptr %p) {
+; CHECK-LABEL: define void @_undef_in_middle(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store <4 x i32> <i32 1, i32 undef, i32 3, i32 undef>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -144,12 +142,12 @@ define void @negative_undef_in_middle(ptr %p) {
 }
 
 ;------------------------------------------------------------
-; Negative: undef prefix, defined suffix. Conservatively do not narrow
-; (would require a new GEP; handle as a follow-up).
+; undef prefix, defined suffix. Conservatively do not narrow
+; because it would require a new GEP.
 ;------------------------------------------------------------
 
-define void @negative_undef_prefix(ptr %p) {
-; CHECK-LABEL: define void @negative_undef_prefix(
+define void @undef_prefix(ptr %p) {
+; CHECK-LABEL: define void @_undef_prefix(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store <4 x i32> <i32 undef, i32 undef, i32 undef, i32 7>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -159,11 +157,11 @@ define void @negative_undef_prefix(ptr %p) {
 }
 
 ;------------------------------------------------------------
-; Negative: volatile -- never narrow, preserve all observable effects.
+; : volatile -- never narrow.
 ;------------------------------------------------------------
 
-define void @negative_volatile(ptr %p) {
-; CHECK-LABEL: define void @negative_volatile(
+define void @volatile(ptr %p) {
+; CHECK-LABEL: define void @_volatile(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store volatile <4 x i32> <i32 7, i32 undef, i32 undef, i32 undef>, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
@@ -173,11 +171,11 @@ define void @negative_volatile(ptr %p) {
 }
 
 ;------------------------------------------------------------
-; Negative: atomic -- never narrow.
+; : atomic -- never narrow.
 ;------------------------------------------------------------
 
-define void @negative_atomic(ptr %p) {
-; CHECK-LABEL: define void @negative_atomic(
+define void @_atomic(ptr %p) {
+; CHECK-LABEL: define void @_atomic(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store atomic <4 x i32> <i32 7, i32 undef, i32 undef, i32 undef>, ptr [[P]] monotonic, align 16
 ; CHECK-NEXT:    ret void
@@ -187,14 +185,12 @@ define void @negative_atomic(ptr %p) {
 }
 
 ;------------------------------------------------------------
-; Negative: non-constant stored value with an undef lane.
-; Starts from insertelement; InstCombine may not fold it into a constant
-; vector if the inserted value is non-constant, so the store doesn't see a
-; ConstantVector. Narrowing this is a potential follow-up.
+; non-constant stored value with an undef lane.
+; TODO: could we optimize this?
 ;------------------------------------------------------------
 
-define void @negative_nonconstant_insertelement(ptr %p, float %x) {
-; CHECK-LABEL: define void @negative_nonconstant_insertelement(
+define void @nonconstant_insertelement(ptr %p, float %x) {
+; CHECK-LABEL: define void @_nonconstant_insertelement(
 ; CHECK-SAME: ptr [[P:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x float> <float poison, float undef, float undef, float undef>, float [[X]], i64 0
 ; CHECK-NEXT:    store <4 x float> [[V]], ptr [[P]], align 16
@@ -212,7 +208,7 @@ define void @negative_nonconstant_insertelement(ptr %p, float %x) {
 define void @narrow_v4i32_with_tbaa(ptr %p) {
 ; CHECK-LABEL: define void @narrow_v4i32_with_tbaa(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 7, i32 undef, i32 undef, i32 undef>, ptr [[P]], align 16, !tbaa [[INT_TBAA0:![0-9]+]]
+; CHECK-NEXT:    store i32 7, ptr [[P]], align 16, !tbaa [[INT_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   store <4 x i32> <i32 7, i32 undef, i32 undef, i32 undef>, ptr %p, align 16, !tbaa !0
