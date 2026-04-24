@@ -24,6 +24,9 @@ void ModuleCacheEntries::flush() {
   auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   for (auto &[Path, Entry] : Map) {
     if (Entry->State == ModuleCacheEntry::S_Written) {
+      // Note: We could propagate Entry->ModTime to the on-disk file, but
+      // implicitly-built modules (unlike explicitly-built modules) don't use
+      // that metadata to refer to imports, rendering this unnecessary.
       off_t Size;
       time_t ModTime;
       // Best-effort: ignore errors (e.g. read-only cache directory).
