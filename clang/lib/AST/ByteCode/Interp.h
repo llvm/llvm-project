@@ -2785,6 +2785,12 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
                           const llvm::fltSemantics *Sem, uint32_t FPOI) {
   const T &From = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!From.isNumber())
+      return false;
+  }
+
   APSInt FromAP = From.toAPSInt();
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
