@@ -2091,7 +2091,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
           if (Model != "kernel") {
             PIC = true;
             ToolChain.getDriver().Diag(diag::warn_drv_ps_force_pic)
-                << LastPICArg->getSpelling()
+                << LastPICArg->getAsString(Args)
                 << (EffectiveTriple.isPS4() ? "PS4" : "PS5");
           }
         }
