@@ -37,7 +37,7 @@
 ; CHECK-NOT:      DW_TAG
 ; CHECK:            DW_AT_name ("static_local")
 
-@static_local = internal addrspace(3) global i32 undef, align 4, !dbg !0
+@static_local = internal addrspace(3) global i32 0, align 4, !dbg !0
 
 define void @_Z3barPi(ptr %q) !dbg !14 {
 entry:
