@@ -1356,10 +1356,10 @@ struct InformationCache {
   }
 
   /// Return true if the stack (llvm::Alloca) can be accessed by other threads.
-  bool stackIsAccessibleByOtherThreads() { return !targetIsGPU(); }
+  bool stackIsAccessibleByOtherThreads() { return !IsTargetGPU(); }
 
   /// Return true if the target is a GPU.
-  bool targetIsGPU() const { return M.getTargetTriple().isGPU(); }
+  bool IsTargetGPU() const { return M.getTargetTriple().isGPU(); }
 
   /// Return all functions that might be called indirectly, only valid for
   /// closed world modules (see isClosedWorldModule).
@@ -1748,6 +1748,9 @@ struct Attributor {
 
   /// Return the internal information cache.
   InformationCache &getInfoCache() { return InfoCache; }
+
+  /// Return the module.
+  const Module &getModule() { return InfoCache.getModule(); }
 
   /// Return true if this is a module pass, false otherwise.
   bool isModulePass() const { return Configuration.IsModulePass; }

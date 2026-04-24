@@ -942,7 +942,7 @@ bool AA::isAssumedThreadLocalObject(Attributor &A, Value &Obj,
     }
   }
 
-  if (A.getInfoCache().targetIsGPU()) {
+  if (A.getInfoCache().IsTargetGPU()) {
     if (AA::isGPULocalAddressSpace(A.getInfoCache().getModule(),
                                    Obj.getType()->getPointerAddressSpace())) {
       LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
@@ -3367,7 +3367,7 @@ InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
 }
 
 std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
-  if (targetIsGPU())
+  if (IsTargetGPU())
     return 0;
   return std::nullopt;
 }

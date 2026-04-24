@@ -8700,9 +8700,9 @@ void AAMemoryLocationImpl::categorizePtrValue(
 
     // Filter accesses to constant (GPU) memory if we have an AS at the access
     // site or the object is known to actually have the associated AS.
-    if (AA::isGPU(*I.getModule())) {
-      if (AA::isGPUConstantAddressSpace(*I.getModule(), AccessAS) ||
-          (AA::isGPUConstantAddressSpace(*I.getModule(), ObjectAS) &&
+    if (AA::isGPU(A.getModule())) {
+      if (AA::isGPUConstantAddressSpace(A.getModule(), AccessAS) ||
+          (AA::isGPUConstantAddressSpace(A.getModule(), ObjectAS) &&
            isIdentifiedObject(&Obj)))
         return true;
     }
