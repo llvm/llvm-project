@@ -7,18 +7,16 @@
 define dso_local zeroext range(i8 -1, 1) i8 @f(i8 noundef zeroext %x) {
 ; CHECK-32BIT-LABEL: f:
 ; CHECK-32BIT:       # %bb.0: # %entry
-; CHECK-32BIT-NEXT:    cmpwi r3, 0
-; CHECK-32BIT-NEXT:    li r3, 0
-; CHECK-32BIT-NEXT:    li r4, 255
-; CHECK-32BIT-NEXT:    iseleq r3, r4, r3
+; CHECK-32BIT-NEXT:    addic r3, r3, -1
+; CHECK-32BIT-NEXT:    subfe r3, r3, r3
+; CHECK-32BIT-NEXT:    clrlwi r3, r3, 24
 ; CHECK-32BIT-NEXT:    blr
 ;
 ; CHECK-64BIT-LABEL: f:
 ; CHECK-64BIT:       # %bb.0: # %entry
-; CHECK-64BIT-NEXT:    cmpwi r3, 0
-; CHECK-64BIT-NEXT:    li r3, 0
-; CHECK-64BIT-NEXT:    li r4, 255
-; CHECK-64BIT-NEXT:    iseleq r3, r4, r3
+; CHECK-64BIT-NEXT:    addic r3, r3, -1
+; CHECK-64BIT-NEXT:    subfe r3, r3, r3
+; CHECK-64BIT-NEXT:    clrldi r3, r3, 56
 ; CHECK-64BIT-NEXT:    blr
 entry:
   %cmp = icmp eq i8 %x, 0
@@ -29,10 +27,9 @@ entry:
 define i32 @compare2(i64 %conv1) {
 ; CHECK-32BIT-LABEL: compare2:
 ; CHECK-32BIT:       # %bb.0: # %entry
-; CHECK-32BIT-NEXT:    or. r3, r4, r3
-; CHECK-32BIT-NEXT:    li r3, 0
-; CHECK-32BIT-NEXT:    li r4, -1
-; CHECK-32BIT-NEXT:    iseleq r3, r4, r3
+; CHECK-32BIT-NEXT:    or r3, r4, r3
+; CHECK-32BIT-NEXT:    addic r3, r3, -1
+; CHECK-32BIT-NEXT:    subfe r3, r3, r3
 ; CHECK-32BIT-NEXT:    blr
 ;
 ; CHECK-64BIT-LABEL: compare2:
