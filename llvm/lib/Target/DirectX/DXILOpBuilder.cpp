@@ -23,11 +23,6 @@ constexpr StringLiteral DXILOpNamePrefix = "dx.op.";
 
 namespace {
 
-static cl::opt<bool>
-    OpPreciseEnabled("enable-precise",
-                     cl::desc("Enables emission of dx.precise"),
-                     cl::init(false));
-
 enum OverloadKind : uint16_t {
   UNDEFINED = 0,
   VOID = 1,
@@ -493,8 +488,9 @@ static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
 static void setDXILMetadata(CallInst *CI, const OpCodeProperty *Prop) {
   bool ShouldEmitPrecise = true;
 
-  for(const auto &Operand : CI->operands()) {
-    if (isa<FPMathOperator>(Operand) && cast<FPMathOperator>(Operand)->getFastMathFlags().isFast()) {
+  for (const auto &Operand : CI->operands()) {
+    if (isa<FPMathOperator>(Operand) &&
+        cast<FPMathOperator>(Operand)->getFastMathFlags().isFast()) {
       ShouldEmitPrecise = false;
       break;
     }
