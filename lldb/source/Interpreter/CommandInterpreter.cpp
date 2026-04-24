@@ -2243,28 +2243,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // arguments.
   StatsDuration execute_time;
   if (cmd_obj != nullptr) {
-    bool generate_repeat_command = add_to_history;
-    // If we got here when empty_command was true, then this command is a
-    // stored "repeat command" which we should give a chance to produce it's
-    // repeat command, even though we don't add repeat commands to the history.
-    generate_repeat_command |= empty_command;
-    // For `command regex`, the regex command (ex `bt`) is added to history, but
-    // the resolved command (ex `thread backtrace`) is _not_ added to history.
-    // However, the resolved command must be given the opportunity to provide a
-    // repeat command. `force_repeat_command` supports this case.
-    generate_repeat_command |= force_repeat_command;
-    if (generate_repeat_command) {
-      Args command_args(command_string);
-      std::optional<std::string> repeat_command =
-          cmd_obj->GetRepeatCommand(command_args, 0);
-      if (repeat_command) {
-        LLDB_LOGF(log, "Repeat command: %s", repeat_command->data());
-        m_repeat_command.assign(*repeat_command);
-      } else {
-        m_repeat_command.assign(original_command_string);
-      }
-    }
-
     if (add_to_history)
       m_command_history.AppendString(original_command_string);
 
@@ -2298,6 +2276,34 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
       indent = pos;
     result.SetDiagnosticIndent(indent);
     cmd_obj->Execute(parsed_command_args.c_str(), result);
+
+    // Generate the repeat command *AFTER* Execute is called, so that commands
+    // can use their parsed option values.
+    bool generate_repeat_command = add_to_history;
+    // If we got here when empty_command was true, then this command is a
+    // stored "repeat command" which we should give a chance to produce it's
+    // repeat command, even though we don't add repeat commands to the
+    // history.
+    generate_repeat_command |= empty_command;
+    // For `command regex`, the regex command (ex `bt`) is added to history,
+    // but the resolved command (ex `thread backtrace`) is _not_ added to
+    // history. However, the resolved command must be given the opportunity to
+    // provide a repeat command. `force_repeat_command` supports this case.
+    generate_repeat_command |= force_repeat_command;
+    if (generate_repeat_command) {
+      Args command_args(command_string);
+      std::optional<std::string> repeat_command =
+          cmd_obj->GetRepeatCommand(command_args, 0);
+      if (repeat_command) {
+        LLDB_LOGF(log, "Repeat command: %s", repeat_command->data());
+        m_repeat_command = *repeat_command;
+      } else if (m_repeat_command.empty()) {
+        // Regex commands call HandleCommand to invoke the resolved command. The
+        // resolved command is given priority for producing a repeat command.
+        // Make this default assignment only if m_repeat_command has no value.
+        m_repeat_command = original_command_string;
+      }
+    }
   }
 
   LLDB_LOGF(log, "HandleCommand, command %s",
