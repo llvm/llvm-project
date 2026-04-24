@@ -690,7 +690,7 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     // that address spaces don't matter here since we're not going to result in
     // an actual new load.
     if (!LoadTy->isFloatingPointTy() && !LoadTy->isPointerTy() &&
-        !LoadTy->isVectorTy())
+        !LoadTy->isByteTy() && !LoadTy->isVectorTy())
       return nullptr;
 
     Type *MapTy = Type::getIntNTy(C->getContext(),
@@ -904,7 +904,8 @@ Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
   if (C->isNullValue() && !Ty->isX86_AMXTy())
     return Constant::getNullValue(Ty);
   if (C->isAllOnesValue() &&
-      (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy()))
+      (Ty->isIntOrIntVectorTy() || Ty->isByteOrByteVectorTy() ||
+       Ty->isFPOrFPVectorTy()))
     return Constant::getAllOnesValue(Ty);
   return nullptr;
 }
