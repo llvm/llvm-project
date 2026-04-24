@@ -189,3 +189,15 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  shutdown
+  SRCS
+    shutdown.cpp
+  HDRS
+    ../shutdown.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
