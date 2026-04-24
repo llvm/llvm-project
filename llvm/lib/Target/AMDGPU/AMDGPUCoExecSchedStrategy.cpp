@@ -216,7 +216,8 @@ unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
   for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
                                      PE = SchedModel->getWriteProcResEnd(SC);
        PI != PE; ++PI) {
-    ReleaseAtCycle = std::max(ReleaseAtCycle, (unsigned)PI->ReleaseAtCycle);
+    ReleaseAtCycle =
+        std::max(ReleaseAtCycle, static_cast<unsigned>(PI->ReleaseAtCycle));
   }
   return ReleaseAtCycle;
 }
@@ -248,17 +249,21 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
   SRI = static_cast<const SIRegisterInfo *>(TRI);
   SII = static_cast<const SIInstrInfo *>(DAG->TII);
 
-  HWUInfo.resize((int)InstructionFlavor::NUM_FLAVORS);
+  HWUInfo.resize(static_cast<int>(InstructionFlavor::NUM_FLAVORS));
 
   for (unsigned I = 0; I < HWUInfo.size(); I++) {
     HWUInfo[I].reset();
     HWUInfo[I].setType(I);
   }
 
-  HWUInfo[(int)InstructionFlavor::WMMA].setProducesCoexecWindow(true);
-  HWUInfo[(int)InstructionFlavor::MultiCycleVALU].setProducesCoexecWindow(true);
-  HWUInfo[(int)InstructionFlavor::TRANS].setProducesCoexecWindow(true);
-  HWUInfo[(int)InstructionFlavor::DS].setBufferSize(DefaultBufferSizes::DS);
+  HWUInfo[static_cast<int>(InstructionFlavor::WMMA)].setProducesCoexecWindow(
+      true);
+  HWUInfo[static_cast<int>(InstructionFlavor::MultiCycleVALU)]
+      .setProducesCoexecWindow(true);
+  HWUInfo[static_cast<int>(InstructionFlavor::TRANS)].setProducesCoexecWindow(
+      true);
+  HWUInfo[static_cast<int>(InstructionFlavor::DS)].setBufferSize(
+      DefaultBufferSizes::DS);
 
   collectRegionSummary();
 }
@@ -323,7 +328,7 @@ void CandidateHeuristics::collectRegionSummary() {
   for (auto &SU : DAG->SUnits) {
     MachineInstr *MI = SU.getInstr();
     const InstructionFlavor Flavor = classifyFlavor(*MI, *SII);
-    HWUInfo[(int)(Flavor)].insert(&SU, getHWUICyclesForSU(&SU));
+    HWUInfo[static_cast<int>(Flavor)].insert(&SU, getHWUICyclesForSU(&SU));
     unsigned CarriedLatency = getCarriedLatency(&SU);
     if (CarriedLatency)
       CarriedLatencies[MI] = CarriedLatency;
