@@ -315,7 +315,7 @@ void CSEDriver::pruneDeadOps(Operation *root, ScopedMapTy &knownValues) {
     // Since the root op is not inserted into the ScopedHashMap, do not undo
     // its previous insertion.
     if (op != root)
-      knownValues.invalidate(op);
+      knownValues.erase(op);
     rewriter.eraseOp(op);
     ++numDCE;
   }
