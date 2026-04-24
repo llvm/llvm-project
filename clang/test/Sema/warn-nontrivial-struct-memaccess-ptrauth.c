@@ -26,35 +26,50 @@ struct PtrAuthTrivial {
 
 struct PtrAuthNonTrivial0 {
   int f0;
-  int * AQ f1; // c-note 2 {{non-trivial to copy}}
+  int * AQ f1; // #PtrAuthNonTrivial0_f1
   int f2;
 };
 
 struct PtrAuthNonTrivial1 {
-  int * AQ f0; // c-note 2 {{non-trivial to copy}}
+  int * AQ f0; // #PtrAuthNonTrivial1_f0
   int f1;
   struct PtrAuthNonTrivial0 f2;
 };
 
-void testPtrAuthTrivial(struct PtrAuthTrivial *d, struct PtrAuthTrivial *s) {
+void testPtrAuthTrivial(struct PtrAuthTrivial *d, struct PtrAuthTrivial *s, int i) {
   memset(d, 0, sizeof(struct PtrAuthTrivial));
   memset(d, 1, sizeof(struct PtrAuthTrivial));
+  memset(d, i, sizeof(struct PtrAuthTrivial));
   bzero(d, sizeof(struct PtrAuthTrivial));
   memcpy(d, s, sizeof(struct PtrAuthTrivial));
   memmove(d, s, sizeof(struct PtrAuthTrivial));
 }
 
 void testPtrAuthNonTrivial1(struct PtrAuthNonTrivial1 *d,
-                            struct PtrAuthNonTrivial1 *s) {
-  memset(d, 0, sizeof(struct PtrAuthNonTrivial1)); // cxx-warning {{is a pointer to non-trivially copyable type 'struct PtrAuthNonTrivial1'}} // cxx-note {{explicitly cast the pointer to silence}}
-  memset(d, 1, sizeof(struct PtrAuthNonTrivial1)); // cxx-warning {{is a pointer to non-trivially copyable type 'struct PtrAuthNonTrivial1'}} // cxx-note {{explicitly cast the pointer to silence}}
-  bzero(d, sizeof(struct PtrAuthNonTrivial1)); // cxx-warning {{is a pointer to non-trivially copyable type 'struct PtrAuthNonTrivial1'}} // cxx-note {{explicitly cast the pointer to silence}}
-  memcpy(d, s, sizeof(struct PtrAuthNonTrivial1));
-  // c-warning@-1 {{that is not trivial to primitive-copy}}
-  // cxx-warning@-2 {{is a pointer to non-trivially copyable type 'struct PtrAuthNonTrivial1'}}
-  // expected-note@-3 {{explicitly cast the pointer to silence}}
-  memmove(d, s, sizeof(struct PtrAuthNonTrivial1));
-  // c-warning@-1 {{that is not trivial to primitive-copy}}
-  // cxx-warning@-2 {{is a pointer to non-trivially copyable type 'struct PtrAuthNonTrivial1'}}
-  // expected-note@-3 {{explicitly cast the pointer to silence}}
+                            struct PtrAuthNonTrivial1 *s,
+                            int i) {
+  memset(d, 0, sizeof(struct PtrAuthNonTrivial1));
+  memset(d, 1, sizeof(struct PtrAuthNonTrivial1)); // #memset_d_1
+  // cxx-warning@#memset_d_1 {{is a pointer to non-trivially copyable type 'struct PtrAuthNonTrivial1'}}
+  // cxx-note@#memset_d_1 {{explicitly cast the pointer to silence}}
+
+  memset(d, i, sizeof(struct PtrAuthNonTrivial1)); /// #memset_d_i
+  // cxx-warning@#memset_d_i {{is a pointer to non-trivially copyable type 'struct PtrAuthNonTrivial1'}}
+  // cxx-note@#memset_d_i {{explicitly cast the pointer to silence}}
+
+  bzero(d, sizeof(struct PtrAuthNonTrivial1));
+
+  memcpy(d, s, sizeof(struct PtrAuthNonTrivial1)); // #memcpy_d
+  // c-warning@#memcpy_d {{that is not trivial to primitive-copy}}
+  // c-note@#PtrAuthNonTrivial0_f1 {{non-trivial to copy}}
+  // c-note@#PtrAuthNonTrivial1_f0 {{non-trivial to copy}}
+  // cxx-warning@#memcpy_d {{is a pointer to non-trivially copyable type 'struct PtrAuthNonTrivial1'}}
+  // expected-note@#memcpy_d {{explicitly cast the pointer to silence}}
+
+  memmove(d, s, sizeof(struct PtrAuthNonTrivial1)); // #memmove_d
+  // c-warning@#memmove_d {{that is not trivial to primitive-copy}}
+  // c-note@#PtrAuthNonTrivial0_f1 {{non-trivial to copy}}
+  // c-note@#PtrAuthNonTrivial1_f0 {{non-trivial to copy}}
+  // cxx-warning@#memmove_d {{is a pointer to non-trivially copyable type 'struct PtrAuthNonTrivial1'}}
+  // expected-note@#memmove_d {{explicitly cast the pointer to silence}}
 }
