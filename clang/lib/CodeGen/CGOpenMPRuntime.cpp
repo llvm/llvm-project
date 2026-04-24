@@ -7583,7 +7583,9 @@ private:
         AttachInfo.AttachPteeAddr.emitRawPointer(CGF));
     CombinedInfo.Sizes.push_back(PointerSize);
     CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
-    CombinedInfo.DontAddMemberOfInMapper.push_back(false);
+    // ATTACH entries don't participate in ref-count tracking, and must note be
+    // grouped as a member of the enclosing struct in emitUserDefinedMapper.
+    CombinedInfo.DontAddMemberOfInMapper.push_back(true);
     CombinedInfo.Mappers.push_back(nullptr);
     CombinedInfo.NonContigInfo.Dims.push_back(1);
   }
@@ -8376,6 +8378,9 @@ private:
 
           if (!IsMappingWholeStruct) {
             CombinedInfo.Types.push_back(Flags);
+            // Pointee entries (HasAttachPtr=true) occupy different storage than
+            // the pointer variable; emitUserDefinedMapper must not set
+            // MEMBER_OF for them.
             CombinedInfo.DontAddMemberOfInMapper.push_back(HasAttachPtr);
           } else {
             StructBaseCombinedInfo.Types.push_back(Flags);
@@ -9484,13 +9489,13 @@ public:
         : !PartialStruct.PreliminaryMapData.BasePointers.empty()
             ? OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ
             : OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
-    // Combined entries with an attach pointer occupy different storage than
-    // the original item, so if this map is for a mapper, it should not be a
-    // member of the original item being mapped. e.g.:
+    // Combined entries with an attach pointer also occupy a different storage
+    // space than the pointer itself, so emitUserDefinedMapper should not add
+    // MEMBER_OF flags linking them. e.g.:
     //   map(s2.s1p->x, s2.s1p->y)
     // combined entry:
     //   s2.s1p[0], s2.s1p->x, sizeof(s1p->x..y), ALLOC
-    // This occupies different storage than s2.
+    // s2.s1p[0] occupies different storage than s2.s1p or s2.
     CombinedInfo.DontAddMemberOfInMapper.push_back(AttachInfo.isValid());
     // If any element has the present modifier, then make sure the runtime
     // doesn't attempt to allocate the struct.

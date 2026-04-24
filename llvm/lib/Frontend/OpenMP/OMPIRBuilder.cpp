@@ -9971,22 +9971,11 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             Info->Types[I]);
     constexpr uint64_t MemberOfMask = 0xffff000000000000ULL;
-    bool IsAttach =
-        RawType &
-        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-            OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
 
-    // Add MEMBER_OF (ShiftedPreviousSize) to link this sub-map with the
-    // current array element. Two cases must not get a new outer MEMBER_OF:
-    //
-    // 1. Entries marked as DontAddMemberOfInMapper. These represent entries
-    //    that represent the pointee data that does not occupy the same
-    //    storage space as the array-element being mapped.
-    //
-    // 2. ATTACH entries: These do not represent an actual map, but pointer
-    //    attachment, which is deferred to the end of the region on which the
-    //    map occurs. It is not involved in any allocation/deallocation or
-    //    ref-count tracking.
+    // Add MEMBER_OF (ShiftedPreviousSize) to group this sub-map with the
+    // current array element (N = __tgt_mapper_num_components() at loop body
+    // start).
+
     //
     // Example 1:
     //   mapper:  #pragma omp declare mapper(id: S s) map(s.x, s.p[0:10])
@@ -9994,30 +9983,34 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     //   entries per element:
     //
     //     &arr[i],      &arr[i].x,    sizeof(int),    MEMBER_OF(N)|TO|FROM
-    //     &arr[i].p[0], &arr[i].p[0], 10*sizeof(int), TO|FROM  (*)
-    //     &arr[i].p,    &arr[i].p[0], sizeof(int*),   ATTACH
-    //     (*) DontAddMemberOfInMapper=true: s.p[0:10] occupies different
-    //     storage than s.
+    //     &arr[i].p[0], &arr[i].p[0], 10*sizeof(int), TO|FROM        (*)
+    //     &arr[i].p,    &arr[i].p[0], sizeof(int*),   ATTACH         (**)
     //
-    // Example 2: Struct with multiple pointees that share pointer-member storage
-    //   mapper:  #pragma omp declare mapper(S2 s2) map(s2.z, s2.s1p->x, s2.s1p->y)
+    // Example 2:
+    //   mapper:  #pragma omp declare mapper(S2 s2) map(s2.z, s2.s1p->x,
+    //                                                  s2.s1p->y)
     //   use:     S2 arr[2]; ... map(arr)
     //   entries per element:
     //
-    //     &arr[i],        &arr[i].z,      sizeof(int),        MEMBER_OF(N)|TO|FROM
-    //     &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y), ALLOC  (**)
-    //     &arr[i].s1p[0], &arr[i].s1p->x, sizeof(int),        MEMBER_OF(N+2)|TO|FROM
-    //     &arr[i].s1p[0], &arr[i].s1p->y, sizeof(int),        MEMBER_OF(N+2)|TO|FROM
-    //     &arr[i].s1p,    &arr[i].s1p->x, sizeof(ptr),        ATTACH
-    //     (**) DontAddMemberOfInMapper=true (set by emitCombinedEntry): the *s1p
-    //     pointee occupies separate storage from arr[i].  The individual x/y
-    //     entries carry inner MEMBER_OF(2) bits which are shifted by N instead
-    //     of getting a new outer layer.
-    //     (N = __tgt_mapper_num_components() at loop body start)
+    //     &arr[i],        &arr[i].z,      sizeof(int), MEMBER_OF(N)|TO|FROM
+    //     &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y), ALLOC (*)
+    //     &arr[i].s1p[0], &arr[i].s1p->x, sizeof(int), MEMBER_OF(N+2)|TO|FROM
+    //     &arr[i].s1p[0], &arr[i].s1p->y, sizeof(int), MEMBER_OF(N+2)|TO|FROM
+    //     &arr[i].s1p,    &arr[i].s1p->x, sizeof(ptr), ATTACH (**)
+    //
+    //     x/y carry inner MEMBER_OF(2)
+    //          which is shifted by N to become MEMBER_OF(N+2).
+    //
+    // Entries with DontAddMemberOfInMapper=true must not receive a
+    // new outer MEMBER_OF. They occupy a different storage block than the
+    // the enclosing struct (like pointee data (*)), or are ATTACH entries that
+    // represent pointer-attachment (**), and don't contribute to any ref-count
+    // entries for pointer members).
+    //
+    // If such an entry already has its own MEMBER_OF bits (like for s1p->x/y
+    // above), they are still shifted by N.
     Value *MemberMapType;
-    if (IsAttach) {
-      MemberMapType = OriMapType;
-    } else if (Info->DontAddMemberOfInMapper[I]) {
+    if (Info->DontAddMemberOfInMapper[I]) {
       if (RawType & MemberOfMask)
         MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
       else
@@ -10127,7 +10120,11 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     // ATTACH entries must not receive map-type-modifying bits: ATTACH|ALWAYS is
     // reserved for the attach(always) map-type modifier, and other modifier bits
     // (DELETE, CLOSE, PRESENT) have no meaning for an ATTACH entry.
-    Value *FinalMapType = IsAttach ? CurMapType : CurMapTypeWithModifiers;
+    constexpr uint64_t AttachBit =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    Value *FinalMapType =
+        (RawType & AttachBit) ? CurMapType : CurMapTypeWithModifiers;
 
     Value *OffloadingArgs[] = {MapperHandle, CurBaseArg,  CurBeginArg,
                                CurSizeArg,   FinalMapType, CurNameArg};
