@@ -6,6 +6,66 @@ macro(libclc_configure_source_list variable path)
   set(${variable} ${${variable}} PARENT_SCOPE)
 endmacro()
 
+# Validates the triple and extracts the OS and architecture components.
+macro(libclc_configure_triple triple arch os)
+  # Validate the target triple by its components.
+  string(REPLACE "-" ";" TRIPLE ${triple})
+  list(GET TRIPLE 0 ARCH)
+  list(LENGTH TRIPLE triple_len)
+
+  set(VENDOR "")
+  set(OS "")
+  set(ENV "")
+  if(triple_len GREATER 1)
+    list(GET TRIPLE 1 VENDOR)
+  endif()
+  if(triple_len GREATER 2)
+    list(GET TRIPLE 2 OS)
+  endif()
+  if(triple_len GREATER 3)
+    list(GET TRIPLE 3 ENV)
+  endif()
+
+  set(libclc_known_arches nvptx64 amdgcn spirv spirv64 clspv clspv64)
+  if(NOT ARCH IN_LIST libclc_known_arches)
+    message(FATAL_ERROR "libclc target '${LIBCLC_TARGET}' has unknown "
+      "architecture '${ARCH}'\n"
+      "Valid architectures are: ${libclc_known_arches}\n")
+  endif()
+
+  if(ARCH STREQUAL "amdgcn")
+    if(NOT OS STREQUAL "amdhsa")
+      message(FATAL_ERROR
+        "libclc target '${LIBCLC_TARGET}': amdgcn requires the 'amdhsa' OS\n")
+    endif()
+    if(VENDOR AND NOT VENDOR STREQUAL "amd")
+      message(FATAL_ERROR
+        "libclc target '${LIBCLC_TARGET}': unexpected vendor '${VENDOR}'\n")
+    endif()
+  elseif(ARCH STREQUAL "nvptx64")
+    if(VENDOR AND NOT VENDOR STREQUAL "nvidia")
+      message(FATAL_ERROR
+        "libclc target '${LIBCLC_TARGET}': unexpected vendor '${VENDOR}'\n")
+    endif()
+    if(OS AND NOT (OS STREQUAL "nvidiacl" OR OS STREQUAL "cuda"))
+      message(FATAL_ERROR
+        "libclc target '${LIBCLC_TARGET}': unexpected OS '${OS}'\n")
+    endif()
+  elseif(ARCH MATCHES "^spirv")
+    if(VENDOR AND NOT VENDOR STREQUAL "mesa3d")
+      message(FATAL_ERROR
+        "libclc target '${LIBCLC_TARGET}': unexpected vendor '${VENDOR}'\n")
+    endif()
+  endif()
+
+  if(ENV AND NOT ENV STREQUAL "llvm")
+    message(FATAL_ERROR
+      "libclc target '${LIBCLC_TARGET}': unexpected environment '${ENV}'\n")
+  endif()
+  set(${arch} ${ARCH})
+  set(${os} ${OS})
+endmacro()
+
 # Appends a compile option to the given source files. Paths are relative
 # to `path` and the property is set in the top-level libclc directory scope.
 macro(libclc_configure_source_options path option)

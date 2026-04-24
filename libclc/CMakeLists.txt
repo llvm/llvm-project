@@ -22,27 +22,13 @@ option(
   LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
 )
 
-# List of all supported targets.
-set( LIBCLC_TARGETS_ALL
-  amdgcn-amd-amdhsa-llvm
-  clspv--
-  clspv64--
-  nvptx64--
-  nvptx64--nvidiacl
-  nvptx64-nvidia-cuda
-  spirv-mesa3d-
-  spirv64-mesa3d-
-)
-
-set(LIBCLC_TARGET ${LLVM_RUNTIMES_TARGET})
+set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
 if(NOT LIBCLC_TARGET)
   message(FATAL_ERROR "libclc target is empty\n")
 endif()
-if(NOT "${LIBCLC_TARGET}" IN_LIST LIBCLC_TARGETS_ALL)
-  message(FATAL_ERROR "Unknown libclc target: ${LIBCLC_TARGET}\n"
-    "Valid targets are: ${LIBCLC_TARGETS_ALL}\n")
-endif()
+
+libclc_configure_triple(${LIBCLC_TARGET} ARCH OS)
 
 if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   set( LIBCLC_STANDALONE_BUILD TRUE )
@@ -95,10 +81,6 @@ if( NOT LIBCLC_USE_SPIRV_BACKEND )
 endif()
 
 message(STATUS "libclc target '${LIBCLC_TARGET}' is enabled")
-
-string( REPLACE "-" ";" TRIPLE  ${LIBCLC_TARGET} )
-list(GET TRIPLE 0 ARCH)
-list(GET TRIPLE 2 OS)
 
 if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
   if(NOT LIBCLC_USE_SPIRV_BACKEND AND NOT llvm-spirv_exe)
