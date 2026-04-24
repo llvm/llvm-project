@@ -2236,10 +2236,19 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   const auto *TLI = TM.getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
       TLI->getLoadMemOperandFlags(I, CurrF->getDataLayout());
-  auto *NewI =
-      B.CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
-                        {I.getPointerOperand(), B.getInt16(Flags),
-                         B.getInt32(I.getAlign().value())});
+
+  unsigned IntrinsicId;
+  SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt16(Flags)};
+  if (!I.isAtomic()) {
+    IntrinsicId = Intrinsic::spv_load;
+    Args.push_back(B.getInt32(I.getAlign().value()));
+  } else {
+    IntrinsicId = Intrinsic::spv_atomic_load;
+    Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
+  }
+  CallInst *NewI =
+      B.CreateIntrinsic(IntrinsicId, {I.getOperand(0)->getType()}, Args);
+
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
@@ -2267,10 +2276,18 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
     CB->mutateType(B.getInt32Ty());
   }
 
+  unsigned IntrinsicId;
+  SmallVector<Value *, 4> Args = {I.getValueOperand(), PtrOp,
+                                  B.getInt16(Flags)};
+  if (!I.isAtomic()) {
+    IntrinsicId = Intrinsic::spv_store;
+    Args.push_back(B.getInt32(I.getAlign().value()));
+  } else {
+    IntrinsicId = Intrinsic::spv_atomic_store;
+    Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
+  }
   auto *NewI = B.CreateIntrinsic(
-      Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
-      {I.getValueOperand(), PtrOp, B.getInt16(Flags),
-       B.getInt32(I.getAlign().value())});
+      IntrinsicId, {I.getValueOperand()->getType(), PtrOp->getType()}, Args);
   NewI->copyMetadata(I);
   I.eraseFromParent();
   return NewI;
