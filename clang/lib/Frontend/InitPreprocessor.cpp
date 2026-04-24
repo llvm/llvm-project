@@ -716,7 +716,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_constexpr_dynamic_alloc", "201907L");
     Builder.defineMacro("__cpp_constinit", "201907L");
 
-    // Support for coroutines on 32 bits x86 Microsoft platforms is
+    // Support for coroutines on 32-bit x86 Microsoft platforms is
     // incomplete, do not advertise it.
     if (!(TI.getCXXABI().isMicrosoft() && TI.getTriple().isX86_32()))
       Builder.defineMacro("__cpp_impl_coroutine", "201902L");
