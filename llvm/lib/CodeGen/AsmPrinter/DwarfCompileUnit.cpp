@@ -81,6 +81,10 @@ DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
     : DwarfUnit(GetCompileUnitType(Kind, DW), Node, A, DW, DWU, UID) {
   insertDIE(Node, &getUnitDie());
   MacroLabelBegin = Asm->createTempSymbol("cu_macro_begin");
+  assert(CUNode);
+  for (auto *GVE : CUNode->getGlobalVariables())
+    if (auto *GV = GVE->getVariable())
+      GlobalVarScopes.insert(GV->getScope());
 }
 
 /// addLabelAddress - Add a dwarf label attribute data and value using
@@ -1223,10 +1227,6 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
 }
 
 bool DwarfCompileUnit::hasGlobalVariableInScope(const DILocalScope *ScopeNode) {
-  if (GlobalVarScopes.empty())
-    for (auto *GVE : CUNode->getGlobalVariables())
-      if (auto *GV = GVE->getVariable())
-        GlobalVarScopes.insert(GV->getScope());
   return GlobalVarScopes.contains(ScopeNode);
 }
 

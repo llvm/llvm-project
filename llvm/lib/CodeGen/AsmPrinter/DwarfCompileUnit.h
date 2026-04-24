@@ -94,7 +94,7 @@ class DwarfCompileUnit final : public DwarfUnit {
   /// multiple pointer variables reference the same constant.
   DenseMap<std::pair<const DIType *, int64_t>, DIE *> ImplicitPointerDIEs;
 
-  // Lazily-built set of scope nodes referenced by global variables in this CU.
+  // Set of scope nodes referenced by global variables in this CU.
   SmallPtrSet<const MDNode *, 4> GlobalVarScopes;
 
   /// DWO ID for correlating skeleton and split units.
