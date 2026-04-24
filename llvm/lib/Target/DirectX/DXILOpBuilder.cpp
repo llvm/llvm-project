@@ -22,7 +22,6 @@ using namespace llvm::dxil;
 constexpr StringLiteral DXILOpNamePrefix = "dx.op.";
 
 namespace {
-
 enum OverloadKind : uint16_t {
   UNDEFINED = 0,
   VOID = 1,
