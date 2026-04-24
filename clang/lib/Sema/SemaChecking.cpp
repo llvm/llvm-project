@@ -3267,7 +3267,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     const llvm::Triple &TT = Context.getTargetInfo().getTriple();
     if (!TT.isOSWindows() && !TT.isUEFI()) {
       Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
-          << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+          << TheCall->getSourceRange();
       return ExprError();
     }
     if (BuiltinMSVCAnnotation(*this, TheCall))
