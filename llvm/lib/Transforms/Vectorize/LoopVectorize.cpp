@@ -6971,7 +6971,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
-            std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer)) {
+            std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange)) {
       // Now optimize the initial VPlan.
       VPlanTransforms::hoistPredicatedLoads(*Plan, PSE, OrigLoop);
       VPlanTransforms::sinkPredicatedStores(*Plan, PSE, OrigLoop);
@@ -6996,8 +6996,9 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   }
 }
 
-VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
-    VPlanPtr Plan, VFRange &Range, LoopVersioning *LVer) {
+VPlanPtr
+LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
+                                                       VFRange &Range) {
 
   using namespace llvm::VPlanPatternMatch;
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;

@@ -2204,9 +2204,6 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpBeginLoopDirective &x) {
-    Unparse(static_cast<const OmpBeginDirective &>(x));
-  }
   void Unparse(const OmpBeginSectionsDirective &x) {
     Unparse(static_cast<const OmpBeginDirective &>(x));
   }
@@ -2311,9 +2308,6 @@ public:
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OmpEndLoopDirective &x) {
-    Unparse(static_cast<const OmpEndDirective &>(x));
   }
   void Unparse(const OmpEndSectionsDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
