@@ -666,7 +666,8 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
   return NewStore;
 }
 
-/// Return the scalar or shorter vector formed by the non-empty defined prefix of
+/// Return the scalar or shorter vector formed by the non-empty defined prefix
+/// of
 /// \p C if the remaining lanes are all undef/poison.
 static Constant *getDefinedPrefix(Constant *C, FixedVectorType *VTy) {
   unsigned NumElts = VTy->getNumElements();
@@ -1624,8 +1625,8 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // becomes
   //   store <K x T> <V0, ..., V(K-1)>, ptr P, align A    (K >  1)
   //   store T V0,                    ptr P, align A    (K == 1)
-  // FIXME: This is also technically incorrect because it might overwrite a poison
-  // value. Change to PoisonValue once #52930 is resolved.
+  // FIXME: This is also technically incorrect because it might overwrite a
+  // poison value. Change to PoisonValue once #52930 is resolved.
   if (SI.isSimple()) {
     auto *VTy = dyn_cast<FixedVectorType>(Val->getType());
     auto *C = dyn_cast<Constant>(Val);
