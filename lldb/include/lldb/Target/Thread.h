@@ -1027,6 +1027,10 @@ public:
   ///     A pointer to the next executed plan.
   ThreadPlan *GetCurrentPlan() const;
 
+  /// Returns true if this thread has a ThreadPlanCallFunction on its
+  /// plan stack, indicating it is running a debugger-injected expression.
+  bool IsRunningCallFunctionPlan() const;
+
   /// Unwinds the thread stack for the innermost expression plan currently
   /// on the thread plan stack.
   ///
