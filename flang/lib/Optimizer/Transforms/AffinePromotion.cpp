@@ -50,6 +50,10 @@ struct AffineIfAnalysis;
 struct AffineFunctionAnalysis {
   explicit AffineFunctionAnalysis(mlir::func::FuncOp funcOp) {
     funcOp->walk([&](fir::DoLoopOp doloop) {
+      fir::DoLoopOp outermost = doloop;
+      while (auto parent = outermost->getParentOfType<fir::DoLoopOp>())
+        outermost = parent;
+      outermostLoopMap[doloop] = outermost;
       loopAnalysisMap.try_emplace(doloop, doloop, *this);
     });
   }
@@ -58,26 +62,43 @@ struct AffineFunctionAnalysis {
 
   AffineIfAnalysis getChildIfAnalysis(fir::IfOp op) const;
 
+  fir::DoLoopOp getOutermostLoop(fir::DoLoopOp op) const {
+    auto it = outermostLoopMap.find(op.getOperation());
+    assert(it != outermostLoopMap.end());
+    return it->second;
+  }
+
   llvm::DenseMap<mlir::Operation *, AffineLoopAnalysis> loopAnalysisMap;
   llvm::DenseMap<mlir::Operation *, AffineIfAnalysis> ifAnalysisMap;
+  llvm::DenseMap<mlir::Operation *, fir::DoLoopOp> outermostLoopMap;
 };
 } // namespace
 
 /// Recursively checks whether a value can be expressed as an affine function
-/// of loop induction variables and integer constants.  Walks through
-/// fir.convert (type-cast), arith.addi, arith.subi, and arith.muli (the
-/// latter only when at least one operand is a compile-time constant so the
-/// result stays within MLIR's strict affine expression rules).
-static bool isAffineIndex(mlir::Value val, unsigned depth = 0) {
+/// of loop induction variables, integer constants, and loop-invariant symbols
+/// (values defined outside the outermost loop of the nest).
+///
+/// When \p outermost is provided, values defined outside it are accepted as
+/// valid affine symbols.  When nullptr, only loop IVs and constants are
+/// accepted (legacy behavior).
+static bool isAffineIndex(mlir::Value val,
+                          fir::DoLoopOp outermost = nullptr,
+                          unsigned depth = 0) {
   if (depth > 16)
     return false;
 
   if (auto conv = val.getDefiningOp<fir::ConvertOp>())
-    return isAffineIndex(conv.getValue(), depth + 1);
+    return isAffineIndex(conv.getValue(), outermost, depth + 1);
 
-  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(val))
-    return isa<fir::DoLoopOp>(blockArg.getOwner()->getParentOp()) ||
-           isa<mlir::affine::AffineForOp>(blockArg.getOwner()->getParentOp());
+  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(val)) {
+    if (isa<fir::DoLoopOp>(blockArg.getOwner()->getParentOp()) ||
+        isa<mlir::affine::AffineForOp>(blockArg.getOwner()->getParentOp()))
+      return true;
+    if (outermost &&
+        !outermost->isAncestor(blockArg.getOwner()->getParentOp()))
+      return true;
+    return false;
+  }
 
   auto *defOp = val.getDefiningOp();
   if (!defOp)
@@ -87,22 +108,26 @@ static bool isAffineIndex(mlir::Value val, unsigned depth = 0) {
     return true;
 
   if (auto add = dyn_cast<mlir::arith::AddIOp>(defOp))
-    return isAffineIndex(add.getLhs(), depth + 1) &&
-           isAffineIndex(add.getRhs(), depth + 1);
+    return isAffineIndex(add.getLhs(), outermost, depth + 1) &&
+           isAffineIndex(add.getRhs(), outermost, depth + 1);
 
   if (auto sub = dyn_cast<mlir::arith::SubIOp>(defOp))
-    return isAffineIndex(sub.getLhs(), depth + 1) &&
-           isAffineIndex(sub.getRhs(), depth + 1);
+    return isAffineIndex(sub.getLhs(), outermost, depth + 1) &&
+           isAffineIndex(sub.getRhs(), outermost, depth + 1);
 
   if (auto mul = dyn_cast<mlir::arith::MulIOp>(defOp)) {
     auto *lhsDef = mul.getLhs().getDefiningOp();
     auto *rhsDef = mul.getRhs().getDefiningOp();
     if ((lhsDef && isa<mlir::arith::ConstantOp>(lhsDef)) ||
         (rhsDef && isa<mlir::arith::ConstantOp>(rhsDef)))
-      return isAffineIndex(mul.getLhs(), depth + 1) &&
-             isAffineIndex(mul.getRhs(), depth + 1);
+      return isAffineIndex(mul.getLhs(), outermost, depth + 1) &&
+             isAffineIndex(mul.getRhs(), outermost, depth + 1);
     return false;
   }
+
+  // Value defined outside the outermost loop → valid affine symbol.
+  if (outermost && !outermost->isAncestor(defOp))
+    return true;
 
   LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: index is not an affine "
                              "expression of loop IVs\n";
@@ -113,10 +138,14 @@ static bool isAffineIndex(mlir::Value val, unsigned depth = 0) {
 /// Builds an mlir::AffineExpr by recursively walking the FIR/arith expression
 /// tree rooted at a fir.array_coor index value.  Loop induction variables
 /// become affine dimensions; integer constants are folded into the expression.
+/// Values defined outside the outermost enclosing loop are classified as
+/// affine symbols — they are loop-invariant across the entire nest.
 struct AffineIndexBuilder {
   using MaybeExpr = std::optional<mlir::AffineExpr>;
 
-  explicit AffineIndexBuilder(mlir::MLIRContext *ctx) : context(ctx) {}
+  explicit AffineIndexBuilder(mlir::MLIRContext *ctx,
+                              fir::DoLoopOp outermost = nullptr)
+      : context(ctx), outermostLoop(outermost) {}
 
   MaybeExpr build(mlir::Value val) {
     if (auto conv = val.getDefiningOp<fir::ConvertOp>())
@@ -132,6 +161,9 @@ struct AffineIndexBuilder {
         dims.push_back(val);
         return mlir::getAffineDimExpr(idx, context);
       }
+      if (outermostLoop &&
+          !outermostLoop->isAncestor(blockArg.getOwner()->getParentOp()))
+        return addSymbol(val);
       return {};
     }
 
@@ -167,12 +199,43 @@ struct AffineIndexBuilder {
       return {};
     }
 
+    // Value defined outside the outermost loop → affine symbol.
+    if (outermostLoop && !outermostLoop->isAncestor(defOp))
+      return addSymbol(val);
+
     return {};
   }
 
   mlir::MLIRContext *context;
+  fir::DoLoopOp outermostLoop;
   llvm::SmallVector<mlir::Value> dims;
+  llvm::SmallVector<mlir::Value> syms;
+
+private:
+  MaybeExpr addSymbol(mlir::Value val) {
+    for (unsigned i = 0; i < syms.size(); ++i)
+      if (syms[i] == val)
+        return mlir::getAffineSymbolExpr(i, context);
+    unsigned idx = syms.size();
+    syms.push_back(val);
+    return mlir::getAffineSymbolExpr(idx, context);
+  }
 };
+
+/// Ensure a value is index-typed, inserting a fir.convert immediately after
+/// the value's definition point if needed.  Affine operations require all
+/// dimension and symbol operands to be of index type.
+static mlir::Value castToIndex(mlir::Value val, mlir::PatternRewriter &rewriter) {
+  if (val.getType().isIndex())
+    return val;
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  if (auto *defOp = val.getDefiningOp())
+    rewriter.setInsertionPointAfter(defOp);
+  else if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(val))
+    rewriter.setInsertionPointToStart(blockArg.getOwner());
+  return fir::ConvertOp::create(rewriter, val.getLoc(),
+                                rewriter.getIndexType(), val);
+}
 
 namespace {
 struct AffineLoopAnalysis {
@@ -193,8 +256,14 @@ private:
       if (!analysis.canPromoteToAffine())
         return false;
     }
-    for (auto ifOp : loopOperation.getOps<fir::IfOp>())
-      functionAnalysis.ifAnalysisMap.try_emplace(ifOp, ifOp, functionAnalysis);
+    // Reject loops containing fir.if until full fir.if → affine.if
+    // promotion is available.  
+    if (!loopOperation.getOps<fir::IfOp>().empty()) {
+      LLVM_DEBUG(llvm::dbgs()
+                     << "AffineLoopAnalysis: loop contains fir.if, "
+                        "skipping (if-promotion not yet enabled)\n");
+      return false;
+    }
     return true;
   }
 
@@ -213,12 +282,15 @@ private:
   bool analyzeLoop(fir::DoLoopOp loopOperation,
                    AffineFunctionAnalysis &functionAnalysis) {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: \n"; loopOperation.dump(););
-    return analyzeMemoryAccess(loopOperation) &&
+    auto outermost = functionAnalysis.getOutermostLoop(loopOperation);
+    return analyzeBounds(loopOperation, outermost) &&
+           analyzeMemoryAccess(loopOperation, outermost) &&
            analysisResults(loopOperation) &&
            analyzeBody(loopOperation, functionAnalysis);
   }
 
-  bool analyzeReference(mlir::Value memref, mlir::Operation *op) {
+  bool analyzeReference(mlir::Value memref, mlir::Operation *op,
+                        fir::DoLoopOp outermost) {
     if (auto acoOp = memref.getDefiningOp<ArrayCoorOp>()) {
       if (mlir::isa<fir::BoxType>(acoOp.getMemref().getType())) {
         // TODO: Look if and how fir.box can be promoted to affine.
@@ -229,7 +301,7 @@ private:
       }
       bool canPromote = true;
       for (auto coordinate : acoOp.getIndices())
-        canPromote = canPromote && isAffineIndex(coordinate);
+        canPromote = canPromote && isAffineIndex(coordinate, outermost);
       return canPromote;
     }
     if (auto coOp = memref.getDefiningOp<CoordinateOp>()) {
@@ -246,13 +318,44 @@ private:
     return false;
   }
 
-  bool analyzeMemoryAccess(fir::DoLoopOp loopOperation) {
+  bool analyzeMemoryAccess(fir::DoLoopOp loopOperation,
+                           fir::DoLoopOp outermost) {
     for (auto loadOp : loopOperation.getOps<fir::LoadOp>())
-      if (!analyzeReference(loadOp.getMemref(), loadOp))
+      if (!analyzeReference(loadOp.getMemref(), loadOp, outermost))
         return false;
     for (auto storeOp : loopOperation.getOps<fir::StoreOp>())
-      if (!analyzeReference(storeOp.getMemref(), storeOp))
+      if (!analyzeReference(storeOp.getMemref(), storeOp, outermost))
         return false;
+    return true;
+  }
+
+  bool analyzeBounds(fir::DoLoopOp loopOperation,
+                     fir::DoLoopOp outermost) {
+    // Only promote loops with a positive constant step. The genericBounds
+    // fallback (which attempts to handle variable/negative steps) is broken
+    // — see the comment on that function — so we reject everything that
+    // positiveConstantStep cannot handle.
+    bool hasPositiveConstantStep = false;
+    if (auto defOp = loopOperation.getStep()
+                          .getDefiningOp<mlir::arith::ConstantOp>())
+      if (auto attr = mlir::dyn_cast<IntegerAttr>(defOp.getValue()))
+        hasPositiveConstantStep = attr.getInt() > 0;
+    if (!hasPositiveConstantStep) {
+      LLVM_DEBUG(llvm::dbgs()
+                     << "AffineLoopAnalysis: step is not a positive "
+                        "constant, cannot promote\n");
+      return false;
+    }
+    if (!isAffineIndex(loopOperation.getLowerBound(), outermost)) {
+      LLVM_DEBUG(llvm::dbgs()
+                     << "AffineLoopAnalysis: lower bound not affine\n");
+      return false;
+    }
+    if (!isAffineIndex(loopOperation.getUpperBound(), outermost)) {
+      LLVM_DEBUG(llvm::dbgs()
+                     << "AffineLoopAnalysis: upper bound not affine\n");
+      return false;
+    }
     return true;
   }
 
@@ -411,7 +514,7 @@ AffineFunctionAnalysis::getChildIfAnalysis(fir::IfOp op) const {
   if (it == ifAnalysisMap.end()) {
     LLVM_DEBUG(llvm::dbgs() << "AffineFunctionAnalysis: not computed for:\n";
                op.dump(););
-    op.emitError("error in fetching if analysis in AffineFunctionAnalysis\n");
+
     return {};
   }
   return it->getSecond();
@@ -436,7 +539,8 @@ struct MultiDimAffineResult {
 /// MemRefType, and adjusts each per-dimension index from Fortran 1-based to
 /// memref 0-based indexing.
 static MultiDimAffineResult
-createMultiDimAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
+createMultiDimAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter,
+                        fir::DoLoopOp outermost) {
   auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>();
   auto loc = acoOp.getLoc();
   auto *context = acoOp.getContext();
@@ -461,28 +565,41 @@ createMultiDimAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
   SmallVector<mlir::Value> adjustedIndices;
   auto indices = acoOp.getIndices();
 
+  auto buildOperands = [&](AffineIndexBuilder &builder) {
+    SmallVector<mlir::Value> operands;
+    for (auto &d : builder.dims)
+      operands.push_back(castToIndex(d, rewriter));
+    for (auto &s : builder.syms)
+      operands.push_back(castToIndex(s, rewriter));
+    return operands;
+  };
+
   if (auto shapeOp = acoOp.getShape().getDefiningOp<ShapeOp>()) {
     for (auto idx : indices) {
-      AffineIndexBuilder builder(context);
+      AffineIndexBuilder builder(context, outermost);
       auto expr = builder.build(idx);
       assert(expr && "analysis guaranteed index is affine");
       auto adjustedExpr = *expr - 1;
-      auto map = mlir::AffineMap::get(builder.dims.size(), 0, adjustedExpr);
+      auto map = mlir::AffineMap::get(builder.dims.size(),
+                                      builder.syms.size(), adjustedExpr);
+      auto operands = buildOperands(builder);
       auto adjusted =
-          affine::AffineApplyOp::create(rewriter, loc, map, builder.dims);
+          affine::AffineApplyOp::create(rewriter, loc, map, operands);
       adjustedIndices.push_back(adjusted.getResult());
     }
   } else if (auto shapeShiftOp =
                  acoOp.getShape().getDefiningOp<ShapeShiftOp>()) {
     auto pairs = shapeShiftOp.getPairs();
     for (unsigned i = 0; i < indices.size(); ++i) {
-      AffineIndexBuilder builder(context);
+      AffineIndexBuilder builder(context, outermost);
       auto expr = builder.build(indices[i]);
       assert(expr && "analysis guaranteed index is affine");
-      auto adjustedExpr = *expr - mlir::getAffineSymbolExpr(0, context);
-      auto map = mlir::AffineMap::get(builder.dims.size(), 1, adjustedExpr);
-      SmallVector<mlir::Value> operands;
-      operands.append(builder.dims.begin(), builder.dims.end());
+      unsigned extraSymIdx = builder.syms.size();
+      auto adjustedExpr =
+          *expr - mlir::getAffineSymbolExpr(extraSymIdx, context);
+      auto map = mlir::AffineMap::get(builder.dims.size(),
+                                      builder.syms.size() + 1, adjustedExpr);
+      auto operands = buildOperands(builder);
       operands.push_back(pairs[i * 2]);
       auto adjusted =
           affine::AffineApplyOp::create(rewriter, loc, map, operands);
@@ -491,15 +608,16 @@ createMultiDimAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
   } else if (auto sliceOp = acoOp.getShape().getDefiningOp<SliceOp>()) {
     auto triples = sliceOp.getTriples();
     for (unsigned i = 0; i < indices.size(); ++i) {
-      AffineIndexBuilder builder(context);
+      AffineIndexBuilder builder(context, outermost);
       auto expr = builder.build(indices[i]);
       assert(expr && "analysis guaranteed index is affine");
-      auto lbSym = mlir::getAffineSymbolExpr(0, context);
-      auto strideSym = mlir::getAffineSymbolExpr(1, context);
+      unsigned extraSymBase = builder.syms.size();
+      auto lbSym = mlir::getAffineSymbolExpr(extraSymBase, context);
+      auto strideSym = mlir::getAffineSymbolExpr(extraSymBase + 1, context);
       auto adjustedExpr = (*expr - lbSym).floorDiv(strideSym);
-      auto map = mlir::AffineMap::get(builder.dims.size(), 2, adjustedExpr);
-      SmallVector<mlir::Value> operands;
-      operands.append(builder.dims.begin(), builder.dims.end());
+      auto map = mlir::AffineMap::get(builder.dims.size(),
+                                      builder.syms.size() + 2, adjustedExpr);
+      auto operands = buildOperands(builder);
       operands.push_back(triples[i * 3]);
       operands.push_back(triples[i * 3 + 2]);
       auto adjusted =
@@ -515,28 +633,31 @@ createMultiDimAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
   return {std::move(adjustedIndices), arrayConvert};
 }
 
-static void rewriteLoad(fir::LoadOp loadOp, mlir::PatternRewriter &rewriter) {
+static void rewriteLoad(fir::LoadOp loadOp, mlir::PatternRewriter &rewriter,
+                        fir::DoLoopOp outermost) {
   rewriter.setInsertionPoint(loadOp);
-  auto result = createMultiDimAffineOps(loadOp.getMemref(), rewriter);
+  auto result = createMultiDimAffineOps(loadOp.getMemref(), rewriter, outermost);
   rewriter.replaceOpWithNewOp<affine::AffineLoadOp>(
       loadOp, result.arrayConvert.getResult(), result.indices);
 }
 
 static void rewriteStore(fir::StoreOp storeOp,
-                         mlir::PatternRewriter &rewriter) {
+                         mlir::PatternRewriter &rewriter,
+                         fir::DoLoopOp outermost) {
   rewriter.setInsertionPoint(storeOp);
-  auto result = createMultiDimAffineOps(storeOp.getMemref(), rewriter);
+  auto result = createMultiDimAffineOps(storeOp.getMemref(), rewriter, outermost);
   rewriter.replaceOpWithNewOp<affine::AffineStoreOp>(
       storeOp, storeOp.getValue(), result.arrayConvert.getResult(),
       result.indices);
 }
 
-static void rewriteMemoryOps(Block *block, mlir::PatternRewriter &rewriter) {
+static void rewriteMemoryOps(Block *block, mlir::PatternRewriter &rewriter,
+                              fir::DoLoopOp outermost = {}) {
   for (auto &bodyOp : llvm::make_early_inc_range(block->getOperations())) {
     if (isa<fir::LoadOp>(bodyOp))
-      rewriteLoad(cast<fir::LoadOp>(bodyOp), rewriter);
+      rewriteLoad(cast<fir::LoadOp>(bodyOp), rewriter, outermost);
     else if (isa<fir::StoreOp>(bodyOp))
-      rewriteStore(cast<fir::StoreOp>(bodyOp), rewriter);
+      rewriteStore(cast<fir::StoreOp>(bodyOp), rewriter, outermost);
   }
 }
 
@@ -601,7 +722,8 @@ public:
     loop.getInductionVar().replaceAllUsesWith(inductionVar);
     rewriter.finalizeOpModification(loop.getOperation());
 
-    rewriteMemoryOps(affineFor.getBody(), rewriter);
+    auto outermost = functionAnalysis.getOutermostLoop(loop);
+    rewriteMemoryOps(affineFor.getBody(), rewriter, outermost);
 
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: loop rewriten to:\n";
                affineFor.dump(););
@@ -619,42 +741,56 @@ private:
     return genericBounds(op, rewriter);
   }
 
-  /// Build an AffineMap + operands for a single loop bound using
-  /// AffineIndexBuilder.  Reuses the same recursive decomposition used for
-  /// array indices: fir.convert, arith.addi/subi/muli, constants, and
-  /// enclosing loop IVs are all handled uniformly.
-  ///
-  /// If the bound is an affine expression of enclosing loop IVs and
-  /// constants, those IVs become dimensions in the map (as required by the
-  /// affine verifier).  Otherwise the raw value is treated as a symbol.
-  static mlir::AffineMap boundMap(mlir::Value operand, int64_t offset,
-                                  mlir::MLIRContext *ctx,
-                                  SmallVectorImpl<mlir::Value> &mapOperands) {
-    AffineIndexBuilder builder(ctx);
+  mlir::AffineMap boundMap(mlir::Value operand, int64_t offset,
+                           mlir::MLIRContext *ctx,
+                           SmallVectorImpl<mlir::Value> &mapOperands,
+                           fir::DoLoopOp outermost,
+                           mlir::PatternRewriter &rewriter) const {
+    AffineIndexBuilder builder(ctx, outermost);
     if (auto expr = builder.build(operand)) {
-      mapOperands.append(builder.dims.begin(), builder.dims.end());
-      return mlir::AffineMap::get(builder.dims.size(), /*symbolCount=*/0,
+      for (auto &d : builder.dims)
+        mapOperands.push_back(castToIndex(d, rewriter));
+      for (auto &s : builder.syms)
+        mapOperands.push_back(castToIndex(s, rewriter));
+      return mlir::AffineMap::get(builder.dims.size(), builder.syms.size(),
                                   *expr + offset);
     }
-    mapOperands.push_back(operand);
-    return mlir::AffineMap::get(/*dimCount=*/0, /*symbolCount=*/1,
-                                mlir::getAffineSymbolExpr(0, ctx) + offset);
+    llvm_unreachable("analysis should have rejected non-affine bounds");
   }
 
-  // when step for the loop is positive compile time constant
   std::pair<affine::AffineForOp, mlir::Value>
   positiveConstantStep(fir::DoLoopOp op, int64_t step,
                        mlir::PatternRewriter &rewriter) const {
     auto *ctx = op.getContext();
+    auto outermost = functionAnalysis.getOutermostLoop(op);
     SmallVector<mlir::Value> lbOperands, ubOperands;
-    auto lbMap = boundMap(op.getLowerBound(), 0, ctx, lbOperands);
-    auto ubMap = boundMap(op.getUpperBound(), 1, ctx, ubOperands);
+    auto lbMap =
+        boundMap(op.getLowerBound(), 0, ctx, lbOperands, outermost, rewriter);
+    auto ubMap =
+        boundMap(op.getUpperBound(), 1, ctx, ubOperands, outermost, rewriter);
     auto affineFor = affine::AffineForOp::create(
         rewriter, op.getLoc(), lbOperands, lbMap, ubOperands, ubMap, step,
         op.getIterOperands());
     return std::make_pair(affineFor, affineFor.getInductionVar());
   }
 
+  // KNOWN FLAWED: This function attempts to normalize any fir.do_loop
+  // (variable step, negative step) into a 0-based step-1 affine.for by
+  // computing trip_count = (ub - lb + step) / step and reconstructing
+  // the original index as actual_i = lb + ii * step.
+  //
+  // Flaws:
+  //   1. Operand classification: lb, ub, step are passed as affine symbols,
+  //      but they may be dimensions (e.g. enclosing loop IVs), causing the
+  //      MLIR verifier to reject with "dimensional operand cannot be used
+  //      as a symbol".
+  //   2. The index reconstruction (lb + ii * step) involves multiplying a
+  //      dimension (ii) by a variable (step), which is not a valid affine
+  //      expression when step is not a compile-time constant.
+  //
+  // Currently unreachable: analyzeBounds rejects loops with non-positive-
+  // constant steps, so createAffineFor always takes the
+  // positiveConstantStep path. This function is kept for reference only.
   std::pair<affine::AffineForOp, mlir::Value>
   genericBounds(fir::DoLoopOp op, mlir::PatternRewriter &rewriter) const {
     auto lowerBound = mlir::getAffineSymbolExpr(0, op.getContext());

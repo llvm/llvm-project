@@ -106,24 +106,25 @@ func.func @loop_with_if(%a: !arr_d1, %v: f32) {
   }
   return
 }
+// Loops containing fir.if are not promoted (if-promotion deferred to a later patch).
+// The entire nest stays as fir.do_loop.
 // CHECK: func @loop_with_if(%[[VAL_0:.*]]: !fir.ref<!fir.array<?xf32>>, %[[VAL_1:.*]]: f32) {
-// CHECK:   %[[VAL_4:.*]] = arith.constant 2 : index
-// CHECK:   %[[VAL_5:.*]] = arith.constant 100 : index
-// CHECK:   %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-// CHECK:   %[[VAL_7:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
-// CHECK:   affine.for %[[VAL_8:.*]] = 1 to 101 {
-// CHECK:     %[[VAL_9:.*]] = affine.apply #{{.*}}(%[[VAL_8]])
-// CHECK:     affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_9]]] : memref<?xf32>
-// CHECK:   }
-// CHECK:   affine.for %[[VAL_10:.*]] = 1 to 101 {
-// CHECK:     %[[VAL_11:.*]] = affine.apply #{{.*}}(%[[VAL_10]])
-// CHECK:     affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xf32>
-// CHECK:   }
-// CHECK:   affine.for %[[VAL_12:.*]] = 1 to 101 {
-// CHECK:     %[[VAL_13:.*]] = arith.subi %[[VAL_12]], %[[VAL_4]] : index
-// CHECK:     affine.if #set(%[[VAL_12]]) {
-// CHECK:       %[[VAL_14:.*]] = affine.apply #{{.*}}(%[[VAL_12]])
-// CHECK:       affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_14]]] : memref<?xf32>
+// CHECK:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK:   %[[C100:.*]] = arith.constant 100 : index
+// CHECK:   %[[DIMS:.*]] = fir.shape %[[C100]] : (index) -> !fir.shape<1>
+// CHECK:   fir.do_loop %[[I:.*]] = %[[C1]] to %[[C100]] step %[[C1]] {
+// CHECK:     fir.do_loop %[[J:.*]] = %[[C1]] to %[[C100]] step %[[C1]] {
+// CHECK:       fir.do_loop %[[K:.*]] = %[[C1]] to %[[C100]] step %[[C1]] {
+// CHECK:         %[[IM2:.*]] = arith.subi %[[I]], %[[C2]] : index
+// CHECK:         %[[COND:.*]] = arith.cmpi sgt, %[[IM2]], %[[C0]] : index
+// CHECK:         fir.if %[[COND]] {
+// CHECK:           fir.store %[[VAL_1]] to %{{.*}} : !fir.ref<f32>
+// CHECK:         }
+// CHECK:         fir.store %[[VAL_1]] to %{{.*}} : !fir.ref<f32>
+// CHECK:         fir.store %[[VAL_1]] to %{{.*}} : !fir.ref<f32>
+// CHECK:       }
 // CHECK:     }
 // CHECK:   }
 // CHECK:   return
