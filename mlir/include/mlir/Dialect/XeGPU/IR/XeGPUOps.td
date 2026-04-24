@@ -620,7 +620,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
 
   }];
 
-  let arguments = (ins XeGPU_GatherScatterSourceType:$source,
+  let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
@@ -718,7 +718,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 
   }];
 
-  let arguments = (ins XeGPU_GatherScatterSourceType:$source,
+  let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
       AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
@@ -848,7 +848,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   }];
 
   let arguments = (ins XeGPU_ValueOrScalarType:$value,
-      XeGPU_GatherScatterSourceType:$dest,
+      XeGPU_GatherScatterBaseAddrType:$dest,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
       AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,

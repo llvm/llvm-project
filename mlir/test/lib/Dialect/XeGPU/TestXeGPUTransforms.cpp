@@ -71,26 +71,11 @@ struct TestXeGPUUnrollingPatterns
           tdescTy = loadNdOp.getTensorDescType();
         } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
           tdescTy = storeNdOp.getTensorDescType();
-        } else if (auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(op)) {
+        } else if (isa<xegpu::PrefetchOp, xegpu::LoadGatherOp,
+                       xegpu::StoreScatterOp>(op)) {
+          auto anchorOp = cast<xegpu::AnchorLayoutInterface>(op);
           auto layout =
-              llvm::dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
-          if (layout && layout.isForSubgroup()) {
-            auto inst_data = layout.getEffectiveInstDataAsInt();
-            if (!inst_data.empty())
-              return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
-          }
-          return std::nullopt;
-        } else if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
-          auto layout = xegpu::getDistributeLayoutAttr(loadOp.getResult());
-          if (layout && layout.isForSubgroup()) {
-            auto inst_data = layout.getEffectiveInstDataAsInt();
-            if (!inst_data.empty())
-              return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
-          }
-          return std::nullopt;
-        } else if (auto storeOp = dyn_cast<xegpu::StoreScatterOp>(op)) {
-          auto layout =
-              llvm::dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+              dyn_cast_or_null<xegpu::LayoutAttr>(anchorOp.getAnchorLayout());
           if (layout && layout.isForSubgroup()) {
             auto inst_data = layout.getEffectiveInstDataAsInt();
             if (!inst_data.empty())
