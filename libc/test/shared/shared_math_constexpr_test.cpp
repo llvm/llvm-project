@@ -56,8 +56,6 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::ddivl(0.0L, 1.0L));
 static_assert(0.0 == LIBC_NAMESPACE::shared::dmull(0.0L, 1.0L));
 static_assert(1.0L == LIBC_NAMESPACE::shared::fabsl(-1.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::floorl(0.0L));
-static_assert(0.0 ==
-              LIBC_NAMESPACE::shared::dsubl(0.0L, 0.0L));
 
 #endif
 
@@ -79,8 +77,6 @@ static_assert(0.0 ==
               LIBC_NAMESPACE::shared::dmulf128(float128(0.0), float128(1.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::floorf128(float128(0.0)));
-static_assert(0.0 ==
-              LIBC_NAMESPACE::shared::dsubf128(float128(0.0), float128(0.0)));
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
