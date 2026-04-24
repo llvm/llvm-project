@@ -279,11 +279,11 @@ ScopedHashTableScope<K, V, KInfo, Allocator>::~ScopedHashTableScope() {
   }
 }
 
-// This method undoes the latest binding of the given key, effectively
-// reverting to the previous state for that key.
-// In the example at the beginning of this file, if we execute `HT.erase(0)`
-// immediately after `HT.insert(0, 42);`, then the value associated with key "0"
-// reverts to 0. This value is owned by "Scope1(HT)".
+/// This method undoes the latest binding of the given key, effectively
+/// reverting to the previous state for that key. In the example at the
+/// beginning of this file, if we execute `HT.erase(0)` immediately after
+/// `HT.insert(0, 42);`, then the value associated with key "0" reverts to 0.
+/// This value is owned by "Scope1(HT)".
 template <typename K, typename V, typename KInfo, typename Allocator>
 void ScopedHashTableScope<K, V, KInfo, Allocator>::erase(const K &Key) {
   auto I = HT.TopLevelMap.find(Key);
