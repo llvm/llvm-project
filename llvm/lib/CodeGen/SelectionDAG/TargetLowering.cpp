@@ -6307,8 +6307,8 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
 
     // Indirect 'other' or 'immediate' constraints are not allowed.
     bool isRegOrMem = (CType == TargetLowering::C_Memory ||
-                               CType == TargetLowering::C_Register ||
-                               CType == TargetLowering::C_RegisterClass);
+                       CType == TargetLowering::C_Register ||
+                       CType == TargetLowering::C_RegisterClass);
     if (OpInfo.isIndirect && !isRegOrMem)
       continue;
 

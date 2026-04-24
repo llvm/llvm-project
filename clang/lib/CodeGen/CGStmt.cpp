@@ -2889,8 +2889,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     //   (We'll correct this before ISel if using the fast register allocator.)
     // - If this is a memory result, return the value by-reference.
     QualType QTy = OutExpr->getType();
-    const bool IsScalarOrAggregate = hasScalarEvaluationKind(QTy) ||
-                                     hasAggregateEvaluationKind(QTy);
+    const bool IsScalarOrAggregate =
+        hasScalarEvaluationKind(QTy) || hasAggregateEvaluationKind(QTy);
     const bool RegisterMemoryConstraints =
         llvm::is_contained(OutputConstraint, 'r') &&
         llvm::is_contained(OutputConstraint, 'm');
