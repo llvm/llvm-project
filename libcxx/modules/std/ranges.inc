@@ -363,6 +363,16 @@ export namespace std {
       using std::ranges::views::enumerate;
     }
 #endif // _LIBCPP_STD_VER >= 23
+
+#if _LIBCPP_STD_VER >= 26
+    // [range.to.input], to input view
+    using std::ranges::as_input_view;
+
+    namespace views {
+      using std::ranges::views::as_input;
+    }
+#endif
+
   } // namespace ranges
 
   namespace views = ranges::views;

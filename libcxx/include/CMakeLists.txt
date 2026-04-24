@@ -715,6 +715,7 @@ set(files
   __ranges/adjacent_transform_view.h
   __ranges/adjacent_view.h
   __ranges/all.h
+  __ranges/as_input_view.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
   __ranges/common_view.h
