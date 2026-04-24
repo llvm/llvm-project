@@ -4263,7 +4263,7 @@ void IndexBitcodeWriter::writeModStrings() {
     auto ModuleId = ModuleIdMap.size();
     ModuleIdMap[Key] = ModuleId;
     Vals.push_back(ModuleId);
-    Vals.append(Key.begin(), Key.end());
+    Vals.append(Key.bytes_begin(), Key.bytes_end());
 
     // Emit the finished record.
     Stream.EmitRecord(bitc::MST_CODE_ENTRY, Vals, AbbrevToUse);
