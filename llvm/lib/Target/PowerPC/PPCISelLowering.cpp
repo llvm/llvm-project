@@ -19345,7 +19345,7 @@ SDValue PPCTargetLowering::combineFMALike(SDNode *N,
 
 bool PPCTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   // Only duplicate to increase tail-calls for the 64bit SysV ABIs.
-  if (!Subtarget.is64BitELFABI())
+  if (!Subtarget.is64BitELFABI() && !Subtarget.isAIXABI())
     return false;
 
   // If not a tail call then no need to proceed.
