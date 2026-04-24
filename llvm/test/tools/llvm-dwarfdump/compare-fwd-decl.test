@@ -1,0 +1,167 @@
+## Test that llvm-dwarfdump --compare prefers definitions over
+## forward declarations when matching DIEs.
+
+# REQUIRES: x86-registered-target
+
+## A file with both forward decl + definition should match a file
+## with only the definition.
+# RUN: yaml2obj --docnum=1 %s -o %t-lhs.o
+# RUN: yaml2obj --docnum=2 %s -o %t-rhs.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs.o | FileCheck %s --check-prefix=MATCH
+
+# MATCH: Matched:
+# MATCH: Different: 0
+
+## --- LHS: forward declaration + definition of struct Foo
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_data_member_location
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value: 0x0004
+        - AbbrCode: 2                   # forward decl: struct Foo;
+          Values:
+            - CStr: Foo
+        - AbbrCode: 3                   # definition: struct Foo { int x; }
+          Values:
+            - CStr: Foo
+            - Value: 0x04
+        - AbbrCode: 4                   # member x
+          Values:
+            - CStr: x
+            - Value: 0x0000002c          # -> int
+            - Value: 0x00
+        - AbbrCode: 0
+        - AbbrCode: 5                   # int
+          Values:
+            - CStr: int
+            - Value: 0x05
+            - Value: 0x04
+        - AbbrCode: 0
+
+## --- RHS: only the definition of struct Foo (no forward decl)
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_data_member_location
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value: 0x0004
+        - AbbrCode: 2                   # definition: struct Foo { int x; }
+          Values:
+            - CStr: Foo
+            - Value: 0x04
+        - AbbrCode: 3                   # member x
+          Values:
+            - CStr: x
+            - Value: 0x00000027          # -> int
+            - Value: 0x00
+        - AbbrCode: 0
+        - AbbrCode: 4                   # int
+          Values:
+            - CStr: int
+            - Value: 0x05
+            - Value: 0x04
+        - AbbrCode: 0

@@ -1,0 +1,126 @@
+## Test that llvm-dwarfdump --compare matches imported declarations
+## by the referenced entity rather than positionally.
+
+# REQUIRES: x86-registered-target
+
+## Identical imports should match.
+# RUN: yaml2obj --docnum=1 %s -o %t-lhs.o
+# RUN: yaml2obj --docnum=2 %s -o %t-rhs-same.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs-same.o | FileCheck %s --check-prefix=SAME
+
+# SAME: Matched:
+# SAME: Different: 0
+
+## --- LHS: namespace ns { int x; } using ns::x;
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_imported_declaration
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref4
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value: 0x0004
+        - AbbrCode: 2                   # namespace ns
+          Values:
+            - CStr: ns
+        - AbbrCode: 3                   # int x
+          Values:
+            - CStr: x
+        - AbbrCode: 0                   # end namespace
+        - AbbrCode: 4                   # using ns::x
+          Values:
+            - Value: 0x0000001c          # -> ns::x
+        - AbbrCode: 0
+
+## --- RHS-same: identical structure
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_imported_declaration
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref4
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value: 0x0004
+        - AbbrCode: 2
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+            - CStr: x
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - Value: 0x0000001c
+        - AbbrCode: 0

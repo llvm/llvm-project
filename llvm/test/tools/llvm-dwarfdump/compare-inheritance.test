@@ -1,0 +1,242 @@
+## Test that llvm-dwarfdump --compare matches inheritance DIEs by
+## base class name rather than positionally.
+
+# REQUIRES: x86-registered-target
+
+## Identical inheritance should match.
+# RUN: yaml2obj --docnum=1 %s -o %t-lhs.o
+# RUN: yaml2obj --docnum=2 %s -o %t-rhs-same.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs-same.o | FileCheck %s --check-prefix=SAME
+
+# SAME: Matched:
+# SAME: Different: 0
+
+## Different base class: Base2 replaced with Base3.
+# RUN: yaml2obj --docnum=3 %s -o %t-rhs-diff.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs-diff.o > %t-diff.out 2>&1 || true
+# RUN: FileCheck %s --check-prefix=DIFF < %t-diff.out
+
+# DIFF: structure_type{{.*}}Base2
+# DIFF: structure_type{{.*}}Base3
+
+## --- LHS: struct Derived : Base1, Base2 {}
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_inheritance
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_data_member_location
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value: 0x0004
+        - AbbrCode: 2                   # Derived
+          Values:
+            - CStr: Derived
+            - Value: 0x02
+        - AbbrCode: 3                   # : Base1
+          Values:
+            - Value: 0x0000002f          # -> Base1
+            - Value: 0x00
+        - AbbrCode: 3                   # : Base2
+          Values:
+            - Value: 0x00000037          # -> Base2
+            - Value: 0x01
+        - AbbrCode: 0
+        - AbbrCode: 4                   # Base1
+          Values:
+            - CStr: Base1
+            - Value: 0x01
+        - AbbrCode: 4                   # Base2
+          Values:
+            - CStr: Base2
+            - Value: 0x01
+        - AbbrCode: 0
+
+## --- RHS-same: identical layout
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_inheritance
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_data_member_location
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value: 0x0004
+        - AbbrCode: 2
+          Values:
+            - CStr: Derived
+            - Value: 0x02
+        - AbbrCode: 3
+          Values:
+            - Value: 0x0000002f
+            - Value: 0x00
+        - AbbrCode: 3
+          Values:
+            - Value: 0x00000037
+            - Value: 0x01
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: Base1
+            - Value: 0x01
+        - AbbrCode: 4
+          Values:
+            - CStr: Base2
+            - Value: 0x01
+        - AbbrCode: 0
+
+## --- RHS-diff: Base2 replaced with Base3
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_inheritance
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_data_member_location
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value: 0x0004
+        - AbbrCode: 2
+          Values:
+            - CStr: Derived
+            - Value: 0x02
+        - AbbrCode: 3                   # : Base1
+          Values:
+            - Value: 0x0000002f          # -> Base1
+            - Value: 0x00
+        - AbbrCode: 3                   # : Base3
+          Values:
+            - Value: 0x00000037          # -> Base3
+            - Value: 0x01
+        - AbbrCode: 0
+        - AbbrCode: 4                   # Base1
+          Values:
+            - CStr: Base1
+            - Value: 0x01
+        - AbbrCode: 4                   # Base3
+          Values:
+            - CStr: Base3
+            - Value: 0x01
+        - AbbrCode: 0

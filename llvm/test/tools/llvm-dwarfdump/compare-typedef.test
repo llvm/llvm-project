@@ -1,0 +1,191 @@
+## Test that llvm-dwarfdump --compare detects typedef differences
+## where the underlying type differs.
+
+# REQUIRES: x86-registered-target
+
+## Same typedef should match.
+# RUN: yaml2obj --docnum=1 %s -o %t-lhs.o
+# RUN: yaml2obj --docnum=2 %s -o %t-rhs-same.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs-same.o | FileCheck %s --check-prefix=SAME
+
+# SAME: Matched:
+# SAME: Different: 0
+
+## Typedef with different underlying type should differ.
+# RUN: yaml2obj --docnum=3 %s -o %t-rhs-diff.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs-diff.o > %t-diff.out 2>&1 || true
+# RUN: FileCheck %s --check-prefix=DIFF < %t-diff.out
+
+# DIFF: base_type{{.*}}int
+# DIFF: base_type{{.*}}long
+
+## --- LHS: typedef MyInt -> int
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_typedef
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.c
+            - Value: 0x0001
+        - AbbrCode: 2
+          Values:
+            - CStr: MyInt
+            - Value: 0x00000021
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+            - Value: 0x05
+            - Value: 0x04
+        - AbbrCode: 0
+
+## --- RHS-same: typedef MyInt -> int (identical)
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_typedef
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.c
+            - Value: 0x0001
+        - AbbrCode: 2
+          Values:
+            - CStr: MyInt
+            - Value: 0x00000021
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+            - Value: 0x05
+            - Value: 0x04
+        - AbbrCode: 0
+
+## --- RHS-diff: typedef MyInt -> long (different underlying type)
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_typedef
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.c
+            - Value: 0x0001
+        - AbbrCode: 2
+          Values:
+            - CStr: MyInt
+            - Value: 0x00000021
+        - AbbrCode: 3
+          Values:
+            - CStr: long
+            - Value: 0x05
+            - Value: 0x08
+        - AbbrCode: 0

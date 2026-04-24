@@ -1,0 +1,231 @@
+## Test that llvm-dwarfdump --compare structurally compares the DWARF type
+## graph, including unnamed type modifier DIEs (pointer, const, volatile, etc.).
+
+# REQUIRES: x86-registered-target
+
+## Two files with the same type structure should match.
+# RUN: yaml2obj --docnum=1 %s -o %t-lhs.o
+# RUN: yaml2obj --docnum=2 %s -o %t-rhs-same.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs-same.o | FileCheck %s --check-prefix=SAME
+
+# SAME: Matched:
+# SAME: Different: 0
+
+
+## A file with a different type chain (const int* vs int*) should differ.
+# RUN: yaml2obj --docnum=3 %s -o %t-rhs-diff.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs-diff.o > %t-diff.out 2>&1 || true
+# RUN: FileCheck %s --check-prefix=TYPEDIFF < %t-diff.out
+
+# TYPEDIFF: variable{{.*}}p
+
+## --- LHS: variable "p" has type "const int *" (pointer -> const -> int)
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_const_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.c
+            - Value: 0x0001
+        - AbbrCode: 2                   # variable "p"
+          Values:
+            - CStr: p
+            - Value: 0x0000001d          # -> pointer_type
+        - AbbrCode: 3                   # pointer_type -> const
+          Values:
+            - Value: 0x00000022          # -> const_type
+        - AbbrCode: 4                   # const_type -> int
+          Values:
+            - Value: 0x00000027          # -> base_type "int"
+        - AbbrCode: 5                   # base_type "int"
+          Values:
+            - CStr: int
+            - Value: 0x05
+            - Value: 0x04
+        - AbbrCode: 0
+
+## --- RHS-same: identical type structure (const int *)
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_const_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.c
+            - Value: 0x0001
+        - AbbrCode: 2                   # variable "p"
+          Values:
+            - CStr: p
+            - Value: 0x0000001d          # -> pointer_type
+        - AbbrCode: 3                   # pointer_type -> const
+          Values:
+            - Value: 0x00000022          # -> const_type
+        - AbbrCode: 4                   # const_type -> int
+          Values:
+            - Value: 0x00000027          # -> base_type "int"
+        - AbbrCode: 5                   # base_type "int"
+          Values:
+            - CStr: int
+            - Value: 0x05
+            - Value: 0x04
+        - AbbrCode: 0
+
+## --- RHS-diff: different type structure (int * instead of const int *)
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.c
+            - Value: 0x0001
+        - AbbrCode: 2                   # variable "p"
+          Values:
+            - CStr: p
+            - Value: 0x0000001d          # -> pointer_type
+        - AbbrCode: 3                   # pointer_type -> int (no const!)
+          Values:
+            - Value: 0x00000022          # -> base_type "int" directly
+        - AbbrCode: 4                   # base_type "int"
+          Values:
+            - CStr: int
+            - Value: 0x05
+            - Value: 0x04
+        - AbbrCode: 0

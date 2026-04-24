@@ -1,0 +1,13 @@
+## Test --compare error handling.
+
+## --compare with only one file should fail.
+# RUN: llvm-dwarfdump --compare /dev/null > %t.out 2>&1 || true
+# RUN: FileCheck %s --check-prefix=ONE < %t.out
+
+# ONE: --compare requires exactly two input files
+
+## --compare with three files should fail.
+# RUN: llvm-dwarfdump --compare /dev/null /dev/null /dev/null > %t2.out 2>&1 || true
+# RUN: FileCheck %s --check-prefix=THREE < %t2.out
+
+# THREE: --compare requires exactly two input files

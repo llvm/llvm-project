@@ -1,0 +1,152 @@
+## Test that --compare treats a forward declaration and its definition as
+## the same type when referenced via DW_AT_type. This is the common case
+## when the parallel linker deduplicates a type into an artificial type unit.
+
+# REQUIRES: x86-registered-target
+
+## LHS: variable "x" has type pointing to a forward declaration of Foo.
+## RHS: variable "x" has type pointing to the full definition of Foo.
+## These should match semantically.
+# RUN: yaml2obj --docnum=1 %s -o %t-lhs.o
+# RUN: yaml2obj --docnum=2 %s -o %t-rhs.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs.o > %t.out 2>&1 || true
+# RUN: FileCheck %s < %t.out
+
+# CHECK: Matched:
+# CHECK: Different: 0
+
+## --- LHS: variable x with type -> forward decl of Foo
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value: 0x0004
+        - AbbrCode: 2
+          Values:
+            - CStr: x
+            - Value: 0x0000001f
+        - AbbrCode: 3
+          Values:
+            - CStr: Foo
+        - AbbrCode: 0
+
+## --- RHS: variable x with type -> full definition of Foo
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_data_member_location
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value: 0x0004
+        - AbbrCode: 2
+          Values:
+            - CStr: x
+            - Value: 0x0000001f
+        - AbbrCode: 3
+          Values:
+            - CStr: Foo
+            - Value: 0x04
+        - AbbrCode: 4
+          Values:
+            - CStr: val
+            - Value: 0x00000030
+            - Value: 0x00
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: int
+            - Value: 0x05
+            - Value: 0x04
+        - AbbrCode: 0

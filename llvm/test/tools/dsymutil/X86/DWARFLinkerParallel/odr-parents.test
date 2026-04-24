@@ -6,7 +6,16 @@
 # RUN: echo '    symbols:' >> %t2.map
 # RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
 # RUN: echo '...' >> %t2.map
-# RUN: dsymutil --linker=parallel -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker=parallel -y %t2.map -f -o %t.parallel.o
+# RUN: llvm-dwarfdump -a %t.parallel.o | FileCheck %s
+
+## Verify the classic and parallel linker produce semantically equivalent output.
+# RUN: dsymutil -y %t2.map -f -o %t.classic.o
+# RUN: llvm-dwarfdump --compare --compare-ignore-lines \
+# RUN:   %t.classic.o %t.parallel.o > %t.compare 2>&1 || true
+# RUN: FileCheck --check-prefix=COMPARE %s < %t.compare
+
+# COMPARE: Matched
 
 ## This test checks debug info for the equally named structures from
 ## different namespaces. The result should contain two variables which

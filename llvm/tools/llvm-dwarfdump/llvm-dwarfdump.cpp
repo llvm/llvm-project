@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDiff.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
@@ -349,6 +350,17 @@ static opt<bool> CombineInstances(
         "Use with --show-variable-coverage to average variable coverage across "
         "inlined subroutine instances instead of printing them separately."),
     cat(DwarfDumpCategory));
+static opt<bool> Compare(
+    "compare",
+    desc("Semantically compare two DWARF files. Requires exactly two input "
+         "files. Compares the DWARF type graph structurally, ignoring offsets, "
+         "forms, and encoding differences."),
+    cat(DwarfDumpCategory));
+static opt<bool>
+    CompareIgnoreLines("compare-ignore-lines",
+                       desc("Use with --compare to ignore DW_AT_decl_line "
+                            "differences."),
+                       cat(DwarfDumpCategory));
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 } // namespace
@@ -951,6 +963,59 @@ int main(int argc, char **argv) {
   }
 
   bool Success = true;
+  if (Compare) {
+    if (Objects.size() != 2) {
+      WithColor::error() << "--compare requires exactly two input files\n";
+      return EXIT_FAILURE;
+    }
+
+    struct OwnedContext {
+      std::unique_ptr<MemoryBuffer> Buffer;
+      std::unique_ptr<Binary> Bin;
+      std::unique_ptr<DWARFContext> Context;
+    };
+
+    auto OpenCtx = [](StringRef Filename) -> std::unique_ptr<OwnedContext> {
+      auto Result = std::make_unique<OwnedContext>();
+      auto BufOrErr = MemoryBuffer::getFileOrSTDIN(Filename);
+      if (!BufOrErr) {
+        WithColor::error() << "cannot open '" << Filename
+                           << "': " << BufOrErr.getError().message() << "\n";
+        return nullptr;
+      }
+      Result->Buffer = std::move(*BufOrErr);
+      auto BinOrErr = createBinary(Result->Buffer->getMemBufferRef());
+      if (!BinOrErr) {
+        WithColor::error() << Filename << ": " << toString(BinOrErr.takeError())
+                           << "\n";
+        return nullptr;
+      }
+      Result->Bin = std::move(*BinOrErr);
+      if (auto *Obj = dyn_cast<ObjectFile>(Result->Bin.get())) {
+        Result->Context = DWARFContext::create(*Obj);
+        return Result;
+      }
+      WithColor::error() << Filename << ": unsupported binary format\n";
+      return nullptr;
+    };
+
+    auto LOwned = OpenCtx(Objects[0]);
+    auto ROwned = OpenCtx(Objects[1]);
+    if (!LOwned || !ROwned)
+      return EXIT_FAILURE;
+
+    DiffOptions DiffOpts;
+    DiffOpts.IgnoreLines = CompareIgnoreLines;
+
+    DiffInput LInput{*LOwned->Context, Objects[0]};
+    DiffInput RInput{*ROwned->Context, Objects[1]};
+
+    DWARFDiff Differ(DiffOpts);
+    DiffResult Result = Differ.diff(LInput, RInput);
+    printDiffResult(OutputFile.os(), Result);
+    return Result.hasDifferences() ? EXIT_FAILURE : EXIT_SUCCESS;
+  }
+
   if (Verify) {
     if (!VerifyNumThreads)
       parallel::strategy =

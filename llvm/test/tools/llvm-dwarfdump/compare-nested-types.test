@@ -1,0 +1,258 @@
+## Test that --compare handles nested structs and multiple members correctly.
+## A struct with nested children should be compared recursively by identity.
+
+# REQUIRES: x86-registered-target
+
+## Identical nested struct should match.
+# RUN: yaml2obj --docnum=1 %s -o %t-lhs.o
+# RUN: yaml2obj --docnum=2 %s -o %t-rhs.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-rhs.o | FileCheck %s --check-prefix=SAME
+
+# SAME: Matched:
+# SAME: Different: 0
+
+
+## Extra member added to the nested struct should be detected.
+# RUN: yaml2obj --docnum=3 %s -o %t-extra.o
+# RUN: llvm-dwarfdump --compare %t-lhs.o %t-extra.o > %t.out 2>&1 || true
+# RUN: FileCheck %s --check-prefix=EXTRA < %t.out
+
+# EXTRA: member{{.*}}Outer::Inner::z
+
+## --- LHS: struct Outer { struct Inner { int x; int y; }; };
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value:  0x04
+        - AbbrCode: 2           # struct Outer
+          Values:
+            - CStr: Outer
+            - Value:  0x08
+        - AbbrCode: 2           # struct Inner (nested)
+          Values:
+            - CStr: Inner
+            - Value:  0x08
+        - AbbrCode: 3           # int x
+          Values:
+            - CStr: x
+            - Value:  0x00000038 # -> int
+        - AbbrCode: 3           # int y
+          Values:
+            - CStr: y
+            - Value:  0x00000038 # -> int
+        - AbbrCode: 0           # end Inner
+        - AbbrCode: 0           # end Outer
+        - AbbrCode: 4           # int
+          Values:
+            - CStr: int
+            - Value:  0x05
+            - Value:  0x04
+        - AbbrCode: 0           # end CU
+
+## --- RHS: identical nested struct
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value:  0x04
+        - AbbrCode: 2
+          Values:
+            - CStr: Outer
+            - Value:  0x08
+        - AbbrCode: 2
+          Values:
+            - CStr: Inner
+            - Value:  0x08
+        - AbbrCode: 3
+          Values:
+            - CStr: x
+            - Value:  0x00000038
+        - AbbrCode: 3
+          Values:
+            - CStr: y
+            - Value:  0x00000038
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+            - Value:  0x05
+            - Value:  0x04
+        - AbbrCode: 0
+
+## --- Extra: Inner has an additional member z
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_encoding
+            Form:      DW_FORM_data1
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: test.cpp
+            - Value:  0x04
+        - AbbrCode: 2
+          Values:
+            - CStr: Outer
+            - Value:  0x0c
+        - AbbrCode: 2
+          Values:
+            - CStr: Inner
+            - Value:  0x0c
+        - AbbrCode: 3           # x
+          Values:
+            - CStr: x
+            - Value:  0x0000003f
+        - AbbrCode: 3           # y
+          Values:
+            - CStr: y
+            - Value:  0x0000003f
+        - AbbrCode: 3           # z (extra!)
+          Values:
+            - CStr: z
+            - Value:  0x0000003f
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+            - Value:  0x05
+            - Value:  0x04
+        - AbbrCode: 0
