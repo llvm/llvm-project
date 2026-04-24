@@ -24,4 +24,6 @@ void shouldWarn() {
 void shouldNotWarn() {
   auto [_, mid, last] = get_data(); // '_' is accepted by default
   doIt(_, mid, last);
+
+  auto [f, m, l] = get_data(); // short names but does not exceed the line count threshold
 }
