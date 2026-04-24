@@ -5,6 +5,13 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -x c-header -emit-pch -o %t %S/pragma-redefine-extname.h
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -include-pch %t %s -verify -emit-llvm -o - | FileCheck %s
 
+/// Compile it again to check that the pch file is deterministic.
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux -x c-header -emit-pch -o %t.cmp %S/pragma-redefine-extname.h
+// RUN: diff %t %t.cmp >/dev/null
+/// Try it a second time to reduce chance of false negatives.
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux -x c-header -emit-pch -o %t.cmp %S/pragma-redefine-extname.h
+// RUN: diff %t %t.cmp >/dev/null
+
 // CHECK: define dso_local void @redeffunc2_ext
 // CHECK: call void @redeffunc1_ext
 
