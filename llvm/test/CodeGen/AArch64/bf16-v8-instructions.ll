@@ -396,16 +396,16 @@ define <8 x float> @h_to_s(<8 x bfloat> %a) {
 ;
 ; CHECK-CVT-GI-LABEL: h_to_s:
 ; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll2 v1.4s, v0.8h, #16
+; CHECK-CVT-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-BF16-GI-LABEL: h_to_s:
 ; CHECK-BF16-GI:       // %bb.0:
-; CHECK-BF16-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll2 v1.4s, v0.8h, #16
+; CHECK-BF16-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-BF16-GI-NEXT:    ret
   %1 = fpext <8 x bfloat> %a to <8 x float>
   ret <8 x float> %1
@@ -444,22 +444,20 @@ define <8 x double> @h_to_d(<8 x bfloat> %a) {
 ;
 ; CHECK-CVT-GI-LABEL: h_to_d:
 ; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-CVT-GI-NEXT:    shll v2.4s, v0.4h, #16
-; CHECK-CVT-GI-NEXT:    fcvtl v0.2d, v2.2s
-; CHECK-CVT-GI-NEXT:    shll v3.4s, v1.4h, #16
-; CHECK-CVT-GI-NEXT:    fcvtl2 v1.2d, v2.4s
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll2 v3.4s, v0.8h, #16
+; CHECK-CVT-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-CVT-GI-NEXT:    fcvtl2 v1.2d, v1.4s
 ; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v3.2s
 ; CHECK-CVT-GI-NEXT:    fcvtl2 v3.2d, v3.4s
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-BF16-GI-LABEL: h_to_d:
 ; CHECK-BF16-GI:       // %bb.0:
-; CHECK-BF16-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-BF16-GI-NEXT:    shll v2.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    fcvtl v0.2d, v2.2s
-; CHECK-BF16-GI-NEXT:    shll v3.4s, v1.4h, #16
-; CHECK-BF16-GI-NEXT:    fcvtl2 v1.2d, v2.4s
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll2 v3.4s, v0.8h, #16
+; CHECK-BF16-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-BF16-GI-NEXT:    fcvtl2 v1.2d, v1.4s
 ; CHECK-BF16-GI-NEXT:    fcvtl v2.2d, v3.2s
 ; CHECK-BF16-GI-NEXT:    fcvtl2 v3.2d, v3.4s
 ; CHECK-BF16-GI-NEXT:    ret
