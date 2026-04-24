@@ -1265,12 +1265,12 @@ and synchronization time. If highly precise kernel timing is required, it is
 recommended to use dedicated profiling tools in conjunction with the replay
 tool.
 
-Finally, the replay tool provides an optional verification step that checks
-whether the output device memory snapshot generated during replay matches the
-output snapshot captured during the recording phase. Because this verification
-performs a strict binary difference between the two memory snapshots, the check
-may fail for kernels operating on floating-point data due to normal variations
-in precision and operation order.
+Finally, the replay tool provides an optional verification step via the
+``--verify`` flag. When enabled, it checks whether the output device memory
+snapshot generated during replay matches the output snapshot captured during the
+recording phase. Because this verification performs a strict binary difference
+between the two memory snapshots, the check may fail for kernels operating on
+floating-point data due to normal variations in precision and operation order.
 
 The recording phase, implemented by ``libomptarget``, can be controlled via
 environment variables. A full list of environment variables and their definition
