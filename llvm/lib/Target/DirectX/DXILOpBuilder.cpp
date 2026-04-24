@@ -491,7 +491,16 @@ static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
 }
 
 static void setDXILMetadata(CallInst *CI, const OpCodeProperty *Prop) {
-  if (OpPreciseEnabled && isa<FPMathOperator>(CI)) {
+  bool ShouldEmitPrecise = true;
+
+  for(const auto &Operand : CI->operands()) {
+    if (isa<FPMathOperator>(Operand) && cast<FPMathOperator>(Operand)->getFastMathFlags().isFast()) {
+      ShouldEmitPrecise = false;
+      break;
+    }
+  }
+
+  if (isa<FPMathOperator>(CI) && ShouldEmitPrecise) {
 
     const StringRef Key = "dx.precise";
     Module *M = CI->getModule();
