@@ -5624,9 +5624,7 @@ static SDValue combineAndNotIntoVANDN(SDNode *N, const SDLoc &DL,
 
 static bool isConstantSplatVector(SDValue N, APInt &SplatValue,
                                   unsigned MinSizeInBits) {
-  if (N->getOpcode() == ISD::BITCAST)
-    N = N->getOperand(0);
-
+  N = peekThroughBitcasts(N);
   BuildVectorSDNode *Node = dyn_cast<BuildVectorSDNode>(N);
 
   if (!Node)
@@ -7745,9 +7743,7 @@ static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
   if (Srl.getOpcode() != ISD::SRL)
     return SDValue();
 
-  if (One.getOpcode() == ISD::BITCAST)
-    One = One.getOperand(0);
-
+  One = peekThroughBitcasts(One);
   if (!isConstantSplatVector(One, SplatVal, EltVT.getSizeInBits()))
     return SDValue();
 
