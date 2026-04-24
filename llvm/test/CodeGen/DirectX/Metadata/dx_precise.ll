@@ -224,13 +224,13 @@ entry:
   ret void
 }
 
-;; By this point all !dx.precise anotation should be matched
+; By this point all !dx.precise anotation should be matched
 ; CHECK-NOT: !dx.precise ![[SM]]
 
 define void @fast(float %p) {
 entry:
   %1 = fadd fast float %p, 2.0
-  %2 = call fast float @llvm.dx.saturate.f32(float %1)
+  %2 = call float @llvm.dx.saturate.f32(float %1)
   ret void
 }
 ; CHECK: ![[SM]] = !{i32 1}
