@@ -159,6 +159,7 @@ nub_size_t DNBProcessGetAvailableProfileData(nub_process_t pid, char *buf,
                                              nub_size_t buf_size) DNB_EXPORT;
 nub_size_t DNBProcessGetStopCount(nub_process_t pid) DNB_EXPORT;
 uint32_t DNBProcessGetCPUType(nub_process_t pid) DNB_EXPORT;
+bool DNBProcessAddrSize(nub_process_t pid, int &addr_size) DNB_EXPORT;
 size_t DNBGetAllInfos(std::vector<struct kinfo_proc> &proc_infos);
 JSONGenerator::ObjectSP DNBGetDyldProcessState(nub_process_t pid);
 
@@ -253,9 +254,21 @@ std::string DNBGetMacCatalystVersionString();
 bool DNBDebugserverIsTranslated();
 
 bool DNBGetAddressingBits(uint32_t &addressing_bits);
+nub_addr_t DNBFixAddress(nub_addr_t addr,
+                         nub_process_t pid = INVALID_NUB_PROCESS);
 
 nub_process_t DNBGetParentProcessID(nub_process_t child_pid);
 
 bool DNBProcessIsBeingDebugged(nub_process_t pid);
+
+bool DNBSharedCacheRegionAddr(nub_process_t pid, nub_addr_t &vmaddr,
+                              nub_addr_t &size);
+
+bool DNBDyldNotificationFunctionAddr(nub_process_t pid,
+                                     nub_addr_t &lldb_image_notifier);
+
+bool DNBGetBinariesLoadedInfo(nub_process_t pid, nub_thread_t tid,
+                              std::vector<uint64_t> &added_binaries,
+                              JSONGenerator::ObjectSP &detailed_binary_infos);
 
 #endif

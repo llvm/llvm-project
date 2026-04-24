@@ -58,6 +58,9 @@ enum UniformityLLTOpPredicateID {
   DivS64,
   DivS128,
 
+  // any LLT, divergent-check only predicate
+  DivAnyTy,
+
   // pointers
   P0,
   P1,
@@ -148,6 +151,10 @@ enum RegBankLLTMappingApplyID {
   IntrId,
   Imm,
   Vcc,
+
+  // any LLT, bank-only apply IDs
+  VgprAnyTy,
+  AgprAnyTy,
 
   // sgpr scalars, pointers, vectors and B-types
   Sgpr16,
