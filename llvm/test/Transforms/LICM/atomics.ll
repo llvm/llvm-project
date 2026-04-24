@@ -266,9 +266,9 @@ end:
 }
 
 
-define i32 @test8(ptr nocapture noalias %x, ptr nocapture %y) {
+define i32 @test8(ptr nocapture %x, ptr nocapture noalias %y) {
 ; CHECK-LABEL: define i32 @test8(
-; CHECK-SAME: ptr noalias captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[X:%.*]], ptr noalias captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:

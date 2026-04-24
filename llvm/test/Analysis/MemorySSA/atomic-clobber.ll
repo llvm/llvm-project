@@ -110,7 +110,7 @@ define void @check_aa_is_sane(ptr noalias %a, ptr noalias %b) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: cmpxchg ptr %a, i32 0, i32 1 acquire acquire
   cmpxchg ptr %a, i32 0, i32 1 acquire acquire
-; CHECK: MemoryUse(1)
+; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: load i32, ptr %b, align 4
   load i32, ptr %b, align 4
 
