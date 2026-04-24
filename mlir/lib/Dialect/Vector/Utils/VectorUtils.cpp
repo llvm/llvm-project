@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -406,6 +407,137 @@ static bool isMaskTriviallyFoldable(SmallVector<OpFoldResult> &maskSizes,
   return true;
 }
 
+/// Returns true if `index` is an scf.for IV that is statically proven in-bounds
+/// for accesses of length `vecSize` into a static dimension `baseDimSize`.
+///
+/// This handles the common vector loop form:
+///   scf.for %iv = %c0 to %ub step %c<vecSize>
+/// and proves `%iv + vecSize <= baseDimSize` for all iterations.
+static bool isKnownInBoundsForLoopIV(Value index, int64_t vecSize,
+                                     int64_t baseDimSize) {
+  auto iv = dyn_cast<BlockArgument>(index);
+  if (!iv)
+    return false;
+
+  auto forOp = dyn_cast<scf::ForOp>(iv.getOwner()->getParentOp());
+  if (!forOp || forOp.getInductionVar() != index)
+    return false;
+
+  APSInt lbInt, ubInt, stepInt;
+  if (!matchPattern(forOp.getLowerBound(), m_ConstantInt(&lbInt)) ||
+      !matchPattern(forOp.getUpperBound(), m_ConstantInt(&ubInt)) ||
+      !matchPattern(forOp.getStep(), m_ConstantInt(&stepInt)))
+    return false;
+
+  int64_t lb = lbInt.getSExtValue();
+  int64_t ub = ubInt.getSExtValue();
+  int64_t step = stepInt.getSExtValue();
+  if (lb != 0 || step <= 0 || vecSize <= 0 || step != vecSize)
+    return false;
+
+  // Empty loop executes no transfer accesses.
+  if (lb >= ub)
+    return true;
+
+  if (baseDimSize < vecSize)
+    return false;
+
+  // With lb = 0 and step = vecSize, proving ub <= baseDimSize is sufficient to
+  // guarantee iv + vecSize <= baseDimSize on all iterations.
+  return ub <= baseDimSize;
+}
+
+/// Returns `in_bounds` values derived from static shapes and constant indices.
+/// Conservatively returns false for any dimension that cannot be proven safe.
+///
+/// `baseDims` and `alignedIndices` must be aligned with `vectorShape`:
+///   * `baseDims[vecDim]` is the base tensor dim checked for `vecDim`.
+///   * `alignedIndices[vecDim]` is the index used for that mapped base dim.
+static SmallVector<bool> computeInBoundsFromStaticShapeAndIndices(
+    ArrayRef<int64_t> baseShape, ArrayRef<int64_t> vectorShape,
+    ArrayRef<int64_t> baseDims, ArrayRef<Value> alignedIndices,
+    bool unknownIndexRequiresExactSize) {
+  SmallVector<bool> inBounds(vectorShape.size(), false);
+  if (baseDims.size() != vectorShape.size() ||
+      alignedIndices.size() != vectorShape.size())
+    return inBounds;
+
+  for (auto [vecDim, vecSize] : llvm::enumerate(vectorShape)) {
+    int64_t baseDim = baseDims[vecDim];
+    Value index = alignedIndices[vecDim];
+    if (!ShapedType::isStatic(baseShape[baseDim]) || vecSize < 0)
+      continue;
+
+    int64_t baseDimSize = baseShape[baseDim];
+    APSInt indexValue;
+    if (matchPattern(index, m_ConstantInt(&indexValue))) {
+      int64_t idx = indexValue.getSExtValue();
+      // Indexes must be non-negative and stay in range for the whole vector
+      // dim. Compare as `idx <= baseDimSize - vecSize` to avoid signed
+      // overflow in `idx + vecSize`.
+      inBounds[vecDim] =
+          idx >= 0 && idx <= baseDimSize && vecSize <= baseDimSize - idx;
+      continue;
+    }
+
+    if (isKnownInBoundsForLoopIV(index, vecSize, baseDimSize)) {
+      inBounds[vecDim] = true;
+      continue;
+    }
+
+    // Relax unknown-index handling to preserve previous behavior for
+    // loop-structured code paths while still preferring index-aware proofs.
+    inBounds[vecDim] = unknownIndexRequiresExactSize ? (baseDimSize == vecSize)
+                                                     : (baseDimSize >= vecSize);
+  }
+  return inBounds;
+}
+
+/// Compute in_bounds for transfer_read where source and vector ranks match.
+static SmallVector<bool>
+computeReadInBoundsFromStaticShape(ArrayRef<int64_t> sourceShape,
+                                   ArrayRef<int64_t> vectorShape,
+                                   ArrayRef<Value> readIndices) {
+  if (sourceShape.size() != vectorShape.size() ||
+      readIndices.size() != vectorShape.size())
+    return SmallVector<bool>(vectorShape.size(), false);
+
+  SmallVector<int64_t> sourceDims;
+  sourceDims.reserve(vectorShape.size());
+  for (auto [dim, _] : llvm::enumerate(vectorShape))
+    sourceDims.push_back(dim);
+
+  return computeInBoundsFromStaticShapeAndIndices(
+      sourceShape, vectorShape, sourceDims, readIndices,
+      /*unknownIndexRequiresExactSize=*/true);
+}
+
+/// Compute in_bounds for transfer_write where write indices are expressed in
+/// destination-rank coordinates.
+static SmallVector<bool>
+computeWriteInBoundsFromStaticShape(ArrayRef<int64_t> destShape,
+                                    ArrayRef<int64_t> vectorShape,
+                                    ArrayRef<Value> writeIndices) {
+  if (writeIndices.size() != destShape.size() ||
+      destShape.size() < vectorShape.size())
+    return SmallVector<bool>(vectorShape.size(), false);
+
+  int64_t rankDiff = destShape.size() - vectorShape.size();
+  SmallVector<int64_t> destDims;
+  SmallVector<Value> alignedIndices;
+  destDims.reserve(vectorShape.size());
+  alignedIndices.reserve(vectorShape.size());
+  for (auto [vecDim, _] : llvm::enumerate(vectorShape)) {
+    int64_t destDim = rankDiff + vecDim;
+    destDims.push_back(destDim);
+    alignedIndices.push_back(writeIndices[destDim]);
+  }
+
+  return computeInBoundsFromStaticShapeAndIndices(
+      destShape, vectorShape, destDims, alignedIndices,
+      /*unknownIndexRequiresExactSize=*/false);
+}
+
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      Value source,
                                      ArrayRef<int64_t> inputVectorSizes,
@@ -441,16 +573,13 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
          "expected same pad element type to match source element type");
 
   auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
+  SmallVector<Value> indices(vecToReadRank, zero);
   SmallVector<bool> inBoundsVal(vecToReadRank, true);
 
   if (useInBoundsInsteadOfMasking) {
-    // Update the inBounds attribute.
-    // FIXME: This computation is too weak - it ignores the read indices.
-    for (unsigned i = 0; i < vecToReadRank; i++)
-      inBoundsVal[i] = (sourceShape[i] == vecToReadShape[i]) &&
-                       ShapedType::isStatic(sourceShape[i]);
+    inBoundsVal = computeReadInBoundsFromStaticShape(sourceShape,
+                                                     vecToReadShape, indices);
   }
-  SmallVector<Value> indices(vecToReadRank, zero);
   auto transferReadOp =
       vector::TransferReadOp::create(builder, loc,
                                      /*vectorType=*/vecToReadTy,
@@ -491,17 +620,6 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   int64_t vecToStoreRank = vecToStoreType.getRank();
   auto vecToStoreShape = vecToStoreType.getShape();
 
-  // Compute the in_bounds attribute
-  SmallVector<bool> inBoundsVal(vecToStoreRank, true);
-  if (useInBoundsInsteadOfMasking) {
-    // Update the inBounds attribute.
-    // FIXME: This computation is too weak - it ignores the write indices.
-    for (unsigned i = 0; i < vecToStoreRank; i++)
-      inBoundsVal[i] =
-          (destShape[destRank - vecToStoreRank + i] >= vecToStoreShape[i]) &&
-          ShapedType::isStatic(destShape[destRank - vecToStoreRank + i]);
-  }
-
   // If missing, initialize the write indices to 0.
   bool useDefaultWriteIdxs = writeIndices.empty();
   assert((useDefaultWriteIdxs ||
@@ -510,6 +628,13 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   if (useDefaultWriteIdxs) {
     auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
     writeIndices.assign(destRank, zero);
+  }
+
+  // Compute the in_bounds attribute.
+  SmallVector<bool> inBoundsVal(vecToStoreRank, true);
+  if (useInBoundsInsteadOfMasking) {
+    inBoundsVal = computeWriteInBoundsFromStaticShape(
+        destShape, vecToStoreShape, writeIndices);
   }
 
   // Generate the xfer_write Op
