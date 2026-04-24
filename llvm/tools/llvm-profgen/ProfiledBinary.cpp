@@ -237,10 +237,10 @@ void ProfiledBinary::load(StringRef TripleStr) {
     exitWithError("not a valid ELF/COFF image", Path);
 
   auto *Obj = cast<ObjectFile>(&ExeBinary);
-  TheTriple = Obj->makeTriple();
-
   if (!TripleStr.empty())
     TheTriple = Triple(TripleStr);
+  else
+    TheTriple = Obj->makeTriple();
 
   LLVM_DEBUG(dbgs() << "Loading " << Path << "\n");
 

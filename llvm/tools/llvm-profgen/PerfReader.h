@@ -752,8 +752,8 @@ private:
 
 class ETMReader {
 public:
-  ETMReader(ProfiledBinary *Binary, StringRef TraceFile)
-      : Binary(Binary), TraceFile(TraceFile) {}
+  ETMReader(ProfiledBinary *Binary, StringRef TraceFile, uint8_t TraceID)
+      : Binary(Binary), TraceFile(TraceFile), TraceID(TraceID) {}
   void parseETMTraces();
   void recordProcessedRange(uint64_t Start, uint64_t End, uint64_t Count);
   const ContextSampleCounterMap &getSampleCounters() const { return Counters; }
@@ -761,6 +761,7 @@ public:
 private:
   ProfiledBinary *Binary = nullptr;
   StringRef TraceFile;
+  uint8_t TraceID;
   ContextSampleCounterMap Counters;
 };
 

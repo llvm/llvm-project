@@ -46,7 +46,7 @@ At least one of the following commands are required:
 .. note::
 
    Only one of ``--perfscript``, ``--perfdata``, ``--unsymbolized-profile``,
-   or ``--llvm-sample-profile`` may be specified at a time.  
+   ``--llvm-sample-profile``, or ``--etm`` may be specified at a time.
 
 .. option:: --binary=<string[,string,...]>
 
@@ -84,6 +84,11 @@ OPTIONS
     
    Path of debug info binary. ``llvm-profgen`` will load the DWARF info from
    it instead of the executable binary.
+
+.. option:: --target-triple=<triple>
+
+   Override the target triple for the binary. This is useful for ETM trace
+   decoding to specify the correct Arm M-profile target.
   
 .. option:: --pid
 

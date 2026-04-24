@@ -90,6 +90,11 @@ static cl::opt<std::string> ETMPath("etm", cl::value_desc("etm"),
                                     cl::desc("Path of raw ETM trace file"),
                                     cl::cat(ProfGenCategory));
 
+static cl::opt<unsigned> ETMTraceID(
+    "etm-trace-id", cl::init(0x10),
+    cl::desc("CoreSight Trace ID (CSID) used to route ETM trace data."),
+    cl::cat(ProfGenCategory));
+
 static cl::opt<std::string>
     TargetTriple("target-triple", cl::value_desc("triple"),
                  cl::desc("Override the target triple for the binary"),
@@ -214,7 +219,8 @@ int main(int argc, const char *argv[]) {
     std::unique_ptr<PerfReaderBase> PerfReader;
 
     if (File.Format == InputFormat::ETMFormat) {
-      EtmReader = std::make_unique<ETMReader>(Binary.get(), File.InputFile);
+      EtmReader = std::make_unique<ETMReader>(Binary.get(), File.InputFile,
+                                              static_cast<uint8_t>(ETMTraceID));
       EtmReader->parseETMTraces();
       Counters = &EtmReader->getSampleCounters();
     } else {

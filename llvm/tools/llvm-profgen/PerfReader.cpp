@@ -33,11 +33,6 @@ static cl::opt<bool> ShowMmapEvents("show-mmap-events",
                                     cl::desc("Print binary load events."),
                                     cl::cat(ProfGenCategory));
 
-static cl::opt<unsigned> ETMTraceID(
-    "etm-trace-id", cl::init(0x10),
-    cl::desc("CoreSight Trace ID (CSID) used to route ETM trace data."),
-    cl::cat(ProfGenCategory));
-
 static cl::opt<bool>
     UseOffset("use-offset", cl::init(true),
               cl::desc("Work with `--skip-symbolization` or "
@@ -1458,9 +1453,8 @@ void ETMReader::parseETMTraces() {
     exitWithError("No synchronization header (0x80) found in the bitstream.");
   ArrayRef<uint8_t> TraceSlice = Data.slice(StartIdx);
 
-  auto DecoderOrErr =
-      ETMDecoder::create(Binary->getBinary(), Binary->getTriple(),
-                         static_cast<uint8_t>(ETMTraceID));
+  auto DecoderOrErr = ETMDecoder::create(
+      Binary->getBinary(), Binary->getTriple(), static_cast<uint8_t>(TraceID));
 
   if (!DecoderOrErr)
     exitWithError(toString(DecoderOrErr.takeError()));

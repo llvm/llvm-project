@@ -40,15 +40,15 @@ public:
       else if (ArchVersion == 7)
         ArchVer = ARCH_V7;
       else
-        ArchVer = ARCH_UNKNOWN; // For version 6 (Cortex-M0) and others.
+        // For version 6 (Cortex-M0) and others.
+        ArchVer = ARCH_UNKNOWN;
     }
     // Initialize the decoder for Arm M-profile targets.
     Cfg.arch_ver = ArchVer;
     Cfg.core_prof = profile_CortexM;
 
     // The CoreSight Trace ID (CSID) is a hardware-assigned 7-bit identifier
-    // used to route trace data. 0x10 is the most common default value for the
-    // ETM.
+    // used to route trace data.
     Cfg.reg_traceidr = TraceID;
   }
 
