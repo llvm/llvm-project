@@ -310,6 +310,9 @@ static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
 /// (other) consumers.
 class LayoutInfoPropagation
     : public SparseBackwardDataFlowAnalysis<LayoutInfoLattice> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LayoutInfoPropagation)
+
 private:
   xegpu::LayoutKind layoutKind;
   unsigned indexBitWidth;
