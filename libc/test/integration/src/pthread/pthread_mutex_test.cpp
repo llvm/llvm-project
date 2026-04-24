@@ -168,9 +168,9 @@ void recursive_mutex_test() {
   pthread_mutexattr_t attr;
   pthread_mutex_t recursive_mutex;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_init(&attr), 0);
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_settype(&attr,
-                                                      PTHREAD_MUTEX_RECURSIVE),
-            0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE),
+      0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&recursive_mutex, &attr), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
 
@@ -183,8 +183,8 @@ void recursive_mutex_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&recursive_mutex), 0);
 
   pthread_t thread;
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&thread, nullptr, trylock_other_thread,
-                                           &recursive_mutex),
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_create(
+                &thread, nullptr, trylock_other_thread, &recursive_mutex),
             0);
   void *retval = nullptr;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_join(thread, &retval), 0);

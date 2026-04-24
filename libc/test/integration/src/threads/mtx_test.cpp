@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/string/memory_utils/inline_memcpy.h"
 #include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
 #include "src/threads/mtx_lock.h"
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
-#include "src/string/memory_utils/inline_memcpy.h"
 
 #include "test/IntegrationTest/test.h"
 
