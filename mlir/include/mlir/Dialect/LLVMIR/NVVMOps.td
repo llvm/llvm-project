@@ -526,7 +526,8 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 // keeps the NVVM dialect self-contained -- users don't need to reach for
 // `math.*` ops for something that already has a PTX instruction.
 
-def NVVM_SinOp : NVVM_Op<"sin", [Pure, SameOperandsAndResultType]> {
+def NVVM_SinOp : NVVM_SingleResultIntrinsicOp<"sin",
+    [Pure, SameOperandsAndResultType]> {
   let summary = "Sine (fast approximation)";
   let description = [{
     Computes a fast approximation of the sine of the input value (in radians).
@@ -540,11 +541,6 @@ def NVVM_SinOp : NVVM_Op<"sin", [Pure, SameOperandsAndResultType]> {
                        DefaultValuedAttr<BoolAttr, "false">:$ftz);
   let results = (outs F32:$res);
   let assemblyFormat = "$src attr-dict `:` type($src)";
-  string llvmBuilder = [{
-    unsigned IID = $ftz ? llvm::Intrinsic::nvvm_sin_approx_ftz_f
-                        : llvm::Intrinsic::nvvm_sin_approx_f;
-    $res = createIntrinsicCall(builder, IID, {$src});
-  }];
 }
 
 //===----------------------------------------------------------------------===//

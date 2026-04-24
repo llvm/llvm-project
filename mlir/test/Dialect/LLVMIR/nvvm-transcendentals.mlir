@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @nvvm_sin_f32
 func.func @nvvm_sin_f32(%arg0: f32) -> f32 {
