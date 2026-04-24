@@ -64,7 +64,8 @@ static_assert(float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::copysignf128(float128(0.0),
                                                    float128(0.0)));
-static_assert(0.0 == LIBC_NAMESPACE::shared::dmulf128(float128(0.0), float128(1.0)));
+static_assert(0.0 ==
+              LIBC_NAMESPACE::shared::dmulf128(float128(0.0), float128(1.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::floorf128(float128(0.0)));
 
