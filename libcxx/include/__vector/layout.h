@@ -12,7 +12,6 @@
 #include <__assert>
 #include <__config>
 #include <__debug_utils/sanitizers.h>
-#include <__fwd/vector.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/pointer_traits.h>
@@ -20,7 +19,6 @@
 #include <__memory/uninitialized_algorithms.h>
 #include <__split_buffer>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 
