@@ -4998,7 +4998,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   const llvm::Triple *AuxTriple =
-      (IsCuda || IsHIP || IsSYCL) ? TC.getAuxTriple() : nullptr;
+      (IsCuda || IsHIP) ? TC.getAuxTriple() : nullptr;
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
   bool IsUEFI = RawTriple.isUEFI();
   bool IsIAMCU = RawTriple.isOSIAMCU();
@@ -6545,6 +6545,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     else if (IsWindowsMSVC)
       ImplyVCPPCXXVer = true;
 
+    if (IsSYCL && types::isCXX(InputType) &&
+        !Args.hasArg(options::OPT__SLASH_std))
+      // For DPC++, we default to -std=c++17 for all compilations.  Use of -std
+      // on the command line will override.
+      CmdArgs.push_back("-std=c++17");
+
     Args.AddLastArg(CmdArgs, options::OPT_ftrigraphs,
                     options::OPT_fno_trigraphs);
   }
@@ -7466,6 +7472,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     if (LanguageStandard.empty()) {
+      if (IsSYCL)
+        // For DPC++, C++17 is the default.
+        LanguageStandard = "-std=c++17";
       if (IsMSVC2015Compatible)
         LanguageStandard = "-std=c++14";
       else
