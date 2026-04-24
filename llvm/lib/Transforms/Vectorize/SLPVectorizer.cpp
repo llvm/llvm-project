@@ -14754,7 +14754,8 @@ void BoUpSLP::transformNodes() {
     case Instruction::FAdd: {
       // Check if possible to convert (a*b)+c to fma.
       if (E.State != TreeEntry::Vectorize ||
-          !E.getOperations().isAddSubLikeOp())
+          !E.getOperations().isAddSubLikeOp() ||
+          E.getOperations().isAltShuffle())
         break;
       const TreeEntry *LHS = getOperandEntry(&E, 0);
       const TreeEntry *RHS = getOperandEntry(&E, 1);
