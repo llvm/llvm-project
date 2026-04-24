@@ -7478,8 +7478,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   sort(SortedOffsetsV);
 
   if (NumOffsets > 1) {
+    int64_t BaseBytes = DL->getTypeStoreSize(BaseTy);
     for (int I : seq<int>(1, SortedOffsetsV.size())) {
-      if (SortedOffsetsV[I] - SortedOffsetsV[I - 1] != InputTyNumElts)
+      if (SortedOffsetsV[I] - SortedOffsetsV[I - 1] != BaseBytes)
         return false;
     }
   }
