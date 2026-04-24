@@ -1006,6 +1006,44 @@ add_header_library(
 )
 
 add_header_library(
+  ddivf128
+  HDRS
+    ddivf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  ddivl
+  HDRS
+    ddivl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  dmulf128
+  HDRS
+    dmulf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  dmull
+  HDRS
+    dmull.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   daddf128
   HDRS
     daddf128.h
@@ -3018,6 +3056,17 @@ add_header_library(
 )
 
 add_header_library(
+  logbbf16
+  HDRS
+    logbbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   logbf16
   HDRS
     logbf16.h
@@ -3110,6 +3159,7 @@ add_header_library(
   powf
   HDRS
     powf.h
+    powf_small_tables.h
   DEPENDS
     .common_constants
     .exp10f

@@ -1883,7 +1883,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
 
       result.AppendErrorWithFormat("Not enough arguments provided; you "
                                    "need at least %d arguments to use "
-                                   "this alias.\n",
+                                   "this alias.",
                                    index);
       return nullptr;
     } else {
@@ -1976,11 +1976,7 @@ Status CommandInterpreter::PreprocessToken(std::string &expr_str) {
   Status error;
   ExecutionContext exe_ctx(GetExecutionContext());
 
-  // Get a dummy target to allow for calculator mode while processing
-  // backticks. This also helps break the infinite loop caused when target is
-  // null.
-  Target *exe_target = exe_ctx.GetTargetPtr();
-  Target &target = exe_target ? *exe_target : m_debugger.GetDummyTarget();
+  Target &target = exe_ctx.GetTargetRef();
 
   ValueObjectSP expr_result_valobj_sp;
 
@@ -2524,7 +2520,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
       } else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
         result.AppendErrorWithFormat("Not enough arguments provided; you "
                                      "need at least %d arguments to use "
-                                     "this alias.\n",
+                                     "this alias.",
                                      index);
         return;
       } else {
@@ -2893,7 +2889,7 @@ void CommandInterpreter::HandleCommands(
         if (idx != num_lines - 1)
           result.AppendErrorWithFormat(
               "Aborting reading of commands after command #%" PRIu64
-              ": '%s' continued the target.\n",
+              ": '%s' continued the target.",
               (uint64_t)idx + 1, cmd);
         else
           result.AppendMessageWithFormatv(
@@ -2913,7 +2909,7 @@ void CommandInterpreter::HandleCommands(
       if (idx != num_lines - 1)
         result.AppendErrorWithFormat(
             "Aborting reading of commands after command #%" PRIu64
-            ": '%s' stopped with a signal or exception.\n",
+            ": '%s' stopped with a signal or exception.",
             (uint64_t)idx + 1, cmd);
       else
         result.AppendMessageWithFormatv(
@@ -2957,7 +2953,7 @@ void CommandInterpreter::HandleCommandsFromFile(
     CommandReturnObject &result) {
   if (!FileSystem::Instance().Exists(cmd_file)) {
     result.AppendErrorWithFormat(
-        "Error reading commands from file %s - file not found.\n",
+        "Error reading commands from file %s - file not found.",
         cmd_file.GetFilename().AsCString("<Unknown>"));
     return;
   }
@@ -3279,7 +3275,8 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
 ExecutionContext CommandInterpreter::GetExecutionContext() const {
   return !m_overriden_exe_contexts.empty()
              ? m_overriden_exe_contexts.top()
-             : m_debugger.GetSelectedExecutionContext();
+             : m_debugger.GetSelectedExecutionContext(
+                   /*adopt_dummy_target=*/true);
 }
 
 void CommandInterpreter::OverrideExecutionContext(
@@ -3405,7 +3402,8 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
   StartHandlingCommand();
 
-  ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
+  ExecutionContext exe_ctx =
+      m_debugger.GetSelectedExecutionContext(/*adopt_dummy_target=*/true);
   bool pushed_exe_ctx = false;
   if (exe_ctx.HasTargetScope()) {
     OverrideExecutionContext(exe_ctx);
@@ -3820,7 +3818,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.
         lldbassert(num_matches == 0);
-        result.AppendErrorWithFormat("'%s' is not a valid command.\n",
+        result.AppendErrorWithFormat("'%s' is not a valid command.",
                                      next_word.c_str());
       }
       if (!done)
@@ -3831,7 +3829,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       if (!suffix.empty()) {
         result.AppendErrorWithFormat(
             "command '%s' did not recognize '%s%s%s' as valid (subcommand "
-            "might be invalid).\n",
+            "might be invalid).",
             cmd_obj->GetCommandName().str().c_str(),
             next_word.empty() ? "" : next_word.c_str(),
             next_word.empty() ? " -- " : " ", suffix.c_str());
@@ -3868,7 +3866,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
                 revised_command_line.PutCString(" --");
             } else {
               result.AppendErrorWithFormat(
-                  "the '%s' command doesn't support the --gdb-format option\n",
+                  "the '%s' command doesn't support the --gdb-format option",
                   cmd_obj->GetCommandName().str().c_str());
               return nullptr;
             }
@@ -3876,8 +3874,8 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
           break;
 
         default:
-          result.AppendErrorWithFormat(
-              "unknown command shorthand suffix: '%s'\n", suffix.c_str());
+          result.AppendErrorWithFormat("unknown command shorthand suffix: '%s'",
+                                       suffix.c_str());
           return nullptr;
         }
       }
