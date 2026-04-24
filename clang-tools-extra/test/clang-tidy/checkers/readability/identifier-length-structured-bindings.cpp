@@ -1,4 +1,3 @@
-
 // RUN: %check_clang_tidy -std=c++17-or-later %s readability-identifier-length %t \
 // RUN: -config='{CheckOptions: {readability-identifier-length.LineCountThreshold: 1}}' \
 // RUN: -- -fexceptions
