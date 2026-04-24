@@ -1526,6 +1526,20 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     Module = &S.PP.getIdentifierTable().get(ModuleName);
   }
 
+  // Check if the new ownership_returns attribute does not contain 
+  // an index, but previous attributes do
+  if (K == OwnershipAttr::Returns && AL.getNumArgs() == 1) {
+    for (const auto *I : D->specific_attrs<OwnershipAttr>()) {
+      if (I->getOwnKind() == OwnershipAttr::Returns && I->args_size() > 0) {
+        S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
+            << I->args_begin()->getSourceIndex() << 0;
+        S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
+            << 0 << 1;
+        return;
+      }
+    }
+  }
+
   SmallVector<ParamIdx, 8> OwnershipArgs;
   for (unsigned i = 1; i < AL.getNumArgs(); ++i) {
     Expr *Ex = AL.getArgAsExpr(i);
@@ -1563,33 +1577,33 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
             << (AL.isRegularKeywordAttribute() ||
                 I->isRegularKeywordAttribute());
         return;
+      } else if (K == OwnershipAttr::Returns &&
+                 I->getOwnKind() == OwnershipAttr::Returns) {
+        bool IHasArgs = I->args_size() > 0;
+
+        if (!IHasArgs || !llvm::is_contained(I->args(), Idx)) {
+          unsigned IIdx = IHasArgs ? I->args_begin()->getSourceIndex() : 0;
+
+          S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
+              << IIdx << (IHasArgs ? 0 : 1);
+
+          S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
+              << Idx.getSourceIndex() << 0 << Ex->getSourceRange();
+          return;
+        }
+      } else if (K == OwnershipAttr::Takes &&
+                 I->getOwnKind() == OwnershipAttr::Takes) {
+        if (I->getModule()->getName() != ModuleName) {
+          S.Diag(I->getLocation(), diag::err_ownership_takes_class_mismatch)
+              << I->getModule()->getName();
+          S.Diag(AL.getLoc(), diag::note_ownership_takes_class_mismatch)
+              << ModuleName << Ex->getSourceRange();
+
+          return;
+        }
       }
     }
     OwnershipArgs.push_back(Idx);
-  }
-
-  for (const auto *I : D->specific_attrs<OwnershipAttr>()) {
-    if (K == OwnershipAttr::Returns &&
-        I->getOwnKind() == OwnershipAttr::Returns) {
-      // Enforce that all ownership_returns attributes have the exact same
-      // arguments.
-      bool ExactMatch =
-          (I->getModule() == Module) && llvm::equal(I->args(), OwnershipArgs);
-
-      if (!ExactMatch) {
-        S.Diag(AL.getLoc(), diag::err_ownership_param_mismatch);
-      }
-      return;
-    } else if (K == OwnershipAttr::Takes &&
-               I->getOwnKind() == OwnershipAttr::Takes) {
-      if (I->getModule() != Module) {
-        S.Diag(I->getLocation(), diag::err_ownership_takes_class_mismatch)
-            << I->getModule()->getName();
-        S.Diag(AL.getLoc(), diag::note_ownership_takes_class_mismatch)
-            << ModuleName << AL.getRange();
-        return;
-      }
-    }
   }
 
   ParamIdx *Start = OwnershipArgs.data();
