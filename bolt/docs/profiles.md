@@ -74,11 +74,10 @@ Where:
 - `R` — Aggregated trace originating at a return.
 - `B` — Aggregated branch from `<start>` to `<end>`.
 - `F` — Aggregated fall-through from `<start>` to `<end>`.
-- `f` — Aggregated fall-through with external origin (disambiguates returns
-  hitting a basic block head from regular internal jumps).
-- `r` — Aggregated fall-through originating at an external return (no checks
-  performed for fall-through start).
+- `f` — Aggregated fall-through with external origin.
+- `r` — Aggregated fall-through with external return as origin.
 
+### Trace mapping
 Internally, all branch/fall-through formats are represented as traces, with the
 following field mapping:
 - `B <start> <end>` -> `T <start> <end> BR_ONLY`
@@ -91,16 +90,24 @@ The constants have the following values and can be specified directly:
 - `FT_EXTERNAL_ORIGIN`: UINT64_MAX-1: fffffffffffffffe or -2
 - `FT_EXTERNAL_RETURN`: UINT64_MAX-2: fffffffffffffffd or -3
 
-e.g. `T <branch> <target> -1` is a branch trace with unknown fall-through, useful
-for representing top-of-brstack entries having no valid fall-through. Note that
-such traces can be extended with an average fall-through length by passing
+### Call continuation fall-throughs
+Where applicable, call continuation fall-throughs are extended back to cover
+the call site, improving profile continuity:
+- `f`: check that the fall-through start is a block start, not an entry point
+  or a landing pad.
+- `R`/`r`: unconditional.
+- `T`: local origin: extend only if it's a return. External origin: use `f`.
+
+Return hint is only needed for external returns (e.g. from a PLT call), where
+the address can't be disassembled to distinguish a return from a jump.
+
+### Best practices
+Use T/R format. To capture branch type using Linux perf events, set
+the `PERF_SAMPLE_BRANCH_TYPE_SAVE` flag in `perf_event_attr::branch_sample_type`.
+
+To represent top of brstack entry with no fall-through, use `BR_ONLY` as `ft_end`.
+Such traces can be extended with an average fall-through length by passing
 `--impute-trace-fall-through`.
-
-`R`/`r` mark a fall-through originating at a return so it can be extended back
-to cover the call site, improving profile continuity. The hint is only needed
-for external returns (e.g. from a PLT call), where the return instruction can't
-be disassembled to tell a return from an ordinary jump.
-
 
 ### Location format
 
@@ -125,6 +132,11 @@ S 41be60 6
 Trace profile combining branches and fall-throughs:
 ```
 T 4b196f 4b19e0 4b19ef 2
+```
+
+Trace with unknown fall-through:
+```
+T 4b196f 4b19e0 -1 2
 ```
 
 Legacy branch profile with separate branches and fall-throughs:
