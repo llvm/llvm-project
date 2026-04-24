@@ -8453,8 +8453,8 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v40, s34, 2
 ; GFX9-NEXT:    s_load_dwordx2 s[34:35], s[34:35], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v28, 0
+; GFX9-NEXT:    global_load_dword v32, v[0:1], off
 ; GFX9-NEXT:    s_addk_i32 s32, 0x400
-; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[0:3], v28, s[34:35]
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v28, s[34:35] offset:16
@@ -8465,12 +8465,11 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX9-NEXT:    global_load_dwordx4 v[24:27], v28, s[34:35] offset:96
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    global_load_dwordx4 v[28:31], v28, s[34:35] offset:112
+; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX9-NEXT:    s_mov_b32 s35, external_void_func_v32i32_i32@abs32@hi
 ; GFX9-NEXT:    s_mov_b32 s34, external_void_func_v32i32_i32@abs32@lo
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX9-NEXT:    s_waitcnt vmcnt(7)
-; GFX9-NEXT:    global_load_dword v32, v[0:1], off
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(8)
 ; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
@@ -9550,9 +9549,9 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:16
-; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:20
-; GFX9-NEXT:    s_addk_i32 s32, 0x800
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:16
+; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:20
+; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s33
 ; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    v_writelane_b32 v40, s34, 2
@@ -9567,15 +9566,15 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v40, s51, 11
 ; GFX9-NEXT:    v_writelane_b32 v40, s52, 12
 ; GFX9-NEXT:    v_writelane_b32 v40, s53, 13
+; GFX9-NEXT:    s_addk_i32 s32, 0x800
 ; GFX9-NEXT:    v_writelane_b32 v40, s54, 14
 ; GFX9-NEXT:    s_mov_b32 s5, byval_align16_f64_arg@abs32@hi
 ; GFX9-NEXT:    s_mov_b32 s4, byval_align16_f64_arg@abs32@lo
 ; GFX9-NEXT:    v_writelane_b32 v40, s55, 15
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    buffer_store_dword v31, off, s[0:3], s32
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s33
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    v_readlane_b32 s55, v40, 15
 ; GFX9-NEXT:    v_readlane_b32 s54, v40, 14
@@ -15976,17 +15975,17 @@ define amdgpu_gfx void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, d
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_mov_b64 exec, s[36:37]
 ; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s33
-; GFX9-NEXT:    s_addk_i32 s32, 0x400
+; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:4
 ; GFX9-NEXT:    v_writelane_b32 v40, s34, 2
+; GFX9-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX9-NEXT:    s_mov_b32 s35, stack_passed_f64_arg@abs32@hi
 ; GFX9-NEXT:    s_mov_b32 s34, stack_passed_f64_arg@abs32@lo
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
