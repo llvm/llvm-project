@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info --name=static_local --show-parents - | FileCheck %s --implicit-check-not=DW_TAG
 
 ;; Derived from a CUDA program like:
 ;;
@@ -25,17 +25,13 @@
 ;; The abstract "foo" subprogram must contain a DW_TAG_lexical_block holding
 ;; the "static_local" variable.
 
-; CHECK:      DW_TAG_subprogram
-; CHECK-NOT:    DW_TAG
-; CHECK:        DW_AT_name ("foo")
-; CHECK-NOT:    DW_TAG
-; CHECK:        DW_AT_inline (DW_INL_inlined)
-; CHECK-NOT:    {{DW_TAG|NULL}}
-; CHECK:        DW_TAG_lexical_block
-; CHECK-NOT:    {{DW_TAG|NULL}}
-; CHECK:          DW_TAG_variable
-; CHECK-NOT:      DW_TAG
-; CHECK:            DW_AT_name ("static_local")
+; CHECK: DW_TAG_compile_unit
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_AT_name ("foo")
+; CHECK:       DW_AT_inline (DW_INL_inlined)
+; CHECK:         DW_TAG_lexical_block
+; CHECK:           DW_TAG_variable
+; CHECK:             DW_AT_name ("static_local")
 
 @static_local = internal addrspace(3) global i32 0, align 4, !dbg !0
 
