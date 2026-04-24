@@ -1089,8 +1089,8 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     EVT VT = Node->getValueType(0);
     EVT EltVT = VT.getVectorElementType();
     if (!VT.isScalableVector() &&
-	TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
-        TargetLowering::Expand)
+        TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
+            TargetLowering::Expand)
       break;
     // Otherwise canonicalize the whole vector.
     SDValue Mul = TLI.expandFCANONICALIZE(Node, DAG);
