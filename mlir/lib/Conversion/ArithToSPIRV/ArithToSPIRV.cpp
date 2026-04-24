@@ -261,7 +261,12 @@ struct ElementwiseFPOpPattern final : OpConversionPattern<Op> {
     auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
         op, dstType, adaptor.getOperands());
 
-    auto spirvFMF = convertArithFastMathFlagsToSPIRV(op.getFastmath());
+    auto *converter = this->template getTypeConverter<SPIRVTypeConverter>();
+    if (!converter->getTargetEnv().allows(spirv::Capability::Kernel))
+      return success();
+
+    spirv::FPFastMathMode spirvFMF =
+        convertArithFastMathFlagsToSPIRV(op.getFastmath());
     if (spirvFMF != spirv::FPFastMathMode::None) {
       newOp->setAttr("fp_fast_math_mode",
                      spirv::FPFastMathModeAttr::get(op.getContext(), spirvFMF));

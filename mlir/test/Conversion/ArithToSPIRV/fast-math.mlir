@@ -136,3 +136,21 @@ func.func @addf_vector_fast_math(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) -
 }
 
 } // end module
+
+// -----
+
+// FPFastMathMode decoration requires the Kernel capability. Without it the decoration is dropped.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @addf_fast_math_no_kernel
+func.func @addf_fast_math_no_kernel(%arg0 : f32, %arg1 : f32) -> f32 {
+  // CHECK: spirv.FAdd %{{.*}}, %{{.*}} : f32
+  // CHECK-NOT: fp_fast_math_mode
+  %0 = arith.addf %arg0, %arg1 fastmath<nnan,ninf> : f32
+  return %0: f32
+}
+
+} // end module
