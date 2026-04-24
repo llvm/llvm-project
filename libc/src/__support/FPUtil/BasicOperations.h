@@ -26,7 +26,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T abs(T x) {
+LIBC_INLINE constexpr T abs(T x) {
   return FPBits<T>(x).abs().get_val();
 }
 
