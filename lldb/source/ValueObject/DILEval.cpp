@@ -42,6 +42,16 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       /* do_deref */ false);
 }
 
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+}
+
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
   if (!valobj)
