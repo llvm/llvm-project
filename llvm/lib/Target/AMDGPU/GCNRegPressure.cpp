@@ -612,10 +612,11 @@ void GCNRPTracker::reset(const MachineInstr &MI,
   MaxPressure = CurPressure = getVirtRegPressure(*MRI, VirtLiveRegs);
 
   setPhysRegTracking();
-  if (TrackPhysRegs) {
-    PhysLiveRegs.clear();
+  // Always clear PhysLiveRegs even when TrackPhysRegs is false, to avoid
+  // stale data if physical tracking was previously enabled.
+  PhysLiveRegs.clear();
+  if (TrackPhysRegs)
     PhysLiveRegs.init(*SRI);
-  }
 }
 
 void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
@@ -627,10 +628,11 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
   MaxPressure = CurPressure = getVirtRegPressure(MRInfo, VirtLiveRegsSet);
 
   setPhysRegTracking();
-  if (TrackPhysRegs) {
-    PhysLiveRegs.clear();
+  // Always clear PhysLiveRegs even when TrackPhysRegs is false, to avoid
+  // stale data if physical tracking was previously enabled.
+  PhysLiveRegs.clear();
+  if (TrackPhysRegs)
     PhysLiveRegs.init(*SRI);
-  }
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
@@ -726,8 +728,15 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   MaxPressure = HasECDefs ? max(CurPressure + ECDefPressure, MaxPressure)
                           : max(CurPressure, MaxPressure);
 
-  assert(CurPressure ==
-         getVirtRegPressure(*MRI, VirtLiveRegs) + constructPhysRegPressure());
+  auto VirtPressure = getVirtRegPressure(*MRI, VirtLiveRegs);
+  auto PhysPressure = constructPhysRegPressure();
+  assert(CurPressure == VirtPressure + PhysPressure ||
+         (dbgs() << "Pressure mismatch in recede()\nMI: " << MI
+                 << "Tracked: " << print(CurPressure)
+                 << "Expected: " << print(VirtPressure + PhysPressure)
+                 << "Virt: " << print(VirtPressure)
+                 << "Phys: " << print(PhysPressure),
+          false));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
