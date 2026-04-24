@@ -794,6 +794,13 @@ SDValue LoongArchTargetLowering::lowerFP_EXTEND(SDValue Op,
   SDValue Src = Op->getOperand(0);
   EVT SVT = Src.getValueType();
 
+  bool V2F32ToV2F64 =
+      VT == MVT::v2f64 && SVT == MVT::v2f32 && Subtarget.hasExtLSX();
+  bool V4F32ToV4F64 =
+      VT == MVT::v4f64 && SVT == MVT::v4f32 && Subtarget.hasExtLASX();
+  if (!V2F32ToV2F64 && !V4F32ToV4F64)
+    return SDValue();
+
   // Check if Op is the high part of vector.
   auto CheckVecHighPart = [](SDValue Op) {
     Op = peekThroughBitcasts(Op);
@@ -830,13 +837,12 @@ SDValue LoongArchTargetLowering::lowerFP_EXTEND(SDValue Op,
   }
 
   // v2f64 = fp_extend v2f32
-  if (VT == MVT::v2f64 && SVT == MVT::v2f32 && Subtarget.hasExtLSX()) {
+  if (V2F32ToV2F64)
     return DAG.getNode(Opcode, DL, VT, VFCVTOp);
-  }
 
   // v4f64 = fp_extend v4f32
-  if (VT == MVT::v4f64 && SVT == MVT::v4f32 && Subtarget.hasExtLASX()) {
-    // XVFCVT instruction operators on each 128-bit segament as a lane, so a
+  if (V4F32ToV4F64) {
+    // XVFCVT instruction operates on each 128-bit segment as a lane, so a
     // vector_shuffle is required firstly.
     SmallVector<int, 8> Mask = {0, 1, 4, 5, 2, 3, 6, 7};
     SDValue Res = DAG.getVectorShuffle(WideOpVT, DL, VFCVTOp,
