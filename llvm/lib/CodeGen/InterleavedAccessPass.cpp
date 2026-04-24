@@ -347,10 +347,6 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
     if (Mask.size() * Factor > NumLoadElements) {
       if (!ShuffleVectorInst::isSingleSourceMask(Mask, NumLoadElements))
         return false;
-      for (unsigned i = 0; i < Mask.size(); i++) {
-        if (static_cast<unsigned>(Mask[i]) >= NumLoadElements)
-          return false;
-      }
     }
 
     Indices.push_back(Index);
@@ -366,10 +362,6 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
     if (Mask.size() * Factor > NumLoadElements) {
       if (!ShuffleVectorInst::isSingleSourceMask(Mask, NumLoadElements))
         return false;
-      for (unsigned i = 0; i < Mask.size(); i++) {
-        if (static_cast<unsigned>(Mask[i]) >= NumLoadElements)
-          return false;
-      }
     }
 
     if (cast<Instruction>(Shuffle->getOperand(0))->getOperand(0) == Load)

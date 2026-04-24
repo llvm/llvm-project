@@ -1350,15 +1350,15 @@ define void @load_factor2_wide_pointer(ptr %ptr) {
 ; possible to produce a vld2.v2i32, but that currently isn't implemented.)
 define void @load_out_of_range(ptr %ptr) {
 ; CHECK-NEON-LABEL: @load_out_of_range(
-; CHECK-NEON-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEON-NEXT:    [[V0:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
-; CHECK-NEON-NEXT:    [[V1:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0(ptr [[PTR:%.*]], i32 4)
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_out_of_range(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
-; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
+; CHECK-MVE-NEXT:    [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0(ptr [[PTR:%.*]])
+; CHECK-MVE-NEXT:    [[TMP1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
+; CHECK-MVE-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_out_of_range(
