@@ -438,8 +438,7 @@ constexpr static uint64_t computeSwitchEnum(dxil::OpCode OpCode,
   return (OpCodePack << 32) | (VersionMajor << 16) | VersionMinor;
 }
 
-// Retreive all the set attributes for a DXIL OpCode given the targeted
-// DXILVersion
+/// Get the set of attributes for a given DXIL OpCode and the DXIL version.
 static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
                                           VersionTuple DXILVersion) {
   // Instantiate all versions to iterate through
@@ -468,8 +467,8 @@ static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
   return Attributes;
 }
 
-// Retreive the set of DXIL Attributes given the version and map them to an
-// llvm function attribute that is set onto the instruction
+/// Get the attributes to apply to the function for the DXIL operation with the
+/// given OpCode and DXIL version.
 static AttributeList getDXILFnAttributeList(LLVMContext &Ctx,
                                             dxil::OpCode OpCode,
                                             VersionTuple DXILVersion) {
