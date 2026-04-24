@@ -372,6 +372,29 @@ LogicalResult cir::BreakOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// LocalInitOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  cir::GlobalOp global = getReferencedGlobal(symbolTable);
+  if (!global)
+    return emitOpError("'")
+           << getGlobalName() << "' does not reference a valid cir.global";
+
+  if (getTls() && !global.getTlsModel())
+    return emitOpError("access to global not marked thread local");
+
+  bool isStaticLocal = getStaticLocal();
+  bool globalIsStaticLocal = global.getStaticLocalGuard().has_value();
+
+  if (isStaticLocal != globalIsStaticLocal)
+    return emitOpError("static_local attribute mismatch");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConditionOp
 //===----------------------------------------------------------------------===//
 
@@ -1844,6 +1867,13 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
+  if ((getStaticLocalGuard().has_value() || getTlsModel()) &&
+      (!getCtorRegion().empty() || !getDtorRegion().empty()))
+    return emitOpError(
+        "Cannot have a thread-local or static-local global-op "
+        "with a constructor or destructor, they require in-function "
+        "initialization via LocalInitOp");
+
   // TODO(CIR): Many other checks for properties that haven't been upstreamed
   // yet.
 
@@ -2538,15 +2568,24 @@ mlir::LogicalResult cir::FuncOp::verify() {
 
   if (!isDeclaration() && getCoroutine()) {
     bool foundAwait = false;
+    int coroBodyCount = 0;
     this->walk([&](Operation *op) {
       if (auto await = dyn_cast<AwaitOp>(op)) {
         foundAwait = true;
-        return;
+      } else if (isa<CoroBodyOp>(op)) {
+        coroBodyCount++;
+        if (coroBodyCount > 1) {
+          return mlir::WalkResult::interrupt();
+        }
       }
+      return mlir::WalkResult::advance();
     });
     if (!foundAwait)
       return emitOpError()
              << "coroutine body must use at least one cir.await op";
+    if (coroBodyCount != 1)
+      return emitOpError()
+             << "coroutine function must have exactly one cir.body op";
   }
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
@@ -2957,6 +2996,48 @@ LogicalResult cir::AwaitOp::verify() {
   if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
   return success();
+}
+
+LogicalResult cir::CoReturnOp::verify() {
+  if (!getOperation()->getParentOfType<CoroBodyOp>())
+    return emitOpError("must be inside a cir.coro.body");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CoroBody
+//===----------------------------------------------------------------------===//
+
+void cir::CoroBodyOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor::parent());
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(&getBody()));
+}
+
+mlir::ValueRange
+cir::CoroBodyOp::getSuccessorInputs(RegionSuccessor successor) {
+  return ValueRange();
+}
+
+LogicalResult cir::CoroBodyOp::verify() {
+  if (!getOperation()->getParentOfType<FuncOp>().getCoroutine())
+    return emitOpError("enclosing function must be a coroutine");
+  return success();
+}
+
+void cir::CoroBodyOp::build(OpBuilder &builder, OperationState &result,
+                            BuilderCallbackRef bodyBuilder) {
+  assert(bodyBuilder &&
+         "the builder callback for 'CoroBodyOp' must be present");
+  OpBuilder::InsertionGuard guard(builder);
+
+  Region *bodyRegion = result.addRegion();
+  builder.createBlock(bodyRegion);
+  bodyBuilder(builder, result.location);
 }
 
 //===----------------------------------------------------------------------===//
