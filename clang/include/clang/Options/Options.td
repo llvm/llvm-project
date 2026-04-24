@@ -6889,16 +6889,54 @@ def no_xcselect : Flag<["--"], "no-xcselect">,
 //===----------------------------------------------------------------------===//
 let Visibility = [ClangOption, FlangOption] in {
 
-def fPIC : Flag<["-"], "fPIC">, Group<f_Group>;
-def fno_PIC : Flag<["-"], "fno-PIC">, Group<f_Group>;
-def fPIE : Flag<["-"], "fPIE">, Group<f_Group>;
-def fno_PIE : Flag<["-"], "fno-PIE">, Group<f_Group>;
-def fpic : Flag<["-"], "fpic">, Group<f_Group>;
-def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
-def fpie : Flag<["-"], "fpie">, Group<f_Group>;
-def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
-def pie : Flag<["-"], "pie">, Group<Link_Group>;
-def no_pie : Flag<["-"], "no-pie">, Group<Link_Group>;
+def fpic : Flag<["-"], "fpic">, Group<f_Group>,
+  HelpText<"Generate position-independent code">,
+  DocBrief<[{
+Generate position-independent code. On targets that distinguish PIC code
+models, this selects small PIC mode.
+}]>;
+def fPIC : Flag<["-"], "fPIC">, Group<f_Group>,
+  HelpText<"Generate position-independent code">,
+  DocBrief<[{
+Generate position-independent code. On targets that distinguish PIC code
+models, this selects large PIC mode.
+}]>;
+def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>,
+  HelpText<"Disable position-independent code generation">,
+  DocBrief<[{
+Disable PIC and PIE code generation. This controls compilation; use
+``-no-pie`` to control PIE linking.
+}]>;
+def fno_PIC : Flag<["-"], "fno-PIC">, Group<f_Group>, Alias<fno_pic>,
+  HelpText<"Alias for -fno-pic">;
+
+def fpie : Flag<["-"], "fpie">, Group<f_Group>,
+  HelpText<"Generate position-independent code for executables">,
+  DocBrief<[{
+Generate position-independent code suitable for a position-independent
+executable. On targets that distinguish PIC code models, this selects small
+PIE mode and marks the generated code as PIE.
+}]>;
+def fPIE : Flag<["-"], "fPIE">, Group<f_Group>,
+  HelpText<"Generate position-independent code for executables">,
+  DocBrief<[{
+Generate position-independent code suitable for a position-independent
+executable. On targets that distinguish PIC code models, this selects large
+PIE mode and marks the generated code as PIE.
+}]>;
+def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>,
+  HelpText<"Disable position-independent executable code generation">,
+  DocBrief<[{
+Disable PIE code generation. For compilation this also disables PIC; use
+``-no-pie`` to control PIE linking on toolchains that support it.
+}]>;
+def fno_PIE : Flag<["-"], "fno-PIE">, Group<f_Group>, Alias<fno_pie>,
+  HelpText<"Alias for -fno-pie">;
+
+def pie : Flag<["-"], "pie">, Group<Link_Group>,
+  HelpText<"Link a position-independent executable">;
+def no_pie : Flag<["-"], "no-pie">, Group<Link_Group>,
+  HelpText<"Link a position-dependent executable">;
 
 } // let Vis = [Default, FlangOption]
 
