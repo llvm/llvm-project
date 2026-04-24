@@ -355,7 +355,7 @@ protected:
     } else {
       if (command.GetArgumentCount() > 1) {
         result.AppendErrorWithFormat(
-            "too many arguments; expected frame-index, saw '%s'.",
+            "too many arguments; expected frame-index, saw '%s'",
             command[0].c_str());
         m_options.GenerateOptionUsage(
             result.GetErrorStream(), *this,
@@ -366,7 +366,7 @@ protected:
 
       if (command.GetArgumentCount() == 1) {
         if (command[0].ref().getAsInteger(0, frame_idx)) {
-          result.AppendErrorWithFormat("invalid frame index argument '%s'.",
+          result.AppendErrorWithFormat("invalid frame index argument '%s'",
                                        command[0].c_str());
           return;
         }
@@ -384,7 +384,7 @@ protected:
       m_exe_ctx.SetFrameSP(thread->GetSelectedFrame(SelectMostRelevantFrame));
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Frame index (%u) out of range.", frame_idx);
+      result.AppendErrorWithFormat("Frame index (%u) out of range", frame_idx);
     }
   }
 
@@ -585,7 +585,7 @@ protected:
                   findUniqueRegexMatches(regex, regex_var_list, *variable_list);
               if (!results) {
                 result.AppendErrorWithFormat(
-                    "no variables matched the regular expression '%s'.",
+                    "no variables matched the regular expression '%s'",
                     entry.c_str());
                 continue;
               }
@@ -678,7 +678,7 @@ protected:
               else
                 result.AppendErrorWithFormat(
                     "unable to find any variable expression path that matches "
-                    "'%s'.",
+                    "'%s'",
                     entry.c_str());
             }
           }
@@ -907,26 +907,26 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
                                                 CommandReturnObject &result) {
 #if LLDB_ENABLE_PYTHON
   if (m_options.m_class_name.empty()) {
-    result.AppendErrorWithFormat("%s needs a Python class name (-l argument).",
+    result.AppendErrorWithFormat("%s needs a Python class name (-l argument)",
                                  m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_module.empty()) {
-    result.AppendErrorWithFormat("%s needs a module name (-s argument).",
+    result.AppendErrorWithFormat("%s needs a module name (-s argument)",
                                  m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_symbols.empty()) {
     result.AppendErrorWithFormat(
-        "%s needs at least one symbol name (-n argument).", m_cmd_name.c_str());
+        "%s needs at least one symbol name (-n argument)", m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_regex && m_options.m_symbols.size() > 1) {
     result.AppendErrorWithFormat(
-        "%s needs only one symbol regular expression (-n argument).",
+        "%s needs only one symbol regular expression (-n argument)",
         m_cmd_name.c_str());
     return;
   }
@@ -1049,7 +1049,7 @@ public:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     uint32_t recognizer_id;
     if (!llvm::to_integer(command.GetArgumentAtIndex(0), recognizer_id)) {
-      result.AppendErrorWithFormat("'%s' is not a valid recognizer id.",
+      result.AppendErrorWithFormat("'%s' is not a valid recognizer id",
                                    command.GetArgumentAtIndex(0));
       return;
     }
@@ -1075,7 +1075,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, true)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1100,7 +1100,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, false)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1125,7 +1125,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.RemoveRecognizerWithID(recognizer_id)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1191,7 +1191,7 @@ protected:
     const char *frame_index_str = command.GetArgumentAtIndex(0);
     uint32_t frame_index;
     if (!llvm::to_integer(frame_index_str, frame_index)) {
-      result.AppendErrorWithFormat("'%s' is not a valid frame index.",
+      result.AppendErrorWithFormat("'%s' is not a valid frame index",
                                    frame_index_str);
       return;
     }
@@ -1208,7 +1208,7 @@ protected:
     }
     if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one frame index argument.", m_cmd_name.c_str());
+          "'%s' takes exactly one frame index argument", m_cmd_name.c_str());
       return;
     }
 
