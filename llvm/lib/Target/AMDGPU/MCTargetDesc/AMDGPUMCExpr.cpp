@@ -103,17 +103,15 @@ static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
 static bool
 evaluateMCExprs(ArrayRef<const MCExpr *> Exprs, const MCAssembler *Asm,
                 std::initializer_list<std::reference_wrapper<uint64_t>> Vals) {
-  assert(Exprs.size() == Vals.size() &&
-         "MCExpr and output variable count mismatch");
-  auto ValIt = Vals.begin();
-  for (const MCExpr *Expr : Exprs) {
+  return llvm::all_of(llvm::zip_equal(Exprs, Vals), [&](const auto &Pair) {
+    const MCExpr *Expr = std::get<0>(Pair);
+    uint64_t &Val = std::get<1>(Pair).get();
     MCValue MCVal;
     if (!Expr->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
       return false;
-    ValIt->get() = MCVal.getConstant();
-    ++ValIt;
-  }
-  return true;
+    Val = MCVal.getConstant();
+    return true;
+  });
 }
 
 bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
