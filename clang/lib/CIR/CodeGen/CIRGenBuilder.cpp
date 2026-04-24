@@ -42,6 +42,10 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
   // If the array pointer is not decayed, emit a GetElementOp.
   auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
 
+  assert(mlir::isa<cir::IntType>(idx.getType()) &&
+         cir::isValidFundamentalIntWidth(
+             mlir::cast<cir::IntType>(idx.getType()).getWidth()));
+
   if (shouldDecay && arrayTy && arrayTy == eltTy) {
     auto eltPtrTy =
         getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());

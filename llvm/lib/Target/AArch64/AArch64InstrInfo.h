@@ -598,8 +598,6 @@ protected:
   isCopyLikeInstrImpl(const MachineInstr &MI) const override;
 
 private:
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
   /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///

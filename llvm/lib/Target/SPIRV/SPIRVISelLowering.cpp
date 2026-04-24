@@ -109,27 +109,48 @@ void SPIRVTargetLowering::getTgtMemIntrinsic(
     SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
     MachineFunction &MF, unsigned Intrinsic) const {
   IntrinsicInfo Info;
-  unsigned AlignIdx = 3;
+
+  unsigned AlignIdx = 0;
+  unsigned OrderingIdx = 0;
+  unsigned FlagsIdx;
+
   switch (Intrinsic) {
   case Intrinsic::spv_load:
+    FlagsIdx = 1;
     AlignIdx = 2;
-    [[fallthrough]];
-  case Intrinsic::spv_store: {
-    if (I.getNumOperands() >= AlignIdx + 1) {
-      auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
-      Info.align = Align(AlignOp->getZExtValue());
-    }
-    Info.flags = static_cast<MachineMemOperand::Flags>(
-        cast<ConstantInt>(I.getOperand(AlignIdx - 1))->getZExtValue());
-    Info.memVT = MVT::i64;
-    // TODO: take into account opaque pointers (don't use getElementType).
-    // MVT::getVT(PtrTy->getElementType());
-    Infos.push_back(Info);
+    break;
+  case Intrinsic::spv_store:
+    FlagsIdx = 2;
+    AlignIdx = 3;
+    break;
+  case Intrinsic::spv_atomic_load:
+    FlagsIdx = 1;
+    OrderingIdx = 2;
+    break;
+  case Intrinsic::spv_atomic_store:
+    FlagsIdx = 2;
+    OrderingIdx = 3;
+    break;
+  default:
     return;
   }
-  default:
-    break;
+
+  Info.flags = static_cast<MachineMemOperand::Flags>(
+      cast<ConstantInt>(I.getOperand(FlagsIdx))->getZExtValue());
+  Info.memVT = MVT::i64;
+  // TODO: take into account opaque pointers (don't use getElementType).
+  // MVT::getVT(PtrTy->getElementType());
+
+  if (AlignIdx) {
+    auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
+    Info.align = Align(AlignOp->getZExtValue());
   }
+
+  if (OrderingIdx) {
+    Info.order = static_cast<AtomicOrdering>(
+        cast<ConstantInt>(I.getOperand(OrderingIdx))->getZExtValue());
+  }
+  Infos.push_back(Info);
 }
 
 TargetLowering::ConstraintType

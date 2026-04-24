@@ -4425,7 +4425,6 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_exp : RuntimeLibcallImpl<EXP_V2F64>;
   def amd_vrd2_exp10 : RuntimeLibcallImpl<EXP10_V2F64>;
   def amd_vrd2_exp2 : RuntimeLibcallImpl<EXP2_V2F64>;
-  def amd_vrd2_expm1 : RuntimeLibcallImpl<EXPM1_V2F64>;
   def amd_vrd2_log : RuntimeLibcallImpl<LOG_V2F64>;
   def amd_vrd2_log10 : RuntimeLibcallImpl<LOG10_V2F64>;
   def amd_vrd2_log1p : RuntimeLibcallImpl<LOG1P_V2F64>;

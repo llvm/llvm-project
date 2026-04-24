@@ -489,11 +489,11 @@ void CommandObjectDisassemble::DoExecute(Args &command,
     if (plugin_name) {
       result.AppendErrorWithFormat(
           "Unable to find Disassembler plug-in named '%s' that supports the "
-          "'%s' architecture.",
+          "'%s' architecture",
           plugin_name, m_options.arch.GetArchitectureName());
     } else
       result.AppendErrorWithFormat(
-          "Unable to find Disassembler plug-in for the '%s' architecture.",
+          "Unable to find Disassembler plug-in for the '%s' architecture",
           m_options.arch.GetArchitectureName());
     return;
   } else if (flavor_string != nullptr && !disassembler->FlavorValidForArchSpec(
@@ -505,7 +505,7 @@ void CommandObjectDisassemble::DoExecute(Args &command,
 
   if (!command.empty()) {
     result.AppendErrorWithFormat(
-        "\"disassemble\" arguments are specified as options.");
+        "\"disassemble\" arguments are specified as options");
     const int terminal_width =
         GetCommandInterpreter().GetDebugger().GetTerminalWidth();
     const bool use_color = GetCommandInterpreter().GetDebugger().GetUseColor();
@@ -564,11 +564,11 @@ void CommandObjectDisassemble::DoExecute(Args &command,
     } else {
       if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS) {
         result.AppendErrorWithFormat(
-            "Failed to disassemble memory in function at 0x%8.8" PRIx64 ".",
+            "Failed to disassemble memory in function at 0x%8.8" PRIx64,
             m_options.symbol_containing_addr);
       } else {
         result.AppendErrorWithFormat(
-            "Failed to disassemble memory at 0x%8.8" PRIx64 ".",
+            "Failed to disassemble memory at 0x%8.8" PRIx64,
             cur_range.GetBaseAddress().GetLoadAddress(&target));
       }
     }

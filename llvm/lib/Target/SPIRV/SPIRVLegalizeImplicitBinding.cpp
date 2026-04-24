@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVLegalizeImplicitBinding.h"
 #include "SPIRV.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -28,14 +29,9 @@
 using namespace llvm;
 
 namespace {
-class SPIRVLegalizeImplicitBinding : public ModulePass {
+class SPIRVLegalizeImplicitBindingImpl {
 public:
-  static char ID;
-  SPIRVLegalizeImplicitBinding() : ModulePass(ID) {}
-  StringRef getPassName() const override {
-    return "SPIRV Legalize Implicit Binding";
-  }
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M);
 
 private:
   void collectBindingInfo(Module &M);
@@ -51,6 +47,18 @@ private:
   std::vector<BitVector> UsedBindings;
   // A list of all implicit binding calls, to be sorted by order ID.
   SmallVector<CallInst *, 16> ImplicitBindingCalls;
+};
+
+class SPIRVLegalizeImplicitBindingLegacy : public ModulePass {
+public:
+  static char ID;
+  SPIRVLegalizeImplicitBindingLegacy() : ModulePass(ID) {}
+  StringRef getPassName() const override {
+    return "SPIRV Legalize Implicit Binding";
+  }
+  bool runOnModule(Module &M) override {
+    return SPIRVLegalizeImplicitBindingImpl().runOnModule(M);
+  }
 };
 
 struct BindingInfoCollector : public InstVisitor<BindingInfoCollector> {
@@ -129,7 +137,7 @@ static uint32_t getDescSet(const CallInst *CI) {
   return cast<ConstantInt>(CI->getArgOperand(DescSetArgIdx))->getZExtValue();
 }
 
-void SPIRVLegalizeImplicitBinding::collectBindingInfo(Module &M) {
+void SPIRVLegalizeImplicitBindingImpl::collectBindingInfo(Module &M) {
   BindingInfoCollector InfoCollector(UsedBindings, ImplicitBindingCalls);
   InfoCollector.visit(M);
 
@@ -140,7 +148,7 @@ void SPIRVLegalizeImplicitBinding::collectBindingInfo(Module &M) {
             });
 }
 
-void SPIRVLegalizeImplicitBinding::verifyUniqueOrderIdPerResource(
+void SPIRVLegalizeImplicitBindingImpl::verifyUniqueOrderIdPerResource(
     SmallVectorImpl<CallInst *> &Calls) {
   // Check that the order Id is unique per resource.
   for (uint32_t i = 1; i < Calls.size(); ++i) {
@@ -157,7 +165,7 @@ void SPIRVLegalizeImplicitBinding::verifyUniqueOrderIdPerResource(
   }
 }
 
-uint32_t SPIRVLegalizeImplicitBinding::getAndReserveFirstUnusedBinding(
+uint32_t SPIRVLegalizeImplicitBindingImpl::getAndReserveFirstUnusedBinding(
     uint32_t DescSet) {
   if (UsedBindings.size() <= DescSet) {
     UsedBindings.resize(DescSet + 1);
@@ -174,7 +182,7 @@ uint32_t SPIRVLegalizeImplicitBinding::getAndReserveFirstUnusedBinding(
   return NewBinding;
 }
 
-void SPIRVLegalizeImplicitBinding::replaceImplicitBindingCalls(Module &M) {
+void SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
   uint32_t lastOrderId = -1;
   uint32_t lastBindingNumber = -1;
 
@@ -202,7 +210,7 @@ void SPIRVLegalizeImplicitBinding::replaceImplicitBindingCalls(Module &M) {
   }
 }
 
-bool SPIRVLegalizeImplicitBinding::runOnModule(Module &M) {
+bool SPIRVLegalizeImplicitBindingImpl::runOnModule(Module &M) {
   collectBindingInfo(M);
   if (ImplicitBindingCalls.empty()) {
     return false;
@@ -214,16 +222,24 @@ bool SPIRVLegalizeImplicitBinding::runOnModule(Module &M) {
 }
 } // namespace
 
-char SPIRVLegalizeImplicitBinding::ID = 0;
+PreservedAnalyses SPIRVLegalizeImplicitBinding::run(Module &M,
+                                                    ModuleAnalysisManager &AM) {
+  return SPIRVLegalizeImplicitBindingImpl().runOnModule(M)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
+}
 
-INITIALIZE_PASS(SPIRVLegalizeImplicitBinding, "legalize-spirv-implicit-binding",
+char SPIRVLegalizeImplicitBindingLegacy::ID = 0;
+
+INITIALIZE_PASS(SPIRVLegalizeImplicitBindingLegacy,
+                "legalize-spirv-implicit-binding",
                 "Legalize SPIR-V implicit bindings", false, false)
 
 ModulePass *llvm::createSPIRVLegalizeImplicitBindingPass() {
-  return new SPIRVLegalizeImplicitBinding();
+  return new SPIRVLegalizeImplicitBindingLegacy();
 }
 
-void SPIRVLegalizeImplicitBinding::replaceResourceHandleCall(
+void SPIRVLegalizeImplicitBindingImpl::replaceResourceHandleCall(
     Module &M, CallInst *OldCI, uint32_t NewBinding) {
   IRBuilder<> Builder(OldCI);
   const uint32_t DescSet =
@@ -247,7 +263,7 @@ void SPIRVLegalizeImplicitBinding::replaceResourceHandleCall(
   OldCI->eraseFromParent();
 }
 
-void SPIRVLegalizeImplicitBinding::replaceCounterHandleCall(
+void SPIRVLegalizeImplicitBindingImpl::replaceCounterHandleCall(
     Module &M, CallInst *OldCI, uint32_t NewBinding) {
   IRBuilder<> Builder(OldCI);
   const uint32_t DescSet =

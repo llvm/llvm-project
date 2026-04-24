@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -22,17 +20,6 @@
 
 using namespace mlir;
 using namespace mlir::xegpu;
-
-static bool isSharedMemory(const MemRefType &memrefTy) {
-  Attribute attr = memrefTy.getMemorySpace();
-  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
-    return intAttr.getInt() == 3;
-  if (auto memrefSpace = llvm::dyn_cast<MemorySpaceAttr>(attr))
-    return memrefSpace.getValue() == MemorySpace::SLM;
-  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(attr))
-    return xevmSpace.getValue() == xevm::AddrSpace::SHARED;
-  return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
-}
 
 template <typename T>
 static std::string makeString(T array, bool breakline = false) {

@@ -50,12 +50,12 @@ void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
-void initializeSPIRVLegalizePointerCastPass(PassRegistry &);
-void initializeSPIRVRegularizerPass(PassRegistry &);
-void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
+void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);
+void initializeSPIRVRegularizerLegacyPass(PassRegistry &);
+void initializeSPIRVMergeRegionExitTargetsLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
 void initializeSPIRVPrepareGlobalsPass(PassRegistry &);
-void initializeSPIRVLegalizeImplicitBindingPass(PassRegistry &);
+void initializeSPIRVLegalizeImplicitBindingLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PassRegistry &);
 void initializeSPIRVCtorDtorLoweringLegacyPass(PassRegistry &);
 } // namespace llvm

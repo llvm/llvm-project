@@ -567,6 +567,16 @@ def fir_ZeroOp : fir_OneResultOp<"zero_bits", [Pure]> {
   let assemblyFormat = "type($intype) attr-dict";
 }
 
+def fir_FakeUseOp : fir_Op<"fake_use", []> {
+  let summary = "fake use of values to extend their lifetime";
+  let description = [{
+    This operation is used to keep values alive for debug information purposes.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$args);
+  let assemblyFormat = "$args attr-dict `:` type($args)";
+}
+
 //===----------------------------------------------------------------------===//
 // Terminator operations
 //===----------------------------------------------------------------------===//

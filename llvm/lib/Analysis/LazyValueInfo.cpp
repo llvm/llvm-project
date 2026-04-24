@@ -1316,8 +1316,8 @@ LazyValueInfoImpl::getValueFromSimpleICmpCondition(CmpInst::Predicate Pred,
                                                    bool UseBlockValue) {
   ConstantRange RHSRange(RHS->getType()->getScalarSizeInBits(),
                          /*isFullSet=*/true);
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
-    RHSRange = ConstantRange(CI->getValue());
+  if (auto *C = dyn_cast<Constant>(RHS)) {
+    RHSRange = C->toConstantRange();
   } else if (UseBlockValue) {
     std::optional<ValueLatticeElement> R =
         getBlockValue(RHS, CxtI->getParent(), CxtI);
@@ -1391,7 +1391,7 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
   }
 
   Type *Ty = Val->getType();
-  if (!Ty->isIntegerTy())
+  if (!Ty->isIntOrIntVectorTy())
     return ValueLatticeElement::getOverdefined();
 
   unsigned BitWidth = Ty->getScalarSizeInBits();

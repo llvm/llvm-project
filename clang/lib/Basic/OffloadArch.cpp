@@ -152,15 +152,20 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID) {
   if (ID == OffloadArch::AMDGCNSPIRV)
-    return llvm::Triple("spirv64-amd-amdhsa");
+    return llvm::Triple(llvm::Triple::spirv64, llvm::Triple::NoSubArch,
+                        llvm::Triple::AMD, llvm::Triple::AMDHSA);
 
-  if (IsNVIDIAOffloadArch(ID))
-    return DefaultToolchainTriple.isArch64Bit()
-               ? llvm::Triple("nvptx64-nvidia-cuda")
-               : llvm::Triple("nvptx-nvidia-cuda");
+  if (IsNVIDIAOffloadArch(ID)) {
+    llvm::Triple::ArchType Arch = DefaultToolchainTriple.isArch64Bit()
+                                      ? llvm::Triple::nvptx64
+                                      : llvm::Triple::nvptx;
+    return llvm::Triple(Arch, llvm::Triple::NoSubArch, llvm::Triple::NVIDIA,
+                        llvm::Triple::CUDA);
+  }
 
   if (IsAMDOffloadArch(ID))
-    return llvm::Triple("amdgcn-amd-amdhsa");
+    return llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
+                        llvm::Triple::AMD, llvm::Triple::AMDHSA);
 
   return {};
 }

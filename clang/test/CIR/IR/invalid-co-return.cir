@@ -1,0 +1,5 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+cir.func @must_be_inside_coro_body() { 
+  cir.co_return // expected-error {{must be inside a cir.coro.body}}
+}

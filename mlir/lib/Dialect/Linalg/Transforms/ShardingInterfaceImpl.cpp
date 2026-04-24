@@ -334,7 +334,7 @@ void registerShardingInterfaceExternalModels(DialectRegistry &registry) {
     registry.insert<affine::AffineDialect, arith::ArithDialect, scf::SCFDialect,
                     tensor::TensorDialect>();
     ctx->appendDialectRegistry(registry);
-    for (StringRef name : registry.getDialectNames())
+    for (StringRef name : registry.getRegisteredDialectNames())
       ctx->getOrLoadDialect(name);
 
     registerOne<linalg::GenericOp>(ctx);

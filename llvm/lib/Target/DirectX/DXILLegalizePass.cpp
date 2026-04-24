@@ -407,6 +407,57 @@ legalizeGetHighLowi64Bytes(Instruction &I,
 }
 
 static bool
+resolveUnreachableSwitchDefault(Instruction &I,
+                                SmallVectorImpl<Instruction *> &ToRemove,
+                                DenseMap<Value *, Value *> &) {
+  auto *SI = dyn_cast<SwitchInst>(&I);
+  if (!SI || SI->getNumCases() == 0)
+    return false;
+
+  BasicBlock *DefaultBB = SI->getDefaultDest();
+
+  // Check if the default destination ends with an unreachable instruction.
+  if (DefaultBB->size() == 0 ||
+      !isa<UnreachableInst>(DefaultBB->getTerminator()))
+    return false;
+
+  // Try to find a common successor of all case destinations. If all case
+  // blocks unconditionally branch to the same block, that is the common
+  // successor. This is just a best effort, and is done as the original form of
+  // the switch statement was likely in this form before being transformed to
+  // an unreachable branch.
+  BasicBlock *CommonSuccessor = nullptr;
+  for (auto &Case : SI->cases()) {
+    BasicBlock *CaseBB = Case.getCaseSuccessor();
+    auto *BI = dyn_cast<UncondBrInst>(CaseBB->getTerminator());
+    if (!BI) {
+      CommonSuccessor = nullptr;
+      break;
+    }
+    BasicBlock *Succ = BI->getSuccessor(0);
+    if (!CommonSuccessor)
+      CommonSuccessor = Succ;
+    else if (CommonSuccessor != Succ) {
+      CommonSuccessor = nullptr;
+      break;
+    }
+  }
+
+  BasicBlock *NewDefault =
+      CommonSuccessor ? CommonSuccessor : SI->case_begin()->getCaseSuccessor();
+
+  BasicBlock *SwitchBB = SI->getParent();
+  SI->setDefaultDest(NewDefault);
+
+  // Ensure all phi nodes are legal by adding an incoming poison value from the
+  // unreachable branch.
+  for (PHINode &Phi : NewDefault->phis())
+    Phi.addIncoming(PoisonValue::get(Phi.getType()), SwitchBB);
+
+  return true;
+}
+
+static bool
 legalizeScalarLoadStoreOnArrays(Instruction &I,
                                 SmallVectorImpl<Instruction *> &ToRemove,
                                 DenseMap<Value *, Value *> &) {
@@ -501,6 +552,7 @@ private:
     LegalizationPipeline[Stage2].push_back(
         downcastI64toI32InsertExtractElements);
     LegalizationPipeline[Stage2].push_back(legalizeScalarLoadStoreOnArrays);
+    LegalizationPipeline[Stage2].push_back(resolveUnreachableSwitchDefault);
   }
 };
 

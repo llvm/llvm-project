@@ -14,6 +14,8 @@
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVInstrInfo.h"
 
+#include "SPIRV.h"
+
 namespace llvm {
 [[maybe_unused]] static bool definesATypeRegister(const MachineInstr &MI) {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -31,5 +33,9 @@ bool SPIRVTypeInst::isTypeIntN(unsigned N) const {
   if (N)
     return MI->getOperand(1).getImm() == N;
   return true;
+}
+
+bool SPIRVTypeInst::isAnyTypeFloat() const {
+  return MI->getOpcode() == SPIRV::OpTypeFloat;
 }
 } // namespace llvm

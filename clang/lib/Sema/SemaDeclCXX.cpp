@@ -3526,6 +3526,18 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     }
   }
 
+  // HLSL prohibits user defined constructors and destructors.
+  if (getLangOpts().HLSL) {
+    switch (Name.getNameKind()) {
+    case DeclarationName::CXXConstructorName:
+    case DeclarationName::CXXDestructorName:
+      Diag(Loc, diag::err_hlsl_cstor_dstor);
+      return nullptr;
+    default:
+      break;
+    }
+  }
+
   // C++ 9.2p6: A member shall not be declared to have automatic storage
   // duration (auto, register) or with the extern storage-class-specifier.
   // C++ 7.1.1p8: The mutable specifier can be applied only to names of class

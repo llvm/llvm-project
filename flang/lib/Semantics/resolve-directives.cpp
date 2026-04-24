@@ -80,11 +80,6 @@ protected:
     CHECK(!dirContext_.empty());
     return dirContext_.back();
   }
-  std::optional<DirContext> GetContextIf() {
-    return dirContext_.empty()
-        ? std::nullopt
-        : std::make_optional<DirContext>(dirContext_.back());
-  }
   void PushContext(const parser::CharBlock &source, T dir, Scope &scope) {
     if constexpr (std::is_same_v<T, llvm::acc::Directive>) {
       dirContext_.emplace_back(source, dir, scope);
@@ -477,29 +472,6 @@ public:
   template <typename A> bool Pre(const A &) { return true; }
   template <typename A> void Post(const A &) {}
 
-  template <typename A> bool Pre(const parser::Statement<A> &statement) {
-    currentStatementSource_ = statement.source;
-    // Keep track of the labels in all the labelled statements
-    if (statement.label) {
-      auto label{statement.label.value()};
-      // Get the context to check if the labelled statement is in an
-      // enclosing OpenMP construct
-      std::optional<DirContext> thisContext{GetContextIf()};
-      targetLabels_.emplace(
-          label, std::make_pair(currentStatementSource_, thisContext));
-      // Check if a statement that causes a jump to the 'label'
-      // has already been encountered
-      auto range{sourceLabels_.equal_range(label)};
-      for (auto it{range.first}; it != range.second; ++it) {
-        // Check if both the statement with 'label' and the statement that
-        // causes a jump to the 'label' are in the same scope
-        CheckLabelContext(it->second.first, currentStatementSource_,
-            it->second.second, thisContext);
-      }
-    }
-    return true;
-  }
-
   bool Pre(const parser::SpecificationPart &) {
     partStack_.push_back(PartKind::SpecificationPart);
     return true;
@@ -511,18 +483,6 @@ public:
     return true;
   }
   void Post(const parser::ExecutionPart &) { partStack_.pop_back(); }
-
-  bool Pre(const parser::InternalSubprogram &) {
-    // Clear the labels being tracked in the previous scope
-    ClearLabels();
-    return true;
-  }
-
-  bool Pre(const parser::ModuleSubprogram &) {
-    // Clear the labels being tracked in the previous scope
-    ClearLabels();
-    return true;
-  }
 
   bool Pre(const parser::StmtFunctionStmt &x) {
     const auto &parsedExpr{std::get<parser::Scalar<parser::Expr>>(x.t)};
@@ -611,9 +571,6 @@ public:
 
   bool Pre(const parser::OpenMPLoopConstruct &);
   void Post(const parser::OpenMPLoopConstruct &) { PopContext(); }
-  void Post(const parser::OmpBeginLoopDirective &) {
-    GetContext().withinConstruct = true;
-  }
   bool Pre(const parser::OpenMPMisplacedEndDirective &x) { return false; }
   bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
 
@@ -920,30 +877,6 @@ public:
 
   void Post(const parser::Name &);
 
-  // Keep track of labels in the statements that causes jumps to target labels
-  void Post(const parser::GotoStmt &gotoStmt) { CheckSourceLabel(gotoStmt.v); }
-  void Post(const parser::ComputedGotoStmt &computedGotoStmt) {
-    for (auto &label : std::get<std::list<parser::Label>>(computedGotoStmt.t)) {
-      CheckSourceLabel(label);
-    }
-  }
-  void Post(const parser::ArithmeticIfStmt &arithmeticIfStmt) {
-    CheckSourceLabel(std::get<1>(arithmeticIfStmt.t));
-    CheckSourceLabel(std::get<2>(arithmeticIfStmt.t));
-    CheckSourceLabel(std::get<3>(arithmeticIfStmt.t));
-  }
-  void Post(const parser::AssignedGotoStmt &assignedGotoStmt) {
-    for (auto &label : std::get<std::list<parser::Label>>(assignedGotoStmt.t)) {
-      CheckSourceLabel(label);
-    }
-  }
-  void Post(const parser::AltReturnSpec &altReturnSpec) {
-    CheckSourceLabel(altReturnSpec.v);
-  }
-  void Post(const parser::ErrLabel &errLabel) { CheckSourceLabel(errLabel.v); }
-  void Post(const parser::EndLabel &endLabel) { CheckSourceLabel(endLabel.v); }
-  void Post(const parser::EorLabel &eorLabel) { CheckSourceLabel(eorLabel.v); }
-
   void ResolveOmpObjectsForMapClause(
       Symbol::Flag mapFlag, const parser::OmpObjectList &objList) {
     for (const auto &ompObj : objList.v) {
@@ -1083,13 +1016,6 @@ private:
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
   UnorderedSymbolSet stmtFunctionExprSymbols_;
-  std::multimap<const parser::Label,
-      std::pair<parser::CharBlock, std::optional<DirContext>>>
-      sourceLabels_;
-  std::map<const parser::Label,
-      std::pair<parser::CharBlock, std::optional<DirContext>>>
-      targetLabels_;
-  parser::CharBlock currentStatementSource_;
 
   enum class PartKind : int {
     // There are also other "parts", such as internal-subprogram-part, etc,
@@ -1125,13 +1051,6 @@ private:
       const parser::Name &, const Symbol &, Symbol::Flag);
   void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
-  void CheckSourceLabel(const parser::Label &);
-  void CheckLabelContext(const parser::CharBlock, const parser::CharBlock,
-      std::optional<DirContext>, std::optional<DirContext>);
-  void ClearLabels() {
-    sourceLabels_.clear();
-    targetLabels_.clear();
-  };
 
   void AddOmpRequiresToScope(Scope &,
       const WithOmpDeclarative::RequiresClauses *,
@@ -3234,60 +3153,6 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
         "Variable '%s' in statement function expression cannot be in a "
         "%s clause"_err_en_US,
         name.ToString(), clauseName.str());
-  }
-}
-
-void OmpAttributeVisitor::CheckSourceLabel(const parser::Label &label) {
-  // Get the context to check if the statement causing a jump to the 'label' is
-  // in an enclosing OpenMP construct
-  std::optional<DirContext> thisContext{GetContextIf()};
-  sourceLabels_.emplace(
-      label, std::make_pair(currentStatementSource_, thisContext));
-  // Check if the statement with 'label' to which a jump is being introduced
-  // has already been encountered
-  auto it{targetLabels_.find(label)};
-  if (it != targetLabels_.end()) {
-    // Check if both the statement with 'label' and the statement that causes a
-    // jump to the 'label' are in the same scope
-    CheckLabelContext(currentStatementSource_, it->second.first, thisContext,
-        it->second.second);
-  }
-}
-
-// Check for invalid branch into or out of OpenMP structured blocks
-void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
-    const parser::CharBlock target, std::optional<DirContext> sourceContext,
-    std::optional<DirContext> targetContext) {
-  auto dirContextsSame = [](DirContext &lhs, DirContext &rhs) -> bool {
-    // Sometimes nested constructs share a scope but are different contexts.
-    // The directiveSource comparison is for OmpSection. Sections do not have
-    // their own scopes and two different sections both have the same directive.
-    // Their source however is different. This string comparison is unfortunate
-    // but should only happen for GOTOs inside of SECTION.
-    return (lhs.scope == rhs.scope) && (lhs.directive == rhs.directive) &&
-        (lhs.directiveSource == rhs.directiveSource);
-  };
-  unsigned version{context_.langOptions().OpenMPVersion};
-  if (targetContext &&
-      (!sourceContext ||
-          (!dirContextsSame(*targetContext, *sourceContext) &&
-              !DoesScopeContain(
-                  &targetContext->scope, sourceContext->scope)))) {
-    context_
-        .Say(source, "invalid branch into an OpenMP structured block"_err_en_US)
-        .Attach(target, "In the enclosing %s directive branched into"_en_US,
-            parser::omp::GetUpperName(targetContext->directive, version));
-  }
-  if (sourceContext &&
-      (!targetContext ||
-          (!dirContextsSame(*sourceContext, *targetContext) &&
-              !DoesScopeContain(
-                  &sourceContext->scope, targetContext->scope)))) {
-    context_
-        .Say(source,
-            "invalid branch leaving an OpenMP structured block"_err_en_US)
-        .Attach(target, "Outside the enclosing %s directive"_en_US,
-            parser::omp::GetUpperName(sourceContext->directive, version));
   }
 }
 

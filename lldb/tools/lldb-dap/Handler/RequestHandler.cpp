@@ -139,16 +139,20 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   std::future<lldb::SBError> did_attach_message_success =
       comm_channel.NotifyDidAttach();
 
-  // We just attached to the runInTerminal launcher, which was waiting to be
-  // attached. We now resume it, so it can receive the didAttach notification
-  // and then perform the exec. Upon continuing, the debugger will stop the
-  // process right in the middle of the exec. To the user, what we are doing is
-  // transparent, as they will only be able to see the process since the exec,
-  // completely unaware of the preparatory work.
+// We just attached to the runInTerminal launcher, which was waiting to be
+// attached. We now resume it, so it can receive the didAttach notification
+// and then perform the exec. Upon continuing, the debugger will stop the
+// process right in the middle of the exec. To the user, what we are doing is
+// transparent, as they will only be able to see the process since the exec,
+// completely unaware of the preparatory work.
+//
+// On Windows, the debuggee itself is waiting to be attached to. There is no
+// need to continue.
+#ifndef _WIN32
   dap.target.GetProcess().Continue();
+#endif
 
-  // Now that the actual target is just starting (i.e. exec was just invoked),
-  // we return the debugger to its sync state.
+  // Return the debugger to its prior async state.
   scope_sync_mode.reset();
 
   // If sending the notification failed, the launcher should be dead by now and

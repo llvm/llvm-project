@@ -177,6 +177,8 @@ class DXILPrepareModule : public ModulePass {
 
 public:
   bool runOnModule(Module &M) override {
+    M.convertFromNewDbgValues();
+
     PointerTypeMap PointerTypes = PointerTypeAnalysis::run(M);
     AttributeMask AttrMask;
     for (Attribute::AttrKind I = Attribute::None; I != Attribute::EndAttrKinds;

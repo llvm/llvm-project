@@ -618,7 +618,7 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     // example.
     return MCID.getSize();
   case TargetOpcode::BUNDLE:
-    return getInstBundleLength(MI);
+    return getInstBundleSize(MI);
   case TargetOpcode::COPY:
     if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
       return 4;
@@ -643,17 +643,6 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return Size;
   }
   }
-}
-
-unsigned ARMBaseInstrInfo::getInstBundleLength(const MachineInstr &MI) const {
-  unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
-  while (++I != E && I->isInsideBundle()) {
-    assert(!I->isBundle() && "No nested bundle!");
-    Size += getInstSizeInBytes(*I);
-  }
-  return Size;
 }
 
 void ARMBaseInstrInfo::copyFromCPSR(MachineBasicBlock &MBB,

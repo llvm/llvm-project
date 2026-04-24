@@ -38,7 +38,7 @@ def int_dx_resource_handlefromimplicitbinding
 
 def int_dx_resource_getpointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_any_ty],
-                            [IntrConvergent, IntrNoMem]>;
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
 
 def int_dx_resource_nonuniformindex
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
@@ -284,6 +284,18 @@ def int_dx_ddy_fine : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0
 def int_dx_firstbituhigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_firstbitshigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_firstbitlow : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem, IntrTriviallyScalarizable]>;
+
+def int_dx_all_memory_barrier
+    : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+
+def int_dx_all_memory_barrier_with_group_sync
+    : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+
+def int_dx_device_memory_barrier
+    : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+
+def int_dx_device_memory_barrier_with_group_sync
+    : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
 
 def int_dx_group_memory_barrier
     : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;

@@ -25,10 +25,10 @@ def XeGPU_DpasOprType: FixedVectorOfRankAndType<[1, 2, 3], [XeGPU_ScalarType]>;
 def XeGPU_DpasResType: FixedVectorOfRankAndType<[1, 2], [XeGPU_ScalarType]>;
 def XeGPU_OffsetType: FixedVectorOfNonZeroRankOf<[Index]>;
 def XeGPU_MaskType: FixedVectorOfNonZeroRankOf<[I1]>;
-def XeGPU_ValueType: VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType]>;
+def XeGPU_ValueType: VectorOfRankAndType<[1,2,3,4,5,6,7,8], [XeGPU_ScalarType]>;
 def XeGPU_ValueOrScalarType : AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>;
 def XeGPU_VectorOrScalarType
-    : AnyTypeOf<[VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType, Index]>, XeGPU_ScalarType]>;
+    : AnyTypeOf<[VectorOfRankAndType<[1,2,3,4,5,6,7,8], [XeGPU_ScalarType, Index]>, XeGPU_ScalarType]>;
 def XeGPU_GatherScatterBaseAddrType
     : AnyTypeOf<[MemRefRankOf<[XeGPU_ScalarType], [1]>, XeGPU_PointerType]>;
 
@@ -39,7 +39,7 @@ class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
   let mnemonic = typeMnemonic;
 }
 
-def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
+def isSharedPred : CPred<"XeGPUDialect::isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
 class StaticShared1DMemRefOf<list<Type> allowedTypes> :
   ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
      "reside in share memory and statically 1d shaped " # MemRefOf<allowedTypes>.summary # " ",

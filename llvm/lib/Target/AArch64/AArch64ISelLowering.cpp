@@ -5464,6 +5464,7 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   unsigned LaneOffset = Op.getConstantOperandVal(3);
   unsigned NumElements = VT.getVectorMinNumElements();
   uint64_t EltSizeInBytes = Op.getConstantOperandVal(2);
+  EVT AddrTy = Op->getOperand(0).getValueType();
 
   // Lane offsets and other element sizes are not supported by whilewr/rw.
   if (LaneOffset != 0 || !is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes))
@@ -5473,9 +5474,19 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   EVT PredVT =
       getPackedSVEVectorVT(EltVT).changeElementType(*DAG.getContext(), MVT::i1);
 
-  // Legal whilewr/rw (lowered by tablegen matcher).
-  if (PredVT == VT)
-    return Op;
+  if (PredVT == VT) {
+    // Legal whilewr/rw (lowered by tablegen matcher).
+    if (AddrTy == MVT::i64)
+      return Op;
+
+    // Almost legal whilewr/rw (addresses must be promoted to i64).
+    assert(AddrTy == MVT::i32 && "Only expected i32 to be legal!");
+    return DAG.getNode(
+        Op.getOpcode(), DL, VT,
+        DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Op->getOperand(0)),
+        DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Op->getOperand(1)),
+        DAG.getConstant(EltSizeInBytes, DL, MVT::i64), Op->getOperand(3));
+  }
 
   // Expand if this mask needs splitting (this will produce a whilelo).
   if (NumElements > PredVT.getVectorMinNumElements())

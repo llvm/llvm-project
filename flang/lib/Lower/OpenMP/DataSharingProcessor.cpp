@@ -422,7 +422,6 @@ static parser::CharBlock getSource(const semantics::SemanticsContext &semaCtx,
         return parser::omp::GetOmpDirectiveName(x).source;
       },
       [&](const parser::OpenMPDeclarativeConstruct &x) { return x.source; },
-      [&](const parser::OmpEndLoopDirective &x) { return x.source; },
       [&](const auto &x) { return parser::CharBlock{}; },
   });
 }

@@ -295,6 +295,10 @@ Changes to LLDB
   If you are using such a system and cannot change LLDB version, or want to package
   an affected version in a way that is compatible with these systems, the issue
   contains details of backports that could be done to fix the affected versions.
+* LLDB now supports debugging Linux [Memory Protection Keys](https://docs.kernel.org/core-api/protection-keys.html)
+  on AArch64 systems that have the Permission Overlay Extension (POE / FEAT_S1POE).
+  See the [LLDB on AArch64 Linux](https://lldb.llvm.org/use/aarch64-linux.html#permission-overlay-extension-poe)
+  guide for more information.
 
 ### Windows
 

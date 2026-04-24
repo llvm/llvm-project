@@ -1086,9 +1086,9 @@ void copy_member_of_array_element_member() {
 
   #pragma acc parallel loop copy(outer.inner[2].b)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2> : !s64i
   // CHECK-NEXT: %[[GETINNER:.*]] = cir.get_member %[[OUTER]][0] {name = "inner"} : !cir.ptr<!rec_OuterTy> -> !cir.ptr<!cir.array<!rec_InnerTy x 4>>
-  // CHECK-NEXT: %[[GET_ELT:.*]] = cir.get_element %[[GETINNER]][%[[TWO]] : !s32i] : !cir.ptr<!cir.array<!rec_InnerTy x 4>> -> !cir.ptr<!rec_InnerTy>
+  // CHECK-NEXT: %[[GET_ELT:.*]] = cir.get_element %[[GETINNER]][%[[TWO]] : !s64i] : !cir.ptr<!cir.array<!rec_InnerTy x 4>> -> !cir.ptr<!rec_InnerTy>
   // CHECK-NEXT: %[[GETB:.*]] = cir.get_member %[[GET_ELT]][1] {name = "b"} : !cir.ptr<!rec_InnerTy> -> !cir.ptr<!s32i>
   // CHECK-NEXT:  %[[COPYIN1:.*]] = acc.copyin varPtr(%[[GETB]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copy>, name = "outer.inner[2].b"}
   // CHECK-NEXT:  acc.parallel combined(loop) dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {

@@ -1271,6 +1271,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitCoroutineFrame();
   }
   case Builtin::BI__builtin_coro_free:
+    return RValue::get(emitCoroFreeBuiltin(e).getResult());
   case Builtin::BI__builtin_coro_size: {
     GlobalDecl gd{fd};
     mlir::Type ty = cgm.getTypes().getFunctionType(

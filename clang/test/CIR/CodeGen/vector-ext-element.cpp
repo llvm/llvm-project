@@ -323,11 +323,11 @@ void array_subscript_expr_with_element_expr_base() {
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
 // CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s64i
 // CIR: %[[A_PTR:.*]] = cir.cast bitcast %0 : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!s32i>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
 // CIR: %[[VEC_MEMBER_EXPR:.*]] = cir.ptr_stride %[[A_PTR]], %[[CONST_0]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
-// CIR: %[[VEC_ELEM_PTR:.*]] = cir.ptr_stride %[[VEC_MEMBER_EXPR]], %[[CONST_1]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CIR: %[[VEC_ELEM_PTR:.*]] = cir.ptr_stride %[[VEC_MEMBER_EXPR]], %[[CONST_1]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR: cir.store {{.*}} %[[CONST_2]], %[[VEC_ELEM_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16

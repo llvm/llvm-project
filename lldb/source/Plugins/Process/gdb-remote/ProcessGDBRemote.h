@@ -250,8 +250,10 @@ public:
   std::string HarmonizeThreadIdsForProfileData(
       StringExtractorGDBRemote &inputStringExtractor);
 
-  void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
-  void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
+  void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+               bool is_expression_fork = false) override;
+  void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                bool is_expression_fork = false) override;
   void DidVForkDone() override;
   void DidExec() override;
 
@@ -498,7 +500,8 @@ private:
   const ProcessGDBRemote &operator=(const ProcessGDBRemote &) = delete;
 
   // fork helpers
-  void DidForkSwitchSoftwareBreakpoints(bool enable);
+  void DidForkSwitchSoftwareBreakpoints(bool enable,
+                                        bool is_expression_fork = false);
   void DidForkSwitchHardwareTraps(bool enable);
 
   void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,

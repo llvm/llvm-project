@@ -4773,6 +4773,10 @@ void ArgumentAnalyzer::Analyze(
               actual->set_isPercentVal();
             }
           },
+          [&](const parser::ConditionalArg &) {
+            context_.Say(
+                "Fortran 2023 conditional arguments are not yet supported"_todo_en_US);
+          },
       },
       std::get<parser::ActualArg>(arg.t).u);
   if (actual) {

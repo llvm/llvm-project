@@ -94,6 +94,14 @@ static const Loan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan(Path, MTE);
 }
 
+/// Creates a loan for an allocation through 'new'
+/// \param NE The CXXNewExpr that represents the allocation
+/// \return The new Loan on success, nullptr otherwise
+static const Loan *createLoan(FactManager &FactMgr, const CXXNewExpr *NE) {
+  AccessPath Path(NE);
+  return FactMgr.getLoanMgr().createLoan(Path, NE);
+}
+
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -613,6 +621,30 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
   assert(Src && "Base of array subscript should have origins");
   CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
       Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
+}
+
+void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
+  OriginList *NewList = getOriginsList(*NE);
+
+  const Loan *L = createLoan(FactMgr, NE);
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
+
+  NewList = NewList->peelOuterOrigin();
+
+  if (!NewList || !NE->getInitializer())
+    return;
+
+  // FIXME: OriginList is null for `new[]` initializers. Remove this `Init`
+  // check once array origins are supported.
+  if (OriginList *Init = getOriginsList(*NE->getInitializer()); Init)
+    flow(NewList, Init, true);
+}
+
+void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
+  OriginList *List = getOriginsList(*DE->getArgument());
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<InvalidateOriginFact>(List->getOuterOriginID(), DE));
 }
 
 bool FactsGenerator::escapesViaReturn(OriginID OID) const {

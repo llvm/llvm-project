@@ -578,6 +578,14 @@ public:
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
+  /// Helper function for the below two that will create the
+  /// constructor/destructor in specified regions, rather than in the GlobalOp.
+  void emitCXXSpecialVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                 bool performInit, mlir::Region &ctorRegion,
+                                 mlir::Region &dtorRegion);
+  /// Emit the function that initializes the specified static-local variable.
+  void emitCXXStaticLocalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                     bool performInit);
   /// Emit the function that initializes the specified global
   void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
                                 bool performInit);
@@ -705,6 +713,7 @@ public:
   static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
   static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
   static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
+  static constexpr const char *builtinCoroFree = "__builtin_coro_free";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

@@ -50,7 +50,7 @@ int f(int i) {
     return (n >= 0
       // CIR:  %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
       // CIR:  %[[ARR:.*]] = cir.get_member %[[A]][2] {name = "arr"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 3>>
-      // CIR:  cir.get_element %[[ARR]][%{{.*}} : !s32i] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
+      // CIR:  cir.get_element %[[ARR]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
       // LLVM: getelementptr [3 x i32], ptr getelementptr inbounds nuw (i8, ptr @[[F_A]], i64 12), i32 0, i64 %{{.*}}
       // OGCG: getelementptr inbounds [3 x i32], ptr getelementptr inbounds nuw (i8, ptr @__const._Z1fi.a, i64 12), i64 0, i64 %{{.*}}
       ? a.arr[n]
@@ -72,9 +72,10 @@ int f(int i) {
         // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
         // CIR: %[[N:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
         // CIR: %[[SUB:.*]] = cir.sub nsw %[[TWO]], %[[N]] : !s32i
+        // CIR: %[[SUB_64:.*]] = cir.cast integral %[[SUB]] : !s32i -> !s64i
         // CIR: %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
         // CIR: %[[Y:.*]] = cir.get_member %[[A]][1] {name = "y"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 2>>
-        // CIR: cir.get_element %[[Y]][%[[SUB]] : !s32i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
+        // CIR: cir.get_element %[[Y]][%[[SUB_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 
         // LLVM: getelementptr [2 x i32], ptr getelementptr inbounds nuw ({{.*}} @[[F_A]], i64 4), i32 0, i64 %{{.*}}
         // LLVM: load i32
@@ -123,7 +124,7 @@ namespace PR42276 {
     for (int i = 0; i < sizeof(m) / sizeof(m[0]); ++i)
       // CIR-CXX11: %[[M:.*]] = cir.get_global @_ZN7PR422765State1mE.const : !cir.ptr<!cir.array<!rec_anon_struct x 2>>
       // CIR-CXX2A: %[[M:.*]] = cir.get_global @_ZN7PR422765State1mE : !cir.ptr<!cir.array<!rec_anon_struct x 2>>
-      // CIR: cir.get_element %[[M]][%{{.*}} : !s32i] : !cir.ptr<!cir.array<!rec_anon_struct x 2>> -> !cir.ptr<!rec_anon_struct>
+      // CIR: cir.get_element %[[M]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!rec_anon_struct x 2>> -> !cir.ptr<!rec_anon_struct>
 
       // LLVM-CXX11: getelementptr [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE.const, i32 0, i64 %{{.*}}
       // LLVM-CXX2A: getelementptr [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE, i32 0, i64 %{{.*}}
@@ -135,7 +136,7 @@ namespace PR42276 {
     for (int i = 0; i< sizeof(dms) / sizeof(dms[0]); ++i)
       // CIR-CXX11: %[[DMS:.*]] = cir.get_global @_ZN7PR422765State3dmsE.const : !cir.ptr<!cir.array<!s64i x 2>>
       // CIR-CXX2A: %[[DMS:.*]] = cir.get_global @_ZN7PR422765State3dmsE : !cir.ptr<!cir.array<!s64i x 2>>
-      // CIR: cir.get_element %[[DMS]][%{{.*}} : !s32i] : !cir.ptr<!cir.array<!s64i x 2>> -> !cir.ptr<!s64i>
+      // CIR: cir.get_element %[[DMS]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s64i x 2>> -> !cir.ptr<!s64i>
       // LLVM-CXX11: getelementptr [2 x i64], ptr @_ZN7PR422765State3dmsE.const, i32 0, i64 %{{.*}}
       // LLVM-CXX2A: getelementptr [2 x i64], ptr @_ZN7PR422765State3dmsE, i32 0, i64 %{{.*}}
       // OGCG-CXX11: getelementptr inbounds [2 x i64], ptr @_ZN7PR422765State3dmsE.const, i64 0, i64 %{{.*}}

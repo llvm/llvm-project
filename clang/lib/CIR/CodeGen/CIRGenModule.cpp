@@ -1816,9 +1816,23 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       noProtoCallOp.erase();
     } else if (auto getGlobalOp =
                    mlir::dyn_cast<cir::GetGlobalOp>(use.getUser())) {
-      // Replace type
-      getGlobalOp.getAddr().setType(
-          cir::PointerType::get(newFn.getFunctionType()));
+      // The GetGlobal was emitted with the no-proto FuncType. Uses of this
+      // operation (cir.store, cir.cast) were built for that pointer type. When
+      // we re-type the result to the real FuncType, we need to add a bit the
+      // old pointer type so those uses are still valid. This can lead to
+      // some redundant bitcast chains, but those will be cleaned up by the
+      // canonicalizer.
+      mlir::Value res = getGlobalOp.getAddr();
+      const mlir::Type oldResTy = res.getType();
+      const auto newPtrTy = cir::PointerType::get(newFn.getFunctionType());
+      if (oldResTy != newPtrTy) {
+        res.setType(newPtrTy);
+        builder.setInsertionPointAfter(getGlobalOp.getOperation());
+        mlir::Value castRes =
+            cir::CastOp::create(builder, getGlobalOp.getLoc(), oldResTy,
+                                cir::CastKind::bitcast, res);
+        res.replaceAllUsesExcept(castRes, castRes.getDefiningOp());
+      }
     } else if (mlir::isa<cir::GlobalOp>(use.getUser())) {
       // Function addresses in global initializers use GlobalViewAttrs typed to
       // the initializer context (e.g. struct field type), not the FuncOp type,

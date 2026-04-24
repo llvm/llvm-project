@@ -52,7 +52,7 @@ void CIRGenFunction::emitInvariantStart(CharUnits size, mlir::Value addr,
 }
 
 static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
-                         cir::GlobalOp globalOp) {
+                         cir::GlobalOp globalOp, mlir::Region &ctorRegion) {
   assert((varDecl->hasGlobalStorage() ||
           (varDecl->hasLocalStorage() &&
            cgf.getContext().getLangOpts().OpenCLCPlusPlus)) &&
@@ -64,7 +64,7 @@ static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
 
   // Set up the ctor region.
   mlir::OpBuilder::InsertionGuard guard(builder);
-  mlir::Block *block = builder.createBlock(&globalOp.getCtorRegion());
+  mlir::Block *block = builder.createBlock(&ctorRegion);
   CIRGenFunction::LexicalScope lexScope{cgf, globalOp.getLoc(),
                                         builder.getInsertionBlock()};
   lexScope.setAsGlobalInit();
@@ -100,7 +100,7 @@ static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
 }
 
 static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
-                            cir::GlobalOp addr) {
+                            cir::GlobalOp addr, mlir::Region &dtorRegion) {
   // Honor __attribute__((no_destroy)) and bail instead of attempting
   // to emit a reference to a possibly nonexistent destructor, which
   // in turn can cause a crash. This will result in a global constructor
@@ -131,7 +131,7 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
 
   // Prepare the dtor region.
   mlir::OpBuilder::InsertionGuard guard(builder);
-  mlir::Block *block = builder.createBlock(&addr.getDtorRegion());
+  mlir::Block *block = builder.createBlock(&dtorRegion);
   CIRGenFunction::LexicalScope lexScope{cgf, addr.getLoc(),
                                         builder.getInsertionBlock()};
   lexScope.setAsGlobalInit();
@@ -225,10 +225,14 @@ cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl gd) {
 // region to the global variable and insert the initialization code
 // into the ctor region. This will be moved into the
 // __cxx_global_var_init function during the LoweringPrepare pass.
-void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
-                                            cir::GlobalOp addr,
-                                            bool performInit) {
+void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
+                                             cir::GlobalOp addr,
+                                             bool performInit,
+                                             mlir::Region &ctorRegion,
+                                             mlir::Region &dtorRegion) {
   QualType ty = varDecl->getType();
+  assert(curCGF && "Special var init only available inside of a function");
+  CIRGenFunction &cgf = *curCGF;
 
   // TODO: handle address space
   // The address space of a static local variable (addr) may be different
@@ -248,15 +252,6 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
   // expects "this" in the "generic" address space.
   assert(!cir::MissingFeatures::addressSpace());
 
-  // Create a CIRGenFunction to emit the initializer. While this isn't a true
-  // function, the handling works the same way.
-  CIRGenFunction cgf{*this, builder, true};
-  llvm::SaveAndRestore<CIRGenFunction *> savedCGF(curCGF, &cgf);
-  curCGF->curFn = addr;
-
-  CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
-                                            getLoc(varDecl->getLocation())};
-
   addr.setAstAttr(cir::ASTVarDeclAttr::get(&getMLIRContext(), varDecl));
 
   if (!ty->isReferenceType()) {
@@ -268,15 +263,15 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
         varDecl->getType().isConstantStorage(getASTContext(), true, !needsDtor);
     // PerformInit, constant store invariant / destroy handled below.
     if (performInit) {
-      emitDeclInit(cgf, varDecl, addr);
+      emitDeclInit(cgf, varDecl, addr, ctorRegion);
       // For constant storage, emit invariant.start in the ctor region after
       // initialization but before the yield.
       if (isConstantStorage) {
         CIRGenBuilderTy &builder = cgf.getBuilder();
         mlir::OpBuilder::InsertionGuard guard(builder);
         // Set insertion point to end of ctor region (before yield)
-        if (!addr.getCtorRegion().empty()) {
-          mlir::Block *block = &addr.getCtorRegion().back();
+        if (!ctorRegion.empty()) {
+          mlir::Block *block = &ctorRegion.back();
           // Find the yield op and insert before it
           mlir::Operation *yieldOp = block->getTerminator();
           if (yieldOp) {
@@ -290,12 +285,12 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
     }
 
     if (!isConstantStorage)
-      emitDeclDestroy(cgf, varDecl, addr);
+      emitDeclDestroy(cgf, varDecl, addr, dtorRegion);
     return;
   }
 
   mlir::OpBuilder::InsertionGuard guard(builder);
-  auto *block = builder.createBlock(&addr.getCtorRegion());
+  auto *block = builder.createBlock(&ctorRegion);
   CIRGenFunction::LexicalScope scope{*curCGF, addr.getLoc(),
                                      builder.getInsertionBlock()};
   scope.setAsGlobalInit();
@@ -324,4 +319,41 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
 
   builder.setInsertionPointToEnd(block);
   cir::YieldOp::create(builder, addr->getLoc());
+}
+
+void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
+                                            cir::GlobalOp addr,
+                                            bool performInit) {
+  assert(!varDecl->isStaticLocal() &&
+         varDecl->getTLSKind() == VarDecl::TLS_None);
+
+  // Create a CIRGenFunction to emit the initializer. While this isn't a true
+  // function, the handling works the same way.
+  CIRGenFunction cgf{*this, builder, true};
+  llvm::SaveAndRestore<CIRGenFunction *> savedCGF(curCGF, &cgf);
+  curCGF->curFn = addr;
+
+  CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
+                                            getLoc(varDecl->getLocation())};
+
+  emitCXXSpecialVarDeclInit(varDecl, addr, performInit, addr.getCtorRegion(),
+                            addr.getDtorRegion());
+}
+
+void CIRGenModule::emitCXXStaticLocalVarDeclInit(const VarDecl *varDecl,
+                                                 cir::GlobalOp addr,
+                                                 bool performInit) {
+  assert(varDecl->isStaticLocal() ||
+         varDecl->getTLSKind() != VarDecl::TLS_None);
+
+  if (varDecl->getTLSKind() != VarDecl::TLS_None)
+    errorNYI(varDecl->getSourceRange(),
+             "TLS not implemented for static-local init");
+
+  auto initOp = cir::LocalInitOp::create(
+      builder, addr->getLoc(), addr.getSymNameAttr(),
+      varDecl->getTLSKind() != VarDecl::TLS_None, varDecl->isStaticLocal());
+
+  emitCXXSpecialVarDeclInit(varDecl, addr, performInit, initOp.getCtorRegion(),
+                            initOp.getDtorRegion());
 }

@@ -19,6 +19,11 @@
 static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
                                         llvm::cl::init(true));
 
+/// Disable the use of fake use for arguments.
+static llvm::cl::opt<bool> disableArgumentFakeUse("disable-argument-fake-use",
+                                                  llvm::cl::Hidden,
+                                                  llvm::cl::init(false));
+
 namespace fir {
 
 template <typename F>
@@ -107,6 +112,9 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.dwarfVersion = config.DwarfVersion;
   options.splitDwarfFile = config.SplitDwarfFile;
   options.dwarfDebugFlags = config.DwarfDebugFlags;
+  options.emitFakeUseForArguments =
+      (config.OptLevel == llvm::OptimizationLevel::O0) &&
+      !disableArgumentFakeUse;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
