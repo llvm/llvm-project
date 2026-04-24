@@ -658,7 +658,6 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
   llvm::set_thread_name(thread_name);
 
   lldb::SBListener listener = debugger.GetListener();
-  broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   debugger.GetBroadcaster().AddListener(
       listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
 
@@ -691,6 +690,7 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
       }
     }
   }
+  DAP_LOG(log, "Stopped Event Thread.");
 }
 
 } // namespace lldb_dap

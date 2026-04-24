@@ -10,6 +10,7 @@
 #include "EventHelper.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBListener.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "llvm/Support/Threading.h"
@@ -105,6 +106,13 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
     m_debugger_event_threads.erase(it);
   }
 
+  // Add the listener for the 'StopEventThread' event before starting the
+  // event thread to prevent a race condition. Under heavy load, a stop event
+  // could be sent immediately after the thread starts. If the listener isn't
+  // registered first, the event is missed, leading to a deadlock.
+  lldb::SBListener listener = debugger.GetListener();
+  requesting_dap->broadcaster.AddListener(listener,
+                                          eBroadcastBitStopEventThread);
   // Create a new event thread and store it.
   auto new_thread_sp = std::make_shared<ManagedEventThread>(
       requesting_dap->broadcaster,
