@@ -1884,23 +1884,27 @@ for more details.
 
    Informs the compiler whether signaling NaNs behave according to IEEE 754.
 
-   IEEE 754 defines signaling NaNs (SNaNs) as a subset of Not-a-Numbers (NaNs),
-   which possesses following properties:
+   IEEE 754 defines signaling NaNs (sNaNs) as a subset of Not-a-Numbers (NaNs),
+   that possess the following properties:
 
-   * Floating-point operations, in which an SNaN is an operand, raise the
-     ``Invalid`` exception,
-   * Floating-point operations do not produce SNaNs, only quiet NaN can be a
-     result. Some target architectures do not support SNaNs; only a quiet NaN
-     can be a result.
+   * Floating-point operations in which an sNaN is an operand, raise the
+     ``Invalid`` exception.
+   * Floating-point operations do not produce sNaNs; only a quiet NaN can be a
+     result.
+
+   Some target architectures do not support sNaNs. On such a target, the
+   behavior of an sNaN is same as that of a quiet NaN: it can appear as a
+   result, and the "Invalid" exception is not raised when it is an operand in
+   an operation.
 
    The option ``-fsignaling-nans`` specifies IEEE 754 compliant behavior for
    signaling NaNs. It has no effect if the target architecture does not
-   implements IEEE 754 signaling NaN behavior. This option causes the
+   implement IEEE 754 signaling NaN behavior. This option causes the
    preprocessor macro ``__SUPPORT_SNAN__`` to be defined.
 
    The option ``-fno-signaling-nans`` specifies that signaling NaNs are treated
    in the same way as quiet NaNs. This is the only option allowed if the target
-   architecture does not implement signaling NaNs according to IEEE-754. On
+   architecture does not implement signaling NaNs according to IEEE-754. On the
    supporting architectures, it can enable additional optimization opportunities.
 
    If more than one option is specified, the last one takes effect. If none is

@@ -126,14 +126,6 @@ struct SimplifyQuery {
   /// Otherwise always return false.
   LLVM_ABI bool isUndefValue(Value *V) const;
 
-  bool hasSignalingNaNs() const {
-    if (CxtI)
-      if (const BasicBlock *BB = CxtI->getParent())
-        if (const Function *F = BB->getParent())
-          return F->hasFnAttribute("signaling-nans");
-    return false;
-  }
-
   SimplifyQuery getWithoutDomCondCache() const {
     SimplifyQuery Copy(*this);
     Copy.DC = nullptr;

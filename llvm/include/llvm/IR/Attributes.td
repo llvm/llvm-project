@@ -423,6 +423,11 @@ def MarkedForWindowsSecureHotPatching
 def AllowDirectAccessInHotPatchFunction
     : StrBoolAttr<"allow_direct_access_in_hot_patch_function">;
 
+/// Signaling NaNs should be handled according to IEEE 754 semantics: they
+/// cannot be the result of a floating-point operation, and using them as
+/// operands raises an "Invalid" exception.
+def SignalingNans : EnumAttr<"signaling_nans", IntersectCustom, [FnAttr]>;
+
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
@@ -494,3 +499,4 @@ def : MergeRule<"adjustCallerStackProbeSize">;
 def : MergeRule<"adjustMinLegalVectorWidth">;
 def : MergeRule<"adjustNullPointerValidAttr">;
 def : MergeRule<"setAND<MustProgressAttr>">;
+def : MergeRule<"setOR<SignalingNansAttr>">;

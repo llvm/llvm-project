@@ -1150,6 +1150,11 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
         if (!NewRange.isFullSet())
           Intersected.addRangeAttr(NewRange);
       } break;
+      case Attribute::SignalingNans:
+        if (Attr0.hasAttribute(Attribute::SignalingNans) ||
+            Attr1.hasAttribute(Attribute::SignalingNans))
+          Intersected.addAttribute(Attribute::SignalingNans);
+        break;
       default:
         llvm_unreachable("Unknown attribute with custom intersection rule");
       }

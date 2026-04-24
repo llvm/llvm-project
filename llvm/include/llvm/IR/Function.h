@@ -696,6 +696,11 @@ public:
   /// Return the representational value of the denormal_fpenv attribute.
   DenormalFPEnv getDenormalFPEnv() const;
 
+  /// Determine if signaling NaNs are supported in this function.
+  bool hasSignalingNans() const {
+    return hasFnAttribute(Attribute::SignalingNans);
+  }
+
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
   void copyAttributesFrom(const Function *Src);

@@ -1004,14 +1004,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (D && D->hasAttr<HybridPatchableAttr>())
     Fn->addFnAttr(llvm::Attribute::HybridPatchable);
 
-  if (D) {
+  if (D && getContext().getTargetInfo().hasSignalingNaNs()) {
     if (CGM.getCodeGenOpts().SignalingNans) {
-      if (getContext().getTargetInfo().hasSignalingNaNs())
-        Fn->addFnAttr("signaling-nans");
+      Fn->addFnAttr(llvm::Attribute::SignalingNans);
     } else if (!CGM.getCodeGenOpts().NoSignalingNans) {
       // Both options are absent, - calculate default setting.
       if (D->hasAttr<StrictFPAttr>())
-        Fn->addFnAttr("signaling-nans");
+        Fn->addFnAttr(llvm::Attribute::SignalingNans);
     }
   }
 

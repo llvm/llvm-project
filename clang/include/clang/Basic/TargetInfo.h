@@ -744,6 +744,9 @@ public:
   virtual bool hasStrictFP() const { return HasStrictFP; }
 
   /// Determine whether signaling NaNs are supported on this target.
+  ///
+  /// A target can override this method if the support of signaling NaNs depends
+  /// on processor features or any other target options.
   virtual bool hasSignalingNaNs() const { return HasSignalingNaNs; }
 
   /// Return the alignment that is the largest alignment ever used for any
