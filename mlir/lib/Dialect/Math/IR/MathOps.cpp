@@ -794,9 +794,9 @@ OpFoldResult math::FPowIOp::fold(FoldAdaptor adaptor) {
           return {};
 
         switch (APFloat::SemanticsToEnum(sem)) {
-        case APFloat::S_IEEEdouble:
+        case APFloat::Semantics::S_IEEEdouble:
           return APFloat(pow(base.convertToDouble(), fExp.convertToDouble()));
-        case APFloat::S_IEEEsingle:
+        case APFloat::Semantics::S_IEEEsingle:
           return APFloat(powf(base.convertToFloat(), fExp.convertToFloat()));
         default:
           return {};
