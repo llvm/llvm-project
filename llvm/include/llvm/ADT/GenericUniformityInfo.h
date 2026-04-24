@@ -52,6 +52,7 @@ public:
   void compute() {
     DA->initialize();
     DA->compute();
+    DA->registerCallbacks();
   }
 
   /// The GPU kernel this analysis result is for

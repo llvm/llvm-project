@@ -93,3 +93,46 @@ TEST(UniformityAnalysis, NewValueIsConservativelyDivergent) {
   EXPECT_TRUE(UI.isDivergent(NewInst))
       << "New instruction created after analysis must be reported divergent";
 }
+
+TEST(UniformityAnalysis, DeletionCallbackMakesNewInstDivergent) {
+  // Delete a uniform instruction. CallbackVH::deleted() removes it from
+  // UniformValues during eraseFromParent(). A newly created instruction is
+  // not in UniformValues and must be conservatively reported as divergent.
+  LLVMInitializeAMDGPUTargetInfo();
+  LLVMInitializeAMDGPUTarget();
+  LLVMInitializeAMDGPUTargetMC();
+
+  StringRef ModuleString = R"(
+  target triple = "amdgcn-unknown-amdhsa"
+  define amdgpu_kernel void @test(i32 inreg %a, i32 inreg %b) {
+    %add = add i32 %a, %b
+    ret void
+  }
+  )";
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(ModuleString, Err, Context);
+  ASSERT_TRUE(M) << Err.getMessage();
+
+  Function *F = M->getFunction("test");
+  ASSERT_TRUE(F);
+
+  std::unique_ptr<TargetMachine> TM =
+      createAMDGPUTargetMachine("amdgcn-amd-", "gfx1010", "+wavefrontsize32");
+  ASSERT_TRUE(TM);
+  TargetTransformInfo TTI = TM->getTargetTransformInfo(*F);
+
+  UniformityInfo UI = computeUniformity(&TTI, F);
+
+  Instruction *AddInst = &*F->getEntryBlock().begin();
+  ASSERT_TRUE(isa<BinaryOperator>(AddInst));
+  EXPECT_FALSE(UI.isDivergent(AddInst)) << "%add should be uniform";
+
+  AddInst->eraseFromParent();
+
+  IRBuilder<> Builder(&F->getEntryBlock(), F->getEntryBlock().begin());
+  Value *NewInst = Builder.CreateAdd(F->getArg(0), F->getArg(1), "new_add");
+
+  EXPECT_TRUE(UI.isDivergent(NewInst))
+      << "New instruction after deletion must be reported divergent";
+}

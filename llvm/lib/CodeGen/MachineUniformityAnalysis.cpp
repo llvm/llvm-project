@@ -85,6 +85,10 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
 }
 
 template <>
+void llvm::GenericUniformityAnalysisImpl<
+    MachineSSAContext>::registerCallbacks() {}
+
+template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
     Register Reg) {
   assert(isDivergent(Reg));
