@@ -36,10 +36,11 @@ S *test_nothrow_new() {
 // CHECK:       cir.call @_ZN1SC1Ev(%[[CAST]])
 // CHECK:     } cleanup eh {
 // CHECK:       cir.call @_ZdlPvRKSt9nothrow_t(%[[ALLOC]], {{.*}}) nothrow
-// CHECK:     }
-// CHECK:   }
+// CHECK:     } loc(
+// CHECK:   } loc(
+// CHECK-NEXT: %[[LOADED:.*]] = cir.load
 // CHECK:   %[[NULL_S:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_S>
-// CHECK:   cir.select if %[[IS_NOT_NULL]] then {{.*}} else %[[NULL_S]]
+// CHECK:   cir.select if %[[IS_NOT_NULL]] then %[[LOADED]] else %[[NULL_S]]
 
 // LLVM: define {{.*}} ptr @_Z16test_nothrow_newv() {{.*}}personality ptr @__gxx_personality_v0
 // LLVM:   %[[ALLOC:.*]] = call {{.*}} ptr @_ZnwmRKSt9nothrow_t(i64 noundef 4, {{.*}})
@@ -89,10 +90,11 @@ int *test_nothrow_new_init() {
 // CHECK:       cir.store {{.*}} %[[FORTY_TWO]], %[[CAST]]
 // CHECK:     } cleanup eh {
 // CHECK:       cir.call @_ZdlPvRKSt9nothrow_t(%[[ALLOC]], {{.*}}) nothrow
-// CHECK:     }
-// CHECK:   }
+// CHECK:     } loc(
+// CHECK:   } loc(
+// CHECK-NEXT: %[[LOADED_I:.*]] = cir.load
 // CHECK:   %[[NULL_I:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
-// CHECK:   cir.select if %[[IS_NOT_NULL]] then {{.*}} else %[[NULL_I]]
+// CHECK:   cir.select if %[[IS_NOT_NULL]] then %[[LOADED_I]] else %[[NULL_I]]
 
 // LLVM: define {{.*}} ptr @_Z21test_nothrow_new_initv()
 // LLVM:   %[[ALLOC:.*]] = call {{.*}} ptr @_ZnwmRKSt9nothrow_t(i64 noundef 4, {{.*}})

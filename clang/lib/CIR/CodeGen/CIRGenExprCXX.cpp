@@ -1506,41 +1506,6 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   }
 }
 
-/// Emit the bitcast and initialization for a new-expression.
-/// This is factored out so it can be called from the IfOp's thenBuilder
-/// when a null check is needed, or directly when it is not.
-static Address emitNewExprInit(CIRGenFunction &cgf, const CXXNewExpr *e,
-                               QualType allocType, mlir::Type elementTy,
-                               Address allocation, mlir::Value numElements,
-                               mlir::Value allocSizeWithoutCookie,
-                               const FunctionDecl *allocator,
-                               Address resultPtr) {
-  auto &builder = cgf.getBuilder();
-
-  Address result = builder.createElementBitCast(cgf.getLoc(e->getSourceRange()),
-                                                allocation, elementTy);
-
-  // Store the result pointer before initialization so that it is available
-  // to the cleanup if the initializer throws.
-  if (resultPtr.isValid())
-    builder.createStore(cgf.getLoc(e->getSourceRange()), result.getPointer(),
-                        resultPtr);
-
-  // Passing pointer through launder.invariant.group to avoid propagation of
-  // vptrs information which may be included in previous type.
-  if (cgf.cgm.getCodeGenOpts().StrictVTablePointers &&
-      allocator->isReservedGlobalPlacementOperator())
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "emitCXXNewExpr: strict vtable pointers");
-
-  assert(!cir::MissingFeatures::sanitizers());
-
-  emitNewInitializer(cgf, e, allocType, elementTy, result, numElements,
-                     allocSizeWithoutCookie);
-
-  return result;
-}
-
 mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   // The element type being allocated.
   QualType allocType = getContext().getBaseElementType(e->getAllocatedType());
@@ -1653,20 +1618,25 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   bool nullCheck = e->shouldNullCheckAllocation() &&
                    (!allocType.isPODType(getContext()) || e->hasInitializer());
 
-  mlir::Location loc = getLoc(e->getSourceRange());
-
+  // If there's an operator delete, enter a cleanup to call it if an
+  // exception is thrown. If we do this, we'll be creating the result pointer
+  // inside a cleanup scope, either with a bitcast or an offset based on the
+  // array cookie size. However, we need to return that pointer from outside
+  // the cleanup scope, so we need to store it in a temporary variable.
   bool useNewDeleteCleanup =
       e->getOperatorDelete() &&
       !e->getOperatorDelete()->isReservedGlobalPlacementOperator();
 
   mlir::Type elementTy;
+  // For array new, use the allocated type to handle multidimensional arrays
+  // correctly.
   if (e->isArray())
     elementTy = convertTypeForMem(e->getAllocatedType());
   else
     elementTy = convertTypeForMem(allocType);
 
   // Lambda that emits the init sequence: cleanup setup, cookie init,
-  // bitcast + initializer (via the helper), and cleanup deactivation.
+  // bitcast + initializer, and cleanup deactivation.
   Address result = Address::invalid();
   Address resultPtr = Address::invalid();
   auto emitInit = [&]() {
@@ -1680,11 +1650,6 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
       cleanupDominator =
           cir::UnreachableOp::create(builder, getLoc(e->getSourceRange()))
               .getOperation();
-    }
-
-    // Create __new_result alloca before emitNewExprInit so it appears
-    // before any temporaries created during initialization.
-    if (useNewDeleteCleanup) {
       resultPtr = createTempAlloca(builder.getPointerTo(elementTy),
                                    allocation.getAlignment(),
                                    getLoc(e->getSourceRange()), "__new_result");
@@ -1696,10 +1661,31 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
           *this, allocation, numElements, e, allocType);
     }
 
-    result =
-        emitNewExprInit(*this, e, allocType, elementTy, allocation, numElements,
-                        allocSizeWithoutCookie, allocator, resultPtr);
+    result = builder.createElementBitCast(getLoc(e->getSourceRange()),
+                                          allocation, elementTy);
 
+    // Store the result pointer before initialization so that it is available
+    // to the cleanup if the initializer throws.
+    if (resultPtr.isValid())
+      builder.createStore(getLoc(e->getSourceRange()), result.getPointer(),
+                          resultPtr);
+
+    // Passing pointer through launder.invariant.group to avoid propagation of
+    // vptrs information which may be included in previous type. To not break
+    // LTO with different optimizations levels, we do it regardless of
+    // optimization level.
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        allocator->isReservedGlobalPlacementOperator())
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXNewExpr: strict vtable pointers");
+
+    assert(!cir::MissingFeatures::sanitizers());
+
+    emitNewInitializer(*this, e, allocType, elementTy, result, numElements,
+                       allocSizeWithoutCookie);
+
+    // Deactivate the 'operator delete' cleanup if we finished
+    // initialization.
     if (useNewDeleteCleanup) {
       deactivateCleanupBlock(operatorDeleteCleanup, cleanupDominator);
       cleanupDominator->erase();
@@ -1712,13 +1698,14 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   cir::IfOp nullCheckOp;
   if (nullCheck) {
     mlir::Value isNotNull = builder.createPtrIsNotNull(allocation.getPointer());
-    nullCheckOp = cir::IfOp::create(builder, loc, isNotNull,
-                                    /*withElseRegion=*/false,
-                                    /*thenBuilder=*/
-                                    [&](mlir::OpBuilder &, mlir::Location loc) {
-                                      emitInit();
-                                      builder.createYield(loc);
-                                    });
+    nullCheckOp =
+        cir::IfOp::create(builder, getLoc(e->getSourceRange()), isNotNull,
+                          /*withElseRegion=*/false,
+                          /*thenBuilder=*/
+                          [&](mlir::OpBuilder &, mlir::Location loc) {
+                            emitInit();
+                            builder.createYield(loc);
+                          });
   } else {
     emitInit();
   }
