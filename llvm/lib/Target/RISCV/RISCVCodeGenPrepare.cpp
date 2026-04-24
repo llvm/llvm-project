@@ -360,19 +360,13 @@ bool RISCVCodeGenPrepare::simplyInsertElementForReduction(IntrinsicInst &II) {
   IRBuilder<> Builder(&II);
   Value *NewOp = Builder.CreateIntrinsic(Opcode, Op0->getType(), Op0);
   Value *NewScalar;
-  switch (Opcode) {
-  case Intrinsic::vector_reduce_xor:
+  if (Opcode == Intrinsic::vector_reduce_xor)
     NewScalar = Builder.CreateXor(NewOp, Scalar);
-    break;
-  case Intrinsic::vector_reduce_add:
+  else if (Opcode == Intrinsic::vector_reduce_add)
     NewScalar = Builder.CreateAdd(NewOp, Scalar);
-    break;
-  case Intrinsic::vector_reduce_or:
+  else
     NewScalar = Builder.CreateOr(NewOp, Scalar);
-    break;
-  default:
-    break;
-  };
+
   II.replaceAllUsesWith(NewScalar);
   II.eraseFromParent();
   return true;
