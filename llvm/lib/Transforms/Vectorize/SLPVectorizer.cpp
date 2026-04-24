@@ -20381,7 +20381,8 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
                                       MaybeAlign());
       Builder.SetInsertPoint(LastInst->getParent(), Res->getIterator());
       eraseInstruction(Res);
-      LastInstructionToPos.try_emplace(LastInst, Res);
+      if (E->State != TreeEntry::SplitVectorize)
+        LastInstructionToPos.try_emplace(LastInst, Res);
     }
   }
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
