@@ -422,9 +422,9 @@ public:
     return MI->isTerminator() && isUnspillableTerminatorImpl(MI);
   }
 
-  /// Sum the sizes of instructions inside of a BUNDLE, by calling
-  /// getInstBundleSize on each. This is a utility function for implementations
-  /// of getInstSizeInBytes to use.
+  /// Sum the sizes of instructions inside of a BUNDLE, by calling \ref
+  /// getInstSizeInBytes on each. This is a utility function for implementations
+  /// of \ref getInstSizeInBytes to use.
   unsigned getInstBundleSize(const MachineInstr &MI) const;
 
   /// Returns the size in bytes of the specified MachineInstr, or ~0U
