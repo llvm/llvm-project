@@ -44,10 +44,8 @@ define void @fptrunc_v4f64_to_v4f32(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 16
-; CHECK-NEXT:    vfcvt.s.d $vr0, $vr0, $vr0
-; CHECK-NEXT:    vfcvt.s.d $vr1, $vr0, $vr1
-; CHECK-NEXT:    vpermi.w $vr1, $vr0, 68
-; CHECK-NEXT:    vst $vr1, $a0, 0
+; CHECK-NEXT:    vfcvt.s.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <4 x double>, ptr %a0
@@ -61,10 +59,8 @@ define void @fptrunc_concat_bitcast(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 16
-; CHECK-NEXT:    vfcvt.s.d $vr0, $vr0, $vr0
-; CHECK-NEXT:    vfcvt.s.d $vr1, $vr0, $vr1
-; CHECK-NEXT:    vpermi.w $vr1, $vr0, 68
-; CHECK-NEXT:    vst $vr1, $a0, 0
+; CHECK-NEXT:    vfcvt.s.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %x = load <4 x double>, ptr %a0

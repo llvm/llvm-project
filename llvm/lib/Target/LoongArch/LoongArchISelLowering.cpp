@@ -707,13 +707,14 @@ static SDValue isNOT(SDValue V, SelectionDAG &DAG) {
 // Or
 //   x1 = LoongArch::VFCVT undef, x
 //   y1 = LoongArch::VFCVT undef, y
-//   z = LoongArchISD::VPACKEV y1, x1
+//   z = LoongArchISD::VPACKEV y1, x1; or LoongArchISD::VPERMI y1, x1, 68
 // can be combined to:
 //   z = LoongArch::VFCVT y, x
 static SDValue combineFP_ROUND(SDValue N, const SDLoc &DL, SelectionDAG &DAG,
                                const LoongArchSubtarget &Subtarget) {
   assert(((N->getOpcode() == ISD::CONCAT_VECTORS && N->getNumOperands() == 2) ||
-          (N->getOpcode() == LoongArchISD::VPACKEV)) &&
+          (N->getOpcode() == LoongArchISD::VPACKEV) ||
+          (N->getOpcode() == LoongArchISD::VPERMI)) &&
          "Invalid Node");
 
   SDValue Op0 = peekThroughBitcasts(N->getOperand(0));
@@ -764,18 +765,29 @@ static SDValue combineFP_ROUND(SDValue N, const SDLoc &DL, SelectionDAG &DAG,
     }
   }
 
-  if (N->getOpcode() == LoongArchISD::VPACKEV &&
+  if ((N->getOpcode() == LoongArchISD::VPACKEV ||
+       N->getOpcode() == LoongArchISD::VPERMI) &&
       Opcode0 == LoongArchISD::VFCVT) {
-    // For VPACKEV, check if the first operation of LoongArchISD::VFCVT is
-    // undef.
+    // For VPACKEV or VPERMI, check if the first operation of VFCVT is undef.
     if (!Op0.getOperand(0).isUndef() || !Op1.getOperand(0).isUndef())
       return SDValue();
 
-    if (Subtarget.hasExtLSX() && (VT == MVT::v2i64 || VT == MVT::v2f64) &&
-        SVT0 == MVT::v4f32 && SSVT0 == MVT::v2f64) {
+    if (!Subtarget.hasExtLSX() || SVT0 != MVT::v4f32 || SSVT0 != MVT::v2f64)
+      return SDValue();
+
+    if (N->getOpcode() == LoongArchISD::VPACKEV &&
+        (VT == MVT::v2i64 || VT == MVT::v2f64)) {
       SDValue Res = DAG.getNode(LoongArchISD::VFCVT, DL, MVT::v4f32,
                                 Op0.getOperand(1), Op1.getOperand(1));
       return DAG.getBitcast(VT, Res);
+    }
+
+    if (N->getOpcode() == LoongArchISD::VPERMI && VT == MVT::v4f32) {
+      int64_t Imm = cast<ConstantSDNode>(N->getOperand(2))->getSExtValue();
+      if (Imm != 68)
+        return SDValue();
+      return DAG.getNode(LoongArchISD::VFCVT, DL, MVT::v4f32, Op0.getOperand(1),
+                         Op1.getOperand(1));
     }
   }
 
@@ -7963,6 +7975,7 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::VSELECT:
     return performVSELECTCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::VPACKEV:
+  case LoongArchISD::VPERMI:
     if (SDValue Result =
             combineFP_ROUND(SDValue(N, 0), SDLoc(N), DAG, Subtarget))
       return Result;
