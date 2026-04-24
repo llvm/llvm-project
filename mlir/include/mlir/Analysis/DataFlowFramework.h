@@ -20,9 +20,9 @@
 #include "mlir/Support/StorageUniquer.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/TypeName.h"
 #include <queue>
 #include <tuple>
@@ -339,10 +339,9 @@ public:
   /// initialized.  When no filter is given every loaded analysis is
   /// (re-)initialized.  The fixpoint loop always processes all enqueued work
   /// items regardless of the filter.
-  LogicalResult
-  initializeAndRun(Operation *top,
-                   llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter =
-                       nullptr);
+  LogicalResult initializeAndRun(
+      Operation *top,
+      llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter = nullptr);
 
   /// Lookup an analysis state for the given lattice anchor. Returns null if one
   /// does not exist.

@@ -110,7 +110,8 @@ Location LatticeAnchor::getLoc() const {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DataFlowSolver::initializeAndRun(
-    Operation *top, llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter) {
+    Operation *top,
+    llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter) {
   // Enable enqueue to the worklist.
   isRunning = true;
   llvm::scope_exit guard([&]() { isRunning = false; });
@@ -119,7 +120,7 @@ LogicalResult DataFlowSolver::initializeAndRun(
   llvm::scope_exit restoreInterprocedural(
       [&]() { config.setInterprocedural(isInterprocedural); });
   if (isInterprocedural && !top->hasTrait<OpTrait::SymbolTable>())
-  config.setInterprocedural(false);
+    config.setInterprocedural(false);
 
   auto shouldInitialize = [&](DataFlowAnalysis &analysis) {
     return !analysisFilter || analysisFilter(analysis);

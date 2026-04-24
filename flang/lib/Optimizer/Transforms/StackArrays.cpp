@@ -537,8 +537,7 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
       candidateOps.insert({allocmem, insertionPoint});
   }
 
-  LLVM_DEBUG(for (auto [allocMemOp, _]
-                  : candidateOps) {
+  LLVM_DEBUG(for (auto [allocMemOp, _] : candidateOps) {
     llvm::dbgs() << "StackArrays: Found candidate op: " << *allocMemOp << '\n';
   });
   return mlir::success();
