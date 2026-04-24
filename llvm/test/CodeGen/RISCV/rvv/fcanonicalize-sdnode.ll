@@ -71,12 +71,10 @@ define <vscale x 4 x half> @canonicalize_nxv4f16(<vscale x 4 x half> %a) {
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    li a0, 15
-; ZVFHMIN-NEXT:    slli a0, a0, 10
-; ZVFHMIN-NEXT:    vmv.v.x v12, a0
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v12
+; ZVFHMIN-NEXT:    lui a0, 260096
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfmul.vv v10, v10, v8
+; ZVFHMIN-NEXT:    vfmul.vf v10, v10, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10
 ; ZVFHMIN-NEXT:    ret
@@ -89,12 +87,10 @@ define <vscale x 4 x bfloat> @canonicalize_nxv4bf16(<vscale x 4 x bfloat> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; CHECK-NEXT:    lui a0, 4
-; CHECK-NEXT:    addi a0, a0, -128
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v12
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfmul.vv v10, v10, v8
+; CHECK-NEXT:    vfmul.vf v10, v10, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v10
 ; CHECK-NEXT:    ret

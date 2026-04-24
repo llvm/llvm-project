@@ -1179,7 +1179,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VECREDUCE_FMIN,
         ISD::VECREDUCE_FMAX,
         ISD::VECREDUCE_FMINIMUM,
-        ISD::VECREDUCE_FMAXIMUM};
+        ISD::VECREDUCE_FMAXIMUM,
+        ISD::FCANONICALIZE};
 
     // TODO: Make more of these ops legal.
     static const unsigned ZvfbfaPromoteOps[] = {ISD::FDIV,
