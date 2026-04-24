@@ -55,11 +55,10 @@ struct RelocAttrs {
 // PAC key indices used by ARM64e. Values match the runtime ABI (ptrauth.h).
 enum class PtrAuthKey : uint8_t { IA = 0, IB = 1, DA = 2, DB = 3 };
 
-// ARM64e ptrauth metadata. Stored as uint8_t/uint16_t to keep AuthReloc
-// the same size as int64_t.
+// ARM64e ptrauth metadata. Sized to keep AuthReloc the same size as int64_t.
 struct AuthInfo {
   uint16_t diversity;
-  uint8_t key; // PtrAuthKey value (0-3).
+  PtrAuthKey key;
   uint8_t addrDiv;
 };
 

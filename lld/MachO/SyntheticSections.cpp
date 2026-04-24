@@ -409,6 +409,15 @@ void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
       }
       rebase->target = targetValue & 0x7ff'ffff'ffff;
       rebase->high8 = (targetValue >> 56);
+      // The target field is 43 bits and high8 covers bits 56-63; bits 43-55
+      // are not encodable. arm64e requires chained fixups (Driver.cpp rejects
+      // -no_fixup_chains for this arch), so report a hard error instead of a
+      // recommendation to disable them.
+      uint64_t encodedVA = static_cast<uint64_t>(rebase->target) |
+                           (static_cast<uint64_t>(rebase->high8) << 56);
+      if (encodedVA != targetValue)
+        error("rebase target 0x" + Twine::utohexstr(targetVA) +
+              " does not fit into arm64e chained-fixup target field");
       rebase->next = 0;
       rebase->bind = 0;
       rebase->auth = 0;
@@ -425,7 +434,7 @@ void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
     rebase->target = runtimeOffset;
     rebase->diversity = ai->diversity;
     rebase->addrDiv = ai->addrDiv;
-    rebase->key = ai->key;
+    rebase->key = static_cast<uint8_t>(ai->key);
     rebase->next = 0;
     rebase->bind = 0;
     rebase->auth = 1;
@@ -487,7 +496,7 @@ static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend,
       bind->zero = 0;
       bind->diversity = ai->diversity;
       bind->addrDiv = ai->addrDiv;
-      bind->key = ai->key;
+      bind->key = static_cast<uint8_t>(ai->key);
       bind->next = 0;
       bind->bind = 1;
       bind->auth = 1;
@@ -499,7 +508,7 @@ static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend,
       bind->zero = 0;
       bind->diversity = ai->diversity;
       bind->addrDiv = ai->addrDiv;
-      bind->key = ai->key;
+      bind->key = static_cast<uint8_t>(ai->key);
       bind->next = 0;
       bind->bind = 1;
       bind->auth = 1;
@@ -535,9 +544,8 @@ void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
 
 void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
   // Auth GOT entries use IA key, diversity=0, address-diversified.
-  static const AuthInfo defaultAuthInfo = {/*diversity=*/0,
-                                           static_cast<uint8_t>(PtrAuthKey::IA),
-                                           /*addrDiv=*/true};
+  static constexpr AuthInfo defaultAuthInfo = {/*diversity=*/0, PtrAuthKey::IA,
+                                               /*addrDiv=*/true};
   if (config->emitChainedFixups) {
     for (const auto &[i, entry] : llvm::enumerate(entries)) {
       const AuthInfo *ai = isAuth ? &defaultAuthInfo : nullptr;

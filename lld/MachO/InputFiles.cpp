@@ -602,7 +602,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
             isSubtrahend ? 0 : static_cast<int32_t>(totalAddend);
         r.authData.info.diversity = authPtr.diversity;
         r.authData.info.addrDiv = authPtr.addrDiv;
-        r.authData.info.key = authPtr.key;
+        r.authData.info.key = static_cast<PtrAuthKey>(authPtr.key);
       }
     }
 
