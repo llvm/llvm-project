@@ -1825,8 +1825,8 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       mlir::Value res = getGlobalOp.getAddr();
       const mlir::Type oldResTy = res.getType();
       const auto newPtrTy = cir::PointerType::get(newFn.getFunctionType());
-      res.setType(newPtrTy);
       if (oldResTy != newPtrTy) {
+        res.setType(newPtrTy);
         builder.setInsertionPointAfter(getGlobalOp.getOperation());
         mlir::Value castRes =
             cir::CastOp::create(builder, getGlobalOp.getLoc(), oldResTy,
