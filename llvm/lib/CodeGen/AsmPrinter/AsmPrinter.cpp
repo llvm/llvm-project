@@ -2289,13 +2289,6 @@ void AsmPrinter::emitFunctionBody() {
             TII->getInstSizeVerifyMode(MI);
         if (Mode != TargetInstrInfo::InstSizeVerifyMode::NoVerify) {
           unsigned ExpectedSize = TII->getInstSizeInBytes(MI);
-          if (MI.isBundled()) {
-            // Bundled instructions are emitted together.
-            auto It = MI.getIterator(), End = MBB.instr_end();
-            for (++It; It != End && It->isInsideBundle(); ++It)
-              ExpectedSize += TII->getInstSizeInBytes(*It);
-          }
-
           MCFragment *NewFragment = OutStreamer->getCurrentFragment();
           unsigned ActualSize;
           if (OldFragment == NewFragment) {
