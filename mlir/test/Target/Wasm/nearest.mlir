@@ -3,12 +3,14 @@
 /* Source code used to generate this test:
 (module
     (func (export "nearest_f32") (result f32)
-    f32.const 10
-    f32.nearest)
+        f32.const 10
+        f32.nearest
+    )
 
     (func (export "nearest_f64") (result f64)
-    f64.const 10
-    f64.nearest)
+        f64.const 10
+        f64.nearest
+    )
 )
 */
 

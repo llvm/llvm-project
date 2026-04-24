@@ -3,20 +3,24 @@
 /* Source code used to generate this test:
 (module
     (func (export "trunc_ui_f32_to_i32") (result i32)
-    f32.const 10
-    i32.trunc_f32_u)
+        f32.const 10
+        i32.trunc_f32_u
+    )
 
     (func (export "trunc_ui_f64_to_i32") (result i32)
-    f64.const 10
-    i32.trunc_f64_u)
+        f64.const 10
+        i32.trunc_f64_u
+    )
 
     (func (export "trunc_ui_f32_to_i64") (result i64)
-    f32.const 10
-    i64.trunc_f32_u)
+        f32.const 10
+        i64.trunc_f32_u
+    )
 
     (func (export "trunc_ui_f64_to_i64") (result i64)
-    f64.const 10
-    i64.trunc_f64_u)
+        f64.const 10
+        i64.trunc_f64_u
+    )
 )
 */
 
