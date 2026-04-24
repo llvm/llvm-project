@@ -5007,6 +5007,18 @@ const SCEV *ScalarEvolution::getPointerBase(const SCEV *V) {
   }
 }
 
+/// Push users of the given Instruction onto the given Worklist.
+static void PushDefUseChildren(Instruction *I,
+                               SmallVectorImpl<Instruction *> &Worklist,
+                               SmallPtrSetImpl<Instruction *> &Visited) {
+  // Push the def-use children onto the Worklist stack.
+  for (User *U : I->users()) {
+    auto *UserInsn = cast<Instruction>(U);
+    if (Visited.insert(UserInsn).second)
+      Worklist.push_back(UserInsn);
+  }
+}
+
 namespace {
 
 /// Takes SCEV S and Loop L. For each AddRec sub-expression, use its start
@@ -8739,7 +8751,6 @@ void ScalarEvolution::forgetAllLoops() {
   FoldCache.clear();
   FoldCacheUser.clear();
 }
-
 void ScalarEvolution::visitAndClearUsers(
     SmallVectorImpl<Instruction *> &Worklist,
     SmallPtrSetImpl<Instruction *> &Visited,
@@ -8758,14 +8769,7 @@ void ScalarEvolution::visitAndClearUsers(
         ConstantEvolutionLoopExitValue.erase(PN);
     }
 
-    // Push the def-use children onto the Worklist stack.
-    for (User *U : I->users()) {
-      auto *UserInst = cast<Instruction>(U);
-      if ((ValueExprMap.contains(UserInst) ||
-           isa<WithOverflowInst>(UserInst)) &&
-          Visited.insert(UserInst).second)
-        Worklist.push_back(UserInst);
-    }
+    PushDefUseChildren(I, Worklist, Visited);
   }
 }
 
