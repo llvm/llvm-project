@@ -86,20 +86,6 @@ static cl::opt<std::string> DataAccessProfileFilename(
              "-D`) consisting of memory access events."),
     cl::cat(ProfGenCategory));
 
-static cl::opt<std::string> ETMPath("etm", cl::value_desc("etm"),
-                                    cl::desc("Path of raw ETM trace file"),
-                                    cl::cat(ProfGenCategory));
-
-static cl::opt<unsigned> ETMTraceID(
-    "etm-trace-id", cl::init(0x10),
-    cl::desc("CoreSight Trace ID (CSID) used to route ETM trace data."),
-    cl::cat(ProfGenCategory));
-
-static cl::opt<std::string>
-    TargetTriple("target-triple", cl::value_desc("triple"),
-                 cl::desc("Override the target triple for the binary"),
-                 cl::cat(ProfGenCategory));
-
 // Validate the command line input.
 static void validateCommandLine() {
   // Allow the missing perfscript if we only use to show binary disassembly.
@@ -110,18 +96,15 @@ static void validateCommandLine() {
     bool HasUnsymbolizedProfile =
         UnsymbolizedProfFilename.getNumOccurrences() > 0;
     bool HasSampleProfile = SampleProfFilename.getNumOccurrences() > 0;
-    bool HasEtm = ETMPath.getNumOccurrences() > 0;
-    uint16_t S = HasPerfData + HasPerfScript + HasUnsymbolizedProfile +
-                 HasSampleProfile + HasEtm;
+    uint16_t S =
+        HasPerfData + HasPerfScript + HasUnsymbolizedProfile + HasSampleProfile;
     if (S != 1) {
       std::string Msg =
-          S > 1 ? "Only one of `--perfscript`, `--perfdata`, "
-                  "`--unsymbolized-profile`, "
-                  "`--sample-profile` or `--etm` can be used."
-                : "Perf input file is missing. Please provide one of "
-                  "`--perfscript`, "
-                  "`--perfdata`, `--unsymbolized-profile`, `--sample-profile`, "
-                  "`--etm`.";
+          S > 1
+              ? "`--perfscript`, `--perfdata` and `--unsymbolized-profile` "
+                "cannot be used together."
+              : "Perf input file is missing, please use one of `--perfscript`, "
+                "`--perfdata` and `--unsymbolized-profile` for the input.";
       exitWithError(Msg);
     }
 
@@ -136,7 +119,6 @@ static void validateCommandLine() {
     CheckFileExists(HasPerfScript, PerfScriptFilename);
     CheckFileExists(HasUnsymbolizedProfile, UnsymbolizedProfFilename);
     CheckFileExists(HasSampleProfile, SampleProfFilename);
-    CheckFileExists(HasEtm, ETMPath);
   }
 
   if (!llvm::sys::fs::exists(BinaryPath)) {
@@ -153,20 +135,17 @@ static void validateCommandLine() {
   }
 }
 
-static InputFile getInputFile() {
-  InputFile File;
+static PerfInputFile getPerfInputFile() {
+  PerfInputFile File;
   if (PerfDataFilename.getNumOccurrences()) {
     File.InputFile = PerfDataFilename;
-    File.Format = InputFormat::PerfData;
+    File.Format = PerfFormat::PerfData;
   } else if (PerfScriptFilename.getNumOccurrences()) {
     File.InputFile = PerfScriptFilename;
-    File.Format = InputFormat::PerfScript;
+    File.Format = PerfFormat::PerfScript;
   } else if (UnsymbolizedProfFilename.getNumOccurrences()) {
     File.InputFile = UnsymbolizedProfFilename;
-    File.Format = InputFormat::UnsymbolizedProfile;
-  } else if (ETMPath.getNumOccurrences()) {
-    File.InputFile = ETMPath;
-    File.Format = InputFormat::ETMFormat;
+    File.Format = PerfFormat::UnsymbolizedProfile;
   }
   return File;
 }
@@ -188,8 +167,6 @@ int main(int argc, const char *argv[]) {
   // Load symbols and disassemble the code of a given binary.
   std::unique_ptr<ProfiledBinary> Binary =
       std::make_unique<ProfiledBinary>(BinaryPath, DebugBinPath);
-  Binary->load(TargetTriple);
-
   if (ShowDisassemblyOnly)
     return EXIT_SUCCESS;
 
@@ -212,47 +189,35 @@ int main(int argc, const char *argv[]) {
     std::optional<uint32_t> PIDFilter;
     if (ProcessId.getNumOccurrences())
       PIDFilter = ProcessId;
-    InputFile File = getInputFile();
-    const ContextSampleCounterMap *Counters = nullptr;
-    bool ProfileIsCS = false;
-    std::unique_ptr<ETMReader> EtmReader;
-    std::unique_ptr<PerfReaderBase> PerfReader;
+    PerfInputFile PerfFile = getPerfInputFile();
+    std::unique_ptr<PerfReaderBase> Reader =
+        PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
+    // Parse perf events and samples
+    Reader->parsePerfTraces();
 
-    if (File.Format == InputFormat::ETMFormat) {
-      EtmReader = std::make_unique<ETMReader>(Binary.get(), File.InputFile,
-                                              static_cast<uint8_t>(ETMTraceID));
-      EtmReader->parseETMTraces();
-      Counters = &EtmReader->getSampleCounters();
-    } else {
-      PerfReader = PerfReaderBase::create(Binary.get(), File, PIDFilter);
-      // Parse perf events and samples
-      PerfReader->parsePerfTraces();
-
-      if (!DataAccessProfileFilename.empty()) {
-        if (PerfReader->profileIsCS() || Binary->usePseudoProbes()) {
-          exitWithError("Symbolizing vtables from data access profiles is not "
-                        "yet supported for context-sensitive perf traces or "
-                        "when pseudo-probe based mapping is enabled. ");
-        }
-        // Parse the data access perf traces into <ip, data-addr> pairs,
-        // symbolize the data-addr to data-symbol. If the data-addr is a vtable,
-        // increment counters for the <ip, data-symbol> pair.
-        if (Error E = PerfReader->parseDataAccessPerfTraces(
-                DataAccessProfileFilename, PIDFilter)) {
-          handleAllErrors(std::move(E), [&](const StringError &SE) {
-            exitWithError(SE.getMessage());
-          });
-        }
+    if (!DataAccessProfileFilename.empty()) {
+      if (Reader->profileIsCS() || Binary->usePseudoProbes()) {
+        exitWithError("Symbolizing vtables from data access profiles is not "
+                      "yet supported for context-sensitive perf traces or "
+                      "when pseudo-probe based mapping is enabled. ");
       }
-      Counters = &PerfReader->getSampleCounters();
-      ProfileIsCS = PerfReader->profileIsCS();
+      // Parse the data access perf traces into <ip, data-addr> pairs, symbolize
+      // the data-addr to data-symbol. If the data-addr is a vtable, increment
+      // counters for the <ip, data-symbol> pair.
+      if (Error E = Reader->parseDataAccessPerfTraces(DataAccessProfileFilename,
+                                                      PIDFilter)) {
+        handleAllErrors(std::move(E), [&](const StringError &SE) {
+          exitWithError(SE.getMessage());
+        });
+      }
     }
 
     if (SkipSymbolization)
       return EXIT_SUCCESS;
 
     std::unique_ptr<ProfileGeneratorBase> Generator =
-        ProfileGeneratorBase::create(Binary.get(), Counters, ProfileIsCS);
+        ProfileGeneratorBase::create(Binary.get(), &Reader->getSampleCounters(),
+                                     Reader->profileIsCS());
     Generator->generateProfile();
     Generator->write();
   }
