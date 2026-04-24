@@ -519,6 +519,31 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM transcendental op definitions
+//===----------------------------------------------------------------------===//
+// PTX provides only fast approximations for sin/cos/lg2/ex2/tanh. Exposing
+// these as plain `nvvm.{sin,cos,lg2,ex2,tanh}` (without a `.approx` suffix)
+// keeps the NVVM dialect self-contained -- users don't need to reach for
+// `math.*` ops for something that already has a PTX instruction.
+
+def NVVM_SinOp : NVVM_SingleResultIntrinsicOp<"sin",
+    [Pure, SameOperandsAndResultType]> {
+  let summary = "Sine (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the sine of the input value (in radians).
+    Lowers to PTX `sin.approx{.ftz}.f32`. The `ftz` attribute, when set,
+    flushes subnormal inputs and results to sign-preserving zero.
+
+    For more information, see PTX ISA:
+    [sin](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sin)
+  }];
+  let arguments = (ins F32:$src,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
 
