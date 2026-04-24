@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_MACROS_LIBC_MODULAR_FORMAT_PRINTF_H
 #define LLVM_LIBC_MACROS_LIBC_MODULAR_FORMAT_PRINTF_H
 
-#define _LIBC_MODULAR_FORMAT_PRINTF(MODULAR_IMPL_FN)                           \
+#define _LIBC_MODULAR_FORMAT_PRINTF(MODULAR_IMPL_FN, FORMAT_INDEX,             \
+                                    FIRST_TO_CHECK)                            \
+  __attribute__((format(printf, FORMAT_INDEX, FIRST_TO_CHECK)))                \
   __attribute__((modular_format(MODULAR_IMPL_FN, "__printf", "float")))
 
 #endif // LLVM_LIBC_MACROS_LIBC_MODULAR_FORMAT_PRINTF_H
