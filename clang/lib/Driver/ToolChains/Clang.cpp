@@ -6519,8 +6519,22 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-std=c++98");
       else
         CmdArgs.push_back("-std=c89");
-    else
+    else {
+      if (Args.hasArg(options::OPT_fsycl)) {
+        const LangStandard *LangStd =
+            LangStandard::getLangStandardForName(Std->getValue());
+        if (LangStd) {
+          // Use of -std= with 'C' is not supported for SYCL.
+          if (LangStd->getLanguage() == Language::C)
+            D.Diag(diag::err_drv_argument_not_allowed_with)
+                << Std->getAsString(Args) << "-fsycl";
+          // SYCL requires C++17 or later.
+          else if (LangStd->isCPlusPlus() && !LangStd->isCPlusPlus17())
+            D.Diag(diag::err_drv_sycl_requires_cxx17) << Std->getAsString(Args);
+        }
+      }
       Std->render(Args, CmdArgs);
+    }
 
     // If -f(no-)trigraphs appears after the language standard flag, honor it.
     if (Arg *A = Args.getLastArg(options::OPT_std_EQ, options::OPT_ansi,
@@ -6546,9 +6560,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       ImplyVCPPCXXVer = true;
 
     if (IsSYCL && types::isCXX(InputType) &&
-        !Args.hasArg(options::OPT__SLASH_std))
+        !Args.hasArg(options::OPT__SLASH_std) && !IsWindowsMSVC)
       // For DPC++, we default to -std=c++17 for all compilations.  Use of -std
-      // on the command line will override.
+      // on the command line will override. On Windows MSVC, this is handled
+      // by the ImplyVCPPCXXVer path below.
       CmdArgs.push_back("-std=c++17");
 
     Args.AddLastArg(CmdArgs, options::OPT_ftrigraphs,
