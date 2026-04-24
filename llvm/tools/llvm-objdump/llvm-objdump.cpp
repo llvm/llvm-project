@@ -1743,13 +1743,9 @@ fetchBinaryByBuildID(const ObjectFile &Obj) {
   object::BuildIDRef BuildID = getBuildID(&Obj);
   if (BuildID.empty())
     return std::nullopt;
-  Expected<std::string> Path = BIDFetcher->fetch(BuildID);
-  if (!Path) {
-    // Failure to fetch debuginfod is rarely an error and most users will not
-    // care why this failed.
-    consumeError(Path.takeError());
+  std::optional<std::string> Path = BIDFetcher->fetch(BuildID);
+  if (!Path)
     return std::nullopt;
-  }
   Expected<OwningBinary<Binary>> DebugBinary = createBinary(*Path);
   if (!DebugBinary) {
     reportWarning(toString(DebugBinary.takeError()), *Path);
@@ -3845,10 +3841,8 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   // Look up any provided build IDs, then append them to the input filenames.
   for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_build_id)) {
     object::BuildID BuildID = parseBuildIDArg(A);
-    Expected<std::string> Path = BIDFetcher->fetch(BuildID);
+    std::optional<std::string> Path = BIDFetcher->fetch(BuildID);
     if (!Path) {
-      // Most users will not care why this failed.
-      consumeError(Path.takeError());
       reportCmdLineError(A->getSpelling() + ": could not find build ID '" +
                          A->getValue() + "'");
     }
