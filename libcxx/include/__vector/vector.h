@@ -768,7 +768,7 @@ private:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
-      __v_.__layout_.__set_boundary(__pos_);
+      __v_.__layout_.__set_boundary_using_pointer(__pos_);
       if (__pos_ != __new_end_) {
         __v_.__annotate_shrink(__new_end_ - __v_.__layout_.__begin_ptr());
       }
@@ -786,7 +786,7 @@ private:
     pointer __soon_to_be_end = __layout_.__end_ptr();
     while (__new_last != __soon_to_be_end)
       __alloc_traits::destroy(this->__layout_.__alloc(), std::__to_address(--__soon_to_be_end));
-    __layout_.__set_boundary(__new_last);
+    __layout_.__set_boundary_using_pointer(__new_last);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c) {
@@ -1245,7 +1245,7 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
     __guard.__complete(); // Release the guard once objects in [__old_last_, __layout_.__end_ptr()) have been
                           // successfully relocated.
     __merged.__set_sentinel(__merged.end() + (__layout_.__end_ptr() - __old_last));
-    __layout_.__set_boundary(__old_last);
+    __layout_.__set_boundary_using_pointer(__old_last);
     std::__uninitialized_allocator_relocate(
         __layout_.__alloc(),
         std::__to_address(__v.begin()),

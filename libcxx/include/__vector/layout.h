@@ -216,8 +216,8 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __set_layout(pointer __new_begin, size_type __new_size, size_type __new_capacity) _NOEXCEPT {
     __begin_ = __new_begin;
-    __set_boundary(__new_size);
-    __set_capacity(__new_capacity);
+    __set_boundary_using_integer(__new_size);
+    __set_capacity_using_integer(__new_capacity);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset_without_allocator() _NOEXCEPT {
@@ -271,10 +271,10 @@ public:
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __capacity_ptr() _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __capacity_ptr() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary(size_type __n) _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary(pointer __ptr) _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __n) _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(pointer __ptr) _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary_using_integer(size_type __n) _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary_using_pointer(pointer __ptr) _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity_using_integer(size_type __n) _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity_using_pointer(pointer __ptr) _NOEXCEPT;
 
   /// Returns `__begin_` if `__boundary_type` is `pointer`, and `0` if it is `size_type`.
   ///
@@ -376,22 +376,22 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__invariants() 
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary(size_type __n) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary_using_integer(size_type __n) _NOEXCEPT {
   __boundary_ = __n;
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary(pointer __ptr) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary_using_pointer(pointer __ptr) _NOEXCEPT {
   __boundary_ = static_cast<size_type>(__ptr - __begin_);
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(size_type __n) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_integer(size_type __n) _NOEXCEPT {
   __capacity_ = __n;
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(pointer __ptr) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_pointer(pointer __ptr) _NOEXCEPT {
   __capacity_ = static_cast<size_type>(__ptr - __begin_);
 }
 
@@ -470,22 +470,22 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__invariants() 
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary(size_type __n) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary_using_integer(size_type __n) _NOEXCEPT {
   __boundary_ = __begin_ + __n;
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary(pointer __ptr) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_boundary_using_pointer(pointer __ptr) _NOEXCEPT {
   __boundary_ = __ptr;
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(size_type __n) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_integer(size_type __n) _NOEXCEPT {
   __capacity_ = __begin_ + __n;
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(pointer __ptr) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_pointer(pointer __ptr) _NOEXCEPT {
   __capacity_ = __ptr;
 }
 
