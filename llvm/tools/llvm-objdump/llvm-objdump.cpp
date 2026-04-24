@@ -1508,21 +1508,10 @@ public:
         // rather than producing an inconsistent decoder.
         if (!MAttrs.empty()) {
           std::vector<std::string> Combined = std::move(ISAFeatures);
-          // parseFeatures asserts each element starts with '+' or '-'; users
-          // may pass --mattr=zcmp (implicit '+'), so normalize before
-          // forwarding.
-          for (const std::string &M : MAttrs) {
-            if (M.empty())
-              continue;
-            if (M.front() == '+' || M.front() == '-')
-              Combined.push_back(M);
-            else
-              Combined.push_back("+" + M);
-          }
+          Combined.insert(Combined.end(), MAttrs.begin(), MAttrs.end());
           if (auto Check = RISCVISAInfo::parseFeatures(
                   (*ParseResult)->getXLen(), Combined)) {
-            for (const std::string &M : MAttrs)
-              Features.AddFeature(M);
+            Features.addFeaturesVector(MAttrs);
           } else {
             consumeError(Check.takeError());
           }
