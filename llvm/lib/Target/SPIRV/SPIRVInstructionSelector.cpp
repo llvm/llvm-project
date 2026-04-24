@@ -3101,18 +3101,19 @@ bool SPIRVInstructionSelector::selectBarrierInst(MachineInstr &I,
          "Device Scope must set UniformMemory and ImageMemory semantic "
          "in Barrier instruction");
 
-  Register MemSemReg = buildI32Constant(MemSem, I);
-  Register ScopeReg = buildI32Constant(Scope, I);
   MachineBasicBlock &BB = *I.getParent();
-  auto MI =
-      BuildMI(BB, I, I.getDebugLoc(), TII.get(BarrierType)).addUse(ScopeReg);
+  auto MI = BuildMI(BB, I, I.getDebugLoc(), TII.get(BarrierType));
 
   // OpControlBarrier needs to also set Execution Scope
   if (WithGroupSync) {
-    MI.addUse(ScopeReg);
+    Register ExecReg = buildI32Constant(SPIRV::Scope::Workgroup, I);
+    MI.addUse(ExecReg);
   }
 
-  MI.addUse(MemSemReg).constrainAllUses(TII, TRI, RBI);
+  Register ScopeReg = buildI32Constant(Scope, I);
+  Register MemSemReg = buildI32Constant(MemSem, I);
+
+  MI.addUse(ScopeReg).addUse(MemSemReg).constrainAllUses(TII, TRI, RBI);
   return true;
 }
 
@@ -3870,11 +3871,16 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
 
     SPIRVTypeInst SpirvScalarType = GR.getScalarOrVectorComponentType(ResType);
 
-    assert(SpirvScalarType->getOperand(1).getImm() == 32 &&
-           "only float operands supported by GLSL extended math");
-
-    Register ConstReg = GR.buildConstantFP(APFloat(3.3219280948874f),
-                                           MIRBuilder, SpirvScalarType);
+    // Match the literal precision to the scalar type so the OpConstant
+    // literal does not contain non-zero high-order bits that would fail
+    // SPIR-V validation when the type is narrower than 32 bits (e.g. half).
+    APFloat ConstVal(3.3219280948873623);
+    bool LosesInfo;
+    ConstVal.convert(
+        getZeroFP(GR.getTypeForSPIRVType(SpirvScalarType)).getSemantics(),
+        APFloat::rmNearestTiesToEven, &LosesInfo);
+    Register ConstReg =
+        GR.buildConstantFP(ConstVal, MIRBuilder, SpirvScalarType);
     Register ArgReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
     auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
                       ? SPIRV::OpVectorTimesScalar
@@ -4749,6 +4755,28 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectFirstBitHigh(ResVReg, ResType, I, /*IsSigned=*/true);
   case Intrinsic::spv_firstbitlow: // There is no CL equivlent of FindILsb
     return selectFirstBitLow(ResVReg, ResType, I);
+  case Intrinsic::spv_all_memory_barrier:
+    return selectBarrierInst(I, SPIRV::Scope::Device,
+                             SPIRV::MemorySemantics::UniformMemory |
+                                 SPIRV::MemorySemantics::ImageMemory |
+                                 SPIRV::MemorySemantics::WorkgroupMemory,
+                             /*WithGroupSync*/ false);
+  case Intrinsic::spv_all_memory_barrier_with_group_sync:
+    return selectBarrierInst(I, SPIRV::Scope::Device,
+                             SPIRV::MemorySemantics::UniformMemory |
+                                 SPIRV::MemorySemantics::ImageMemory |
+                                 SPIRV::MemorySemantics::WorkgroupMemory,
+                             /*WithGroupSync*/ true);
+  case Intrinsic::spv_device_memory_barrier:
+    return selectBarrierInst(I, SPIRV::Scope::Device,
+                             SPIRV::MemorySemantics::UniformMemory |
+                                 SPIRV::MemorySemantics::ImageMemory,
+                             /*WithGroupSync*/ false);
+  case Intrinsic::spv_device_memory_barrier_with_group_sync:
+    return selectBarrierInst(I, SPIRV::Scope::Device,
+                             SPIRV::MemorySemantics::UniformMemory |
+                                 SPIRV::MemorySemantics::ImageMemory,
+                             /*WithGroupSync*/ true);
   case Intrinsic::spv_group_memory_barrier:
     return selectBarrierInst(I, SPIRV::Scope::Workgroup,
                              SPIRV::MemorySemantics::WorkgroupMemory,
@@ -6369,8 +6397,15 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
          ResType->getOpcode() == SPIRV::OpTypeFloat);
   // TODO: Add matrix implementation once supported by the HLSL frontend.
   SPIRVTypeInst SpirvScalarType = GR.getScalarOrVectorComponentType(ResType);
-  Register ScaleReg =
-      GR.buildConstantFP(APFloat(0.30103f), MIRBuilder, SpirvScalarType);
+  // The literal must match the precision of the scalar type, otherwise the
+  // OpConstant will contain non-zero high-order bits and fail SPIR-V
+  // validation when the type is narrower than 32 bits (e.g. half).
+  APFloat ScaleVal(0.30103);
+  bool LosesInfo;
+  ScaleVal.convert(
+      getZeroFP(GR.getTypeForSPIRVType(SpirvScalarType)).getSemantics(),
+      APFloat::rmNearestTiesToEven, &LosesInfo);
+  Register ScaleReg = GR.buildConstantFP(ScaleVal, MIRBuilder, SpirvScalarType);
 
   // Multiply log2(x) by 0.30103 to get log10(x) result.
   auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector

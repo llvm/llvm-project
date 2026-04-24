@@ -20,8 +20,7 @@ E::E() noexcept : foo(s()) {}
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[FOO:%.*]] = getelementptr inbounds nuw [[STRUCT_E:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK-NEXT:    [[FOO_ASCAST:%.*]] = addrspacecast ptr [[FOO]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @_Z1sv(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_S:%.*]]) align 1 [[FOO_ASCAST]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @_Z1sv(ptr dead_on_unwind writable sret([[STRUCT_S:%.*]]) align 1 [[FOO]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 //
