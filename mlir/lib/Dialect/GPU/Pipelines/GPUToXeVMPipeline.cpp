@@ -79,7 +79,8 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(instDataOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUBlocking());
-    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUArrayLengthOptimization());
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        xegpu::createXeGPUArrayLengthOptimization());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
   if (options.xegpuOpLevel == "subgroup" ||

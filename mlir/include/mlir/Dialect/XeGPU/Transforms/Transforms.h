@@ -21,7 +21,6 @@
 
 namespace mlir {
 class RewritePatternSet;
-class TypeConverter;
 
 namespace xegpu {
 
