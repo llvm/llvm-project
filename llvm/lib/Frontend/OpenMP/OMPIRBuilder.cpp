@@ -9964,12 +9964,67 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
                             ? Info->Names[I]
                             : Constant::getNullValue(Builder.getPtrTy());
 
-    // Extract the MEMBER_OF field from the map type.
     Value *OriMapType = Builder.getInt64(
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             Info->Types[I]));
-    Value *MemberMapType =
-        Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
+    auto RawType =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            Info->Types[I]);
+    constexpr uint64_t MemberOfMask = 0xffff000000000000ULL;
+    bool IsAttach =
+        RawType &
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+
+    // Add MEMBER_OF (ShiftedPreviousSize) to link this sub-map with the
+    // current array element. Two cases must not get a new outer MEMBER_OF:
+    //
+    // 1. Entries marked as DontAddMemberOfInMapper. These represent entries
+    //    that represent the pointee data that does not occupy the same
+    //    storage space as the array-element being mapped.
+    //
+    // 2. ATTACH entries: These do not represent an actual map, but pointer
+    //    attachment, which is deferred to the end of the region on which the
+    //    map occurs. It is not involved in any allocation/deallocation or
+    //    ref-count tracking.
+    //
+    // Example 1:
+    //   mapper:  #pragma omp declare mapper(id: S s) map(s.x, s.p[0:10])
+    //   use:     S arr[2]; ... map(arr)
+    //   entries per element:
+    //
+    //     &arr[i],      &arr[i].x,    sizeof(int),    MEMBER_OF(N)|TO|FROM
+    //     &arr[i].p[0], &arr[i].p[0], 10*sizeof(int), TO|FROM  (*)
+    //     &arr[i].p,    &arr[i].p[0], sizeof(int*),   ATTACH
+    //     (*) DontAddMemberOfInMapper=true: s.p[0:10] occupies different
+    //     storage than s.
+    //
+    // Example 2: Struct with multiple pointees that share pointer-member storage
+    //   mapper:  #pragma omp declare mapper(S2 s2) map(s2.z, s2.s1p->x, s2.s1p->y)
+    //   use:     S2 arr[2]; ... map(arr)
+    //   entries per element:
+    //
+    //     &arr[i],        &arr[i].z,      sizeof(int),        MEMBER_OF(N)|TO|FROM
+    //     &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y), ALLOC  (**)
+    //     &arr[i].s1p[0], &arr[i].s1p->x, sizeof(int),        MEMBER_OF(N+2)|TO|FROM
+    //     &arr[i].s1p[0], &arr[i].s1p->y, sizeof(int),        MEMBER_OF(N+2)|TO|FROM
+    //     &arr[i].s1p,    &arr[i].s1p->x, sizeof(ptr),        ATTACH
+    //     (**) DontAddMemberOfInMapper=true (set by emitCombinedEntry): the *s1p
+    //     pointee occupies separate storage from arr[i].  The individual x/y
+    //     entries carry inner MEMBER_OF(2) bits which are shifted by N instead
+    //     of getting a new outer layer.
+    //     (N = __tgt_mapper_num_components() at loop body start)
+    Value *MemberMapType;
+    if (IsAttach) {
+      MemberMapType = OriMapType;
+    } else if (Info->DontAddMemberOfInMapper[I]) {
+      if (RawType & MemberOfMask)
+        MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
+      else
+        MemberMapType = OriMapType;
+    } else {
+      MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
+    }
 
     // Combine the map type inherited from user-defined mapper with that
     // specified in the program. According to the OMP_MAP_TO and OMP_MAP_FROM
@@ -10047,8 +10102,35 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     CurMapType->addIncoming(FromMapType, FromBB);
     CurMapType->addIncoming(MemberMapType, ToElseBB);
 
-    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg, CurBeginArg,
-                               CurSizeArg,   CurMapType, CurNameArg};
+    // Propagate map-type-modifying bits from the outer map clause to each map
+    // inserted by the mapper.
+    //
+    // OpenMP 6.0:281:34: The effect of the mapper modifier is to remove the
+    // list item from the map clause and to apply the clauses specified in the
+    // declared mapper to the construct on which the map clause appears...
+    // If any modifier with the map-type-modifying property appears in the map
+    // clause then the effect is as if that modifier appears in each map clause
+    // specified in the declared mapper.
+    //
+    // Map-type-modifying bits: ALWAYS, DELETE, CLOSE, PRESENT.
+    Value *ModifierBitMask = Builder.CreateAnd(
+        MapType,
+        Builder.getInt64(
+            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
+                OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
+                OpenMPOffloadMappingFlags::OMP_MAP_CLOSE |
+                OpenMPOffloadMappingFlags::OMP_MAP_PRESENT)));
+    Value *CurMapTypeWithModifiers = Builder.CreateOr(
+        CurMapType, ModifierBitMask, "omp.maptype.with.modifiers");
+
+    // ATTACH entries must not receive map-type-modifying bits: ATTACH|ALWAYS is
+    // reserved for the attach(always) map-type modifier, and other modifier bits
+    // (DELETE, CLOSE, PRESENT) have no meaning for an ATTACH entry.
+    Value *FinalMapType = IsAttach ? CurMapType : CurMapTypeWithModifiers;
+
+    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg,  CurBeginArg,
+                               CurSizeArg,   FinalMapType, CurNameArg};
 
     auto ChildMapperFn = CustomMapperCB(I);
     if (!ChildMapperFn)

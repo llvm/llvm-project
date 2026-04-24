@@ -8266,6 +8266,7 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysNonContigCountExpression) {
   CombinedInfo.Types.push_back(static_cast<omp::OpenMPOffloadMappingFlags>(
       omp::OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG |
       omp::OpenMPOffloadMappingFlags::OMP_MAP_TO));
+  CombinedInfo.DontAddMemberOfInMapper.push_back(false);
   CombinedInfo.Names.push_back(
       Builder.CreateGlobalString("data", "data_name", 0, M.get()));
 

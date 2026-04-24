@@ -7583,6 +7583,7 @@ private:
         AttachInfo.AttachPteeAddr.emitRawPointer(CGF));
     CombinedInfo.Sizes.push_back(PointerSize);
     CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    CombinedInfo.DontAddMemberOfInMapper.push_back(false);
     CombinedInfo.Mappers.push_back(nullptr);
     CombinedInfo.NonContigInfo.Dims.push_back(1);
   }
@@ -7684,6 +7685,7 @@ private:
       CombinedInfo.Sizes.push_back(
           CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/false));
       CombinedInfo.Types.push_back(Flags);
+      CombinedInfo.DontAddMemberOfInMapper.push_back(false);
       CombinedInfo.Mappers.push_back(nullptr);
       CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize : 1);
     }
@@ -8372,10 +8374,14 @@ private:
             }
           }
 
-          if (!IsMappingWholeStruct)
+          if (!IsMappingWholeStruct) {
             CombinedInfo.Types.push_back(Flags);
-          else
+            CombinedInfo.DontAddMemberOfInMapper.push_back(HasAttachPtr);
+          } else {
             StructBaseCombinedInfo.Types.push_back(Flags);
+            StructBaseCombinedInfo.DontAddMemberOfInMapper.push_back(
+                HasAttachPtr);
+          }
         }
 
         // If we have encountered a member expression so far, keep track of the
@@ -8976,6 +8982,7 @@ private:
           if (HasUdpFbNullify)
             Flags |= OpenMPOffloadMappingFlags::OMP_MAP_FB_NULLIFY;
           UseDeviceDataCombinedInfo.Types.push_back(Flags);
+          UseDeviceDataCombinedInfo.DontAddMemberOfInMapper.push_back(false);
           UseDeviceDataCombinedInfo.Mappers.push_back(nullptr);
         };
 
@@ -9383,7 +9390,27 @@ public:
 
   /// Constructor for the declare mapper directive.
   MappableExprsHandler(const OMPDeclareMapperDecl &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {}
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {
+    auto CollectAttachPtrExprsForClauseComponents = [this](const auto *C) {
+      for (auto L : C->component_lists()) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+            std::get<1>(L);
+        if (!Components.empty())
+          collectAttachPtrExprInfo(Components, CurDir);
+      }
+    };
+
+    // Populate the AttachPtrExprMap for all component lists from map-related
+    // clauses in the declare mapper directive.
+    for (const auto *Cl : Dir.clauses()) {
+      if (const auto *C = dyn_cast<OMPMapClause>(Cl))
+        CollectAttachPtrExprsForClauseComponents(C);
+      else if (const auto *C = dyn_cast<OMPToClause>(Cl))
+        CollectAttachPtrExprsForClauseComponents(C);
+      else if (const auto *C = dyn_cast<OMPFromClause>(Cl))
+        CollectAttachPtrExprsForClauseComponents(C);
+    }
+  }
 
   /// Generate code for the combined entry if we have a partially mapped struct
   /// and take care of the mapping flags of the arguments corresponding to
@@ -9457,6 +9484,14 @@ public:
         : !PartialStruct.PreliminaryMapData.BasePointers.empty()
             ? OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ
             : OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
+    // Combined entries with an attach pointer occupy different storage than
+    // the original item, so if this map is for a mapper, it should not be a
+    // member of the original item being mapped. e.g.:
+    //   map(s2.s1p->x, s2.s1p->y)
+    // combined entry:
+    //   s2.s1p[0], s2.s1p->x, sizeof(s1p->x..y), ALLOC
+    // This occupies different storage than s2.
+    CombinedInfo.DontAddMemberOfInMapper.push_back(AttachInfo.isValid());
     // If any element has the present modifier, then make sure the runtime
     // doesn't attempt to allocate the struct.
     if (CurTypes.end() !=
@@ -9572,6 +9607,7 @@ public:
           OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
           OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF |
           OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      CombinedInfo.DontAddMemberOfInMapper.push_back(false);
       CombinedInfo.Mappers.push_back(nullptr);
     }
     for (const LambdaCapture &LC : RD->captures()) {
@@ -9612,6 +9648,7 @@ public:
           OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
           OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF |
           OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      CombinedInfo.DontAddMemberOfInMapper.push_back(false);
       CombinedInfo.Mappers.push_back(nullptr);
     }
   }
@@ -9904,6 +9941,7 @@ public:
       CurCaptureVarInfo.Types.push_back(
           OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
           OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
+      CurCaptureVarInfo.DontAddMemberOfInMapper.push_back(false);
       CurCaptureVarInfo.Mappers.push_back(nullptr);
       return;
     }
@@ -10302,6 +10340,7 @@ public:
     if (IsImplicit)
       CombinedInfo.Types.back() |= OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
 
+    CombinedInfo.DontAddMemberOfInMapper.push_back(false);
     // No user-defined mapper for default mapping.
     CombinedInfo.Mappers.push_back(nullptr);
   }
@@ -10518,14 +10557,30 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///                                 size*sizeof(Ty), clearToFromMember(type));
 ///   // Map members.
 ///   for (unsigned i = 0; i < size; i++) {
+///     N = __tgt_mapper_num_components(rt_mapper_handle);
 ///     // For each component specified by this mapper:
 ///     for (auto c : begin[i]->all_components) {
+///       // MEMBER_OF grouping: tie this component to the current array element
+///       // (component N) by adding N<<48.  Exceptions:
+///       //   - ATTACH entries are not members of any struct storage range.
+///       //   - Pointee entries (reached via a pointer member) occupy separate
+///       //     storage; their inner MEMBER_OF bits are shifted by N instead.
+///       if (c.isAttach() || c.isPointee())
+///         member_type = c.arg_type + (c.hasInnerMemberOf() ? N<<48 : 0);
+///       else
+///         member_type = c.arg_type + N<<48;
+///       // Map-type-modifying bits (ALWAYS, DELETE, CLOSE, PRESENT) from the
+///       // outer map clause are propagated to each component, except ATTACH
+///       // entries (ATTACH|ALWAYS is reserved for attach(always), and other
+///       // modifier bits have no meaning for ATTACH).
+///       effective_type = c.isAttach() ? member_type
+///                                     : member_type | modifierBits(type);
 ///       if (c.hasMapper())
 ///         (*c.Mapper())(rt_mapper_handle, c.arg_base, c.arg_begin, c.arg_size,
-///                       c.arg_type, c.arg_name);
+///                       effective_type, c.arg_name);
 ///       else
 ///         __tgt_push_mapper_component(rt_mapper_handle, c.arg_base,
-///                                     c.arg_begin, c.arg_size, c.arg_type,
+///                                     c.arg_begin, c.arg_size, effective_type,
 ///                                     c.arg_name);
 ///     }
 ///   }
@@ -10741,6 +10796,7 @@ static void genMapInfoForCaptures(
       CurInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
                               OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
                               OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      CurInfo.DontAddMemberOfInMapper.push_back(false);
       CurInfo.Mappers.push_back(nullptr);
     } else {
       const ValueDecl *CapturedVD =
@@ -10898,6 +10954,7 @@ static void emitTargetCallKernelLaunch(
   CombinedInfo.Sizes.push_back(CGF.Builder.getInt64(0));
   CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
                                OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+  CombinedInfo.DontAddMemberOfInMapper.push_back(false);
   if (!CombinedInfo.Names.empty())
     CombinedInfo.Names.push_back(NullPtr);
   CombinedInfo.Exprs.push_back(nullptr);
