@@ -130,15 +130,15 @@ public:
   // Cannot be defaulted, since `_LIBCPP_COMPRESSED_PAIR` isn't an aggregate before C++14.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout()
       _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-      : __capacity_(__zero_boundary_type()) {}
+      : __capacity_{} {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type const& __a)
       _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
-      : __capacity_(__zero_boundary_type()), __alloc_(__a) {}
+      : __capacity_{}, __alloc_(__a) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type&& __a)
       _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-      : __capacity_(__zero_boundary_type()), __alloc_(std::move(__a)) {}
+      : __capacity_{}, __alloc_(std::move(__a)) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout(__vector_layout&& __other)
       _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
@@ -147,8 +147,8 @@ public:
         __capacity_(std::move(__other.__capacity_)),
         __alloc_(std::move(__other.__alloc_)) {
     __other.__begin_    = nullptr;
-    __other.__boundary_ = __zero_boundary_type();
-    __other.__capacity_ = __zero_boundary_type();
+    __other.__boundary_ = {};
+    __other.__capacity_ = {};
   }
 
   /// Returns a reference to the stored allocator.
@@ -222,8 +222,8 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset_without_allocator() _NOEXCEPT {
     __begin_ = nullptr;
-    __set_boundary(__zero_relative_to_begin());
-    __set_capacity(__zero_relative_to_begin());
+    __boundary_ = {};
+    __capacity_ = {};
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(__vector_layout& __other) _NOEXCEPT {
@@ -275,20 +275,6 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary_using_pointer(pointer __ptr) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity_using_integer(size_type __n) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity_using_pointer(pointer __ptr) _NOEXCEPT;
-
-  /// Returns `__begin_` if `__boundary_type` is `pointer`, and `0` if it is `size_type`.
-  ///
-  /// Since `0` is implicitly convertible to both `size_type` and `nullptr`, `__set_boundary(0)` is
-  /// ambiguous. Using a named function optimises for the reader much more nicely than using an
-  /// explicit cast to `size_type`. In addition to describing intent, this function avoids extra
-  /// pointer arithmetic in the pointer-based `__set_boundary(size_type{})`.
-  ///
-  /// Note that this function cannot be used when setting `__begin_`.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __boundary_type
-  __zero_relative_to_begin() _NOEXCEPT;
-  // Works around a Clang 20 zero-initialization bug on user-defined pointer types.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI static __boundary_type
-  __zero_boundary_type() _NOEXCEPT;
 
 private:
   pointer __begin_ = nullptr;
@@ -394,18 +380,6 @@ template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_pointer(pointer __ptr) _NOEXCEPT {
   __capacity_ = static_cast<size_type>(__ptr - __begin_);
 }
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__boundary_type
-__vector_layout<_Tp, _Alloc>::__zero_relative_to_begin() _NOEXCEPT {
-  return 0;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __vector_layout<_Tp, _Alloc>::__boundary_type
-__vector_layout<_Tp, _Alloc>::__zero_boundary_type() _NOEXCEPT {
-  return 0;
-}
 #else
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -487,18 +461,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity_using_pointer(pointer __ptr) _NOEXCEPT {
   __capacity_ = __ptr;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__boundary_type
-__vector_layout<_Tp, _Alloc>::__zero_relative_to_begin() _NOEXCEPT {
-  return __begin_;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __vector_layout<_Tp, _Alloc>::__boundary_type
-__vector_layout<_Tp, _Alloc>::__zero_boundary_type() _NOEXCEPT {
-  return nullptr;
 }
 #endif // _LIBCPP_ABI_SIZE_BASED_VECTOR
 
