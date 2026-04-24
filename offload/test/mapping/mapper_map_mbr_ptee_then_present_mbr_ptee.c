@@ -26,7 +26,7 @@ void print_status(void *p, const char *name) {
 int main() {
   s1.p = (int *)&x;
 
-#pragma omp target enter data map(alloc : s1.x, s1.p[0:10])
+#pragma omp target enter data map(alloc : s1.x, s1.p[0 : 10])
   printf("After mapping\n");
   print_status(&s1.x, "x");         // CHECK: x is present
   print_status(&s1.dummy, "dummy"); // CHECK: dummy is not present
@@ -37,7 +37,7 @@ int main() {
   // This present check should pass.
 #pragma omp target enter data map(present, alloc : s1)
 
-#pragma omp target exit data map(delete: s1)
+#pragma omp target exit data map(delete : s1)
   printf("After deleting\n");
   print_status(&s1.x, "x");         // CHECK: x is not present
   print_status(&s1.dummy, "dummy"); // CHECK: dummy is not present

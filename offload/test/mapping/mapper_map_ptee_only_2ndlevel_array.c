@@ -36,7 +36,8 @@ int main() {
 
 #pragma omp target enter data map(to : s2arr)
   printf("After mapping\n");
-  print_status(&s2arr[0].s1.x, "s2arr[0].s1.x"); // CHECK: s2arr[0].s1.x is present
+  print_status(&s2arr[0].s1.x,
+               "s2arr[0].s1.x"); // CHECK: s2arr[0].s1.x is present
   // dummy/p being present is not ideal, but that's what we get with the
   // current implementation because we need to map the full contiguous
   // chunk for the array first before invoking the mapper.
@@ -46,7 +47,8 @@ int main() {
                "s2arr[0].s1.p"); // CHECK: s2arr[0].s1.p is present
   print_status(&s2arr[0].s1.p[0],
                "s2arr[0].s1.p[0]"); // CHECK: s2arr[0].s1.p[0] is present
-  print_status(&s2arr[1].s1.x, "s2arr[1].s1.x"); // CHECK: s2arr[1].s1.x is present
+  print_status(&s2arr[1].s1.x,
+               "s2arr[1].s1.x"); // CHECK: s2arr[1].s1.x is present
   print_status(&s2arr[1].s1.dummy,
                "s2arr[1].s1.dummy"); // CHECK: s2arr[1].s1.dummy is present
   print_status(&s2arr[1].s1.p,
