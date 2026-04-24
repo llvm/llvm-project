@@ -18,6 +18,7 @@
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "ubsan/ubsan_init.h"
@@ -84,6 +85,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
 
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
+
+  __sanitizer_set_report_path(common_flags()->log_path);
 
   InitializePlatformEarly();
 
