@@ -67,6 +67,9 @@ A list of non-standard directives supported by Flang
 * `!dir$ vector always` forces vectorization on the following loop regardless
   of cost model decisions. The loop must still be vectorizable.
   [This directive currently only works on plain do loops without labels].
+* `!dir$ simd` works the same as `vector always` above, but provides an alternative
+  spelling and support for projects which would have used the classic-flang frontend
+  previously.
 * `!dir$ vector vectorlength({fixed|scalable|<num>|<num>,fixed|<num>,scalable})`
   specifies a hint to the compiler about the desired vectorization factor. If
   `fixed` is used, the compiler should prefer fixed-width vectorization.
@@ -99,6 +102,16 @@ A list of non-standard directives supported by Flang
   assignment statement.
 * `!dir$ forceinline` works in the same way as the `inline` directive, but it forces
    inlining by the compiler on a function call statement.
+* `!dir$ inlinealways <name>`. An alternative spelling to `forceinline`, providing compatibility
+  with older Fortran compilers, such as classic-flang. It can be specified at the callsite, or
+  in the function or subroutine you want to inline. `name` is optional and should only be used
+  when specifying the directive within a function, example:
+  ```
+  function test
+    !DIR$ INLINEALWAYS test
+    ...
+  end function
+  ```
 * `!dir$ noinline` works in the same way as the `inline` directive, but prevents
   any attempt of inlining by the compiler on a function call statement.
 

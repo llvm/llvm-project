@@ -317,7 +317,7 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
   SPIRVTypeInst ScalarType = nullptr;
   if (SPIRVTypeInst DefType = GR->getSPIRVTypeForVReg(SrcReg)) {
     assert(DefType->getOpcode() == SPIRV::OpTypeVector);
-    ScalarType = GR->getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
+    ScalarType = GR->getScalarOrVectorComponentType(DefType);
   }
 
   if (!ScalarType) {

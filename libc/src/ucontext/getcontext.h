@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int getcontext(ucontext_t *ucp);
+int getcontext(ucontext_t *ucp) noexcept;
 
 } // namespace LIBC_NAMESPACE_DECL
 

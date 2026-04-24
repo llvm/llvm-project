@@ -3018,6 +3018,17 @@ add_header_library(
 )
 
 add_header_library(
+  logbbf16
+  HDRS
+    logbbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   logbf16
   HDRS
     logbf16.h
@@ -3110,6 +3121,7 @@ add_header_library(
   powf
   HDRS
     powf.h
+    powf_small_tables.h
   DEPENDS
     .common_constants
     .exp10f

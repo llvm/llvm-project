@@ -1345,3 +1345,25 @@ namespace ExpandOnOPTEPointers {
   }
   static_assert(test());
 }
+
+namespace ConstIntPotentialConstantExpr {
+  /// NO error about a constexpr function that's never a constant expression.
+  constexpr int Const() {
+    const int a = 10; // both-note {{declared const here}}
+    a = 20; // both-error {{cannot assign to variable 'a' with const-qualified type 'const int'}}
+    return 1;
+  }
+}
+
+namespace IndirectFieldInitializer {
+  struct A {
+    struct {
+      union {
+        int x = x = 3;
+      };
+    };
+    constexpr A() {}
+  };
+  static_assert(A().x == 3, "");
+
+}
