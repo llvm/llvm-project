@@ -61,7 +61,7 @@ bool RISCVInlineAsmLowering::lowerAsmOperandForConstraint(
     return InlineAsmLowering::lowerAsmOperandForConstraint(Val, "s", Ops,
                                                            MIRBuilder);
   default:
-    // Target-indepnedent constraints.
+    // Target-independent constraints.
     return InlineAsmLowering::lowerAsmOperandForConstraint(Val, Constraint, Ops,
                                                            MIRBuilder);
   }
