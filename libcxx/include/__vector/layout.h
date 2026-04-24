@@ -34,11 +34,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 /// Defines `std::vector`'s storage layout and any operations that are affected by a change in the
 /// layout.
 ///
-/// Dynamically-sized arrays like `std::vector` have several different representations. libc++
-/// supports two different layouts for `std::vector`:
+/// `std::vector` can be represented in a variety of ways. Each representation strongly influences
+/// the codegen when calling vector operations, which can significantly impact runtime performance
+/// and memory utilisation. libc++ provides two alternative layouts for `std::vector`, although only
+/// one can be active for an enitre binary:
 ///
-///   * pointer-based layout
-///   * size-based layout
+///   * pointer-based layout (stable ABI default)
+///   * size-based layout (unstable ABI alternative)
 //
 /// We describe these layouts below. All vector representations have a pointer that points to where
 /// the memory is allocated (called `__begin_`).
@@ -47,8 +49,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///
 /// The pointer-based layout uses two more pointers in addition to `__begin_`. The second pointer
 /// (called `__end_`) points past the end of the part of the buffer that holds valid elements.
-/// Another pointer (called `__capacity_`) points past the end of the allocated buffer. This is the
-/// default representation for libc++ due to historical reasons.
+/// Another pointer (called `__capacity_`) points past the end of the allocated buffer. The original
+/// libc++ `std::vector` implementation only provided the pointer-based layout. libc++ continues to
+/// use the pointer-based layout, by default, in order to maintain binary compatibility with
+/// existing software.
 ///
 /// The `__end_` pointer has three primary use-cases:
 ///   * to compute the size of the vector; and
