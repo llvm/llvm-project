@@ -2707,9 +2707,6 @@ static bool diagnoseMatrixLayoutOnNonMatrix(Sema &SemaRef, Decl *D,
   if (const auto *FPT = Ty->getAs<FunctionProtoType>()) {
     if (isMatrixOrArrayOfMatrix(SemaRef.getASTContext(), FPT->getReturnType()))
       return false;
-    for (QualType ParamTy : FPT->param_types())
-      if (isMatrixOrArrayOfMatrix(SemaRef.getASTContext(), ParamTy))
-        return false;
     SemaRef.Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << AttrName;
     return true;
   }

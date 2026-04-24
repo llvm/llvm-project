@@ -50,6 +50,9 @@ void foo(column_major float4x4 mat, row_major int i) {}
 // expected-error@+1 {{'row_major' attribute can only be applied to a matrix type}}
 void foo2(float4x4 mat, row_major int i) {}
 
+// expected-error@+1 {{'row_major' attribute can only be applied to a matrix type}}
+row_major int foo(float4x4 mat) {}
+
 
 template <typename T>
 struct Wrapper {
