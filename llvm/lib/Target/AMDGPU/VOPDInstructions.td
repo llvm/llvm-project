@@ -79,15 +79,15 @@ class VOPD3e<bits<6> opX, bits<6> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   let Inst{44} = !if(VDY.Pfl.HasModifiers, src0Y_modifiers, 0);
   let Inst{45} = !if(!and(VDY.Pfl.HasSrc1, VDY.Pfl.HasModifiers), vsrc1Y_modifiers, 0);
   let Inst{46} = !if(!and(VDY.Pfl.HasVOPD3Src2, VDY.Pfl.HasModifiers), vsrc2Y_modifiers, 0);
-  let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc1X"), -1), 0, vsrc1X);
+  let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc1X"), -1), ?, vsrc1X);
 
   // Despite the vsrc operand name, SGPRs can be used for vsrc2X for
   // V_DUAL_CNDMASK_B32
-  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc2X"), -1), 0, vsrc2X);
+  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc2X"), -1), ?, vsrc2X);
   let Inst{71-64} = vdstX;
-  let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc1Y"), -1), 0, vsrc1Y);
+  let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc1Y"), -1), ?, vsrc1Y);
   let Inst{87-80} = !if(!ne(!find(VDY.Pfl.AsmVOPD3Y, "bitop"), -1), bitop3,
-                        !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc2Y"), -1), 0, vsrc2Y));
+                        !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc2Y"), -1), ?, vsrc2Y));
   let Inst{95-88} = vdstY;
 }
 
