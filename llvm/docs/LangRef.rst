@@ -7994,7 +7994,7 @@ that distinguish between the vectorized loop and its scalar remainder.
 Together these two attributes provide a four-way classification:
 
 - ``body`` only: main vectorized loop body
-- ``epilogue`` only: scalar remainder loop after vectorization
+- ``epilogue`` only: scalar epilogue loop after vectorization
 - Both ``body`` and ``epilogue``: vectorized epilogue 
   (a remainder loop that was itself vectorized during epilogue
   vectorization)

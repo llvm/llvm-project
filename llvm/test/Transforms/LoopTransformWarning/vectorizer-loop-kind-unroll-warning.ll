@@ -17,9 +17,8 @@
 ; Epilogue vectorization is forced to exercise all four loop categories:
 ;
 ;   1. plain loop         – not touched by the vectorizer
-;   2. vectorized loop    – main vector body      (body only)
-;   3. remainder loop     – scalar cleanup         (epilogue only)
-;   4. vectorized remainder loop – epilogue vector (both flags)
+;   2. vectorized loop    – main vector body      (has vectorize.body)
+;   3. epilogue loop      – epilogue loop          (has vectorize.epilogue)
 ;
 ; Runtime unrolling is disabled via metadata so the unroller cannot act,
 ; causing the pragma-unroll hint to survive to the warning pass.
@@ -29,7 +28,7 @@
 
 ; CHECK:     warning: test.cpp:1:1: loop not unrolled: the optimizer was unable to perform the requested transformation
 ; CHECK-NOT: warning: test.cpp:1:1: vectorized
-; CHECK-NOT: warning: test.cpp:1:1: remainder
+; CHECK-NOT: warning: test.cpp:1:1: epilogue
 
 define void @plain_loop(ptr noalias %A, i64 %n) !dbg !100 {
 entry:
@@ -50,8 +49,7 @@ exit:
 ;--- vectorizable_loop: vectorized with epilogue, all three fail to unroll -----
 
 ; CHECK-DAG: warning: test.cpp:10:1: vectorized loop not unrolled: the optimizer was unable to perform the requested transformation
-; CHECK-DAG: warning: test.cpp:10:1: remainder loop not unrolled: the optimizer was unable to perform the requested transformation
-; CHECK-DAG: warning: test.cpp:10:1: vectorized remainder loop not unrolled: the optimizer was unable to perform the requested transformation
+; CHECK-DAG: warning: test.cpp:10:1: epilogue loop not unrolled: the optimizer was unable to perform the requested transformation
 
 define void @vectorizable_loop(ptr noalias %A, ptr noalias %B, i64 %n) !dbg !200 {
 entry:
@@ -84,13 +82,6 @@ exit:
 ; YAML:      Name:            FailedRequestedUnrolling
 ; YAML:      Function:        vectorizable_loop
 ; YAML:      Args:
-; YAML:        - String:          'vectorized remainder loop not unrolled:
-
-; YAML:      --- !Failure
-; YAML:      Pass:            transform-warning
-; YAML:      Name:            FailedRequestedUnrolling
-; YAML:      Function:        vectorizable_loop
-; YAML:      Args:
 ; YAML:        - String:          'vectorized loop not unrolled:
 
 ; YAML:      --- !Failure
@@ -98,7 +89,7 @@ exit:
 ; YAML:      Name:            FailedRequestedUnrolling
 ; YAML:      Function:        vectorizable_loop
 ; YAML:      Args:
-; YAML:        - String:          'remainder loop not unrolled:
+; YAML:        - String:          'epilogue loop not unrolled:
 
 ;--- Metadata ------------------------------------------------------------------
 

@@ -40,9 +40,7 @@ for.end:
 }
 
 ; Now, we check for the Hint metadata
-; CHECK: [[vect]] = distinct !{[[vect]], [[width:![0-9]+]], [[vec_body:![0-9]+]], [[runtime_unroll:![0-9]+]]}
+; CHECK: [[vect]] = distinct !{[[vect]], [[width:![0-9]+]], [[runtime_unroll:![0-9]+]]}
 ; CHECK: [[width]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[vec_body]] = !{!"llvm.loop.vectorize.body", i32 1}
 ; CHECK: [[runtime_unroll]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[scalar]] = distinct !{[[scalar]], [[runtime_unroll]], [[width]], [[scalar_rem:![0-9]+]]}
-; CHECK: [[scalar_rem]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK: [[scalar]] = distinct !{[[scalar]], [[runtime_unroll]], [[width]]}

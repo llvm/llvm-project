@@ -57,10 +57,10 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP1]], 6
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP1]], 6
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP43:%.*]] = shl nuw i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP43:%.*]] = shl nuw i64 [[TMP9]], 3
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[N]] to i32
@@ -70,7 +70,7 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], [[TMP9]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
@@ -108,7 +108,7 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP29]] = or <vscale x 16 x i32> [[VEC_PHI4]], [[TMP25]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <vscale x 16 x i32> [[TMP27]], [[TMP26]]
 ; CHECK-NEXT:    [[BIN_RDX8:%.*]] = or <vscale x 16 x i32> [[TMP28]], [[BIN_RDX]]
@@ -118,7 +118,7 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP43]]
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP31]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -140,7 +140,7 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP40]] = or <vscale x 8 x i32> [[VEC_PHI13]], [[TMP39]]
 ; CHECK-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX12]], [[TMP33]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC11]]
-; CHECK-NEXT:    br i1 [[TMP41]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP41]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP42:%.*]] = call i32 @llvm.vector.reduce.or.nxv8i32(<vscale x 8 x i32> [[TMP40]])
 ; CHECK-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC11]]
@@ -161,7 +161,7 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[OR]] = or i32 [[SUM]], [[LOAD_EXT]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], %[[LOOP]] ], [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ [[TMP42]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[OR_LCSSA]]
@@ -189,13 +189,11 @@ exit:
 
 attributes #0 = { "target-cpu"="neoverse-512tvb" }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
-; CHECK: [[PROF5]] = !{!"branch_weights", i32 8, i32 56}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META7:![0-9]+]], [[META2]], [[META3]]}
-; CHECK: [[META7]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META7]], [[META7]]}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+; CHECK: [[PROF4]] = !{!"branch_weights", i32 8, i32 56}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]]}
 ;.

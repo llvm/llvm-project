@@ -178,8 +178,8 @@ generated loops with two metadata attributes for remark quality:
 Together these provide a four-way classification:
 
 - ``body`` only: main vectorized loop body
-- ``epilogue`` only: scalar remainder loop after vectorization
-- Both: epilogue vectorized remainder (a remainder that was itself
+- ``epilogue`` only: scalar epilogue loop after vectorization
+- Both: vectorized epilogue (a remainder that was itself
   vectorized during epilogue vectorization)
 - Neither: a plain loop not produced by the vectorizer
 
@@ -187,7 +187,7 @@ This is used by subsequent passes (e.g., the loop unroller and
 ``WarnMissedTransforms``) to produce more precise optimization remarks.
 For instance, instead of reporting both "loop unrolled" and "loop not
 unrolled" for the same source line, the unroller can clarify that a
-*vectorized* loop was unrolled while its *scalar remainder* was not.
+*vectorized* loop was unrolled while its *scalar epilogue* was not.
 
 When using a follow-up attribute, it replaces any automatically deduced
 attributes for the generated loop in question. Therefore it is

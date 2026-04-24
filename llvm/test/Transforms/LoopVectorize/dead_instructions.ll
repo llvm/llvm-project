@@ -44,16 +44,16 @@ define i64 @dead_instructions_01(ptr %a, i64 %n) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[UNNAMEDTMP2:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[UNNAMEDTMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[UNNAMEDTMP1:%.*]] = load i64, ptr [[UNNAMEDTMP0]], align 8
-; CHECK-NEXT:    [[UNNAMEDTMP2]] = add i64 [[UNNAMEDTMP1]], [[R]]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP7:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP7]] = add i64 [[TMP6]], [[R]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_BODY]], label %[[FOR_END]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_BODY]], label %[[FOR_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[UNNAMEDTMP3:%.*]] = phi i64 [ [[UNNAMEDTMP2]], %[[FOR_BODY]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i64 [[UNNAMEDTMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ [[TMP7]], %[[FOR_BODY]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[TMP8]]
 ;
 entry:
   br label %for.body
@@ -91,7 +91,7 @@ define void @pr47390(ptr %a) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -134,15 +134,15 @@ define void @dead_load_and_vector_pointer(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 8, !alias.scope [[META7:![0-9]+]], !noalias [[META10:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP1]], align 8, !alias.scope [[META7]], !noalias [[META10]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 8, !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP1]], align 8, !alias.scope [[META5]], !noalias [[META8]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[WIDE_LOAD2]], splat (i32 1)
-; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[TMP2]], align 4, !alias.scope [[META7]], !noalias [[META10]]
-; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP1]], align 4, !alias.scope [[META7]], !noalias [[META10]]
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[TMP2]], align 4, !alias.scope [[META5]], !noalias [[META8]]
+; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP1]], align 4, !alias.scope [[META5]], !noalias [[META8]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -160,7 +160,7 @@ define void @dead_load_and_vector_pointer(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[PRIMARY]]
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PRIMARY]], 128
-; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
 ;
 entry:
   br label %loop
@@ -181,18 +181,16 @@ loop:
   br i1 %cmp, label %exit, label %loop
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]]}
-; CHECK: [[META9]] = distinct !{[[META9]], !"LVerDomain"}
-; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
-; CHECK: [[META11]] = distinct !{[[META11]], [[META9]]}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]], [[META3]]}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META5]]}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
+; CHECK: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], !"LVerDomain"}
+; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
+; CHECK: [[META9]] = distinct !{[[META9]], [[META7]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
 ;.

@@ -33,7 +33,7 @@ define i32 @test_icmp_constant_op_zext(ptr %dst) {
 ; CHECK-NEXT:    store i8 [[OR_TRUNC]], ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -79,7 +79,7 @@ define i32 @test_icmp_and_op_zext(ptr %dst, i64 %a) {
 ; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
@@ -94,7 +94,7 @@ define i32 @test_icmp_and_op_zext(ptr %dst, i64 %a) {
 ; CHECK-NEXT:    store i8 [[OR_TRUNC]], ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -131,7 +131,7 @@ define void @ext_cmp(ptr %src.1, ptr %src.2, ptr noalias %dst) {
 ; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       exit:
@@ -162,13 +162,11 @@ exit:
   ret void
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ;.

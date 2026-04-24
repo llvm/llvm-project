@@ -95,7 +95,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; NO-VP-NEXT:    [[INDVARS_NEXT]] = add nuw nsw i64 [[INDVARS]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_NEXT]], [[TC]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; NO-VP:       [[FOR_END]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -154,7 +154,7 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP23]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP23]]
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[FOR_END:.*]]
 ; IF-EVL:       [[FOR_END]]:
@@ -194,7 +194,7 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP17]], ptr [[TMP18]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP22:%.*]] = mul nuw i32 [[TMP21]], 4
@@ -222,7 +222,7 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; NO-VP-NEXT:    [[INDVARS_NEXT]] = add nuw nsw i64 [[INDVARS]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_NEXT]], [[TC]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; NO-VP:       [[FOR_END]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -289,7 +289,7 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP27]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP27]]
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[FOR_END:.*]]
 ; IF-EVL:       [[FOR_END]]:
@@ -336,7 +336,7 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP22]], ptr [[TMP23]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[TMP26:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP27:%.*]] = mul nuw i32 [[TMP26]], 4
@@ -371,7 +371,7 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    store i32 [[ADD1]], ptr [[ARRAYIDX2]], align 4
 ; NO-VP-NEXT:    [[INDVARS_NEXT]] = add nuw nsw i64 [[INDVARS]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_NEXT]], [[TC]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; NO-VP:       [[FOR_END]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -427,7 +427,7 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[INDVARS]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP13]], 1
 ; IF-EVL-NEXT:    [[FOR1_LCSSA:%.*]] = extractelement <vscale x 4 x i32> [[TMP10]], i64 [[TMP28]]
@@ -463,7 +463,7 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP13]], ptr [[TMP14]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 4
@@ -489,7 +489,7 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; NO-VP-NEXT:    [[INDVARS_NEXT]] = add nuw nsw i64 [[INDVARS]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_NEXT]], [[TC]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; NO-VP:       [[FOR_END]]:
 ; NO-VP-NEXT:    [[FOR1_LCSSA:%.*]] = phi i32 [ [[FOR1]], %[[FOR_BODY]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
 ; NO-VP-NEXT:    ret i32 [[FOR1_LCSSA]]
@@ -546,7 +546,7 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[FOR_END:.*]]
 ; IF-EVL:       [[FOR_END]]:
@@ -583,7 +583,7 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; NO-VP-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP21:%.*]] = mul nuw i32 [[TMP17]], 2
@@ -603,7 +603,7 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; NO-VP-NEXT:    store i64 [[FOR1]], ptr [[ARRAYIDX]], align 8
 ; NO-VP-NEXT:    [[IV1_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV1_NEXT]], [[TC]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; NO-VP:       [[FOR_END]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -630,27 +630,24 @@ for.end:
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.
-; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; IF-EVL: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
+; IF-EVL: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IF-EVL: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ;.
-; NO-VP: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; NO-VP: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; NO-VP: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; NO-VP: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; NO-VP: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; NO-VP: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; NO-VP: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; NO-VP: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP9]] = distinct !{[[LOOP9]], [[META3]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP11]] = distinct !{[[LOOP11]], [[META3]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP13]] = distinct !{[[LOOP13]], [[META3]], [[META1]], [[META5]]}
+; NO-VP: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; NO-VP: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; NO-VP: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; NO-VP: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
+; NO-VP: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
+; NO-VP: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
 ;.

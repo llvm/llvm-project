@@ -298,7 +298,7 @@ define ptr @std_find_caller(ptr noundef %first, ptr noundef %last) {
 ; CHECK:       [[LOOP_LATCH_I]]:
 ; CHECK-NEXT:    [[PTR_IV_NEXT_I]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_I]], i64 2
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq ptr [[PTR_IV_NEXT_I]], [[LAST]]
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[STD_FIND_GENERIC_IMPL_EXIT]], label %[[LOOP_HEADER_I]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[STD_FIND_GENERIC_IMPL_EXIT]], label %[[LOOP_HEADER_I]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[STD_FIND_GENERIC_IMPL_EXIT]]:
 ; CHECK-NEXT:    [[RES_I:%.*]] = phi ptr [ [[FIRST]], %[[ENTRY]] ], [ [[SCEVGEP]], %[[MIDDLE_BLOCK]] ], [ [[TMP14]], %[[VECTOR_EARLY_EXIT]] ], [ [[SCEVGEP]], %[[LOOP_LATCH_I]] ], [ [[PTR_IV_I]], %[[LOOP_HEADER_I]] ]
 ; CHECK-NEXT:    ret ptr [[RES_I]]
@@ -337,10 +337,8 @@ exit:
 
 declare void @llvm.assume(i1 noundef)
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.

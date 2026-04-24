@@ -76,7 +76,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2:       [[FOR_COND_CLEANUP3]]:
 ; O2-NEXT:    [[INC7]] = add nuw nsw i64 [[I_06]], 1
 ; O2-NEXT:    [[EXITCOND7_NOT:%.*]] = icmp eq i64 [[INC7]], 100
-; O2-NEXT:    br i1 [[EXITCOND7_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP9:![0-9]+]]
+; O2-NEXT:    br i1 [[EXITCOND7_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP8:![0-9]+]]
 ; O2:       [[FOR_BODY4]]:
 ; O2-NEXT:    [[J_05:%.*]] = phi i64 [ [[INC5:%.*]], %[[FOR_BODY4]] ], [ [[J_05_PH]], %[[FOR_BODY4_PREHEADER9]] ]
 ; O2-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[J_05]]
@@ -85,7 +85,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2-NEXT:    store i32 [[INC]], ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA0]]
 ; O2-NEXT:    [[INC5]] = add nuw i64 [[J_05]], 1
 ; O2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC5]], [[NUMELEMS]]
-; O2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP3]], label %[[FOR_BODY4]], !llvm.loop [[LOOP10:![0-9]+]]
+; O2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP3]], label %[[FOR_BODY4]], !llvm.loop [[LOOP9:![0-9]+]]
 ;
 ; O3-LABEL: define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(
 ; O3-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
@@ -127,11 +127,11 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O3-NEXT:    store i32 [[INC_US]], ptr [[ADD_PTR_I_US]], align 4, !tbaa [[INT_TBAA0]]
 ; O3-NEXT:    [[INC5_US]] = add nuw i64 [[J_05_US]], 1
 ; O3-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC5_US]], [[NUMELEMS]]
-; O3-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]], label %[[FOR_BODY4_US]], !llvm.loop [[LOOP9:![0-9]+]]
+; O3-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]], label %[[FOR_BODY4_US]], !llvm.loop [[LOOP8:![0-9]+]]
 ; O3:       [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]:
 ; O3-NEXT:    [[INC7_US]] = add nuw nsw i64 [[I_06_US]], 1
 ; O3-NEXT:    [[EXITCOND8_NOT:%.*]] = icmp eq i64 [[INC7_US]], 100
-; O3-NEXT:    br i1 [[EXITCOND8_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER_US]], !llvm.loop [[LOOP11:![0-9]+]]
+; O3-NEXT:    br i1 [[EXITCOND8_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER_US]], !llvm.loop [[LOOP9:![0-9]+]]
 ; O3:       [[FOR_COND_CLEANUP]]:
 ; O3-NEXT:    ret void
 ;
@@ -250,25 +250,21 @@ declare void @llvm.lifetime.end.p0(ptr nocapture)
 ; O2: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
 ; O2: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; O2: [[META3]] = !{!"Simple C++ TBAA"}
-; O2: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
+; O2: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
 ; O2: [[META5]] = !{!"llvm.loop.mustprogress"}
 ; O2: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; O2: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
-; O2: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
-; O2: [[LOOP9]] = distinct !{[[LOOP9]], [[META5]]}
-; O2: [[LOOP10]] = distinct !{[[LOOP10]], [[META5]], [[META8]], [[META6]], [[META11:![0-9]+]]}
-; O2: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; O2: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
+; O2: [[LOOP8]] = distinct !{[[LOOP8]], [[META5]]}
+; O2: [[LOOP9]] = distinct !{[[LOOP9]], [[META5]], [[META7]], [[META6]]}
 ;.
 ; O3: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; O3: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
 ; O3: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; O3: [[META3]] = !{!"Simple C++ TBAA"}
-; O3: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
+; O3: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
 ; O3: [[META5]] = !{!"llvm.loop.mustprogress"}
 ; O3: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; O3: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
-; O3: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
-; O3: [[LOOP9]] = distinct !{[[LOOP9]], [[META5]], [[META8]], [[META6]], [[META10:![0-9]+]]}
-; O3: [[META10]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; O3: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]]}
+; O3: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
+; O3: [[LOOP8]] = distinct !{[[LOOP8]], [[META5]], [[META7]], [[META6]]}
+; O3: [[LOOP9]] = distinct !{[[LOOP9]], [[META5]]}
 ;.

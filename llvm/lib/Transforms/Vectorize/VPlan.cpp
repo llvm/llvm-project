@@ -31,6 +31,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1806,10 +1807,9 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
     }
   }
   // Tag the scalar remainder so downstream passes (e.g. the unroller and
-  // WarnMissedTransforms) can produce more informative remarks. This is set
-  // unconditionally (including during epilogue vectorization) so that the
-  // final scalar tail is always identifiable.
-  if (Plan.getScalarPreheader()->hasPredecessors())
+  // WarnMissedTransforms) can produce more informative remarks.  Only emit
+  // when remarks are enabled.
+  if (ORE->enabled() && Plan.getScalarPreheader()->hasPredecessors())
     addBooleanLoopAttribute(OrigLoop, "llvm.loop.vectorize.epilogue");
 
   if (!VectorLoop)
@@ -1830,12 +1830,10 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       Hints.setAlreadyVectorized();
     }
   }
-  // Tag the vector loop body so downstream passes can identify it. During
-  // epilogue vectorization the epilogue vector loop naturally inherits
-  // epilogue from the pass-1 remainder and gets body here,
-  // giving it both tags — which uniquely identifies it as a vectorized
-  // epilogue.
-  addBooleanLoopAttribute(VectorLoop, "llvm.loop.vectorize.body");
+  // Tag the vector loop body so downstream passes can identify it.  Only
+  // emit when remarks are enabled.
+  if (ORE->enabled())
+    addBooleanLoopAttribute(VectorLoop, "llvm.loop.vectorize.body");
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);
   if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)

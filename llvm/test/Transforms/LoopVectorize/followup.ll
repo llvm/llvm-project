@@ -36,11 +36,9 @@ for.end:
 ; CHECK-LABEL: for.body:
 ; CHECK: br i1 %exitcond, label %for.end.loopexit, label %for.body, !llvm.loop ![[LOOP_EPILOGUE:[0-9]+]]
 
-; CHECK: ![[LOOP_VECTOR]] = distinct !{![[LOOP_VECTOR]], ![[FOLLOWUP_ALL:[0-9]+]], ![[FOLLOWUP_VECTORIZED:[0-9]+]], ![[VECTOR_BODY:[0-9]+]], ![[RT_UNROLL_DIS:[0-9]+]]}
+; CHECK: ![[LOOP_VECTOR]] = distinct !{![[LOOP_VECTOR]], ![[FOLLOWUP_ALL:[0-9]+]], ![[FOLLOWUP_VECTORIZED:[0-9]+]], ![[RT_UNROLL_DIS:[0-9]+]]}
 ; CHECK: ![[FOLLOWUP_ALL]] = !{!"FollowupAll"}
-; CHECK: ![[FOLLOWUP_VECTORIZED]] = !{!"FollowupVectorized"}
-; CHECK: ![[VECTOR_BODY]] = !{!"llvm.loop.vectorize.body", i32 1}
+; CHECK: ![[FOLLOWUP_VECTORIZED:[0-9]+]] = !{!"FollowupVectorized"}
 ; CHECK: ![[RT_UNROLL_DIS]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: ![[LOOP_EPILOGUE]] = distinct !{![[LOOP_EPILOGUE]], ![[FOLLOWUP_ALL]], ![[FOLLOWUP_EPILOGUE:[0-9]+]], ![[SCALAR_REMAINDER:[0-9]+]]}
+; CHECK: ![[LOOP_EPILOGUE]] = distinct !{![[LOOP_EPILOGUE]], ![[FOLLOWUP_ALL]], ![[FOLLOWUP_EPILOGUE:[0-9]+]]}
 ; CHECK: ![[FOLLOWUP_EPILOGUE]] = !{!"FollowupEpilogue"}
-; CHECK: ![[SCALAR_REMAINDER]] = !{!"llvm.loop.vectorize.epilogue", i32 1}

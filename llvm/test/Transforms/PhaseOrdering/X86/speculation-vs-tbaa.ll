@@ -60,7 +60,7 @@ define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O23-NEXT:    store double 2.000000e+00, ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA8]]
 ; O23-NEXT:    [[INC]] = add nuw i64 [[K_02]], 1
 ; O23-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[NUMELEM]]
-; O23-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; O23-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; O23:       [[FOR_COND_CLEANUP]]:
 ; O23-NEXT:    ret void
 ;
@@ -112,10 +112,8 @@ for.cond.cleanup:                                 ; preds = %for.cond
 ; O23: [[META7]] = !{!"Simple C++ TBAA"}
 ; O23: [[DOUBLE_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
 ; O23: [[META9]] = !{!"double", [[META6]], i64 0}
-; O23: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]], [[META12:![0-9]+]], [[META13:![0-9]+]]}
+; O23: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
 ; O23: [[META11]] = !{!"llvm.loop.isvectorized", i32 1}
-; O23: [[META12]] = !{!"llvm.loop.vectorize.body", i32 1}
-; O23: [[META13]] = !{!"llvm.loop.unroll.runtime.disable"}
-; O23: [[LOOP14]] = distinct !{[[LOOP14]], [[META13]], [[META11]], [[META15:![0-9]+]]}
-; O23: [[META15]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; O23: [[META12]] = !{!"llvm.loop.unroll.runtime.disable"}
+; O23: [[LOOP13]] = distinct !{[[LOOP13]], [[META12]], [[META11]]}
 ;.

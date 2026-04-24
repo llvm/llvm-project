@@ -108,7 +108,7 @@ define void @wombat(i32 %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %a
 ; CHECK:       [[BB21]]:
 ; CHECK-NEXT:    [[ADD22]] = add nuw nsw i64 [[PHI]], 1
 ; CHECK-NEXT:    [[ICMP23:%.*]] = icmp eq i64 [[ADD22]], [[ZEXT]]
-; CHECK-NEXT:    br i1 [[ICMP23]], label %[[BB24]], label %[[BB8]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[ICMP23]], label %[[BB24]], label %[[BB8]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[BB24]]:
 ; CHECK-NEXT:    br label %[[BB25]]
 ; CHECK:       [[BB25]]:
@@ -179,11 +179,9 @@ attributes #0 = { uwtable vscale_range(1,16) "aarch64_pstate_sm_body" "target-fe
 ; CHECK: [[META10]] = !{[[META8]]}
 ; CHECK: [[META11]] = !{[[META6]]}
 ; CHECK: [[META12]] = !{[[META1]], [[META7]], [[META8]]}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META14:![0-9]+]], [[META15:![0-9]+]], [[META16:![0-9]+]], [[META17:![0-9]+]]}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META14:![0-9]+]], [[META15:![0-9]+]], [[META16:![0-9]+]]}
 ; CHECK: [[META14]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META15]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META16]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META17]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP18:![0-9]+]] = distinct !{[[LOOP18]], [[META14]], [[META15]], [[META19:![0-9]+]]}
-; CHECK: [[META19]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK: [[META16]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META14]], [[META15]]}
 ;.

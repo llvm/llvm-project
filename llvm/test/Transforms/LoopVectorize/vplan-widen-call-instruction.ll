@@ -60,7 +60,7 @@ define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr no
 ; CHECK-NEXT:    store double [[A_REDUCTION1_LCSSA]], ptr [[C_PTR]], align 8
 ; CHECK-NEXT:    [[INDVAR11]] = add nuw nsw i64 [[INDVAR1]], 1
 ; CHECK-NEXT:    [[FOR1_COND:%.*]] = icmp eq i64 [[INDVAR11]], 1000
-; CHECK-NEXT:    br i1 [[FOR1_COND]], label %[[EXIT]], label %[[FOR1_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[FOR1_COND]], label %[[EXIT]], label %[[FOR1_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -113,7 +113,7 @@ define void @call_to_non_intrinsic() {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add i64 [[OUTER_IV]], 1
 ; CHECK-NEXT:    [[OUTER_EC:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[OUTER_EC]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_EC]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -145,12 +145,10 @@ declare void @use()
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]]}
-; CHECK: [[META7]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]]}
+; CHECK: [[META5]] = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.

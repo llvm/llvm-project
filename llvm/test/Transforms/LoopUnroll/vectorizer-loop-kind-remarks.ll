@@ -18,9 +18,8 @@
 ; Epilogue vectorization is forced to exercise all four loop categories:
 ;
 ;   1. plain loop         – not touched by the vectorizer
-;   2. vectorized loop    – main vector body      (body only)
-;   3. remainder loop     – scalar cleanup         (epilogue only)
-;   4. vectorized remainder loop – epilogue vector (both flags)
+;   2. vectorized loop    – main vector body      (has vectorize.body)
+;   3. epilogue loop      – epilogue loop          (has vectorize.epilogue)
 ;
 ; Both stderr remarks and YAML structured output are checked.
 
@@ -28,7 +27,7 @@
 
 ; CHECK:     remark: test.cpp:1:1: unrolled loop by a factor of 2
 ; CHECK-NOT: remark: test.cpp:1:1: unrolled vectorized
-; CHECK-NOT: remark: test.cpp:1:1: unrolled remainder
+; CHECK-NOT: remark: test.cpp:1:1: unrolled epilogue
 
 define void @plain_loop(ptr noalias %A, i64 %n) !dbg !100 {
 entry:
@@ -49,8 +48,7 @@ exit:
 ;--- vectorizable_loop: vectorized with epilogue -> 3 unrolled sub-loops ------
 
 ; CHECK-DAG: remark: test.cpp:10:1: unrolled vectorized loop by a factor of 2
-; CHECK-DAG: remark: test.cpp:10:1: unrolled remainder loop by a factor of 2
-; CHECK-DAG: remark: test.cpp:10:1: unrolled vectorized remainder loop by a factor of 2
+; CHECK-DAG: remark: test.cpp:10:1: unrolled epilogue loop by a factor of 2
 
 define void @vectorizable_loop(ptr noalias %A, ptr noalias %B, i64 %n) !dbg !200 {
 entry:
@@ -83,13 +81,6 @@ exit:
 ; YAML:      Name:            PartialUnrolled
 ; YAML:      Function:        vectorizable_loop
 ; YAML:      Args:
-; YAML:        - String:          'unrolled vectorized remainder loop by a factor of '
-
-; YAML:      --- !Passed
-; YAML:      Pass:            loop-unroll
-; YAML:      Name:            PartialUnrolled
-; YAML:      Function:        vectorizable_loop
-; YAML:      Args:
 ; YAML:        - String:          'unrolled vectorized loop by a factor of '
 
 ; YAML:      --- !Passed
@@ -97,7 +88,7 @@ exit:
 ; YAML:      Name:            PartialUnrolled
 ; YAML:      Function:        vectorizable_loop
 ; YAML:      Args:
-; YAML:        - String:          'unrolled remainder loop by a factor of '
+; YAML:        - String:          'unrolled epilogue loop by a factor of '
 
 ;--- Metadata ------------------------------------------------------------------
 

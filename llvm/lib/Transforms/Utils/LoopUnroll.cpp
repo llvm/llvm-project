@@ -831,16 +831,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // Determine whether this loop originated from the vectorizer so we can
   // produce more informative remarks.
-  bool IsVectorBody = getBooleanLoopAttribute(L, "llvm.loop.vectorize.body");
-  bool IsEpilogue = getBooleanLoopAttribute(L, "llvm.loop.vectorize.epilogue");
-
-  StringRef LoopKind;
-  if (IsVectorBody && IsEpilogue)
-    LoopKind = "vectorized remainder ";
-  else if (IsVectorBody)
-    LoopKind = "vectorized ";
-  else if (IsEpilogue)
-    LoopKind = "remainder ";
+  StringRef LoopKind = getLoopVectorizeKindPrefix(L);
 
   // Report the unrolling decision.
   if (CompletelyUnroll) {

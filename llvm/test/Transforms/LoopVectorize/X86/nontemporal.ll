@@ -74,7 +74,7 @@ for.body:
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx2 = getelementptr inbounds i32, ptr %dst, i64 %indvars.iv
 ; Check that the store is not vectorized and that we don't lose the !nontemporal hint in it.
-; CHECK: store i32 %{{[0-9]+}}, ptr %arrayidx2, align 4, !nontemporal ![[NT:[0-9]+]]
+; CHECK: store i32 %{{[0-9]+}}, ptr %arrayidx2, align 4, !nontemporal !4
   store i32 %0, ptr %arrayidx2, align 4, !nontemporal !0
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
@@ -100,7 +100,7 @@ for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
 ; Check that the load is not vectorized and that we don't lose the !nontemporal hint in it.
-; CHECK: load i32, ptr %arrayidx, align 4, !nontemporal ![[NT]]
+; CHECK: load i32, ptr %arrayidx, align 4, !nontemporal !4
   %0 = load i32, ptr %arrayidx, align 4, !nontemporal !0
   %arrayidx2 = getelementptr inbounds i32, ptr %dst, i64 %indvars.iv
   store i32 %0, ptr %arrayidx2, align 4

@@ -171,8 +171,7 @@ attributes #3 = { nounwind }
 ; CHECK: [[CHAR_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
 ; CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
 ; CHECK: [[META7]] = !{!"Simple C++ TBAA"}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
 ; CHECK: [[META9]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
 ;.

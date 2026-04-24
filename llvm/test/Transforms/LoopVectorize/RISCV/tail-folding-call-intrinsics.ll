@@ -59,7 +59,7 @@ define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[DOT]], ptr [[GEP11]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -120,7 +120,7 @@ define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    store i32 [[DOT]], ptr [[GEP11]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -181,7 +181,7 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP18]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
@@ -197,7 +197,7 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[DOT]], ptr [[GEP11]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -240,7 +240,7 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP15]], ptr [[TMP16]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
 ; NO-VP-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -258,7 +258,7 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    store i32 [[DOT]], ptr [[GEP11]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -319,7 +319,7 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP18]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
@@ -335,7 +335,7 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[DOT]], ptr [[GEP11]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -378,7 +378,7 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP15]], ptr [[TMP16]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
 ; NO-VP-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -396,7 +396,7 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    store i32 [[DOT]], ptr [[GEP11]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -457,7 +457,7 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP18]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
@@ -473,7 +473,7 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[DOT]], ptr [[GEP11]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -516,7 +516,7 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP15]], ptr [[TMP16]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
 ; NO-VP-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -534,7 +534,7 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    store i32 [[DOT]], ptr [[GEP11]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -589,7 +589,7 @@ define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP16]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
@@ -603,7 +603,7 @@ define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[TMP19]], ptr [[GEP3]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -639,7 +639,7 @@ define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP12]], ptr [[TMP13]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
 ; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -655,7 +655,7 @@ define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store i32 [[TMP1]], ptr [[GEP3]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -707,7 +707,7 @@ define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP20]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP20]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
@@ -721,7 +721,7 @@ define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[TMP23]], ptr [[GEP3]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -757,7 +757,7 @@ define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP12]], ptr [[TMP13]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
 ; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -773,7 +773,7 @@ define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store i32 [[TMP1]], ptr [[GEP3]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -827,7 +827,7 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP18]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
@@ -843,7 +843,7 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[CONV3]], ptr [[GEP5]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -881,7 +881,7 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP14]], ptr [[TMP15]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
 ; NO-VP-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -899,7 +899,7 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store i32 [[CONV3]], ptr [[GEP5]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -955,7 +955,7 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP18]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP18]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
@@ -971,7 +971,7 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[CONV3]], ptr [[GEP5]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -1009,7 +1009,7 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP14]], ptr [[TMP15]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
 ; NO-VP-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1027,7 +1027,7 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store i32 [[CONV3]], ptr [[GEP5]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -1081,7 +1081,7 @@ define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP16]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
@@ -1095,7 +1095,7 @@ define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[COND]], ptr [[GEP9]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP21:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -1131,7 +1131,7 @@ define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP12]], ptr [[TMP13]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
 ; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1147,7 +1147,7 @@ define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store i32 [[COND]], ptr [[GEP9]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP21:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -1213,7 +1213,7 @@ define void @log10(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store <4 x float> [[TMP2]], ptr [[TMP3]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; NO-VP-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1229,7 +1229,7 @@ define void @log10(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    store float [[COND]], ptr [[GEP9]], align 4
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP23:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP21:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -1254,51 +1254,47 @@ exit:
 
 
 ;.
-; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; IF-EVL: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
-; IF-EVL: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META5]]}
-; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META5]]}
-; IF-EVL: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META5]]}
-; IF-EVL: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META5]]}
-; IF-EVL: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]], [[META5]]}
-; IF-EVL: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]], [[META5]]}
-; IF-EVL: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]], [[META5]]}
-; IF-EVL: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]], [[META5]]}
+; IF-EVL: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IF-EVL: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
+; IF-EVL: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
+; IF-EVL: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]]}
+; IF-EVL: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]]}
+; IF-EVL: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]]}
+; IF-EVL: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]]}
 ;.
-; NO-VP: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; NO-VP: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; NO-VP: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; NO-VP: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; NO-VP: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; NO-VP: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
-; NO-VP: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; NO-VP: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]], [[META5]]}
-; NO-VP: [[LOOP22]] = distinct !{[[LOOP22]], [[META1]], [[META2]], [[META3]]}
-; NO-VP: [[LOOP23]] = distinct !{[[LOOP23]], [[META1]], [[META5]]}
+; NO-VP: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; NO-VP: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; NO-VP: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; NO-VP: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; NO-VP: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
+; NO-VP: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
+; NO-VP: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]]}
+; NO-VP: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]]}
+; NO-VP: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]]}
+; NO-VP: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]]}
+; NO-VP: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]]}
 ;.

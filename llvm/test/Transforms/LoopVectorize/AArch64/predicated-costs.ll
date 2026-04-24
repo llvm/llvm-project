@@ -140,7 +140,7 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 4
 ; CHECK-NEXT:    [[IV_NEXT_EXT:%.*]] = zext i8 [[IV_NEXT]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N_SUB]], [[IV_NEXT_EXT]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -320,7 +320,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP42:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP42]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP42]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[END]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -344,7 +344,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -489,9 +489,9 @@ define void @getPredBlockCostDivisor_truncate(i32 %0, i1 %c1, i1 %c2, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP0]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[C1]], label %[[IF_1:.*]], label %[[LATCH]], !prof [[PROF17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF_1:.*]], label %[[LATCH]], !prof [[PROF15:![0-9]+]]
 ; CHECK:       [[IF_1]]:
-; CHECK-NEXT:    br i1 [[C2]], label %[[IF_2:.*]], label %[[LATCH]], !prof [[PROF17]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[IF_2:.*]], label %[[LATCH]], !prof [[PROF15]]
 ; CHECK:       [[IF_2]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
@@ -538,14 +538,12 @@ exit:
 ; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
 ; CHECK: [[META6]] = distinct !{[[META6]], [[META2]]}
 ; CHECK: [[META7]] = !{[[META1]], [[META4]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
 ; CHECK: [[META9]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META12]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META9]], [[META10]], [[META14:![0-9]+]]}
-; CHECK: [[META14]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META11]], [[META12]]}
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META12]], [[META10]], [[META14]]}
-; CHECK: [[PROF17]] = !{!"branch_weights", i32 0, i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
+; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META11]], [[META10]]}
+; CHECK: [[PROF15]] = !{!"branch_weights", i32 0, i32 1}
 ;.

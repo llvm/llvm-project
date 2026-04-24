@@ -62,7 +62,7 @@ define void @test_assume(ptr %arr, i64 %n) {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -133,7 +133,7 @@ define void @test_assume_non_canonical_iv(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 6)
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -162,7 +162,7 @@ define void @test_assume_non_canonical_iv(ptr %arr, i64 %n) {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -230,7 +230,7 @@ define void @test_lifetime(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -253,7 +253,7 @@ define void @test_lifetime(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -315,7 +315,7 @@ define void @test_sideeffect(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -337,7 +337,7 @@ define void @test_sideeffect(ptr %arr, i64 %n) {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -399,7 +399,7 @@ define void @test_pseudoprobe(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -421,7 +421,7 @@ define void @test_pseudoprobe(ptr %arr, i64 %n) {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -456,19 +456,17 @@ exit:
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META4]], [[META2]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]], [[META4]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META4]], [[META2]], [[META6]]}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]], [[META3]], [[META4]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META4]], [[META2]], [[META6]]}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]], [[META3]], [[META4]]}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META4]], [[META2]], [[META6]]}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META2]], [[META3]], [[META4]]}
-; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META4]], [[META2]], [[META6]]}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META3]], [[META2]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META3]], [[META2]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META3]], [[META2]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META3]], [[META2]]}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META3]], [[META2]]}
 ;.

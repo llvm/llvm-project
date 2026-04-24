@@ -69,7 +69,7 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER9]], label %[[VEC_EPILOG_PH]], !prof [[PROF11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER9]], label %[[VEC_EPILOG_PH]], !prof [[PROF10:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[N_VEC11:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483644
@@ -86,7 +86,7 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    store <4 x double> [[TMP40]], ptr [[TMP41]], align 8, !tbaa [[DOUBLE_TBAA3]]
 ; CHECK-NEXT:    [[INDEX_NEXT16]] = add nuw i64 [[INDEX12]], 4
 ; CHECK-NEXT:    [[TMP42:%.*]] = icmp eq i64 [[INDEX_NEXT16]], [[N_VEC11]]
-; CHECK-NEXT:    br i1 [[TMP42]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP42]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N17:%.*]] = icmp eq i64 [[N_VEC11]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[CMP_N17]], label %[[FOR_END]], label %[[FOR_BODY_PREHEADER9]]
@@ -110,7 +110,7 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL]] = add nuw nsw i64 [[INDVARS_IV_PROL]], 1
 ; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
 ; CHECK-NEXT:    [[PROL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
-; CHECK-NEXT:    br i1 [[PROL_ITER_CMP_NOT]], label %[[FOR_BODY_PROL_LOOPEXIT]], label %[[FOR_BODY_PROL]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[PROL_ITER_CMP_NOT]], label %[[FOR_BODY_PROL_LOOPEXIT]], label %[[FOR_BODY_PROL]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[FOR_BODY_PROL_LOOPEXIT]]:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ [[INDVARS_IV_PH]], %[[FOR_BODY_PREHEADER9]] ], [ [[INDVARS_IV_NEXT_PROL]], %[[FOR_BODY_PROL]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub nsw i64 [[INDVARS_IV_PH]], [[WIDE_TRIP_COUNT]]
@@ -177,7 +177,7 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    store double [[TMP37]], ptr [[ARRAYIDX2_7]], align 8, !tbaa [[DOUBLE_TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV]], 8
 ; CHECK-NEXT:    [[EXITCOND_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_7]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_7]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_7]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -229,14 +229,12 @@ attributes #0 = { nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="
 ; CHECK: [[META4]] = !{!"double", [[META5:![0-9]+]], i64 0}
 ; CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
 ; CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
 ; CHECK: [[META8]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META9]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META10]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[PROF11]] = !{!"branch_weights", i32 4, i32 12}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META8]], [[META13:![0-9]+]], [[META9]], [[META10]]}
-; CHECK: [[META13]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META15:![0-9]+]]}
-; CHECK: [[META15]] = !{!"llvm.loop.unroll.disable"}
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META8]], [[META13]], [[META13]]}
+; CHECK: [[META9]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[PROF10]] = !{!"branch_weights", i32 4, i32 12}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META8]], [[META9]]}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META13:![0-9]+]]}
+; CHECK: [[META13]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META8]]}
 ;.

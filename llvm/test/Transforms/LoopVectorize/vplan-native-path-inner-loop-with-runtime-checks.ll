@@ -106,7 +106,7 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP40]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[ARRAYIDX29]], align 8
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[INNER_IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[INNER]], label %[[OUTER_LATCH]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[INNER]], label %[[OUTER_LATCH]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add i64 [[OUTER_IV]], 1
 ; CHECK-NEXT:    [[OUTER_EC:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 100
@@ -148,10 +148,8 @@ exit:
 ; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
 ; CHECK: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META7]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META10:![0-9]+]]}
-; CHECK: [[META10]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META6]]}
 ;.

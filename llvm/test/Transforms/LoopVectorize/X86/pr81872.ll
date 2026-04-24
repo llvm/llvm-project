@@ -78,9 +78,8 @@ attributes #0 = {"target-cpu"="haswell" "target-features"="+avx2" }
 
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 23}
-; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
+; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[META5]] = !{!"llvm.loop.estimated_trip_count", i32 24}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[META4]] = !{!"llvm.loop.estimated_trip_count", i32 24}
 ;.

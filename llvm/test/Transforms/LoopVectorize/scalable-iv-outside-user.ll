@@ -40,7 +40,7 @@ define i32 @iv_live_out_wide(ptr %dst) {
 ; CHECK-NEXT:    store i16 0, ptr [[GEP_DST]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[STEP_2]], [[IV]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[IV_NEXT]], 2000
-; CHECK-NEXT:    br i1 [[CMP_I]], label %[[LOOP]], label %[[E_EXIT]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_I]], label %[[LOOP]], label %[[E_EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[E_EXIT]]:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -63,10 +63,8 @@ e.exit:
   ret i32 %res
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.

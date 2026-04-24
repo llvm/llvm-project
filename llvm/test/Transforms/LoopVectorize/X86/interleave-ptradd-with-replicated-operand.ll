@@ -122,7 +122,7 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[PTR_IV]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[IV]], 100
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[P_4_LCSSA:%.*]] = phi ptr [ [[P_4]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret ptr [[P_4_LCSSA]]
@@ -150,10 +150,8 @@ exit:
 
 attributes #0 = { "target-cpu"="znver2" }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.

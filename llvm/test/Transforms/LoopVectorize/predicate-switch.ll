@@ -91,7 +91,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC1:       [[LOOP_LATCH]]:
 ; IC1-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i8, ptr [[PTR_IV]], i64 1
 ; IC1-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; IC1-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
+; IC1-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IC1:       [[EXIT]]:
 ; IC1-NEXT:    ret void
 ;
@@ -229,7 +229,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC2:       [[LOOP_LATCH]]:
 ; IC2-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i8, ptr [[PTR_IV]], i64 1
 ; IC2-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; IC2-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
+; IC2-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    ret void
 ;
@@ -414,7 +414,7 @@ define void @switch_all_to_default(ptr %start) {
 ; IC1-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP1]], align 1
 ; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IC1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; IC1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IC1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IC1:       [[MIDDLE_BLOCK]]:
 ; IC1-NEXT:    br label %[[EXIT:.*]]
 ; IC1:       [[EXIT]]:
@@ -434,7 +434,7 @@ define void @switch_all_to_default(ptr %start) {
 ; IC2-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP5]], align 1
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IC2:       [[MIDDLE_BLOCK]]:
 ; IC2-NEXT:    br label %[[EXIT:.*]]
 ; IC2:       [[EXIT]]:
@@ -474,7 +474,7 @@ define void @switch_unconditional(ptr %start) {
 ; IC1-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
 ; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IC1-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; IC1-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IC1-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IC1:       [[MIDDLE_BLOCK]]:
 ; IC1-NEXT:    br label %[[EXIT:.*]]
 ; IC1:       [[EXIT]]:
@@ -494,7 +494,7 @@ define void @switch_unconditional(ptr %start) {
 ; IC2-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IC2-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; IC2-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IC2-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IC2:       [[MIDDLE_BLOCK]]:
 ; IC2-NEXT:    br label %[[EXIT:.*]]
 ; IC2:       [[EXIT]]:
@@ -543,7 +543,7 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC1-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[VEC_IND]]
 ; IC1-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
-; IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META8:![0-9]+]]
+; IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META6:![0-9]+]]
 ; IC1-NEXT:    [[TMP5:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD]], splat (i32 10)
 ; IC1-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
 ; IC1-NEXT:    [[PREDPHI2:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI]]
@@ -554,7 +554,7 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IC1-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; IC1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; IC1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; IC1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IC1:       [[MIDDLE_BLOCK]]:
 ; IC1-NEXT:    br label %[[EXIT:.*]]
 ; IC1:       [[SCALAR_PH]]:
@@ -574,7 +574,7 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC1-NEXT:    store i32 0, ptr [[GEP_1]], align 4
 ; IC1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
+; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; IC1:       [[EXIT]]:
 ; IC1-NEXT:    ret void
 ;
@@ -601,8 +601,8 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC2-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
 ; IC2-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[STEP_ADD]]
 ; IC2-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i64 2
-; IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 4, !alias.scope [[META8:![0-9]+]]
-; IC2-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP8]], align 4, !alias.scope [[META8]]
+; IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 4, !alias.scope [[META6:![0-9]+]]
+; IC2-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP8]], align 4, !alias.scope [[META6]]
 ; IC2-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD]], splat (i32 10)
 ; IC2-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD2]], splat (i32 10)
 ; IC2-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
@@ -620,7 +620,7 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IC2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; IC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IC2:       [[MIDDLE_BLOCK]]:
 ; IC2-NEXT:    br label %[[EXIT:.*]]
 ; IC2:       [[SCALAR_PH]]:
@@ -640,7 +640,7 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC2-NEXT:    store i32 0, ptr [[GEP_1]], align 4
 ; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
+; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    ret void
 ;
@@ -669,31 +669,27 @@ exit:
 }
 
 ;.
-; IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IC1: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; IC1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IC1: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; IC1: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; IC1: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
-; IC1: [[META8]] = !{[[META9:![0-9]+]]}
-; IC1: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]]}
-; IC1: [[META10]] = distinct !{[[META10]], !"LVerDomain"}
-; IC1: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]], [[META3]]}
-; IC1: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META5]]}
+; IC1: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IC1: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; IC1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; IC1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; IC1: [[META6]] = !{[[META7:![0-9]+]]}
+; IC1: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
+; IC1: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; IC1: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
+; IC1: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ;.
-; IC2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; IC2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IC2: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; IC2: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IC2: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; IC2: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; IC2: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; IC2: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
-; IC2: [[META8]] = !{[[META9:![0-9]+]]}
-; IC2: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]]}
-; IC2: [[META10]] = distinct !{[[META10]], !"LVerDomain"}
-; IC2: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]], [[META3]]}
-; IC2: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META5]]}
+; IC2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IC2: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; IC2: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; IC2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; IC2: [[META6]] = !{[[META7:![0-9]+]]}
+; IC2: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
+; IC2: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; IC2: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
+; IC2: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ;.

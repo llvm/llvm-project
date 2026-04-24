@@ -99,10 +99,9 @@ declare void @llvm.lifetime.end.p0(ptr nocapture)
 ; CHECK: [[META4]] = !{!"float", [[META5:![0-9]+]], i64 0}
 ; CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
 ; CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
 ; CHECK: [[META8]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META9]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META11]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META12]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[META11]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.

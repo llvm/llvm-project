@@ -51,7 +51,7 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC2-NEXT:    [[RDX_NEXT]] = add nsw i32 [[MUL]], [[RDX]]
 ; IC2-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; IC2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IC2-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; IC2-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
 ; IC2-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
@@ -116,7 +116,7 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC4-NEXT:    [[RDX_NEXT]] = add nsw i32 [[MUL]], [[RDX]]
 ; IC4-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; IC4-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IC4-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; IC4-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IC4:       [[EXIT]]:
 ; IC4-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP15]], %[[MIDDLE_BLOCK]] ]
 ; IC4-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
@@ -140,17 +140,13 @@ exit:
   ret i32 %rdx.next
 }
 ;.
-; IC2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; IC2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IC2: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; IC2: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IC2: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; IC2: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; IC2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IC2: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.
-; IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IC4: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; IC4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IC4: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; IC4: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; IC4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.

@@ -56,7 +56,7 @@ define i64 @select_non_const_iv_start_signed_guard(ptr %a, i64 %rdx_start, i64 %
 ; CHECK-VF4IC1-NEXT:    [[COND]] = select i1 [[CMP1]], i64 [[IV]], i64 [[RDX_07]]
 ; CHECK-VF4IC1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; CHECK-VF4IC1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-VF4IC1:       [[EXIT_LOOPEXIT]]:
 ; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[EXIT]]
@@ -146,7 +146,7 @@ define i64 @select_non_const_iv_start_signed_guard(ptr %a, i64 %rdx_start, i64 %
 ; CHECK-VF4IC4-NEXT:    [[COND]] = select i1 [[CMP1]], i64 [[IV]], i64 [[RDX_07]]
 ; CHECK-VF4IC4-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; CHECK-VF4IC4-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-VF4IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-VF4IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-VF4IC4:       [[EXIT_LOOPEXIT]]:
 ; CHECK-VF4IC4-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC4-NEXT:    br label %[[EXIT]]
@@ -229,7 +229,7 @@ define i64 @select_non_const_iv_start_signed_guard(ptr %a, i64 %rdx_start, i64 %
 ; CHECK-VF1IC4-NEXT:    [[COND1]] = select i1 [[CMP2]], i64 [[IV1]], i64 [[RDX_7]]
 ; CHECK-VF1IC4-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV1]], 1
 ; CHECK-VF1IC4-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-VF1IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-VF1IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-VF1IC4:       [[EXIT_LOOPEXIT]]:
 ; CHECK-VF1IC4-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND1]], %[[FOR_BODY1]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF1IC4-NEXT:    br label %[[EXIT]]
@@ -295,7 +295,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-VF4IC1-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF4IC1-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-VF4IC1-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
 ; CHECK-VF4IC1-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP8]], <4 x i1> [[TMP7]], i32 [[TMP10]])
@@ -315,7 +315,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC1-NEXT:    [[COND]] = select i1 [[CMP1]], i32 [[TMP13]], i32 [[RDX_07]]
 ; CHECK-VF4IC1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; CHECK-VF4IC1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-VF4IC1:       [[EXIT_LOOPEXIT]]:
 ; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i32 [ [[COND]], %[[FOR_BODY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[EXIT]]
@@ -390,7 +390,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-VF4IC4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD_3]], splat (i32 4)
 ; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF4IC4-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-VF4IC4-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
 ; CHECK-VF4IC4-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP8]], <4 x i1> [[TMP7]], i32 [[TMP10]])
@@ -413,7 +413,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC4-NEXT:    [[COND]] = select i1 [[CMP1]], i32 [[TMP13]], i32 [[RDX_07]]
 ; CHECK-VF4IC4-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; CHECK-VF4IC4-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-VF4IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-VF4IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-VF4IC4:       [[EXIT_LOOPEXIT]]:
 ; CHECK-VF4IC4-NEXT:    [[COND_LCSSA:%.*]] = phi i32 [ [[COND]], %[[FOR_BODY]] ], [ [[TMP36]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC4-NEXT:    br label %[[EXIT]]
@@ -486,7 +486,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF1IC4-NEXT:    [[TMP41]] = select i1 [[TMP33]], i32 [[TMP14]], i32 [[VEC_PHI3]]
 ; CHECK-VF1IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-VF1IC4-NEXT:    [[TMP42:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF1IC4-NEXT:    br i1 [[TMP42]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-VF1IC4-NEXT:    br i1 [[TMP42]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF1IC4:       [[MIDDLE_BLOCK]]:
 ; CHECK-VF1IC4-NEXT:    [[TMP43:%.*]] = select i1 [[TMP34]], i32 [[TMP38]], i32 [[RDX_START]]
 ; CHECK-VF1IC4-NEXT:    [[TMP44:%.*]] = select i1 [[TMP35]], i32 [[TMP39]], i32 [[TMP43]]
@@ -508,7 +508,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF1IC4-NEXT:    [[COND]] = select i1 [[CMP2]], i32 [[TMP48]], i32 [[RDX_07]]
 ; CHECK-VF1IC4-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV1]], 1
 ; CHECK-VF1IC4-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-VF1IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-VF1IC4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-VF1IC4:       [[EXIT_LOOPEXIT]]:
 ; CHECK-VF1IC4-NEXT:    [[COND_LCSSA:%.*]] = phi i32 [ [[COND]], %[[FOR_BODY1]] ], [ [[TMP46]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF1IC4-NEXT:    br label %[[EXIT]]
@@ -542,30 +542,24 @@ exit:
   ret i32 %idx.0.lcssa
 }
 ;.
-; CHECK-VF4IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK-VF4IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-VF4IC1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VF4IC1: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK-VF4IC1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-VF4IC1: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK-VF4IC1: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK-VF4IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; CHECK-VF4IC1: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
+; CHECK-VF4IC1: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VF4IC1: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK-VF4IC1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK-VF4IC1: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.
-; CHECK-VF4IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK-VF4IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-VF4IC4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VF4IC4: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK-VF4IC4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-VF4IC4: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK-VF4IC4: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK-VF4IC4: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; CHECK-VF4IC4: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META1]], [[META5]]}
+; CHECK-VF4IC4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VF4IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK-VF4IC4: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK-VF4IC4: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.
-; CHECK-VF1IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK-VF1IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-VF1IC4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VF1IC4: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK-VF1IC4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-VF1IC4: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
-; CHECK-VF1IC4: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
-; CHECK-VF1IC4: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
-; CHECK-VF1IC4: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META5]]}
+; CHECK-VF1IC4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VF1IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK-VF1IC4: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK-VF1IC4: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
 ;.

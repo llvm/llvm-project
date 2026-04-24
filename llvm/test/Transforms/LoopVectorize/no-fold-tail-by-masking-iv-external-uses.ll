@@ -89,7 +89,7 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[INC]] = add i8 [[I]], 1
 ; CHECK-NEXT:    [[CONV2]] = zext i8 [[INC]] to i64
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[CONV2]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[LOAD_VAL]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[LOAD_VAL]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       load_val:
 ; CHECK-NEXT:    [[FINAL:%.*]] = phi i64 [ [[CONV]], [[LOOP]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[FINAL]]
@@ -134,11 +134,9 @@ done:
 !2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ;.

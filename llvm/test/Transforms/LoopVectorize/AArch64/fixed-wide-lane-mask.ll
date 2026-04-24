@@ -87,13 +87,11 @@ for.end:
 attributes #0 = { nounwind "target-features"="+neon,+sve" }
 
 ;.
-; CHECK-UF1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK-UF1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-UF1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-UF1: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK-UF1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-UF1: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.
-; CHECK-UF4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK-UF4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-UF4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-UF4: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK-UF4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-UF4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.

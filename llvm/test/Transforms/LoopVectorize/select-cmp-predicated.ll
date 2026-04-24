@@ -71,7 +71,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    [[R_1]] = phi i32 [ [[R_012]], %[[FOR_BODY]] ], [ [[SPEC_SELECT]], %[[IF_THEN]] ]
 ; CHECK-VF2IC1-NEXT:    [[INC]] = add nuw nsw i64 [[I_013]], 1
 ; CHECK-VF2IC1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; CHECK-VF2IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-VF2IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-VF2IC1:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-VF2IC1-NEXT:    [[R_1_LCSSA:%.*]] = phi i32 [ [[R_1]], %[[FOR_INC]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF2IC1-NEXT:    ret i32 [[R_1_LCSSA]]
@@ -146,7 +146,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF1IC2-NEXT:    [[R_1]] = phi i32 [ [[R_012]], %[[FOR_BODY]] ], [ [[SPEC_SELECT]], %[[IF_THEN]] ]
 ; CHECK-VF1IC2-NEXT:    [[INC]] = add nuw nsw i64 [[I_013]], 1
 ; CHECK-VF1IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; CHECK-VF1IC2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-VF1IC2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-VF1IC2:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-VF1IC2-NEXT:    [[R_1_LCSSA:%.*]] = phi i32 [ [[R_1]], %[[FOR_INC]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF1IC2-NEXT:    ret i32 [[R_1_LCSSA]]
@@ -180,17 +180,13 @@ for.end.loopexit:
   ret i32 %r.1.lcssa
 }
 ;.
-; CHECK-VF2IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK-VF2IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-VF2IC1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VF2IC1: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK-VF2IC1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-VF2IC1: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]], [[META5:![0-9]+]]}
-; CHECK-VF2IC1: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK-VF2IC1: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VF2IC1: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.
-; CHECK-VF1IC2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK-VF1IC2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-VF1IC2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-VF1IC2: [[META2]] = !{!"llvm.loop.vectorize.body", i32 1}
-; CHECK-VF1IC2: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-VF1IC2: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META5:![0-9]+]]}
-; CHECK-VF1IC2: [[META5]] = !{!"llvm.loop.vectorize.epilogue", i32 1}
+; CHECK-VF1IC2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VF1IC2: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ;.
