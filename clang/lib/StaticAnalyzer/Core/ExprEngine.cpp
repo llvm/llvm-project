@@ -1953,7 +1953,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
 
       ExplodedNodeSet Tmp;
-      NodeBuilder Bldr2(PreVisit, Tmp, *currBldrCtx);
 
       const Expr *ArgE;
       if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S))
@@ -1980,7 +1979,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         if (IsTemporary)
           State = createTemporaryRegionIfNeeded(State, SF, cast<Expr>(S),
                                                 cast<Expr>(S));
-        Bldr2.generateNode(S, I, State);
+        Tmp.insert(Engine.makePostStmtNode(S, State, I));
       }
 
       getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
@@ -1999,7 +1998,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
 
       ExplodedNodeSet Tmp;
-      NodeBuilder Bldr2(preVisit, Tmp, *currBldrCtx);
 
       const auto *Ex = cast<Expr>(S);
       QualType resultType = Ex->getType();
@@ -2023,7 +2021,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
             State = escapeValues(State, Val, PSK_EscapeOther);
           }
 
-        Bldr2.generateNode(S, N, State);
+        Tmp.insert(Engine.makePostStmtNode(S, State, N));
       }
 
       getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
