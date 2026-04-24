@@ -15,6 +15,9 @@
 #include "src/pthread/pthread_mutex_lock.h"
 #include "src/pthread/pthread_mutex_trylock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
+#include "src/pthread/pthread_mutexattr_destroy.h"
+#include "src/pthread/pthread_mutexattr_init.h"
+#include "src/pthread/pthread_mutexattr_settype.h"
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
@@ -143,6 +146,73 @@ void trylock_test() {
   LIBC_NAMESPACE::pthread_mutex_destroy(&trylock_mutex);
 }
 
+void *trylock_other_thread(void *arg) {
+  auto *mutex = reinterpret_cast<pthread_mutex_t *>(arg);
+  int result = LIBC_NAMESPACE::pthread_mutex_trylock(mutex);
+  if (result == 0)
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(mutex), 0);
+  return reinterpret_cast<void *>(uintptr_t(result));
+}
+
+void recursive_mutex_test() {
+  pthread_mutexattr_t attr;
+  pthread_mutex_t recursive_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_settype(&attr,
+                                                      PTHREAD_MUTEX_RECURSIVE),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&recursive_mutex, &attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
+
+  ASSERT_TRUE(recursive_mutex.__recursive);
+  ASSERT_EQ(recursive_mutex.__owner, 0);
+  ASSERT_EQ(recursive_mutex.__lock_count, size_t(0));
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&recursive_mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&recursive_mutex), 0);
+
+  pthread_t thread;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&thread, nullptr, trylock_other_thread,
+                                           &recursive_mutex),
+            0);
+  void *retval = nullptr;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(thread, &retval), 0);
+  ASSERT_EQ(uintptr_t(retval), uintptr_t(EBUSY));
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&recursive_mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&recursive_mutex), 0);
+  ASSERT_EQ(recursive_mutex.__owner, 0);
+  ASSERT_EQ(recursive_mutex.__lock_count, size_t(0));
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&recursive_mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&recursive_mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&recursive_mutex), 0);
+}
+
+void initializer_acts_the_same_as_null_attr() {
+  pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t mutex_from_init;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&mutex_from_init, nullptr), 0);
+
+  ASSERT_EQ(mutex.__ftxw.__word, mutex_from_init.__ftxw.__word);
+  ASSERT_EQ(mutex.__priority_inherit, mutex_from_init.__priority_inherit);
+  ASSERT_EQ(mutex.__recursive, mutex_from_init.__recursive);
+  ASSERT_EQ(mutex.__robust, mutex_from_init.__robust);
+  ASSERT_EQ(mutex.__pshared, mutex_from_init.__pshared);
+  ASSERT_EQ(mutex.__owner, mutex_from_init.__owner);
+  ASSERT_EQ(mutex.__lock_count, mutex_from_init.__lock_count);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&mutex), EBUSY);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&mutex), 0);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&mutex_from_init), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&mutex_from_init), EBUSY);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&mutex_from_init), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&mutex_from_init), 0);
+}
+
 static constexpr int THREAD_COUNT = 10;
 static pthread_mutex_t multiple_waiter_lock;
 static pthread_mutex_t counter_lock;
@@ -199,14 +269,12 @@ void multiple_waiters() {
   LIBC_NAMESPACE::pthread_mutex_destroy(&counter_lock);
 }
 
-// Test the initializer
-[[maybe_unused]]
-static pthread_mutex_t test_initializer = PTHREAD_MUTEX_INITIALIZER;
-
 TEST_MAIN() {
   relay_counter();
   wait_and_step();
   trylock_test();
+  recursive_mutex_test();
+  initializer_acts_the_same_as_null_attr();
   multiple_waiters();
   return 0;
 }

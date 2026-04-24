@@ -138,6 +138,30 @@ void wait_and_step() {
   LIBC_NAMESPACE::mtx_destroy(&step_lock);
 }
 
+void recursive_mutex_test() {
+  mtx_t recursive_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&recursive_mutex, mtx_recursive),
+            static_cast<int>(thrd_success));
+
+  ASSERT_TRUE(recursive_mutex.__recursive);
+  ASSERT_EQ(recursive_mutex.__owner, 0);
+  ASSERT_EQ(recursive_mutex.__lock_count, size_t(0));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&recursive_mutex),
+            static_cast<int>(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&recursive_mutex),
+            static_cast<int>(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&recursive_mutex),
+            static_cast<int>(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&recursive_mutex),
+            static_cast<int>(thrd_success));
+  ASSERT_EQ(recursive_mutex.__owner, 0);
+  ASSERT_EQ(recursive_mutex.__lock_count, size_t(0));
+
+  LIBC_NAMESPACE::mtx_destroy(&recursive_mutex);
+}
+
 static constexpr int THREAD_COUNT = 10;
 static mtx_t multiple_waiter_lock;
 static mtx_t counter_lock;
@@ -197,6 +221,7 @@ void multiple_waiters() {
 TEST_MAIN() {
   relay_counter();
   wait_and_step();
+  recursive_mutex_test();
   multiple_waiters();
   return 0;
 }
