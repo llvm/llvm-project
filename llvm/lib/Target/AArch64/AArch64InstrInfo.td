@@ -395,8 +395,6 @@ def HasCPA           : Predicate<"Subtarget->hasCPA()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def HasTLBID         : Predicate<"Subtarget->hasTLBID()">,
                                  AssemblerPredicateWithAll<(all_of FeatureTLBID), "tlbid">;
-def HasMPAMv2        : Predicate<"Subtarget->hasMPAMv2()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureMPAMv2), "mpamv2">;
 def HasMTETC         : Predicate<"Subtarget->hasMTETC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureMTETC), "mtetc">;
 def HasGCIE          : Predicate<"Subtarget->hasGCIE()">,
@@ -1567,19 +1565,6 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 def : InstAlias<"nop", (NOP)>;
 
 def STSHH: STSHHI;
-
-let hasSideEffects = 1, mayStore = 1, isCodeGenOnly = 1 in {
-let Size = 8 in
-def STSHH_ATOMIC_STORE_SZ
-    : Pseudo<(outs), (ins GPR64:$val, GPR64sp:$addr, i32imm:$order,
-                          i32imm:$policy, i32imm:$size), []>,
-             Sched<[WriteAtomic]>;
-}
-
-def : Pat<(int_aarch64_stshh_atomic_store GPR64sp:$addr, GPR64:$val,
-           (i32 timm:$order), (i32 timm:$policy), (i32 timm:$size)),
-          (STSHH_ATOMIC_STORE_SZ GPR64:$val, GPR64sp:$addr, (i32 timm:$order),
-           (i32 timm:$policy), (i32 timm:$size))>;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.

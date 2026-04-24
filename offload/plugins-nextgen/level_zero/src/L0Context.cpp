@@ -38,6 +38,13 @@ Error L0ContextTy::init() {
     cleanupOnError();
     return Err;
   }
+
+  ze_result_t RC;
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zexKernelGetArgumentSize", (void **)&zexKernelGetArgumentSize);
+  if (RC != ZE_RESULT_SUCCESS)
+    zexKernelGetArgumentSize = nullptr;
+
   return Plugin::success();
 }
 
