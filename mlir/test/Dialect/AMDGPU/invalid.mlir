@@ -522,8 +522,6 @@ func.func @sparse_mfma_abid_invalid_for_16bit(%a: vector<4xf16>, %b: vector<8xf1
 
 // -----
 
-// gfx950 16-bit variants (m=16,k=64 and m=32,k=32 with f16/bf16 source) only
-// have 2 index sets, so ABID must be in [0, 1] -- not [0, 3] as cdna3 16-bit.
 func.func @sparse_mfma_abid_invalid_for_gfx950_16bit(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<4xf32>, %idx: vector<2xi16>) -> vector<4xf32> {
   // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be in [0, 1] for this variant}}
   %d = amdgpu.sparse_mfma 16x16x64 %a * %b + %c sparse(%idx : vector<2xi16>) { abid = 2 : i32, cbsz = 0 : i32 } : vector<8xf16>, vector<16xf16>, vector<4xf32>
@@ -532,8 +530,6 @@ func.func @sparse_mfma_abid_invalid_for_gfx950_16bit(%a: vector<8xf16>, %b: vect
 
 // -----
 
-// gfx950 8-bit variants (m=16,k=128 and m=32,k=64) ignore CBSZ/ABID; both
-// must be 0 in IR.
 func.func @sparse_mfma_gfx950_8bit_nonzero_cbsz(%a: vector<16xi8>, %b: vector<32xi8>, %c: vector<4xi32>, %idx: vector<2xi16>) -> vector<4xi32> {
   // expected-error@+1 {{'amdgpu.sparse_mfma' op CBSZ must be 0 for this variant (field is ignored by hardware)}}
   %d = amdgpu.sparse_mfma 16x16x128 %a * %b + %c sparse(%idx : vector<2xi16>) { abid = 0 : i32, cbsz = 1 : i32 } : vector<16xi8>, vector<32xi8>, vector<4xi32>
@@ -566,8 +562,6 @@ func.func @sparse_mfma_wrong_idx_type_for_16bit(%a: vector<4xf16>, %b: vector<8x
 
 // -----
 
-// gfx950 16-bit variants (k=64 with f16/bf16) take <2xi16>, not <4xi8>:
-// the prior verifier rule that keyed only on source bitwidth was wrong here.
 func.func @sparse_mfma_wrong_idx_type_for_gfx950_16bit(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<4xf32>, %idx: vector<4xi8>) -> vector<4xf32> {
   // expected-error@+1 {{'amdgpu.sparse_mfma' op expected vector<2xi16> sparse indices for this variant, but got 'vector<4xi8>'}}
   %d = amdgpu.sparse_mfma 16x16x64 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xf16>, vector<16xf16>, vector<4xf32>
