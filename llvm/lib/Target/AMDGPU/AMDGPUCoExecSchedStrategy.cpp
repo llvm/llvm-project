@@ -429,7 +429,8 @@ bool CandidateHeuristics::tryEffectiveStall(
         *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
     HardwareUnitInfo *HWUI = getHWUIFromFlavor(Flavor);
 
-    if (HWUI->getBufferSize() <= 1)
+    // A BufferSize of 0 means "unlimited" buffer, thus we will never fill it.
+    if (HWUI->getBufferSize() == 0)
       return 0;
 
     // getBufferAvailableCycle assumes top-down scheduling.
