@@ -2860,17 +2860,6 @@ struct PointerFieldHolder {
 };
 
 // FIXME: https://github.com/llvm/llvm-project/issues/184344
-void placement_new_pointer_field_use_after_scope() {
-  PointerFieldHolder h;
-  PointerFieldHolder *p = &h;
-  {
-    MyObj obj;
-    p = new (&h) PointerFieldHolder{&obj};
-  }
-  (void)p->Ptr->id;
-}
-
-// FIXME: https://github.com/llvm/llvm-project/issues/184344
 void delete_through_pointer_field() {
   PointerFieldHolder h{new MyObj};
   delete h.Ptr;
@@ -2897,6 +2886,114 @@ void allocate_void_ptr() {
 }
 
 } // namespace new_allocation
+
+namespace placement_new {
+
+void placement_new_int_basic() {
+  int *p;
+  {
+    int storage;
+    p = new (&storage) int; // expected-warning {{object whose reference is captured does not live long enough}}
+  }                         // expected-note {{destroyed here}}
+  (void)*p;                 // expected-note {{later used here}}
+}
+
+void placement_new_view_from_dead_scope() {
+  View storage;
+  View *p = &storage;
+  {
+    MyObj obj;
+    p = new (&storage) View(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                               // expected-note {{destroyed here}}
+  p->use();                       // expected-note {{later used here}}
+}
+
+void placement_new_pointer_from_dead_object() {
+  MyObj *slot = nullptr;
+  MyObj **p = &slot;
+  {
+    MyObj obj;
+    p = new (&slot) MyObj *(&obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                                // expected-note {{destroyed here}}
+  (void)**p;                       // expected-note {{later used here}}
+}
+
+void placement_new_array_basic() {
+  int *p;
+  {
+    int storage[2];
+    p = new (&storage) int[2]; // expected-warning {{object whose reference is captured does not live long enough}}
+  }                            // expected-note {{destroyed here}}
+  (void)p[0];                  // expected-note {{later used here}}
+}
+
+void placement_new_array_braces() {
+  int *p;
+  {
+    int storage[2];
+    p = new (&storage) int[2]{}; // expected-warning {{object whose reference is captured does not live long enough}}
+  }                              // expected-note {{destroyed here}}
+  (void)p[0];                    // expected-note {{later used here}}
+}
+
+struct PlacementNewInMethod {
+  View V; // expected-note {{this field dangles}}
+
+  void bad_store_after_placement_new() {
+    {
+      MyObj obj;
+      new (this) PlacementNewInMethod;
+      V = obj; // expected-warning {{address of stack memory escapes to a field}}
+    }
+    V.use();
+  }
+};
+
+// FIXME: Currently does not diagnose. We do not overwrite `storage`'s origins on placement new because we lose them on bitcast from `View*` to `void*`.
+void placement_new_member_call_from_dead_scope() {
+  View *storage = new View;
+  {
+    MyObj obj;
+    new (storage) View(obj);
+  }
+  storage->use();
+}
+
+void placement_new_heap_then_delete_use_after_free() {
+  int *storage = new int(7); // expected-warning {{allocated object does not live long enough}}
+  int *p = new (storage) int(42);
+  delete storage;            // expected-note {{freed here}}
+  (void)*p;                  // expected-note {{later used here}}
+}
+
+int* foo(int* x [[clang::lifetimebound]], int* y [[clang::lifetimebound]]);
+
+void placement_new_delete_result_of_lifetimebound_call() {
+  int *x = new int(1); // expected-warning {{allocated object does not live long enough}}
+  int *y = new int(2); // expected-warning {{allocated object does not live long enough}}
+  int *slot = nullptr;
+  int **p = new (&slot) int *(foo(x, y));
+  delete foo(x, y);    // expected-note 2 {{freed here}}
+  (void)**p;           // expected-note 2 {{later used here}}
+}
+
+
+struct PointerFieldHolder {
+  MyObj *Ptr;
+};
+
+// FIXME: https://github.com/llvm/llvm-project/issues/184344
+void placement_new_pointer_field_use_after_scope() {
+  PointerFieldHolder h;
+  PointerFieldHolder *p = &h;
+  {
+    MyObj obj;
+    p = new (&h) PointerFieldHolder{&obj};
+  }
+  (void)p->Ptr->id;
+}
+
+} // namespace placement_new
 
 namespace method_call_uses_field_origins {
 int GLOBAL_INT;
