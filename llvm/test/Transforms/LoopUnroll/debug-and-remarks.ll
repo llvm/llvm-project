@@ -1,13 +1,37 @@
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-allow-partial < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=PARTIAL-ALLOW
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-count=4 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=USER-COUNT
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-count=9999 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=USER-COUNT-EXCEED
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-peel-count=2 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=EXPLICIT-PEEL
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-threshold=0 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=ZERO-THRESH
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-full-max-count=2 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=MAX-COUNT
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-allow-partial -unroll-partial-threshold=4 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=PARTIAL-NOPROFIT
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-allow-remainder=false < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=PRAGMA-NOREMAINDER
-; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -unroll-partial-threshold=9 < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=RUNTIME-NOPROFIT
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-allow-partial < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=PARTIAL-ALLOW
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-count=4 < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=USER-COUNT
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-count=9999 < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=USER-COUNT-EXCEED
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-peel-count=2 < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=EXPLICIT-PEEL
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-threshold=0 < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=ZERO-THRESH
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-full-max-count=2 < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=MAX-COUNT
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-allow-partial -unroll-partial-threshold=4 < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=PARTIAL-NOPROFIT
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-allow-remainder=false < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=PRAGMA-NOREMAINDER
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-remainder < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=REMAINDER
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
+; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-partial-threshold=9 < %s 2>&1 \
+; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=RUNTIME-NOPROFIT
+
 
 ; REQUIRES: asserts
 
@@ -17,6 +41,7 @@
 ; CHECK-NEXT: Explicit unroll requested: pragma-full
 ; CHECK-NEXT: Trying pragma unroll...
 ; CHECK-NEXT:  Not fully unrolling: unknown trip count.
+; CHECK-NEXT:remark: <unknown>:0:0: may be unable to fully unroll loop: trip count is unknown
 ; CHECK-NEXT: Trying full unroll...
 ; CHECK-NEXT: Trying upper-bound unroll...
 ; CHECK-NEXT: Trying loop peeling...
@@ -24,6 +49,7 @@
 ; CHECK-NEXT: Trying runtime unroll...
 ; CHECK-NEXT:  Will not try to unroll loop with runtime trip count because -unroll-runtime not given
 ; CHECK-NEXT: Not unrolling: no viable strategy found.
+; CHECK-NEXT:remark: <unknown>:0:0: unable to unroll loop: no viable unroll count found
 
 define i32 @pragma_full_unroll_unknown_tc(ptr %A, i32 %n) {
 entry:
@@ -78,6 +104,7 @@ exit:
 
 ; CHECK-LABEL:Loop Unroll: F[extended_convergence] Loop %for.body (depth=1)
 ; CHECK-NEXT: Not unrolling: contains convergent operations.
+; CHECK-NEXT:remark: <unknown>:0:0: unable to unroll loop: contains convergent operations
 
 declare void @convergent_func() convergent
 declare token @llvm.experimental.convergence.anchor()
@@ -104,6 +131,7 @@ exit:
 
 ; CHECK-LABEL:Loop Unroll: F[noduplicate_prevents_unroll] Loop %for.body (depth=1)
 ; CHECK-NEXT: Not unrolling: contains non-duplicatable instructions.
+; CHECK-NEXT:remark: <unknown>:0:0: unable to unroll loop: contains non-duplicatable instructions
 
 declare void @noduplicate_func() noduplicate
 
@@ -128,6 +156,7 @@ exit:
 
 ; CHECK-LABEL:Loop Unroll: F[indirectbr_loop] Loop %for.body (depth=1)
 ; CHECK-NEXT: Not unrolling loop which is not in loop-simplify form.
+; CHECK-NEXT:remark: <unknown>:0:0: unable to unroll loop: not in loop-simplify form
 
 define i32 @indirectbr_loop(ptr %A, ptr %target) {
 entry:
@@ -151,6 +180,7 @@ exit:
 ; CHECK-LABEL:Loop Unroll: F[inline_prevents_unroll] Loop %for.body (depth=1)
 ; CHECK-NEXT:Loop Size = 8
 ; CHECK-NEXT: Not unrolling loop with inlinable calls.
+; CHECK-NEXT:remark: <unknown>:0:0: unable to unroll loop: contains inlinable calls
 
 define internal i32 @single_use_helper(i32 %x) {
   %add = add i32 %x, 42
@@ -198,6 +228,7 @@ exit:
 ; CHECK-NEXT:  Profitable after cost analysis.
 ; CHECK-NEXT:  Exiting block %for.body: TripCount=10, TripMultiple=0, BreakoutTrip=0
 ; CHECK-NEXT:COMPLETELY UNROLLING loop %for.body with trip count 10!
+; CHECK-NEXT:remark: <unknown>:0:0: completely unrolled loop with 10 iterations
 
 define i32 @full_unroll_profitability_analysis(ptr %A, ptr %B) {
 entry:
@@ -297,6 +328,7 @@ exit:
 ; CHECK-NEXT:  Unrolling: size {{[0-9]+}} < threshold {{[0-9]+}}.
 ; CHECK-NEXT:  Exiting block %for.body: TripCount=4, TripMultiple=0, BreakoutTrip=0
 ; CHECK-NEXT:COMPLETELY UNROLLING loop %for.body with trip count 4!
+; CHECK-NEXT:remark: <unknown>:0:0: completely unrolled loop with 4 iterations
 
 define i32 @full_unroll_size_under_threshold(ptr %A) {
 entry:
@@ -324,6 +356,7 @@ exit:
 ; CHECK-NEXT:  Fully unrolling with trip count: 6.
 ; CHECK-NEXT:  Exiting block %for.body: TripCount=6, TripMultiple=0, BreakoutTrip=0
 ; CHECK-NEXT:COMPLETELY UNROLLING loop %for.body with trip count 6!
+; CHECK-NEXT:remark: <unknown>:0:0: completely unrolled loop with 6 iterations
 
 define i32 @pragma_full_known_tc(ptr %A) {
 entry:
@@ -351,6 +384,7 @@ exit:
 ; CHECK-NEXT:  Unrolling with pragma count: 3.
 ; CHECK-NEXT:  Exiting block %for.body: TripCount=12, TripMultiple=0, BreakoutTrip=0
 ; CHECK-NEXT:UNROLLING loop %for.body by 3!
+; CHECK-NEXT:remark: <unknown>:0:0: unrolled loop by a factor of 3
 
 define i32 @pragma_count_unroll(ptr %A) {
 entry:
@@ -431,6 +465,7 @@ exit:
 ; CHECK-NEXT:  Unrolling with max trip count: 3.
 ; CHECK-NEXT:  Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
 ; CHECK-NEXT:COMPLETELY UNROLLING loop %for.body with trip count 3!
+; CHECK-NEXT:remark: <unknown>:0:0: completely unrolled loop with 3 iterations
 
 define i32 @upper_bound_unroll(ptr %A, i32 %n) {
 entry:
@@ -527,6 +562,7 @@ exit:
 ; CHECK-NEXT: Trying loop peeling...
 ; CHECK-NEXT:  Peeling with count: 1.
 ; CHECK-NEXT:PEELING loop %for.header with iteration count 1!
+; CHECK-NEXT:remark: <unknown>:0:0: peeled loop by 1 iterations
 
 declare void @foo()
 
@@ -568,10 +604,22 @@ exit:
 ; CHECK-NEXT:  Runtime unrolling with count: 8
 ; CHECK-NEXT:  Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
 ; CHECK:UNROLLING loop %for.body by 8 with run-time trip count!
+; CHECK-NEXT:remark: <unknown>:0:0: unrolled loop by a factor of 8 with run-time trip count
 ;
-; With a low partial threshold, the runtime unroll count is reduced below 2
-; and no unrolling occurs. Verify we don't print a misleading
-; "Runtime unrolling with count" message.
+; REMAINDER-LABEL:Loop Unroll: F[runtime_unroll_simple] Loop %for.body (depth=1)
+; REMAINDER-NEXT:Loop Size = 6
+; REMAINDER-NEXT: Computing unroll count: TripCount=0, MaxTripCount=2147483647, TripMultiple=1
+; REMAINDER-NEXT: Explicit unroll requested: pragma-enable
+; REMAINDER-NEXT: Trying pragma unroll...
+; REMAINDER-NEXT: Trying full unroll...
+; REMAINDER-NEXT: Trying upper-bound unroll...
+; REMAINDER-NEXT: Trying loop peeling...
+; REMAINDER-NEXT: Trying partial unroll...
+; REMAINDER-NEXT: Trying runtime unroll...
+; REMAINDER-NEXT:  Runtime unrolling with count: 8
+; REMAINDER-NEXT:  Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
+; REMAINDER:UNROLLING loop %for.body by 8 with run-time trip count (remainder unrolled)!
+; REMAINDER-NEXT:remark: <unknown>:0:0: unrolled loop by a factor of 8 with run-time trip count (remainder unrolled)
 ;
 ; RUNTIME-NOPROFIT-LABEL:Loop Unroll: F[runtime_unroll_simple] Loop %for.body (depth=1)
 ; RUNTIME-NOPROFIT-NEXT:Loop Size = 6
@@ -620,6 +668,7 @@ exit:
 ; PARTIAL-ALLOW-NEXT:  Partially unrolling with count: {{[0-9]+}}
 ; PARTIAL-ALLOW-NEXT:  Exiting block %for.body: TripCount=200, TripMultiple=0, BreakoutTrip=0
 ; PARTIAL-ALLOW-NEXT:UNROLLING loop %for.body by {{[0-9]+}}!
+; PARTIAL-ALLOW-NEXT:remark: <unknown>:0:0: unrolled loop by a factor of {{[0-9]+}}
 
 define i32 @partial_unroll_cost_analysis(ptr %A) {
 entry:
@@ -645,6 +694,7 @@ exit:
 ; CHECK-NEXT: Explicit unroll requested: pragma-full
 ; CHECK-NEXT: Trying pragma unroll...
 ; CHECK-NEXT:  Won't unroll; trip count is too large.
+; CHECK-NEXT:remark: <unknown>:0:0: may be unable to fully unroll loop: trip count 1000001 exceeds limit 1000000
 ; CHECK-NEXT: Trying full unroll...
 ; CHECK-NEXT:  Unrolled size {{[0-9]+}} exceeds threshold {{[0-9]+}}; checking for cost benefit.
 ; CHECK-NEXT:   Not analyzing loop cost: trip count too large.
@@ -655,6 +705,8 @@ exit:
 ; CHECK-NEXT:  Partially unrolling with count: {{[0-9]+}}
 ; CHECK-NEXT:  Exiting block %for.body: TripCount=1000001, TripMultiple=0, BreakoutTrip=0
 ; CHECK-NEXT:UNROLLING loop %for.body by {{[0-9]+}}!
+; CHECK-NEXT:remark: <unknown>:0:0: unrolled loop by a factor of {{[0-9]+}}
+; CHECK-NEXT:remark: <unknown>:0:0: unable to fully unroll loop as directed; unrolled by factor {{[0-9]+}}
 
 define i32 @pragma_full_tc_too_large(ptr %A) {
 entry:
@@ -747,6 +799,7 @@ exit:
 ; USER-COUNT-NEXT:  Unrolling with user-specified count: 4.
 ; USER-COUNT-NEXT:  Exiting block %for.body: TripCount=12, TripMultiple=0, BreakoutTrip=0
 ; USER-COUNT-NEXT:UNROLLING loop %for.body by 4!
+; USER-COUNT-NEXT:remark: <unknown>:0:0: unrolled loop by a factor of 4
 ;
 ; USER-COUNT-EXCEED-LABEL:Loop Unroll: F[user_count_unroll] Loop %for.body (depth=1)
 ; USER-COUNT-EXCEED-NEXT:Loop Size = 6
@@ -758,6 +811,7 @@ exit:
 ; USER-COUNT-EXCEED-NEXT:  Unrolling: size {{[0-9]+}} < threshold {{[0-9]+}}.
 ; USER-COUNT-EXCEED-NEXT:  Exiting block %for.body: TripCount=12, TripMultiple=0, BreakoutTrip=0
 ; USER-COUNT-EXCEED-NEXT:COMPLETELY UNROLLING loop %for.body with trip count 12!
+; USER-COUNT-EXCEED-NEXT:remark: <unknown>:0:0: completely unrolled loop with 12 iterations
 
 define i32 @user_count_unroll(ptr %A) {
 entry:
@@ -782,6 +836,7 @@ exit:
 ; EXPLICIT-PEEL-NEXT: Computing unroll count: TripCount=0, MaxTripCount=2147483647, TripMultiple=1
 ; EXPLICIT-PEEL-NEXT:  Using explicit peel count: 2.
 ; EXPLICIT-PEEL-NEXT:PEELING loop %for.body with iteration count 2!
+; EXPLICIT-PEEL-NEXT:remark: <unknown>:0:0: peeled loop by 2 iterations
 
 define i32 @explicit_peel_count(ptr %A, i32 %n) {
 entry:
@@ -805,6 +860,7 @@ exit:
 
 ; ZERO-THRESH-LABEL:Loop Unroll: F[zero_thresh_unroll] Loop %for.body (depth=1)
 ; ZERO-THRESH-NEXT: Not unrolling: all thresholds are zero.
+; ZERO-THRESH-NEXT:remark: <unknown>:0:0: unable to unroll loop: unroll threshold is zero
 
 define i32 @zero_thresh_unroll(ptr %A) {
 entry:
@@ -818,7 +874,7 @@ for.body:
   %add = add i32 %sum, %load
   %inc = add i32 %i, 1
   %cmp = icmp ult i32 %inc, 8
-  br i1 %cmp, label %for.body, label %exit
+  br i1 %cmp, label %for.body, label %exit, !llvm.loop !16
 
 exit:
   ret i32 %add
@@ -893,10 +949,13 @@ exit:
 ; PRAGMA-NOREMAINDER-NEXT: Explicit unroll requested: pragma-count(3)
 ; PRAGMA-NOREMAINDER-NEXT: Trying pragma unroll...
 ; PRAGMA-NOREMAINDER-NEXT:  Not unrolling with pragma count 3: remainder not allowed, count does not divide trip multiple 10.
+; PRAGMA-NOREMAINDER-NEXT:remark: <unknown>:0:0: may be unable to unroll loop with count 3: remainder loop is not allowed and count does not divide trip multiple 10
 ; PRAGMA-NOREMAINDER-NEXT: Trying full unroll...
 ; PRAGMA-NOREMAINDER-NEXT:  Unrolling: size {{[0-9]+}} < threshold {{[0-9]+}}.
 ; PRAGMA-NOREMAINDER-NEXT:  Exiting block %for.body: TripCount=10, TripMultiple=0, BreakoutTrip=0
 ; PRAGMA-NOREMAINDER-NEXT:COMPLETELY UNROLLING loop %for.body with trip count 10!
+; PRAGMA-NOREMAINDER-NEXT:remark: <unknown>:0:0: completely unrolled loop with 10 iterations
+; PRAGMA-NOREMAINDER-NEXT:remark: <unknown>:0:0: unable to unroll loop with requested count 3; unrolled by factor 10
 
 define i32 @pragma_count_no_remainder(ptr %A) {
 entry:
@@ -911,6 +970,36 @@ for.body:
   %inc = add i32 %i, 1
   %cmp = icmp ult i32 %inc, 10
   br i1 %cmp, label %for.body, label %exit, !llvm.loop !14
+
+exit:
+  ret i32 %add
+}
+
+; CHECK-LABEL:Loop Unroll: F[header_address_taken] Loop %for.body (depth=1)
+; CHECK-NEXT:Loop Size = 6
+; CHECK-NEXT: Computing unroll count: TripCount=4, MaxTripCount=0, TripMultiple=4
+; CHECK-NEXT: Explicit unroll requested: pragma-enable
+; CHECK-NEXT: Trying pragma unroll...
+; CHECK-NEXT: Trying full unroll...
+; CHECK-NEXT:  Unrolling: size {{[0-9]+}} < threshold {{[0-9]+}}.
+; CHECK-NEXT:  Won't unroll loop: address of header block is taken.
+; CHECK-NEXT: Failed to unroll loop as explicitly requested.
+; CHECK-NEXT:remark: <unknown>:0:0: failed to unroll loop as explicitly requested
+
+define i32 @header_address_taken(ptr %A) {
+entry:
+  store ptr blockaddress(@header_address_taken, %for.body), ptr %A
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i
+  %load = load i32, ptr %arrayidx
+  %add = add i32 %sum, %load
+  %inc = add i32 %i, 1
+  %cmp = icmp ult i32 %inc, 4
+  br i1 %cmp, label %for.body, label %exit, !llvm.loop !15
 
 exit:
   ret i32 %add
@@ -931,3 +1020,5 @@ exit:
 !12 = distinct !{!12, !3}
 !13 = distinct !{!13, !4}
 !14 = distinct !{!14, !6}
+!15 = distinct !{!15, !4}
+!16 = distinct !{!16, !4}
