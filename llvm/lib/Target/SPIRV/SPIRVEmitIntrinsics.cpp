@@ -2571,25 +2571,12 @@ bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
   const SPIRVSubtarget *STI = TM.getSubtargetImpl(*Inst->getFunction());
   if (!STI->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing))
     return false;
-  // Add aliasing decorations to internal load and store intrinsics
-  // and atomic instructions, skipping atomic store as it won't have ID to
-  // attach the decoration.
-  if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>()))
-    return true;
-  auto *CI = dyn_cast<CallInst>(Inst);
-  if (!CI)
-    return false;
-  if (Function *Fun = CI->getCalledFunction()) {
-    if (Fun->isIntrinsic())
-      return false;
-    std::string Name = getOclOrSpirvBuiltinDemangledName(Fun->getName());
-    const std::string Prefix = "__spirv_Atomic";
-    const bool IsAtomic = Name.find(Prefix) == 0;
-
-    if (!Fun->getReturnType()->isVoidTy() && IsAtomic)
-      return true;
-  }
-  return false;
+  // Add aliasing decorations to internal load and store intrinsics.
+  // Do not attach them to store atomic or load atomic intrinsics / instructions
+  // since the extension is inconsistent at the moment (we cannot add the
+  // decoration to atomic stores because they do not have an id).
+  return match(Inst,
+               m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>());
 }
 
 void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
