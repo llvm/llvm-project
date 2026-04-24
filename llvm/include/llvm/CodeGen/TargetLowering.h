@@ -84,7 +84,6 @@ class LLVMContext;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
-class MachineIRBuilder;
 class MachineJumpTableInfo;
 class MachineLoop;
 class MachineRegisterInfo;
