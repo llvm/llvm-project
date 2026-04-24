@@ -272,4 +272,54 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
   return true;
 }
 
+// Return true iff 'candidate' can be hoisted out of 'op',
+// which is an OpenACC compute operation (e.g. kernels, parallel, etc.).
+template <typename Op>
+bool OperationMoveModel<Op>::canMoveOutOf(mlir::Operation *op,
+                                          mlir::Operation *candidate) const {
+  // In general, some movement out of the compute operations is allowed,
+  // so return true if candidate is nullptr.
+  if (!candidate)
+    return true;
+
+  // Hoist operations with trivial type operands and results.
+  return llvm::all_of(candidate->getOperands(),
+                      [](mlir::Value operand) {
+                        return fir::isa_trivial(operand.getType());
+                      }) &&
+         llvm::all_of(candidate->getResults(), [](mlir::Value result) {
+           return fir::isa_trivial(result.getType());
+         });
+}
+
+template <>
+bool OperationMoveModel<mlir::acc::KernelsOp>::canMoveFromDescendant(
+    mlir::Operation *op, mlir::Operation *descendant,
+    mlir::Operation *candidate) const {
+  return true;
+}
+
+template bool OperationMoveModel<mlir::acc::KernelsOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const;
+
+template <>
+bool OperationMoveModel<mlir::acc::ParallelOp>::canMoveFromDescendant(
+    mlir::Operation *op, mlir::Operation *descendant,
+    mlir::Operation *candidate) const {
+  return true;
+}
+
+template bool OperationMoveModel<mlir::acc::ParallelOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const;
+
+template <>
+bool OperationMoveModel<mlir::acc::SerialOp>::canMoveFromDescendant(
+    mlir::Operation *op, mlir::Operation *descendant,
+    mlir::Operation *candidate) const {
+  return true;
+}
+
+template bool OperationMoveModel<mlir::acc::SerialOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const;
+
 } // namespace fir::acc
