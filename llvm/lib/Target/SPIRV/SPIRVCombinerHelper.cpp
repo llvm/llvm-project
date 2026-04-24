@@ -400,3 +400,86 @@ void SPIRVCombinerHelper::applyMatrixMultiply(MachineInstr &MI) const {
   Builder.buildBuildVector(ResReg, ResultScalars);
   MI.eraseFromParent();
 }
+
+static bool isSpvGep(const MachineInstr &MI) {
+  unsigned Op = MI.getOpcode();
+  if (Op != TargetOpcode::G_INTRINSIC &&
+      Op != TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
+    return false;
+  return cast<GIntrinsic>(MI).getIntrinsicID() == Intrinsic::spv_gep;
+}
+
+bool SPIRVCombinerHelper::matchCoalesceAccessChain(MachineInstr &MI) const {
+  if (!isSpvGep(MI) || MI.getNumExplicitOperands() < 5)
+    return false;
+
+  MachineInstr *Inner = MRI.getVRegDef(MI.getOperand(3).getReg());
+  if (!Inner || !isSpvGep(*Inner) || Inner->getParent() != MI.getParent() ||
+      Inner->getNumExplicitOperands() < 5)
+    return false;
+
+  Register InnerDef = Inner->getOperand(0).getReg();
+  for (MachineInstr &Use : MRI.use_nodbg_instructions(InnerDef)) {
+    if (&Use == &MI)
+      continue;
+    if (Use.getOpcode() == TargetOpcode::G_INTRINSIC ||
+        Use.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS) {
+      Intrinsic::ID IID = cast<GIntrinsic>(Use).getIntrinsicID();
+      if (IID == Intrinsic::spv_assign_ptr_type ||
+          IID == Intrinsic::spv_assign_type)
+        continue;
+    }
+    return false;
+  }
+
+  if (!getImm(MI.getOperand(4), &MRI) || foldImm(MI.getOperand(4), &MRI) != 0)
+    return false;
+
+  for (unsigned I = 4, E = Inner->getNumExplicitOperands(); I != E; ++I)
+    if (!getImm(Inner->getOperand(I), &MRI))
+      return false;
+  for (unsigned I = 5, E = MI.getNumExplicitOperands(); I != E; ++I)
+    if (!getImm(MI.getOperand(I), &MRI))
+      return false;
+
+  return true;
+}
+
+void SPIRVCombinerHelper::applyCoalesceAccessChain(MachineInstr &MI) const {
+  Register Result = MI.getOperand(0).getReg();
+  int64_t OuterInBounds = MI.getOperand(2).getImm();
+
+  MachineInstr *Inner = MRI.getVRegDef(MI.getOperand(3).getReg());
+  Register InnerBase = Inner->getOperand(3).getReg();
+  int64_t InnerInBounds = Inner->getOperand(2).getImm();
+
+  SmallVector<Register, 8> InnerIdxs;
+  for (unsigned I = 4, E = Inner->getNumExplicitOperands(); I != E; ++I)
+    InnerIdxs.push_back(Inner->getOperand(I).getReg());
+  SmallVector<Register, 8> OuterIdxs;
+  for (unsigned I = 5, E = MI.getNumExplicitOperands(); I != E; ++I)
+    OuterIdxs.push_back(MI.getOperand(I).getReg());
+
+  Builder.setInstrAndDebugLoc(MI);
+  auto MIB =
+      Builder.buildIntrinsic(Intrinsic::spv_gep, ArrayRef<Register>{Result})
+          .addImm(InnerInBounds & OuterInBounds)
+          .addUse(InnerBase);
+  for (Register R : InnerIdxs)
+    MIB.addUse(R);
+  for (Register R : OuterIdxs)
+    MIB.addUse(R);
+
+  Register InnerDef = Inner->getOperand(0).getReg();
+  SmallVector<MachineInstr *, 4> MarkersToErase;
+  for (MachineInstr &Use : MRI.use_nodbg_instructions(InnerDef)) {
+    if (&Use == &MI || &Use == Inner)
+      continue;
+    MarkersToErase.push_back(&Use);
+  }
+  for (MachineInstr *M : MarkersToErase)
+    M->eraseFromParent();
+
+  MI.eraseFromParent();
+  Inner->eraseFromParent();
+}

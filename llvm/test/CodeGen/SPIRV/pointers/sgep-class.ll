@@ -9,7 +9,6 @@
 ; CHECK-DAG: %[[#Base:]] = OpTypeStruct %[[#int]]
 ; CHECK-DAG: %[[#Derived:]] = OpTypeStruct %[[#Base]] %[[#float]]
 ; CHECK-DAG: %[[#ptr_Derived:]] = OpTypePointer Function %[[#Derived]]
-; CHECK-DAG: %[[#ptr_Base:]] = OpTypePointer Function %[[#Base]]
 ; CHECK-DAG: %[[#ptr_int:]] = OpTypePointer Function %[[#int]]
 ; CHECK-DAG: %[[#idx_0:]] = OpConstant %[[#int]] 0
 
@@ -18,13 +17,9 @@ entry:
   %0 = call token @llvm.experimental.convergence.entry()
   ; CHECK: %[[#d_var:]] = OpFunctionParameter %[[#ptr_Derived]]
 
-  ; Access Base part
   %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%class.Derived) %d, i32 0)
-  ; CHECK: %[[#ptr_base:]] = OpInBoundsAccessChain %[[#ptr_Base]] %[[#d_var]] %[[#idx_0]]
-
-  ; Access field in Base
   %2 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%class.Base) %1, i32 0)
-  ; CHECK: %[[#ptr_field:]] = OpInBoundsAccessChain %[[#ptr_int]] %[[#ptr_base]] %[[#idx_0]]
+  ; CHECK: %[[#ptr_field:]] = OpInBoundsAccessChain %[[#ptr_int]] %[[#d_var]] %[[#idx_0]] %[[#idx_0]]
 
   store i32 42, ptr %2, align 4
   ; CHECK: OpStore %[[#ptr_field]]

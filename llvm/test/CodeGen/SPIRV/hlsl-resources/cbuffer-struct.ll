@@ -8,7 +8,6 @@
 ; CHECK-DAG: %[[ZERO:[0-9]+]] = OpConstant %[[INT]] 0{{$}}
 
 ; CHECK-DAG: %[[STRUCT_MATRIX:[0-9]+]] = OpTypeStruct %[[VEC4]] %[[VEC4]] %[[VEC4]] %[[VEC4]]
-; CHECK-DAG: %[[PTR_MATRIX:[0-9]+]] = OpTypePointer Uniform %[[STRUCT_MATRIX]]
 ; CHECK-DAG: %[[PTR_FLOAT:[0-9]+]] = OpTypePointer Uniform %[[FLOAT]]
 
 ; CHECK-DAG: %[[STRUCT_MYSTRUCT:[0-9]+]] = OpTypeStruct %[[STRUCT_MATRIX]] %[[STRUCT_MATRIX]] %[[STRUCT_MATRIX]]
@@ -87,8 +86,7 @@ entry:
   %mul3.i20.i = fmul reassoc nnan ninf nsz arcp afn <4 x float> %splat.splat2.i19.i, %5
   %8 = tail call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.fmuladd.v4f32(<4 x float> %splat.splat.i18.i, <4 x float> nofpclass(nan inf) %4, <4 x float> %mul3.i20.i)
   %9 = fadd reassoc nnan ninf nsz arcp afn <4 x float> %8, %6
-; CHECK: %[[PTR_M1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_MATRIX]] %[[PTR_STRUCT]] %[[ONE_64]]
-; CHECK: %[[PTR_M1_V0:[0-9]+]] = OpAccessChain %[[PTR_VEC4]] %[[PTR_M1]] %[[ZERO]]
+; CHECK: %[[PTR_M1_V0:[0-9]+]] = OpAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ONE_64]] %[[ZERO]]
 ; CHECK: %[[VAL_M1_V0:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M1_V0]]
   %10 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 64), align 16
 ; CHECK: %[[PTR_M1_V1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[ONE_64]] %[[ONE_64]]
@@ -108,8 +106,7 @@ entry:
   %15 = tail call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.fmuladd.v4f32(<4 x float> %splat.splat5.i16.i, <4 x float> nofpclass(nan inf) %12, <4 x float> %14)
   %splat.splat7.i17.i = shufflevector <4 x float> %9, <4 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %16 = tail call reassoc nnan ninf nsz arcp afn noundef <4 x float> @llvm.fmuladd.v4f32(<4 x float> %splat.splat7.i17.i, <4 x float> nofpclass(nan inf) %13, <4 x float> %15)
-; CHECK: %[[PTR_M2:[0-9]+]] = OpInBoundsAccessChain %[[PTR_MATRIX]] %[[PTR_STRUCT]] %[[TWO_64]]
-; CHECK: %[[PTR_M2_V0:[0-9]+]] = OpAccessChain %[[PTR_VEC4]] %[[PTR_M2]] %[[ZERO]]
+; CHECK: %[[PTR_M2_V0:[0-9]+]] = OpAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[TWO_64]] %[[ZERO]]
 ; CHECK: %[[VAL_M2_V0:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_M2_V0]]
   %17 = load <4 x float>, ptr addrspace(12) getelementptr inbounds nuw (i8, ptr addrspace(12) @transforms, i64 128), align 16
 ; CHECK: %[[PTR_M2_V1:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_STRUCT]] %[[TWO_64]] %[[ONE_64]]

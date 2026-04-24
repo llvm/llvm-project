@@ -34,10 +34,18 @@ def matrix_multiply_lowering
                         [{ return Helper.matchMatrixMultiply(*${root}); }]),
                     (apply [{ Helper.applyMatrixMultiply(*${root}); }])>;
 
+def access_chain_coalescing : GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS):$root,
+          [{ return Helper.matchCoalesceAccessChain(*${root}); }]),
+  (apply [{ Helper.applyCoalesceAccessChain(*${root}); }])
+>;
+
 def SPIRVPreLegalizerCombiner
     : GICombiner<"SPIRVPreLegalizerCombinerImpl",
                  [vector_length_sub_to_distance_lowering,
                   vector_select_to_faceforward_lowering,
-                  matrix_transpose_lowering, matrix_multiply_lowering]> {
+                  matrix_transpose_lowering, matrix_multiply_lowering,
+                  access_chain_coalescing]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }

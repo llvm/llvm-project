@@ -17,23 +17,22 @@
 ; CHECK-DAG:     %[[#arr_uint_5:]] = OpTypeArray %[[#uint]] %[[#uint_5]]
 ; CHECK-DAG: %[[#ptr_arr_uint_5:]] = OpTypePointer Function %[[#arr_uint_5]]
 ; CHECK-DAG:              %[[#S:]] = OpTypeStruct %[[#uint]] %[[#uint]]
-; CHECK-DAG:          %[[#ptr_S:]] = OpTypePointer Function %[[#S]]
 ; CHECK-DAG:        %[[#arr_S_5:]] = OpTypeArray %[[#S]] %[[#uint_5]]
 ; CHECK-DAG:    %[[#ptr_arr_S_5:]] = OpTypePointer Function %[[#arr_S_5]]
 ; CHECK-DAG:             %[[#S2:]] = OpTypeStruct %[[#uint]] %[[#S]] %[[#uint]]
-; CHECK-DAG:         %[[#ptr_S2:]] = OpTypePointer Function %[[#S2]]
 ; CHECK-DAG:       %[[#arr_S2_5:]] = OpTypeArray %[[#S2]] %[[#uint_5]]
 ; CHECK-DAG:   %[[#ptr_arr_S2_5:]] = OpTypePointer Function %[[#arr_S2_5]]
 
 define spir_func void @array_load_store(ptr %a) convergent {
 entry:
+; CHECK:	%[[#a1:]] = OpFunctionParameter {{%[0-9]+}}
   %0 = call token @llvm.experimental.convergence.entry()
   %tmp = alloca [5 x i32], align 4
 ; CHECK:	%[[#tmp:]] = OpVariable %[[#ptr_arr_uint_5]] Function
 
   %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x i32]) %a, i64 2)
   %2 = load i32, ptr %1, align 4
-; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#]] %[[#ulong_2]]
+; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#a1]] %[[#ulong_2]]
 ; CHECK:	  %[[#B:]] = OpLoad %[[#uint]] %[[#A]]
 
   %3 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x i32]) %tmp, i64 3)
@@ -46,6 +45,7 @@ entry:
 
 define spir_func void @array_struct_load_store(ptr %a) convergent {
 entry:
+; CHECK:	%[[#a2:]] = OpFunctionParameter {{%[0-9]+}}
   %0 = call token @llvm.experimental.convergence.entry()
   %tmp = alloca [5 x %struct.S], align 4
 ; CHECK:	%[[#tmp:]] = OpVariable %[[#ptr_arr_S_5]] Function
@@ -53,15 +53,13 @@ entry:
   %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x %struct.S]) %a, i64 2)
   %2 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %1, i64 1)
   %3 = load i32, ptr %2, align 4
-; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_S]] %[[#]] %[[#ulong_2]]
-; CHECK:	  %[[#B:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#A]] %[[#ulong_1]]
+; CHECK:	  %[[#B:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#a2]] %[[#ulong_2]] %[[#ulong_1]]
 ; CHECK:	  %[[#C:]] = OpLoad %[[#uint]] %[[#B]]
 
   %4 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x %struct.S]) %tmp, i64 3)
   %5 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %4, i32 0)
   store i32 %3, ptr %5, align 4
-; CHECK:	  %[[#D:]] = OpInBoundsAccessChain %[[#ptr_S]] %[[#tmp]] %[[#ulong_3]]
-; CHECK:	  %[[#E:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#D]] %[[#uint_0]]
+; CHECK:	  %[[#E:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#tmp]] %[[#ulong_3]] %[[#uint_0]]
 ; CHECK:	             OpStore %[[#E]] %[[#C]]
 
   ret void
@@ -69,13 +67,14 @@ entry:
 
 define spir_func void @array_struct_load_store_combined(ptr %a) convergent {
 entry:
+; CHECK:	%[[#a3:]] = OpFunctionParameter {{%[0-9]+}}
   %0 = call token @llvm.experimental.convergence.entry()
   %tmp = alloca [5 x %struct.S], align 4
 ; CHECK:	%[[#tmp:]] = OpVariable %[[#ptr_arr_S_5]] Function
 
   %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x %struct.S]) %a, i64 2, i64 1)
   %2 = load i32, ptr %1, align 4
-; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#]] %[[#ulong_2]] %[[#ulong_1]]
+; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#a3]] %[[#ulong_2]] %[[#ulong_1]]
 ; CHECK:	  %[[#B:]] = OpLoad %[[#uint]] %[[#A]]
 
   %3 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x %struct.S]) %tmp, i64 3, i32 0)
@@ -88,6 +87,7 @@ entry:
 
 define spir_func void @array_nested_struct_load_store(ptr %a) convergent {
 entry:
+; CHECK:	%[[#a4:]] = OpFunctionParameter {{%[0-9]+}}
   %0 = call token @llvm.experimental.convergence.entry()
   %tmp = alloca [5 x %struct.S2], align 4
 ; CHECK:	%[[#tmp:]] = OpVariable %[[#ptr_arr_S2_5]] Function
@@ -96,18 +96,14 @@ entry:
   %2 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S2) %1, i64 1)
   %3 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %2, i64 0)
   %4 = load i32, ptr %3, align 4
-; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_S2]] %[[#]] %[[#ulong_1]]
-; CHECK:	  %[[#B:]] = OpInBoundsAccessChain %[[#ptr_S]] %[[#A]] %[[#ulong_1]]
-; CHECK:	  %[[#C:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#B]] %[[#ulong_0]]
+; CHECK:	  %[[#C:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#a4]] %[[#ulong_1]] %[[#ulong_1]] %[[#ulong_0]]
 ; CHECK:	  %[[#D:]] = OpLoad %[[#uint]] %[[#C]]
 
   %5 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x %struct.S2]) %tmp, i64 3)
   %6 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S2) %5, i32 1)
   %7 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %6, i32 0)
   store i32 %4, ptr %7, align 4
-; CHECK:	  %[[#E:]] = OpInBoundsAccessChain %[[#ptr_S2]] %[[#tmp]] %[[#ulong_3]]
-; CHECK:	  %[[#F:]] = OpInBoundsAccessChain %[[#ptr_S]] %[[#E]] %[[#uint_1]]
-; CHECK:	  %[[#G:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#F]] %[[#uint_0]]
+; CHECK:	  %[[#G:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#tmp]] %[[#ulong_3]] %[[#uint_1]] %[[#uint_0]]
 ; CHECK:	             OpStore %[[#G]] %[[#D]]
 
   ret void
@@ -115,13 +111,14 @@ entry:
 
 define spir_func void @array_nested_struct_load_store_combined(ptr %a) convergent {
 entry:
+; CHECK:	%[[#a5:]] = OpFunctionParameter {{%[0-9]+}}
   %0 = call token @llvm.experimental.convergence.entry()
   %tmp = alloca [5 x %struct.S2], align 4
 ; CHECK:	%[[#tmp:]] = OpVariable %[[#ptr_arr_S2_5]] Function
 
   %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x %struct.S2]) %a, i64 1, i64 1, i64 0)
   %2 = load i32, ptr %1, align 4
-; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#]] %[[#ulong_1]] %[[#ulong_1]] %[[#ulong_0]]
+; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#a5]] %[[#ulong_1]] %[[#ulong_1]] %[[#ulong_0]]
 ; CHECK:	  %[[#B:]] = OpLoad %[[#uint]] %[[#A]]
 
   %3 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x %struct.S2]) %tmp, i64 3, i32 1, i32 0)

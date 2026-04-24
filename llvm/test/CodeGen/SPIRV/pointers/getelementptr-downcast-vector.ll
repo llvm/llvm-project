@@ -16,9 +16,10 @@
 ; CHECK-DAG:   %[[#v4_fp:]] = OpTypePointer Function %[[#v4]]
 
 define internal spir_func <3 x i32> @foo(ptr addrspace(10) %a) {
+; CHECK: %[[#foo_a:]] = OpFunctionParameter %[[#v4_pp]]
 
   %1 = getelementptr inbounds <4 x i32>, ptr addrspace(10) %a, i64 0
-; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#v4_pp]] %[[#]]
+; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#v4_pp]] %[[#foo_a]]
 
   ; partial loading of a vector: v4 -> v3.
   %2 = load <3 x i32>, ptr addrspace(10) %1, align 16
@@ -30,9 +31,10 @@ define internal spir_func <3 x i32> @foo(ptr addrspace(10) %a) {
 }
 
 define internal spir_func <3 x i32> @fooDefault(ptr %a) {
+; CHECK: %[[#fooD_a:]] = OpFunctionParameter %[[#v4_fp]]
 
   %1 = getelementptr inbounds <4 x i32>, ptr %a, i64 0
-; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#v4_fp]] %[[#]]
+; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#v4_fp]] %[[#fooD_a]]
 
   ; partial loading of a vector: v4 -> v3.
   %2 = load <3 x i32>, ptr %1, align 16
@@ -44,9 +46,10 @@ define internal spir_func <3 x i32> @fooDefault(ptr %a) {
 }
 
 define internal spir_func <3 x i32> @fooBounds(ptr %a) {
+; CHECK: %[[#fooB_a:]] = OpFunctionParameter %[[#v4_fp]]
 
   %1 = getelementptr <4 x i32>, ptr %a, i64 0
-; CHECK: %[[#tmp:]]  = OpAccessChain %[[#v4_fp]] %[[#]]
+; CHECK: %[[#tmp:]]  = OpAccessChain %[[#v4_fp]] %[[#fooB_a]]
 
   ; partial loading of a vector: v4 -> v3.
   %2 = load <3 x i32>, ptr %1, align 16
@@ -58,9 +61,10 @@ define internal spir_func <3 x i32> @fooBounds(ptr %a) {
 }
 
 define internal spir_func <2 x i32> @bar(ptr addrspace(10) %a) {
+; CHECK: %[[#bar_a:]] = OpFunctionParameter %[[#v4_pp]]
 
   %1 = getelementptr inbounds <4 x i32>, ptr addrspace(10) %a, i64 0
-; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#v4_pp]] %[[#]]
+; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#v4_pp]] %[[#bar_a]]
 
   ; partial loading of a vector: v4 -> v2.
   %2 = load <2 x i32>, ptr addrspace(10) %1, align 16
@@ -72,13 +76,11 @@ define internal spir_func <2 x i32> @bar(ptr addrspace(10) %a) {
 }
 
 define internal spir_func i32 @baz(ptr addrspace(10) %a) {
+; CHECK: %[[#baz_a:]] = OpFunctionParameter %[[#v4_pp]]
 
   %1 = getelementptr inbounds <4 x i32>, ptr addrspace(10) %a, i64 0
-; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#v4_pp]] %[[#]]
-
-  ; Loading of the first scalar of a vector: v4 -> int.
   %2 = load i32, ptr addrspace(10) %1, align 16
-; CHECK: %[[#ptr:]] = OpAccessChain %[[#uint_pp]] %[[#tmp]] %[[#uint_0]]
+; CHECK: %[[#ptr:]] = OpAccessChain %[[#uint_pp]] %[[#baz_a]] %[[#uint_0]]
 ; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]]
 
   ret i32 %2
@@ -86,13 +88,11 @@ define internal spir_func i32 @baz(ptr addrspace(10) %a) {
 }
 
 define internal spir_func i32 @bazDefault(ptr %a) {
+; CHECK: %[[#bazD_a:]] = OpFunctionParameter %[[#v4_fp]]
 
   %1 = getelementptr inbounds <4 x i32>, ptr %a, i64 0
-; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#v4_fp]] %[[#]]
-
-  ; Loading of the first scalar of a vector: v4 -> int.
   %2 = load i32, ptr %1, align 16
-; CHECK: %[[#ptr:]] = OpAccessChain %[[#uint_fp]] %[[#tmp]] %[[#uint_0]]
+; CHECK: %[[#ptr:]] = OpAccessChain %[[#uint_fp]] %[[#bazD_a]] %[[#uint_0]]
 ; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]]
 
   ret i32 %2
@@ -100,13 +100,11 @@ define internal spir_func i32 @bazDefault(ptr %a) {
 }
 
 define internal spir_func i32 @bazBounds(ptr %a) {
+; CHECK: %[[#bazB_a:]] = OpFunctionParameter %[[#v4_fp]]
 
   %1 = getelementptr <4 x i32>, ptr %a, i64 0
-; CHECK: %[[#tmp:]]  = OpAccessChain %[[#v4_fp]] %[[#]]
-
-  ; Loading of the first scalar of a vector: v4 -> int.
   %2 = load i32, ptr %1, align 16
-; CHECK: %[[#ptr:]]  = OpAccessChain %[[#uint_fp]] %[[#tmp]] %[[#uint_0]]
+; CHECK: %[[#ptr:]] = OpAccessChain %[[#uint_fp]] %[[#bazB_a]] %[[#uint_0]]
 ; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]]
 
   ret i32 %2
@@ -114,9 +112,10 @@ define internal spir_func i32 @bazBounds(ptr %a) {
 }
 
 define internal spir_func void @foos(ptr addrspace(10) %a) {
+; CHECK: %[[#foos_a:]] = OpFunctionParameter %[[#v4_pp]]
 
   %1 = getelementptr inbounds <4 x i32>, ptr addrspace(10) %a, i64 0
-; CHECK: %[[#ptr:]]  = OpInBoundsAccessChain %[[#v4_pp]] %[[#]]
+; CHECK: %[[#ptr:]]  = OpInBoundsAccessChain %[[#v4_pp]] %[[#foos_a]]
 
   store <3 x i32> <i32 0, i32 1, i32 2>, ptr addrspace(10) %1, align 16
 ; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]]
@@ -132,9 +131,10 @@ define internal spir_func void @foos(ptr addrspace(10) %a) {
 }
 
 define internal spir_func void @foosDefault(ptr %a) {
+; CHECK: %[[#foosD_a:]] = OpFunctionParameter %[[#v4_fp]]
 
   %1 = getelementptr inbounds <4 x i32>, ptr %a, i64 0
-; CHECK: %[[#ptr:]]  = OpInBoundsAccessChain %[[#v4_fp]] %[[#]]
+; CHECK: %[[#ptr:]]  = OpInBoundsAccessChain %[[#v4_fp]] %[[#foosD_a]]
 
   store <3 x i32> <i32 0, i32 1, i32 2>, ptr %1, align 16
 ; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]]
@@ -150,9 +150,10 @@ define internal spir_func void @foosDefault(ptr %a) {
 }
 
 define internal spir_func void @foosBounds(ptr %a) {
+; CHECK: %[[#foosB_a:]] = OpFunctionParameter %[[#v4_fp]]
 
   %1 = getelementptr <4 x i32>, ptr %a, i64 0
-; CHECK: %[[#ptr:]]  = OpAccessChain %[[#v4_fp]] %[[#]]
+; CHECK: %[[#ptr:]]  = OpAccessChain %[[#v4_fp]] %[[#foosB_a]]
 
   store <3 x i32> <i32 0, i32 1, i32 2>, ptr %1, align 64
 ; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]]
@@ -168,9 +169,10 @@ define internal spir_func void @foosBounds(ptr %a) {
 }
 
 define internal spir_func void @bars(ptr addrspace(10) %a) {
+; CHECK: %[[#bars_a:]] = OpFunctionParameter %[[#v4_pp]]
 
   %1 = getelementptr <4 x i32>, ptr addrspace(10) %a, i64 0
-; CHECK: %[[#ptr:]]  = OpAccessChain %[[#v4_pp]] %[[#]]
+; CHECK: %[[#ptr:]]  = OpAccessChain %[[#v4_pp]] %[[#bars_a]]
 
   store <2 x i32> <i32 0, i32 1>, ptr addrspace(10) %1, align 16
 ; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]]
@@ -184,36 +186,33 @@ define internal spir_func void @bars(ptr addrspace(10) %a) {
 }
 
 define internal spir_func void @bazs(ptr addrspace(10) %a) {
+; CHECK: %[[#bazs_a:]] = OpFunctionParameter %[[#v4_pp]]
 
   %1 = getelementptr <4 x i32>, ptr addrspace(10) %a, i64 0
-; CHECK: %[[#ptr:]]  = OpAccessChain %[[#v4_pp]] %[[#]]
-
   store i32 0, ptr addrspace(10) %1, align 32
-; CHECK:  %[[#tmp:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#ptr]] %[[#uint_0]]
+; CHECK: %[[#tmp:]] = OpAccessChain %[[#uint_pp]] %[[#bazs_a]] %[[#uint_0]]
 ; CHECK: OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void
 }
 
 define internal spir_func void @bazsDefault(ptr %a) {
+; CHECK: %[[#bazsD_a:]] = OpFunctionParameter %[[#v4_fp]]
 
   %1 = getelementptr inbounds <4 x i32>, ptr %a, i64 0
-; CHECK: %[[#ptr:]]  = OpInBoundsAccessChain %[[#v4_fp]] %[[#]]
-
   store i32 0, ptr %1, align 16
-; CHECK:  %[[#tmp:]] = OpInBoundsAccessChain %[[#uint_fp]] %[[#ptr]] %[[#uint_0]]
+; CHECK: %[[#tmp:]] = OpInBoundsAccessChain %[[#uint_fp]] %[[#bazsD_a]] %[[#uint_0]]
 ; CHECK: OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void
 }
 
 define internal spir_func void @bazsBounds(ptr %a) {
+; CHECK: %[[#bazsB_a:]] = OpFunctionParameter %[[#v4_fp]]
 
   %1 = getelementptr <4 x i32>, ptr %a, i64 0
-; CHECK: %[[#ptr:]]  = OpAccessChain %[[#v4_fp]] %[[#]]
-
   store i32 0, ptr %1, align 16
-; CHECK:  %[[#tmp:]] = OpInBoundsAccessChain %[[#uint_fp]] %[[#ptr]] %[[#uint_0]]
+; CHECK: %[[#tmp:]] = OpAccessChain %[[#uint_fp]] %[[#bazsB_a]] %[[#uint_0]]
 ; CHECK: OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void

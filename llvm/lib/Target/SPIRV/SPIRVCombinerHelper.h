@@ -37,6 +37,8 @@ public:
   void applyMatrixTranspose(MachineInstr &MI) const;
   bool matchMatrixMultiply(MachineInstr &MI) const;
   void applyMatrixMultiply(MachineInstr &MI) const;
+  bool matchCoalesceAccessChain(MachineInstr &MI) const;
+  void applyCoalesceAccessChain(MachineInstr &MI) const;
 
 private:
   SPIRVTypeInst getDotProductVectorType(Register ResReg, uint32_t K,

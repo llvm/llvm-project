@@ -21,12 +21,11 @@
 ; CHECK-DAG: [[uint_2:%[0-9]+]] = OpConstant [[uint]] 2
 
 ; CHECK-DAG: [[ptr_uint:%[0-9]+]] = OpTypePointer Function [[uint]]
-; CHECK-DAG:    [[ptr_A:%[0-9]+]] = OpTypePointer Function [[A]]
 ; CHECK-DAG:    [[ptr_B:%[0-9]+]] = OpTypePointer Function [[B]]
 
 define internal i32 @load_B_0(ptr %base) {
 ; CHECK: [[tmp:%[0-9]+]] = OpFunctionParameter [[ptr_B]]
-; CHECK: {{%[0-9]+}} = OpAccessChain [[ptr_A]] [[tmp]] [[uint_0]]
+; CHECK: {{%[0-9]+}} = OpAccessChain [[ptr_uint]] [[tmp]] [[uint_0]] [[uint_0]]
   %res = getelementptr %B, ptr %base, i32 0, i32 0
   %val = load i32, ptr %res
   ret i32 %val
@@ -34,7 +33,7 @@ define internal i32 @load_B_0(ptr %base) {
 
 define internal i32 @load_inbounds_B_0(ptr %base) {
 ; CHECK: [[tmp:%[0-9]+]] = OpFunctionParameter [[ptr_B]]
-; CHECK: {{%[0-9]+}} = OpInBoundsAccessChain [[ptr_A]] [[tmp]] [[uint_0]]
+; CHECK: {{%[0-9]+}} = OpAccessChain [[ptr_uint]] [[tmp]] [[uint_0]] [[uint_0]]
   %res = getelementptr inbounds %B, ptr %base, i32 0, i32 0
   %val = load i32, ptr %res
   ret i32 %val
@@ -58,7 +57,7 @@ define internal i32 @load_inbounds_B_1(ptr %base) {
 
 define internal i32 @load_B_2(ptr %base) {
 ; CHECK: [[tmp:%[0-9]+]] = OpFunctionParameter [[ptr_B]]
-; CHECK: {{%[0-9]+}} = OpAccessChain [[ptr_A]] [[tmp]] [[uint_2]]
+; CHECK: {{%[0-9]+}} = OpAccessChain [[ptr_uint]] [[tmp]] [[uint_2]] [[uint_0]]
   %res = getelementptr %B, ptr %base, i32 0, i32 2
   %val = load i32, ptr %res
   ret i32 %val
@@ -66,7 +65,7 @@ define internal i32 @load_B_2(ptr %base) {
 
 define internal i32 @load_inbounds_B_2(ptr %base) {
 ; CHECK: [[tmp:%[0-9]+]] = OpFunctionParameter [[ptr_B]]
-; CHECK: {{%[0-9]+}} = OpInBoundsAccessChain [[ptr_A]] [[tmp]] [[uint_2]]
+; CHECK: {{%[0-9]+}} = OpAccessChain [[ptr_uint]] [[tmp]] [[uint_2]] [[uint_0]]
   %res = getelementptr inbounds %B, ptr %base, i32 0, i32 2
   %val = load i32, ptr %res
   ret i32 %val
@@ -90,8 +89,7 @@ define internal i32 @load_inbounds_B_2_1(ptr %base) {
 
 define internal i32 @load_B_2_A_1(ptr %base) {
 ; CHECK: [[tmp:%[0-9]+]] = OpFunctionParameter [[ptr_B]]
-; CHECK: [[x:%[0-9]+]] = OpAccessChain [[ptr_A]] [[tmp]] [[uint_2]]
-; CHECK:   {{%[0-9]+}} = OpAccessChain [[ptr_uint]] [[x]] [[uint_1]]
+; CHECK: {{%[0-9]+}} = OpAccessChain [[ptr_uint]] [[tmp]] [[uint_2]] [[uint_1]]
   %x = getelementptr %B, ptr %base, i32 0, i32 2
   %res = getelementptr %A, ptr %x, i32 0, i32 1
   %val = load i32, ptr %res
