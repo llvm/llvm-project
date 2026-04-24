@@ -1412,7 +1412,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   addHandleAccessFunction(Load, /*IsConstMethod=*/true,
                           /*IsConstReturn=*/false, /*IsRef=*/false,
                           AST.UnsignedIntTy);
-  addLoadWithStatusFunction(Load, /*IsConst=*/true);
+  addLoadWithStatusFunction(Load, /*IsConstMethod=*/true);
 
   return *this;
 }
@@ -1567,7 +1567,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
     addHandleAccessFunction(Load, /*IsConstMethod=*/true,
                             /*IsConstReturn=*/false, /*IsRef=*/false,
                             AST.UnsignedIntTy, ReturnType);
-    addLoadWithStatusFunction(Load, /*IsConst=*/true, ReturnType);
+    addLoadWithStatusFunction(Load, /*IsConstMethod=*/true, ReturnType);
   };
 
   AddLoads("Load", AST.UnsignedIntTy);
@@ -2205,14 +2205,14 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadWithStatusFunction(
-    DeclarationName &Name, bool IsConst, QualType ReturnTy) {
+    DeclarationName &Name, bool IsConstMethod, QualType ReturnTy) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   bool NeedsTypedBuiltin = !ReturnTy.isNull();
 
   // The empty QualType is a placeholder. The actual return type is set below.
-  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConst);
+  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConstMethod);
 
   if (!NeedsTypedBuiltin)
     ReturnTy = getHandleElementType();
