@@ -324,7 +324,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 
     KnownBits Res = KnownBits::urem(LHSKnown, RHSKnown);
 
-    Known = Res;
+    Known = KnownBits::urem(LHSKnown, RHSKnown);
     break;
   }
 
