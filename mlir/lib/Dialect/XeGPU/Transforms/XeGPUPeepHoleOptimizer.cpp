@@ -449,11 +449,14 @@ class MultiRed2dOpPattern
     auto loc = reductionOp.getLoc();
     auto acc = reductionOp.getAcc();
 
-    // If the result is scalar after reduction, look for consumer
-    // convert_layout op and remove it. The layout propagation pass will
-    // re-install it properly after the decomposition.
+    // If the result is scalar or a single-element vector after reduction,
+    // look for consumer convert_layout op and remove it. The layout
+    // propagation pass will re-install it properly after the decomposition.
     Type resultType = reductionOp.getResult().getType();
-    if (resultType.isIntOrFloat()) {
+    bool isSingleElementVector = false;
+    if (auto vecTy = dyn_cast<VectorType>(resultType))
+      isSingleElementVector = vecTy.getNumElements() == 1;
+    if (resultType.isIntOrFloat() || isSingleElementVector) {
       for (auto &use : reductionOp.getResult().getUses()) {
         if (auto convertLayoutOp =
                 llvm::dyn_cast<xegpu::ConvertLayoutOp>(use.getOwner())) {
