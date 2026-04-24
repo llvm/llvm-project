@@ -44,25 +44,15 @@ static int64_t computeNewFCD(int64_t oldFCD, int64_t arrayLength) {
 
 /// Check if a load_nd or prefetch_nd operation needs optimization
 static bool needsOptimization(xegpu::TensorDescType tdescType) {
-  // Only optimize 2D tensors
   auto shape = tdescType.getShape();
   if (shape.size() != 2)
-    return false;
+    return false;  // Only 2D tensors
 
-  // Check if FCD is larger than subgroup size
   int64_t fcd = shape[1];
-  if (fcd <= SUBGROUP_SIZE)
-    return false;
+  if (fcd <= SUBGROUP_SIZE || fcd % SUBGROUP_SIZE != 0)
+    return false;  // FCD must be > subgroup_size and evenly divisible
 
-  // Check if FCD is a multiple of subgroup size
-  if (fcd % SUBGROUP_SIZE != 0)
-    return false;
-
-  // Check if array_length is already set to non-1
-  if (tdescType.getArrayLength() > 1)
-    return false;
-
-  return true;
+  return tdescType.getArrayLength() == 1;  // Skip if already optimized
 }
 
 /// Pattern to rewrite xegpu.create_nd_tdesc operations using simple RewritePattern
