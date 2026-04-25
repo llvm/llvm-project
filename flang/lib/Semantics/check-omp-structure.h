@@ -71,6 +71,7 @@ public:
 
   using llvmOmpClause = const llvm::omp::Clause;
 
+  void Enter(const parser::ProgramUnit &);
   bool Enter(const parser::MainProgram &);
   void Leave(const parser::MainProgram &);
   bool Enter(const parser::BlockData &);
