@@ -1016,7 +1016,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
           cgm.getOrCreateStaticVarDecl(*vd, cgm.getCIRLinkageVarDefinition(vd));
       mlir::Value getGlobVal = builder.createGetGlobal(var);
       auto getGlob = getGlobVal.getDefiningOp<cir::GetGlobalOp>();
-      getGlob.setStaticLocal(true);
+      getGlob.setStaticLocal(var.getStaticLocalGuard().has_value());
       getGlob.setTls(vd->getTLSKind() != VarDecl::TLS_None);
       addr = Address(getGlob, convertTypeForMem(vd->getType()),
                      getContext().getDeclAlign(vd));
