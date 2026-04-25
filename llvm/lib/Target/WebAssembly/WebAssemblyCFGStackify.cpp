@@ -2141,24 +2141,12 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
 
   for (auto &MBB : reverse(MF)) {
     for (auto &MI : reverse(MBB)) {
-      if (MI.getOpcode() == WebAssembly::TRY)
+      if (WebAssembly::isTry(MI.getOpcode())) {
         EHPadStack.pop_back();
-      else if (MI.getOpcode() == WebAssembly::TRY_TABLE) {
-        // We want to exclude try_tables created in fixCallUnwindMismatches.
-        // Check if the try_table's unwind destination matches the EH pad stack
-        // top. If it is created in fixCallUnwindMismatches, it wouldn't.
-        if (getSingleUnwindDest(&MI) == EHPadStack.back())
-          EHPadStack.pop_back();
-      } else if (MI.getOpcode() == WebAssembly::DELEGATE)
+      } else if (MI.getOpcode() == WebAssembly::DELEGATE) {
         EHPadStack.push_back(&MBB);
-      else if (WebAssembly::isCatch(MI.getOpcode())) {
+      } else if (WebAssembly::isCatch(MI.getOpcode())) {
         auto *EHPad = &MBB;
-
-        // If the BB has a catch pseudo instruction but is not marked as an EH
-        // pad, it's a trampoline BB we created in fixCallUnwindMismatches. Skip
-        // it.
-        if (!EHPad->isEHPad())
-          continue;
 
         // catch_all always catches an exception, so we don't need to do
         // anything
