@@ -44,7 +44,8 @@ protected:
   /// Parse pre-aggregated input and return collected Traces.
   /// Requires BC to be initialized (X86-only tests).
   void parseAndCollectTraces(
-      StringRef Input, std::vector<std::pair<Trace, TakenBranchInfo>> &Result) {
+      StringRef Input,
+      std::vector<std::pair<Trace, TakenBranchInfo>> &Result) {
     DataAggregator DA("<pseudo input>");
     DA.BC = BC.get();
     DA.setParsingBuffer(Input);
@@ -156,21 +157,12 @@ TEST_F(PreAggregatedX86TestHelper, BranchEntry) {
   // B <from> <to> <count> <mispred>
   // Trace: {from, to, BR_ONLY}
   std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
-  parseAndCollectTraces("B 4b196f 4b19e0 2 0\n", Traces);
+  parseAndCollectTraces("B 4b196f 4b19e0 2 3\n", Traces);
   ASSERT_EQ(Traces.size(), 1u);
   EXPECT_EQ(Traces[0].first.Branch, 0x4b196fULL);
   EXPECT_EQ(Traces[0].first.From, 0x4b19e0ULL);
   EXPECT_EQ(Traces[0].first.To, Trace::BR_ONLY);
   EXPECT_EQ(Traces[0].second.TakenCount, 2u);
-  EXPECT_EQ(Traces[0].second.MispredCount, 0u);
-}
-
-TEST_F(PreAggregatedX86TestHelper, BranchWithMispreds) {
-  std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
-  parseAndCollectTraces("B 4b196f 4b19e0 10 3\n", Traces);
-  ASSERT_EQ(Traces.size(), 1u);
-  EXPECT_EQ(Traces[0].first.To, Trace::BR_ONLY);
-  EXPECT_EQ(Traces[0].second.TakenCount, 10u);
   EXPECT_EQ(Traces[0].second.MispredCount, 3u);
 }
 
