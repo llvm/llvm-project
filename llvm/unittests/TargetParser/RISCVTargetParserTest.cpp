@@ -50,10 +50,10 @@ TEST(RISCVVType, IMEVTypeFields) {
   EXPECT_EQ(1U, RISCVVType::encodeIMELambda(1));
   EXPECT_EQ(3U, RISCVVType::encodeIMELambda(4));
   EXPECT_EQ(7U, RISCVVType::encodeIMELambda(64));
-  EXPECT_EQ(std::nullopt, RISCVVType::decodeIMELambda(0));
-  EXPECT_EQ(std::optional<unsigned>(1), RISCVVType::decodeIMELambda(1));
-  EXPECT_EQ(std::optional<unsigned>(4), RISCVVType::decodeIMELambda(3));
-  EXPECT_EQ(std::optional<unsigned>(64), RISCVVType::decodeIMELambda(7));
+  EXPECT_FALSE(RISCVVType::decodeIMELambda(0));
+  EXPECT_EQ(1U, *RISCVVType::decodeIMELambda(1));
+  EXPECT_EQ(4U, *RISCVVType::decodeIMELambda(3));
+  EXPECT_EQ(64U, *RISCVVType::decodeIMELambda(7));
 
   unsigned BaseVType =
       RISCVVType::encodeVTYPE(RISCVVType::LMUL_1, 32, /*TailAgnostic=*/true,
@@ -65,8 +65,7 @@ TEST(RISCVVType, IMEVTypeFields) {
   EXPECT_EQ(0x3a0000d0ULL, RV32VType);
   EXPECT_EQ(0x7e000000ULL, RISCVVType::getIMEVTypeFieldsMask(32));
   EXPECT_EQ(3U, RISCVVType::getIMELambdaEncoding(RV32VType, 32));
-  EXPECT_EQ(std::optional<unsigned>(4),
-            RISCVVType::getIMELambda(RV32VType, 32));
+  EXPECT_EQ(4U, *RISCVVType::getIMELambda(RV32VType, 32));
   EXPECT_TRUE(RISCVVType::isIMEAltFmtA(RV32VType, 32));
   EXPECT_FALSE(RISCVVType::isIMEAltFmtB(RV32VType, 32));
   EXPECT_TRUE(RISCVVType::isIMEBlockSize16(RV32VType, 32));
@@ -77,8 +76,7 @@ TEST(RISCVVType, IMEVTypeFields) {
   EXPECT_EQ(0x7e000000000000d0ULL, RV64VType);
   EXPECT_EQ(0x7e00000000000000ULL, RISCVVType::getIMEVTypeFieldsMask(64));
   EXPECT_EQ(7U, RISCVVType::getIMELambdaEncoding(RV64VType, 64));
-  EXPECT_EQ(std::optional<unsigned>(64),
-            RISCVVType::getIMELambda(RV64VType, 64));
+  EXPECT_EQ(64U, *RISCVVType::getIMELambda(RV64VType, 64));
   EXPECT_TRUE(RISCVVType::isIMEAltFmtA(RV64VType, 64));
   EXPECT_TRUE(RISCVVType::isIMEAltFmtB(RV64VType, 64));
   EXPECT_TRUE(RISCVVType::isIMEBlockSize16(RV64VType, 64));
@@ -86,7 +84,7 @@ TEST(RISCVVType, IMEVTypeFields) {
   uint64_t DynamicLambda = RISCVVType::addIMEVTypeFields(
       BaseVType, /*XLen=*/64, /*Lambda=*/0, /*AltFmtA=*/false,
       /*AltFmtB=*/false, /*BlockSize16=*/false);
-  EXPECT_EQ(std::nullopt, RISCVVType::getIMELambda(DynamicLambda, 64));
+  EXPECT_FALSE(RISCVVType::getIMELambda(DynamicLambda, 64));
   EXPECT_EQ(BaseVType, DynamicLambda);
 }
 
