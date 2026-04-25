@@ -791,11 +791,12 @@ struct ValueEquivalenceCache {
     if (lhsIt == lhsRange.end())
       return success();
 
-    // Handle another simple case where operands are just a permutation.
-    // Note: This is not sufficient, this handles simple cases relatively
-    // cheaply.
-    auto sortValues = [](ValueRange values) {
-      SmallVector<Value> sortedValues = llvm::to_vector(values);
+    // Replace values with their entry in equivalentValues if they're in there
+    // that way, a sorted pointer comparison is enough to determine
+    // commutativity.
+    auto sortValues = [this](ValueRange values) {
+      SmallVector<Value> sortedValues = llvm::map_to_vector(
+          values, [this](Value a) { return equivalentValues.lookup_or(a, a); });
       llvm::sort(sortedValues, [](Value a, Value b) {
         return a.getAsOpaquePointer() < b.getAsOpaquePointer();
       });

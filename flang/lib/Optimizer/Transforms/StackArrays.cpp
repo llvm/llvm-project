@@ -156,6 +156,8 @@ public:
 class AllocationAnalysis
     : public mlir::dataflow::DenseForwardDataFlowAnalysis<LatticePoint> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AllocationAnalysis)
+
   using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
 
   mlir::LogicalResult visitOperation(mlir::Operation *op,
@@ -535,8 +537,7 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
       candidateOps.insert({allocmem, insertionPoint});
   }
 
-  LLVM_DEBUG(for (auto [allocMemOp, _]
-                  : candidateOps) {
+  LLVM_DEBUG(for (auto [allocMemOp, _] : candidateOps) {
     llvm::dbgs() << "StackArrays: Found candidate op: " << *allocMemOp << '\n';
   });
   return mlir::success();

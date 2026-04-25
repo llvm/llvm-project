@@ -621,7 +621,7 @@ define i64 @extractelt_v3i64_idx(<3 x i64> %a, i32 zeroext %idx) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vadd.vv v8, v8, v8
-; RV32-NEXT:    add a0, a0, a0
+; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v10, v8, a0
 ; RV32-NEXT:    addi a1, a0, 1

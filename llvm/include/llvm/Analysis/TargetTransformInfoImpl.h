@@ -481,10 +481,6 @@ public:
 
   virtual bool useFastCCForInternalCall(Function &F) const { return true; }
 
-  virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
-    return false;
-  }
-
   virtual bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                   unsigned ScalarOpdIdx) const {
     return false;
