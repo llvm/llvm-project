@@ -219,12 +219,11 @@ protected:
 struct SubgroupScaledMatrixMultiplyAcc : public Instruction,
                                          public MMAInstructionInterface {
   SubgroupScaledMatrixMultiplyAcc(unsigned packedFormatBitSizeA,
-                                  unsigned packedFormatBitSizeB,
-                                  unsigned scaleFactor)
+                                  unsigned packedFormatBitSizeB)
       : Instruction(InstructionKind::SubgroupScaledMatrixMultiplyAcc,
                     InstructionScope::Subgroup),
         packedFormatBitSizeA(packedFormatBitSizeA),
-        packedFormatBitSizeB(packedFormatBitSizeB), scaleFactor(scaleFactor) {}
+        packedFormatBitSizeB(packedFormatBitSizeB) {}
   static bool classof(const Instruction *B) {
     return B->getInstructionKind() ==
            InstructionKind::SubgroupScaledMatrixMultiplyAcc;
@@ -259,13 +258,11 @@ struct SubgroupScaledMatrixMultiplyAcc : public Instruction,
 
   unsigned getPackedFormatBitSizeA() const { return packedFormatBitSizeA; }
   unsigned getPackedFormatBitSizeB() const { return packedFormatBitSizeB; }
-  unsigned getScaleFactor() const { return scaleFactor; }
   bool isLaneLayoutRowMajorOrder() const override { return true; }
 
 protected:
   const unsigned packedFormatBitSizeA;
   const unsigned packedFormatBitSizeB;
-  const unsigned scaleFactor;
 };
 
 struct SpirvLoadGatherInstruction : public LoadGatherInstructionInterface {
@@ -283,7 +280,6 @@ struct SpirvStoreScatterInstruction : public StoreScatterInstructionInterface {
 struct PVCuArch final : public Xe2Plus {
   static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
     static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
-    static const SubgroupScaledMatrixMultiplyAcc dpasMxInst{16, 32, 32};
     static const Subgroup2DBlockLoadInstruction loadNdInst;
     static const Subgroup2DBlockStoreInstruction storeNdInst;
     static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
@@ -336,7 +332,7 @@ struct BMGuArch : public Xe2Plus {
 struct CRIuArch : public Xe2Plus {
   static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
     static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
-    static const SubgroupScaledMatrixMultiplyAcc dpasMxInst{16, 32, 32};
+    static const SubgroupScaledMatrixMultiplyAcc dpasMxInst{16, 32};
     static const Subgroup2DBlockLoadInstruction loadNdInst;
     static const Subgroup2DBlockStoreInstruction storeNdInst;
     static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
