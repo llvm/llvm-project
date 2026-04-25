@@ -383,9 +383,13 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
                                        Scope::DeclScope);
 
   // Delayed default arguments or exception specifications may contain lambdas,
-  // e.g. struct S {
-  //     void ICE(int x, int = sizeof([x] { return x; }()));
-  //   }
+  // struct S {
+  //   void ICE(int x, int = sizeof([x] { return x; }()));
+  // }
+  //
+  // struct X {
+  //   void ICE(int val) noexcept(noexcept([val]{}));
+  // };
   // Lambda capture handling in tryCaptureVariable() expects an enclosing
   // function scope in Sema's FunctionScopes stack.
   Sema::FunctionScopeRAII PopFnContext(Actions);
