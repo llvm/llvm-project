@@ -106,11 +106,10 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
       float xf = x;
-      float r = xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb4cp-3f,
-                                      0x1.2875bcp-3f, -0x1.c2946ep-4f,
-                                      0x1.69da2p-4f);
-      float16 result =
-          fputil::DyadicFloat<32>(r).template as<float16, false>();
+      float r =
+          xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb4cp-3f,
+                                0x1.2875bcp-3f, -0x1.c2946ep-4f, 0x1.69da2p-4f);
+      float16 result = fputil::DyadicFloat<32>(r).template as<float16, false>();
 
       if (LIBC_UNLIKELY(static_cast<float>(result) != r)) {
         int excepts = FE_INEXACT;
