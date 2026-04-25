@@ -36,8 +36,9 @@ TEST(LlvmLibcOSUtilSysinfoTest, PossibleCpuCountSmokeTest) {
       sysinfo::parse_nproc_from(sysinfo::POSSIBLE_NPROC_PATH);
   ASSERT_TRUE(static_cast<bool>(parsed));
   EXPECT_GT(*parsed, size_t(0));
-  EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(sysinfo::POSSIBLE_NPROC_PATH),
-            size_t(0));
+  EXPECT_GT(
+      sysinfo::parse_nproc_with_fallback_from(sysinfo::POSSIBLE_NPROC_PATH),
+      size_t(0));
 }
 
 TEST(LlvmLibcOSUtilSysinfoTest, OnlineCpuCountSmokeTest) {
