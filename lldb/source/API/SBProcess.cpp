@@ -1283,9 +1283,8 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
   }
 
   TargetSP target_sp = process_sp->GetTargetSP();
-  assert(target_sp && "valid SBProcess should have a target");
   if (!target_sp) {
-    error = Status::FromErrorString("SBProcess is invalid");
+    error = Status::FromErrorString("SBProcess has no valid target");
     return error;
   }
 
