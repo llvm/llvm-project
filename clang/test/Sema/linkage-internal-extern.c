@@ -21,6 +21,16 @@ void test_param_shadow(int p) {
     { extern int p; } // expected-error {{declared with both internal and external linkage}}
 }
 
+static int z;
+void test_chained_shadow(void) {
+    extern int z;      // expected-note {{previous}} #2: internal linkage
+    {
+        int z;         // shadow: no linkage
+        { extern int z; } // expected-error {{declared with both internal and external linkage}}
+    }
+}
+
+
 // Valid cases
 
 static int a;
@@ -29,7 +39,7 @@ void test_no_shadow(void) {
 }
 
 void test_no_file_scope(void) {
-    for (static int b = 0;;) {
+    for (int b = 0;;) {
         extern int b;
         break;
     }
