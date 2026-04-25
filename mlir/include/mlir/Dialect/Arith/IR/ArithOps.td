@@ -1273,13 +1273,11 @@ def Arith_DivFOp : Arith_FloatBinaryOpWithRoundingMode<"divf"> {
 // RemFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_RemFOp : Arith_FloatBinaryOp<"remf"> {
+def Arith_RemFOp : Arith_FloatBinaryOpWithRoundingMode<"remf"> {
   let summary = "floating point division remainder operation";
   let description = [{
     Returns the floating point division remainder.
     The remainder has the same sign as the dividend (lhs operand).
-
-    TODO: Add support for rounding modes.
   }];
   let hasFolder = 1;
 }
