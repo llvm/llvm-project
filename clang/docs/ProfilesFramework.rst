@@ -82,10 +82,12 @@ At each semantic site where a rule can be violated, call
    checkProfileViolation("my::profile", "my_rule", Loc,
                          diag::err_my_profile_rule);
 
-This function checks whether the profile is enforced and not suppressed,
-skips SFINAE / unevaluated / discarded-statement contexts (so that profiles
-cannot affect overload resolution or template instantiation), and emits the
-diagnostic if appropriate.  The profile name is passed as ``%0``.
+This function checks whether the profile is enforced and not suppressed.  During
+template argument deduction, profile rule diagnostics are suppressed by Clang's
+normal SFINAE machinery so they cannot affect overload resolution or template
+instantiation; selected specializations replay suppressed diagnostics when used.
+Unevaluated and discarded-statement contexts are skipped.  The profile name is
+passed as ``%0``.
 
 
 Framework Internals Reference

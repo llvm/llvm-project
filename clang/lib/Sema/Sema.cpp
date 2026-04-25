@@ -3082,8 +3082,6 @@ bool Sema::checkProfileViolation(StringRef ProfileName, StringRef RuleName,
   // outcome of overload resolution or template instantiation, nor is it
   // possible to 'SFINAE out' failure of a program to satisfy a profile
   // requirement."
-  if (isSFINAEContext())
-    return false;
   if (isUnevaluatedContext())
     return false;
   if (currentEvaluationContext().isDiscardedStatementContext())
