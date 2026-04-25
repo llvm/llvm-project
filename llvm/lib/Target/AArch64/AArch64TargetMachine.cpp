@@ -266,7 +266,7 @@ LLVMInitializeAArch64Target() {
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeLDTLSCleanupPass(PR);
-  initializeKCFIPass(PR);
+  initializeMachineKCFILegacyPass(PR);
   initializeMachineSMEABIPass(PR);
   initializeAArch64SRLTDefineSuperRegsPass(PR);
   initializeSMEPeepholeOptPass(PR);
