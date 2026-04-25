@@ -400,8 +400,8 @@ if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
 endif()
 
 # Select the inline asm syntax for symbol assignment in sanitizer_redefine_builtins.h.
-if (NOT COMPILER_RT_HAS_ASM_EQUALS_ASSIGN AND COMPILER_RT_HAS_ASM_DOT_SET)
-  list(APPEND SANITIZER_COMMON_CFLAGS -DSANITIZER_COMMON_REDEFINE_BUILTINS_USE_ASM_DOT_SET)
+if (NOT COMPILER_RT_HAS_ASM_DOT_SET AND COMPILER_RT_HAS_ASM_EQUALS_ASSIGN)
+  list(APPEND SANITIZER_COMMON_CFLAGS -DSANITIZER_COMMON_REDEFINE_BUILTINS_USE_ASSIGN)
 endif()
 
 # By default do not instrument or use profdata for compiler-rt.

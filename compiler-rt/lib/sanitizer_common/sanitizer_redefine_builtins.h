@@ -17,13 +17,13 @@
 // The asm hack only works with GCC and Clang.
 #    if !defined(_WIN32) && !defined(_AIX) && !defined(__APPLE__)
 
-#      if defined(SANITIZER_COMMON_REDEFINE_BUILTINS_USE_ASM_DOT_SET)
+#      if defined(SANITIZER_COMMON_REDEFINE_BUILTINS_USE_ASSIGN)
 #        define SANITIZER_REDEFINE_BUILTIN_ASM(name) \
-          asm(".set " #name ", __sanitizer_internal_" #name)
+          asm(#name " = __sanitizer_internal_" #name)
 
 #      else
 #        define SANITIZER_REDEFINE_BUILTIN_ASM(name) \
-          asm("\"" #name "\" = \"__sanitizer_internal_" #name "\"")
+          asm(".set " #name ", __sanitizer_internal_" #name)
 
 #      endif
 
