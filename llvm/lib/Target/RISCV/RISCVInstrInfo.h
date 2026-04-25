@@ -363,8 +363,6 @@ protected:
   const RISCVSubtarget &STI;
 
 private:
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
   bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
                                          bool Invert = false) const;
   bool areRVVInstsReassociable(const MachineInstr &MI1,

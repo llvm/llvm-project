@@ -852,6 +852,11 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
         continue;
 
+      // TODO: Support scalarizing ExtractValue.
+      if (match(Def,
+                m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
+        continue;
+
       auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
                                           Def->operands(), /*IsUniform*/ true,
                                           /*Mask*/ nullptr, /*Flags*/ *Def);
@@ -2952,6 +2957,14 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         VPIRFlags::getDefaultFlags(Instruction::Sub), {}, DL);
   }
 
+  // lhs | (headermask && rhs) -> vp.merge rhs, true, lhs, evl
+  if (match(&CurRecipe,
+            m_c_BinaryOr(m_VPValue(LHS),
+                         m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(RHS)))))
+    return new VPWidenIntrinsicRecipe(
+        Intrinsic::vp_merge, {RHS, Plan->getTrue(), LHS, &EVL},
+        TypeInfo.inferScalarType(LHS), {}, {}, DL);
+
   return nullptr;
 }
 
@@ -3432,7 +3445,8 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
   // Traverse all the recipes in the VPlan and collect the poison-generating
   // recipes in the backward slice starting at the address of a VPWidenRecipe or
   // VPInterleaveRecipe.
-  auto Iter = vp_depth_first_deep(Plan.getEntry());
+  auto Iter =
+      vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntryBasicBlock());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &Recipe : *VPBB) {
       if (auto *WidenRec = dyn_cast<VPWidenMemoryRecipe>(&Recipe)) {
@@ -5490,30 +5504,6 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     // penultimate element of the recurrence.
     for (VPRecipeBase &R : make_early_inc_range(
              make_range(MiddleVPBB->getFirstNonPhi(), MiddleVPBB->end()))) {
-      // For tail-folded loops, the extract may have been converted to
-      // ExtractLane(LastActiveLane, RecurSplice). If only a single lane is
-      // active, select the last element from the previous iteration instead.
-      if (match(&R, m_ExtractLane(m_LastActiveLane(m_VPValue()),
-                                  m_Specific(RecurSplice)))) {
-        auto *ExtractR = cast<VPInstruction>(&R);
-        VPBuilder B(ExtractR);
-        VPValue *LastActiveLane = ExtractR->getOperand(0);
-        Type *Ty = TypeInfo.inferScalarType(LastActiveLane);
-        VPValue *Zero = Plan.getConstantInt(Ty, 0);
-        VPValue *One = Plan.getConstantInt(Ty, 1);
-        VPValue *PenultimateIndex = B.createSub(LastActiveLane, One);
-        VPValue *PenultimateLastIter =
-            B.createNaryOp(VPInstruction::ExtractLane,
-                           {PenultimateIndex, RecurSplice->getOperand(1)});
-        VPValue *LastPrevIter = B.createNaryOp(VPInstruction::ExtractLastLane,
-                                               RecurSplice->getOperand(0));
-
-        VPValue *Cmp = B.createICmp(CmpInst::ICMP_EQ, LastActiveLane, Zero);
-        VPValue *Sel = B.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
-        ExtractR->replaceAllUsesWith(Sel);
-        continue;
-      }
-
       if (!match(&R, m_ExtractLastLaneOfLastPart(m_Specific(RecurSplice))))
         continue;
 
