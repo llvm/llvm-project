@@ -976,3 +976,70 @@ entry:
   %res = zext nneg i2 %x to i32
   ret i32 %res
 }
+
+define i32 @zext_nneg_add_cancel(i8 %arg) {
+; CHECK-LABEL: @zext_nneg_add_cancel(
+; CHECK-NEXT:    [[ADD2:%.*]] = zext i8 [[ARG:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %add = add i8 %arg, -2
+  %zext = zext nneg i8 %add to i32
+  %add2 = add i32 %zext, 2
+  ret i32 %add2
+}
+
+define i32 @zext_nneg_add_cancel_multi_use(i8 %arg) {
+; CHECK-LABEL: @zext_nneg_add_cancel_multi_use(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[ARG:%.*]], -2
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[ADD]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZEXT]])
+; CHECK-NEXT:    [[ADD2:%.*]] = zext i8 [[ARG]] to i32
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %add = add i8 %arg, -2
+  %zext = zext nneg i8 %add to i32
+  call void @use32(i32 %zext)
+  %add2 = add i32 %zext, 2
+  ret i32 %add2
+}
+
+define i32 @zext_nneg_no_cancel(i8 %arg) {
+; CHECK-LABEL: @zext_nneg_no_cancel(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[ADD2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %add = add i8 %arg, -2
+  %zext = zext nneg i8 %add to i32
+  %add2 = add i32 %zext, 1
+  ret i32 %add2
+}
+
+define i32 @zext_nneg_no_cancel_multi_use(i8 %arg) {
+; CHECK-LABEL: @zext_nneg_no_cancel_multi_use(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[ARG:%.*]], -2
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[ADD]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZEXT]])
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i32 [[ZEXT]], 1
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %add = add i8 %arg, -2
+  %zext = zext nneg i8 %add to i32
+  call void @use32(i32 %zext)
+  %add2 = add i32 %zext, 1
+  ret i32 %add2
+}
+
+define i32 @zext_nneg_overflow(i8 %arg) {
+; CHECK-LABEL: @zext_nneg_overflow(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[ARG:%.*]], -2
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[ADD]] to i32
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i32 [[ZEXT]], 299
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %add = add i8 %arg, -2
+  %zext = zext nneg i8 %add to i32
+  %add2 = add i32 %zext, 299
+  ret i32 %add2
+}
+
