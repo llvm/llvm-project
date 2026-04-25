@@ -1528,10 +1528,7 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
         // If we have a context, and it's not a context stashed in the
         // template parameter scope for an out-of-line definition, also
         // look into that context.
-        if (!(Found && S->isTemplateParamScope())) {
-          assert(Ctx->isFileContext() &&
-              "We should have been looking only at file context here already.");
-
+        if (Ctx->isFileContext() && !(Found && S->isTemplateParamScope())) {
           // Look into context considering using-directives.
           if (CppNamespaceLookup(*this, R, Context, Ctx, UDirs))
             Found = true;
