@@ -1284,11 +1284,10 @@ getupDpasSubgroupLayouts(mlir::MLIRContext *context, VectorType aTy,
 
   SmallVector<int> sgLayout = {static_cast<int>(bestPick->first),
                                static_cast<int>(bestPick->second)};
-  SmallVector<int> sgDataA = {
-      static_cast<int>(aTy.getShape()[0] / sgLayout[0]),
-      static_cast<int>(aTy.getShape()[1] / sgLayout[1])};
+  SmallVector<int> sgDataA = {static_cast<int>(aTy.getShape()[0] / sgLayout[0]),
+                              static_cast<int>(aTy.getShape()[1])};
   SmallVector<int> sgDataB = {
-      static_cast<int>(bTy.getShape()[0] / sgLayout[0]),
+      static_cast<int>(bTy.getShape()[0]),
       static_cast<int>(bTy.getShape()[1] / sgLayout[1])};
   SmallVector<int> sgDataCD = {
       static_cast<int>(cdTy.getShape()[0] / sgLayout[0]),
@@ -1387,7 +1386,6 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     auto uArchInstruction = dyn_cast<
         xegpu::uArch::SubgroupScaledMatrixMultiplyAcc>(uArch->getInstruction(
         xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
-    int64_t scaleFactor = uArchInstruction->getScaleFactor();
 
     int64_t rank = matrixLayout.getRank();
     assert(rank == 2 && "dpas layouts must be two dimensions");
@@ -1400,38 +1398,49 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     SmallVector<int64_t> laneData = matrixLayout.getEffectiveLaneDataAsInt();
     auto order = matrixLayout.getOrder();
 
-    SmallVector<int> scaleSgLayout(sgLayout.begin(), sgLayout.end());
-    SmallVector<int> scaleSgData(sgData.begin(), sgData.end());
-
+    SmallVector<int> scaleSgLayout;
+    SmallVector<int> scaleSgData;
     if (!sgLayout.empty() && !sgData.empty()) {
-      scaleSgData[rank - 2] =
-          std::max<int64_t>(scaleShape[rank - 2] / sgLayout[rank - 2], 1);
-      scaleSgData[rank - 1] =
-          std::max<int64_t>(scaleShape[rank - 1] / sgLayout[rank - 1], 1);
+      scaleSgLayout.assign(sgLayout.begin(), sgLayout.end());
+      scaleSgData.assign(sgData.begin(), sgData.end());
+      scaleSgData[rank - 2] = std::max<int64_t>(
+          scaleShape[rank - 2] / (matrixShape[rank - 2] / sgData[rank - 2]), 1);
+      scaleSgData[rank - 1] = std::max<int64_t>(
+          scaleShape[rank - 1] / (matrixShape[rank - 1] / sgData[rank - 1]), 1);
     }
 
-    SmallVector<int> scaleInstData(matrixShape.begin(), matrixShape.end());
+    // For DPAS_MX scales: if matrix has inst_data, scale needs adjusted
+    // inst_data Scale inst_data is derived from matrix inst_data divided by
+    // scale factor
+    SmallVector<int> scaleInstData;
     if (!instData.empty()) {
+      scaleInstData.assign(instData.begin(), instData.end());
       if (isBScale)
-        scaleInstData[rank - 2] =
-            std::max<int64_t>(matrixShape[rank - 2] / scaleFactor, 1);
+        scaleInstData[rank - 2] = std::max<int64_t>(
+            scaleShape[rank - 2] / (matrixShape[rank - 2] / instData[rank - 2]),
+            1);
       else
-        scaleInstData[rank - 1] =
-            std::max<int64_t>(matrixShape[rank - 1] / scaleFactor, 1);
+        scaleInstData[rank - 1] = std::max<int64_t>(
+            scaleShape[rank - 1] / (matrixShape[rank - 1] / instData[rank - 1]),
+            1);
     }
 
-    SmallVector<int> scaleLaneLayout(laneLayout.begin(), laneLayout.end());
-    SmallVector<int> scaleLaneData(laneData.begin(), laneData.end());
-
+    SmallVector<int> scaleLaneLayout;
+    SmallVector<int> scaleLaneData;
     if (!laneLayout.empty() && !laneData.empty()) {
-      bool order = uArchInstruction->isLaneLayoutRowMajorOrder();
-      if (isBScale ^ order)
-        std::swap(scaleLaneLayout[rank - 2], scaleLaneLayout[rank - 1]);
 
-      scaleLaneData[rank - 2] =
-          std::max<int64_t>(scaleShape[rank - 2] / laneLayout[rank - 2], 1);
-      scaleLaneData[rank - 1] =
-          std::max<int64_t>(scaleShape[rank - 1] / laneLayout[rank - 1], 1);
+      scaleLaneLayout.assign(laneLayout.begin(), laneLayout.end());
+      scaleLaneData.assign(laneData.begin(), laneData.end());
+      bool order = uArchInstruction->isLaneLayoutRowMajorOrder();
+      if (isBScale ^ order) {
+        std::swap(scaleLaneLayout[rank - 2], scaleLaneLayout[rank - 1]);
+        scaleLaneLayout[rank - 2] =
+            std::min<int64_t>(scaleShape[rank - 2], scaleLaneLayout[rank - 2]);
+      }
+      scaleLaneData[rank - 2] = std::max<int64_t>(
+          scaleShape[rank - 2] / scaleLaneLayout[rank - 2], 1);
+      scaleLaneData[rank - 1] = std::max<int64_t>(
+          scaleShape[rank - 1] / scaleLaneLayout[rank - 1], 1);
     }
     return xegpu::LayoutAttr::get(
         context,

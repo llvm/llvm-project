@@ -1,4 +1,4 @@
-// RUN: mlir-opt -xevm-attach-target='chip=pvc' -test-xegpu-propagate-layouts="layout-kind=lane" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -xevm-attach-target='chip=cri' -test-xegpu-propagate-layouts="layout-kind=lane" -split-input-file %s | FileCheck %s
 
 gpu.module @test {
 // CHECK-LABEL: func.func @dpas_f16(
@@ -1034,7 +1034,6 @@ func.func @dpas_mx_f8e5m2(%arg0: memref<8x32xf8E5M2>, %arg1: memref<32x16xf8E5M2
 }
 
 // -----
-
 gpu.module @test {
 // CHECK-LABEL: func.func @dpas_mx_fp4
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x64xf4E2M1FN>, %[[ARG1:[0-9a-zA-Z]+]]: memref<64x16xf4E2M1FN>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xbf16>
@@ -1046,14 +1045,14 @@ gpu.module @test {
 // CHECK-SAME: !xegpu.tensor_desc<8x64xf4E2M1FN, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>> -> vector<8x64xf4E2M1FN>
 // CHECK: %[[T3:.*]] = xegpu.load_nd %[[T1]] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<64x16xf4E2M1FN, #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>> -> vector<64x16xf4E2M1FN>
-// CHECK: %[[T4:.*]] = xegpu.create_nd_tdesc %[[ARG3]][{{.*}}] : memref<8x2xf8E8M0FNU> -> !xegpu.tensor_desc<8x2xf8E8M0FNU, #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>>
-// CHECK: %[[T5:.*]] = xegpu.load_nd %[[T4]] <{layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>}> :
-// CHECK-SAME: !xegpu.tensor_desc<8x2xf8E8M0FNU, #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>> -> vector<8x2xf8E8M0FNU>
-// CHECK: %[[T6:.*]] = xegpu.create_nd_tdesc %[[ARG4]][{{.*}}] : memref<2x16xf8E8M0FNU> -> !xegpu.tensor_desc<2x16xf8E8M0FNU, #xegpu.layout<lane_layout = [2, 16], lane_data = [1, 1]>>
-// CHECK: %[[T7:.*]] = xegpu.load_nd %[[T6]] <{layout = #xegpu.layout<lane_layout = [2, 16], lane_data = [1, 1]>}> :
-// CHECK-SAME: !xegpu.tensor_desc<2x16xf8E8M0FNU, #xegpu.layout<lane_layout = [2, 16], lane_data = [1, 1]>> -> vector<2x16xf8E8M0FNU>
+// CHECK: %[[T4:.*]] = xegpu.create_nd_tdesc %[[ARG3]][{{.*}}] : memref<8x2xf8E8M0FNU> -> !xegpu.tensor_desc<8x2xf8E8M0FNU, #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2]>>
+// CHECK: %[[T5:.*]] = xegpu.load_nd %[[T4]] <{layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2]>}> :
+// CHECK-SAME: !xegpu.tensor_desc<8x2xf8E8M0FNU, #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2]>> -> vector<8x2xf8E8M0FNU>
+// CHECK: %[[T6:.*]] = xegpu.create_nd_tdesc %[[ARG4]][{{.*}}] : memref<2x16xf8E8M0FNU> -> !xegpu.tensor_desc<2x16xf8E8M0FNU, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
+// CHECK: %[[T7:.*]] = xegpu.load_nd %[[T6]] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> :
+// CHECK-SAME: !xegpu.tensor_desc<2x16xf8E8M0FNU, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<2x16xf8E8M0FNU>
 // CHECK: %[[T8:.*]] = xegpu.dpas_mx %[[T2]], %[[T3]], %[[CST]] scale_a = %[[T5]] scale_b = %[[T7]]
-// CHECK-SAME: {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>, layout_a_scale = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>, layout_b_scale = #xegpu.layout<lane_layout = [2, 16], lane_data = [1, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
+// CHECK-SAME: {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>, layout_a_scale = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>, layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
 // CHECK-SAME: vector<8x64xf4E2M1FN>, vector<64x16xf4E2M1FN>, vector<8x16xbf16>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU> -> vector<8x16xbf16>
 // CHECK: %[[T9:.*]] = xegpu.create_nd_tdesc %[[ARG2]][{{.*}}] : memref<8x16xbf16> -> !xegpu.tensor_desc<8x16xbf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK: xegpu.store_nd %[[T8]], %[[T9]] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xbf16>, !xegpu.tensor_desc<8x16xbf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
