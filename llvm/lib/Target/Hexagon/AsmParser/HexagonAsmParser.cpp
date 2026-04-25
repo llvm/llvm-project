@@ -159,9 +159,8 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
 public:
   HexagonAsmParser(const MCSubtargetInfo &_STI, MCAsmParser &_Parser,
-                   const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, _STI, MII), Parser(_Parser),
-      InBrackets(false) {
+                   const MCInstrInfo &MII)
+      : MCTargetAsmParser(_STI, MII), Parser(_Parser), InBrackets(false) {
     MCB.setOpcode(Hexagon::BUNDLE);
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
 

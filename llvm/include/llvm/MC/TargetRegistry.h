@@ -176,9 +176,9 @@ public:
                                                const MCSubtargetInfo &STI,
                                                const MCRegisterInfo &MRI,
                                                const MCTargetOptions &Options);
-  using MCAsmParserCtorTy = MCTargetAsmParser *(*)(
-      const MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
-      const MCTargetOptions &Options);
+  using MCAsmParserCtorTy = MCTargetAsmParser *(*)(const MCSubtargetInfo &STI,
+                                                   MCAsmParser &P,
+                                                   const MCInstrInfo &MII);
   using MCDisassemblerCtorTy = MCDisassembler *(*)(const Target &T,
                                                    const MCSubtargetInfo &STI,
                                                    MCContext &Ctx);
@@ -504,11 +504,10 @@ public:
   /// parsing and lexing.
   MCTargetAsmParser *createMCAsmParser(const MCSubtargetInfo &STI,
                                        MCAsmParser &Parser,
-                                       const MCInstrInfo &MII,
-                                       const MCTargetOptions &Options) const {
+                                       const MCInstrInfo &MII) const {
     if (!MCAsmParserCtorFn)
       return nullptr;
-    return MCAsmParserCtorFn(STI, Parser, MII, Options);
+    return MCAsmParserCtorFn(STI, Parser, MII);
   }
 
   /// createAsmPrinter - Create a target specific assembly printer pass.  This
@@ -1349,9 +1348,8 @@ template <class MCAsmParserImpl> struct RegisterMCAsmParser {
 
 private:
   static MCTargetAsmParser *Allocator(const MCSubtargetInfo &STI,
-                                      MCAsmParser &P, const MCInstrInfo &MII,
-                                      const MCTargetOptions &Options) {
-    return new MCAsmParserImpl(STI, P, MII, Options);
+                                      MCAsmParser &P, const MCInstrInfo &MII) {
+    return new MCAsmParserImpl(STI, P, MII);
   }
 };
 
