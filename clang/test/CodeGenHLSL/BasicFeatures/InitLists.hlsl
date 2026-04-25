@@ -66,7 +66,6 @@ struct UnnamedDerived : UnnamedOnly {};
 // CHECK-LABEL: define hidden void @_Z5case1v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_RESULT]], ptr align 1 @__const._Z5case1v.TF1, i32 8, i1 false)
 // CHECK-NEXT:    ret void
 //
@@ -79,7 +78,6 @@ TwoFloats case1() {
 // CHECK-LABEL: define hidden void @_Z5case2v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_RESULT]], ptr align 1 @__const._Z5case2v.TF2, i32 8, i1 false)
 // CHECK-NEXT:    ret void
 //
@@ -92,7 +90,6 @@ TwoFloats case2() {
 // CHECK-LABEL: define hidden void @_Z5case3i(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -113,7 +110,6 @@ TwoFloats case3(int Val) {
 // CHECK-LABEL: define hidden void @_Z5case4Dv2_i(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], <2 x i32> noundef [[TWOVALS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TWOVALS_ADDR:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    store <2 x i32> [[TWOVALS]], ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -137,7 +133,6 @@ TwoFloats case4(int2 TwoVals) {
 // CHECK-LABEL: define hidden void @_Z5case5Dv2_i(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], <2 x i32> noundef [[TWOVALS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TWOVALS_ADDR:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    store <2 x i32> [[TWOVALS]], ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -160,7 +155,6 @@ TwoInts case5(int2 TwoVals) {
 // CHECK-LABEL: define hidden void @_Z5case69TwoFloats(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 1 [[TF4:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[TF4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[X]], align 1
@@ -183,7 +177,6 @@ TwoInts case6(TwoFloats TF4) {
 // CHECK-LABEL: define hidden void @_Z5case77TwoIntsS_i9TwoFloatsS0_S0_S0_(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_DOGGO:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOINTS:%.*]]) align 1 [[TI1:%.*]], ptr noundef byval([[STRUCT_TWOINTS]]) align 1 [[TI2:%.*]], i32 noundef [[VAL:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 1 [[TF1:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 1 [[TF2:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 1 [[TF3:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 1 [[TF4:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
 // CHECK-NEXT:    [[LEGSTATE:%.*]] = getelementptr inbounds nuw [[STRUCT_DOGGO]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -248,7 +241,6 @@ Doggo case7(TwoInts TI1, TwoInts TI2, int Val, TwoFloats TF1, TwoFloats TF2,
 // CHECK-LABEL: define hidden void @_Z5case85Doggo(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_ANIMALBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_DOGGO:%.*]]) align 1 [[D1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[LEGS:%.*]] = getelementptr inbounds nuw [[STRUCT_ANIMALBITS]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[LEGSTATE:%.*]] = getelementptr inbounds nuw [[STRUCT_DOGGO]], ptr [[D1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[LEGSTATE]], align 1
@@ -335,7 +327,6 @@ AnimalBits case8(Doggo D1) {
 // CHECK-LABEL: define hidden void @_Z5case95Doggo10AnimalBits(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_ZOO:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_DOGGO:%.*]]) align 1 [[D1:%.*]], ptr noundef byval([[STRUCT_ANIMALBITS:%.*]]) align 1 [[A1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[DOGS:%.*]] = getelementptr inbounds nuw [[STRUCT_ZOO]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[LEGSTATE:%.*]] = getelementptr inbounds nuw [[STRUCT_DOGGO]], ptr [[DOGS]], i32 0, i32 0
 // CHECK-NEXT:    [[LEGSTATE1:%.*]] = getelementptr inbounds nuw [[STRUCT_DOGGO]], ptr [[D1]], i32 0, i32 0
@@ -752,7 +743,6 @@ Zoo case9(Doggo D1, AnimalBits A1) {
 // CHECK-LABEL: define hidden void @_Z6case109TwoFloatsS_(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 1 [[TF1:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 1 [[TF2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[TF1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[X1]], align 1
@@ -780,7 +770,6 @@ FourFloats case10(TwoFloats TF1, TwoFloats TF2) {
 // CHECK-LABEL: define hidden void @_Z6case11f(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    [[REF_TMP1:%.*]] = alloca <4 x float>, align 4
@@ -830,7 +819,6 @@ FourFloats case11(float F) {
 // CHECK-LABEL: define hidden void @_Z6case12ii(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_SLICYBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], i32 noundef [[I:%.*]], i32 noundef [[J:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[J_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
@@ -853,7 +841,6 @@ SlicyBits case12(int I, int J) {
 // CHECK-LABEL: define hidden void @_Z6case137TwoInts(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_SLICYBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOINTS:%.*]]) align 1 [[TI:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Z]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
@@ -874,7 +861,6 @@ SlicyBits case13(TwoInts TI) {
 // CHECK-LABEL: define hidden void @_Z6case149SlicyBits(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_SLICYBITS:%.*]]) align 1 [[SB:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[SB]], align 1
 // CHECK-NEXT:    [[BF_CAST:%.*]] = sext i8 [[BF_LOAD]] to i32
@@ -895,7 +881,6 @@ TwoInts case14(SlicyBits SB) {
 // CHECK-LABEL: define hidden void @_Z6case159SlicyBits(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_SLICYBITS:%.*]]) align 1 [[SB:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[SB]], align 1
 // CHECK-NEXT:    [[BF_CAST:%.*]] = sext i8 [[BF_LOAD]] to i32
@@ -919,7 +904,6 @@ TwoFloats case15(SlicyBits SB) {
 // CHECK-LABEL: define hidden void @_Z7makeTwoRf(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noalias noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -946,7 +930,6 @@ TwoFloats makeTwo(inout float X) {
 // CHECK-LABEL: define hidden void @_Z6case16v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_TWOFLOATS:%.*]], align 1
 // CHECK-NEXT:    [[TMP:%.*]] = alloca float, align 4
@@ -980,7 +963,6 @@ FourFloats case16() {
 // CHECK-LABEL: define hidden noundef i32 @_Z12case17Helperi(
 // CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
@@ -994,7 +976,6 @@ int case17Helper(int x) {
 // CHECK-LABEL: define hidden void @_Z6case17v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z12case17Helperi(i32 noundef 0) #[[ATTR2]]
 // CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z12case17Helperi(i32 noundef 1) #[[ATTR2]]
@@ -1011,7 +992,6 @@ void case17() {
 // CHECK-LABEL: define hidden void @_Z6case18v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[U:%.*]] = alloca [[STRUCT_UNNAMED:%.*]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[U]], ptr align 1 @__const._Z6case18v.U, i32 5, i1 false)
 // CHECK-NEXT:    ret void
@@ -1024,7 +1004,6 @@ void case18() {
 // CHECK-LABEL: define hidden void @_Z6case197Unnamed(
 // CHECK-SAME: ptr noundef byval([[STRUCT_UNNAMED:%.*]]) align 1 [[U:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TI:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_UNNAMED]], ptr [[U]], i32 0, i32 0
@@ -1042,7 +1021,6 @@ void case19(Unnamed U) {
 // CHECK-LABEL: define hidden void @_Z6case20v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[E:%.*]] = alloca [[STRUCT_EMPTY:%.*]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[E]], ptr align 1 @__const._Z6case20v.E, i32 1, i1 false)
 // CHECK-NEXT:    ret void
@@ -1055,7 +1033,6 @@ void case20() {
 // CHECK-LABEL: define hidden void @_Z6case215Empty(
 // CHECK-SAME: ptr noundef byval([[STRUCT_EMPTY:%.*]]) align 1 [[E:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TI:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TI]], ptr align 1 @__const._Z6case215Empty.TI, i32 8, i1 false)
 // CHECK-NEXT:    ret void
@@ -1068,7 +1045,6 @@ void case21(Empty E) {
 // CHECK-LABEL: define hidden void @_Z6case22v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[UO:%.*]] = alloca [[STRUCT_UNNAMEDONLY:%.*]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[UO]], ptr align 1 @__const._Z6case22v.UO, i32 1, i1 false)
 // CHECK-NEXT:    ret void
@@ -1081,7 +1057,6 @@ void case22() {
 // CHECK-LABEL: define hidden void @_Z6case2311UnnamedOnly(
 // CHECK-SAME: ptr noundef byval([[STRUCT_UNNAMEDONLY:%.*]]) align 1 [[UO:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TI:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TI]], ptr align 1 @__const._Z6case2311UnnamedOnly.TI, i32 8, i1 false)
 // CHECK-NEXT:    ret void
@@ -1095,7 +1070,6 @@ void case23(UnnamedOnly UO) {
 // CHECK-LABEL: define hidden void @_Z6case24v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[ED:%.*]] = alloca [[STRUCT_EMPTYDERIVED:%.*]], align 1
 // CHECK-NEXT:    [[UD:%.*]] = alloca [[STRUCT_UNNAMEDDERIVED:%.*]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[ED]], ptr align 1 @__const._Z6case24v.ED, i32 1, i1 false)
@@ -1110,7 +1084,6 @@ void case24() {
 // CHECK-LABEL: define hidden void @_Z6case2512EmptyDerived14UnnamedDerived(
 // CHECK-SAME: ptr noundef byval([[STRUCT_EMPTYDERIVED:%.*]]) align 1 [[ED:%.*]], ptr noundef byval([[STRUCT_UNNAMEDDERIVED:%.*]]) align 1 [[UD:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TI1:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
 // CHECK-NEXT:    [[TI2:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TI1]], ptr align 1 @__const._Z6case2512EmptyDerived14UnnamedDerived.TI1, i32 8, i1 false)
@@ -1125,7 +1098,6 @@ void case25(EmptyDerived ED, UnnamedDerived UD) {
 // CHECK-LABEL: define hidden void @_Z6case267TwoInts(
 // CHECK-SAME: ptr noundef byval([[STRUCT_TWOINTS:%.*]]) align 1 [[TI:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[F:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    [[F2:%.*]] = alloca <3 x float>, align 4
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
@@ -1164,7 +1136,6 @@ struct CustomResource {
 // CHECK-LABEL: define hidden void @_Z6case2714CustomResource(
 // CHECK-SAME: ptr noundef byval([[STRUCT_CUSTOMRESOURCE:%.*]]) align 1 [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_CUSTOMRESOURCE]], align 1
 // CHECK-NEXT:    [[H:%.*]] = getelementptr inbounds nuw [[STRUCT_CUSTOMRESOURCE]], ptr [[B]], i32 0, i32 0
 // CHECK-NEXT:    [[H1:%.*]] = getelementptr inbounds nuw [[STRUCT_CUSTOMRESOURCE]], ptr [[A]], i32 0, i32 0
@@ -1181,13 +1152,9 @@ void case27(CustomResource a) {
 // CHECK-LABEL: define hidden void @_Z6case289TwoFloats(
 // CHECK-SAME: ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 1 [[TF:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TI:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_TWOFLOATS]], align 1
-// CHECK-NEXT:    [[REF_TMP6:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
-// CHECK-NEXT:    [[AGG_TEMP7:%.*]] = alloca [[STRUCT_TWOFLOATS]], align 1
-// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[TF]], i32 8, i1 false)
 // CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
@@ -1199,23 +1166,13 @@ void case27(CustomResource a) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[GEP3]], align 4
 // CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP1]] to i32
 // CHECK-NEXT:    store i32 [[CONV4]], ptr [[GEP1]], align 4
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[Z5:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z5]], align 1
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[Z]], align 1
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP7]], ptr align 1 [[TF]], i32 8, i1 false)
-// CHECK-NEXT:    [[GEP8:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP6]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP9:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP6]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds [[STRUCT_TWOFLOATS]], ptr [[AGG_TEMP7]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds [[STRUCT_TWOFLOATS]], ptr [[AGG_TEMP7]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP10]], align 4
-// CHECK-NEXT:    [[CONV12:%.*]] = fptosi float [[TMP3]] to i32
-// CHECK-NEXT:    store i32 [[CONV12]], ptr [[GEP8]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP11]], align 4
-// CHECK-NEXT:    [[CONV13:%.*]] = fptosi float [[TMP4]] to i32
-// CHECK-NEXT:    store i32 [[CONV13]], ptr [[GEP9]], align 4
-// CHECK-NEXT:    [[W14:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP6]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W14]], align 1
+// CHECK-NEXT:    [[W6:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W6]], align 1
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[W]], align 1
 // CHECK-NEXT:    ret void
 //
@@ -1226,12 +1183,9 @@ void case28(TwoFloats TF) {
 // CHECK-LABEL: define hidden void @_Z6case2910FourFloats(
 // CHECK-SAME: ptr noundef byval([[STRUCT_FOURFLOATS:%.*]]) align 1 [[FF:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[INTS:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_FOURFLOATS]], align 1
-// CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca [2 x i32], align 4
-// CHECK-NEXT:    [[AGG_TEMP8:%.*]] = alloca [[STRUCT_FOURFLOATS]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[FF]], i32 16, i1 false)
 // CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP]], i32 0, i32 1
@@ -1249,21 +1203,8 @@ void case28(TwoFloats TF) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[INTS]], align 4
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[INTS]], i32 1
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP8]], ptr align 1 [[FF]], i32 16, i1 false)
-// CHECK-NEXT:    [[GEP9:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP7]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP7]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 0, i32 0
-// CHECK-NEXT:    [[GEP12:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 0, i32 1
-// CHECK-NEXT:    [[GEP13:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP14:%.*]] = getelementptr inbounds [[STRUCT_FOURFLOATS]], ptr [[AGG_TEMP8]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP11]], align 4
-// CHECK-NEXT:    [[CONV15:%.*]] = fptosi float [[TMP3]] to i32
-// CHECK-NEXT:    store i32 [[CONV15]], ptr [[GEP9]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP12]], align 4
-// CHECK-NEXT:    [[CONV16:%.*]] = fptosi float [[TMP4]] to i32
-// CHECK-NEXT:    store i32 [[CONV16]], ptr [[GEP10]], align 4
-// CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[REF_TMP7]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX17]], align 4
+// CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYINIT_ELEMENT]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -1274,15 +1215,11 @@ void case29(FourFloats FF) {
 // CHECK-LABEL: define hidden void @_Z6case30v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [4 x float], align 4
 // CHECK-NEXT:    [[TI:%.*]] = alloca [[STRUCT_TWOINTS:%.*]], align 1
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [4 x float], align 4
-// CHECK-NEXT:    [[REF_TMP8:%.*]] = alloca [[STRUCT_TWOINTS]], align 1
-// CHECK-NEXT:    [[AGG_TEMP9:%.*]] = alloca [4 x float], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @__const._Z6case30v.Arr, i32 16, i1 false)
-// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TEMP]], ptr align 4 [[ARR]], i32 16, i1 false)
 // CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
@@ -1296,25 +1233,13 @@ void case29(FourFloats FF) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[GEP3]], align 4
 // CHECK-NEXT:    [[CONV6:%.*]] = fptosi float [[TMP1]] to i32
 // CHECK-NEXT:    store i32 [[CONV6]], ptr [[GEP1]], align 4
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[Z7:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z7]], align 1
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[Z]], align 1
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TEMP9]], ptr align 4 [[ARR]], i32 16, i1 false)
-// CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP8]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds [[STRUCT_TWOINTS]], ptr [[REF_TMP8]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP12:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 0
-// CHECK-NEXT:    [[GEP13:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP14:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 2
-// CHECK-NEXT:    [[GEP15:%.*]] = getelementptr inbounds [4 x float], ptr [[AGG_TEMP9]], i32 0, i32 3
-// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP12]], align 4
-// CHECK-NEXT:    [[CONV16:%.*]] = fptosi float [[TMP3]] to i32
-// CHECK-NEXT:    store i32 [[CONV16]], ptr [[GEP10]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP13]], align 4
-// CHECK-NEXT:    [[CONV17:%.*]] = fptosi float [[TMP4]] to i32
-// CHECK-NEXT:    store i32 [[CONV17]], ptr [[GEP11]], align 4
-// CHECK-NEXT:    [[W18:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP8]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W18]], align 1
+// CHECK-NEXT:    [[W8:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[W8]], align 1
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[W]], align 1
 // CHECK-NEXT:    ret void
 //
@@ -1326,7 +1251,6 @@ void case30() {
 // CHECK-LABEL: define hidden void @_Z6case31v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[F:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[SB:%.*]] = alloca [[STRUCT_SLICYBITS:%.*]], align 1
 // CHECK-NEXT:    store float 1.000000e+00, ptr [[F]], align 4

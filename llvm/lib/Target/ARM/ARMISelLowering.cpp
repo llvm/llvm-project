@@ -529,14 +529,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     addRegisterClass(MVT::f32, &ARM::SPRRegClass);
     addRegisterClass(MVT::f64, &ARM::DPRRegClass);
 
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
-
     if (!Subtarget->hasVFP2Base()) {
       setAllExpand(MVT::f32);
     } else {
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Custom);
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Custom);
+
       for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
                       ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
         setOperationAction(Op, MVT::f32, Legal);
@@ -1502,18 +1500,16 @@ ARMTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
   return std::make_pair(RRC, Cost);
 }
 
-EVT ARMTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
+EVT ARMTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &C,
                                           EVT VT) const {
   if (!VT.isVector())
     return getPointerTy(DL);
 
   // MVE has a predicate register.
-  if ((Subtarget->hasMVEIntegerOps() &&
-       (VT == MVT::v2i64 || VT == MVT::v4i32 || VT == MVT::v8i16 ||
-        VT == MVT::v16i8)) ||
-      (Subtarget->hasMVEFloatOps() &&
-       (VT == MVT::v2f64 || VT == MVT::v4f32 || VT == MVT::v8f16)))
-    return MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
+  if ((Subtarget->hasMVEIntegerOps() && VT.isInteger()) ||
+      (Subtarget->hasMVEFloatOps() && VT.isFloatingPoint()))
+    return VT.changeElementType(C, MVT::i1);
+
   return VT.changeVectorElementTypeToInteger();
 }
 
@@ -4808,6 +4804,49 @@ SDValue ARMTargetLowering::LowerALUO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::MERGE_VALUES, dl, VTs, Value, Overflow);
 }
 
+// Lower various (select (icmp CmpVal, 0), TrueVal, FalseVal) custom patterns.
+static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
+                                      ISD::CondCode CC, const SDLoc &DL,
+                                      SelectionDAG &DAG,
+                                      const ARMSubtarget &Subtarget) {
+  EVT CmpVT = CmpVal.getValueType();
+  EVT VT = LHS.getValueType();
+  if (!CmpVT.isScalarInteger() || !VT.isScalarInteger())
+    return SDValue();
+
+  if (CC == ISD::SETEQ && CmpVal.getOpcode() == ISD::AND &&
+      isOneConstant(CmpVal.getOperand(1))) {
+    auto SplatLSB = [&](EVT SplatVT) {
+      // we need mask of all zeros or ones with same size of the other
+      // operands.
+      SDValue Neg = CmpVal;
+      if (CmpVT.bitsGT(SplatVT))
+        Neg = DAG.getNode(ISD::TRUNCATE, DL, SplatVT, CmpVal);
+      else if (CmpVT.bitsLT(SplatVT))
+        Neg = DAG.getNode(
+            ISD::AND, DL, SplatVT,
+            DAG.getNode(ISD::ANY_EXTEND, DL, SplatVT, CmpVal.getOperand(0)),
+            DAG.getConstant(1, DL, SplatVT));
+      return DAG.getNegative(Neg, DL, SplatVT); // -(and (x, 0x1))
+    };
+
+    // SELECT (AND(X,1) == 0), 0, -1 -> NEG(AND(X,1))
+    if (isNullConstant(LHS) && isAllOnesConstant(RHS))
+      return SplatLSB(VT);
+
+    // SELECT (AND(X,1) == 0), C1, C2 -> XOR(C1,AND(NEG(AND(X,1)),XOR(C1,C2))
+    if (Subtarget.isThumb1Only() && isa<ConstantSDNode>(LHS) &&
+        isa<ConstantSDNode>(RHS)) {
+      SDValue Mask = SplatLSB(VT);
+      SDValue Diff = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
+      SDValue Flip = DAG.getNode(ISD::AND, DL, VT, Mask, Diff);
+      return DAG.getNode(ISD::XOR, DL, VT, LHS, Flip);
+    }
+  }
+
+  return SDValue();
+}
+
 static SDValue LowerADDSUBSAT(SDValue Op, SelectionDAG &DAG,
                               const ARMSubtarget *Subtarget) {
   EVT VT = Op.getValueType();
@@ -5233,7 +5272,6 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
   ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
   if (Op.getValueType().isInteger()) {
-
     // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
     // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
     // (SELECT_CC setlt, lhs, 0, lhs, 0) -> (AND lhs, (SRA lhs, typesize-1))
@@ -5257,6 +5295,12 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
         isNullConstant(FalseVal) && LHS.getValueType() == VT)
       return DAG.getNode(ISD::SRL, dl, VT, LHS,
                          DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
+
+    if (RHSC && RHSC->isZero()) {
+      if (SDValue R = LowerSELECTWithCmpZero(LHS, TrueVal, FalseVal, CC, dl,
+                                             DAG, *Subtarget))
+        return R;
+    }
   }
 
   if (LHS.getValueType() == MVT::i32) {

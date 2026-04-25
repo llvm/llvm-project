@@ -65,9 +65,9 @@ export float TestLoadWithStatus() {
 
 // CHECK: define {{.*}} float @TestLoadWithStatus()()
 // CHECK: call {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 0, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 4, ptr {{.*}} %[[TMP1:.*]])
-// CHECK: call {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 20, ptr {{.*}} %[[TMP2:.*]])
-// CHECK: call {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 24, ptr {{.*}} %[[TMP3:.*]])
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 4, ptr {{.*}} %tmp1)
+// CHECK: call {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 20, ptr {{.*}} %tmp4)
+// CHECK: call {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 24, ptr {{.*}} %tmp7)
 // CHECK: add
 // CHECK: ret float
 

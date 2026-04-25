@@ -72,6 +72,7 @@ MACHINE_FUNCTION_ANALYSIS("live-reg-matrix", LiveRegMatrixAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-stacks", LiveStacksAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-vars", LiveVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-block-freq", MachineBlockFrequencyAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-block-hash", MachineBlockHashInfoAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-branch-prob",
                           MachineBranchProbabilityAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-cycles", MachineCycleAnalysis())
@@ -143,6 +144,8 @@ MACHINE_FUNCTION_PASS("print<live-stacks>", LiveStacksPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-vars>", LiveVariablesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-block-freq>",
                       MachineBlockFrequencyPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<machine-block-hash>",
+                      MachineBlockHashInfoPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-branch-prob>",
                       MachineBranchProbabilityPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-cycles>", MachineCycleInfoPrinterPass(errs()))
