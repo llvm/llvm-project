@@ -5448,32 +5448,12 @@ struct OpenMPStandaloneConstruct {
       u;
 };
 
-struct OmpBeginLoopDirective : public OmpBeginDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpBeginLoopDirective, OmpBeginDirective);
-};
-
-struct OmpEndLoopDirective : public OmpEndDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpEndLoopDirective, OmpEndDirective);
-};
-
 // OpenMP directives enclosing do loop
-struct OpenMPLoopConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
-  OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-      : t({std::move(a), Block{}, std::nullopt}) {}
+struct OpenMPLoopConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct, OmpBlockConstruct);
 
-  const OmpBeginLoopDirective &BeginDir() const {
-    return std::get<OmpBeginLoopDirective>(t);
-  }
-  const std::optional<OmpEndLoopDirective> &EndDir() const {
-    return std::get<std::optional<OmpEndLoopDirective>>(t);
-  }
   const DoConstruct *GetNestedLoop() const;
   const OpenMPLoopConstruct *GetNestedConstruct() const;
-
-  CharBlock source;
-  std::tuple<OmpBeginLoopDirective, Block, std::optional<OmpEndLoopDirective>>
-      t;
 };
 
 // Lookahead class to identify execution-part OpenMP constructs without

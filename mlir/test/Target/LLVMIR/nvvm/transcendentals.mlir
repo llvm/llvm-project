@@ -13,3 +13,17 @@ llvm.func @nvvm_sin_ftz(%arg0: f32) -> f32 {
   %0 = nvvm.sin %arg0 {ftz = true} : f32
   llvm.return %0 : f32
 }
+
+// CHECK-LABEL: @nvvm_cos
+llvm.func @nvvm_cos(%arg0: f32) -> f32 {
+  // CHECK: call float @llvm.nvvm.cos.approx.f(float %{{.*}})
+  %0 = nvvm.cos %arg0 : f32
+  llvm.return %0 : f32
+}
+
+// CHECK-LABEL: @nvvm_cos_ftz
+llvm.func @nvvm_cos_ftz(%arg0: f32) -> f32 {
+  // CHECK: call float @llvm.nvvm.cos.approx.ftz.f(float %{{.*}})
+  %0 = nvvm.cos %arg0 {ftz = true} : f32
+  llvm.return %0 : f32
+}
