@@ -16,6 +16,7 @@
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_trivially_copyable.h>
+#include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/constant_wrapper.h>
 
@@ -37,21 +38,16 @@ struct __is_convertible_from_specialization : false_type {};
 // pointers
 // todo: libstdc++ does not support volatile objects. shall we support it? the standard does not say it should not be
 // supported
-union __storage_func_ref_t {
+union __function_ref_storage {
   void* __obj_ptr_;
-  void const* __obj_const_ptr_;
   void (*__fn_ptr_)();
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_func_ref_t() noexcept : __obj_ptr_(nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __function_ref_storage() noexcept : __obj_ptr_(nullptr) {}
 
   template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_func_ref_t(_Tp* __ptr) noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __function_ref_storage(_Tp* __ptr) noexcept {
     if constexpr (is_object_v<_Tp>) {
-      if constexpr (is_const_v<_Tp>) {
-        __obj_const_ptr_ = __ptr;
-      } else {
-        __obj_ptr_ = __ptr;
-      }
+      __obj_ptr_ = const_cast<remove_cv_t<_Tp>*>(__ptr);
     } else {
       static_assert(is_function_v<_Tp>);
       __fn_ptr_ = reinterpret_cast<void (*)()>(__ptr);
@@ -59,13 +55,9 @@ union __storage_func_ref_t {
   }
 
   template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __get(__storage_func_ref_t __storage) {
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __get(__function_ref_storage __storage) {
     if constexpr (is_object_v<_Tp>) {
-      if constexpr (is_const_v<_Tp>) {
-        return static_cast<_Tp*>(__storage.__obj_const_ptr_);
-      } else {
-        return static_cast<_Tp*>(__storage.__obj_ptr_);
-      }
+      return static_cast<_Tp*>(__storage.__obj_ptr_);
     } else {
       static_assert(is_function_v<_Tp>);
       return reinterpret_cast<_Tp*>(__storage.__fn_ptr_);

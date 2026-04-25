@@ -161,6 +161,10 @@ constexpr auto fn_noexcept = []() noexcept { return 6; };
 const auto one = []() noexcept { return 1; };
 const auto two = []() noexcept { return 2; };
 
+struct VolatileCallable {
+  int operator()() volatile const { return 42; }
+};
+
 constexpr bool test() {
   {
     std::function_ref<void()> f(l1);
@@ -303,6 +307,14 @@ constexpr bool test() {
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f2() == 1 || f2() == 2);
       LIBCPP_ASSERT(f2() == 1);
+    }
+  }
+  {
+    // volatile objects
+    const volatile VolatileCallable vc{};
+    std::function_ref<int()> f(vc);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(f() == 42);
     }
   }
 

@@ -72,7 +72,7 @@ private:
   template <class _Arg>
   using __arg_t _LIBCPP_NODEBUG = typename __function_ref_arg_fwd<_Arg>::type;
 
-  using __storage_t _LIBCPP_NODEBUG = __storage_func_ref_t;
+  using __storage_t _LIBCPP_NODEBUG = __function_ref_storage;
 
   using __call_t _LIBCPP_NODEBUG = _Rp (*)(__storage_t, __arg_t<_ArgTypes>...) noexcept(__is_noexcept);
 
