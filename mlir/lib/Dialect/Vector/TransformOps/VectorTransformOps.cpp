@@ -207,13 +207,9 @@ void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
   vector::populateVectorInterleaveLoweringPatterns(patterns);
 }
 
-void transform::ApplyInterleaveToShufflePatternsOp::populatePatterns(
+void transform::ApplyInterleaveAndDeinterleaveToShufflePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorInterleaveToShufflePatterns(patterns);
-}
-
-void transform::ApplyDeinterleaveToShufflePatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
   vector::populateVectorDeinterleaveToShufflePatterns(patterns);
 }
 
