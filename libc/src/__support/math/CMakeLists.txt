@@ -3009,6 +3009,7 @@ add_header_library(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits

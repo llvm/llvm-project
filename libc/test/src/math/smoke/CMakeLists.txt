@@ -4481,6 +4481,7 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.math.log10p1f16
     libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
 )
 
 add_fp_unittest(
