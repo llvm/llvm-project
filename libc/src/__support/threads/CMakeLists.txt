@@ -24,16 +24,22 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
+  add_header_library(
+    futex_utils
+    HDRS
+      futex_utils.h
+    DEPENDS
+      .${LIBC_TARGET_OS}.futex_utils
+  )
+
   libc_set_definition(rwlock_default_spin_count "LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}")
 
   add_header_library(
     raw_mutex
     HDRS
       raw_mutex.h
-    COMPILE_OPTIONS
-      ${monotonicity_flags}
     DEPENDS
-      .${LIBC_TARGET_OS}.futex_utils
+      .futex_utils
       libc.src.__support.threads.sleep
       libc.src.__support.time.abs_timeout
       libc.src.__support.time.monotonicity
@@ -47,7 +53,6 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
       raw_rwlock.h
     COMPILE_OPTIONS
       ${rwlock_default_spin_count}
-      ${monotonicity_flags}
     DEPENDS
       .raw_mutex
       libc.src.__support.common
@@ -139,12 +144,24 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.callonce)
   )
 endif()
 
-if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
-  add_object_library(
+if(TARGET libc.src.__support.threads.futex_utils)
+  add_header_library(
     CndVar
-    ALIAS
+    HDRS
+      CndVar.h
     DEPENDS
-    .${LIBC_TARGET_OS}.CndVar
+      .futex_utils
+      .mutex
+      .mutex_common
+      .raw_mutex
+      libc.hdr.stdint_proxy
+      libc.src.__support.CPP.expected
+      libc.src.__support.CPP.limits
+      libc.src.__support.CPP.mutex
+      libc.src.__support.CPP.new
+      libc.src.__support.threads.sleep
+      libc.src.__support.time.monotonicity
+      libc.src.__support.time.abs_timeout
   )
 endif()
 

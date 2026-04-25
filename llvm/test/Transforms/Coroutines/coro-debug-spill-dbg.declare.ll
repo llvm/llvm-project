@@ -44,8 +44,7 @@ entry:
   store ptr %this, ptr %this.addr, align 8
   call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !20, metadata !DIExpression()), !dbg !22
   %this1 = load ptr, ptr %this.addr, align 8
-  %0 = bitcast ptr %__promise to ptr
-  %id = call token @llvm.coro.id(i32 16, ptr %0, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 16, ptr %__promise, ptr @foo, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 

@@ -716,6 +716,7 @@ public:
 
   // Lower pseudo instructions after register allocation.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+  bool expandAMOCSNEPseudo(MachineInstr &MI) const;
 
   const TargetRegisterClass *updatedRC(const TargetRegisterClass *RC) const;
   static int getRecordFormOpcode(unsigned Opcode);

@@ -50,6 +50,7 @@
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
+#include "llvm/Transforms/Utils.h"
 #include <optional>
 
 using namespace llvm;
@@ -81,6 +82,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXILForwardHandleAccessesLegacyPass(*PR);
   initializeDSELegacyPassPass(*PR);
   initializeDXILCBufferAccessLegacyPass(*PR);
+  initializeStripConvergenceIntrinsicsLegacyPassPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -110,6 +112,7 @@ public:
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
+    addPass(createStripConvergenceIntrinsicsPass());
     addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createGlobalDCEPass());
     addPass(createDXILMemIntrinsicsLegacyPass());

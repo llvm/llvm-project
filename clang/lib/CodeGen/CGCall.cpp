@@ -866,9 +866,13 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   assert(inserted && "Recursively being processed?");
 
   // Compute ABI information.
-  if (CC == llvm::CallingConv::SPIR_KERNEL) {
+  if (info.getCC() == CC_DeviceKernel &&
+      (CC == llvm::CallingConv::SPIR_KERNEL || CC == llvm::CallingConv::C)) {
     // Force target independent argument handling for the host visible
     // kernel functions.
+    //
+    // For CPU targets, this currently only works for OpenCL.
+    assert(CC != llvm::CallingConv::C || getContext().getLangOpts().OpenCL);
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
@@ -3109,6 +3113,11 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
   assert(ArgNo == FI.arg_size());
 
+  // We can't see all potential arguments in a varargs declaration; treat them
+  // as if they can access memory.
+  if (!AttrOnCallSite && FI.isVariadic())
+    AddPotentialArgAccess();
+
   ArgNo = 0;
   if (AddedPotentialArgAccess && MemAttrForPtrArgs) {
     llvm::FunctionType *FunctionType = getTypes().GetFunctionType(FI);
@@ -3120,7 +3129,14 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         unsigned FirstIRArg, NumIRArgs;
         std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
         for (unsigned i = FirstIRArg; i < FirstIRArg + NumIRArgs; ++i) {
-          if (FunctionType->getParamType(i)->isPointerTy()) {
+          // The index may be out-of-bounds if the callee is a varargs
+          // function.
+          //
+          // FIXME: We can compute the types of varargs arguments without going
+          // through the function type, but the relevant code isn't exposed
+          // in a way that can be called from here.
+          if (i < FunctionType->getNumParams() &&
+              FunctionType->getParamType(i)->isPointerTy()) {
             ArgAttrs[i] =
                 ArgAttrs[i].addAttribute(getLLVMContext(), *MemAttrForPtrArgs);
           }
@@ -5411,6 +5427,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // If the call returns a temporary with struct return, create a temporary
   // alloca to hold the result, unless one is given to us.
   Address SRetPtr = Address::invalid();
+  // Original alloca for lifetime markers
+  Address SRetAlloca = Address::invalid();
   bool NeedSRetLifetimeEnd = false;
   if (RetAI.isIndirect() || RetAI.isInAlloca() || RetAI.isCoerceAndExpand()) {
     // For virtual function pointer thunks and musttail calls, we must always
@@ -5425,8 +5443,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       SRetPtr = ReturnValue.getAddress();
     } else {
       SRetPtr = CreateMemTempWithoutCast(RetTy, "tmp");
-      if (HaveInsertPoint() && ReturnValue.isUnused())
+      if (HaveInsertPoint() && ReturnValue.isUnused()) {
         NeedSRetLifetimeEnd = EmitLifetimeStart(SRetPtr.getBasePointer());
+        if (NeedSRetLifetimeEnd)
+          SRetAlloca = SRetPtr;
+      }
     }
     if (IRFunctionArgs.hasSRetArg()) {
       // A mismatch between the allocated return value's AS and the target's
@@ -6011,8 +6032,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // can't depend on being inside of an ExprWithCleanups, so we need to manually
   // pop this cleanup later on. Being eager about this is OK, since this
   // temporary is 'invisible' outside of the callee.
+  // Use the original alloca pointer (before any addrspacecast) for the
+  // lifetime end marker, since lifetime intrinsics must reference the alloca
+  // address space.
   if (NeedSRetLifetimeEnd)
-    pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, SRetPtr);
+    pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, SRetAlloca);
 
   llvm::BasicBlock *InvokeDest = CannotThrow ? nullptr : getInvokeDest();
 
@@ -6230,6 +6254,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (IsMustTail) {
     for (auto it = EHStack.find(CurrentCleanupScopeDepth); it != EHStack.end();
          ++it) {
+      // A noexcept caller pushes an EHTerminateScope to call std::terminate()
+      // if an exception escapes. A musttail call replaces the caller's frame,
+      // removing this handler. This is safe if the callee is also nounwind:
+      // the callee's own noexcept handler prevents any exception from reaching
+      // where the caller's handler would have been.
+      if (isa<EHTerminateScope>(&*it)) {
+        if (CI->doesNotThrow())
+          continue;
+        CGM.getDiags().Report(MustTailCall->getBeginLoc(),
+                              diag::err_musttail_noexcept_mismatch);
+        break;
+      }
       EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
       // Fake uses can be safely emitted immediately prior to the tail call, so
       // we choose to emit them just before the call here.

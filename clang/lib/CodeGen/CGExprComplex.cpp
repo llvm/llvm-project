@@ -538,6 +538,7 @@ ComplexPairTy ComplexExprEmitter::EmitScalarToComplexCast(llvm::Value *Val,
 
 ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
                                            QualType DestTy) {
+  DestTy = DestTy.getAtomicUnqualifiedType();
   switch (CK) {
   case CK_Dependent:
     llvm_unreachable("dependent cast kind in IR gen!");
@@ -948,10 +949,7 @@ ComplexPairTy ComplexExprEmitter::EmitAlgebraicDiv(llvm::Value *LHSr,
 
 // EmitFAbs - Emit a call to @llvm.fabs.
 static llvm::Value *EmitllvmFAbs(CodeGenFunction &CGF, llvm::Value *Value) {
-  llvm::Function *Func =
-      CGF.CGM.getIntrinsic(llvm::Intrinsic::fabs, Value->getType());
-  llvm::Value *Call = CGF.Builder.CreateCall(Func, Value);
-  return Call;
+  return CGF.Builder.CreateFAbs(Value);
 }
 
 // EmitRangeReductionDiv - Implements Smith's algorithm for complex division.
@@ -1219,9 +1217,7 @@ LValue ComplexExprEmitter::EmitCompoundAssignLValue(
     ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo &), RValue &Val) {
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
-  QualType LHSTy = E->getLHS()->getType();
-  if (const AtomicType *AT = LHSTy->getAs<AtomicType>())
-    LHSTy = AT->getValueType();
+  QualType LHSTy = E->getLHS()->getType().getAtomicUnqualifiedType();
 
   BinOpInfo OpInfo;
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());

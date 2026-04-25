@@ -342,6 +342,13 @@ bool ProcessProperties::GetSteppingRunsAllThreads() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+Args ProcessProperties::GetAlwaysRunThreadNames() const {
+  Args args;
+  const uint32_t idx = ePropertyAlwaysRunThreadNames;
+  m_collection_sp->GetPropertyAtIndexAsArgs(idx, args);
+  return args;
+}
+
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
   const Property *exp_property =
@@ -1580,13 +1587,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-lldb::break_id_t
-Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
-                              bool use_hardware) {
-  addr_t load_addr = LLDB_INVALID_ADDRESS;
-
-  bool show_error = true;
-  switch (GetState()) {
+static bool ShouldShowError(Process &process) {
+  switch (process.GetState()) {
   case eStateInvalid:
   case eStateUnloaded:
   case eStateConnected:
@@ -1594,81 +1596,88 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   case eStateLaunching:
   case eStateDetached:
   case eStateExited:
-    show_error = false;
-    break;
-
+    return false;
   case eStateStopped:
   case eStateRunning:
   case eStateStepping:
   case eStateCrashed:
   case eStateSuspended:
-    show_error = IsAlive();
-    break;
+    return process.IsAlive();
   }
+  llvm_unreachable("unhandled process state");
+}
 
+static addr_t ComputeConstituentLoadAddress(BreakpointLocation &constituent,
+                                            Process &proc) {
   // Reset the IsIndirect flag here, in case the location changes from pointing
-  // to a indirect symbol to a regular symbol.
-  constituent->SetIsIndirect(false);
+  // from an indirect symbol to a regular symbol.
+  constituent.SetIsIndirect(false);
 
-  if (constituent->ShouldResolveIndirectFunctions()) {
-    const Symbol *symbol =
-        constituent->GetAddress().CalculateSymbolContextSymbol();
-    if (symbol && symbol->IsIndirect()) {
-      Status error;
-      Address symbol_address = symbol->GetAddress();
-      load_addr = ResolveIndirectFunction(&symbol_address, error);
-      if (!error.Success() && show_error) {
-        GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-            "warning: failed to resolve indirect function at 0x%" PRIx64
-            " for breakpoint %i.%i: %s\n",
-            symbol->GetLoadAddress(&GetTarget()),
-            constituent->GetBreakpoint().GetID(), constituent->GetID(),
-            error.AsCString() ? error.AsCString() : "unknown error");
-        return LLDB_INVALID_BREAK_ID;
-      }
-      Address resolved_address(load_addr);
-      load_addr = resolved_address.GetOpcodeLoadAddress(&GetTarget());
-      constituent->SetIsIndirect(true);
-    } else
-      load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
-  } else
-    load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
+  Target &target = proc.GetTarget();
 
-  if (load_addr != LLDB_INVALID_ADDRESS) {
-    BreakpointSiteSP bp_site_sp;
+  if (!constituent.ShouldResolveIndirectFunctions())
+    return constituent.GetAddress().GetOpcodeLoadAddress(&target);
 
-    // Look up this breakpoint site.  If it exists, then add this new
-    // constituent, otherwise create a new breakpoint site and add it.
+  const Symbol *symbol =
+      constituent.GetAddress().CalculateSymbolContextSymbol();
+  if (!symbol || !symbol->IsIndirect())
+    return constituent.GetAddress().GetOpcodeLoadAddress(&target);
 
-    bp_site_sp = m_breakpoint_site_list.FindByAddress(load_addr);
+  // An indirect symbol is involved.
+  Status error;
+  Address symbol_address = symbol->GetAddress();
+  addr_t load_addr = proc.ResolveIndirectFunction(&symbol_address, error);
 
-    if (bp_site_sp) {
-      bp_site_sp->AddConstituent(constituent);
-      constituent->SetBreakpointSite(bp_site_sp);
-      return bp_site_sp->GetID();
-    } else {
-      bp_site_sp.reset(
-          new BreakpointSite(constituent, load_addr, use_hardware));
-      if (bp_site_sp) {
-        Status error = EnableBreakpointSite(bp_site_sp.get());
-        if (error.Success()) {
-          constituent->SetBreakpointSite(bp_site_sp);
-          return m_breakpoint_site_list.Add(bp_site_sp);
-        } else {
-          if (show_error || use_hardware) {
-            // Report error for setting breakpoint...
-            GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-                "warning: failed to set breakpoint site at 0x%" PRIx64
-                " for breakpoint %i.%i: %s\n",
-                load_addr, constituent->GetBreakpoint().GetID(),
-                constituent->GetID(),
-                error.AsCString() ? error.AsCString() : "unknown error");
-          }
-        }
-      }
-    }
+  if (!error.Success() && ShouldShowError(proc)) {
+    target.GetDebugger().GetAsyncErrorStream()->Printf(
+        "warning: failed to resolve indirect function at 0x%" PRIx64
+        " for breakpoint %i.%i: %s\n",
+        symbol->GetLoadAddress(&target), constituent.GetBreakpoint().GetID(),
+        constituent.GetID(),
+        error.AsCString() ? error.AsCString() : "unknown error");
+    // FIXME: ShouldShowError must only guard the error message.
+    // FIXME: Use diagnostics instead of printing "warning" to the async output.
+    return LLDB_INVALID_ADDRESS;
   }
-  // We failed to enable the breakpoint
+
+  Address resolved_address(load_addr);
+  constituent.SetIsIndirect(true);
+  return resolved_address.GetOpcodeLoadAddress(&target);
+}
+
+lldb::break_id_t
+Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
+                              bool use_hardware) {
+  addr_t load_addr = ComputeConstituentLoadAddress(*constituent, *this);
+
+  if (load_addr == LLDB_INVALID_ADDRESS)
+    return LLDB_INVALID_BREAK_ID;
+
+  // Look up this breakpoint site.  If it exists, then add this new
+  // constituent, otherwise create a new breakpoint site and add it.
+  if (BreakpointSiteSP bp_site_sp =
+          m_breakpoint_site_list.FindByAddress(load_addr)) {
+    bp_site_sp->AddConstituent(constituent);
+    constituent->SetBreakpointSite(bp_site_sp);
+    return bp_site_sp->GetID();
+  }
+
+  BreakpointSiteSP bp_site_sp(
+      new BreakpointSite(constituent, load_addr, use_hardware));
+  Status error = EnableBreakpointSite(bp_site_sp.get());
+  if (error.Success()) {
+    constituent->SetBreakpointSite(bp_site_sp);
+    return m_breakpoint_site_list.Add(bp_site_sp);
+  }
+
+  if (ShouldShowError(*this) || use_hardware) {
+    // Report error for setting breakpoint...
+    GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
+        "warning: failed to set breakpoint site at 0x%" PRIx64
+        " for breakpoint %i.%i: %s\n",
+        load_addr, constituent->GetBreakpoint().GetID(), constituent->GetID(),
+        error.AsCString() ? error.AsCString() : "unknown error");
+  }
   return LLDB_INVALID_BREAK_ID;
 }
 
@@ -2315,6 +2324,45 @@ uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
   return fail_value;
 }
 
+llvm::SmallVector<std::optional<uint64_t>>
+Process::ReadUnsignedIntegersFromMemory(llvm::ArrayRef<addr_t> addresses,
+                                        unsigned integer_byte_size) {
+  if (addresses.empty())
+    return {};
+  // Like ReadUnsignedIntegerFromMemory, this only supports a handful
+  // of widths.
+  if (!llvm::is_contained({1u, 2u, 4u, 8u}, integer_byte_size))
+    return llvm::SmallVector<std::optional<uint64_t>>(addresses.size(),
+                                                      std::nullopt);
+
+  llvm::SmallVector<Range<addr_t, size_t>> ranges{
+      llvm::map_range(addresses, [=](addr_t ptr) {
+        return Range<addr_t, size_t>(ptr, integer_byte_size);
+      })};
+
+  std::vector<uint8_t> buffer(integer_byte_size * addresses.size(), 0);
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> memory =
+      ReadMemoryRanges(ranges, buffer);
+
+  llvm::SmallVector<std::optional<uint64_t>> result;
+  result.reserve(addresses.size());
+  const uint32_t addr_size = GetAddressByteSize();
+  const ByteOrder byte_order = GetByteOrder();
+
+  for (llvm::MutableArrayRef<uint8_t> range : memory) {
+    if (range.size() != integer_byte_size) {
+      result.push_back(std::nullopt);
+      continue;
+    }
+
+    DataExtractor data(range.data(), integer_byte_size, byte_order, addr_size);
+    offset_t offset = 0;
+    result.push_back(data.GetMaxU64(&offset, integer_byte_size));
+    assert(offset == integer_byte_size);
+  }
+  return result;
+}
+
 int64_t Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr,
                                              size_t integer_byte_size,
                                              int64_t fail_value,
@@ -2332,6 +2380,12 @@ addr_t Process::ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error) {
                                   error))
     return scalar.ULongLong(LLDB_INVALID_ADDRESS);
   return LLDB_INVALID_ADDRESS;
+}
+
+llvm::SmallVector<std::optional<addr_t>>
+Process::ReadPointersFromMemory(llvm::ArrayRef<addr_t> ptr_locs) {
+  const size_t ptr_size = GetAddressByteSize();
+  return ReadUnsignedIntegersFromMemory(ptr_locs, ptr_size);
 }
 
 bool Process::WritePointerToMemory(lldb::addr_t vm_addr, lldb::addr_t ptr_value,
@@ -2598,7 +2652,7 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
             file_spec.GetPath().c_str());
   ModuleSP module_sp = std::make_shared<Module>(file_spec, ArchSpec());
   if (!module_sp)
-    return llvm::createStringError("Failed to allocate Module");
+    return llvm::createStringError("failed to allocate module");
 
   Status error;
   std::unique_ptr<Progress> progress_up;
@@ -3878,7 +3932,8 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
 bool Process::PrivateStateThread::StartupThread() {
   llvm::Expected<HostThread> private_state_thread =
       ThreadLauncher::LaunchThread(
-          m_thread_name, [this] { return m_process.RunPrivateStateThread(); },
+          m_thread_name,
+          [this] { return m_process.RunPrivateStateThread(m_is_override); },
           8 * 1024 * 1024);
   if (!private_state_thread) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Host), private_state_thread.takeError(),
@@ -3936,7 +3991,8 @@ bool Process::StartPrivateStateThread(
     // place already, so do that first:
     *backup_ptr = m_current_private_state_thread_sp;
     m_current_private_state_thread_sp.reset(new PrivateStateThread(
-        *this, GetPublicState(), GetPrivateState(), thread_name));
+        *this, GetPublicState(), GetPrivateState(), thread_name,
+        /*is_override=*/true));
   } else
     m_current_private_state_thread_sp->SetThreadName(thread_name);
 
@@ -4151,7 +4207,15 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_result_t Process::RunPrivateStateThread() {
+thread_local bool PrivateStateThreadGuard::g_is_private_state_thread = false;
+
+thread_result_t Process::RunPrivateStateThread(bool is_override) {
+  // Override PSTs exist solely to service RunThreadPlan expression evaluation.
+  // They must see parent frames, not provider-augmented frames.
+  std::optional<PrivateStateThreadGuard> pst_guard;
+  if (is_override)
+    pst_guard.emplace();
+
   bool control_only = true;
 
   Log *log = GetLog(LLDBLog::Process);
@@ -5339,6 +5403,14 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // still succeed.
     bool miss_first_event = true;
 #endif
+    bool pending_stop_on_vfork_done = false;
+
+    // If we spawned an override PST, mark the current (original) PST so
+    // GetStackFrameList returns parent frames during event processing.
+    std::optional<PrivateStateThreadGuard> private_state_thread_guard;
+    if (backup_private_state_thread)
+      private_state_thread_guard.emplace();
+
     while (true) {
       // We usually want to resume the process if we get to the top of the
       // loop. The only exception is if we get two running events with no
@@ -5492,13 +5564,71 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                 do_resume = false;
                 handle_running_event = true;
               } else {
-                const bool handle_interrupts = true;
-                return_value = *HandleStoppedEvent(
-                    expr_thread_id, thread_plan_sp, thread_plan_restorer,
-                    event_sp, event_to_broadcast_sp, options,
-                    handle_interrupts);
-                if (return_value == eExpressionThreadVanished)
-                  keep_going = false;
+                // Check for fork/vfork/vforkdone stop reasons. DidFork /
+                // DidVFork / DidVForkDone have already been called by
+                // PerformAction (via DoOnRemoval).
+                bool handled_fork = false;
+                if (ThreadSP fork_thread_sp =
+                        GetThreadList().FindThreadByID(expr_thread_id)) {
+                  if (StopInfoSP stop_info_sp = fork_thread_sp->GetStopInfo()) {
+                    StopReason reason = stop_info_sp->GetStopReason();
+                    if (reason == eStopReasonFork ||
+                        reason == eStopReasonVFork ||
+                        reason == eStopReasonVForkDone) {
+                      handled_fork = true;
+                      if (reason == eStopReasonFork &&
+                          options.GetStopOnFork()) {
+                        // Fork + stop-on-fork: DidFork already ran via
+                        // PerformAction. Parent breakpoints are unaffected.
+                        LLDB_LOGF(log, "Process::RunThreadPlan(): stopped for "
+                                       "fork, stop-on-fork is set.");
+                        return_value = eExpressionInterrupted;
+                      } else if (reason == eStopReasonVFork &&
+                                 options.GetStopOnFork()) {
+                        // VFork + stop-on-fork: DidVFork already disabled
+                        // software breakpoints (parent and child share
+                        // address space). Interrupting now would leave the
+                        // user with non-functional breakpoints. Defer the
+                        // stop until vforkdone, when DidVForkDone restores
+                        // breakpoint state.
+                        LLDB_LOGF(log,
+                                  "Process::RunThreadPlan(): got vfork with "
+                                  "stop-on-fork, deferring stop to "
+                                  "vforkdone.");
+                        pending_stop_on_vfork_done = true;
+                        keep_going = true;
+                        do_resume = true;
+                        handle_running_event = true;
+                      } else if (reason == eStopReasonVForkDone &&
+                                 pending_stop_on_vfork_done) {
+                        // Deferred vfork stop: the vfork cycle has
+                        // completed. DidVForkDone has re-enabled software
+                        // breakpoints and decremented
+                        // m_vfork_in_progress_count.
+                        LLDB_LOGF(log, "Process::RunThreadPlan(): vfork cycle "
+                                       "complete, stop-on-fork is set.");
+                        pending_stop_on_vfork_done = false;
+                        return_value = eExpressionInterrupted;
+                      } else {
+                        LLDB_LOGF(log, "Process::RunThreadPlan(): got fork "
+                                       "event, continuing.");
+                        keep_going = true;
+                        do_resume = true;
+                        handle_running_event = true;
+                      }
+                    }
+                  }
+                }
+
+                if (!handled_fork) {
+                  const bool handle_interrupts = true;
+                  return_value = *HandleStoppedEvent(
+                      expr_thread_id, thread_plan_sp, thread_plan_restorer,
+                      event_sp, event_to_broadcast_sp, options,
+                      handle_interrupts);
+                  if (return_value == eExpressionThreadVanished)
+                    keep_going = false;
+                }
               }
             } break;
 
@@ -5680,6 +5810,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           continue;
       }
     } // END WAIT LOOP
+
+    private_state_thread_guard.reset();
 
     // If we had to start up a temporary private state thread to run this
     // thread plan, shut it down now.
@@ -6022,6 +6154,7 @@ void Process::Flush() {
   m_extended_thread_stop_id = 0;
   m_queue_list.Clear();
   m_queue_list_stop_id = 0;
+  GetTarget().GetDebugger().FlushStatusLine();
 }
 
 lldb::addr_t Process::GetCodeAddressMask() {
@@ -6154,7 +6287,7 @@ addr_t Process::ResolveIndirectFunction(const Address *address, Status &error) {
       const Symbol *symbol = address->CalculateSymbolContextSymbol();
       error = Status::FromErrorStringWithFormat(
           "Unable to call resolver for indirect function %s",
-          symbol ? symbol->GetName().AsCString() : "<UNKNOWN>");
+          symbol ? symbol->GetName().AsCString(nullptr) : "<UNKNOWN>");
       function_addr = LLDB_INVALID_ADDRESS;
     } else {
       if (ABISP abi_sp = GetABI())
@@ -6280,12 +6413,12 @@ size_t Process::AddImageToken(lldb::addr_t image_ptr) {
 lldb::addr_t Process::GetImagePtrFromToken(size_t token) const {
   if (token < m_image_tokens.size())
     return m_image_tokens[token];
-  return LLDB_INVALID_IMAGE_TOKEN;
+  return LLDB_INVALID_ADDRESS;
 }
 
 void Process::ResetImageToken(size_t token) {
   if (token < m_image_tokens.size())
-    m_image_tokens[token] = LLDB_INVALID_IMAGE_TOKEN;
+    m_image_tokens[token] = LLDB_INVALID_ADDRESS;
 }
 
 Address

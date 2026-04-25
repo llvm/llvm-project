@@ -64,86 +64,81 @@ define i32 @func(i32 %x, i32 %y) nounwind {
 define i64 @func2(i64 %x, i64 %y) nounwind {
 ; CHECK-T16-LABEL: func2:
 ; CHECK-T16:       @ %bb.0:
-; CHECK-T16-NEXT:    .save {r4, lr}
-; CHECK-T16-NEXT:    push {r4, lr}
-; CHECK-T16-NEXT:    mov r4, r1
-; CHECK-T16-NEXT:    eors r1, r3
-; CHECK-T16-NEXT:    adds r2, r0, r2
-; CHECK-T16-NEXT:    adcs r3, r4
-; CHECK-T16-NEXT:    eors r4, r3
-; CHECK-T16-NEXT:    bics r4, r1
-; CHECK-T16-NEXT:    asrs r0, r3, #31
-; CHECK-T16-NEXT:    movs r1, #1
-; CHECK-T16-NEXT:    lsls r1, r1, #31
-; CHECK-T16-NEXT:    eors r1, r0
-; CHECK-T16-NEXT:    cmp r4, #0
-; CHECK-T16-NEXT:    bpl .LBB1_3
+; CHECK-T16-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-T16-NEXT:    push {r4, r5, r7, lr}
+; CHECK-T16-NEXT:    mov r5, r0
+; CHECK-T16-NEXT:    adds r0, r0, r2
+; CHECK-T16-NEXT:    mov r0, r1
+; CHECK-T16-NEXT:    adcs r0, r3
+; CHECK-T16-NEXT:    asrs r0, r0, #31
+; CHECK-T16-NEXT:    movs r4, #1
+; CHECK-T16-NEXT:    lsls r4, r4, #31
+; CHECK-T16-NEXT:    eors r4, r0
+; CHECK-T16-NEXT:    adds r2, r5, r2
+; CHECK-T16-NEXT:    adcs r1, r3
+; CHECK-T16-NEXT:    bvc .LBB1_3
 ; CHECK-T16-NEXT:  @ %bb.1:
-; CHECK-T16-NEXT:    bpl .LBB1_4
+; CHECK-T16-NEXT:    bvc .LBB1_4
 ; CHECK-T16-NEXT:  .LBB1_2:
-; CHECK-T16-NEXT:    pop {r4, pc}
+; CHECK-T16-NEXT:    mov r1, r4
+; CHECK-T16-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-T16-NEXT:  .LBB1_3:
 ; CHECK-T16-NEXT:    mov r0, r2
-; CHECK-T16-NEXT:    bmi .LBB1_2
+; CHECK-T16-NEXT:    bvs .LBB1_2
 ; CHECK-T16-NEXT:  .LBB1_4:
-; CHECK-T16-NEXT:    mov r1, r3
-; CHECK-T16-NEXT:    pop {r4, pc}
+; CHECK-T16-NEXT:    mov r4, r1
+; CHECK-T16-NEXT:    mov r1, r4
+; CHECK-T16-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; CHECK-T2-LABEL: func2:
 ; CHECK-T2:       @ %bb.0:
 ; CHECK-T2-NEXT:    adds r0, r0, r2
-; CHECK-T2-NEXT:    eor.w r12, r1, r3
-; CHECK-T2-NEXT:    adc.w r2, r1, r3
-; CHECK-T2-NEXT:    eors r1, r2
-; CHECK-T2-NEXT:    bics.w r1, r1, r12
-; CHECK-T2-NEXT:    it mi
-; CHECK-T2-NEXT:    asrmi r0, r2, #31
-; CHECK-T2-NEXT:    mov.w r1, #-2147483648
-; CHECK-T2-NEXT:    it mi
-; CHECK-T2-NEXT:    eormi.w r2, r1, r2, asr #31
-; CHECK-T2-NEXT:    mov r1, r2
+; CHECK-T2-NEXT:    mov.w r2, #-2147483648
+; CHECK-T2-NEXT:    adcs r1, r3
+; CHECK-T2-NEXT:    it vs
+; CHECK-T2-NEXT:    asrvs r0, r1, #31
+; CHECK-T2-NEXT:    it vs
+; CHECK-T2-NEXT:    eorvs.w r1, r2, r1, asr #31
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func2:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    adds r0, r0, r2
-; CHECK-ARM-NEXT:    eor r12, r1, r3
-; CHECK-ARM-NEXT:    adc r2, r1, r3
-; CHECK-ARM-NEXT:    eor r1, r1, r2
-; CHECK-ARM-NEXT:    bics r1, r1, r12
-; CHECK-ARM-NEXT:    asrmi r0, r2, #31
-; CHECK-ARM-NEXT:    mov r1, #-2147483648
-; CHECK-ARM-NEXT:    eormi r2, r1, r2, asr #31
-; CHECK-ARM-NEXT:    mov r1, r2
+; CHECK-ARM-NEXT:    mov r2, #-2147483648
+; CHECK-ARM-NEXT:    adcs r1, r1, r3
+; CHECK-ARM-NEXT:    asrvs r0, r1, #31
+; CHECK-ARM-NEXT:    eorvs r1, r2, r1, asr #31
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-T15TE-LABEL: func2:
 ; CHECK-T15TE:       @ %bb.0:
-; CHECK-T15TE-NEXT:    .save {r4, lr}
-; CHECK-T15TE-NEXT:    push {r4, lr}
-; CHECK-T15TE-NEXT:    movs r4, r1
-; CHECK-T15TE-NEXT:    eors r1, r3
-; CHECK-T15TE-NEXT:    adds r2, r0, r2
-; CHECK-T15TE-NEXT:    adcs r3, r4
-; CHECK-T15TE-NEXT:    eors r4, r3
-; CHECK-T15TE-NEXT:    bics r4, r1
-; CHECK-T15TE-NEXT:    asrs r0, r3, #31
-; CHECK-T15TE-NEXT:    movs r1, #1
-; CHECK-T15TE-NEXT:    lsls r1, r1, #31
-; CHECK-T15TE-NEXT:    eors r1, r0
-; CHECK-T15TE-NEXT:    cmp r4, #0
-; CHECK-T15TE-NEXT:    bpl .LBB1_3
+; CHECK-T15TE-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-T15TE-NEXT:    push {r4, r5, r7, lr}
+; CHECK-T15TE-NEXT:    movs r5, r0
+; CHECK-T15TE-NEXT:    adds r0, r0, r2
+; CHECK-T15TE-NEXT:    mov r12, r1
+; CHECK-T15TE-NEXT:    mov r0, r12
+; CHECK-T15TE-NEXT:    adcs r0, r3
+; CHECK-T15TE-NEXT:    asrs r0, r0, #31
+; CHECK-T15TE-NEXT:    movs r4, #1
+; CHECK-T15TE-NEXT:    lsls r4, r4, #31
+; CHECK-T15TE-NEXT:    eors r4, r0
+; CHECK-T15TE-NEXT:    adds r2, r5, r2
+; CHECK-T15TE-NEXT:    adcs r1, r3
+; CHECK-T15TE-NEXT:    bvc .LBB1_3
 ; CHECK-T15TE-NEXT:  @ %bb.1:
-; CHECK-T15TE-NEXT:    bpl .LBB1_4
+; CHECK-T15TE-NEXT:    bvc .LBB1_4
 ; CHECK-T15TE-NEXT:  .LBB1_2:
-; CHECK-T15TE-NEXT:    pop {r4, pc}
+; CHECK-T15TE-NEXT:    movs r1, r4
+; CHECK-T15TE-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-T15TE-NEXT:  .LBB1_3:
 ; CHECK-T15TE-NEXT:    mov r12, r2
 ; CHECK-T15TE-NEXT:    mov r0, r12
-; CHECK-T15TE-NEXT:    bmi .LBB1_2
+; CHECK-T15TE-NEXT:    bvs .LBB1_2
 ; CHECK-T15TE-NEXT:  .LBB1_4:
-; CHECK-T15TE-NEXT:    movs r1, r3
-; CHECK-T15TE-NEXT:    pop {r4, pc}
+; CHECK-T15TE-NEXT:    movs r4, r1
+; CHECK-T15TE-NEXT:    movs r1, r4
+; CHECK-T15TE-NEXT:    pop {r4, r5, r7, pc}
   %tmp = call i64 @llvm.sadd.sat.i64(i64 %x, i64 %y)
   ret i64 %tmp
 }

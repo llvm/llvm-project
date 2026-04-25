@@ -672,4 +672,168 @@ TEST_F(PlatformLocateSafePathTest,
   EXPECT_EQ(file_specs.size(), 1u);
   EXPECT_TRUE(ss.GetString().empty());
 }
+
+TEST_F(PlatformLocateSafePathTest,
+       LocateScriptingResourcesFromSafePaths_AutoLoadScriptsForModule) {
+  // Test that the LocateScriptingResourcesFromSafePaths API respects the
+  // target.auto-load-scripts-for-modules setting.
+
+  m_target_sp->SetLoadScriptFromSymbolFile(eLoadScriptFromSymFileTrusted);
+  TestingProperties::GetGlobalTestingProperties().AppendSafeAutoLoadPaths(
+      FileSpec(m_tmp_root_dir));
+
+  auto setup_module = [this](llvm::StringRef module_name) {
+    FileSpec module_fspec(
+        CreateFile(llvm::formatv("{0}.o", module_name).str(), m_tmp_root_dir));
+    EXPECT_TRUE(module_fspec);
+
+    llvm::SmallString<128> module_dir(m_tmp_root_dir);
+    llvm::sys::path::append(module_dir, module_name);
+    EXPECT_FALSE(llvm::sys::fs::create_directory(module_dir));
+
+    return FileSpec(
+        CreateFile(llvm::formatv("{0}.py", module_name).str(), module_dir));
+  };
+
+  FileSpec script_false_fspec = setup_module("ModuleFalse");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleFalse",
+                                           eLoadScriptFromSymFileFalse);
+
+  FileSpec script_true_fspec = setup_module("ModuleTrue");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleTrue",
+                                           eLoadScriptFromSymFileTrue);
+
+  FileSpec script_warn_fspec = setup_module("ModuleWarn");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleWarn",
+                                           eLoadScriptFromSymFileWarn);
+
+  FileSpec script_trusted_fspec = setup_module("ModuleTrusted");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleTrusted",
+                                           eLoadScriptFromSymFileTrusted);
+
+  FileSpec script_another_true_fspec = setup_module("ModuleAnotherTrue");
+  m_target_sp->SetAutoLoadScriptsForModule("ModuleAnotherTrue",
+                                           eLoadScriptFromSymFileTrue);
+
+  FileSpec script_default_fspec = setup_module("ModuleDefault");
+
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, script_false_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(script_false_fspec));
+
+    EXPECT_EQ(file_specs[script_false_fspec], eLoadScriptFromSymFileFalse);
+  }
+
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, script_true_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(script_true_fspec));
+
+    EXPECT_EQ(file_specs[script_true_fspec], eLoadScriptFromSymFileTrue);
+  }
+
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, script_warn_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(script_warn_fspec));
+
+    EXPECT_EQ(file_specs[script_warn_fspec], eLoadScriptFromSymFileWarn);
+  }
+
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, script_trusted_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(script_trusted_fspec));
+
+    EXPECT_EQ(file_specs[script_trusted_fspec], eLoadScriptFromSymFileTrusted);
+  }
+
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, script_another_true_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(script_another_true_fspec));
+
+    EXPECT_EQ(file_specs[script_another_true_fspec],
+              eLoadScriptFromSymFileTrue);
+  }
+
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, script_default_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    ASSERT_TRUE(file_specs.contains(script_default_fspec));
+
+    EXPECT_EQ(file_specs[script_default_fspec], eLoadScriptFromSymFileTrusted);
+  }
+}
+
+TEST_F(PlatformLocateSafePathTest,
+       LocateScriptingResourcesFromSafePaths_AutoLoadUsesModuleName) {
+  // Test that the auto-load-scripts-for-modules setting uses the module
+  // name (not the sanitized script name) for lookup. The module is named
+  // "TestModule.1" (with a dot), and the script is "TestModule_1.py"
+  // (sanitized). Setting "TestModule_1=true" should NOT affect loading
+  // because the lookup key should be "TestModule.1".
+
+  TestingProperties::GetGlobalTestingProperties().AppendSafeAutoLoadPaths(
+      FileSpec(m_tmp_root_dir));
+
+  // Create dummy module file at <test-root>/TestModule.1.o
+  FileSpec module_fspec(CreateFile("TestModule.1.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  llvm::SmallString<128> module_dir(m_tmp_root_dir);
+  llvm::sys::path::append(module_dir, "TestModule.1");
+  ASSERT_FALSE(llvm::sys::fs::create_directory(module_dir));
+
+  CreateFile("TestModule_1.py", module_dir);
+
+  m_target_sp->SetLoadScriptFromSymbolFile(eLoadScriptFromSymFileFalse);
+
+  // Setting the sanitized script name should NOT affect the module's load
+  // style.
+  m_target_sp->SetAutoLoadScriptsForModule("TestModule_1",
+                                           eLoadScriptFromSymFileTrue);
+
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, module_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    EXPECT_EQ(file_specs.begin()->second, eLoadScriptFromSymFileFalse);
+  }
+
+  // Now set the actual module name. This should override the default.
+  m_target_sp->SetAutoLoadScriptsForModule("TestModule.1",
+                                           eLoadScriptFromSymFileTrue);
+
+  {
+    StreamString ss;
+    auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+        ss, module_fspec, *m_target_sp);
+
+    ASSERT_EQ(file_specs.size(), 1u);
+    EXPECT_EQ(file_specs.begin()->second, eLoadScriptFromSymFileTrue);
+  }
+}
+
 #endif // NDEBUG

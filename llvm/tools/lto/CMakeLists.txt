@@ -45,6 +45,15 @@ if(LLVM_ENABLE_PIC)
     if(LLVM_LTO_VERSION_OFFSET)
       math(EXPR LTO_VERSION "${LLVM_VERSION_MAJOR} + ${LLVM_LTO_VERSION_OFFSET}")
     endif()
+    if(LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN)
+      set_target_properties(LTO PROPERTIES
+        SOVERSION ${LTO_VERSION}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
+        VERSION ${LTO_VERSION}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
+      if(LLVM_UNVERSIONED_LIBLTO_ON_DARWIN)
+        set_property(TARGET LTO PROPERTY SOVERSION)
+        set_property(TARGET LTO PROPERTY VERSION)
+      endif()
+    endif()
     llvm_set_macho_current_version(LTO ${LTO_VERSION})
     if(LLVM_USE_SANITIZER)
       execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=lib
