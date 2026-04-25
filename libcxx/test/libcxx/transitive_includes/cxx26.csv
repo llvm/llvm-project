@@ -233,6 +233,8 @@ ctgmath version
 cwchar cctype
 cwchar cwctype
 cwctype cctype
+debugging csignal
+debugging version
 deque cctype
 deque compare
 deque cstdint

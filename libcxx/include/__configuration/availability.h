@@ -39,6 +39,9 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE /* nothing */
 
@@ -69,6 +72,11 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 23
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 22
 // TODO: Fill this in
@@ -212,6 +220,11 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
+
+// This controls the availability of the C++26 debugging functions.
+// The platform specific implementation is built in the library.
+#define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_23
+#define _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
 
 // This controls the availability of new implementation of std::atomic's
 // wait, notify_one and notify_all. The new implementation uses

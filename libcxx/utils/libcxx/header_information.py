@@ -163,7 +163,6 @@ module_c_headers = [h for h in all_headers if h.has_cxx20_module() and h.is_cstd
 # implemented yet. They are used in the generated module input. The C++23 standard
 # modules will fail to build if a header is added but this list is not updated.
 headers_not_available = list(map(Header, [
-    "debugging",
     "generator",
     "hazard_pointer",
     "inplace_vector",
@@ -186,6 +185,7 @@ lit_header_restrictions = {
     "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",
     "cwchar": "// UNSUPPORTED: no-wide-characters",
     "cwctype": "// UNSUPPORTED: no-wide-characters",
+    "debugging": "// REQUIRES: std-at-least-c++26",
     "experimental/iterator": "// UNSUPPORTED: c++03",
     "experimental/propagate_const": "// UNSUPPORTED: c++03",
     "experimental/simd": "// UNSUPPORTED: c++03",
