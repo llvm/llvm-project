@@ -21,6 +21,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Statistic.h"
@@ -983,6 +984,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasBF16TransInsts()) {
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
+  }
+
+  if (Subtarget->hasFP8ConversionInsts()) {
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP,
+                       {MVT::f32, MVT::v2f32, MVT::v4f32}, Custom);
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::v2i8, MVT::v4i8},
+                       Custom);
   }
 
   if (Subtarget->hasCvtPkF16F32Inst()) {
@@ -7496,6 +7504,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerExternalSymbol(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    return LowerCONVERT_FROM_ARBITRARY_FP(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID:
@@ -10567,6 +10577,78 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_width(MaxID));
   return DAG.getNode(ISD::AssertZext, SL, MVT::i32, Val,
                      DAG.getValueType(SmallVT));
+}
+
+SDValue
+SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT DstVT = Op.getValueType();
+  if (DstVT != MVT::f32 && DstVT != MVT::v2f32 && DstVT != MVT::v4f32)
+    return SDValue();
+
+  bool IsBF8 = false;
+  switch (static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1))) {
+  case APFloatBase::S_Float8E4M3FN:
+    IsBF8 = false;
+    break;
+  case APFloatBase::S_Float8E5M2:
+    IsBF8 = true;
+    break;
+  default:
+    return SDValue();
+  }
+
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+
+  // Defer constant inputs to generic bit-twiddling expansion.
+  if (DAG.isConstantIntBuildVectorOrConstantInt(Src))
+    return SDValue();
+
+  // Pack vector inputs as hw instruction is packed.
+  // FIXME: note, packing loses lane-wise poison. Should we do something about
+  // it?
+  auto PackBytes = [&](unsigned NumBytes, unsigned FirstLane) {
+    EVT EltVT = Src.getValueType().getVectorElementType();
+    SDValue PackedI32;
+    for (unsigned I = 0; I != NumBytes; ++I) {
+      SDValue Elt = DAG.getExtractVectorElt(SL, EltVT, Src, FirstLane + I);
+      SDValue Byte = DAG.getZExtOrTrunc(Elt, SL, MVT::i32);
+      Byte = DAG.getNode(ISD::AND, SL, MVT::i32, Byte,
+                         DAG.getConstant(0xFF, SL, MVT::i32));
+      if (I != 0)
+        Byte = DAG.getNode(ISD::SHL, SL, MVT::i32, Byte,
+                           DAG.getConstant(I * 8, SL, MVT::i32));
+      PackedI32 =
+          I == 0 ? Byte : DAG.getNode(ISD::OR, SL, MVT::i32, PackedI32, Byte);
+    }
+    return PackedI32;
+  };
+
+  auto EmitPk = [&](SDValue PackedI32, unsigned WordSel) {
+    unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f32_bf8
+                            : Intrinsic::amdgcn_cvt_pk_f32_fp8;
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f32,
+                       DAG.getTargetConstant(IntrID, SL, MVT::i32), PackedI32,
+                       DAG.getTargetConstant(WordSel, SL, MVT::i1));
+  };
+
+  if (DstVT == MVT::f32) {
+    unsigned IntrID =
+        IsBF8 ? Intrinsic::amdgcn_cvt_f32_bf8 : Intrinsic::amdgcn_cvt_f32_fp8;
+    SDValue SrcI32 = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::f32,
+                       DAG.getTargetConstant(IntrID, SL, MVT::i32), SrcI32,
+                       DAG.getTargetConstant(0, SL, MVT::i32));
+  }
+
+  if (DstVT == MVT::v2f32)
+    return EmitPk(PackBytes(2, 0), 0);
+
+  SDValue PackedI32 = PackBytes(4, 0);
+  SDValue Lo = EmitPk(PackedI32, 0);
+  SDValue Hi = EmitPk(PackedI32, 1);
+  return DAG.getNode(ISD::CONCAT_VECTORS, SL, MVT::v4f32, Lo, Hi);
 }
 
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
