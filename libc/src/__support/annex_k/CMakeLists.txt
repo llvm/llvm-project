@@ -1,0 +1,11 @@
+add_header_library(
+  abort_handler_s
+  HDRS
+    abort_handler_s.h
+  DEPENDS
+    libc.hdr.types.errno_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.stdlib.abort
+)
