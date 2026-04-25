@@ -745,7 +745,7 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     llvm::StringRef llvmIntrName =
         getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
             usgn ? llvmIntrinsic : altLLVMIntrinsic));
-    mlir::Value result = 
+    mlir::Value result =
         emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
                      /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
                      /*funcResTy=*/vTy, loc);
@@ -2091,8 +2091,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
   // defer to common code if it's been added to our special map.
   builtin = findARMVectorIntrinsicInMap(AArch64SIMDIntrinsicMap, builtinID,
-                                        aarch64SIMDIntrinsicsProvenSorted);                                          
-  if (builtin)
+                                        aarch64SIMDIntrinsicsProvenSorted);
     return emitCommonNeonBuiltinExpr(
         *this, builtin->BuiltinID, builtin->LLVMIntrinsic,
         builtin->AltLLVMIntrinsic, builtin->NameHint, builtin->TypeModifier,
