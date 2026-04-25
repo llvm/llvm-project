@@ -69,7 +69,7 @@ OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
   scopeStack_.push_back(&context.globalScope());
 }
 
-void OmpStructureChecker::Enter(const parser::ProgramUnit &) {
+void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
   ClearLabels();
 }
 
