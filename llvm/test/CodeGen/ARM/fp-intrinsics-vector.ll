@@ -601,33 +601,25 @@ define <4 x float> @trunc_v4f32(<4 x float> %x) #0 {
 define <4 x i1> @fcmp_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-LABEL: fcmp_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.f32 s3, s7
+; CHECK-NEXT:    vcmp.f32 s0, s4
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s2, s6
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    mov r3, #0
 ; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    movweq r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    mvnne r1, #0
+; CHECK-NEXT:    mvneq r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s0, s4
-; CHECK-NEXT:    movweq r2, #1
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    mvnne r2, #0
+; CHECK-NEXT:    vmov.32 d16[0], r1
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    vcmp.f32 s3, s7
+; CHECK-NEXT:    mvneq r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vmov.32 d17[0], r1
+; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    vcmp.f32 s1, s5
-; CHECK-NEXT:    vmov.32 d17[0], r2
-; CHECK-NEXT:    movweq r3, #1
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    mvnne r3, #0
+; CHECK-NEXT:    mvneq r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov.32 d16[0], r3
 ; CHECK-NEXT:    vmov.32 d17[1], r1
-; CHECK-NEXT:    movweq r0, #1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mvnne r0, #0
+; CHECK-NEXT:    mvneq r0, #0
 ; CHECK-NEXT:    vmov.32 d16[1], r0
 ; CHECK-NEXT:    vmovn.i32 d0, q8
 ; CHECK-NEXT:    bx lr
@@ -639,33 +631,25 @@ entry:
 define <4 x i1> @fcmps_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-LABEL: fcmps_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmpe.f32 s3, s7
+; CHECK-NEXT:    vcmpe.f32 s0, s4
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmpe.f32 s2, s6
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    mov r3, #0
 ; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    movweq r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    mvnne r1, #0
+; CHECK-NEXT:    mvneq r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmpe.f32 s0, s4
-; CHECK-NEXT:    movweq r2, #1
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    mvnne r2, #0
+; CHECK-NEXT:    vmov.32 d16[0], r1
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    vcmpe.f32 s3, s7
+; CHECK-NEXT:    mvneq r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vmov.32 d17[0], r1
+; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    vcmpe.f32 s1, s5
-; CHECK-NEXT:    vmov.32 d17[0], r2
-; CHECK-NEXT:    movweq r3, #1
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    mvnne r3, #0
+; CHECK-NEXT:    mvneq r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov.32 d16[0], r3
 ; CHECK-NEXT:    vmov.32 d17[1], r1
-; CHECK-NEXT:    movweq r0, #1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mvnne r0, #0
+; CHECK-NEXT:    mvneq r0, #0
 ; CHECK-NEXT:    vmov.32 d16[1], r0
 ; CHECK-NEXT:    vmovn.i32 d0, q8
 ; CHECK-NEXT:    bx lr
@@ -1129,15 +1113,12 @@ define <2 x i1> @fcmp_v2f64(<2 x double> %x, <2 x double> %y) #0 {
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f64 d1, d3
-; CHECK-NEXT:    movweq r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    mvnne r1, #0
+; CHECK-NEXT:    mvneq r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov.32 d0[0], r1
-; CHECK-NEXT:    movweq r0, #1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    vmov.32 d0[1], r0
+; CHECK-NEXT:    vmov.32 d16[0], r1
+; CHECK-NEXT:    mvneq r0, #0
+; CHECK-NEXT:    vmov.32 d16[1], r0
+; CHECK-NEXT:    vorr d0, d16, d16
 ; CHECK-NEXT:    bx lr
 entry:
   %val = call <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double> %x, <2 x double> %y, metadata !"oeq", metadata !"fpexcept.strict")
@@ -1152,15 +1133,12 @@ define <2 x i1> @fcmps_v2f64(<2 x double> %x, <2 x double> %y) #0 {
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmpe.f64 d1, d3
-; CHECK-NEXT:    movweq r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    mvnne r1, #0
+; CHECK-NEXT:    mvneq r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov.32 d0[0], r1
-; CHECK-NEXT:    movweq r0, #1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    vmov.32 d0[1], r0
+; CHECK-NEXT:    vmov.32 d16[0], r1
+; CHECK-NEXT:    mvneq r0, #0
+; CHECK-NEXT:    vmov.32 d16[1], r0
+; CHECK-NEXT:    vorr d0, d16, d16
 ; CHECK-NEXT:    bx lr
 entry:
   %val = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double> %x, <2 x double> %y, metadata !"oeq", metadata !"fpexcept.strict")

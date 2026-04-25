@@ -4899,39 +4899,7 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return getCMOV(dl, VT, SelectTrue, SelectFalse, ARMcc, OverflowCmp, DAG);
   }
 
-  // Convert:
-  //
-  //   (select (cmov 1, 0, cond), t, f) -> (cmov t, f, cond)
-  //   (select (cmov 0, 1, cond), t, f) -> (cmov f, t, cond)
-  //
-  if (Cond.getOpcode() == ARMISD::CMOV && Cond.hasOneUse()) {
-    const ConstantSDNode *CMOVTrue =
-      dyn_cast<ConstantSDNode>(Cond.getOperand(0));
-    const ConstantSDNode *CMOVFalse =
-      dyn_cast<ConstantSDNode>(Cond.getOperand(1));
-
-    if (CMOVTrue && CMOVFalse) {
-      unsigned CMOVTrueVal = CMOVTrue->getZExtValue();
-      unsigned CMOVFalseVal = CMOVFalse->getZExtValue();
-
-      SDValue True;
-      SDValue False;
-      if (CMOVTrueVal == 1 && CMOVFalseVal == 0) {
-        True = SelectTrue;
-        False = SelectFalse;
-      } else if (CMOVTrueVal == 0 && CMOVFalseVal == 1) {
-        True = SelectFalse;
-        False = SelectTrue;
-      }
-
-      if (True.getNode() && False.getNode())
-        return getCMOV(dl, Op.getValueType(), True, False, Cond.getOperand(2),
-                       Cond.getOperand(3), DAG);
-    }
-  }
-
-  return DAG.getSelectCC(dl, Cond,
-                         DAG.getConstant(0, dl, Cond.getValueType()),
+  return DAG.getSelectCC(dl, Cond, DAG.getConstant(0, dl, Cond.getValueType()),
                          SelectTrue, SelectFalse, ISD::SETNE);
 }
 
@@ -18502,9 +18470,76 @@ ARMTargetLowering::PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+// (CMOV l r EQ (CMP (CMOV x y cc2 cond) x)) => (CMOV l r !cc2 cond)
+// (CMOV l r EQ (CMP (CMOV x y cc2 cond) y)) => (CMOV l r cc2 cond)
+// Where x and y are constants and x != y
+
+// (CMOV l r NE (CMP (CMOV x y cc2 cond) x)) => (CMOV l r cc2 cond)
+// (CMOV l r NE (CMP (CMOV x y cc2 cond) y)) => (CMOV l r !cc2 cond)
+// Where x and y are constants and x != y
+static SDValue foldCMOVOfCMOV(SDNode *Op, SelectionDAG &DAG) {
+  SDValue L = Op->getOperand(0);
+  SDValue R = Op->getOperand(1);
+  ARMCC::CondCodes OpCC =
+      static_cast<ARMCC::CondCodes>(Op->getConstantOperandVal(2));
+
+  SDValue OpCmp = Op->getOperand(3);
+  if (OpCmp.getOpcode() != ARMISD::CMPZ && OpCmp.getOpcode() != ARMISD::CMP)
+    return SDValue();
+
+  SDValue CmpLHS = OpCmp.getOperand(0);
+  SDValue CmpRHS = OpCmp.getOperand(1);
+
+  if (CmpRHS.getOpcode() == ARMISD::CMOV)
+    std::swap(CmpLHS, CmpRHS);
+  else if (CmpLHS.getOpcode() != ARMISD::CMOV)
+    return SDValue();
+
+  SDValue X = CmpLHS->getOperand(0);
+  SDValue Y = CmpLHS->getOperand(1);
+  if (!isa<ConstantSDNode>(X) || !isa<ConstantSDNode>(Y) || X == Y) {
+    return SDValue();
+  }
+
+  // If one of the constant is opaque constant, x,y sdnode is still different
+  // but the real value maybe the same. So check APInt here to make sure the
+  // code is correct.
+  ConstantSDNode *CX = cast<ConstantSDNode>(X);
+  ConstantSDNode *CY = cast<ConstantSDNode>(Y);
+  if (CX->getAPIntValue() == CY->getAPIntValue())
+    return SDValue();
+
+  ARMCC::CondCodes CC =
+      static_cast<ARMCC::CondCodes>(CmpLHS->getConstantOperandVal(2));
+  SDValue Cond = CmpLHS->getOperand(3);
+
+  if (CmpRHS == X)
+    CC = ARMCC::getOppositeCondition(CC);
+  else if (CmpRHS != Y)
+    return SDValue();
+
+  if (OpCC == ARMCC::NE)
+    CC = ARMCC::getOppositeCondition(CC);
+  else if (OpCC != ARMCC::EQ)
+    return SDValue();
+
+  SDLoc DL(Op);
+  EVT VT = Op->getValueType(0);
+
+  SDValue CCValue = DAG.getConstant(CC, SDLoc(Op), MVT::i32);
+  return DAG.getNode(ARMISD::CMOV, DL, VT, L, R, CCValue, Cond);
+}
+
 /// PerformCMOVCombine - Target-specific DAG combining for ARMISD::CMOV.
 SDValue
 ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
+  // CMOV x, x, cc -> x
+  if (N->getOperand(0) == N->getOperand(1))
+    return N->getOperand(0);
+
+  if (SDValue R = foldCMOVOfCMOV(N, DAG))
+    return R;
+
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   SDValue FalseVal = N->getOperand(0);
@@ -18565,15 +18600,6 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
     SDValue ARMcc;
     SDValue NewCmp = getARMCmp(LHS, RHS, ISD::SETNE, ARMcc, DAG, dl);
     Res = DAG.getNode(ARMISD::CMOV, dl, VT, LHS, FalseVal, ARMcc, NewCmp);
-  }
-
-  // (cmov F T ne (cmpz (cmov 0 1 CC Flags) 0))
-  // -> (cmov F T CC Flags)
-  if (CC == ARMCC::NE && LHS.getOpcode() == ARMISD::CMOV && LHS->hasOneUse() &&
-      isNullConstant(LHS->getOperand(0)) && isOneConstant(LHS->getOperand(1)) &&
-      isNullConstant(RHS)) {
-    return DAG.getNode(ARMISD::CMOV, dl, VT, FalseVal, TrueVal,
-                       LHS->getOperand(2), LHS->getOperand(3));
   }
 
   if (!VT.isInteger())
