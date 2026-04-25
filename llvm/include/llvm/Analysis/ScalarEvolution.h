@@ -2366,12 +2366,6 @@ private:
   /// Helper for forgetMemoizedResults.
   void forgetMemoizedResultsImpl(const SCEV *S);
 
-  /// Iterate over instructions in \p Worklist and their users. Erase entries
-  /// from ValueExprMap and collect SCEV expressions in \p ToForget
-  void visitAndClearUsers(SmallVectorImpl<Instruction *> &Worklist,
-                          SmallPtrSetImpl<Instruction *> &Visited,
-                          SmallVectorImpl<SCEVUse> &ToForget);
-
   /// Erase Value from ValueExprMap and ExprValueMap.
   void eraseValueFromMap(Value *V);
 

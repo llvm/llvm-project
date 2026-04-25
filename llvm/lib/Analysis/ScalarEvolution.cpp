@@ -5007,18 +5007,6 @@ const SCEV *ScalarEvolution::getPointerBase(const SCEV *V) {
   }
 }
 
-/// Push users of the given Instruction onto the given Worklist.
-static void PushDefUseChildren(Instruction *I,
-                               SmallVectorImpl<Instruction *> &Worklist,
-                               SmallPtrSetImpl<Instruction *> &Visited) {
-  // Push the def-use children onto the Worklist stack.
-  for (User *U : I->users()) {
-    auto *UserInsn = cast<Instruction>(U);
-    if (Visited.insert(UserInsn).second)
-      Worklist.push_back(UserInsn);
-  }
-}
-
 namespace {
 
 /// Takes SCEV S and Loop L. For each AddRec sub-expression, use its start
@@ -8654,18 +8642,6 @@ bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
   return getBackedgeTakenInfo(L).isConstantMaxOrZero(this);
 }
 
-/// Push PHI nodes in the header of the given loop onto the given Worklist.
-static void PushLoopPHIs(const Loop *L,
-                         SmallVectorImpl<Instruction *> &Worklist,
-                         SmallPtrSetImpl<Instruction *> &Visited) {
-  BasicBlock *Header = L->getHeader();
-
-  // Push all Loop-header PHIs onto the Worklist stack.
-  for (PHINode &PN : Header->phis())
-    if (Visited.insert(&PN).second)
-      Worklist.push_back(&PN);
-}
-
 ScalarEvolution::BackedgeTakenInfo &
 ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   auto &BTI = getBackedgeTakenInfo(L);
@@ -8751,32 +8727,9 @@ void ScalarEvolution::forgetAllLoops() {
   FoldCache.clear();
   FoldCacheUser.clear();
 }
-void ScalarEvolution::visitAndClearUsers(
-    SmallVectorImpl<Instruction *> &Worklist,
-    SmallPtrSetImpl<Instruction *> &Visited,
-    SmallVectorImpl<SCEVUse> &ToForget) {
-  while (!Worklist.empty()) {
-    Instruction *I = Worklist.pop_back_val();
-    if (!isSCEVable(I->getType()) && !isa<WithOverflowInst>(I))
-      continue;
-
-    ValueExprMapType::iterator It =
-        ValueExprMap.find_as(static_cast<Value *>(I));
-    if (It != ValueExprMap.end()) {
-      ToForget.push_back(It->second);
-      eraseValueFromMap(It->first);
-      if (PHINode *PN = dyn_cast<PHINode>(I))
-        ConstantEvolutionLoopExitValue.erase(PN);
-    }
-
-    PushDefUseChildren(I, Worklist, Visited);
-  }
-}
 
 void ScalarEvolution::forgetLoop(const Loop *L) {
   SmallVector<const Loop *, 16> LoopWorklist(1, L);
-  SmallVector<Instruction *, 32> Worklist;
-  SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<SCEVUse, 16> ToForget;
 
   // Iterate over all the loops and sub-loops to drop SCEV information.
@@ -8796,8 +8749,12 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
       llvm::append_range(ToForget, LoopUsersItr->second);
 
     // Drop information about expressions based on loop-header PHIs.
-    PushLoopPHIs(CurrL, Worklist, Visited);
-    visitAndClearUsers(Worklist, Visited, ToForget);
+    for (PHINode &PN : CurrL->getHeader()->phis()) {
+      ConstantEvolutionLoopExitValue.erase(&PN);
+      auto VIt = ValueExprMap.find_as(static_cast<Value *>(&PN));
+      if (VIt != ValueExprMap.end())
+        ToForget.push_back(VIt->second);
+    }
 
     LoopPropertiesCache.erase(CurrL);
     // Forget all contained loops too, to avoid dangling entries in the
@@ -8815,13 +8772,42 @@ void ScalarEvolution::forgetValue(Value *V) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) return;
 
-  // Drop information about expressions based on loop-header PHIs.
-  SmallVector<Instruction *, 16> Worklist;
+  SmallVector<std::pair<Instruction *, ValueExprMapType::iterator>, 16>
+      Worklist;
   SmallPtrSet<Instruction *, 8> Visited;
   SmallVector<SCEVUse, 8> ToForget;
-  Worklist.push_back(I);
-  Visited.insert(I);
-  visitAndClearUsers(Worklist, Visited, ToForget);
+
+  auto PushUser = [&](Instruction *UI) {
+    bool IsWO = isa<WithOverflowInst>(UI);
+    if (!isSCEVable(UI->getType()) && !IsWO)
+      return;
+    if (!Visited.insert(UI).second)
+      return;
+    auto It = ValueExprMap.find_as(static_cast<Value *>(UI));
+    if (It == ValueExprMap.end() && !IsWO)
+      return;
+    Worklist.emplace_back(UI, It);
+  };
+
+  if (isSCEVable(I->getType()) || isa<WithOverflowInst>(I)) {
+    Visited.insert(I);
+    Worklist.emplace_back(
+        I, ValueExprMap.find_as(static_cast<Value *>(I)));
+  }
+
+  while (!Worklist.empty()) {
+    auto [Cur, It] = Worklist.pop_back_val();
+
+    if (It != ValueExprMap.end()) {
+      ToForget.push_back(It->second);
+      if (auto *PN = dyn_cast<PHINode>(Cur))
+        ConstantEvolutionLoopExitValue.erase(PN);
+      eraseValueFromMap(It->first);
+    }
+
+    for (User *U : Cur->users())
+      PushUser(cast<Instruction>(U));
+  }
 
   forgetMemoizedResults(ToForget);
 }
