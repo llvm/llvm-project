@@ -359,6 +359,12 @@ def err_non_default_visibility_dllimport : Error<
   "non-default visibility cannot be applied to 'dllimport' declaration">;
 def err_ifunc_resolver_return : Error<
   "ifunc resolver function must return a pointer">;
+def err_alias_between_function_and_variable : Error<
+  "cannot alias a %select{function|variable}0 with a %select{variable|function}0">;
+def note_aliasee_declaration: Note<"aliasee is declared here">;
+def warn_alias_type_mismatch : Warning<
+  "alias and aliasee have different types %0 and %1">,
+  InGroup<DiagGroup<"attribute-alias">>;
 
 def warn_atomic_op_misaligned : Warning<
   "misaligned atomic operation may incur "
