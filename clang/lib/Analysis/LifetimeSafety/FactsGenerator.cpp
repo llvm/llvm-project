@@ -642,11 +642,12 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
                               ->getType()
                               ->getAs<PointerType>();
         Arg && Arg->isVoidPointerType()) {
-      // FIXME: Flow from constructor expr to placement arg to also support
-      // side effect placement new has. e.g.
-      // new(&p) MyObj(...);
-      // Should flow from MyObj(...) to &p.
-      OriginList *PlacementList = getOriginsList(*NE->getPlacementArg(0));
+      const Expr *PlacementArg = NE->getPlacementArg(0)->IgnoreImpCasts();
+      OriginList *PlacementList =
+          getRValueOrigins(PlacementArg, getOriginsList(*PlacementArg));
+      if (PlacementList->peelOuterOrigin())
+        flow(PlacementList->peelOuterOrigin(),
+             getOriginsList(*NE->getInitializer()), true);
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
           true));

@@ -2936,7 +2936,10 @@ void placement_new_array_braces() {
   (void)p[0];                    // expected-note {{later used here}}
 }
 
-// FIXME: Currently does not diagnose. We do not overwrite `V`'s origins on placement new because we lose them on bitcast from `View*` to `void*`.
+// FIXME: Currently `&expr` creates a brand new origin instead of reusing origins
+// from the original expression. Because of that, writes through `&expr` cannot
+// overwrite the original expression's inner storage origins. 
+// Related to https://github.com/llvm/llvm-project/issues/176291
 struct PlacementNewInMethod {
   View V;
 
@@ -2949,14 +2952,13 @@ struct PlacementNewInMethod {
   }
 };
 
-// FIXME: same false-negative as above
 void placement_new_member_call_from_dead_scope() {
   View *storage = new View;
   {
     MyObj obj;
-    new (storage) View(obj);
-  }
-  storage->use();
+    new (storage) View(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                          // expected-note {{destroyed here}}
+  storage->use();            // expected-note {{later used here}}
 }
 
 void placement_new_heap_then_delete_use_after_free() {
