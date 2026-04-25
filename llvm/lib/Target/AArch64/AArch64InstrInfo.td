@@ -395,8 +395,6 @@ def HasCPA           : Predicate<"Subtarget->hasCPA()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def HasTLBID         : Predicate<"Subtarget->hasTLBID()">,
                                  AssemblerPredicateWithAll<(all_of FeatureTLBID), "tlbid">;
-def HasMPAMv2        : Predicate<"Subtarget->hasMPAMv2()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureMPAMv2), "mpamv2">;
 def HasMTETC         : Predicate<"Subtarget->hasMTETC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureMTETC), "mtetc">;
 def HasGCIE          : Predicate<"Subtarget->hasGCIE()">,
@@ -1567,19 +1565,6 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 def : InstAlias<"nop", (NOP)>;
 
 def STSHH: STSHHI;
-
-let hasSideEffects = 1, mayStore = 1, isCodeGenOnly = 1 in {
-let Size = 8 in
-def STSHH_ATOMIC_STORE_SZ
-    : Pseudo<(outs), (ins GPR64:$val, GPR64sp:$addr, i32imm:$order,
-                          i32imm:$policy, i32imm:$size), []>,
-             Sched<[WriteAtomic]>;
-}
-
-def : Pat<(int_aarch64_stshh_atomic_store GPR64sp:$addr, GPR64:$val,
-           (i32 timm:$order), (i32 timm:$policy), (i32 timm:$size)),
-          (STSHH_ATOMIC_STORE_SZ GPR64:$val, GPR64sp:$addr, (i32 timm:$order),
-           (i32 timm:$policy), (i32 timm:$size))>;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
@@ -8659,6 +8644,21 @@ def : Pat<(v2i64 (AArch64saddlv (v2i32 V64:$Rn))),
 // The UADDLV v2i32 gets mapped to UADDLP.
 def : Pat<(v2i64 (AArch64uaddlv (v2i32 V64:$Rn))),
           (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLPv2i32_v1i64 V64:$Rn), dsub))>;
+
+def : Pat<(add (AArch64bici (v8i16 (bitconvert v16i8:$src)), (i32 255), (i32 8)),
+               (AArch64vlshr (v8i16 (AArch64NvCast v16i8:$src)), (i32 8))),
+          (UADDLPv16i8_v8i16 V128:$src)>;
+
+def : Pat<(add (and (v4i32 (bitconvert v8i16:$src)),
+                    (v4i32 (AArch64NvCast (v2i64 (AArch64movi_edit (i32 51)))))),
+               (AArch64vlshr (v4i32 (AArch64NvCast v8i16:$src)), (i32 16))),
+          (UADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (v2i64 (zext (v2i32 (AArch64zip1 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
+                                         (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+               (v2i64 (zext (v2i32 (AArch64zip2 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
+                                         (v2i32 (extract_subvector v4i32:$src, (i64 2)))))))),
+          (UADDLPv4i32_v2i64 V128:$src)>;
 
 //------------------------------------------------------------------------------
 // AdvSIMD modified immediate instructions

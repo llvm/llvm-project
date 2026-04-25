@@ -371,8 +371,7 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
       return;
     }
 
-    cir::GlobalLinkageKind linkage =
-        cgm.getCIRLinkageVarDefinition(&d, /*IsConstant=*/false);
+    cir::GlobalLinkageKind linkage = cgm.getCIRLinkageVarDefinition(&d);
 
     // FIXME: We need to force the emission/use of a guard variable for
     // some variables even if we can constant-evaluate them because
@@ -628,7 +627,8 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     // We have a constant initializer, but a nontrivial destructor. We still
     // need to perform a guarded "initialization" in order to register the
     // destructor.
-    cgm.errorNYI(d.getSourceRange(), "C++ guarded init");
+    emitCXXGuardedInit(d, gv, /*performInit=*/false);
+    gvAddr.setStaticLocal(true);
   }
 
   return gv;
@@ -677,7 +677,7 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   // There are a lot of attributes that need to be handled here. Until
   // we start to support them, we just report an error if there are any.
   if (d.hasAttr<AnnotateAttr>())
-    cgm.errorNYI(d.getSourceRange(), "emitStaticVarDecl: Global annotations");
+    cgm.addGlobalAnnotations(&d, var);
   if (d.getAttr<PragmaClangBSSSectionAttr>())
     cgm.errorNYI(d.getSourceRange(),
                  "emitStaticVarDecl: CIR global BSS section attribute");
@@ -832,6 +832,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
 
   case Decl::Function:     // void X();
   case Decl::EnumConstant: // enum ? { X = ? }
+  case Decl::ExplicitInstantiation:
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
   case Decl::Label:        // __label__ x;
   case Decl::Import:
@@ -896,7 +897,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
     QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
     assert(!cir::MissingFeatures::generateDebugInfo());
     if (ty->isVariablyModifiedType())
-      cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
+      emitVariablyModifiedType(ty);
     return;
   }
   case Decl::ImplicitConceptSpecialization:
@@ -1071,6 +1072,17 @@ void CIRGenFunction::pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
       destroyer);
 }
 
+/// pushEHDestroyIfNeeded - Push the standard destructor for the given type as
+/// an EH-only cleanup. If EH cleanup is not needed, just return.
+void CIRGenFunction::pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind,
+                                           Address addr, QualType type) {
+  if (!needsEHCleanup(dtorKind))
+    return;
+
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
+  pushDestroy(EHCleanup, addr, type, getDestroyer(dtorKind));
+}
+
 /// Push the standard destructor for the given type as
 /// at least a normal cleanup.
 void CIRGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
@@ -1130,10 +1142,8 @@ void CIRGenFunction::pushPendingCleanupToEHStack(
   if (entry.activeFlag.isValid()) {
     EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
     scope.setActiveFlag(entry.activeFlag);
-    if (scope.isNormalCleanup())
-      scope.setTestFlagInNormalCleanup();
-    if (scope.isEHCleanup())
-      scope.setTestFlagInEHCleanup();
+    scope.setTestFlagInNormalCleanup(scope.isNormalCleanup());
+    scope.setTestFlagInEHCleanup(scope.isEHCleanup());
   }
 }
 

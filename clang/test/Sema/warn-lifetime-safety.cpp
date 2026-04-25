@@ -925,6 +925,9 @@ void lifetimebound_return_reference() {
 struct LifetimeBoundCtor {
   LifetimeBoundCtor();
   LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]);
+  LifetimeBoundCtor(const MyObj& obj, int); // not lifetimebound ctor.
+  LifetimeBoundCtor(int* p [[clang::lifetimebound]]);
+  LifetimeBoundCtor(std::string_view sv [[clang::lifetimebound]]);
 };
 
 void lifetimebound_ctor() {
@@ -961,6 +964,109 @@ void lifetimebound_ctor_static_cast() {
     v = static_cast<LifetimeBoundCtor>(obj); // expected-warning {{object whose reference is captured does not live long enough}}
   }                                          // expected-note {{destroyed here}}
   (void)v;                                   // expected-note {{later used here}}
+}
+
+void lifetimebound_make_unique() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    MyObj obj;
+    ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{object whose reference is captured does not live long enough}}
+  }                                                 // tu-note {{destroyed here}}
+  (void)ptr;                                        // tu-note {{later used here}}
+}
+
+void non_lifetimebound_make_unique() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    MyObj obj;
+    // No error as the ctor is not lifetimebound.
+    ptr = std::make_unique<LifetimeBoundCtor>(obj, 0);
+  }
+  (void)ptr;
+}
+
+void lifetimebound_make_unique_temp() {
+  std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // tu-warning {{object whose reference is captured does not live long enough}} \
+                                                                                         // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
+}
+
+// FIXME: make_unique annotation cannot be inferred for pointer param in constructor
+void lifetimebound_make_unique_raw_ptr() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  int x = 0;
+  {
+    int* p = &x;
+    ptr = std::make_unique<LifetimeBoundCtor>(p);
+  }
+  (void)ptr;
+}
+
+// FIXME: make_unique annotation cannot be inferred for view-type param in constructor
+void lifetimebound_make_unique_string_view_local() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    std::string s;
+    std::string_view sv(s);
+    ptr = std::make_unique<LifetimeBoundCtor>(sv);
+  }
+  (void)ptr;
+}
+
+struct MultiLifetimeBoundCtor {
+  MultiLifetimeBoundCtor(const MyObj& obj1 [[clang::lifetimebound]], const MyObj& obj2);
+  MultiLifetimeBoundCtor(const MyObj& obj1, const MyObj& obj2 [[clang::lifetimebound]], int);
+  MultiLifetimeBoundCtor(const MyObj& obj1 [[clang::lifetimebound]], const MyObj& obj2 [[clang::lifetimebound]], double);
+};
+
+void lifetimebound_make_unique_multi_params() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
+}
+
+void lifetimebound_make_unique_multi_params2() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
+}
+
+void lifetimebound_make_unique_multi_params2_no_error_case() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1);
+  }
+  (void)ptr;
+}
+
+void lifetimebound_make_unique_multi_params3_1() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
+}
+
+void lifetimebound_make_unique_multi_params3_2() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // tu-warning {{object whose reference is captured does not live long enough}}
+  } // tu-note {{destroyed here}}
+  (void)ptr; // tu-note {{later used here}}
 }
 
 View lifetimebound_return_of_local() {
@@ -2446,15 +2552,13 @@ std::string_view return_dangling_view_through_owner() {
   return sv; // expected-note {{returned here}}
 }
 
-// FIXME: False negative. Move assignment of unique_ptr is not defaulted,
-// so origins from `local` don't propagate to `ups`.
 void owner_outlives_lifetimebound_source() {
   std::unique_ptr<S> ups;
   {
     std::string local;
-    ups = getUniqueS(local);
-  }
-  (void)ups; // Should warn.
+    ups = getUniqueS(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ups; // expected-note {{later used here}}
 }
 
 } // namespace track_origins_for_lifetimebound_record_type
@@ -2558,6 +2662,241 @@ int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
 }
 
 } // namespace conditional_operator_control_flow
+
+namespace new_allocation {
+
+//===----------------------------------------------------------------------===//
+// new
+//===----------------------------------------------------------------------===//
+
+void new_view_from_dead_scope() {
+  View *p;
+  {
+    MyObj obj;
+    p = new View(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                    // expected-note {{destroyed here}}
+  p->use();            // expected-note {{later used here}}
+}
+
+void new_int_basic() {
+  int *p = new int; // expected-warning {{allocated object does not live long enough}}
+  delete p;         // expected-note {{freed here}}
+  (void)*p;         // expected-note {{later used here}}
+}
+
+void new_int_parens() {
+  int *p = new int(); // expected-warning {{allocated object does not live long enough}}
+  delete p;           // expected-note {{freed here}}
+  (void)*p;           // expected-note {{later used here}}
+}
+
+void new_int_braces() {
+  int *p = new int{}; // expected-warning {{allocated object does not live long enough}}
+  delete p;           // expected-note {{freed here}}
+  (void)*p;           // expected-note {{later used here}}
+}
+
+void conditional_delete(bool cond) {
+  int *p1 = new int;       // expected-warning {{allocated object does not live long enough}}
+  int *p2 = new int;       // expected-warning {{allocated object does not live long enough}}
+  delete (cond ? p1 : p2); // expected-note 2 {{freed here}}
+  (void)*p1;               // expected-note {{later used here}}
+  (void)*p2;               // expected-note {{later used here}}
+}
+
+int* foo(int* x [[clang::lifetimebound]], int* y [[clang::lifetimebound]]);
+
+void delete_returned_from_call() {
+  int* x = new int(1); // expected-warning {{allocated object does not live long enough}}
+  int* y = new int(2); // expected-warning {{allocated object does not live long enough}}
+  delete foo(x, y);    // expected-note 2 {{freed here}}
+  (void)x;             // expected-note {{later used here}}
+  (void)y;             // expected-note {{later used here}}
+}
+
+void new_pointer_from_pointer() {
+  MyObj **p;
+  {
+    MyObj obj;
+    MyObj *q = &obj;    // expected-warning {{object whose reference is captured does not live long enough}}
+    p = new MyObj *(q); 
+  }                     // expected-note {{destroyed here}}
+  (void)**p;            // expected-note {{later used here}}
+}
+
+void new_pointer_from_dead_object() {
+  MyObj **p;
+  {
+    MyObj obj;
+    p = new MyObj *(&obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                        // expected-note {{destroyed here}}
+  (void)**p;               // expected-note {{later used here}}
+}
+
+struct MultiView {
+  MultiView(MyObj& a [[clang::lifetimebound]], MyObj& b [[clang::lifetimebound]]);
+};
+
+void new_multiview_from_mixed_scope() {
+  MyObj obj1;
+  MultiView *p;
+  {
+    MyObj obj2;
+    p = new MultiView(obj1, obj2); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                                // expected-note {{destroyed here}}
+  (void)p;                         // expected-note {{later used here}}
+}
+
+void new_array_basic() {
+  int *p = new int[2]; // expected-warning {{allocated object does not live long enough}}
+  delete[] p;          // expected-note {{freed here}}
+  (void)p[0];          // expected-note {{later used here}}
+}
+
+void new_array_parens() {
+  int *p = new int[2](); // expected-warning {{allocated object does not live long enough}}
+  delete[] p;            // expected-note {{freed here}}
+  (void)p[0];            // expected-note {{later used here}}
+}
+
+void new_array_braces() {
+  int *p = new int[2]{}; // expected-warning {{allocated object does not live long enough}}
+  delete[] p;            // expected-note {{freed here}}
+  (void)p[0];            // expected-note {{later used here}}
+}
+
+// FIXME: https://github.com/llvm/llvm-project/issues/187471
+void new_pointer_array_from_dead_objects() {
+  MyObj **arr;
+  {
+    MyObj a, b;
+    arr = new MyObj *[2]{&a, &b};
+  }
+  (void)arr[0]->id;
+  (void)arr[1]->id;
+}
+
+struct PointerArrayFieldHolder {
+  MyObj **Ptrs;
+};
+
+// FIXME: https://github.com/llvm/llvm-project/issues/187471
+void pointer_array_field_sensitivity() {
+  PointerArrayFieldHolder h;
+  {
+    MyObj a, b;
+    h.Ptrs = new MyObj *[2]{&a, &b};
+  }
+  (void)h.Ptrs[0]->id;
+}
+
+//===----------------------------------------------------------------------===//
+// delete
+//===----------------------------------------------------------------------===//
+
+void delete_direct_use_after_free() {
+  MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
+  delete p;             // expected-note {{freed here}}
+  (void)p->id;          // expected-note {{later used here}}
+}
+
+void delete_alias_use_after_free() {
+  MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
+  MyObj *q = p;
+  delete p;             // expected-note {{freed here}}
+  (void)q->id;          // expected-note {{later used here}}
+}
+
+void delete_pointer_propagation_use_after_free() {
+  MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
+  MyObj **pp = &p;
+  delete p;             // expected-note {{freed here}}
+  (void)(*pp)->id;      // expected-note {{later used here}}
+}
+
+void delete_param_pointer(int* x) { // expected-warning {{parameter does not live long enough}}
+  delete x;                         // expected-note {{freed here}}
+  (void)x;                          // expected-note {{later used here}}
+}
+
+// FIXME: false-negative
+struct S {
+  int *x;
+  void foo() {
+    delete x;
+    (void)x;
+  }
+};
+
+void use_inner_origin_after_delete(MyObj* obj) { // expected-warning {{parameter does not live long enough}}
+    int* p = &obj->id;
+    delete obj;                                   // expected-note {{freed here}}
+    (void)*p;                                     // expected-note {{later used here}}
+}
+
+void delete_nullptr_no_warning() {
+  int *p = nullptr;
+  delete p;
+}
+
+void delete_array_nullptr_no_warning() {
+  int *p = nullptr;
+  delete[] p;
+}
+
+struct ClassSpecificDelete {
+  int X;
+  static void operator delete(void *);
+};
+
+void class_specific_operator_delete_use_after_free() {
+  ClassSpecificDelete *p = new ClassSpecificDelete; // expected-warning {{allocated object does not live long enough}}
+  delete p;                                         // expected-note {{freed here}}
+  (void)p->X;                                       // expected-note {{later used here}}
+}
+
+struct PointerFieldHolder {
+  MyObj *Ptr;
+};
+
+// FIXME: https://github.com/llvm/llvm-project/issues/184344
+void placement_new_pointer_field_use_after_scope() {
+  PointerFieldHolder h;
+  PointerFieldHolder *p = &h;
+  {
+    MyObj obj;
+    p = new (&h) PointerFieldHolder{&obj};
+  }
+  (void)p->Ptr->id;
+}
+
+// FIXME: https://github.com/llvm/llvm-project/issues/184344
+void delete_through_pointer_field() {
+  PointerFieldHolder h{new MyObj};
+  delete h.Ptr;
+  (void)h.Ptr->id;
+}
+
+void delete_stack_object() {
+  MyObj obj;
+  MyObj* p = &obj; // expected-warning {{allocated object does not live long enough}}
+  delete &obj;     // expected-note {{freed here}}
+  (void)p->id;     // expected-note {{later used here}}
+}
+
+void delete_stack_object_int() {
+  int obj;
+  int* p = &obj;  // expected-warning {{allocated object does not live long enough}}
+  delete &obj;    // expected-note {{freed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+void allocate_void_ptr() {
+    void** v = new void*;
+    delete v;
+}
+
+} // namespace new_allocation
 
 namespace method_call_uses_field_origins {
 int GLOBAL_INT;
