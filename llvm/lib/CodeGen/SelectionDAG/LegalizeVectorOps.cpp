@@ -2141,13 +2141,13 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
   // 1. Scalable vector is never unrolled.
   // 2. Fixed vector is unrolled if one of followings is true:
   //      a. Vector only has 1 element and target knows how to handle scalar
-  //         FOPYSIGN(either legal or custom expand).
+  //         FOPYSIGN(either legal or custom expand or promote).
   //      b. Vector has more than 1 element and target supports scalar
   //         FCOPYSIGN natively and vector length <= 3(2 AND + 1 OR).
   if (VT.isFixedLengthVector()) {
     EVT EltVT = VT.getVectorElementType();
     if ((VT.getVectorNumElements() == 1 &&
-         TLI.isOperationLegalOrCustom(ISD::FCOPYSIGN, EltVT)) ||
+         TLI.isOperationLegalOrCustomOrPromote(ISD::FCOPYSIGN, EltVT)) ||
         (VT.getVectorNumElements() < 4 &&
          TLI.isOperationLegal(ISD::FCOPYSIGN, EltVT) &&
          TLI.isExtractVecEltCheap(VT, 0)))
