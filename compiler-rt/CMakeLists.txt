@@ -401,7 +401,7 @@ endif()
 
 # Select the inline asm syntax for symbol assignment in sanitizer_redefine_builtins.h.
 if (NOT COMPILER_RT_HAS_ASM_EQUALS_ASSIGN AND COMPILER_RT_HAS_ASM_DOT_SET)
-  list(APPEND SANITIZER_COMMON_CFLAGS -DSANITIZER_USE_ASM_DOT_SET)
+  list(APPEND SANITIZER_COMMON_CFLAGS -DSANITIZER_COMMON_REDEFINE_BUILTINS_USE_ASM_DOT_SET)
 endif()
 
 # By default do not instrument or use profdata for compiler-rt.
