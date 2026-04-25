@@ -1915,6 +1915,11 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (ExitingBlocks.empty())
     return false;
 
+  // Predication may skip iterations of L, which is only safe if none of them
+  // would run forever. Calls that may not return are rejected below.
+  if (!isLoopNestFinite(L, *SE, *LI))
+    return false;
+
   // At this point, ExitingBlocks consists of only those blocks which are
   // predicatable.  Given that, we know we have at least one exit we can
   // predicate if the loop is doesn't have side effects and doesn't have any
