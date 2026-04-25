@@ -15,6 +15,7 @@
 #include <limits>
 #include <optional>
 #include <thread>
+#include <variant>
 
 #include "GDBRemoteCommunicationServerLLGS.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -2904,60 +2905,32 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
 }
 
 namespace {
-/// Helper struct to expand a GDBStoppointType into flags.
-struct BreakpointKind {
+struct UseBreakpoint {
   bool want_hardware;
-  bool want_breakpoint;
-  uint32_t watch_flags;
-
-  /// Invalid types must be handled prior to calling this.
-  BreakpointKind(GDBStoppointType stoppoint_type) {
-    switch (stoppoint_type) {
-    case eBreakpointSoftware:
-      want_hardware = false;
-      want_breakpoint = true;
-      return;
-    case eBreakpointHardware:
-      want_hardware = true;
-      want_breakpoint = true;
-      return;
-    case eWatchpointWrite:
-      watch_flags = 1;
-      want_hardware = true;
-      want_breakpoint = false;
-      return;
-    case eWatchpointRead:
-      watch_flags = 2;
-      want_hardware = true;
-      want_breakpoint = false;
-      return;
-    case eWatchpointReadWrite:
-      watch_flags = 3;
-      want_hardware = true;
-      want_breakpoint = false;
-      return;
-    case eStoppointInvalid:
-      break;
-    }
-    llvm_unreachable("unhandled GDBStoppointType");
-  }
 };
+struct UseWatchpoint {
+  uint32_t flags;
+  static constexpr bool want_hardware = true;
+};
+struct InvalidStoppoint {};
 
-/// If stoppoint_type is a valid type, create a BreakpointKind, otherwise
-/// returns nullopt.
-std::optional<BreakpointKind>
+std::variant<UseBreakpoint, UseWatchpoint, InvalidStoppoint>
 getBreakpointKind(GDBStoppointType stoppoint_type) {
   switch (stoppoint_type) {
   case eBreakpointSoftware:
+    return UseBreakpoint{/*want_hardware*/ false};
   case eBreakpointHardware:
+    return UseBreakpoint{/*want_hardware*/ true};
   case eWatchpointWrite:
+    return UseWatchpoint{/*flags*/ 1};
   case eWatchpointRead:
+    return UseWatchpoint{/*flags*/ 2};
   case eWatchpointReadWrite:
-    return BreakpointKind(stoppoint_type);
+    return UseWatchpoint{/*flags*/ 3};
   case eStoppointInvalid:
-    return std::nullopt;
+    return InvalidStoppoint();
   }
-  llvm_unreachable("unhandled GDBStoppointType in getBreakpointKind");
+  llvm_unreachable("unhandled GDBStoppointType");
 }
 } // namespace
 
@@ -2982,8 +2955,9 @@ GDBRemoteCommunicationServerLLGS::ExecuteSetBreakpoint(
 
   const GDBStoppointType stoppoint_type =
       GDBStoppointType(packet.GetS32(eStoppointInvalid));
-  std::optional<BreakpointKind> bp_kind = getBreakpointKind(stoppoint_type);
-  if (!bp_kind)
+  std::variant<UseBreakpoint, UseWatchpoint, InvalidStoppoint> bp_variant =
+      getBreakpointKind(stoppoint_type);
+  if (std::holds_alternative<InvalidStoppoint>(bp_variant))
     return BreakpointResult::CreateIllFormed(
         "Z packet had invalid software/hardware specifier");
 
@@ -3008,8 +2982,8 @@ GDBRemoteCommunicationServerLLGS::ExecuteSetBreakpoint(
     return BreakpointResult::CreateIllFormed(
         "Malformed Z packet, failed to parse size argument");
 
-  if (bp_kind->want_breakpoint) {
-    // Try to set the breakpoint.
+  // Try to set a breakpoint.
+  if (auto *bp_kind = std::get_if<UseBreakpoint>(&bp_variant)) {
     const Status error =
         m_current_process->SetBreakpoint(addr, size, bp_kind->want_hardware);
     if (error.Success())
@@ -3020,9 +2994,10 @@ GDBRemoteCommunicationServerLLGS::ExecuteSetBreakpoint(
     return BreakpointResult::CreateError(0x09);
   }
 
-  // Try to set the watchpoint.
+  // Try to set a watchpoint.
+  auto wp_kind = std::get<UseWatchpoint>(bp_variant);
   const Status error = m_current_process->SetWatchpoint(
-      addr, size, bp_kind->watch_flags, bp_kind->want_hardware);
+      addr, size, wp_kind.flags, wp_kind.want_hardware);
   if (error.Success())
     return BreakpointResult::CreateOK();
   Log *log = GetLog(LLDBLog::Watchpoints);
@@ -3052,8 +3027,9 @@ GDBRemoteCommunicationServerLLGS::ExecuteRemoveBreakpoint(
 
   const GDBStoppointType stoppoint_type =
       GDBStoppointType(packet.GetS32(eStoppointInvalid));
-  std::optional<BreakpointKind> bp_kind = getBreakpointKind(stoppoint_type);
-  if (!bp_kind)
+  std::variant<UseBreakpoint, UseWatchpoint, InvalidStoppoint> bp_variant =
+      getBreakpointKind(stoppoint_type);
+  if (std::holds_alternative<InvalidStoppoint>(bp_variant))
     return BreakpointResult::CreateIllFormed(
         "z packet had invalid software/hardware specifier");
 
@@ -3080,8 +3056,8 @@ GDBRemoteCommunicationServerLLGS::ExecuteRemoveBreakpoint(
   size argument");
   */
 
-  if (bp_kind->want_breakpoint) {
-    // Try to clear the breakpoint.
+  // Try to clear the breakpoint.
+  if (auto *bp_kind = std::get_if<UseBreakpoint>(&bp_variant)) {
     const Status error =
         m_current_process->RemoveBreakpoint(addr, bp_kind->want_hardware);
     if (error.Success())
