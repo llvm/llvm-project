@@ -51,11 +51,13 @@ __asan_on_error() {
   fprintf(stderr, "description: %s\n", description);
   // CHECK: description: double-free
 
-  const void *addr_dealloc = __asan_get_report_dealloc_address();
-  size_t size_dealloc = __asan_get_report_dealloc_size();
+  const void *addr_dealloc = NULL;
+  size_t size_dealloc = 0xbad;
+  int is_dealloc =
+      __asan_get_report_dealloc_address(&addr_dealloc, &size_dealloc);
   fprintf(stderr,
           "is_dealloc: %d, addr_dealloc: " PTR_FMT ", size_dealloc: %zu\n",
-          !!addr_dealloc, addr_dealloc, size_dealloc);
+          is_dealloc, addr_dealloc, size_dealloc);
   // CHECK: is_dealloc: 1, addr_dealloc: 0x[[ADDR]], size_dealloc: 0
 }
 
