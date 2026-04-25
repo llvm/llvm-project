@@ -122,7 +122,7 @@ add_or_sub(InType x, InType y) {
         // volatile prevents Clang from converting tmp to OutType and then
         // immediately back to InType before negating it, resulting in double
         // rounding.
-        if (__builtin_is_constant_evaluated()) {
+        if (cpp::is_constant_evaluated()) {
           InType tmp = y;
           if constexpr (IsSub)
             tmp = -tmp;
