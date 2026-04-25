@@ -15,8 +15,6 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
@@ -24,6 +22,173 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
+
+namespace rsqrtf16_internal {
+
+LIBC_INLINE_VAR constexpr int RSQRT_FRACTION_BITS = 29;
+LIBC_INLINE_VAR constexpr int64_t ONE = int64_t(1) << RSQRT_FRACTION_BITS;
+LIBC_INLINE_VAR constexpr int64_t THREE_HALVES = 3 * (ONE >> 1);
+
+// Degree-4 minimax polynomial generated with Sollya:
+//   P = fpminimax(1/sqrt(x), 4,
+//       [|single,single,single,single,single|], [0.5;1])
+// Coefficients are stored in Q29 fixed-point format.
+LIBC_INLINE_VAR constexpr int64_t COEFFS[5] = {
+    1'573'164'416, -2'940'085'504, 3'653'406'208, -2'366'894'080, 617'319'616,
+};
+LIBC_INLINE_VAR constexpr int64_t ONE_OVER_SQRT2 = 0x16a09e60;
+
+LIBC_INLINE constexpr int floor_log2(uint64_t x) {
+  int result = -1;
+  while (x) {
+    x >>= 1;
+    ++result;
+  }
+  return result;
+}
+
+LIBC_INLINE constexpr int64_t eval_polynomial(uint32_t m) {
+  int64_t y = COEFFS[4];
+  y = COEFFS[3] + ((y * m) >> RSQRT_FRACTION_BITS);
+  y = COEFFS[2] + ((y * m) >> RSQRT_FRACTION_BITS);
+  y = COEFFS[1] + ((y * m) >> RSQRT_FRACTION_BITS);
+  y = COEFFS[0] + ((y * m) >> RSQRT_FRACTION_BITS);
+  return y;
+}
+
+LIBC_INLINE constexpr int64_t newton_raphson(uint32_t m, int64_t y) {
+  int64_t y2 = (y * y) >> RSQRT_FRACTION_BITS;
+  int64_t my2 = (static_cast<int64_t>(m) * y2) >> RSQRT_FRACTION_BITS;
+  int64_t factor = THREE_HALVES - (my2 >> 1);
+  return (y * factor) >> RSQRT_FRACTION_BITS;
+}
+
+LIBC_INLINE constexpr uint16_t fixed_to_half_bits(uint64_t y, int scale_exp) {
+  int y_log2 = floor_log2(y);
+  int out_exp = scale_exp + y_log2 - RSQRT_FRACTION_BITS;
+  int biased_exp = out_exp + 15;
+
+  uint32_t out_sig = y_log2 >= 10 ? static_cast<uint32_t>(y >> (y_log2 - 10))
+                                  : static_cast<uint32_t>(y << (10 - y_log2));
+
+  if (biased_exp <= 0)
+    return 0x0400;
+  if (biased_exp >= 31)
+    return 0x7bff;
+
+  return static_cast<uint16_t>((biased_exp << 10) | (out_sig & 0x3ff));
+}
+
+LIBC_INLINE constexpr uint16_t approximate_rsqrt(uint16_t x_abs) {
+  uint32_t x_mant = x_abs & 0x03ff;
+  int exponent = 0;
+
+  if (x_abs >= 0x0400) {
+    x_mant |= 0x0400;
+    exponent = static_cast<int>(x_abs >> 10) - 14;
+  } else {
+    exponent = -13;
+    while ((x_mant & 0x0400) == 0) {
+      x_mant <<= 1;
+      --exponent;
+    }
+  }
+
+  uint32_t m = x_mant << (RSQRT_FRACTION_BITS - 11);
+  int64_t y = newton_raphson(m, eval_polynomial(m));
+
+  int scale_exp = 0;
+  if (exponent & 1) {
+    y = (y * ONE_OVER_SQRT2) >> RSQRT_FRACTION_BITS;
+    scale_exp = -((exponent - 1) / 2);
+  } else {
+    scale_exp = -(exponent / 2);
+  }
+
+  return fixed_to_half_bits(static_cast<uint64_t>(y), scale_exp);
+}
+
+// Compare y = sig * 2^exp with 1 / sqrt(x_sig * 2^x_exp).
+// Return -1 if y is below the exact value, 0 if exact, and 1 if above.
+LIBC_INLINE constexpr int compare_with_rsqrt(uint32_t sig, int exp,
+                                             uint32_t x_sig, int x_exp) {
+  uint64_t lhs = static_cast<uint64_t>(sig) * sig * x_sig;
+  int scale = 2 * exp + x_exp;
+
+  if (scale >= 0)
+    return (scale == 0 && lhs == 1) ? 0 : 1;
+
+  int rshift = -scale;
+  if (rshift >= 64)
+    return -1;
+
+  uint64_t rhs = uint64_t(1) << rshift;
+  if (lhs < rhs)
+    return -1;
+  if (lhs > rhs)
+    return 1;
+  return 0;
+}
+
+LIBC_INLINE constexpr int compare_half_with_rsqrt(uint16_t y, uint32_t x_sig,
+                                                  int x_exp) {
+  uint32_t y_sig = 0x0400 | (y & 0x03ff);
+  int y_exp = static_cast<int>(y >> 10) - 25;
+  return compare_with_rsqrt(y_sig, y_exp, x_sig, x_exp);
+}
+
+LIBC_INLINE constexpr uint16_t floor_rsqrt(uint16_t approx, uint32_t x_sig,
+                                           int x_exp) {
+  uint16_t y = approx < 0x0400 ? 0x0400 : approx;
+  while (compare_half_with_rsqrt(y, x_sig, x_exp) > 0)
+    --y;
+  while (y < 0x7bff && compare_half_with_rsqrt(y + 1, x_sig, x_exp) <= 0)
+    ++y;
+  return y;
+}
+
+LIBC_INLINE constexpr uint16_t round_result(uint16_t y, uint32_t x_sig,
+                                            int x_exp) {
+  if (compare_half_with_rsqrt(y, x_sig, x_exp) == 0)
+    return y;
+
+  int rounding_mode = FE_TONEAREST;
+  if (!cpp::is_constant_evaluated())
+    rounding_mode = fputil::get_round();
+  if (rounding_mode == FE_UPWARD)
+    return y + 1;
+  if (rounding_mode != FE_TONEAREST)
+    return y;
+
+  uint32_t y_sig = 0x0400 | (y & 0x03ff);
+  int y_exp = static_cast<int>(y >> 10) - 25;
+  uint32_t midpoint_sig = (y_sig << 1) | 1;
+  int midpoint_cmp = compare_with_rsqrt(midpoint_sig, y_exp - 1, x_sig, x_exp);
+
+  if (midpoint_cmp < 0)
+    return y + 1;
+  if (midpoint_cmp > 0)
+    return y;
+  return (y & 1) ? static_cast<uint16_t>(y + 1) : y;
+}
+
+LIBC_INLINE constexpr float16 rsqrtf16_no_float(uint16_t x_abs) {
+  uint32_t x_sig = 0;
+  int x_exp = 0;
+  if (x_abs >= 0x0400) {
+    x_sig = 0x0400 | (x_abs & 0x03ff);
+    x_exp = static_cast<int>(x_abs >> 10) - 25;
+  } else {
+    x_sig = x_abs;
+    x_exp = -24;
+  }
+
+  uint16_t approx = approximate_rsqrt(x_abs);
+  uint16_t y = floor_rsqrt(approx, x_sig, x_exp);
+  return fputil::FPBits<float16>(round_result(y, x_sig, x_exp)).get_val();
+}
+
+} // namespace rsqrtf16_internal
 
 LIBC_INLINE constexpr float16 rsqrtf16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
@@ -78,73 +243,7 @@ LIBC_INLINE constexpr float16 rsqrtf16(float16 x) {
   return fputil::cast<float16>(result);
 
 #else
-  float xf = fputil::cast<float>(x);
-
-  int exponent = 0;
-  float mantissa = fputil::frexp(xf, exponent);
-
-  float result = 0.0f;
-  int exp_floored = -(exponent >> 1);
-
-  if (mantissa == 0.5f) {
-    // When mantissa is 0.5f, x was a power of 2 (or subnormal that normalizes
-    // this way). 1/sqrt(0.5f) = sqrt(2.0f).
-    // If exponent is odd (exponent = 2k + 1):
-    //   rsqrt(x) = (1/sqrt(0.5)) * 2^(-(2k+1)/2) = sqrt(2) * 2^(-k-0.5)
-    //            = sqrt(2) * 2^(-k) * (1/sqrt(2)) = 2^(-k)
-    //   exp_floored = -((2k+1)>>1) = -(k) = -k
-    //   So result = ldexp(1.0f, exp_floored)
-    // If exponent is even (exponent = 2k):
-    //   rsqrt(x) = (1/sqrt(0.5)) * 2^(-2k/2) = sqrt(2) * 2^(-k)
-    //   exp_floored = -((2k)>>1) = -(k) = -k
-    //   So result = ldexp(sqrt(2.0f), exp_floored)
-    if (exponent & 1) {
-      result = fputil::ldexp(1.0f, exp_floored);
-    } else {
-      constexpr float SQRT_2_F = 0x1.6a09e6p0f; // sqrt(2.0f)
-      result = fputil::ldexp(SQRT_2_F, exp_floored);
-    }
-  } else {
-    // 4 Degree minimax polynomial (single-precision coefficients) generated
-    // with Sollya:
-    //   P = fpminimax(1/sqrt(x), 4,
-    //       [|single,single,single,single,single|], [0.5;1])
-    float y = fputil::polyeval(mantissa,
-                               0x1.771256p1f,  // c0
-                               -0x1.5e7c4ap2f, // c1
-                               0x1.b3851cp2f,  // c2
-                               -0x1.1a27ep2f,  // c3
-                               0x1.265c66p0f); // c4
-
-    // Newton-Raphson iteration in float (use multiply_add to leverage FMA when
-    // available):
-    float y2 = y * y;
-    float factor = fputil::multiply_add(-0.5f * mantissa, y2, 1.5f);
-    y = y * factor;
-
-    result = fputil::ldexp(y, exp_floored);
-    if (exponent & 1) {
-      constexpr float ONE_OVER_SQRT2 = 0x1.6a09e6p-1f; // 1/sqrt(2)
-      result *= ONE_OVER_SQRT2;
-    }
-
-    // Targeted post-correction: for the specific half-precision mantissa
-    // pattern M == 0x011F we observe a consistent -1 ULP bias across exponents.
-    // Apply a tiny upward nudge to cross the rounding boundary in all modes.
-    const uint16_t half_mantissa = static_cast<uint16_t>(x_abs & 0x3ff);
-    if (half_mantissa == 0x011F) {
-      // Nudge up to fix consistent -1 ULP at that mantissa boundary
-      result = fputil::multiply_add(result, 0x1.0p-21f,
-                                    result); // result *= (1 + 2^-21)
-    } else if (half_mantissa == 0x0313) {
-      // Nudge down to fix +1 ULP under upward rounding at this mantissa
-      // boundary
-      result = fputil::multiply_add(result, -0x1.0p-21f,
-                                    result); // result *= (1 - 2^-21)
-    }
-  }
-
-  return fputil::cast<float16>(result);
+  return rsqrtf16_internal::rsqrtf16_no_float(x_abs);
 #endif
 }
 
