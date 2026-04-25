@@ -414,7 +414,7 @@ public:
 
   const MCSubtargetInfo *getSubtargetInfo() const { return MSTI; }
 
-  LLVM_ABI const MCTargetOptions *getTargetOptions() const;
+  LLVM_ABI const MCTargetOptions &getTargetOptions() const;
 
   LLVM_ABI CodeViewContext &getCVContext();
 
