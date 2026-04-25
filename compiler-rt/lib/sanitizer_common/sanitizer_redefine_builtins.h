@@ -17,8 +17,7 @@
 // The asm hack only works with GCC and Clang.
 #    if !defined(_WIN32) && !defined(_AIX) && !defined(__APPLE__)
 
-#      if !defined(COMPILER_RT_HAS_ASM_EQUALS_ASSIGN) && \
-          defined(COMPILER_RT_HAS_ASM_DOT_SET)
+#      if defined(SANITIZER_USE_ASM_DOT_SET)
 
 #        define SANITIZER_REDEFINE_BUILTIN_ASM(name) \
           asm(".set " #name ", __sanitizer_internal_" #name)
