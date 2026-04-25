@@ -962,8 +962,6 @@ AArch64PostLegalizerCombinerPass::run(MachineFunction &MF,
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GISelValueTrackingAnalysis>();
-  if (MDT)
-    PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<GISelCSEAnalysis>();
   return PA;
 }
