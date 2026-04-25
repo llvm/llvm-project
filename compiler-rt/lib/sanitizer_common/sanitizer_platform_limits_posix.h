@@ -769,7 +769,7 @@ struct __sanitizer_sigaction {
 #        endif
 #      endif
 #    endif
-#    if SANITIZER_LINUX || SANITIZER_HAIKU
+#    if (SANITIZER_LINUX || SANITIZER_HAIKU) && !defined(__alpha__)
   void (*sa_restorer)();
 #    endif
 #    if defined(__mips__) && (SANITIZER_WORDSIZE == 32) && !SANITIZER_MUSL

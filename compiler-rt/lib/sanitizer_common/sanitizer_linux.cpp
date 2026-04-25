@@ -1022,7 +1022,7 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     // rt_sigaction, so we need to do the same (we'll need to reimplement the
     // restorers; for x86_64 the restorer address can be obtained from
     // oldact->sa_restorer upon a call to sigaction(xxx, NULL, oldact).
-#      if !SANITIZER_ANDROID || !SANITIZER_MIPS32
+#      if (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && !defined(__alpha__)
     k_act.sa_restorer = u_act->sa_restorer;
 #      endif
   }
@@ -1038,7 +1038,7 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     internal_memcpy(&u_oldact->sa_mask, &k_oldact.sa_mask,
                     sizeof(__sanitizer_kernel_sigset_t));
     u_oldact->sa_flags = k_oldact.sa_flags;
-#      if !SANITIZER_ANDROID || !SANITIZER_MIPS32
+#      if (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && !defined(__alpha__)
     u_oldact->sa_restorer = k_oldact.sa_restorer;
 #      endif
   }
