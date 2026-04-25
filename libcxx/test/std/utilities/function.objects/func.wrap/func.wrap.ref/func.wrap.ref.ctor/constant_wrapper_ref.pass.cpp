@@ -362,6 +362,14 @@ constexpr bool test() {
       assert(f4(2, 3).i == 6);
     }
   }
+  {
+    // volatile objects
+    volatile int i = 5;
+    std::function_ref<int() > f(std::cw<[](int j) { return j + 42; }>, i);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(f() == 47);
+    }
+  }
 
   return true;
 }

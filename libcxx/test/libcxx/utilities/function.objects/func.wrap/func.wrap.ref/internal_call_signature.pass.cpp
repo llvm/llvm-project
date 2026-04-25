@@ -31,7 +31,7 @@ struct SmallButNonTrivial {
 // specializations, so we can just specialize an undefined function_ref here to inspect the defined ones
 template <>
 class std::function_ref<int> {
-  using storage = std::__storage_func_ref_t;
+  using storage = std::__function_ref_storage;
   void test() {
     {
       // by value small argument
