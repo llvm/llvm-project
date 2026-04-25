@@ -146,7 +146,7 @@ tools = [
 ]
 
 if config.clang_enable_cir:
-    tools.append("clang-cir")
+    tools.append("cir-opt")
 
 if config.clang_examples:
     config.available_features.add("examples")
