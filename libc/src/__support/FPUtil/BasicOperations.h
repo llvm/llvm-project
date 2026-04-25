@@ -34,27 +34,25 @@ namespace internal {
 
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
-max(T x, T y) {
+constexpr_max(T x, T y) {
   FPBits<T> x_bits(x);
   FPBits<T> y_bits(y);
-
-  // To make sure that fmax(+0, -0) == +0 == fmax(-0, +0), whenever x and y
-  // have different signs and both are not NaNs, we return the number with
-  // positive sign.
   if (x_bits.sign() != y_bits.sign())
     return x_bits.is_pos() ? x : y;
   return x > y ? x : y;
 }
 
+template <typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+max(T x, T y) {
+  return constexpr_max(x, y);
+}
+
 #ifdef LIBC_TYPES_HAS_FLOAT16
 #if defined(__LIBC_USE_BUILTIN_FMAXF16_FMINF16)
 template <> LIBC_INLINE constexpr float16 max(float16 x, float16 y) {
-  if (cpp::is_constant_evaluated()) {
-    FPBits<float16> x_bits(x), y_bits(y);
-    if (x_bits.sign() != y_bits.sign())
-      return x_bits.is_pos() ? x : y;
-    return x > y ? x : y;
-  }
+  if (cpp::is_constant_evaluated())
+    return constexpr_max(x, y);
   return __builtin_fmaxf16(x, y);
 }
 #elif !defined(LIBC_TARGET_ARCH_IS_AARCH64)
