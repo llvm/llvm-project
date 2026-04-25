@@ -2443,7 +2443,7 @@ bool ASTUnit::visitLocalTopLevelDecls(void *context, DeclVisitorFn Fn) {
   return true;
 }
 
-OptionalFileEntryRef ASTUnit::getPCHFile() {
+std::optional<StringRef> ASTUnit::getPCHFile() {
   if (!Reader)
     return std::nullopt;
 
@@ -2466,7 +2466,7 @@ OptionalFileEntryRef ASTUnit::getPCHFile() {
     return true;
   });
   if (Mod)
-    return Mod->File;
+    return Mod->FileName;
 
   return std::nullopt;
 }

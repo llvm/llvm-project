@@ -19,6 +19,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lld/Common/BPSectionOrdererBase.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Utils.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -52,14 +53,17 @@ template <class D> struct BPOrderer {
 
   // Compute a section order using the Balanced Partitioning algorithm.
   //
-  // * for*Compresion: Improve Lempel-Ziv compression by grouping
-  //   similar sections together.
+  // * compressionSortSpecs: Improve Lempel-Ziv compression by grouping
+  //   similar sections together. The specs select which sections participate,
+  //   divide them into distinct groups, and run BP independently for each
+  //   group, then place the groups according to their layout priority.
   // * profilePath: Utilize a temporal profile file to reduce page faults during
   //   program startup.
   // * compressionSortStartupFunctions: if profilePath is specified, allocate
   //   extra utility vertices to prioritize nearby function similarity.
-  auto computeOrder(llvm::StringRef profilePath, bool forFunctionCompression,
-                    bool forDataCompression,
+  auto computeOrder(llvm::StringRef profilePath,
+                    llvm::ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
+                    bool forFunctionCompression, bool forDataCompression,
                     bool compressionSortStartupFunctions, bool verbose,
                     llvm::ArrayRef<Section *> sections,
                     const DenseMap<CachedHashStringRef, std::set<unsigned>>
@@ -68,6 +72,10 @@ template <class D> struct BPOrderer {
 
   std::optional<StringRef> static getResolvedLinkageName(StringRef name) {
     return {};
+  }
+
+  std::string static getCompressionSubgroupKey(const Section &sec) {
+    return "";
   }
 };
 } // namespace lld
@@ -150,7 +158,8 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
 
 template <class D>
 auto BPOrderer<D>::computeOrder(
-    StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
+    StringRef profilePath, ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
+    bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose,
     ArrayRef<Section *> sections,
     const DenseMap<CachedHashStringRef, std::set<unsigned>>
@@ -221,20 +230,82 @@ auto BPOrderer<D>::computeOrder(
     }
   }
 
+  // Compression grouping: for each section, find the winning spec among
+  // matching --bp-compression-sort-section globs. Match resolution:
+  // - Explicit matchPriority always beats positional.
+  // - Among explicit: lowest matchPriority wins.
+  // - Among positional: last match wins.
+  // Sections matched by the same winning globString are grouped together and
+  // may be further subdivided by getCompressionSubgroupKey(). Layout order is
+  // (layoutPriority, globString, subgroupKey).
+  struct GlobGroup {
+    unsigned layoutPriority;
+    std::map<std::string, SmallVector<unsigned>> subgroups;
+  };
+  StringMap<GlobGroup> globGroups;
   SmallVector<unsigned> sectionIdxsForFunctionCompression,
       sectionIdxsForDataCompression;
   for (unsigned sectionIdx = 0; sectionIdx < sections.size(); sectionIdx++) {
     if (startupSectionIdxUNs.contains(sectionIdx))
       continue;
     const auto *isec = sections[sectionIdx];
-    if (D::isCodeSection(*isec)) {
-      if (forFunctionCompression)
-        sectionIdxsForFunctionCompression.push_back(sectionIdx);
-    } else {
-      if (forDataCompression)
-        sectionIdxsForDataCompression.push_back(sectionIdx);
+    auto sectionName = D::getSectionName(*isec);
+
+    const BPCompressionSortSpec *winner = nullptr;
+    for (const auto &spec : compressionSortSpecs) {
+      if (!spec.glob.match(sectionName))
+        continue;
+      if (!winner || spec.matchPriority.value_or(UINT_MAX) <=
+                         winner->matchPriority.value_or(UINT_MAX))
+        winner = &spec;
+    }
+    if (winner) {
+      auto &group = globGroups[winner->globString];
+      group.layoutPriority = winner->layoutPriority;
+      auto subgroupKey = D::getCompressionSubgroupKey(*isec);
+      group.subgroups[subgroupKey].push_back(sectionIdx);
+      continue;
+    }
+    bool isCode = D::isCodeSection(*isec);
+    if (forFunctionCompression && isCode)
+      sectionIdxsForFunctionCompression.push_back(sectionIdx);
+    if (forDataCompression && !isCode)
+      sectionIdxsForDataCompression.push_back(sectionIdx);
+  }
+
+  // Flatten groups sorted by (layoutPriority, globString, subgroupKey).
+  struct CompressionGroup {
+    std::string key;
+    SmallVector<unsigned> sectionIdxs;
+  };
+  SmallVector<CompressionGroup> groupsForCompression;
+  {
+    struct SortedCompressionGroup {
+      std::tuple<unsigned, StringRef, StringRef> sortKey;
+      SmallVector<unsigned> *sectionIdxs;
+    };
+    SmallVector<SortedCompressionGroup> sortedGroups;
+    for (auto &[globString, group] : globGroups)
+      for (auto &[subKey, idxs] : group.subgroups)
+        sortedGroups.push_back(
+            {{group.layoutPriority, globString, subKey}, &idxs});
+    llvm::sort(sortedGroups, [](const auto &a, const auto &b) {
+      return a.sortKey < b.sortKey;
+    });
+    for (auto &group : sortedGroups) {
+      auto &[prio, globString, subKey] = group.sortKey;
+      std::string fullKey =
+          subKey.empty() ? globString.str() : (globString + ":" + subKey).str();
+      groupsForCompression.push_back(
+          {std::move(fullKey), std::move(*group.sectionIdxs)});
     }
   }
+  if (forFunctionCompression)
+    groupsForCompression.push_back(
+        {"legacy:function", std::move(sectionIdxsForFunctionCompression)});
+  if (forDataCompression)
+    groupsForCompression.push_back(
+        {"legacy:data", std::move(sectionIdxsForDataCompression)});
 
   if (compressionSortStartupFunctions) {
     SmallVector<unsigned> startupIdxs;
@@ -252,51 +323,44 @@ auto BPOrderer<D>::computeOrder(
     }
   }
 
-  // Map a section index (order directly) to a list of duplicate section indices
-  // (not ordered directly).
+  // Map a section index (ordered directly) to a list of duplicate section
+  // indices (not ordered directly).
   DenseMap<unsigned, SmallVector<unsigned, 0>> duplicateSectionIdxs;
-  auto unsForFunctionCompression = getUnsForCompression<D>(
-      sections, sectionToIdx, sectionIdxsForFunctionCompression,
-      &duplicateSectionIdxs, maxUN);
-  auto unsForDataCompression = getUnsForCompression<D>(
-      sections, sectionToIdx, sectionIdxsForDataCompression,
-      &duplicateSectionIdxs, maxUN);
+  SmallVector<std::vector<BPFunctionNode>> nodesForCompression;
+  for (auto &group : groupsForCompression) {
+    auto &nodes = nodesForCompression.emplace_back();
+    auto uns =
+        getUnsForCompression<D>(sections, sectionToIdx, group.sectionIdxs,
+                                &duplicateSectionIdxs, maxUN);
+    for (auto &[sectionIdx, uns] : uns)
+      nodes.emplace_back(sectionIdx, uns);
+    // Sort compression nodes by their Id (which is the section index) because
+    // the input linker order tends to be not bad.
+    llvm::sort(nodes, [](auto &L, auto &R) { return L.Id < R.Id; });
+  }
 
-  std::vector<BPFunctionNode> nodesForStartup, nodesForFunctionCompression,
-      nodesForDataCompression;
+  std::vector<BPFunctionNode> nodesForStartup;
   for (auto &[sectionIdx, uns] : startupSectionIdxUNs)
     nodesForStartup.emplace_back(sectionIdx, uns);
-  for (auto &[sectionIdx, uns] : unsForFunctionCompression)
-    nodesForFunctionCompression.emplace_back(sectionIdx, uns);
-  for (auto &[sectionIdx, uns] : unsForDataCompression)
-    nodesForDataCompression.emplace_back(sectionIdx, uns);
 
   // Use the first timestamp to define the initial order for startup nodes.
   llvm::sort(nodesForStartup, [&sectionIdxToTimestamp](auto &L, auto &R) {
     return std::make_pair(sectionIdxToTimestamp[L.Id], L.Id) <
            std::make_pair(sectionIdxToTimestamp[R.Id], R.Id);
   });
-  // Sort compression nodes by their Id (which is the section index) because the
-  // input linker order tends to be not bad.
-  llvm::sort(nodesForFunctionCompression,
-             [](auto &L, auto &R) { return L.Id < R.Id; });
-  llvm::sort(nodesForDataCompression,
-             [](auto &L, auto &R) { return L.Id < R.Id; });
 
   {
     TimeTraceScope timeScope("Balanced Partitioning");
     BalancedPartitioningConfig config;
     BalancedPartitioning bp(config);
     bp.run(nodesForStartup);
-    bp.run(nodesForFunctionCompression);
-    bp.run(nodesForDataCompression);
+    for (auto &nodes : nodesForCompression)
+      bp.run(nodes);
   }
 
   unsigned numStartupSections = 0, startupSize = 0;
-  unsigned numCodeCompressionSections = 0, codeCompressionSize = 0;
-  unsigned numDuplicateCodeSections = 0, duplicateCodeSize = 0;
-  unsigned numDataCompressionSections = 0, dataCompressionSize = 0;
-  unsigned numDuplicateDataSections = 0, duplicateDataSize = 0;
+  unsigned numCompressionSections = 0, compressionSize = 0;
+  unsigned numDuplicateCompressionSections = 0, duplicateCompressionSize = 0;
   SetVector<const Section *> orderedSections;
   // Order startup functions,
   for (auto &node : nodesForStartup) {
@@ -306,63 +370,46 @@ auto BPOrderer<D>::computeOrder(
       ++numStartupSections;
     }
   }
-  // then functions for compression,
-  for (auto &node : nodesForFunctionCompression) {
-    const auto *isec = sections[node.Id];
-    if (orderedSections.insert(isec)) {
-      codeCompressionSize += D::getSize(*isec);
-      ++numCodeCompressionSections;
-    }
-    auto It = duplicateSectionIdxs.find(node.Id);
-    if (It == duplicateSectionIdxs.end())
-      continue;
-    for (auto dupSecIdx : It->getSecond()) {
-      const auto *dupIsec = sections[dupSecIdx];
-      if (orderedSections.insert(dupIsec)) {
-        duplicateCodeSize += D::getSize(*dupIsec);
-        ++numDuplicateCodeSections;
+  // then sections for compression.
+  for (const auto &nodes : nodesForCompression) {
+    for (auto &node : nodes) {
+      const auto *isec = sections[node.Id];
+      if (orderedSections.insert(isec)) {
+        compressionSize += D::getSize(*isec);
+        ++numCompressionSections;
       }
-    }
-  }
-  // then data for compression.
-  for (auto &node : nodesForDataCompression) {
-    const auto *isec = sections[node.Id];
-    if (orderedSections.insert(isec)) {
-      dataCompressionSize += D::getSize(*isec);
-      ++numDataCompressionSections;
-    }
-    auto It = duplicateSectionIdxs.find(node.Id);
-    if (It == duplicateSectionIdxs.end())
-      continue;
-    for (auto dupSecIdx : It->getSecond()) {
-      const auto *dupIsec = sections[dupSecIdx];
-      if (orderedSections.insert(dupIsec)) {
-        duplicateDataSize += D::getSize(*dupIsec);
-        ++numDuplicateDataSections;
+      auto It = duplicateSectionIdxs.find(node.Id);
+      if (It == duplicateSectionIdxs.end())
+        continue;
+      for (auto dupSecIdx : It->getSecond()) {
+        const auto *dupIsec = sections[dupSecIdx];
+        if (orderedSections.insert(dupIsec)) {
+          duplicateCompressionSize += D::getSize(*dupIsec);
+          ++numDuplicateCompressionSections;
+        }
       }
     }
   }
 
   if (verbose) {
-    unsigned numTotalOrderedSections =
-        numStartupSections + numCodeCompressionSections +
-        numDuplicateCodeSections + numDataCompressionSections +
-        numDuplicateDataSections;
-    unsigned totalOrderedSize = startupSize + codeCompressionSize +
-                                duplicateCodeSize + dataCompressionSize +
-                                duplicateDataSize;
+    unsigned numTotalOrderedSections = numStartupSections +
+                                       numCompressionSections +
+                                       numDuplicateCompressionSections;
+    unsigned totalOrderedSize =
+        startupSize + compressionSize + duplicateCompressionSize;
     dbgs() << "Ordered " << numTotalOrderedSections << " sections ("
            << totalOrderedSize << " bytes) using balanced partitioning:\n";
     dbgs() << "  Functions for startup: " << numStartupSections << " ("
            << startupSize << " bytes)\n";
-    dbgs() << "  Functions for compression: " << numCodeCompressionSections
-           << " (" << codeCompressionSize << " bytes)\n";
-    dbgs() << "  Duplicate functions: " << numDuplicateCodeSections << " ("
-           << duplicateCodeSize << " bytes)\n";
-    dbgs() << "  Data for compression: " << numDataCompressionSections << " ("
-           << dataCompressionSize << " bytes)\n";
-    dbgs() << "  Duplicate data: " << numDuplicateDataSections << " ("
-           << duplicateDataSize << " bytes)\n";
+    dbgs() << "  Sections for compression: " << numCompressionSections << " ("
+           << compressionSize << " bytes)\n";
+    dbgs() << "  Compression groups: " << groupsForCompression.size() << "\n";
+    for (const auto &group : groupsForCompression)
+      dbgs() << "    " << group.key << ": " << group.sectionIdxs.size()
+             << " sections\n";
+    dbgs() << "  Duplicate compression sections: "
+           << numDuplicateCompressionSections << " ("
+           << duplicateCompressionSize << " bytes)\n";
 
     if (!profilePath.empty()) {
       // Evaluate this function order for startup

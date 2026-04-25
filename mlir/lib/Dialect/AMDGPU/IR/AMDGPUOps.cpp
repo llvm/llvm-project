@@ -103,7 +103,7 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
 
 LogicalResult FatRawBufferCastOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   Adaptor adaptor(operands, attributes, properties, regions);
   auto sourceType =
@@ -742,6 +742,56 @@ LogicalResult SparseWMMAOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// DotOp
+//===----------------------------------------------------------------------===//
+LogicalResult DotOp::verify() {
+  Type aElem = cast<VectorType>(getSourceA().getType()).getElementType();
+  Type bElem = cast<VectorType>(getSourceB().getType()).getElementType();
+  Type dest = getDestC().getType();
+
+  bool aIsFloat8 = aElem.isFloat(8);
+  bool bIsFloat8 = bElem.isFloat(8);
+  bool aIsInteger = isa<IntegerType>(aElem);
+
+  bool bothFloat8 = aIsFloat8 && bIsFloat8;
+  if (!bothFloat8 && aElem != bElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  if (aElem.isF16()) {
+    if (!dest.isF32() && !dest.isF16())
+      return emitOpError("expected f32 or f16 accumulator for f16 sources");
+  } else if (aElem.isBF16()) {
+    if (!dest.isF32() && !dest.isBF16())
+      return emitOpError("expected f32 or bf16 accumulator for bf16 sources");
+  } else if (aIsInteger) {
+    if (!dest.isInteger(32))
+      return emitOpError("expected i32 accumulator for integer sources");
+  } else if (aIsFloat8) {
+    if (!dest.isF32())
+      return emitOpError("expected f32 accumulator for fp8 sources");
+  }
+
+  if ((getUnsignedA() || getUnsignedB()) && !aIsInteger)
+    return emitOpError(
+        "unsignedA/unsignedB are only valid for integer source types");
+
+  if (aElem.isInteger(16) && getUnsignedA() != getUnsignedB())
+    return emitOpError(
+        "mixed-sign dot is not supported for 16-bit integer sources");
+
+  if (getClamp()) {
+    bool noClamp = (aElem.isF16() && dest.isF16()) ||
+                   (aElem.isBF16() && dest.isBF16()) || aIsFloat8;
+    if (noClamp)
+      return emitOpError(
+          "clamp is not supported for this (source, accumulator) combination");
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DPPOp
 //===----------------------------------------------------------------------===//
 LogicalResult DPPOp::verify() {
@@ -941,6 +991,37 @@ struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
 void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<FoldGatherToLDSOfCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalLoadAsyncToLDSOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalLoadAsyncToLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+
+  if (srcType.getElementType() != dstType.getElementType())
+    return emitOpError("source and destination element types must match");
+
+  Type transferType = getTransferType();
+  int transferSize;
+  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
+    transferSize = vectorTransfer.getNumElements() *
+                   vectorTransfer.getElementTypeBitWidth();
+  } else {
+    transferSize = transferType.getIntOrFloatBitWidth();
+  }
+  if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
+    return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
+
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be global");
+
+  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+    return emitOpError("destination memory address space must be Workgroup");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1300,6 +1381,53 @@ LogicalResult DsAsyncBarrierArriveOp::verify() {
 
 LogicalResult DsBarrierArriveOp::verify() {
   return verifyDsBarrierOpCommon(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalPrefetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalPrefetchOp::verify() {
+  auto src = cast<MemRefType>(getSrc().getType());
+
+  Attribute memSpace = src.getMemorySpace();
+  if (!memSpace)
+    return this->emitOpError("the source must have address space attribute");
+  if (!hasGlobalMemorySpace(memSpace))
+    return this->emitOpError("the source must reside in global address space");
+
+  ArrayRef<int64_t> srcShape = src.getShape();
+  const size_t numIndices = getIndices().size();
+  if (srcShape.size() != numIndices)
+    return this->emitOpError(
+        "the number of indices must match the source shape size");
+
+  const LoadTemporalHint temporalHint = getTemporalHint();
+  const Scope scope = getCacheScope();
+  const bool isSpeculative = getSpeculative();
+
+  // See GFX1250 SPG for a detail explanation
+  if (isSpeculative && scope == Scope::WGP)
+    return this->emitOpError(
+        "does not support speculative prefetch in WGP scope");
+
+  // Note that temporal hints are shared between load, store,
+  // prefetch, etc. instructions. However, some instructions
+  // operate only with a subset of hints according to the ISA
+  // documentation. In case of global prefetch, non-temporal (NT)
+  // and last-use (LU) hints are not used. The extra bits of encoding
+  // are used to encode speculative or non-speculative instruction behavior
+  if (llvm::is_contained({LoadTemporalHint::NT, LoadTemporalHint::LU},
+                         temporalHint))
+    return this->emitOpError("does not support NT and LU modes");
+
+  if (llvm::is_contained({LoadTemporalHint::NT_RT, LoadTemporalHint::RT_NT,
+                          LoadTemporalHint::NT_HT},
+                         temporalHint) &&
+      !isSpeculative) {
+    return this->emitOpError("operates only in the speculative mode");
+  }
+  return success();
 }
 
 #define GET_OP_CLASSES

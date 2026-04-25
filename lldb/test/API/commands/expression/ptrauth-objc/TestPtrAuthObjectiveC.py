@@ -2,14 +2,21 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import configuration
 
 
 class TestPtrAuthObjectiveC(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
+
+    def build_arm64e(self):
+        self.build(
+            dictionary={"TRIPLE": configuration.triple.replace("arm64", "arm64e")}
+        )
 
     @skipUnlessArm64eSupported
     def test_objc_message_send(self):
-        self.build()
+        self.build_arm64e()
 
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.m", False)
@@ -23,7 +30,7 @@ class TestPtrAuthObjectiveC(TestBase):
 
     @skipUnlessArm64eSupported
     def test_objc_message_send_with_arg(self):
-        self.build()
+        self.build_arm64e()
 
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.m", False)
@@ -37,7 +44,7 @@ class TestPtrAuthObjectiveC(TestBase):
 
     @skipUnlessArm64eSupported
     def test_objc_alloc_and_message(self):
-        self.build()
+        self.build_arm64e()
 
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.m", False)
@@ -52,7 +59,7 @@ class TestPtrAuthObjectiveC(TestBase):
 
     @skipUnlessArm64eSupported
     def test_objc_derived_class(self):
-        self.build()
+        self.build_arm64e()
 
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.m", False)
@@ -72,7 +79,7 @@ class TestPtrAuthObjectiveC(TestBase):
 
     @skipUnlessArm64eSupported
     def test_objc_isa_check(self):
-        self.build()
+        self.build_arm64e()
 
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.m", False)

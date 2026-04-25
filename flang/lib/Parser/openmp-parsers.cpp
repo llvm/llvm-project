@@ -1836,8 +1836,14 @@ struct NonBlockDoConstructParser {
     // Keep parsing ExecutionPartConstructs until the set of open label-do
     // statements becomes empty, or until the EPC parser fails.
     auto processEpc{[&](ExecutionPartConstruct &&epc) {
+      // The parsed epc may be a construct. In such case, get the final
+      // label from it.
       if (auto &&label{GetStatementLabel(epc)}) {
         labels.erase(*label);
+      } else if (auto *omp{Unwrap<OpenMPConstruct>(epc)}) {
+        if (auto &&label{GetFinalLabel(*omp)}) {
+          labels.erase(*label);
+        }
       }
       if (auto *labelDo{Unwrap<LabelDoStmt>(epc)}) {
         labels.insert(std::get<Label>(labelDo->t));
@@ -2524,6 +2530,7 @@ static constexpr DirectiveSet GetLoopDirectives() {
       unsigned(Directive::OMPD_master_taskloop_simd),
       unsigned(Directive::OMPD_parallel_do),
       unsigned(Directive::OMPD_parallel_do_simd),
+      unsigned(Directive::OMPD_parallel_loop),
       unsigned(Directive::OMPD_parallel_masked_taskloop),
       unsigned(Directive::OMPD_parallel_masked_taskloop_simd),
       unsigned(Directive::OMPD_parallel_master_taskloop),

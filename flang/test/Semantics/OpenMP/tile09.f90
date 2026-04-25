@@ -48,7 +48,7 @@ subroutine f03
   !BECAUSE: This construct does not contain a loop nest
   do i = 1, 10
     !BECAUSE: LOOPRANGE clause was specified with a count of 1 starting at loop 1
-    !BECAUSE: FUSE construct results in a proper loop-sequence
+    !BECAUSE: This FUSE construct does not result in a loop nest, but a proper loop sequence
     !$omp fuse depth(2) looprange(1, 1)
     do j = 1, 10
       do k = 1, 10

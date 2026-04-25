@@ -1489,20 +1489,6 @@ static CXXMethodDecl *lookupMethod(Sema &S, CXXRecordDecl *RecordDecl,
 
 } // end anonymous namespace
 
-static bool hasCounterHandle(const CXXRecordDecl *RD) {
-  if (RD->field_empty())
-    return false;
-  auto It = std::next(RD->field_begin());
-  if (It == RD->field_end())
-    return false;
-  const FieldDecl *SecondField = *It;
-  if (const auto *ResTy =
-          SecondField->getType()->getAs<HLSLAttributedResourceType>()) {
-    return ResTy->getAttrs().IsCounter;
-  }
-  return false;
-}
-
 bool SemaHLSL::handleRootSignatureElements(
     ArrayRef<hlsl::RootSignatureElement> Elements) {
   // Define some common error handling functions
@@ -1840,6 +1826,14 @@ void SemaHLSL::handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL) {
     return;
   D->addAttr(::new (getASTContext())
                  HLSLVkExtBuiltinInputAttr(getASTContext(), AL, ID));
+}
+
+void SemaHLSL::handleVkExtBuiltinOutputAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t ID;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), ID))
+    return;
+  D->addAttr(::new (getASTContext())
+                 HLSLVkExtBuiltinOutputAttr(getASTContext(), AL, ID));
 }
 
 void SemaHLSL::handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL) {
@@ -2946,14 +2940,15 @@ DiagnoseHLSLAvailability::FindAvailabilityAttr(const Decl *D) {
   // environment.
   for (const auto *A : D->attrs()) {
     if (const auto *Avail = dyn_cast<AvailabilityAttr>(A)) {
-      StringRef AttrPlatform = Avail->getPlatform()->getName();
+      const AvailabilityAttr *EffectiveAvail = Avail->getEffectiveAttr();
+      StringRef AttrPlatform = EffectiveAvail->getPlatform()->getName();
       StringRef TargetPlatform =
           SemaRef.getASTContext().getTargetInfo().getPlatformName();
 
       // Match the platform name.
       if (AttrPlatform == TargetPlatform) {
         // Find the best matching attribute for this environment
-        if (HasMatchingEnvironmentOrNone(Avail))
+        if (HasMatchingEnvironmentOrNone(EffectiveAvail))
           return Avail;
         PartialMatch = Avail;
       }
@@ -3060,6 +3055,50 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
   diagnoseAvailabilityViolations(TU);
 }
 
+// For resource member access through a global struct array, verify that the
+// array index selecting the struct element is a constant integer expression.
+// Returns false if the member expression is invalid.
+bool SemaHLSL::ActOnResourceMemberAccessExpr(MemberExpr *ME) {
+  assert((ME->getType()->isHLSLResourceRecord() ||
+          ME->getType()->isHLSLResourceRecordArray()) &&
+         "expected member expr to have resource record type or array of them");
+
+  // Walk the AST from MemberExpr to the VarDecl of the parent struct instance
+  // and take note of any non-constant array indexing along the way. If the
+  // VarDecl we find is a global variable, report error if there was any
+  // non-constant array index in the resource member access along the way.
+  const Expr *NonConstIndexExpr = nullptr;
+  const Expr *E = ME->getBase();
+  while (E) {
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+      if (!NonConstIndexExpr)
+        return true;
+
+      const VarDecl *VD = cast<VarDecl>(DRE->getDecl());
+      if (!VD->hasGlobalStorage())
+        return true;
+
+      SemaRef.Diag(NonConstIndexExpr->getExprLoc(),
+                   diag::err_hlsl_resource_member_array_access_not_constant);
+      return false;
+    }
+
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      const Expr *IdxExpr = ASE->getIdx();
+      if (!IdxExpr->isIntegerConstantExpr(SemaRef.getASTContext()))
+        NonConstIndexExpr = IdxExpr;
+      E = ASE->getBase();
+    } else if (const auto *SubME = dyn_cast<MemberExpr>(E)) {
+      E = SubME->getBase();
+    } else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      E = ICE->getSubExpr();
+    } else {
+      llvm_unreachable("unexpected expr type in resource member access");
+    }
+  }
+  return true;
+}
+
 void SemaHLSL::diagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
   // Skip running the diagnostics scan if the diagnostic mode is
   // strict (-fhlsl-strict-availability) and the target shader stage is known
@@ -3138,6 +3177,25 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
            << /* half or float */ 2 << PassedType;
+  return false;
+}
+
+static bool CheckAnyDoubleRepresentation(Sema *S, SourceLocation Loc,
+                                         int ArgOrdinal,
+                                         clang::QualType PassedType) {
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+      : PassedType->isMatrixType()
+          ? PassedType->castAs<clang::MatrixType>()->getElementType()
+          : PassedType;
+  if (!BaseType->isDoubleType()) {
+    // FIXME: adopt standard `err_builtin_invalid_arg_type` instead of using
+    // this custom error.
+    return S->Diag(Loc, diag::err_builtin_requires_double_type)
+           << ArgOrdinal << PassedType;
+  }
+
   return false;
 }
 
@@ -3492,6 +3550,17 @@ static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
                               TheCall->getBeginLoc()))
     return true;
 
+  return false;
+}
+
+static bool CheckCalculateLodBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 3))
+    return true;
+
+  if (CheckTextureSamplerAndLocation(S, TheCall))
+    return true;
+
+  TheCall->setType(S.Context.FloatTy);
   return false;
 }
 
@@ -3855,6 +3924,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Cmp);
   case Builtin::BI__builtin_hlsl_resource_sample_cmp_level_zero:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::CmpLevelZero);
+  case Builtin::BI__builtin_hlsl_resource_calculate_lod:
+  case Builtin::BI__builtin_hlsl_resource_calculate_lod_unclamped:
+    return CheckCalculateLodBuiltin(SemaRef, TheCall);
   case Builtin::BI__builtin_hlsl_resource_gather:
     return CheckGatherBuiltin(SemaRef, TheCall, /*IsCmp=*/false);
   case Builtin::BI__builtin_hlsl_resource_gather_cmp:
@@ -4112,6 +4184,22 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_elementwise_fma: {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckAllArgsHaveSameType(&SemaRef, TheCall)) {
+      return true;
+    }
+
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                   CheckAnyDoubleRepresentation))
+      return true;
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    // return type is the same as input type
+    TheCall->setType(ArgTyA);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_transpose: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
@@ -4299,7 +4387,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
-  case Builtin::BI__builtin_hlsl_quad_read_across_x: {
+  case Builtin::BI__builtin_hlsl_quad_read_across_x:
+  case Builtin::BI__builtin_hlsl_quad_read_across_y: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
@@ -4857,6 +4946,19 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
     return;
   }
 
+  if (Decl->hasAttr<HLSLVkExtBuiltinOutputAttr>()) {
+    LangAS ImplAS = LangAS::hlsl_output;
+    Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
+    Decl->setType(Type);
+
+    // HLSL uses `static` differently than C++. For BuiltIn output, the static
+    // does not imply private to the module scope.
+    // Marking it as external to reflect the semantic this attribute brings.
+    // See https://github.com/microsoft/hlsl-specs/issues/350
+    Decl->setStorageClass(SC_Extern);
+    return;
+  }
+
   bool IsVulkan = getASTContext().getTargetInfo().getTriple().getOS() ==
                   llvm::Triple::Vulkan;
   if (IsVulkan && Decl->hasAttr<HLSLVkPushConstantAttr>()) {
@@ -4944,7 +5046,7 @@ public:
   // Creates a binding attribute for a resource based on the gathered attributes
   // and the required register type and range.
   Attr *createBindingAttr(SemaHLSL &S, ASTContext &AST, RegisterType RegType,
-                          unsigned Range) {
+                          unsigned Range, bool HasCounter) {
     assert(static_cast<unsigned>(RegType) < 4 && "unexpected register type");
 
     if (VkBindingAttr) {
@@ -4979,6 +5081,9 @@ public:
                           RBA ? RBA->getSpaceNumber() : 0);
       NewAttr->setImplicitBindingOrderID(S.getNextImplicitBindingOrderID());
     }
+    if (HasCounter)
+      NewAttr->setImplicitCounterBindingOrderID(
+          S.getNextImplicitBindingOrderID());
     return NewAttr;
   }
 };
@@ -5000,18 +5105,20 @@ static void createGlobalResourceDeclForStruct(
       VarDecl::Create(AST, DC, Loc, Loc, Id, ResTy, nullptr, SC_None);
 
   unsigned Range = 1;
-  const HLSLAttributedResourceType *ResHandleTy = nullptr;
-  if (const auto *AT = dyn_cast<ArrayType>(ResTy.getTypePtr())) {
+  const Type *SingleResTy = ResTy.getTypePtr()->getUnqualifiedDesugaredType();
+  while (const auto *AT = dyn_cast<ArrayType>(SingleResTy)) {
     const auto *CAT = dyn_cast<ConstantArrayType>(AT);
-    Range = CAT ? CAT->getSize().getZExtValue() : 0;
-    ResHandleTy = getResourceArrayHandleType(ResTy);
-  } else {
-    ResHandleTy = HLSLAttributedResourceType::findHandleTypeOnResource(
-        ResTy.getTypePtr());
+    Range = CAT ? (Range * CAT->getSize().getZExtValue()) : 0;
+    SingleResTy =
+        AT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
   }
+  const HLSLAttributedResourceType *ResHandleTy =
+      HLSLAttributedResourceType::findHandleTypeOnResource(SingleResTy);
+
   // Add a binding attribute to the global resource declaration.
+  bool HasCounter = hasCounterHandle(SingleResTy->getAsCXXRecordDecl());
   Attr *BindingAttr = BindingCtx.createBindingAttr(
-      S.HLSL(), AST, getRegisterType(ResHandleTy), Range);
+      S.HLSL(), AST, getRegisterType(ResHandleTy), Range, HasCounter);
   ResDecl->addAttr(BindingAttr);
   ResDecl->addAttr(InternalLinkageAttr::CreateImplicit(AST));
   ResDecl->setImplicit();
@@ -5250,11 +5357,15 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   CreateMethod =
       lookupMethod(SemaRef, ResourceDecl, CreateMethodName, VD->getLocation());
 
-  if (!CreateMethod)
+  if (!CreateMethod) {
     // This can happen if someone creates a struct that looks like an HLSL
     // resource record but does not have the required static create method.
     // No binding will be generated for it.
+    assert(!ResourceDecl->isImplicit() &&
+           "create method lookup should always succeed for built-in resource "
+           "records");
     return false;
+  }
 
   if (Binding.isExplicit()) {
     IntegerLiteral *RegSlot =
@@ -5612,6 +5723,18 @@ class InitListTransformer {
     if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()) ||
         Ty->isHLSLAttributedResourceType())
       return castInitializer(E);
+
+    // If this is an aggregate type and a prvalue, create an xvalue temporary
+    // so the member accesses will be xvalues. Wrap it in OpaqueExpr to make
+    // sure codegen will not generate duplicate copies.
+    if (E->isPRValue() && Ty->isAggregateType()) {
+      ExprResult TmpExpr = S.TemporaryMaterializationConversion(E);
+      if (TmpExpr.isInvalid())
+        return false;
+      E = TmpExpr.get();
+      E = new (Ctx) OpaqueValueExpr(E->getBeginLoc(), E->getType(),
+                                    E->getValueKind(), E->getObjectKind(), E);
+    }
 
     if (auto *VecTy = Ty->getAs<VectorType>()) {
       uint64_t Size = VecTy->getNumElements();

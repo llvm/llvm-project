@@ -9,6 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
+#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -19,13 +21,23 @@
 
 namespace llvm::orc {
 
+class SelfExecutorProcessControl::InProcessDylibManager : public DylibManager {
+public:
+  InProcessDylibManager(char GlobalManglingPrefix);
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
+  void
+  lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                     DylibManager::SymbolLookupCompleteFn Complete) override;
+
+private:
+  char GlobalManglingPrefix;
+};
+
 SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
     Triple TargetTriple, unsigned PageSize,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
-    : ExecutorProcessControl(std::move(SSP), std::move(D)),
-      IPMA(TargetTriple.isArch64Bit()),
-      IPDM(TargetTriple.isOSBinFormatMachO() ? '_' : '\0') {
+    : ExecutorProcessControl(std::move(SSP), std::move(D)) {
 
   OwnedMemMgr = std::move(MemMgr);
   if (!OwnedMemMgr)
@@ -35,8 +47,6 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->TargetTriple = std::move(TargetTriple);
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
-  this->MemAccess = &IPMA;
-  this->DylibMgr = &IPDM;
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
 
@@ -105,6 +115,17 @@ void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 Error SelfExecutorProcessControl::disconnect() {
   D->shutdown();
   return Error::success();
+}
+
+Expected<std::unique_ptr<DylibManager>>
+SelfExecutorProcessControl::createDefaultDylibMgr() {
+  char Prefix = TargetTriple.isOSBinFormatMachO() ? '_' : '\0';
+  return std::make_unique<InProcessDylibManager>(Prefix);
+}
+
+Expected<std::unique_ptr<MemoryAccess>>
+SelfExecutorProcessControl::createDefaultMemoryAccess() {
+  return std::make_unique<InProcessMemoryAccess>(TargetTriple.isArch64Bit());
 }
 
 shared::CWrapperFunctionBuffer

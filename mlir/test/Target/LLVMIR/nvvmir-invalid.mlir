@@ -209,22 +209,6 @@ llvm.func @nvvm_cvt_f16x2_to_f8x2_invalid_type(%src : vector<2xf16>) {
 
 // -----
 
-llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_type(%src : vector<2xbf16>) {
-  // expected-error @below {{Only 'f8E8M0FNU' type is supported for conversions from bf16x2 to f8x2.}}
-  %res = nvvm.convert.bf16x2.to.f8x2 %src {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xbf16> -> i16 (f8E4M3FN)
-  llvm.return
-}
-
-// -----
-
-llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_rounding(%src : vector<2xbf16>) {
-  // expected-error @below {{Only RZ and RP rounding modes are supported for conversions from bf16x2 to f8x2.}}
-  %res = nvvm.convert.bf16x2.to.f8x2 %src {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16> -> i16 (f8E8M0FNU)
-  llvm.return
-}
-
-// -----
-
 llvm.func @nvvm_cvt_f32x2_to_f6x2_invalid_type(%a : f32, %b : f32) {
   // expected-error @below {{Only 'f6E2M3FN' and 'f6E3M2FN' types are supported for conversions from f32x2 to f6x2.}}
   %res = nvvm.convert.f32x2.to.f6x2 %a, %b : i16 (f8E8M0FNU)
@@ -595,7 +579,7 @@ func.func @invalid_range_equal_bounds() {
 
 // -----
 
-// Test for correct return type check for wmma.load fragment a for f64 
+// Test for correct return type check for wmma.load fragment a for f64
 llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
   // expected-error @below {{'nvvm.wmma.load' op expected destination type to be f64}}
   %0 = nvvm.wmma.load %arg0, %arg1
@@ -603,3 +587,12 @@ llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
     : (!llvm.ptr) -> !llvm.struct<(f64)>
   llvm.return
 }
+
+// -----
+
+// Test that nvvm.barrier0 at module scope (outside any function) produces a
+// proper error instead of crashing with a null dereference in
+// createIntrinsicCall. See https://github.com/llvm/llvm-project/issues/186642
+// expected-error @+2 {{'nvvm.barrier0' op cannot be translated to LLVM IR without an active insertion point}}
+// expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier0}}
+nvvm.barrier0

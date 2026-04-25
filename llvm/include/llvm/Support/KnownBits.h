@@ -38,7 +38,7 @@ public:
   KnownBits() = default;
 
   /// Create a known bits object of BitWidth bits initialized to unknown.
-  KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
+  explicit KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
 
   /// Get the bit width of this value.
   unsigned getBitWidth() const {
@@ -51,9 +51,7 @@ public:
   bool hasConflict() const { return Zero.intersects(One); }
 
   /// Returns true if we know the value of all bits.
-  bool isConstant() const {
-    return Zero.popcount() + One.popcount() == getBitWidth();
-  }
+  bool isConstant() const { return Zero.isInverseOf(One); }
 
   /// Returns the value when all bits have a known value. This just returns One
   /// with a protective assertion.

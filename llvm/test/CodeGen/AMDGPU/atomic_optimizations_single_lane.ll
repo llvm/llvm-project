@@ -3,7 +3,7 @@
 
 ; Check that no optimization is generated for single lane execution.
 
-define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace(8) %inout) "amdgpu-flat-work-group-size"="1,1" {
+define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace(8) %inout) "amdgpu-flat-work-group-size"="1,1" "amdgpu-no-wwm" {
 ; GFX12-LABEL: add_i32_constant:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34

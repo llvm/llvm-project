@@ -91,7 +91,6 @@
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
-#include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
@@ -120,6 +119,7 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
@@ -135,6 +135,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
+#include "llvm/CodeGen/MachineStripDebug.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/MachineVerifier.h"
@@ -281,6 +282,7 @@
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
 #include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "llvm/Transforms/Scalar/ExpandMemCmp.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -374,6 +376,7 @@
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
+#include "llvm/Transforms/Utils/StripConvergenceIntrinsics.h"
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
@@ -486,13 +489,17 @@ public:
 } // namespace
 
 static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
+  if (S == "Os" || S == "Oz")
+    reportFatalUsageError(
+        Twine("The optimization level \"") + S +
+        "\" is no longer supported. Use O2 in conjunction with the " +
+        (S == "Os" ? "optsize" : "minsize") + " attribute instead.");
+
   return StringSwitch<std::optional<OptimizationLevel>>(S)
       .Case("O0", OptimizationLevel::O0)
       .Case("O1", OptimizationLevel::O1)
       .Case("O2", OptimizationLevel::O2)
       .Case("O3", OptimizationLevel::O3)
-      .Case("Os", OptimizationLevel::Os)
-      .Case("Oz", OptimizationLevel::Oz)
       .Default(std::nullopt);
 }
 
@@ -806,6 +813,17 @@ Expected<bool> parseLintOptions(StringRef Params) {
                                             "LintPass");
 }
 
+/// Parser of parameters for FunctionPropertiesStatistics pass.
+Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
+                                            "FunctionPropertiesStatisticsPass");
+}
+
+/// Parser of parameters for InstCount pass.
+Expected<bool> parseInstCountOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
@@ -813,8 +831,7 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
     std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
-    // Don't accept -Os/-Oz.
-    if (OptLevel && !OptLevel->isOptimizingForSize()) {
+    if (OptLevel) {
       UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
       continue;
     }
@@ -871,26 +888,6 @@ Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
 Expected<bool> parsePostOrderFunctionAttrsPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(
       Params, "skip-non-recursive-function-attrs", "PostOrderFunctionAttrs");
-}
-
-Expected<CFGuardPass::Mechanism> parseCFGuardPassOptions(StringRef Params) {
-  if (Params.empty())
-    return CFGuardPass::Mechanism::Check;
-
-  auto [Param, RHS] = Params.split(';');
-  if (!RHS.empty())
-    return make_error<StringError>(
-        formatv("too many CFGuardPass parameters '{}'", Params).str(),
-        inconvertibleErrorCode());
-
-  if (Param == "check")
-    return CFGuardPass::Mechanism::Check;
-  if (Param == "dispatch")
-    return CFGuardPass::Mechanism::Dispatch;
-
-  return make_error<StringError>(
-      formatv("invalid CFGuardPass mechanism: '{}'", Param).str(),
-      inconvertibleErrorCode());
 }
 
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
@@ -975,6 +972,26 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
       return make_error<StringError>(
           formatv("invalid HWAddressSanitizer pass parameter '{}'", ParamName)
               .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<lowertypetests::DropTestKind>
+parseDropTypeTestsPassOptions(StringRef Params) {
+  lowertypetests::DropTestKind Result = lowertypetests::DropTestKind::Assume;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "all") {
+      Result = lowertypetests::DropTestKind::All;
+    } else if (ParamName == "assume") {
+      Result = lowertypetests::DropTestKind::Assume;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid DropTypeTestsPass parameter '{}'", ParamName).str(),
           inconvertibleErrorCode());
     }
   }
@@ -1967,11 +1984,8 @@ PassBuilder::parsePipelineText(StringRef Text) {
 
 static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
                                          OptimizationLevel L) {
-  // This is consistent with old pass manager invoked via opt, but
-  // inconsistent with clang. Clang doesn't enable loop vectorization
-  // but does enable slp vectorization at Oz.
-  PTO.LoopVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
-  PTO.SLPVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
+  PTO.LoopVectorization = L.getSpeedupLevel() > 1;
+  PTO.SLPVectorization = L.getSpeedupLevel() > 1;
 }
 
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,
