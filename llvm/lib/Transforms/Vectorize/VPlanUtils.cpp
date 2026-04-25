@@ -579,17 +579,13 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<VPValue *> WideCanonicalIVs;
-  auto *FoundWidenCanonicalIVUser = find_if(
-      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  auto *WideCanonicalIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
+      LoopRegion->getCanonicalIV());
   assert(count_if(LoopRegion->getCanonicalIV()->users(),
                   IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
          "Must have at most one VPWideCanonicalIVRecipe");
-  if (FoundWidenCanonicalIVUser !=
-      LoopRegion->getCanonicalIV()->users().end()) {
-    auto *WideCanonicalIV =
-        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+  if (WideCanonicalIV)
     WideCanonicalIVs.push_back(WideCanonicalIV);
-  }
 
   // Also include VPWidenIntOrFpInductionRecipes that represent a widened
   // version of the canonical induction.

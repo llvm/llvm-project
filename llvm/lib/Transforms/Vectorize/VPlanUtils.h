@@ -130,6 +130,7 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
 /// return nullptr;
 template <typename MatchT>
 static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+  using namespace llvm::VPlanPatternMatch;
   auto It = find_if(V->users(), match_fn(P));
   return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
 }
@@ -139,6 +140,11 @@ static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
 template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
   using namespace llvm::VPlanPatternMatch;
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
+}
+
+template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
+  using namespace llvm::VPlanPatternMatch;
+  return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
 }
 
 /// Find the canonical IV increment of \p Plan's vector loop region. Returns
