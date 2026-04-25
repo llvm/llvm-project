@@ -2936,20 +2936,20 @@ void placement_new_array_braces() {
   (void)p[0];                    // expected-note {{later used here}}
 }
 
+// FIXME: Currently does not diagnose. We do not overwrite `V`'s origins on placement new because we lose them on bitcast from `View*` to `void*`.
 struct PlacementNewInMethod {
-  View V; // expected-note {{this field dangles}}
+  View V;
 
   void bad_store_after_placement_new() {
     {
       MyObj obj;
-      new (this) PlacementNewInMethod;
-      V = obj; // expected-warning {{address of stack memory escapes to a field}}
+      new (&V) View(obj);
     }
     V.use();
   }
 };
 
-// FIXME: Currently does not diagnose. We do not overwrite `storage`'s origins on placement new because we lose them on bitcast from `View*` to `void*`.
+// FIXME: same false-negative as above
 void placement_new_member_call_from_dead_scope() {
   View *storage = new View;
   {

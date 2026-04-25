@@ -631,16 +631,6 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
 
 void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   OriginList *NewList = getOriginsList(*NE);
-  auto FlowTo = [&](OriginList *List) {
-    if (!List || !NE->getInitializer())
-      return;
-
-    // FIXME: OriginList is null for `new[]` initializers. Remove this
-    // `Init` check once array origins are supported.
-    if (OriginList *Init = getOriginsList(*NE->getInitializer()); Init) {
-      flow(List, Init, true);
-    }
-  };
 
   // Check if we have a placement new where the second argument is void*, to
   // avoid flowing from non-pointer parameters, such as std::nothrow.
@@ -652,6 +642,10 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
                               ->getType()
                               ->getAs<PointerType>();
         Arg && Arg->isVoidPointerType()) {
+      // FIXME: Flow from constructor expr to placement arg. To also support
+      // side effect placement new has. e.g.
+      // new(&p) MyObj(...);
+      // Should flow from constrcutor to &p.
       OriginList *PlacementList = getOriginsList(*NE->getPlacementArg(0));
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
@@ -664,7 +658,14 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   }
 
   NewList = NewList->peelOuterOrigin();
-  FlowTo(NewList);
+
+  if (!NewList || !NE->getInitializer())
+    return;
+
+  // FIXME: OriginList is null for `new[]` initializers. Remove this `Init`
+  // check once array origins are supported.
+  if (OriginList *Init = getOriginsList(*NE->getInitializer()); Init)
+    flow(NewList, Init, true);
 }
 
 void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
