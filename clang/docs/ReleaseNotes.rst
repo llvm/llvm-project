@@ -124,6 +124,12 @@ Clang Python Bindings Potentially Breaking Changes
   be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a
   future release.
 
+OpenCL Potentially Breaking Changes
+-----------------------------------
+- Clang now diagnoses zero-length arrays as errors in OpenCL. OpenCL C 3.0
+  section 6.11.d states that "Variable length arrays and structures with
+  flexible (or unsized) arrays are not supported."
+
 What's New in Clang |release|?
 ==============================
 
@@ -460,6 +466,8 @@ Improvements to Coverage Mapping
 - [MC/DC] Nested expressions are handled as individual MC/DC expressions.
 - "Single byte coverage" now supports branch coverage and can be used
   together with ``-fcoverage-mcdc``.
+- Consteval member functions are no longer emitted in coverage mappings,
+  matching the existing behavior for free consteval functions. (#GH164448)
 
 Bug Fixes in This Version
 -------------------------

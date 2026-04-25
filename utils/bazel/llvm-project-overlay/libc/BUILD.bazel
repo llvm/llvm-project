@@ -2865,6 +2865,7 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_math_asin_utils",
         ":__support_math_inv_trigf_utils",
     ],
 )
@@ -2954,6 +2955,7 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_math_atan_utils",
         ":__support_math_inv_trigf_utils",
     ],
 )
@@ -3321,6 +3323,7 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_macros_optimization",
+        ":__support_math_atan_utils",
         ":__support_math_inv_trigf_utils",
         ":llvm_libc_macros_float16_macros",
     ],
@@ -3353,6 +3356,7 @@ libc_support_library(
         ":__support_fputil_rounding_mode",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_math_atan_utils",
         ":__support_math_inv_trigf_utils",
     ],
 )
@@ -4063,10 +4067,67 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ddivf128",
+    hdrs = ["src/__support/math/ddivf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ddivl",
+    hdrs = ["src/__support/math/ddivl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_dmulf128",
+    hdrs = ["src/__support/math/dmulf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_dmull",
+    hdrs = ["src/__support/math/dmull.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_dsqrtl",
     hdrs = ["src/__support/math/dsqrtl.h"],
     deps = [
         ":__support_fputil_sqrt",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_dsubf128",
+    hdrs = ["src/__support/math/dsubf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_dsubl",
+    hdrs = ["src/__support/math/dsubl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
     ],
 )
 
@@ -4313,6 +4374,65 @@ libc_support_library(
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fabs",
+    hdrs = ["src/__support/math/fabs.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fabsbf16",
+    hdrs = ["src/__support/math/fabsbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fabsf",
+    hdrs = ["src/__support/math/fabsf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fabsf128",
+    hdrs = ["src/__support/math/fabsf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fabsf16",
+    hdrs = ["src/__support/math/fabsf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":__support_macros_properties_architectures",
+        ":__support_macros_properties_compiler",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fabsl",
+    hdrs = ["src/__support/math/fabsl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
     ],
 )
 
@@ -6256,6 +6376,7 @@ libc_support_library(
         ":__support_fputil_polyeval",
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
+        ":__support_math_atan_utils",
         ":hdr_errno_macros",
         ":hdr_fenv_macros",
         ":llvm_libc_macros_float16_macros",
@@ -7142,10 +7263,18 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "ddivl")
+libc_math_function(
+    name = "ddivl",
+    additional_deps = [
+        ":__support_math_ddivl",
+    ],
+)
 
 libc_math_function(
     name = "ddivf128",
+    additional_deps = [
+        ":__support_math_ddivf128",
+    ],
 )
 
 libc_math_function(
@@ -7161,10 +7290,18 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "dmull")
+libc_math_function(
+    name = "dmull",
+    additional_deps = [
+        ":__support_math_dmull",
+    ],
+)
 
 libc_math_function(
     name = "dmulf128",
+    additional_deps = [
+        ":__support_math_dmulf128",
+    ],
 )
 
 libc_math_function(
@@ -7179,10 +7316,18 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "dsubl")
+libc_math_function(
+    name = "dsubl",
+    additional_deps = [
+        ":__support_math_dsubl",
+    ],
+)
 
 libc_math_function(
     name = "dsubf128",
+    additional_deps = [
+        ":__support_math_dsubf128",
+    ],
 )
 
 libc_math_function(
@@ -7471,21 +7616,45 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "fabs")
+libc_math_function(
+    name = "fabs",
+    additional_deps = [
+        ":__support_math_fabs",
+    ],
+)
 
-libc_math_function(name = "fabsf")
+libc_math_function(
+    name = "fabsbf16",
+    additional_deps = [
+        ":__support_math_fabsbf16",
+    ],
+)
 
-libc_math_function(name = "fabsl")
+libc_math_function(
+    name = "fabsf",
+    additional_deps = [
+        ":__support_math_fabsf",
+    ],
+)
+
+libc_math_function(
+    name = "fabsl",
+    additional_deps = [
+        ":__support_math_fabsl",
+    ],
+)
 
 libc_math_function(
     name = "fabsf128",
+    additional_deps = [
+        ":__support_math_fabsf128",
+    ],
 )
 
 libc_math_function(
     name = "fabsf16",
     additional_deps = [
-        ":__support_macros_properties_architectures",
-        ":__support_macros_properties_compiler",
+        ":__support_math_fabsf16",
     ],
 )
 
