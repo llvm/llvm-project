@@ -324,8 +324,8 @@ define <vscale x 8 x i1> @fcmp_ord_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 
 ; CHECK-NEXT:    fcmuo p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmuo p2.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp ord <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res
@@ -426,8 +426,8 @@ define <vscale x 8 x i1> @fcmp_ugt_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 
 ; CHECK-NEXT:    fcmge p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp ugt <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res
@@ -475,8 +475,8 @@ define <vscale x 8 x i1> @fcmp_uge_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 
 ; CHECK-NEXT:    fcmgt p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmgt p2.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp uge <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res
@@ -524,8 +524,8 @@ define <vscale x 8 x i1> @fcmp_ult_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 
 ; CHECK-NEXT:    fcmge p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp ult <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res
@@ -573,8 +573,8 @@ define <vscale x 8 x i1> @fcmp_ule_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 
 ; CHECK-NEXT:    fcmgt p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmgt p2.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp ule <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res

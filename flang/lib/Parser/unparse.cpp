@@ -1498,6 +1498,7 @@ public:
       FMT(G);
       FMT(L);
       FMT(A);
+      FMT(AT);
       FMT(D);
 #undef FMT
     }
@@ -1739,6 +1740,27 @@ public:
   void Unparse(const ActualArg::PercentVal &x) {
     Word("%VAL("), Walk(x.v), Put(')');
   }
+  void UnparseConditionalArgBody(const ConditionalArg &x) {
+    Walk(std::get<ScalarLogicalExpr>(x.t));
+    Put(" ? ");
+    Walk(std::get<ConditionalArg::Consequent>(x.t));
+    Put(" : ");
+    Walk(std::get<common::Indirection<ConditionalArgTail>>(x.t));
+  }
+  void Unparse(const ConditionalArg &x) { // F2023 R1526
+    Put("( ");
+    UnparseConditionalArgBody(x);
+    Put(" )");
+  }
+  void Unparse(const ConditionalArgTail &x) {
+    common::visit(
+        common::visitors{
+            [&](const ConditionalArg &y) { UnparseConditionalArgBody(y); },
+            [&](const ConditionalArg::Consequent &y) { Walk(y); },
+        },
+        x.u);
+  }
+  void Post(const ConditionalArgNil &) { Word(".NIL."); } // part of F2023 R1527
   void Before(const AltReturnSpec &) { // R1525
     Put('*');
   }
@@ -1886,6 +1908,14 @@ public:
               Word("!DIR$ NOINLINE");
             },
             [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
+            [&](const CompilerDirective::InlineAlways &InlineAlways) {
+              Word("!DIR$ INLINEALWAYS");
+              if (InlineAlways.v.has_value()) {
+                Word(" ");
+                Word(InlineAlways.v->ToString());
+              }
+            },
+            [&](const CompilerDirective::Simd &) { Word("!DIR$ SIMD"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2175,9 +2205,6 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpBeginLoopDirective &x) {
-    Unparse(static_cast<const OmpBeginDirective &>(x));
-  }
   void Unparse(const OmpBeginSectionsDirective &x) {
     Unparse(static_cast<const OmpBeginDirective &>(x));
   }
@@ -2282,9 +2309,6 @@ public:
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OmpEndLoopDirective &x) {
-    Unparse(static_cast<const OmpEndDirective &>(x));
   }
   void Unparse(const OmpEndSectionsDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
