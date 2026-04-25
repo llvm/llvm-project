@@ -14871,6 +14871,7 @@ static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return Result;
 
   // (or x, (csinc 0, 0, cc)) -> (csinc x, 0, cc)
+  // providing that the x is 0 or 1.
   SDValue CSINC = N1;
   SDValue Other = N0;
   if (CSINC.getOpcode() != ARMISD::CSINC)
