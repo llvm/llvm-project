@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fmaximum_mag_numbf16.h"
-#include "src/__support/math/fmaximum_mag_numbf16.h"
+#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(bfloat16, fmaximum_mag_numbf16, (bfloat16 x, bfloat16 y)) {
-  return math::fmaximum_mag_numbf16(x, y);
+  return fputil::fmaximum_mag_num(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
