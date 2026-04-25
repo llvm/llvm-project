@@ -628,11 +628,6 @@ bool TargetTransformInfo::useFastCCForInternalCall(Function &F) const {
   return TTIImpl->useFastCCForInternalCall(F);
 }
 
-bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
-    Intrinsic::ID ID) const {
-  return TTIImpl->isTargetIntrinsicTriviallyScalarizable(ID);
-}
-
 bool TargetTransformInfo::isTargetIntrinsicWithScalarOpAtArg(
     Intrinsic::ID ID, unsigned ScalarOpdIdx) const {
   return TTIImpl->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);

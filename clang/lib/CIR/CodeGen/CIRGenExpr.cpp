@@ -203,6 +203,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_NullToMemberPointer:
     case CK_NullToPointer:
     case CK_ReinterpretMemberPointer:
+    case CK_UserDefinedConversion:
       // Common pointer conversions, nothing to do here.
       // TODO: Is there any reason to treat base-to-derived conversions
       // specially?
@@ -254,10 +255,16 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_PointerToIntegral:
     case CK_ToUnion:
     case CK_ToVoid:
-    case CK_UserDefinedConversion:
     case CK_VectorSplat:
     case CK_ZeroToOCLOpaqueType:
-      llvm_unreachable("unexpected cast for emitPointerWithAlignment");
+      // Classic codegen has a default that does nothing. In CIR, we are issuing
+      // a diagnostic so we can examine casts that are reached here to be sure
+      // no action is needed. If nothing is needed, the cast can be moved to the
+      // group above that does nothing.
+      cgm.errorNYI(ce->getSourceRange(),
+                   "unexpected cast for emitPointerWithAlignment: ",
+                   ce->getCastKindName());
+      break;
     }
   }
 
@@ -912,7 +919,7 @@ static bool canEmitSpuriousReferenceToVariable(CIRGenFunction &cgf,
   // We can emit a spurious reference only if the linkage implies that we'll
   // be emitting a non-interposable symbol that will be retained until link
   // time.
-  switch (cgf.cgm.getCIRLinkageVarDefinition(vd, /*IsConstant=*/false)) {
+  switch (cgf.cgm.getCIRLinkageVarDefinition(vd)) {
   case cir::GlobalLinkageKind::ExternalLinkage:
   case cir::GlobalLinkageKind::LinkOnceODRLinkage:
   case cir::GlobalLinkageKind::WeakODRLinkage:
@@ -1241,13 +1248,28 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
          "index was neither LHS nor RHS");
 
   auto emitIdxAfterBase = [&](bool promote) -> mlir::Value {
-    const mlir::Value idx = emitScalarExpr(e->getIdx());
+    mlir::Value idx = emitScalarExpr(e->getIdx());
 
-    // Extend or truncate the index type to 32 or 64-bits.
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(idx.getType());
-    if (promote && ptrTy && ptrTy.isPtrTo<cir::IntType>())
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitArraySubscriptExpr: index type cast");
+    assert(!cir::MissingFeatures::sanitizers());
+
+    // Extend or truncate the index type to pointer-sized integer.
+    if (promote) {
+      // Choose the type we extend or truncate to based on the signedness of the
+      // index type.
+      mlir::Type desiredIdxTy =
+          e->getIdx()->getType()->isSignedIntegerOrEnumerationType()
+              ? ptrDiffTy
+              : uIntPtrTy;
+
+      if (idx.getType() != desiredIdxTy) {
+        cir::CastKind kind = mlir::isa<cir::BoolType>(idx.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral;
+        idx = builder.createOrFold<cir::CastOp>(idx.getLoc(), desiredIdxTy,
+                                                kind, idx);
+      }
+    }
+
     return idx;
   };
 
@@ -1501,15 +1523,17 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_ToUnion:
     return emitAggExprToLValue(e);
 
-  case CK_NonAtomicToAtomic:
-  case CK_AtomicToNonAtomic:
-  case CK_ObjCObjectLValueCast:
-  case CK_VectorSplat:
   case CK_ConstructorConversion:
   case CK_UserDefinedConversion:
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
-  case CK_LValueToRValue: {
+  case CK_LValueToRValue:
+    return emitLValue(e->getSubExpr());
+
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
+  case CK_ObjCObjectLValueCast:
+  case CK_VectorSplat: {
     cgm.errorNYI(e->getSourceRange(),
                  std::string("emitCastLValue for unhandled cast kind: ") +
                      e->getCastKindName());

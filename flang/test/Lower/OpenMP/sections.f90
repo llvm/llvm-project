@@ -12,13 +12,15 @@
 !CHECK:   %[[CONST_1:.*]] = arith.constant 4 : i64
 !CHECK:   %[[PRIVATE_ETA:.*]] = fir.alloca f32 {bindc_name = "eta", pinned, uniq_name = "_QFEeta"}
 !CHECK:   %[[PRIVATE_ETA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ETA]] {uniq_name = "_QFEeta"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:   %[[PRIVATE_COUNT:.*]] = fir.alloca i32 {bindc_name = "count", pinned, uniq_name = "_QFEcount"}
+!CHECK:   %[[PRIVATE_COUNT_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_COUNT]] {uniq_name = "_QFEcount"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[PRIVATE_DOUBLE_COUNT:.*]] = fir.alloca i32 {bindc_name = "double_count", pinned, uniq_name = "_QFEdouble_count"}
 !CHECK:   %[[PRIVATE_DOUBLE_COUNT_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_DOUBLE_COUNT]] {uniq_name = "_QFEdouble_count"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   omp.sections allocate(%[[CONST_1]] : i64 -> %[[COUNT_DECL]]#0 : !fir.ref<i32>)  {
 !CHECK:     omp.section {
 !CHECK:       %[[CONST5:.*]] = arith.constant 5 : i32
-!CHECK:       hlfir.assign %[[CONST5]] to %[[COUNT_DECL]]#0 : i32, !fir.ref<i32>
-!CHECK:       %[[TEMP_COUNT:.*]] = fir.load %[[COUNT_DECL]]#0 : !fir.ref<i32>
+!CHECK:       hlfir.assign %[[CONST5]] to %[[PRIVATE_COUNT_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK:       %[[TEMP_COUNT:.*]] = fir.load %[[PRIVATE_COUNT_DECL]]#0 : !fir.ref<i32>
 !CHECK:       %[[TEMP_DOUBLE_COUNT:.*]] = fir.load %[[PRIVATE_DOUBLE_COUNT_DECL]]#0 : !fir.ref<i32>
 !CHECK:       %[[RESULT:.*]] = arith.muli %[[TEMP_COUNT]], %[[TEMP_DOUBLE_COUNT]] : i32
 !CHECK:       %[[RESULT_CONVERT:.*]] = fir.convert %[[RESULT]] : (i32) -> f32
@@ -37,13 +39,13 @@
 !CHECK:       %[[CONST:.*]] = arith.constant 7.000000e+00 : f32
 !CHECK:       %[[RESULT:.*]] = arith.subf %[[TEMP]], %[[CONST]] {{.*}}: f32
 !CHECK:       hlfir.assign %[[RESULT]] to %[[PRIVATE_ETA_DECL]]#0 : f32, !fir.ref<f32>
-!CHECK:       %[[TEMP_COUNT1:.*]] = fir.load %[[COUNT_DECL]]#0 : !fir.ref<i32>
+!CHECK:       %[[TEMP_COUNT1:.*]] = fir.load %[[PRIVATE_COUNT_DECL]]#0 : !fir.ref<i32>
 !CHECK:       %[[TEMP_COUNT:.*]] = fir.convert %[[TEMP_COUNT1]] : (i32) -> f32
 !CHECK:       %[[TEMP_ETA:.*]] = fir.load %[[PRIVATE_ETA_DECL]]#0 : !fir.ref<f32>
 !CHECK:       %[[TEMP_COUNT2:.*]] = arith.mulf %[[TEMP_COUNT]], %[[TEMP_ETA]] {{.*}}: f32
 !CHECK:       %[[RESULT:.*]] = fir.convert %[[TEMP_COUNT2]] : (f32) -> i32
-!CHECK:       hlfir.assign %[[RESULT]] to %[[COUNT_DECL]]#0 : i32, !fir.ref<i32>
-!CHECK:       %[[TEMP_COUNT3:.*]] = fir.load %[[COUNT_DECL]]#0 : !fir.ref<i32>
+!CHECK:       hlfir.assign %[[RESULT]] to %[[PRIVATE_COUNT_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK:       %[[TEMP_COUNT3:.*]] = fir.load %[[PRIVATE_COUNT_DECL]]#0 : !fir.ref<i32>
 !CHECK:       %[[TEMP_COUNT4:.*]] = fir.convert %[[TEMP_COUNT3]] : (i32) -> f32
 !CHECK:       %[[TEMP_ETA:.*]] = fir.load %[[PRIVATE_ETA_DECL]]#0 : !fir.ref<f32>
 !CHECK:       %[[TEMP_COUNT5:.*]] = arith.subf %[[TEMP_COUNT4]], %[[TEMP_ETA]] {{.*}}: f32
@@ -62,7 +64,7 @@
 program sample
     use omp_lib
     integer :: count = 0, double_count = 1
-    !$omp sections private (eta, double_count) allocate(omp_high_bw_mem_alloc: count)
+    !$omp sections private (eta, count, double_count) allocate(omp_high_bw_mem_alloc: count)
         !$omp section
             count = 1 + 4
             eta = count * double_count

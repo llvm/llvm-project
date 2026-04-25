@@ -39,27 +39,51 @@ static RValue emitLibraryCall(CIRGenFunction &cgf, const FunctionDecl *fd,
   return cgf.emitCall(e->getCallee()->getType(), callee, e, ReturnValueSlot());
 }
 
-template <typename Op>
-static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
-                               bool poisonZero = false) {
-  assert(!cir::MissingFeatures::builtinCheckKind());
-
-  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+template <typename Op, typename... Args>
+static mlir::Value createBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
+                                      mlir::Value arg, Args... args) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-
-  Op op;
-  if constexpr (std::is_same_v<Op, cir::BitClzOp> ||
-                std::is_same_v<Op, cir::BitCtzOp>)
-    op = Op::create(builder, cgf.getLoc(e->getSourceRange()), arg, poisonZero);
-  else
-    op = Op::create(builder, cgf.getLoc(e->getSourceRange()), arg);
-
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  auto op = Op::create(builder, loc, arg, args...);
   mlir::Value result = op.getResult();
-  mlir::Type exprTy = cgf.convertType(e->getType());
-  if (exprTy != result.getType())
-    result = builder.createIntCast(result, exprTy);
+  mlir::Type resultTy = cgf.convertType(e->getType());
+  if (resultTy != result.getType())
+    result = builder.createIntCast(result, resultTy);
+  return result;
+}
 
-  return RValue::get(result);
+template <typename Op, typename... Args>
+static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
+                               Args... args) {
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  return RValue::get(createBuiltinBitOp<Op>(cgf, e, arg, args...));
+}
+
+/// Emit a clz/ctz bit op with optional fallback for __builtin_c[lt]zg.
+/// When a fallback is present, the result is the fallback value if the input is
+/// zero, otherwise the bit count.
+template <typename Op>
+static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
+                                           const CallExpr *e) {
+  bool hasFallback = e->getNumArgs() > 1;
+  bool poisonZero = hasFallback || cgf.getTarget().isCLZForZeroUndef();
+
+  if (!hasFallback) {
+    assert(!cir::MissingFeatures::builtinCheckKind());
+    return emitBuiltinBitOp<Op>(cgf, e, poisonZero);
+  }
+
+  assert(!cir::MissingFeatures::builtinBitCountExpr());
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  mlir::Value result = createBuiltinBitOp<Op>(cgf, e, arg, poisonZero);
+
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  mlir::Value zero = builder.getNullValue(arg.getType(), loc);
+  mlir::Value isZero =
+      builder.createCompare(loc, cir::CmpOpKind::eq, arg, zero);
+  mlir::Value fallbackValue = cgf.emitScalarExpr(e->getArg(1));
+  return RValue::get(builder.createSelect(loc, isZero, fallbackValue, result));
 }
 
 /// Emit the conversions required to turn the given value into an
@@ -1116,17 +1140,28 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
-  case Builtin::BI__builtin_ctzg:
     assert(!cir::MissingFeatures::builtinCheckKind());
-    return emitBuiltinBitOp<cir::BitCtzOp>(*this, e, /*poisonZero=*/true);
+    return emitBuiltinBitOp<cir::BitCtzOp>(*this, e,
+                                           getTarget().isCLZForZeroUndef());
+  case Builtin::BI__builtin_ctzg:
+    return emitBuiltinBitOpWithFallback<cir::BitCtzOp>(*this, e);
 
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
-  case Builtin::BI__builtin_clzg:
     assert(!cir::MissingFeatures::builtinCheckKind());
-    return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/true);
+    return emitBuiltinBitOp<cir::BitClzOp>(*this, e,
+                                           getTarget().isCLZForZeroUndef());
+  case Builtin::BI__builtin_clzg:
+    return emitBuiltinBitOpWithFallback<cir::BitClzOp>(*this, e);
+
+  case Builtin::BI__builtin_elementwise_ctzg:
+    cgm.errorNYI(e->getSourceRange(), "__builtin_elementwise_ctzg");
+    return RValue::get(nullptr);
+  case Builtin::BI__builtin_elementwise_clzg:
+    cgm.errorNYI(e->getSourceRange(), "__builtin_elementwise_clzg");
+    return RValue::get(nullptr);
 
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
@@ -1141,8 +1176,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__lzcnt16:
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64:
-    assert(!cir::MissingFeatures::builtinCheckKind());
-    return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/false);
+    return emitBuiltinBitOp<cir::BitClzOp>(*this, e);
 
   case Builtin::BI__popcnt16:
   case Builtin::BI__popcnt:
@@ -1237,6 +1271,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitCoroutineFrame();
   }
   case Builtin::BI__builtin_coro_free:
+    return RValue::get(emitCoroFreeBuiltin(e).getResult());
   case Builtin::BI__builtin_coro_size: {
     GlobalDecl gd{fd};
     mlir::Type ty = cgm.getTypes().getFunctionType(
@@ -2226,9 +2261,15 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI_exception_info:
   case Builtin::BI__abnormal_termination:
   case Builtin::BI_abnormal_termination:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI_setjmpex:
   case Builtin::BI_setjmp:
-    return errorBuiltinNYI(*this, e, builtinID);
+    if (getTarget().getTriple().isOSMSVCRT()) {
+      cgm.errorNYI(e->getSourceRange(), "setjmp/setjmpex on MSVCRT");
+      return getUndefRValue(e->getType());
+    }
+    // Else break and this will be handled as a library call.
+    break;
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:

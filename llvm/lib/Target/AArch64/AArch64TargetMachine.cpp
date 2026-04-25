@@ -245,7 +245,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64BranchTargetsLegacyPass(PR);
   initializeAArch64CollectLOHLegacyPass(PR);
   initializeAArch64CompressJumpTablesLegacyPass(PR);
-  initializeAArch64ConditionalComparesPass(PR);
+  initializeAArch64ConditionalComparesLegacyPass(PR);
   initializeAArch64ConditionOptimizerLegacyPass(PR);
   initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
   initializeAArch64ExpandPseudoLegacyPass(PR);
@@ -257,11 +257,11 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
   initializeAArch64PostLegalizerCombinerPass(PR);
-  initializeAArch64PostLegalizerLoweringPass(PR);
-  initializeAArch64PostSelectOptimizePass(PR);
+  initializeAArch64PostSelectOptimizeLegacyPass(PR);
+  initializeAArch64PostLegalizerLoweringLegacyPass(PR);
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationLegacyPass(PR);
-  initializeAArch64RedundantCondBranchPass(PR);
+  initializeAArch64RedundantCondBranchLegacyPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
@@ -274,7 +274,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64SpeculationHardeningPass(PR);
   initializeAArch64SLSHardeningPass(PR);
   initializeAArch64StackTaggingPass(PR);
-  initializeAArch64StackTaggingPreRAPass(PR);
+  initializeAArch64StackTaggingPreRALegacyPass(PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
@@ -396,6 +396,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     setGlobalISel(true);
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }
+
+  LLT::setUseExtended(true);
 
   // AArch64 supports the MachineOutliner.
   setMachineOutliner(true);
@@ -816,7 +818,7 @@ bool AArch64PassConfig::addILPOpts() {
     addPass(createAArch64StorePairSuppressPass());
   addPass(createAArch64SIMDInstrOptPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64StackTaggingPreRAPass());
+    addPass(createAArch64StackTaggingPreRALegacyPass());
   return true;
 }
 
