@@ -17,7 +17,7 @@ body:             |
   ; CHECK-NEXT:   CMP64rr [[COPY]], [[COPY1]], implicit-def $eflags
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-  ; CHECK-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+  ; CHECK-NEXT:   INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
   ; CHECK-NEXT:   TEST8rr [[SETCCr]], [[SETCCr]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit killed $eflags
   ; CHECK-NEXT: {{  $}}
@@ -87,7 +87,7 @@ body:             |
   ; CHECK-NEXT:   CMP64rr [[COPY]], [[COPY1]], implicit-def $eflags
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-  ; CHECK-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+  ; CHECK-NEXT:   INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
   ; CHECK-NEXT:   TEST8rr [[SETCCr]], [[SETCCr]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.2, 5, implicit killed $eflags
   ; CHECK-NEXT: {{  $}}
@@ -158,7 +158,7 @@ body:             |
     ; CHECK-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
     ; CHECK-NEXT: [[SETCCr2:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
     ; CHECK-NEXT: [[SETCCr3:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
-    ; CHECK-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; CHECK-NEXT: INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
     ; CHECK-NEXT: MOV8mr $rsp, 1, $noreg, -16, $noreg, [[SETCCr3]]
     ; CHECK-NEXT: MOV8mr $rsp, 1, $noreg, -16, $noreg, [[SETCCr]]
     ; CHECK-NEXT: MOV8mr $rsp, 1, $noreg, -16, $noreg, [[SETCCr1]]
@@ -198,7 +198,7 @@ body:             |
     ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
     ; CHECK-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
     ; CHECK-NEXT: [[SETCCr2:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
-    ; CHECK-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; CHECK-NEXT: INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
     ; CHECK-NEXT: TEST8rr [[SETCCr]], [[SETCCr]], implicit-def $eflags
     ; CHECK-NEXT: [[CMOV64rr:%[0-9]+]]:gr64 = CMOV64rr [[COPY]], [[COPY1]], 5, implicit killed $eflags
     ; CHECK-NEXT: TEST8rr [[SETCCr1]], [[SETCCr1]], implicit-def $eflags
@@ -245,7 +245,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[ADD64rr:%[0-9]+]]:gr64 = ADD64rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; CHECK-NEXT: INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
     ; CHECK-NEXT: dead [[ADD8ri:%[0-9]+]]:gr8 = ADD8ri [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[ADC64ri32_:%[0-9]+]]:gr64 = ADC64ri32 [[ADD64rr]], 42, implicit-def $eflags, implicit killed $eflags
     ; CHECK-NEXT: [[ADC64ri32_1:%[0-9]+]]:gr64 = ADC64ri32 [[ADC64ri32_]], 42, implicit-def $eflags, implicit $eflags
@@ -279,7 +279,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[SUB64rr:%[0-9]+]]:gr64 = SUB64rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; CHECK-NEXT: INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
     ; CHECK-NEXT: dead [[ADD8ri:%[0-9]+]]:gr8 = ADD8ri [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[SBB64ri32_:%[0-9]+]]:gr64 = SBB64ri32 [[SUB64rr]], 42, implicit-def $eflags, implicit killed $eflags
     ; CHECK-NEXT: [[SBB64ri32_1:%[0-9]+]]:gr64 = SBB64ri32 [[SBB64ri32_]], 42, implicit-def dead $eflags, implicit killed $eflags
@@ -313,7 +313,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[ADD64rr:%[0-9]+]]:gr64 = ADD64rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; CHECK-NEXT: INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
     ; CHECK-NEXT: dead [[ADD8ri:%[0-9]+]]:gr8 = ADD8ri [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[RCL64r1_:%[0-9]+]]:gr64 = RCL64r1 [[ADD64rr]], implicit-def $eflags, implicit killed $eflags
     ; CHECK-NEXT: [[RCL64r1_1:%[0-9]+]]:gr64 = RCL64r1 [[RCL64r1_]], implicit-def $eflags, implicit $eflags
@@ -347,7 +347,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[ADD64rr:%[0-9]+]]:gr64 = ADD64rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; CHECK-NEXT: INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
     ; CHECK-NEXT: dead [[ADD8ri:%[0-9]+]]:gr8 = ADD8ri [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[RCR64r1_:%[0-9]+]]:gr64 = RCR64r1 [[ADD64rr]], implicit-def $eflags, implicit killed $eflags
     ; CHECK-NEXT: [[RCR64r1_1:%[0-9]+]]:gr64 = RCR64r1 [[RCR64r1_]], implicit-def $eflags, implicit $eflags
@@ -381,7 +381,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[ADD64rr:%[0-9]+]]:gr64 = ADD64rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; CHECK-NEXT: INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
     ; CHECK-NEXT: dead [[ADD8ri:%[0-9]+]]:gr8 = ADD8ri [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[SETB_C32r:%[0-9]+]]:gr32 = SETB_C32r implicit-def $eflags, implicit killed $eflags
     ; CHECK-NEXT: MOV32mr $rsp, 1, $noreg, -16, $noreg, killed [[SETB_C32r]]
@@ -422,7 +422,7 @@ body:             |
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
   ; CHECK-NEXT:   [[SETCCr2:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
   ; CHECK-NEXT:   [[SETCCr3:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-  ; CHECK-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+  ; CHECK-NEXT:   INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
   ; CHECK-NEXT:   TEST8rr [[SETCCr2]], [[SETCCr2]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit killed $eflags
   ; CHECK-NEXT: {{  $}}
@@ -505,7 +505,7 @@ body:             |
   ; CHECK-NEXT:   [[SETCCr3:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
   ; CHECK-NEXT:   [[SETCCr4:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NEXT:   [[SETCCr5:%[0-9]+]]:gr8 = SETCCr 0, implicit $eflags
-  ; CHECK-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+  ; CHECK-NEXT:   INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
   ; CHECK-NEXT:   TEST8rr [[SETCCr3]], [[SETCCr3]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit killed $eflags
   ; CHECK-NEXT: {{  $}}
@@ -818,7 +818,7 @@ body:             |
   ; CHECK-NEXT:   CMP64rr [[COPY]], [[COPY1]], implicit-def $eflags
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
-  ; CHECK-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+  ; CHECK-NEXT:   INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
   ; CHECK-NEXT:   TEST8rr [[SETCCr]], [[SETCCr]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit killed $eflags
   ; CHECK-NEXT: {{  $}}
@@ -895,7 +895,7 @@ body:             |
   ; CHECK-NEXT:   CMP64rr [[COPY]], [[COPY1]], implicit-def $eflags
   ; CHECK-NEXT:   SETCCm [[COPY]], 1, $noreg, -16, $noreg, 4, implicit $eflags
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
-  ; CHECK-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+  ; CHECK-NEXT:   INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead $eflags
   ; CHECK-NEXT:   TEST8rr [[SETCCr]], [[SETCCr]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit killed $eflags
   ; CHECK-NEXT:   JMP_1 %bb.2

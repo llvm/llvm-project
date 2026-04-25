@@ -196,6 +196,7 @@ using string = basic_string<char>;
 template<typename T>
 struct unique_ptr {
   unique_ptr();
+  explicit unique_ptr(T*);
   unique_ptr(unique_ptr<T>&&);
   unique_ptr& operator=(unique_ptr<T>&&);
   ~unique_ptr();
@@ -203,6 +204,28 @@ struct unique_ptr {
   T &operator*();
   T *operator->();
   T *get() const;
+};
+
+template<typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+  return unique_ptr<T>(new T(args...));
+}
+
+template<typename T>
+struct shared_ptr {
+  shared_ptr();
+  explicit shared_ptr(T*);
+  shared_ptr(const shared_ptr<T>&);
+  shared_ptr(shared_ptr<T>&&);
+  
+  template<typename U>
+  shared_ptr(unique_ptr<U>&& up) : ptr_(up.get()) { up.release(); }
+
+  ~shared_ptr();
+  T &operator*();
+  T *operator->();
+  T *get() const;
+  T* ptr_;
 };
 
 template<typename T>
@@ -283,3 +306,6 @@ public:
 };
 
 }
+
+void *operator new(std::size_t, void *) noexcept;
+void *operator new[](std::size_t, void *) noexcept;
