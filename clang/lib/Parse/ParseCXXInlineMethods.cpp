@@ -380,6 +380,16 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
   InFunctionTemplateScope.Scopes.Enter(Scope::FunctionPrototypeScope |
                                        Scope::FunctionDeclarationScope |
                                        Scope::DeclScope);
+
+  // Delayed default arguments or exception specifications may contain lambdas,
+  // e.g. struct S {
+  //     void ICE(int x, int = sizeof([x] { return x; }()));
+  //   }
+  // Lambda capture handling in tryCaptureVariable() expects an enclosing
+  // function scope in Sema's FunctionScopes stack.
+  Sema::FunctionScopeRAII PopFnContext(Actions);
+  Actions.PushFunctionScope();
+
   for (unsigned I = 0, N = LM.DefaultArgs.size(); I != N; ++I) {
     auto Param = cast<ParmVarDecl>(LM.DefaultArgs[I].Param);
     // Introduce the parameter into scope.
@@ -415,15 +425,6 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       EnterExpressionEvaluationContext Eval(
           Actions,
           Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed, Param);
-
-      // Delayed default arguments may contain lambdas, e.g.
-      //   struct S {
-      //     void ICE(int x, int = sizeof([x] { return x; }()));
-      //   }
-      // Lambda capture handling in tryCaptureVariable() expects an enclosing
-      // function scope in Sema's FunctionScopes stack.
-      Sema::FunctionScopeRAII PopFnContext(Actions);
-      Actions.PushFunctionScope();
 
       ExprResult DefArgResult;
       if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
@@ -510,20 +511,11 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       FunctionToPush = cast<FunctionDecl>(LM.Method);
     Method = dyn_cast<CXXMethodDecl>(FunctionToPush);
 
-    // Push a function scope so that tryCaptureVariable() can properly visit
-    // function scopes involving function parameters that are referenced inside
-    // the noexcept specifier e.g. through a lambda expression.
-    // Example:
-    // struct X {
-    //   void ICE(int val) noexcept(noexcept([val]{}));
-    // };
     // Setup the CurScope to match the function DeclContext - we have such
     // assumption in IsInFnTryBlockHandler().
     ParseScope FnScope(this, Scope::FnScope);
     Sema::ContextRAII FnContext(Actions, FunctionToPush,
                                 /*NewThisContext=*/false);
-    Sema::FunctionScopeRAII PopFnContext(Actions);
-    Actions.PushFunctionScope();
 
     Sema::CXXThisScopeRAII ThisScope(
         Actions, Method ? Method->getParent() : nullptr,
