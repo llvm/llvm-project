@@ -377,7 +377,6 @@ public:
         Intrinsic::vp_add,
         Intrinsic::vp_ashr,
         Intrinsic::vp_cttz_elts,
-        Intrinsic::vp_fptrunc,
         Intrinsic::vp_gather,
         Intrinsic::vp_icmp,
         Intrinsic::vp_is_fpclass,
