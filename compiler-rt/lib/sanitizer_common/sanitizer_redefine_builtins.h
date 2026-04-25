@@ -17,21 +17,24 @@
 // The asm hack only works with GCC and Clang.
 #    if !defined(_WIN32) && !defined(_AIX) && !defined(__APPLE__)
 
-#      if defined(COMPILER_RT_HAS_ASM_EQUALS_ASSIGN)
-asm(R"(
-    memcpy = __sanitizer_internal_memcpy
-    memmove = __sanitizer_internal_memmove
-    memset = __sanitizer_internal_memset
-    )");
-#      elif defined(COMPILER_RT_HAS_ASM_DOT_SET)
-asm(R"(
-    .set memcpy, __sanitizer_internal_memcpy
-    .set memmove, __sanitizer_internal_memmove
-    .set memset, __sanitizer_internal_memset
-    )");
+#      if !defined(COMPILER_RT_HAS_ASM_EQUALS_ASSIGN) && \
+          defined(COMPILER_RT_HAS_ASM_DOT_SET)
+
+#        define SANITIZER_REDEFINE_BUILTIN_ASM(name) \
+          asm(".set " #name ", __sanitizer_internal_" #name)
+
 #      else
-#        error "Don't know how to assign symbols"
+
+#        define SANITIZER_REDEFINE_BUILTIN_ASM(name) \
+          asm("\"" #name "\" = \"__sanitizer_internal_" #name "\"")
+
 #      endif
+
+SANITIZER_REDEFINE_BUILTIN_ASM(memcpy);
+SANITIZER_REDEFINE_BUILTIN_ASM(memmove);
+SANITIZER_REDEFINE_BUILTIN_ASM(memset);
+
+#undef SANITIZER_REDEFINE_BUILTIN_ASM
 
 #      if defined(__cplusplus) && \
           !defined(SANITIZER_COMMON_REDEFINE_BUILTINS_IN_STD)
