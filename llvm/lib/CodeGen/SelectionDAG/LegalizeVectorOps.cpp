@@ -2137,15 +2137,15 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
     return SDValue();
 
   // Heuristic check to determine whether vector should be expanded to integer
-  // operations or unroll to scalar operations.
+  // operations or unrolled to scalar operations.
   // 1. Scalable vector is never unrolled.
-  // 2. Fixed vectors is unrolled if one of following is true:
-  //      a. Vector only has 1 element and target know how to handle scalar
+  // 2. Fixed vector is unrolled if one of followings is true:
+  //      a. Vector only has 1 element and target knows how to handle scalar
   //         FOPYSIGN(either legal or custom expand).
-  //      b. Vector has more than 1 elements and target supports scalar
+  //      b. Vector has more than 1 element and target supports scalar
   //         FCOPYSIGN natively and vector length <= 3(2 AND + 1 OR).
   if (VT.isFixedLengthVector()) {
-    EVT EltVT = VT.getScalarType();
+    EVT EltVT = VT.getVectorElementType();
     if ((VT.getVectorNumElements() == 1 &&
          TLI.isOperationLegalOrCustom(ISD::FCOPYSIGN, EltVT)) ||
         (VT.getVectorNumElements() < 4 &&
