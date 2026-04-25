@@ -2239,7 +2239,7 @@ define i64 @vreduce_mul_nxv3i64(<vscale x 3 x i64> %v) {
 ; RV32-NEXT:    vsetivli zero, 1, e32, m4, ta, ma
 ; RV32-NEXT:  .LBB126_1: # %rdx.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    add a4, a2, a2
+; RV32-NEXT:    slli a4, a2, 1
 ; RV32-NEXT:    addi a2, a2, 1
 ; RV32-NEXT:    addi a5, a4, 1
 ; RV32-NEXT:    vslidedown.vx v12, v8, a4
