@@ -804,6 +804,70 @@ void CodeGenModule::checkAliases() {
       continue;
     }
 
+    if (!IsIFunc) {
+      GlobalDecl AliaseeGD;
+      if (!lookupRepresentativeDecl(GV->getName(), AliaseeGD) ||
+          !isa<VarDecl, FunctionDecl>(AliaseeGD.getDecl())) {
+        Diags.Report(Location, diag::err_alias_to_undefined)
+            << IsIFunc << IsIFunc;
+        Error = true;
+        continue;
+      }
+
+      bool aliasIsFuncDecl = isa<FunctionDecl>(D);
+      bool aliaseeIsFunc = isa<llvm::Function, llvm::GlobalIFunc>(GV);
+      // Function declarations can only alias functions (including IFUNCs).
+      // Similarly, variable declarations can only alias variables.
+      if (aliasIsFuncDecl != aliaseeIsFunc) {
+        Diags.Report(Location, diag::err_alias_between_function_and_variable)
+            << aliasIsFuncDecl;
+        Diags.Report(AliaseeGD.getDecl()->getLocation(),
+                     diag::note_aliasee_declaration);
+        Error = true;
+        continue;
+      }
+
+      // Only report functions.
+      // Type mismatches for variables can be intentional.
+      if (aliasIsFuncDecl && aliaseeIsFunc) {
+        QualType AliasTy = D->getType();
+        QualType AliaseeTy = cast<ValueDecl>(AliaseeGD.getDecl())->getType();
+        auto shouldReportTypeMismatch = [&]() {
+          const auto *AliasFTy =
+              AliasTy.getCanonicalType()->getAs<FunctionType>();
+          const auto *AliaseeFTy =
+              AliaseeTy.getCanonicalType()->getAs<FunctionType>();
+          assert(AliasFTy && AliaseeFTy);
+          if (!Context.typesAreCompatible(AliasFTy->getReturnType(),
+                                          AliaseeFTy->getReturnType()))
+            return true;
+          const auto *AliasFPTy = dyn_cast<FunctionProtoType>(AliasFTy);
+          // Do not report aliases with unspecified parameter lists.
+          if (!AliasFPTy)
+            return false;
+          // Report if the parameter lists are different. Any other mismatches,
+          // such as in exception specifications, are ignored.
+          const auto *AliaseeFPTy = dyn_cast<FunctionProtoType>(AliaseeFTy);
+          if (!AliaseeFPTy)
+            return true;
+          if (AliasFPTy->getNumParams() != AliaseeFPTy->getNumParams() ||
+              AliasFPTy->isVariadic() != AliaseeFPTy->isVariadic())
+            return true;
+          for (unsigned i = 0; i < AliasFPTy->getNumParams(); ++i)
+            if (!Context.typesAreCompatible(AliasFPTy->getParamType(i),
+                                            AliaseeFPTy->getParamType(i)))
+              return true;
+          return false;
+        };
+        if (shouldReportTypeMismatch()) {
+          Diags.Report(Location, diag::warn_alias_type_mismatch)
+              << AliasTy << AliaseeTy;
+          Diags.Report(AliaseeGD.getDecl()->getLocation(),
+                       diag::note_aliasee_declaration);
+        }
+      }
+    }
+
     if (getContext().getTargetInfo().getTriple().isOSAIX())
       if (const llvm::GlobalVariable *GVar =
               dyn_cast<const llvm::GlobalVariable>(GV))

@@ -71,3 +71,43 @@ void test4_foo() __attribute__((alias("test4_bar")));
 
 int test5_bar = 0;
 extern struct incomplete_type test5_foo __attribute__((alias("test5_bar")));
+
+int test6 = 0;
+// expected-note@-1 {{aliasee is declared here}}
+void test6_alias() __attribute__((alias("test6")));
+// expected-error@-1 {{cannot alias a variable with a function}}
+
+extern int test7_alias __attribute__((alias("test7")));
+// expected-error@-1 {{cannot alias a function with a variable}}
+int test7(int x) { return x * 2; }
+// expected-note@-1 {{aliasee is declared here}}
+
+void *test8_ifunc() { return 0; }
+void test8(void) __attribute__((ifunc("test8_ifunc")));
+// expected-note@-1 {{aliasee is declared here}}
+extern int test8_alias __attribute__((alias("test8")));
+// expected-error@-1 {{cannot alias a function with a variable}}
+
+void test9() {}
+// expected-note@-1 {{aliasee is declared here}}
+int test9_alias() __attribute__((alias("test9")));
+// expected-warning@-1 {{alias and aliasee have different types 'int ()' and 'void ()'}}
+
+// No warning for an alias with unspecified parameters if the return types match.
+int test10(int x, int y) { return x + y; }
+int test10_alias() __attribute__((alias("test10")));
+
+int test11(int x, int y) { return x + y; }
+// expected-note@-1 {{aliasee is declared here}}
+int test11_alias(int x, ...) __attribute__((alias("test11")));
+// expected-warning@-1 {{alias and aliasee have different types 'int (int, ...)' and 'int (int, int)'}}
+
+// No warnings expected when using typedef equivalents.
+typedef int Integer;
+Integer test12(int x) { return x; }
+int test12_alias(Integer) __attribute__((alias("test12")));
+
+// Compiler-generated variables are not valid alias targets.
+char *test13 = "asdf";
+extern char test13_alias[5] __attribute__((alias(".str")));
+// expected-error@-1 {{alias must point to a defined variable or function}}
