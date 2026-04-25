@@ -250,10 +250,14 @@ void RVVType::initClangBuiltinStr() {
     ClangBuiltinStr += "int";
     break;
   case ScalarTypeKind::UnsignedInteger:
-  case ScalarTypeKind::FloatE4M3:
-  case ScalarTypeKind::FloatE5M2:
     ClangBuiltinStr += "uint";
     break;
+  case ScalarTypeKind::FloatE4M3:
+    ClangBuiltinStr += "float8e4m3" + LMUL.str() + "_t";
+    return;
+  case ScalarTypeKind::FloatE5M2:
+    ClangBuiltinStr += "float8e5m2" + LMUL.str() + "_t";
+    return;
   default:
     llvm_unreachable("ScalarTypeKind is invalid");
   }
@@ -327,9 +331,13 @@ void RVVType::initTypeStr() {
     Str += getTypeString("int");
     break;
   case ScalarTypeKind::UnsignedInteger:
-  case ScalarTypeKind::FloatE4M3:
-  case ScalarTypeKind::FloatE5M2:
     Str += getTypeString("uint");
+    break;
+  case ScalarTypeKind::FloatE4M3:
+    Str += "vfloat8e4m3" + LMUL.str() + "_t";
+    break;
+  case ScalarTypeKind::FloatE5M2:
+    Str += "vfloat8e5m2" + LMUL.str() + "_t";
     break;
   default:
     llvm_unreachable("ScalarType is invalid!");
@@ -447,6 +455,10 @@ PrototypeDescriptor::parsePrototypeDescriptor(
   case 'w':
     PT = BaseTypeModifier::Vector;
     VTM = VectorTypeModifier::Widening2XVector;
+    break;
+  case 'd':
+    PT = BaseTypeModifier::Vector;
+    VTM = VectorTypeModifier::DoubleLMULVector;
     break;
   case 'q':
     PT = BaseTypeModifier::Vector;
@@ -736,6 +748,10 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     if (ScalarType == ScalarTypeKind::FloatE4M3 ||
         ScalarType == ScalarTypeKind::FloatE5M2)
       ScalarType = ScalarTypeKind::BFloat;
+    break;
+  case VectorTypeModifier::DoubleLMULVector:
+    LMUL.MulLog2LMUL(1);
+    Scale = LMUL.getScale(ElementBitwidth);
     break;
   case VectorTypeModifier::Widening4XVector:
     ElementBitwidth *= 4;
@@ -1217,7 +1233,7 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
 
 SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
   SmallVector<PrototypeDescriptor> PrototypeDescriptors;
-  const StringRef Primaries("evwqom0ztulf");
+  const StringRef Primaries("evwdqom0ztulf");
   while (!Prototypes.empty()) {
     size_t Idx = 0;
     // Skip over complex prototype because it could contain primitive type

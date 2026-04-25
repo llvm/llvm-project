@@ -605,7 +605,7 @@ namespace Destructors {
 
   struct A { int n; };
   constexpr void double_destroy() {
-    A a;
+    A a; // both-note {{declared here}}
     a.~A();
     a.~A(); // both-note {{destruction of object outside its lifetime}}
   }
@@ -1327,12 +1327,27 @@ namespace pr18633 {
   }
 }
 
-namespace {
+namespace MemberExprOnStatic {
   struct F {
     static constexpr int Z = 12;
   };
   F f;
   static_assert(f.Z == 12, "");
+
+  template<int I>
+  struct S {
+    static constexpr const auto &k = I;
+    int a;
+  };
+
+  S<10> s{12};
+  static_assert(s.k == 10, "");
+
+  constexpr int foo() {
+    S<100> s{12};
+    return s.k;
+  }
+  static_assert(foo() == 100, "");
 }
 
 namespace UnnamedBitFields {

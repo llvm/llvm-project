@@ -256,6 +256,12 @@ void MappingTraits<DWARFYAML::File>::mapping(IO &IO, DWARFYAML::File &File) {
   IO.mapRequired("Length", File.Length);
 }
 
+void MappingTraits<DWARFYAML::LnctForm>::mapping(
+    IO &IO, DWARFYAML::LnctForm &LnctForm) {
+  IO.mapRequired("ContentType", LnctForm.ContentType);
+  IO.mapRequired("Form", LnctForm.Form);
+}
+
 void MappingTraits<DWARFYAML::LineTableOpcode>::mapping(
     IO &IO, DWARFYAML::LineTableOpcode &LineTableOpcode) {
   IO.mapRequired("Opcode", LineTableOpcode.Opcode);
@@ -294,7 +300,21 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapOptional("OpcodeBase", LineTable.OpcodeBase);
   IO.mapOptional("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
   if (LineTable.Version >= 5) {
-    // TODO
+    IO.mapOptional("DirectoryEntryFormat", LineTable.DirectoryEntryFormat);
+    IO.mapOptional("DirectoryEntryFormatCount",
+                   LineTable.DirectoryEntryFormatCount,
+                   LineTable.DirectoryEntryFormat.size());
+    IO.mapOptional("Directories", LineTable.Directories);
+    IO.mapOptional("DirectoriesCount", LineTable.DirectoriesCount,
+                   LineTable.Directories.size());
+
+    IO.mapOptional("FileNameEntryFormat", LineTable.FileNameEntryFormat);
+    IO.mapOptional("FileNameEntryFormatCount",
+                   LineTable.FileNameEntryFormatCount,
+                   LineTable.FileNameEntryFormat.size());
+    IO.mapOptional("FileNames", LineTable.FileNames);
+    IO.mapOptional("FileNamesCount", LineTable.FileNamesCount,
+                   LineTable.FileNames.size());
   } else {
     IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
     IO.mapOptional("Files", LineTable.Files);
