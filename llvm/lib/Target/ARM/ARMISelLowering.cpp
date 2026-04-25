@@ -5706,12 +5706,11 @@ static SDValue LowerVectorFP_TO_INT(SDValue Op, SelectionDAG &DAG) {
 }
 
 SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-  if (VT.isVector())
-    return LowerVectorFP_TO_INT(Op, DAG);
 
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+  if (SrcVal.getValueType().isVector())
+    return LowerVectorFP_TO_INT(Op, DAG);
 
   if (isUnsupportedFloatingType(SrcVal.getValueType())) {
     RTLIB::Libcall LC;
@@ -5746,9 +5745,11 @@ SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 
 static SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                   const ARMSubtarget *Subtarget) {
+
+  SDValue FromVal = Op.getOperand(0);
+  EVT FromVT = FromVal.getValueType();
   EVT VT = Op.getValueType();
   EVT ToVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
-  EVT FromVT = Op.getOperand(0).getValueType();
 
   if (VT == MVT::i32 && ToVT == MVT::i32 && FromVT == MVT::f32)
     return Op;
@@ -5768,17 +5769,29 @@ static SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   if (FromVT != MVT::v4f32 && FromVT != MVT::v8f16)
     return SDValue();
 
+  unsigned SatWidth = ToVT.getScalarSizeInBits();
+  unsigned DstWidth = VT.getScalarSizeInBits();
+
+  assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
+
   SDLoc DL(Op);
-  bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
-  unsigned BW = ToVT.getScalarSizeInBits() - IsSigned;
-  SDValue CVT = DAG.getNode(Op.getOpcode(), DL, VT, Op.getOperand(0),
-                            DAG.getValueType(VT.getScalarType()));
-  SDValue Max = DAG.getNode(IsSigned ? ISD::SMIN : ISD::UMIN, DL, VT, CVT,
-                            DAG.getConstant((1 << BW) - 1, DL, VT));
-  if (IsSigned)
-    Max = DAG.getNode(ISD::SMAX, DL, VT, Max,
-                      DAG.getSignedConstant(-(1 << BW), DL, VT));
-  return Max;
+  SDValue NativeCvt = DAG.getNode(Op.getOpcode(), DL, VT, FromVal,
+                                  DAG.getValueType(VT.getScalarType()));
+  SDValue Sat;
+  if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+    SDValue MinC = DAG.getConstant(
+        APInt::getSignedMaxValue(SatWidth).sext(DstWidth), DL, VT);
+    SDValue Min = DAG.getNode(ISD::SMIN, DL, VT, NativeCvt, MinC);
+    SDValue MaxC = DAG.getConstant(
+        APInt::getSignedMinValue(SatWidth).sext(DstWidth), DL, VT);
+    Sat = DAG.getNode(ISD::SMAX, DL, VT, Min, MaxC);
+  } else {
+    SDValue MinC =
+        DAG.getConstant(APInt::getAllOnes(SatWidth).zext(DstWidth), DL, VT);
+    Sat = DAG.getNode(ISD::UMIN, DL, VT, NativeCvt, MinC);
+  }
+
+  return Sat;
 }
 
 static SDValue LowerVectorINT_TO_FP(SDValue Op, SelectionDAG &DAG) {

@@ -5132,12 +5132,6 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
     return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
                        DAG.getValueType(DstVT));
 
-  // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
-  // result. This is only valid if the legal cvt is larger than the saturate
-  // width.
-  if (DstWidth < SatWidth)
-    return SDValue();
-
   if (SrcVT == MVT::f16 && SatVT == MVT::i16 && DstVT == MVT::i32) {
     if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
       SDValue CVTf32 =
@@ -5166,7 +5160,7 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
     Sat = DAG.getNode(ISD::UMIN, DL, DstVT, NativeCvt, MinC);
   }
 
-  return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Sat);
+  return Sat;
 }
 
 SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
