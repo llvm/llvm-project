@@ -146,6 +146,8 @@ C++17 Feature Support
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Implemented `CWG1780 Explicit instantiation/specialization of generic lambda
+  operator() <https://cplusplus.github.io/CWG/issues/1780.html>`_
 
 C Language Changes
 ------------------
