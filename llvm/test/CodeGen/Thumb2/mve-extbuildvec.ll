@@ -40,23 +40,12 @@ define arm_aapcs_vfpcc <2 x i64> @sext_v2i1(i1 %a, i1 %b, i1 %c, i1 %d) {
 define arm_aapcs_vfpcc <4 x i32> @zext_v4i1(i1 %a, i1 %b, i1 %c, i1 %d) {
 ; CHECK-LABEL: zext_v4i1:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    and r2, r2, #1
 ; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r2
+; CHECK-NEXT:    and r0, r3, #1
 ; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #4
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #4, #4
-; CHECK-NEXT:    and r1, r2, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    bfi r0, r1, #8, #4
-; CHECK-NEXT:    and r1, r3, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i32 q1, #0x1
-; CHECK-NEXT:    bfi r0, r1, #12, #4
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    bx lr
   %w = insertelement <4 x i1> poison, i1 %a, i32 0
   %x = insertelement <4 x i1> %w, i1 %b, i32 1
@@ -69,23 +58,16 @@ define arm_aapcs_vfpcc <4 x i32> @zext_v4i1(i1 %a, i1 %b, i1 %c, i1 %d) {
 define arm_aapcs_vfpcc <4 x i32> @sext_v4i1(i1 %a, i1 %b, i1 %c, i1 %d) {
 ; CHECK-LABEL: sext_v4i1:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    and r2, r2, #1
 ; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r2, r2, #0
+; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #4
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r2
+; CHECK-NEXT:    and r0, r3, #1
 ; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #4, #4
-; CHECK-NEXT:    and r1, r2, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    bfi r0, r1, #8, #4
-; CHECK-NEXT:    and r1, r3, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i8 q1, #0xff
-; CHECK-NEXT:    bfi r0, r1, #12, #4
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    bx lr
   %w = insertelement <4 x i1> poison, i1 %a, i32 0
   %x = insertelement <4 x i1> %w, i1 %b, i32 1
@@ -99,38 +81,25 @@ define arm_aapcs_vfpcc <8 x i16> @zext_v8i1(i1 %a, i1 %b, i1 %c, i1 %d, i1 %e, i
 ; CHECK-LABEL: zext_v8i1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    and r0, r0, #1
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #2
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #2, #2
-; CHECK-NEXT:    and r1, r2, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i16 q0, #0x0
-; CHECK-NEXT:    bfi r0, r1, #4, #2
-; CHECK-NEXT:    and r1, r3, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i16 q1, #0x1
-; CHECK-NEXT:    bfi r0, r1, #6, #2
-; CHECK-NEXT:    ldr r1, [sp]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #8, #2
-; CHECK-NEXT:    ldr r1, [sp, #4]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #10, #2
-; CHECK-NEXT:    ldr r1, [sp, #8]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #12, #2
-; CHECK-NEXT:    ldr r1, [sp, #12]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #14, #2
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vmov.16 q0[0], r0
+; CHECK-NEXT:    and r0, r1, #1
+; CHECK-NEXT:    vmov.16 q0[1], r0
+; CHECK-NEXT:    and r0, r2, #1
+; CHECK-NEXT:    vmov.16 q0[2], r0
+; CHECK-NEXT:    and r0, r3, #1
+; CHECK-NEXT:    vmov.16 q0[3], r0
+; CHECK-NEXT:    ldr r0, [sp]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.16 q0[4], r0
+; CHECK-NEXT:    ldr r0, [sp, #4]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.16 q0[5], r0
+; CHECK-NEXT:    ldr r0, [sp, #8]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.16 q0[6], r0
+; CHECK-NEXT:    ldr r0, [sp, #12]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.16 q0[7], r0
 ; CHECK-NEXT:    bx lr
   %w = insertelement <8 x i1> poison, i1 %a, i32 0
   %x = insertelement <8 x i1> %w, i1 %b, i32 1
@@ -148,38 +117,33 @@ define arm_aapcs_vfpcc <8 x i16> @sext_v8i1(i1 %a, i1 %b, i1 %c, i1 %d, i1 %e, i
 ; CHECK-LABEL: sext_v8i1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    and r0, r0, #1
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #2
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #2, #2
-; CHECK-NEXT:    and r1, r2, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i16 q0, #0x0
-; CHECK-NEXT:    bfi r0, r1, #4, #2
-; CHECK-NEXT:    and r1, r3, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i8 q1, #0xff
-; CHECK-NEXT:    bfi r0, r1, #6, #2
-; CHECK-NEXT:    ldr r1, [sp]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #8, #2
-; CHECK-NEXT:    ldr r1, [sp, #4]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #10, #2
-; CHECK-NEXT:    ldr r1, [sp, #8]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #12, #2
-; CHECK-NEXT:    ldr r1, [sp, #12]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #14, #2
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.16 q0[0], r0
+; CHECK-NEXT:    and r0, r1, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.16 q0[1], r0
+; CHECK-NEXT:    and r0, r2, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.16 q0[2], r0
+; CHECK-NEXT:    and r0, r3, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.16 q0[3], r0
+; CHECK-NEXT:    ldr r0, [sp]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.16 q0[4], r0
+; CHECK-NEXT:    ldr r0, [sp, #4]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.16 q0[5], r0
+; CHECK-NEXT:    ldr r0, [sp, #8]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.16 q0[6], r0
+; CHECK-NEXT:    ldr r0, [sp, #12]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.16 q0[7], r0
 ; CHECK-NEXT:    bx lr
   %w = insertelement <8 x i1> poison, i1 %a, i32 0
   %x = insertelement <8 x i1> %w, i1 %b, i32 1
@@ -197,70 +161,49 @@ define arm_aapcs_vfpcc <16 x i8> @zext_v16i1(i1 %a, i1 %b, i1 %c, i1 %d, i1 %e, 
 ; CHECK-LABEL: zext_v16i1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    and r0, r0, #1
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #1, #1
-; CHECK-NEXT:    and r1, r2, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i8 q0, #0x0
-; CHECK-NEXT:    bfi r0, r1, #2, #1
-; CHECK-NEXT:    and r1, r3, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i8 q1, #0x1
-; CHECK-NEXT:    bfi r0, r1, #3, #1
-; CHECK-NEXT:    ldr r1, [sp]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #4, #1
-; CHECK-NEXT:    ldr r1, [sp, #4]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #5, #1
-; CHECK-NEXT:    ldr r1, [sp, #8]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #6, #1
-; CHECK-NEXT:    ldr r1, [sp, #12]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #7, #1
-; CHECK-NEXT:    ldr r1, [sp, #16]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #8, #1
-; CHECK-NEXT:    ldr r1, [sp, #20]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #9, #1
-; CHECK-NEXT:    ldr r1, [sp, #24]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #10, #1
-; CHECK-NEXT:    ldr r1, [sp, #28]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #11, #1
-; CHECK-NEXT:    ldr r1, [sp, #32]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #12, #1
-; CHECK-NEXT:    ldr r1, [sp, #36]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #13, #1
-; CHECK-NEXT:    ldr r1, [sp, #40]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #14, #1
-; CHECK-NEXT:    ldr r1, [sp, #44]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #15, #1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vmov.8 q0[0], r0
+; CHECK-NEXT:    and r0, r1, #1
+; CHECK-NEXT:    vmov.8 q0[1], r0
+; CHECK-NEXT:    and r0, r2, #1
+; CHECK-NEXT:    vmov.8 q0[2], r0
+; CHECK-NEXT:    and r0, r3, #1
+; CHECK-NEXT:    vmov.8 q0[3], r0
+; CHECK-NEXT:    ldr r0, [sp]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[4], r0
+; CHECK-NEXT:    ldr r0, [sp, #4]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[5], r0
+; CHECK-NEXT:    ldr r0, [sp, #8]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[6], r0
+; CHECK-NEXT:    ldr r0, [sp, #12]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[7], r0
+; CHECK-NEXT:    ldr r0, [sp, #16]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[8], r0
+; CHECK-NEXT:    ldr r0, [sp, #20]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[9], r0
+; CHECK-NEXT:    ldr r0, [sp, #24]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[10], r0
+; CHECK-NEXT:    ldr r0, [sp, #28]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[11], r0
+; CHECK-NEXT:    ldr r0, [sp, #32]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[12], r0
+; CHECK-NEXT:    ldr r0, [sp, #36]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[13], r0
+; CHECK-NEXT:    ldr r0, [sp, #40]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[14], r0
+; CHECK-NEXT:    ldr r0, [sp, #44]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    vmov.8 q0[15], r0
 ; CHECK-NEXT:    bx lr
   %w = insertelement <16 x i1> poison, i1 %a, i32 0
   %x = insertelement <16 x i1> %w, i1 %b, i32 1
@@ -286,70 +229,65 @@ define arm_aapcs_vfpcc <16 x i8> @sext_v16i1(i1 %a, i1 %b, i1 %c, i1 %d, i1 %e, 
 ; CHECK-LABEL: sext_v16i1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    and r0, r0, #1
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #1, #1
-; CHECK-NEXT:    and r1, r2, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i8 q0, #0x0
-; CHECK-NEXT:    bfi r0, r1, #2, #1
-; CHECK-NEXT:    and r1, r3, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    vmov.i8 q1, #0xff
-; CHECK-NEXT:    bfi r0, r1, #3, #1
-; CHECK-NEXT:    ldr r1, [sp]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #4, #1
-; CHECK-NEXT:    ldr r1, [sp, #4]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #5, #1
-; CHECK-NEXT:    ldr r1, [sp, #8]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #6, #1
-; CHECK-NEXT:    ldr r1, [sp, #12]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #7, #1
-; CHECK-NEXT:    ldr r1, [sp, #16]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #8, #1
-; CHECK-NEXT:    ldr r1, [sp, #20]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #9, #1
-; CHECK-NEXT:    ldr r1, [sp, #24]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #10, #1
-; CHECK-NEXT:    ldr r1, [sp, #28]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #11, #1
-; CHECK-NEXT:    ldr r1, [sp, #32]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #12, #1
-; CHECK-NEXT:    ldr r1, [sp, #36]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #13, #1
-; CHECK-NEXT:    ldr r1, [sp, #40]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #14, #1
-; CHECK-NEXT:    ldr r1, [sp, #44]
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r0, r1, #15, #1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[0], r0
+; CHECK-NEXT:    and r0, r1, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[1], r0
+; CHECK-NEXT:    and r0, r2, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[2], r0
+; CHECK-NEXT:    and r0, r3, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[3], r0
+; CHECK-NEXT:    ldr r0, [sp]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[4], r0
+; CHECK-NEXT:    ldr r0, [sp, #4]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[5], r0
+; CHECK-NEXT:    ldr r0, [sp, #8]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[6], r0
+; CHECK-NEXT:    ldr r0, [sp, #12]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[7], r0
+; CHECK-NEXT:    ldr r0, [sp, #16]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[8], r0
+; CHECK-NEXT:    ldr r0, [sp, #20]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[9], r0
+; CHECK-NEXT:    ldr r0, [sp, #24]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[10], r0
+; CHECK-NEXT:    ldr r0, [sp, #28]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[11], r0
+; CHECK-NEXT:    ldr r0, [sp, #32]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[12], r0
+; CHECK-NEXT:    ldr r0, [sp, #36]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[13], r0
+; CHECK-NEXT:    ldr r0, [sp, #40]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[14], r0
+; CHECK-NEXT:    ldr r0, [sp, #44]
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    vmov.8 q0[15], r0
 ; CHECK-NEXT:    bx lr
   %w = insertelement <16 x i1> poison, i1 %a, i32 0
   %x = insertelement <16 x i1> %w, i1 %b, i32 1
