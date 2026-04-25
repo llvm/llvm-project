@@ -69,6 +69,10 @@ OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
   scopeStack_.push_back(&context.globalScope());
 }
 
+void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
+  ClearLabels();
+}
+
 bool OmpStructureChecker::Enter(const parser::MainProgram &x) {
   using StatementProgramStmt = parser::Statement<parser::ProgramStmt>;
   if (auto &stmt{std::get<std::optional<StatementProgramStmt>>(x.t)}) {
@@ -177,6 +181,14 @@ void OmpStructureChecker::Leave(const parser::BlockConstruct &x) {
   } else if (auto &&source{parser::GetSource(execPart)}) {
     scopeStack_.push_back(&context_.FindScope(*source));
   }
+}
+
+void OmpStructureChecker::Enter(const parser::InternalSubprogram &) {
+  ClearLabels();
+}
+
+void OmpStructureChecker::Enter(const parser::ModuleSubprogram &) {
+  ClearLabels();
 }
 
 void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
@@ -346,7 +358,7 @@ bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
       GetContext().directive, clauseId, context_.langOptions().OpenMPVersion);
 }
 
-bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
+bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clause) {
   // Do not do clause checks while processing METADIRECTIVE.
   // Context selectors can contain clauses that are not given as a part
   // of a construct, but as trait properties. Testing whether they are
@@ -426,6 +438,118 @@ void OmpStructureChecker::AnalyzeObjects(const parser::OmpObjectList &objects) {
   for (const parser::OmpObject &object : objects.v) {
     AnalyzeObject(object);
   }
+}
+
+const parser::OpenMPConstruct *
+OmpStructureChecker::GetCurrentConstruct() const {
+  for (const LoopOrConstruct &c : llvm::reverse(constructStack_)) {
+    if (auto *omp{std::get_if<const parser::OpenMPConstruct *>(&c)}) {
+      return *omp;
+    }
+  }
+  return nullptr;
+}
+
+void OmpStructureChecker::CheckSourceLabel(const parser::Label &label) {
+  // Get the context to check if the statement causing a jump to the 'label' is
+  // in an enclosing OpenMP construct
+  const parser::OpenMPConstruct *thisConstruct{GetCurrentConstruct()};
+  sourceLabels_.emplace(
+      label, std::make_pair(currentStatementSource_, thisConstruct));
+  // Check if the statement with 'label' to which a jump is being introduced
+  // has already been encountered
+  auto it{targetLabels_.find(label)};
+  if (it != targetLabels_.end()) {
+    // Check if both the statement with 'label' and the statement that causes a
+    // jump to the 'label' are in the same block.
+    CheckLabelContext(currentStatementSource_, it->second.first, thisConstruct,
+        it->second.second);
+  }
+}
+
+// Check for invalid branch into or out of OpenMP structured blocks
+void OmpStructureChecker::CheckLabelContext(const parser::CharBlock source,
+    const parser::CharBlock target, const parser::OpenMPConstruct *srcOmp,
+    const parser::OpenMPConstruct *tgtOmp) {
+  auto isSameOrIncludes = [&](const parser::OpenMPConstruct *lhs,
+                              const parser::OpenMPConstruct *rhs) -> bool {
+    assert(lhs && "Expecting first argument");
+    if (!rhs) {
+      return false;
+    }
+    if (lhs == rhs) {
+      return true;
+    }
+
+    auto getSource{[](const parser::OpenMPConstruct &c) -> parser::CharBlock {
+      std::optional<parser::CharBlock> src{parser::GetSource(c)};
+      assert(src.has_value() && "OpenMPConstruct should have source");
+      return *src;
+    }};
+
+    return getSource(*lhs).Contains(getSource(*rhs));
+  };
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  if (tgtOmp && !isSameOrIncludes(tgtOmp, srcOmp)) {
+    parser::OmpDirectiveName name{GetOmpDirectiveName(*tgtOmp)};
+    context_
+        .Say(source, "invalid branch into an OpenMP structured block"_err_en_US)
+        .Attach(target, "In the enclosing %s directive branched into"_en_US,
+            parser::omp::GetUpperName(name.v, version));
+  }
+  if (srcOmp && !isSameOrIncludes(srcOmp, tgtOmp)) {
+    parser::OmpDirectiveName name{GetOmpDirectiveName(*srcOmp)};
+    context_
+        .Say(source,
+            "invalid branch leaving an OpenMP structured block"_err_en_US)
+        .Attach(target, "Outside the enclosing %s directive"_en_US,
+            parser::omp::GetUpperName(name.v, version));
+  }
+}
+
+// Keep track of labels in the statements that causes jumps to target labels
+void OmpStructureChecker::Leave(const parser::GotoStmt &x) {
+  CheckSourceLabel(x.v);
+}
+
+void OmpStructureChecker::Leave(const parser::ComputedGotoStmt &x) {
+  for (auto &label : std::get<std::list<parser::Label>>(x.t)) {
+    CheckSourceLabel(label);
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::ArithmeticIfStmt &x) {
+  CheckSourceLabel(std::get<1>(x.t));
+  CheckSourceLabel(std::get<2>(x.t));
+  CheckSourceLabel(std::get<3>(x.t));
+}
+
+void OmpStructureChecker::Leave(const parser::AssignedGotoStmt &x) {
+  for (auto &label : std::get<std::list<parser::Label>>(x.t)) {
+    CheckSourceLabel(label);
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::AltReturnSpec &x) {
+  CheckSourceLabel(x.v);
+}
+
+void OmpStructureChecker::Leave(const parser::ErrLabel &x) {
+  CheckSourceLabel(x.v);
+}
+
+void OmpStructureChecker::Leave(const parser::EndLabel &x) {
+  CheckSourceLabel(x.v);
+}
+
+void OmpStructureChecker::Leave(const parser::EorLabel &x) {
+  CheckSourceLabel(x.v);
+}
+
+void OmpStructureChecker::ClearLabels() {
+  sourceLabels_.clear();
+  targetLabels_.clear();
 }
 
 bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
@@ -805,6 +929,8 @@ template <typename T>
 DirectiveSpellingVisitor(T &&) -> DirectiveSpellingVisitor<T>;
 
 void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
+  constructStack_.push_back(&x);
+
   DirectiveSpellingVisitor visitor(
       [this](parser::CharBlock source, llvm::omp::Directive id) {
         return CheckDirectiveSpelling(source, id);
@@ -844,6 +970,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPConstruct &x) {
   if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
     dirStack_.pop_back();
   }
+  constructStack_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
@@ -3273,6 +3400,14 @@ void OmpStructureChecker::Enter(const parser::OmpEndDirective &x) {
   case llvm::omp::Directive::OMPD_workshare:
     PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_workshare);
     break;
+  // 2.7.1 end-do -> END DO [nowait-clause]
+  // 2.8.3 end-do-simd -> END DO SIMD [nowait-clause]
+  case llvm::omp::Directive::OMPD_do:
+    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_do);
+    break;
+  case llvm::omp::Directive::OMPD_do_simd:
+    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_do_simd);
+    break;
   default:
     // no clauses are allowed
     break;
@@ -3287,7 +3422,9 @@ void OmpStructureChecker::Enter(const parser::OmpEndDirective &x) {
 void OmpStructureChecker::Leave(const parser::OmpEndDirective &x) {
   if ((GetContext().directive == llvm::omp::Directive::OMPD_end_scope) ||
       (GetContext().directive == llvm::omp::Directive::OMPD_end_single) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_workshare)) {
+      (GetContext().directive == llvm::omp::Directive::OMPD_end_workshare) ||
+      (GetContext().directive == llvm::omp::Directive::OMPD_end_do) ||
+      (GetContext().directive == llvm::omp::Directive::OMPD_end_do_simd)) {
     dirContext_.pop_back();
   }
 }
@@ -3448,7 +3585,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
   }
 
   auto testThreadprivateVarErr = [&](Symbol sym, parser::Name name,
-                                     llvmOmpClause clauseTy) {
+                                     llvm::omp::Clause clauseTy) {
     if (sym.test(Symbol::Flag::OmpThreadprivate))
       context_.Say(name.source,
           "A THREADPRIVATE variable cannot be in %s clause"_err_en_US,
@@ -3461,7 +3598,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
       llvm::omp::Clause::OMPC_num_threads, llvm::omp::Clause::OMPC_thread_limit,
       llvm::omp::Clause::OMPC_if};
   for (auto it : GetContext().clauseInfo) {
-    llvmOmpClause type = it.first;
+    llvm::omp::Clause type = it.first;
     const auto *clause = it.second;
     if (!threadprivateAllowedSet.test(type)) {
       if (const auto *objList{GetOmpObjectList(*clause)}) {
@@ -4032,7 +4169,7 @@ void OmpStructureChecker::CheckSharedBindingInOuterContext(
   //  binds to.
   if (auto *enclosingContext{GetEnclosingDirContext()}) {
     for (auto it : enclosingContext->clauseInfo) {
-      llvmOmpClause type = it.first;
+      llvm::omp::Clause type = it.first;
       const auto *clause = it.second;
       if (llvm::omp::privateReductionSet.test(type)) {
         if (const auto *objList{GetOmpObjectList(*clause)}) {
@@ -4151,7 +4288,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
   CheckCrayPointee(x.v, "FIRSTPRIVATE");
-  CheckIsLoopIvPartOfClause(llvmOmpClause::OMPC_firstprivate, x.v);
+  CheckIsLoopIvPartOfClause(llvm::omp::Clause::OMPC_firstprivate, x.v);
 
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
@@ -4190,7 +4327,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 }
 
 void OmpStructureChecker::CheckIsLoopIvPartOfClause(
-    llvmOmpClause clause, const parser::OmpObjectList &ompObjectList) {
+    llvm::omp::Clause clause, const parser::OmpObjectList &ompObjectList) {
   unsigned version{context_.langOptions().OpenMPVersion};
   for (const auto &ompObject : ompObjectList.v) {
     if (const parser::Name *name{parser::Unwrap<parser::Name>(ompObject)}) {
@@ -4757,8 +4894,8 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
   // number of DO constructs on the stack. This is checked elsewhere.
 
   std::set<const Symbol *> inductionVars;
-  for (const LoopConstruct &loop : llvm::reverse(loopStack_)) {
-    if (auto *doc{std::get_if<const parser::DoConstruct *>(&loop)}) {
+  for (const LoopOrConstruct &c : llvm::reverse(constructStack_)) {
+    if (auto *doc{std::get_if<const parser::DoConstruct *>(&c)}) {
       // Do-construct, collect the induction variable.
       if (auto &control{(*doc)->GetLoopControl()}) {
         if (auto *b{std::get_if<parser::LoopControl::Bounds>(&control->u)}) {
@@ -4767,15 +4904,17 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
       }
     } else {
       // Omp-loop-construct, check if it's do/simd with an ORDERED clause.
-      auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&loop)};
-      assert(loopc && "Expecting OpenMPLoopConstruct");
-      const parser::OmpDirectiveSpecification &beginSpec{(*loopc)->BeginDir()};
-      llvm::omp::Directive loopDir{beginSpec.DirId()};
-      if (loopDir == llvm::omp::OMPD_do || loopDir == llvm::omp::OMPD_simd) {
-        // If it has ORDERED clause, stop the traversal.
-        if (parser::omp::FindClause(
-                beginSpec, llvm::omp::Clause::OMPC_ordered)) {
-          break;
+      auto *omp{std::get_if<const parser::OpenMPConstruct *>(&c)};
+      assert(omp && "Expecting OpenMPConstruct");
+      if (auto *loop{parser::Unwrap<parser::OpenMPLoopConstruct>(*omp)}) {
+        const parser::OmpDirectiveSpecification &beginSpec{loop->BeginDir()};
+        llvm::omp::Directive loopDir{beginSpec.DirId()};
+        if (loopDir == llvm::omp::OMPD_do || loopDir == llvm::omp::OMPD_simd) {
+          // If it has ORDERED clause, stop the traversal.
+          if (parser::omp::FindClause(
+                  beginSpec, llvm::omp::Clause::OMPC_ordered)) {
+            break;
+          }
         }
       }
     }
@@ -5760,7 +5899,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPInteropConstruct &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
+void OmpStructureChecker::CheckAllowedRequiresClause(llvm::omp::Clause clause) {
   CheckAllowedClause(clause);
   unsigned version{context_.langOptions().OpenMPVersion};
 

@@ -10,9 +10,7 @@ define float @test(ptr %0, double %1, double %2, double %3) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <3 x double> [[TMP7]], double [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x double> [[TMP8]], double [[TMP1]], i32 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <3 x double> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <3 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <3 x double> [[TMP11]], double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <3 x double> [[TMP12]], double [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <3 x double> [[TMP9]], <3 x double> poison, <3 x i32> <i32 1, i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul <3 x double> [[TMP13]], zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1356
 ; CHECK-NEXT:    [[TMP16:%.*]] = fmul double [[TMP1]], 0.000000e+00

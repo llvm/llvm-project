@@ -899,7 +899,7 @@ static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
   }
 
   bool MadeChanges = false;
-  for (const auto [CI, Func] : MemCmpCalls) {
+  for (const auto &[CI, Func] : MemCmpCalls) {
     if (expandMemCmp(CI, TTI, &DL, PSI, BFI, DTU ? &*DTU : nullptr,
                      Func == LibFunc_bcmp))
       MadeChanges = true;
