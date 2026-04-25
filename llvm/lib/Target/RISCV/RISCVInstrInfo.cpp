@@ -64,6 +64,11 @@ static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
                clEnumValN(MachineTraceStrategy::TS_MinInstrCount, "min-instr",
                           "MinInstrCount strategy.")));
 
+static cl::opt<bool> OutlinerEnableRegSave(
+    "riscv-outliner-regsave", cl::init(true), cl::Hidden,
+    cl::desc("Enable RegSave strategy in machine outliner (save X5 to a "
+             "temporary register when X5 is live across outlined calls)."));
+
 namespace llvm::RISCVVPseudosTable {
 
 using namespace RISCV;
@@ -903,11 +908,12 @@ std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
 }
 
 // This is the version used during InlineSpiller::spillAroundUses
-MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
-    LiveIntervals *LIS, VirtRegMap *VRM) const {
-
+MachineInstr *
+RISCVInstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI, LiveIntervals *LIS,
+                                      VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   std::optional<unsigned> LoadOpc = getFoldedOpcode(MF, MI, Ops, STI);
   if (!LoadOpc)
     return nullptr;
@@ -951,8 +957,8 @@ static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
 
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    MachineInstr *&CopyMI, LiveIntervals *LIS) const {
+    MachineInstr &LoadMI, MachineInstr *&CopyMI, LiveIntervals *LIS) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   // For now, only handle RISCV::PseudoCCMOVGPR.
   if (MI.getOpcode() != RISCV::PseudoCCMOVGPR)
     return nullptr;
@@ -1533,8 +1539,12 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
                           .addMBB(&DestBB, RISCVII::MO_CALL);
 
   RS->enterBasicBlockEnd(MBB);
+  // When cf-protection-branch is enabled, we must use t2 (x7) for software
+  // guarded branches to hold the landing pad label.
+  bool HasCFBranch =
+      MF->getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
   const TargetRegisterClass *RC = &RISCV::GPRRegClass;
-  if (STI.hasStdExtZicfilp())
+  if (HasCFBranch)
     RC = &RISCV::GPRX7RegClass;
   Register TmpGPR =
       RS->scavengeRegisterBackwards(*RC, MI.getIterator(),
@@ -1547,8 +1557,8 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
     // Pick s11(or s1 for rve) because it doesn't make a difference.
     TmpGPR = STI.hasStdExtE() ? RISCV::X9 : RISCV::X27;
-    // Force t2 if Zicfilp is on
-    if (STI.hasStdExtZicfilp())
+    // Force t2 if cf-protection-branch is enabled
+    if (HasCFBranch)
       TmpGPR = RISCV::X7;
 
     int FrameIndex = RVFI->getBranchRelaxationScratchFrameIndex();
@@ -1986,7 +1996,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
 
   if (Opcode == TargetOpcode::BUNDLE)
-    return getInstBundleLength(MI);
+    return getInstBundleSize(MI);
 
   if (MI.getParent() && MI.getParent()->getParent()) {
     if (isCompressibleInst(MI, STI))
@@ -2092,17 +2102,6 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   default:
     return get(Opcode).getSize();
   }
-}
-
-unsigned RISCVInstrInfo::getInstBundleLength(const MachineInstr &MI) const {
-  unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
-  while (++I != E && I->isInsideBundle()) {
-    assert(!I->isBundle() && "No nested bundle!");
-    Size += getInstSizeInBytes(*I);
-  }
-  return Size;
 }
 
 bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
@@ -3634,7 +3633,8 @@ bool RISCVInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 // Enum values indicating how an outlined call should be constructed.
 enum MachineOutlinerConstructionID {
   MachineOutlinerTailCall,
-  MachineOutlinerDefault
+  MachineOutlinerDefault,
+  MachineOutlinerRegSave
 };
 
 bool RISCVInstrInfo::shouldOutlineFromFunctionByDefault(
@@ -3682,6 +3682,34 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
   return false;
 }
 
+static Register findRegisterToSaveX5To(outliner::Candidate &C,
+                                       const TargetRegisterInfo &TRI) {
+  // Candidate registers for saving X5: t1-t6
+  static const MCPhysReg TempRegs[] = {
+      RISCV::X6,  // t1
+      RISCV::X7,  // t2
+      RISCV::X28, // t3
+      RISCV::X29, // t4
+      RISCV::X30, // t5
+      RISCV::X31  // t6
+  };
+
+  const MachineFunction *MF = C.getMF();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  for (MCPhysReg Reg : TempRegs) {
+    if (MRI.isReserved(Reg))
+      continue;
+
+    if (C.isAvailableAcrossAndOutOfSeq(Reg, TRI) &&
+        C.isAvailableInsideSeq(Reg, TRI)) {
+      return Reg;
+    }
+  }
+
+  return Register();
+}
+
 bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
   // If the expansion register for tail calls is live across the candidate
   // outlined call site, we cannot outline that candidate as the expansion
@@ -3709,12 +3737,18 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
 
   // Filter out candidates where the X5 register (t0) can't be used to setup
   // the function call.
-  if (llvm::any_of(C, [this](const MachineInstr &MI) {
-        return isMIModifiesReg(MI, &RegInfo, RISCV::X5);
-      }))
+  if (!C.isAvailableInsideSeq(RISCV::X5, RegInfo))
     return true;
 
-  return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo);
+  // If X5 is available in the region, use X5 directly (MachineOutlinerDefault).
+  if (C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo))
+    return false;
+
+  // Otherwise, try to save X5 into t1-t6 (MachineOutlinerRegSave).
+  if (OutlinerEnableRegSave && findRegisterToSaveX5To(C, RegInfo))
+    return false;
+
+  return true;
 }
 
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
@@ -3779,8 +3813,25 @@ RISCVInstrInfo::getOutliningCandidateInfo(
   if (MOCI != MachineOutlinerTailCall && CFICount > 0)
     return std::nullopt;
 
-  for (auto &C : RepeatedSequenceLocs)
-    C.setCallInfo(MOCI, CallOverhead);
+  if (OutlinerEnableRegSave && MOCI == MachineOutlinerDefault) {
+    // Set per-candidate overhead based on X5 availability
+    for (auto &C : RepeatedSequenceLocs) {
+
+      if (C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo)) {
+        // X5 is available, just need the call
+        unsigned CandCallOverhead = 8;
+        C.setCallInfo(MachineOutlinerDefault, CandCallOverhead);
+      } else {
+        // X5 unavailable, need save + call + restore
+        // Save (2-4) + Call (8) + Restore (2-4)
+        unsigned CandCallOverhead = InstrSizeCExt + 8 + InstrSizeCExt;
+        C.setCallInfo(MachineOutlinerRegSave, CandCallOverhead);
+      }
+    }
+  } else {
+    for (auto &C : RepeatedSequenceLocs)
+      C.setCallInfo(MOCI, CallOverhead);
+  }
 
   unsigned SequenceSize = 0;
   for (auto &MI : Candidate)
@@ -3852,6 +3903,32 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
                             .addGlobalAddress(M.getNamedValue(MF.getName()),
                                               /*Offset=*/0, RISCVII::MO_CALL));
     return It;
+  }
+
+  if (C.CallConstructionID == MachineOutlinerRegSave) {
+    Register SaveReg = findRegisterToSaveX5To(C, RegInfo);
+    assert(SaveReg && "Cannot find an available register to save/restore X5.");
+
+    // Save: ADDI SaveReg, X5, 0 (equivalent to MV SaveReg, X5)
+    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(RISCV::ADDI), SaveReg)
+                            .addReg(RISCV::X5)
+                            .addImm(0));
+    It++;
+
+    // Call: PseudoCALLReg X5
+    It = MBB.insert(
+        It, BuildMI(MF, DebugLoc(), get(RISCV::PseudoCALLReg), RISCV::X5)
+                .addGlobalAddress(M.getNamedValue(MF.getName()), 0,
+                                  RISCVII::MO_CALL));
+    MachineBasicBlock::iterator CallPt = It;
+    It++;
+
+    // Restore: ADDI X5, SaveReg, 0 (equivalent to MV X5, SaveReg)
+    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(RISCV::ADDI), RISCV::X5)
+                            .addReg(SaveReg)
+                            .addImm(0));
+
+    return CallPt;
   }
 
   // Add in a call instruction to the outlined function at the given location.

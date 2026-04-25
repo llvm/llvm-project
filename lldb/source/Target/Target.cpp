@@ -3871,7 +3871,8 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
 
       if (default_to_use_pty) {
 #ifdef _WIN32
-        if (info.GetFlags().Test(eLaunchFlagUsePipes)) {
+        if (info.GetFlags().Test(eLaunchFlagUsePipes) ||
+            ::getenv("LLDB_LAUNCH_FLAG_USE_PIPES")) {
           llvm::Error Err = info.SetUpPipeRedirection();
           LLDB_LOG_ERROR(log, std::move(Err),
                          "SetUpPipeRedirection failed: {0}");
@@ -4454,7 +4455,7 @@ public:
     // we just use the one from this instance.
     if (exe_ctx) {
       Target *target = exe_ctx->GetTargetPtr();
-      if (target) {
+      if (target && !target->IsDummyTarget()) {
         TargetOptionValueProperties *target_properties =
             static_cast<TargetOptionValueProperties *>(
                 target->GetValueProperties().get());
@@ -5295,6 +5296,17 @@ void TargetProperties::SetDebugUtilityExpression(bool debug) {
   SetPropertyAtIndex(idx, debug);
 }
 
+bool TargetProperties::GetCheckValueObjectOwnership() const {
+  const uint32_t idx = ePropertyCheckValueObjectOwnership;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetCheckValueObjectOwnership(bool check) {
+  const uint32_t idx = ePropertyCheckValueObjectOwnership;
+  SetPropertyAtIndex(idx, check);
+}
+
 std::optional<LoadScriptFromSymFile>
 TargetProperties::GetAutoLoadScriptsForModule(
     llvm::StringRef module_name) const {
@@ -5429,6 +5441,30 @@ void Target::NotifyBreakpointChanged(
     Breakpoint &bp, const lldb::EventDataSP &breakpoint_data_sp) {
   if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
+}
+
+FileSpecList Target::GetSafeAutoLoadPaths() const {
+  FileSpecList fspecs = Debugger::GetDefaultSafeAutoLoadPaths();
+
+  // Add platform-specific safe-paths.
+  if (m_platform_sp) {
+    if (auto platform_fspecs_or_err =
+            m_platform_sp->GetSafeAutoLoadPaths(*this))
+      fspecs.Append(*platform_fspecs_or_err);
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Modules | LLDBLog::Platform),
+                     platform_fspecs_or_err.takeError(),
+                     "Skipping safe auto-load: {0}");
+  }
+
+  // Properties for testing get added last so they take priority.
+#ifndef NDEBUG
+  for (const auto &fspec :
+       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
+    fspecs.Append(fspec);
+#endif
+
+  return fspecs;
 }
 
 // FIXME: the language plugin should expression options dynamically and

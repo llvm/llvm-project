@@ -1,3 +1,6 @@
+import lldb
+
+
 class WrapperSynthProvider:
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj
@@ -15,7 +18,9 @@ class WrapperSynthProvider:
         y = self.valobj.GetChildMemberWithName("y")
         if x.IsValid() and y.IsValid():
             sum_val = x.GetValueAsUnsigned(0) + y.GetValueAsUnsigned(0)
-            self.sum_value = self.valobj.CreateValueFromExpression("sum", str(sum_val))
+            data = lldb.SBData.CreateDataFromInt(sum_val)
+            type = self.valobj.target.FindFirstType("int")
+            self.sum_value = self.valobj.CreateValueFromData("sum", data, type)
 
         return False
 
