@@ -77,9 +77,8 @@ add_or_sub(InType x, InType y) {
     if (x_bits.is_inf()) {
       if (y_bits.is_inf()) {
         if (!is_effectively_add) {
-          if (!__builtin_is_constant_evaluated()) {
+          if (!cpp::is_constant_evaluated())
             raise_except_if_required(FE_INVALID);
-          }
           return OutFPBits::quiet_nan().get_val();
         }
 
