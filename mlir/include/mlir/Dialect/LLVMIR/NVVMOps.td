@@ -531,11 +531,40 @@ def NVVM_SinOp : NVVM_SingleResultIntrinsicOp<"sin",
   let summary = "Sine (fast approximation)";
   let description = [{
     Computes a fast approximation of the sine of the input value (in radians).
-    Lowers to PTX `sin.approx{.ftz}.f32`. The `ftz` attribute, when set,
-    flushes subnormal inputs and results to sign-preserving zero.
+    The `ftz` attribute, when set, flushes subnormal inputs and results to 
+    sign-preserving zero.
 
     For more information, see PTX ISA:
     [sin](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sin)
+  }];
+  let arguments = (ins F32:$src,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
+
+def NVVM_CosOp : NVVM_SingleResultIntrinsicOp<"cos",
+    [Pure, SameOperandsAndResultType]> {
+  let summary = "Cosine (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the cosine of the input value (in
+    radians). The `ftz` attribute, when set, flushes subnormal inputs
+    and results to sign-preserving zero.
+  }];
+  let arguments = (ins F32:$src,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
+def NVVM_Ex2Op : NVVM_SingleResultIntrinsicOp<"ex2",
+    [Pure, SameOperandsAndResultType]> {
+  let summary = "Base-2 exponential (fast approximation)";
+  let description = [{
+    Computes a fast approximation of 2 raised to the power of the input
+    value. The `ftz` attribute, when set, flushes subnormal inputs and
+    results to sign-preserving zero.
   }];
   let arguments = (ins F32:$src,
                        DefaultValuedAttr<BoolAttr, "false">:$ftz);
