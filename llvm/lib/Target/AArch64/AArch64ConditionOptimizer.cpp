@@ -136,7 +136,7 @@ private:
   void updateCondInstr(MachineInstr *CondMI, AArch64CC::CondCode NewCC);
   void applyCmpAdjustment(CmpCondPair &Pair, const CmpInfo &Info);
   bool commitPendingPair(std::optional<CmpCondPair> &PendingPair,
-                         DenseMap<Register, CmpCondPair> &PairsByReg);
+                         SmallDenseMap<Register, CmpCondPair> &PairsByReg);
   bool tryOptimizePair(CmpCondPair &First, CmpCondPair &Second);
   bool optimizeIntraBlock(MachineBasicBlock &MBB);
   bool optimizeCrossBlock(MachineBasicBlock &HBB);
@@ -516,7 +516,7 @@ bool AArch64ConditionOptimizerImpl::tryOptimizePair(CmpCondPair &First,
 
 bool AArch64ConditionOptimizerImpl::commitPendingPair(
     std::optional<CmpCondPair> &PendingPair,
-    DenseMap<Register, CmpCondPair> &PairsByReg) {
+    SmallDenseMap<Register, CmpCondPair> &PairsByReg) {
   if (!PendingPair)
     return false;
 
@@ -553,7 +553,7 @@ bool AArch64ConditionOptimizerImpl::commitPendingPair(
 //   csinc w10, w0, w1, ge    ; w10 = (w8 >= 10) ? w0 : w1+1
 //
 bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
-  DenseMap<Register, CmpCondPair> PairsByReg;
+  SmallDenseMap<Register, CmpCondPair> PairsByReg;
   std::optional<CmpCondPair> PendingPair;
   MachineInstr *ActiveCmp = nullptr;
   bool Changed = false;
