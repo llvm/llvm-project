@@ -396,6 +396,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
     }
     setOperationAction(ISD::FP_ROUND, MVT::v2f32, Custom);
+    setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Custom);
   }
 
   // Set operations for 'LASX' feature.
@@ -467,6 +468,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FMAXNUM, VT, Legal);
     }
     setOperationAction(ISD::FP_ROUND, MVT::v4f32, Custom);
+    setOperationAction(ISD::FP_EXTEND, MVT::v4f64, Custom);
   }
 
   // Set DAG combine for LA32 and LA64.
@@ -627,6 +629,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerSETCC(Op, DAG);
   case ISD::FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
+  case ISD::FP_EXTEND:
+    return lowerFP_EXTEND(Op, DAG);
   }
   return SDValue();
 }
@@ -777,6 +781,74 @@ SDValue LoongArchTargetLowering::lowerFP_ROUND(SDValue Op,
     SDValue Lo, Hi;
     std::tie(Lo, Hi) = DAG.SplitVector(In, DL);
     return DAG.getNode(LoongArchISD::VFCVT, DL, VT, Hi, Lo);
+  }
+
+  return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerFP_EXTEND(SDValue Op,
+                                                SelectionDAG &DAG) const {
+
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Src = Op->getOperand(0);
+  EVT SVT = Src.getValueType();
+
+  bool V2F32ToV2F64 =
+      VT == MVT::v2f64 && SVT == MVT::v2f32 && Subtarget.hasExtLSX();
+  bool V4F32ToV4F64 =
+      VT == MVT::v4f64 && SVT == MVT::v4f32 && Subtarget.hasExtLASX();
+  if (!V2F32ToV2F64 && !V4F32ToV4F64)
+    return SDValue();
+
+  // Check if Op is the high part of vector.
+  auto CheckVecHighPart = [](SDValue Op) {
+    Op = peekThroughBitcasts(Op);
+    if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+      SDValue SOp = Op.getOperand(0);
+      EVT SVT = SOp.getValueType();
+      if (!SVT.isVector() || (SVT.getVectorNumElements() % 2 != 0))
+        return SDValue();
+
+      const uint64_t Imm = Op.getConstantOperandVal(1);
+      if (Imm == SVT.getVectorNumElements() / 2)
+        return SOp;
+      return SDValue();
+    }
+    return SDValue();
+  };
+
+  unsigned Opcode;
+  SDValue VFCVTOp;
+  EVT WideOpVT = SVT.getSimpleVT().getDoubleNumVectorElementsVT();
+  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
+
+  // If the operand of ISD::FP_EXTEND comes from the high part of vector,
+  // generate LoongArchISD::VFCVTH, otherwise LoongArchISD::VFCVTL.
+  if (SDValue V = CheckVecHighPart(Src)) {
+    assert(V.getValueSizeInBits() == WideOpVT.getSizeInBits() &&
+           "Unexpected wide vector");
+    Opcode = LoongArchISD::VFCVTH;
+    VFCVTOp = DAG.getBitcast(WideOpVT, V);
+  } else {
+    Opcode = LoongArchISD::VFCVTL;
+    VFCVTOp = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideOpVT,
+                          DAG.getUNDEF(WideOpVT), Src, ZeroIdx);
+  }
+
+  // v2f64 = fp_extend v2f32
+  if (V2F32ToV2F64)
+    return DAG.getNode(Opcode, DL, VT, VFCVTOp);
+
+  // v4f64 = fp_extend v4f32
+  if (V4F32ToV4F64) {
+    // XVFCVT instruction operates on each 128-bit segment as a lane, so a
+    // vector_shuffle is required firstly.
+    SmallVector<int, 8> Mask = {0, 1, 4, 5, 2, 3, 6, 7};
+    SDValue Res = DAG.getVectorShuffle(WideOpVT, DL, VFCVTOp,
+                                       DAG.getUNDEF(WideOpVT), Mask);
+    Res = DAG.getNode(Opcode, DL, VT, Res);
+    return Res;
   }
 
   return SDValue();
