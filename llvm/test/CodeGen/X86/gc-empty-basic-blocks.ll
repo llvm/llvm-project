@@ -1,6 +1,7 @@
 ;; This test verifies that -enable-gc-empty-basic-blocks removes regular empty
 ;; blocks but does not remove empty blocks which have their address taken.
 ; RUN: llc < %s -mtriple=x86_64 -O0 -enable-gc-empty-basic-blocks | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64 -O0 -enable-gc-empty-basic-blocks -enable-new-pm | FileCheck %s
 
 ;; This function has a regular empty block.
 define void @foo(i1 zeroext %0) nounwind {
