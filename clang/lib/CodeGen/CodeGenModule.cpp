@@ -804,44 +804,6 @@ void CodeGenModule::checkAliases() {
       continue;
     }
 
-    if (!IsIFunc) {
-      GlobalDecl AliaseeGD;
-      if (!lookupRepresentativeDecl(GV->getName(), AliaseeGD) ||
-          !isa<VarDecl, FunctionDecl>(AliaseeGD.getDecl())) {
-        Diags.Report(Location, diag::err_alias_to_undefined)
-            << IsIFunc << IsIFunc;
-        Error = true;
-        continue;
-      }
-
-      bool aliasIsFuncDecl = isa<FunctionDecl>(D);
-      bool aliaseeIsFunc = isa<llvm::Function, llvm::GlobalIFunc>(GV);
-      // Function declarations can only alias functions (including IFUNCs).
-      // Similarly, variable declarations can only alias variables.
-      if (aliasIsFuncDecl != aliaseeIsFunc) {
-        Diags.Report(Location, diag::err_alias_between_function_and_variable)
-            << aliasIsFuncDecl;
-        Diags.Report(AliaseeGD.getDecl()->getLocation(),
-                     diag::note_aliasee_declaration);
-        Error = true;
-        continue;
-      }
-
-      // Only report functions.
-      // Type mismatches for variables can be intentional.
-      if (aliasIsFuncDecl && aliaseeIsFunc) {
-        QualType AliasTy = D->getType();
-        QualType AliaseeTy = cast<ValueDecl>(AliaseeGD.getDecl())->getType();
-        if (!Context.typesAreCompatible(AliasTy.getCanonicalType(),
-                                        AliaseeTy.getCanonicalType())) {
-          Diags.Report(Location, diag::warn_alias_type_mismatch)
-              << AliasTy << AliaseeTy;
-          Diags.Report(AliaseeGD.getDecl()->getLocation(),
-                       diag::note_aliasee_declaration);
-        }
-      }
-    }
-
     if (getContext().getTargetInfo().getTriple().isOSAIX())
       if (const llvm::GlobalVariable *GVar =
               dyn_cast<const llvm::GlobalVariable>(GV))
