@@ -152,6 +152,7 @@ struct MIToken {
     kw_call_frame_size,
     kw_noconvergent,
     kw_mmra,
+    kw_lr_split,
 
     // Metadata types.
     kw_distinct,
