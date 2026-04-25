@@ -1946,6 +1946,13 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (ExitingBlocks.empty())
     return false;
 
+  // Bail if L itself or any sub-loop on the predicated path has divergent
+  // effects (may fail to terminate, or contains an irreducible sub-CFG);
+  // otherwise we would silently drop an observable infinite loop in a
+  // function that is not willreturn/mustprogress.
+  if (hasPotentialInfiniteLoop(L, *SE, *LI))
+    return false;
+
   // At this point, ExitingBlocks consists of only those blocks which are
   // predicatable.  Given that, we know we have at least one exit we can
   // predicate if the loop is doesn't have side effects and doesn't have any
