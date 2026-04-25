@@ -643,11 +643,18 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
                               ->getType()
                               ->getAs<PointerType>();
         Arg && Arg->isVoidPointerType()) {
+      // Use the placement argument before the implicit conversion to void*, so
+      // inner origins are still available.
       const Expr *PlacementArg = NE->getPlacementArg(0)->IgnoreImpCasts();
+      // If the placement argument is a glvalue (such as DeclRefExpr), skip its
+      // outer storage origin so the list starts with the pointer origin.
       OriginList *PlacementList =
           getRValueOrigins(PlacementArg, getOriginsList(*PlacementArg));
+      // Placement new constructs the pointee of the placement pointer.
       if (Init)
         flow(PlacementList->peelOuterOrigin(), getOriginsList(*Init), true);
+      // The pointer returned by placement new comes from the placement
+      // argument.
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
           true));
