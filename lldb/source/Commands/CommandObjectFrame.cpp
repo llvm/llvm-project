@@ -32,6 +32,7 @@
 #include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <memory>
 #include <optional>
@@ -434,6 +435,33 @@ may even involve JITing and running code in the target program.)");
   ~CommandObjectFrameVariable() override = default;
 
   Options *GetOptions() override { return &m_option_group; }
+
+  // `frame variable` repeats by incrementing the printing depth. When the depth
+  // is too shallow, hitting enter a few times will quickly expand the data.
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
+    uint32_t new_depth = m_varobj_options.max_depth + 1;
+    std::string cmd;
+    llvm::raw_string_ostream os(cmd);
+    bool skip_next = false;
+    for (const auto &entry : current_command_args) {
+      if (skip_next) {
+        skip_next = false;
+        continue;
+      }
+
+      llvm::StringRef arg = entry.ref();
+      if (arg == "--depth" || arg == "-D") {
+        skip_next = true;
+        os << " " << arg << " " << new_depth;
+      } else if (arg.starts_with("-D")) {
+        os << "-D" << new_depth;
+      } else {
+        os << " " << arg;
+      }
+    }
+    return cmd;
+  }
 
 protected:
   llvm::StringRef GetScopeString(VariableSP var_sp) {
