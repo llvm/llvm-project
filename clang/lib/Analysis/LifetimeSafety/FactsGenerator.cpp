@@ -672,8 +672,8 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
 
   // FIXME: OriginList is null for `new[]` initializers. Remove this `Init`
   // check once array origins are supported.
-  if (OriginList *Init = getOriginsList(*NE->getInitializer()); Init)
-    flow(NewList, Init, true);
+  if (OriginList *InitList = getOriginsList(*Init); InitList)
+    flow(NewList, InitList, true);
 }
 
 void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
