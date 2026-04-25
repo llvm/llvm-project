@@ -66,9 +66,6 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
     return;
 
   const Expr *Ex = dyn_cast<Expr>(Condition);
-  if (!Ex)
-    return;
-
   if (!Ctx.getSVal(Ex).isUndef())
     return;
 
