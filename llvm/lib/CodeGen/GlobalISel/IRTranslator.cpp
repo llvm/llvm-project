@@ -4171,6 +4171,9 @@ static bool checkForMustTailInVarArgFn(bool IsVarArg, const BasicBlock &BB) {
 }
 
 bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
+  if (CurMF.getProperties().hasSelected())
+    return false;
+
   MF = &CurMF;
   const Function &F = MF->getFunction();
   ORE = std::make_unique<OptimizationRemarkEmitter>(&F);

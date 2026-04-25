@@ -132,8 +132,9 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
-  // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasFailedISel())
+  // If the ISel pipeline failed, or we have already selected, do not bother
+  // running this pass.
+  if (MF.getProperties().hasFailedISel() || MF.getProperties().hasSelected())
     return false;
 
   ISel = MF.getSubtarget().getInstructionSelector();
