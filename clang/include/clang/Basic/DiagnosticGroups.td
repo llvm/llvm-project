@@ -954,6 +954,7 @@ def ShadowAll : DiagGroup<"shadow-all", [Shadow, ShadowFieldInConstructor,
 
 def : DiagGroup<"sign-promo">;
 def SignCompare : DiagGroup<"sign-compare">;
+def BoolIntegralComparison : DiagGroup<"bool-integral-comparison">;
 def SwitchDefault  : DiagGroup<"switch-default">;
 def : DiagGroup<"synth">;
 def SizeofArrayArgument : DiagGroup<"sizeof-array-argument">;
@@ -1384,6 +1385,7 @@ def Extra : DiagGroup<"extra", [
     SemiBeforeMethodBody,
     MissingMethodReturnType,
     SignCompare,
+    BoolIntegralComparison,
     UnusedParameter,
     UnusedButSetParameter,
     NullPointerArithmetic,

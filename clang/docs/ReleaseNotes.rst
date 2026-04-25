@@ -509,6 +509,33 @@ Improvements to Clang's diagnostics
 - Added warnings for floating-point exception function calls (fenv.h) without enabling
   floating-point exception behavior via the appropriate flags or pragmas. (#GH128239)
 
+- Added ``-Wbool-integral-comparison`` to warn on suspicious comparisons of ``bool``
+  and non-constant integral or enumeration expressions. For example:
+
+  .. code-block:: c++
+
+    bool b = true;
+    int i = 2;
+    bool res = (b == i);
+
+  Clang will warn:
+
+  .. code-block:: text
+
+    warning: comparison between 'bool' and integral type 'int' is suspicious; the 'bool'
+    operand is converted to an integral value that can only be 0 or 1 [-Wbool-integral-comparison]
+    bool res = (b == i);
+                ~ ^  ~
+
+  This warning does not apply to integral constant expressions. Comparisons against
+  0 and 1 are common intentional patterns, while comparisons against other constants
+  are better handled by existing tautological comparison warnings.
+
+  It also does not apply to dependent template comparisons or integral expressions
+  known to have a boolean value, such as unsigned one-bit bit fields.
+
+  This warning is enabled by ``-Wextra``. (#GH194180)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
