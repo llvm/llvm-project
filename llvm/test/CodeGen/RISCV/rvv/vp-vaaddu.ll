@@ -142,7 +142,7 @@ define <vscale x 2 x i8> @vaaddu_9(<vscale x 2 x i16> %x, <vscale x 2 x i16> %y,
 ; CHECK-NEXT:    vwaddu.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v10, 1, v0.t
-; CHECK-NEXT:    vsrl.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsrl.vi v8, v8, 1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
