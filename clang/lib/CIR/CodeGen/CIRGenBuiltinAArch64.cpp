@@ -741,11 +741,17 @@ static mlir::Value emitCommonNeonBuiltinExpr(
                          ctx.BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vshl_v:
-  case NEON::BI__builtin_neon_vshlq_v:
-    return cir::ShiftOp::create(cgf.getBuilder(), loc, vTy,
-                              cgf.getBuilder().createBitcast(ops[0], vTy), 
-                              cgf.getBuilder().createBitcast(ops[1], vTy),
-                              true);
+  case NEON::BI__builtin_neon_vshlq_v: {
+    llvm::StringRef llvmIntrName =
+        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
+            usgn ? llvmIntrinsic : altLLVMIntrinsic));
+    mlir::Value result = emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
+                        /*argTypes=*/{vTy, vTy}, ops,
+                        llvmIntrName,
+                        /*funcResTy=*/vTy, loc);
+    mlir::Type resultType = cgf.convertType(expr->getType());
+    return cgf.getBuilder().createBitcast(result, resultType);
+    }
   case NEON::BI__builtin_neon_vmul_v:
   case NEON::BI__builtin_neon_vmulq_v:
     return cgf.getBuilder().emitIntrinsicCallOp(loc, "aarch64.neon.pmul", vTy,
@@ -2085,7 +2091,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
   // defer to common code if it's been added to our special map.
   builtin = findARMVectorIntrinsicInMap(AArch64SIMDIntrinsicMap, builtinID,
-                                        aarch64SIMDIntrinsicsProvenSorted);
+                                        aarch64SIMDIntrinsicsProvenSorted);                                          
   if (builtin)
     return emitCommonNeonBuiltinExpr(
         *this, builtin->BuiltinID, builtin->LLVMIntrinsic,
