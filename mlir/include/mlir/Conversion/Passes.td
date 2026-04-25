@@ -187,6 +187,32 @@ def ArithToLLVMConversionPass : Pass<"convert-arith-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToLUT
+//===----------------------------------------------------------------------===//
+
+def ConvertArithFP8ExtFToLUT : Pass<"convert-arith-fp8-extf-to-lut", "ModuleOp"> {
+  let summary = "Replace arith.extf from f8 types to f32 with a memref LUT lookup";
+  let description = [{
+    Replaces each `arith.extf %v : f8X to f32` with a load from a 256-entry
+    f32 global constant table indexed by the f8 bit pattern (0–255).  One table
+    is emitted per distinct f8 source format; the values are precomputed at
+    compile time via APFloat so they match the format's exact IEEE semantics.
+    This LUT approach is alternative to direct arith operations to convert to f32.
+
+    The expansion sequence is:
+      %tbl  = memref.get_global @__extf_lut_<fmt> : memref<256xf32>
+      %i8   = arith.bitcast  %v   : f8X   -> i8
+      %ui32 = arith.extui    %i8  : i8    -> i32
+      %idx  = arith.index_cast %ui32 : i32 -> index
+      %res  = memref.load    %tbl[%idx] : memref<256xf32>
+
+    Supported source types: f8E4M3FN, f8E5M2, f8E4M3FNUZ, f8E5M2FNUZ,
+    f8E4M3B11FNUZ, f8E3M4, f8E4M3.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithToAPFloat
 //===----------------------------------------------------------------------===//
 
