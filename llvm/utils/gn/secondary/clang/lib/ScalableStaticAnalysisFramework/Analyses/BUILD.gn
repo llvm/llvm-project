@@ -8,6 +8,7 @@ static_library("Analyses") {
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
     "//llvm/lib/Support",
   ]
+  include_dirs = [ "." ]
   sources = [
     "CallGraph/CallGraphExtractor.cpp",
     "CallGraph/CallGraphJSONFormat.cpp",

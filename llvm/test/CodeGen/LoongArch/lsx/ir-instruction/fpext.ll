@@ -22,21 +22,16 @@ define void @fpext_v2f32_to_v2f64(ptr %res, ptr %a0) nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    fld.s $fa0, $a1, 4
 ; LA32-NEXT:    fld.s $fa1, $a1, 0
-; LA32-NEXT:    fcvt.d.s $fa0, $fa0
-; LA32-NEXT:    fcvt.d.s $fa1, $fa1
-; LA32-NEXT:    vextrins.d $vr1, $vr0, 16
-; LA32-NEXT:    vst $vr1, $a0, 0
+; LA32-NEXT:    vextrins.w $vr1, $vr0, 16
+; LA32-NEXT:    vfcvtl.d.s $vr0, $vr1
+; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: fpext_v2f32_to_v2f64:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.d $a1, $a1, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 0
-; LA64-NEXT:    vreplvei.w $vr1, $vr0, 1
-; LA64-NEXT:    fcvt.d.s $fa1, $fa1
-; LA64-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LA64-NEXT:    fcvt.d.s $fa0, $fa0
-; LA64-NEXT:    vextrins.d $vr0, $vr1, 16
+; LA64-NEXT:    vfcvtl.d.s $vr0, $vr0
 ; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
@@ -50,18 +45,10 @@ define void @fpext_v4f32_to_v4f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: fpext_v4f32_to_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 1
-; CHECK-NEXT:    fcvt.d.s $fa1, $fa1
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 0
-; CHECK-NEXT:    fcvt.d.s $fa2, $fa2
-; CHECK-NEXT:    vextrins.d $vr2, $vr1, 16
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 3
-; CHECK-NEXT:    fcvt.d.s $fa1, $fa1
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 2
-; CHECK-NEXT:    fcvt.d.s $fa0, $fa0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
+; CHECK-NEXT:    vfcvtl.d.s $vr1, $vr0
+; CHECK-NEXT:    vfcvth.d.s $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 16
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    vst $vr1, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <4 x float>, ptr %a0

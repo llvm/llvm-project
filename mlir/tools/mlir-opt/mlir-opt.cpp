@@ -99,6 +99,7 @@ void registerTestDynamicPipelinePass();
 void registerTestRemarkPass();
 void registerTestEmulateNarrowTypePass();
 void registerTestFooAnalysisPass();
+void registerTestStagedAnalysesPass();
 void registerTestComposeSubView();
 void registerTestMultiBuffering();
 void registerTestIRVisitorsPass();
@@ -247,6 +248,7 @@ static void registerTestPasses() {
   mlir::test::registerTestRemarkPass();
   mlir::test::registerTestEmulateNarrowTypePass();
   mlir::test::registerTestFooAnalysisPass();
+  mlir::test::registerTestStagedAnalysesPass();
   mlir::test::registerTestComposeSubView();
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestIRVisitorsPass();

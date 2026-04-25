@@ -5320,6 +5320,23 @@ bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchConstantFoldCountOp(MachineInstr &MI,
+                                              BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  auto Csts = ConstantFoldCountOp(MI.getOpcode(), MRI.getType(Dst),
+                                  MI.getOperand(1).getReg(), MRI);
+  if (Csts.empty())
+    return false;
+
+  MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+    if (Csts.size() == 1)
+      B.buildConstant(Dst, Csts[0]);
+    else
+      B.buildBuildVectorConstant(Dst, Csts);
+  };
+  return true;
+}
+
 bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
                                             APInt &MatchInfo) const {
   Register Op1 = MI.getOperand(1).getReg();

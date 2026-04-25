@@ -649,6 +649,25 @@ func.func @scaled_mfma(%arg0 : f8E8M0FNU, %arg1 : vector<32xf6E2M3FN>, %arg2 : v
   func.return %0 : vector<16xf32>
 }
 
+// CHECK-LABEL: func @sparse_mfma
+func.func @sparse_mfma(%a16_4 : vector<4xf16>, %b16_8 : vector<8xf16>,
+                       %a16_8 : vector<8xf16>, %b16_16 : vector<16xf16>,
+                       %a8_8 : vector<8xi8>, %b8_16 : vector<16xi8>,
+                       %a8_16 : vector<16xi8>, %b8_32 : vector<32xi8>,
+                       %c4f : vector<4xf32>, %c4i : vector<4xi32>,
+                       %idx4xi8 : vector<4xi8>, %idx2xi16 : vector<2xi16>,
+                       %idxI32 : i32) {
+  // CHECK: amdgpu.sparse_mfma 16x16x32 {{.*}} sparse({{.*}} : vector<4xi8>)
+  %0 = amdgpu.sparse_mfma 16x16x32 %a16_4 * %b16_8 + %c4f sparse(%idx4xi8 : vector<4xi8>) { abid = 3 : i32, cbsz = 0 : i32 } : vector<4xf16>, vector<8xf16>, vector<4xf32>
+  // CHECK: amdgpu.sparse_mfma 16x16x64 {{.*}} sparse({{.*}} : vector<2xi16>)
+  %1 = amdgpu.sparse_mfma 16x16x64 %a8_8 * %b8_16 + %c4i sparse(%idx2xi16 : vector<2xi16>) { abid = 1 : i32, cbsz = 0 : i32 } : vector<8xi8>, vector<16xi8>, vector<4xi32>
+  // CHECK: amdgpu.sparse_mfma 16x16x64 {{.*}} sparse({{.*}} : vector<2xi16>)
+  %2 = amdgpu.sparse_mfma 16x16x64 %a16_8 * %b16_16 + %c4f sparse(%idx2xi16 : vector<2xi16>) { abid = 1 : i32, cbsz = 0 : i32 } : vector<8xf16>, vector<16xf16>, vector<4xf32>
+  // CHECK: amdgpu.sparse_mfma 16x16x128 {{.*}} sparse({{.*}} : i32)
+  %3 = amdgpu.sparse_mfma 16x16x128 %a8_16 * %b8_32 + %c4i sparse(%idxI32 : i32) { abid = 0 : i32, cbsz = 0 : i32 } : vector<16xi8>, vector<32xi8>, vector<4xi32>
+  func.return
+}
+
 // CHECK-LABEL: func @transpose_load
 func.func @transpose_load(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16, 3>) -> vector<4xf16> {
   // CHECK: amdgpu.transpose_load

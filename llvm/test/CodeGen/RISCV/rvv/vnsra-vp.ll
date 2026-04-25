@@ -5,8 +5,11 @@
 define <vscale x 1 x i16> @vsra_vv_nxv1i16(<vscale x 1 x i32> %a, <vscale x 1 x i16> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsra_vv_nxv1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsra.wv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v10, v9
+; CHECK-NEXT:    vsra.vv v8, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %bext = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i16(<vscale x 1 x i16> %b, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   %v = call <vscale x 1 x i32> @llvm.vp.ashr.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %bext, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
@@ -17,8 +20,11 @@ define <vscale x 1 x i16> @vsra_vv_nxv1i16(<vscale x 1 x i32> %a, <vscale x 1 x 
 define <vscale x 1 x i16> @vsra_vv_nxv1i16_unmasked(<vscale x 1 x i32> %a, <vscale x 1 x i16> %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vsra_vv_nxv1i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsra.wv v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v10, v9
+; CHECK-NEXT:    vsra.vv v8, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %bext = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i16(<vscale x 1 x i16> %b, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   %v = call <vscale x 1 x i32> @llvm.vp.ashr.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %bext, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
@@ -29,8 +35,11 @@ define <vscale x 1 x i16> @vsra_vv_nxv1i16_unmasked(<vscale x 1 x i32> %a, <vsca
 define <vscale x 1 x i32> @vsra_vv_nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i32> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsra_vv_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsra.wv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vsext.vf2 v10, v9
+; CHECK-NEXT:    vsra.vv v8, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %bext = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i32(<vscale x 1 x i32> %b, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   %v = call <vscale x 1 x i64> @llvm.vp.ashr.nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %bext, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
@@ -41,8 +50,11 @@ define <vscale x 1 x i32> @vsra_vv_nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x 
 define <vscale x 1 x i32> @vsra_vv_nxv1i64_unmasked(<vscale x 1 x i64> %a, <vscale x 1 x i32> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsra_vv_nxv1i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsra.wv v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vsext.vf2 v10, v9
+; CHECK-NEXT:    vsra.vv v8, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %bext = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i32(<vscale x 1 x i32> %b, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   %v = call <vscale x 1 x i64> @llvm.vp.ashr.nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %bext, <vscale x 1 x i1> splat (i1 -1), i32 %evl)

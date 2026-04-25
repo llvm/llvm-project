@@ -91,12 +91,8 @@ constexpr bool testSpan() {
 
   TEST_DIAGNOSTIC_PUSH
   TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdangling")
-  std::span<const int> s5 = {{1, 2}};
-#if TEST_STD_VER >= 26
-  std::span<const int, 2> s6({1, 2});
-#else
+  std::span<const int> s5    = {{1, 2}};
   std::span<const int, 2> s6 = {{1, 2}};
-#endif
   assert(s5.size() == 2); // and it dangles
   assert(s6.size() == 2); // and it dangles
   TEST_DIAGNOSTIC_POP

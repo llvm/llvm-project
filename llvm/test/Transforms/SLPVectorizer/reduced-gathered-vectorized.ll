@@ -23,10 +23,10 @@ define i16 @test() {
 ; X86-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; X86-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> [[TMP12]], <8 x i32> <i32 0, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; X86-NEXT:    [[TMP10:%.*]] = insertelement <8 x i64> [[TMP9]], i64 [[TMP0]], i32 3
-; X86-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP16:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
 ; X86-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i64> [[TMP16]], <8 x i64> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; X86-NEXT:    [[TMP16:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; X86-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; X86-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i64> [[TMP16]], <8 x i64> [[TMP18]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
 ; X86-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i64> [[TMP17]], <8 x i64> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 8, i32 3, i32 4, i32 5, i32 6, i32 8>
 ; X86-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.xor.v8i64(<8 x i64> [[TMP14]])
 ; X86-NEXT:    [[OP_RDX:%.*]] = xor i64 [[TMP15]], [[TMP6]]
@@ -53,10 +53,10 @@ define i16 @test() {
 ; AARCH64-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AARCH64-NEXT:    [[TMP15:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> [[TMP9]], <8 x i32> <i32 0, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AARCH64-NEXT:    [[TMP10:%.*]] = insertelement <8 x i64> [[TMP15]], i64 [[TMP0]], i32 3
-; AARCH64-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AARCH64-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> [[TMP16]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
 ; AARCH64-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AARCH64-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i64> [[TMP17]], <8 x i64> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; AARCH64-NEXT:    [[TMP16:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; AARCH64-NEXT:    [[TMP17:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AARCH64-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i64> [[TMP16]], <8 x i64> [[TMP17]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
 ; AARCH64-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP14]], <8 x i64> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 8, i32 3, i32 4, i32 5, i32 6, i32 8>
 ; AARCH64-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.xor.v8i64(<8 x i64> [[TMP11]])
 ; AARCH64-NEXT:    [[OP_RDX:%.*]] = xor i64 [[TMP12]], [[TMP6]]

@@ -102,12 +102,12 @@ public:
 
     Context.setUseNamesOnTempLabels(true);
 
-    auto *TO = Context.getTargetOptions();
-    IsVerboseAsm = TO->AsmVerbose;
+    const MCTargetOptions &TO = Context.getTargetOptions();
+    IsVerboseAsm = TO.AsmVerbose;
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
-    ShowInst = TO->ShowMCInst;
-    switch (TO->MCUseDwarfDirectory) {
+    ShowInst = TO.ShowMCInst;
+    switch (TO.MCUseDwarfDirectory) {
     case MCTargetOptions::DisableDwarfDirectory:
       UseDwarfDirectory = false;
       break;

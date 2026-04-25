@@ -72,6 +72,22 @@ void f4(_Atomic(float) *p) {
 // OGCG-LABEL: @f4
 // OGCG: store atomic float 0x40091EB860000000, ptr %{{.+}} seq_cst, align 4
 
+void atomic_to_non_atomic(_Atomic int *ptr, _Atomic volatile int *vptr) {
+  // CIR-LABEL: @atomic_to_non_atomic
+  // LLVM-LABEL: @atomic_to_non_atomic
+  // OGCG-LABEL: @atomic_to_non_atomic
+
+  int a = *ptr;
+  // CIR: %{{.+}} = cir.load align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+  // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+
+  int b = *vptr;
+  // CIR: %{{.+}} = cir.load volatile align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic volatile i32, ptr %{{.+}} seq_cst, align 4
+  // OGCG: %{{.+}} = load atomic volatile i32, ptr %{{.+}} seq_cst, align 4
+}
+
 void load(int *ptr) {
   int x;
   __atomic_load(ptr, &x, __ATOMIC_RELAXED);

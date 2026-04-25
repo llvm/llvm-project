@@ -676,7 +676,7 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
   if (ty->isAtomicType() || isLValueSuitableForInlineAtomic(atomicLValue))
-    cgm.errorNYI("emitLoadOfScalar: load atomic");
+    return emitAtomicLoad(atomicLValue, loc).getValue();
 
   if (mlir::isa<cir::VoidType>(eltTy))
     cgm.errorNYI(loc, "emitLoadOfScalar: void type");

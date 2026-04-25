@@ -785,7 +785,6 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::acos:
     case Intrinsic::asin:
     case Intrinsic::atan:
-    case Intrinsic::canonicalize:
     case Intrinsic::cos:
     case Intrinsic::cosh:
     case Intrinsic::exp:

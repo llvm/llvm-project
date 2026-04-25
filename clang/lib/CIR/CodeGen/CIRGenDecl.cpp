@@ -677,7 +677,7 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   // There are a lot of attributes that need to be handled here. Until
   // we start to support them, we just report an error if there are any.
   if (d.hasAttr<AnnotateAttr>())
-    cgm.errorNYI(d.getSourceRange(), "emitStaticVarDecl: Global annotations");
+    cgm.addGlobalAnnotations(&d, var);
   if (d.getAttr<PragmaClangBSSSectionAttr>())
     cgm.errorNYI(d.getSourceRange(),
                  "emitStaticVarDecl: CIR global BSS section attribute");

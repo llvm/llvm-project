@@ -45,7 +45,6 @@ define void @test(ptr noalias %0) {
 ; CHECK-NEXT:    store double [[TMP43]], ptr getelementptr inbounds (i8, ptr @solid_, i64 392), align 8
 ; CHECK-NEXT:    [[TMP44:%.*]] = load <2 x double>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP46:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 [[TMP6]], <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x double> poison)
-; CHECK-NEXT:    [[TMP47:%.*]] = shufflevector <8 x double> [[TMP46]], <8 x double> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP50:%.*]] = shufflevector <8 x double> [[TMP46]], <8 x double> poison, <2 x i32> <i32 7, i32 0>
 ; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <2 x double> [[TMP50]], double [[TMP29]], i32 0
 ; CHECK-NEXT:    [[TMP55:%.*]] = fsub <2 x double> [[TMP39]], [[TMP44]]

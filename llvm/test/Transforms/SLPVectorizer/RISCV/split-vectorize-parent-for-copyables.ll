@@ -5,27 +5,24 @@ define i1 @test(i32 %0, i32 %add21.i, i32 %1) #0 {
 ; CHECK-LABEL: define i1 @test(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[ADD21_I:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP0]]
-; CHECK-NEXT:    [[DIFF_CHECK132:%.*]] = icmp ugt i32 [[ADD21_I]], [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i32> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK134:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    [[CONFLICT_RDX135:%.*]] = or i1 [[DIFF_CHECK132]], [[DIFF_CHECK134]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 0, [[TMP0]]
-; CHECK-NEXT:    [[DIFF_CHECK136:%.*]] = icmp ugt i32 [[TMP0]], [[TMP4]]
-; CHECK-NEXT:    [[CONFLICT_RDX137:%.*]] = or i1 [[CONFLICT_RDX135]], [[DIFF_CHECK136]]
 ; CHECK-NEXT:    [[DIFF_CHECK138:%.*]] = icmp ult i32 [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[CONFLICT_RDX139:%.*]] = or i1 [[CONFLICT_RDX137]], [[DIFF_CHECK138]]
-; CHECK-NEXT:    [[DIFF_CHECK140:%.*]] = icmp ugt i32 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[CONFLICT_RDX141:%.*]] = or i1 [[CONFLICT_RDX139]], [[DIFF_CHECK140]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[DIFF_CHECK142:%.*]] = icmp eq i32 [[TMP5]], 0
-; CHECK-NEXT:    [[CONFLICT_RDX143:%.*]] = or i1 [[CONFLICT_RDX141]], [[DIFF_CHECK142]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 0, [[TMP0]]
-; CHECK-NEXT:    [[DIFF_CHECK146:%.*]] = icmp ugt i32 [[TMP0]], [[TMP6]]
-; CHECK-NEXT:    [[CONFLICT_RDX147:%.*]] = or i1 [[CONFLICT_RDX143]], [[DIFF_CHECK146]]
-; CHECK-NEXT:    [[DIFF_CHECK148:%.*]] = icmp ult i32 [[TMP3]], [[ADD21_I]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[ADD21_I]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt <4 x i32> [[TMP8]], [[TMP4]]
+; CHECK-NEXT:    [[DIFF_CHECK149:%.*]] = icmp ult i32 [[TMP3]], [[ADD21_I]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP9]])
+; CHECK-NEXT:    [[CONFLICT_RDX147:%.*]] = or i1 [[TMP10]], [[DIFF_CHECK138]]
+; CHECK-NEXT:    [[DIFF_CHECK148:%.*]] = or i1 [[DIFF_CHECK149]], [[DIFF_CHECK134]]
 ; CHECK-NEXT:    [[CONFLICT_RDX149:%.*]] = or i1 [[CONFLICT_RDX147]], [[DIFF_CHECK148]]
-; CHECK-NEXT:    ret i1 [[CONFLICT_RDX149]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i1 [[CONFLICT_RDX149]], [[DIFF_CHECK142]]
+; CHECK-NEXT:    ret i1 [[OP_RDX3]]
 ;
 entry:
   %2 = sub i32 0, %0

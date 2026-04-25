@@ -111,6 +111,50 @@ void AArch64MCLFIRewriter::emitMov(MCRegister Dest, MCRegister Src,
   emitInst(Inst, Out, STI);
 }
 
+// {br,blr} xN
+// ->
+// add x28, x27, wN, uxtw
+// {br,blr} x28
+void AArch64MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
+                                                 MCStreamer &Out,
+                                                 const MCSubtargetInfo &STI) {
+  assert(Inst.getNumOperands() >= 1 && Inst.getOperand(0).isReg() &&
+         "expected register operand");
+  MCRegister BranchReg = Inst.getOperand(0).getReg();
+
+  // Guard the branch target through X28.
+  emitAddMask(LFIAddrReg, BranchReg, Out, STI);
+  emitBranch(Inst.getOpcode(), LFIAddrReg, Out, STI);
+}
+
+// ret xN (where xN != x30)
+// ->
+// add x28, x27, wN, uxtw
+// ret x28
+//
+// ret (x30) is safe since x30 is always within the sandbox.
+void AArch64MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
+                                         const MCSubtargetInfo &STI) {
+  assert(Inst.getNumOperands() >= 1 && Inst.getOperand(0).isReg() &&
+         "expected register operand");
+  // RET through LR is safe since LR is always within sandbox.
+  if (Inst.getOperand(0).getReg() != AArch64::LR)
+    rewriteIndirectBranch(Inst, Out, STI);
+  else
+    emitInst(Inst, Out, STI);
+}
+
+// modify x30
+// ->
+// modify x30
+// add x30, x27, w30, uxtw
+void AArch64MCLFIRewriter::rewriteLRModification(const MCInst &Inst,
+                                                 MCStreamer &Out,
+                                                 const MCSubtargetInfo &STI) {
+  emitInst(Inst, Out, STI);
+  emitAddMask(AArch64::LR, AArch64::LR, Out, STI);
+}
+
 // svc #0
 // ->
 // mov x26, x30
@@ -191,6 +235,19 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
     error(Inst, "illegal access to privileged thread pointer register");
     return;
   }
+
+  // Control flow.
+  switch (Inst.getOpcode()) {
+  case AArch64::RET:
+    return rewriteReturn(Inst, Out, STI);
+  case AArch64::BR:
+  case AArch64::BLR:
+    return rewriteIndirectBranch(Inst, Out, STI);
+  }
+
+  // Link register modification.
+  if (explicitlyModifiesRegister(Inst, AArch64::LR))
+    return rewriteLRModification(Inst, Out, STI);
 
   emitInst(Inst, Out, STI);
 }

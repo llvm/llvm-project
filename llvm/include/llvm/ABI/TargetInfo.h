@@ -81,7 +81,7 @@ protected:
   bool isAggregateTypeForABI(const Type *Ty) const;
 };
 
-// TODO: Add factory functions for supported targets here.
+std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 
 } // namespace abi
 } // namespace llvm

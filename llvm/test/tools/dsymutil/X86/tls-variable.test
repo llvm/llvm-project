@@ -11,6 +11,10 @@
 # RUN: echo '...' >> %t2.map
 # RUN: dsymutil -y %t2.map --keep-function-for-static -f -o - | llvm-dwarfdump -a - | FileCheck %s
 # RUN: dsymutil --linker parallel -y %t2.map --keep-function-for-static -f -o - | llvm-dwarfdump -a - | FileCheck %s
+#
+## In update mode, markEverythingAsKept must also handle DW_OP_GNU_push_tls_address.
+# RUN: dsymutil -y %t2.map --keep-function-for-static -f -o %t.dSYM
+# RUN: dsymutil -u %t.dSYM -f -o - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=UPDATE
 
 # CHECK: file format Mach-O 64-bit x86-64
 # CHECK: .debug_info contents:
@@ -24,6 +28,20 @@
 # CHECK: DW_AT_location        (DW_OP_const8u 0x{{.*}}, DW_OP_GNU_push_tls_address)
 # CHECK: DW_AT_name{{.*}}"var2"
 # CHECK: DW_AT_location        (DW_OP_const8u 0x{{.*}}, DW_OP_form_tls_address)
+#
+## Check that both TLS variables appear in the accelerator table.
+# CHECK: .apple_names
+# CHECK-DAG: "var1"
+# CHECK-DAG: "var2"
+
+# UPDATE: DW_TAG_variable
+# UPDATE: DW_AT_name{{.*}}"var1"
+# UPDATE: DW_AT_location        (DW_OP_const8u 0x{{.*}}, DW_OP_GNU_push_tls_address)
+# UPDATE: DW_AT_name{{.*}}"var2"
+# UPDATE: DW_AT_location        (DW_OP_const8u 0x{{.*}}, DW_OP_form_tls_address)
+# UPDATE: .apple_names
+# UPDATE-DAG: "var1"
+# UPDATE-DAG: "var2"
 
 --- !mach-o
 FileHeader:

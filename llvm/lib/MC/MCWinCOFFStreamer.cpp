@@ -125,8 +125,7 @@ MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCObjectWriter> OW)
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW), std::move(CE)),
       CurSymbol(nullptr) {
-  auto *TO = Context.getTargetOptions();
-  if (TO && TO->MCIncrementalLinkerCompatible)
+  if (Context.getTargetOptions().MCIncrementalLinkerCompatible)
     getWriter().setIncrementalLinkerCompatible(true);
 }
 

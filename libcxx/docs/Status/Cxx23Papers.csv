@@ -58,7 +58,7 @@
 "`P1223R5 <https://wg21.link/P1223R5>`__","``ranges::find_last()``, ``ranges::find_last_if()``, and ``ranges::find_last_if_not()``","2022-07 (Virtual)","|Complete|","19","`#105194 <https://github.com/llvm/llvm-project/issues/105194>`__",""
 "`P1467R9 <https://wg21.link/P1467R9>`__","Extended ``floating-point`` types and standard names","2022-07 (Virtual)","","","`#105196 <https://github.com/llvm/llvm-project/issues/105196>`__",""
 "`P1642R11 <https://wg21.link/P1642R11>`__","Freestanding ``[utilities]``, ``[ranges]``, and ``[iterators]``","2022-07 (Virtual)","","","`#105197 <https://github.com/llvm/llvm-project/issues/105197>`__",""
-"`P1899R3 <https://wg21.link/P1899R3>`__","``stride_view``","2022-07 (Virtual)","","","`#105198 <https://github.com/llvm/llvm-project/issues/105198>`__",""
+"`P1899R3 <https://wg21.link/P1899R3>`__","``stride_view``","2022-07 (Virtual)","|Complete|","23","`#105198 <https://github.com/llvm/llvm-project/issues/105198>`__",""
 "`P2093R14 <https://wg21.link/P2093R14>`__","Formatted output","2022-07 (Virtual)","|Complete|","18","`#105199 <https://github.com/llvm/llvm-project/issues/105199>`__",""
 "`P2165R4 <https://wg21.link/P2165R4>`__","Compatibility between ``tuple``, ``pair`` and ``tuple-like`` objects","2022-07 (Virtual)","|Partial|","","`#105200 <https://github.com/llvm/llvm-project/issues/105200>`__","Only the part for ``zip_view`` is implemented."
 "`P2278R4 <https://wg21.link/P2278R4>`__","``cbegin`` should always return a constant iterator","2022-07 (Virtual)","","","`#105201 <https://github.com/llvm/llvm-project/issues/105201>`__",""

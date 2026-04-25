@@ -873,6 +873,11 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
         continue;
 
+      // TODO: Support scalarizing ExtractValue.
+      if (match(Def,
+                m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
+        continue;
+
       auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
                                           Def->operands(), /*IsUniform*/ true,
                                           /*Mask*/ nullptr, /*Flags*/ *Def);
