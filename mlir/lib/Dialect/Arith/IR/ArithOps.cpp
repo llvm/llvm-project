@@ -516,6 +516,11 @@ OpFoldResult arith::SubIOp::fold(FoldAdaptor adaptor) {
       return add.getRhs();
   }
 
+  // subi(a, subi(a, b)) -> b
+  if (auto sub = getRhs().getDefiningOp<SubIOp>())
+    if (getLhs() == sub.getLhs())
+      return sub.getRhs();
+
   return constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(),
       [](APInt a, const APInt &b) { return std::move(a) - b; });
@@ -2948,8 +2953,8 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
 Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
                                     OpBuilder &builder, Location loc,
                                     bool useOnlyFiniteValue) {
-  if (auto attr =
-getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue))
+  if (auto attr = getIdentityValueAttr(op, resultType, builder, loc,
+                                       useOnlyFiniteValue))
     return arith::ConstantOp::create(builder, loc, attr);
   return {};
 }
