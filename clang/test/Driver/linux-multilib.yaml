@@ -1,22 +1,31 @@
 # Basic selection where -fmultilib-flag=debug selects the debug variant.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
 # RUN:     --target=x86_64-linux-gnu -fmultilib-flag=debug --sysroot= \
+# RUN:     -ccc-install-dir %S/Inputs/multilib_linux_tree/usr/bin \
 # RUN:   | FileCheck --check-prefix=CHECK-DEBUG %s
 # CHECK-DEBUG:      "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+# CHECK-DEBUG:      "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-unknown-linux-gnu/debug"
 # CHECK-DEBUG:      "-L{{[^"]*}}/debug"
 
 # Default behavior where no variant path is prepended.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
 # RUN:     --target=x86_64-linux-gnu --sysroot= \
+# RUN:     -ccc-install-dir %S/Inputs/multilib_linux_tree/usr/bin \
 # RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
 # CHECK-DEFAULT-NOT: "-L{{[^"]*}}/debug"
 # CHECK-DEFAULT-NOT: "-L{{[^"]*}}/release"
 # CHECK-DEFAULT-NOT: "-L{{[^"]*}}/noexcept"
+# CHECK-DEFAULT-NOT: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-unknown-linux-gnu/debug"
+# CHECK-DEFAULT-NOT: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-unknown-linux-gnu/release"
+# CHECK-DEFAULT-NOT: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-unknown-linux-gnu/noexcept"
 
 # Multiple matches stacking on top of each-other.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
 # RUN:     --target=x86_64-linux-gnu -fmultilib-flag=debug -fno-exceptions --sysroot= \
+# RUN:     -ccc-install-dir %S/Inputs/multilib_linux_tree/usr/bin \
 # RUN:   | FileCheck --check-prefix=CHECK-LAYERED %s
+# CHECK-LAYERED:      "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-unknown-linux-gnu/noexcept"
+# CHECK-LAYERED-SAME: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-unknown-linux-gnu/debug"
 # CHECK-LAYERED:      "-L{{[^"]*}}/noexcept"
 # CHECK-LAYERED-SAME: "-L{{[^"]*}}/debug"
 

@@ -34,6 +34,8 @@ def SDT_LoongArchVLDREPL : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisPtrTy<1>]>;
 def SDT_LoongArchVMSKCOND : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>;
 def SDT_LoongArchVFCVT_S_D : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
                                                   SDTCisVec<1>, SDTCisFP<1>, SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchVFCVTLH_D_S : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisFP<0>,
+                                                    SDTCisVec<1>, SDTCisFP<1>]>;
 
 // Target nodes.
 
@@ -97,6 +99,8 @@ def loongarch_vmskeqz: SDNode<"LoongArchISD::VMSKEQZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmsknez: SDNode<"LoongArchISD::VMSKNEZ", SDT_LoongArchVMSKCOND>;
 
 def loongarch_vfcvt_s_d: SDNode<"LoongArchISD::VFCVT", SDT_LoongArchVFCVT_S_D>;
+def loongarch_vfcvtl_d_s: SDNode<"LoongArchISD::VFCVTL", SDT_LoongArchVFCVTLH_D_S>;
+def loongarch_vfcvth_d_s: SDNode<"LoongArchISD::VFCVTH", SDT_LoongArchVFCVTLH_D_S>;
 
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
@@ -2615,6 +2619,11 @@ defm : PatVrF<froundeven, "VFRINTRNE">;
 
 def : Pat<(v4f32 (loongarch_vfcvt_s_d (v2f64 LSX128:$vj), (v2f64 LSX128:$vk))),
           (VFCVT_S_D LSX128:$vj, LSX128:$vk)>;
+
+def : Pat<(v2f64 (loongarch_vfcvtl_d_s (v4f32 LSX128:$vj))),
+          (VFCVTL_D_S LSX128:$vj)>;
+def : Pat<(v2f64 (loongarch_vfcvth_d_s (v4f32 LSX128:$vj))),
+          (VFCVTH_D_S LSX128:$vj)>;
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),
