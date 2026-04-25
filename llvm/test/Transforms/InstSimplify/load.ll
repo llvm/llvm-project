@@ -103,7 +103,8 @@ define <4 x b8> @load_vb8_from_allones_gep(i64 %idx) {
 
 define b8 @load_b8_from_inttoptr() {
 ; CHECK-LABEL: @load_b8_from_inttoptr(
-; CHECK-NEXT:    ret b8 -1
+; CHECK-NEXT:    [[LOAD:%.*]] = load b8, ptr @allones_ptr, align 1
+; CHECK-NEXT:    ret b8 [[LOAD]]
 ;
   %load = load b8, ptr @allones_ptr
   ret b8 %load
@@ -111,7 +112,8 @@ define b8 @load_b8_from_inttoptr() {
 
 define <4 x b8> @load_vb8_from_inttoptr() {
 ; CHECK-LABEL: @load_vb8_from_inttoptr(
-; CHECK-NEXT:    ret <4 x b8> splat (b8 -1)
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x b8>, ptr @allones_ptr, align 4
+; CHECK-NEXT:    ret <4 x b8> [[LOAD]]
 ;
   %load = load <4 x b8>, ptr @allones_ptr
   ret <4 x b8> %load
@@ -119,7 +121,8 @@ define <4 x b8> @load_vb8_from_inttoptr() {
 
 define b8 @load_b8_from_struct_inttoptr() {
 ; CHECK-LABEL: @load_b8_from_struct_inttoptr(
-; CHECK-NEXT:    ret b8 -1
+; CHECK-NEXT:    [[LOAD:%.*]] = load b8, ptr @struct_inttoptr, align 1
+; CHECK-NEXT:    ret b8 [[LOAD]]
 ;
   %load = load b8, ptr @struct_inttoptr
   ret b8 %load
