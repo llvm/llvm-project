@@ -99,7 +99,8 @@ define i64 @duplicated_phis_compare_uses_mul_udiv(i64 %x) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[MASKED]], [[IV_1_NEXT]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i64 [[IV_1_NEXT]]
+; CHECK-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_1_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[IV_1_NEXT_LCSSA]]
 ;
 entry:
   %mul.2 = shl i64 %x, 1

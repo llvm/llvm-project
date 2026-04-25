@@ -5908,7 +5908,8 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
                 SplitCriticalEdge(BB, Parent,
                                   CriticalEdgeSplittingOptions(&DT, &LI, MSSAU)
                                       .setMergeIdenticalEdges()
-                                      .setKeepOneInputPHIs());
+                                      .setKeepOneInputPHIs()
+                                      .setPreserveLCSSA());
           } else {
             SmallVector<BasicBlock*, 2> NewBBs;
             DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
@@ -6165,7 +6166,7 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       MSSAU(MSSAU), AMK(PreferredAddresingMode.getNumOccurrences() > 0
                             ? PreferredAddresingMode
                             : TTI.getPreferredAddressingMode(L, &SE)),
-      Rewriter(SE, "lsr", false), BaselineCost(L, SE, TTI, AMK) {
+      Rewriter(SE, "lsr"), BaselineCost(L, SE, TTI, AMK) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;

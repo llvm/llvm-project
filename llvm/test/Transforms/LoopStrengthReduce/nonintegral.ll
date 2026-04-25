@@ -15,27 +15,24 @@ define void @japi1__unsafe_getindex_65028(ptr addrspace(10) %arg) {
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    br label [[L86:%.*]]
 ; CHECK:       L86:
-; CHECK-NEXT:    [[LSR_IV4:%.*]] = phi i64 [ [[LSR_IV_NEXT5:%.*]], [[L86]] ], [ -2, [[TOP:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT5]] = add nsw i64 [[LSR_IV4]], 2
 ; CHECK-NEXT:    br i1 false, label [[L86]], label [[IF29:%.*]]
 ; CHECK:       if29:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(10) [[ARG]], i64 -8
 ; CHECK-NEXT:    br label [[IF31:%.*]]
 ; CHECK:       if31:
-; CHECK-NEXT:    %"#temp#1.sroa.0.022" = phi i64 [ 0, [[IF29]] ], [ [[TMP3_LCSSA:%.*]], [[IF38:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV_NEXT5]], %"#temp#1.sroa.0.022"
+; CHECK-NEXT:    %"#temp#1.sroa.0.022" = phi i64 [ 0, [[IF29]] ], [ [[TMP2:%.*]], [[IF38:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 0, %"#temp#1.sroa.0.022"
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(10) [[SCEVGEP]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2]] = add i64 %"#temp#1.sroa.0.022", 1
 ; CHECK-NEXT:    br label [[L119:%.*]]
 ; CHECK:       L119:
 ; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr addrspace(10) [ [[SCEVGEP3:%.*]], [[L119]] ], [ [[SCEVGEP1]], [[IF31]] ]
-; CHECK-NEXT:    [[I5_0:%.*]] = phi i64 [ %"#temp#1.sroa.0.022", [[IF31]] ], [ [[TMP3:%.*]], [[L119]] ]
-; CHECK-NEXT:    [[TMP3]] = add i64 [[I5_0]], 1
 ; CHECK-NEXT:    [[SCEVGEP3]] = getelementptr i8, ptr addrspace(10) [[LSR_IV2]], i64 8
 ; CHECK-NEXT:    br i1 false, label [[L119]], label [[IF38]]
 ; CHECK:       if38:
-; CHECK-NEXT:    [[TMP3_LCSSA]] = phi i64 [ [[TMP3]], [[L119]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr addrspace(10) [[SCEVGEP3]], align 8
+; CHECK-NEXT:    [[SCEVGEP3_LCSSA:%.*]] = phi ptr addrspace(10) [ [[SCEVGEP3]], [[L119]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr addrspace(10) [[SCEVGEP3_LCSSA]], align 8
 ; CHECK-NEXT:    br i1 true, label [[DONE:%.*]], label [[IF31]]
 ; CHECK:       done:
 ; CHECK-NEXT:    ret void

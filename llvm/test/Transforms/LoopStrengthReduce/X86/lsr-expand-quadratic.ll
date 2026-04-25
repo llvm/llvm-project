@@ -24,20 +24,20 @@ define i32 @test2(i32 %a, i32 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[TEST2_LOOP:%.*]]
 ; CHECK:       test2.loop:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[TEST2_LOOP]] ], [ -16777216, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[TEST2_LOOP]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[TEST2_LOOP]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[INC1115_US:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC11_US:%.*]], [[TEST2_LOOP]] ]
 ; CHECK-NEXT:    [[INC11_US]] = add nsw i32 [[INC1115_US]], 1
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add nsw i32 [[LSR_IV1]], 16777216
 ; CHECK-NEXT:    [[CMP_US:%.*]] = icmp slt i32 [[INC11_US]], 2
 ; CHECK-NEXT:    br i1 [[CMP_US]], label [[TEST2_LOOP]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TOBOOL_US:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA3:%.*]] = phi i32 [ [[LSR_IV_NEXT]], [[TEST2_LOOP]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i32 [ [[LSR_IV_NEXT]], [[TEST2_LOOP]] ]
+; CHECK-NEXT:    [[TOBOOL_US:%.*]] = icmp eq i32 [[LSR_IV_NEXT_LCSSA3]], 0
 ; CHECK-NEXT:    [[SUB_US:%.*]] = select i1 [[TOBOOL_US]], i32 [[A:%.*]], i32 [[B:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[SUB_US]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[LSR_IV_NEXT]]
-; CHECK-NEXT:    [[SEXT_US:%.*]] = mul i32 [[LSR_IV_NEXT2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[LSR_IV_NEXT_LCSSA]]
+; CHECK-NEXT:    [[SEXT_US:%.*]] = mul i32 16777216, [[TMP1]]
 ; CHECK-NEXT:    [[F:%.*]] = ashr i32 [[SEXT_US]], 24
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:

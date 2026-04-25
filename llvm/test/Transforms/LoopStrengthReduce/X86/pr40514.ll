@@ -9,13 +9,9 @@ define i32 @pluto(i32 %arg) #0 {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i64 [[LSR_IV_NEXT2:%.*]], ptr addrspace(1) undef, align 8
-; CHECK-NEXT:    ret i32 [[LSR_IV_NEXT:%.*]]
+; CHECK-NEXT:    store i64 10, ptr addrspace(1) undef, align 8
+; CHECK-NEXT:    ret i32 undef
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2]], [[BB10]] ], [ 9, [[BB:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT]], [[BB10]] ], [ undef, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add nuw nsw i64 [[LSR_IV1]], 1
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB10]]
 ;
 

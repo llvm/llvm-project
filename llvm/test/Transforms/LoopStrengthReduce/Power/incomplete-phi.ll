@@ -38,6 +38,7 @@ define void @foo(ptr %arg) {
 ; CHECK:       bb17:
 ; CHECK-NEXT:    br i1 false, label [[BB18]], label [[BB22_PREHEADER]]
 ; CHECK:       bb22.preheader:
+; CHECK-NEXT:    [[LSR_IV1_LCSSA:%.*]] = phi ptr [ [[LSR_IV1]], [[BB3]] ], [ [[LSR_IV1]], [[BB17]] ]
 ; CHECK-NEXT:    br label [[BB22:%.*]]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    [[LSR_IV_NEXT6]] = add nuw nsw i64 [[LSR_IV5]], 4
@@ -45,7 +46,7 @@ define void @foo(ptr %arg) {
 ; CHECK-NEXT:    [[SCEVGEP8]] = getelementptr i8, ptr [[LSR_IV7]], i64 [[LSR_IV5]]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb22:
-; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi ptr [ [[LSR_IV1]], [[BB22_PREHEADER]] ], [ [[SCEVGEP4:%.*]], [[BB22]] ]
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi ptr [ [[LSR_IV1_LCSSA]], [[BB22_PREHEADER]] ], [ [[SCEVGEP4:%.*]], [[BB22]] ]
 ; CHECK-NEXT:    store float undef, ptr [[LSR_IV3]], align 4
 ; CHECK-NEXT:    [[SCEVGEP4]] = getelementptr i8, ptr [[LSR_IV3]], i64 4
 ; CHECK-NEXT:    br label [[BB22]]

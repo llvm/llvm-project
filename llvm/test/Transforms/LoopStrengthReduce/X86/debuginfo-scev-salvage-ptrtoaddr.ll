@@ -21,7 +21,8 @@ define i64 @test(ptr %p) {
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i64 [[LSR_IV_NEXT]]
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[LSR_IV_NEXT_LCSSA]]
 ;
 entry:
   br label %loop

@@ -26,7 +26,8 @@ define i32 @test() {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_2]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 [[IV_2_NEXT]]
+; CHECK-NEXT:    [[IV_2_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_2_NEXT]], [[LOOP_2]] ]
+; CHECK-NEXT:    ret i32 [[IV_2_NEXT_LCSSA]]
 ;
 entry:
   br label %loop.1
