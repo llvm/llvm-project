@@ -278,14 +278,14 @@ struct __cw_operators {
   }
 };
 
-template <const auto& __callbale, class... _Args>
+template <const auto& _Callable, class... _Args>
 concept __constexpr_callable = (__constexpr_param<remove_cvref_t<_Args>> && ...) && requires {
-  typename constant_wrapper<std::invoke(__callbale, remove_cvref_t<_Args>::value...)>;
+  typename constant_wrapper<std::invoke(_Callable, remove_cvref_t<_Args>::value...)>;
 };
 
-template <const auto& __obj, class... _Args>
+template <const auto& _Obj, class... _Args>
 concept __constexpr_indexable = (__constexpr_param<remove_cvref_t<_Args>> && ...) && requires {
-  typename constant_wrapper<__obj[remove_cvref_t<_Args>::value...]>;
+  typename constant_wrapper<_Obj[remove_cvref_t<_Args>::value...]>;
 };
 
 template <__cw_fixed_value _Xp, class>
