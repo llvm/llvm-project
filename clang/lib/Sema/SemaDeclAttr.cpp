@@ -1577,7 +1577,9 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
             << (AL.isRegularKeywordAttribute() ||
                 I->isRegularKeywordAttribute());
         return;
-      } else if (K == OwnershipAttr::Returns &&
+      }
+
+      if (K == OwnershipAttr::Returns &&
                  I->getOwnKind() == OwnershipAttr::Returns) {
         bool IHasArgs = I->args_size() > 0;
 
@@ -1591,7 +1593,9 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
               << Idx.getSourceIndex() << 0 << Ex->getSourceRange();
           return;
         }
-      } else if (K == OwnershipAttr::Takes &&
+      }
+      
+      if (K == OwnershipAttr::Takes &&
                  I->getOwnKind() == OwnershipAttr::Takes) {
         if (I->getModule()->getName() != ModuleName) {
           S.Diag(I->getLocation(), diag::err_ownership_takes_class_mismatch)
