@@ -12,6 +12,18 @@
 // RUN: %clang_cl -gcodeview-command-line --target=i686-windows-msvc -Xclang -fmessage-length=100 /c /Z7 /Fo%t.obj -- %s
 // RUN: llvm-pdbutil dump --types %t.obj | FileCheck %s --check-prefix MESSAGELEN
 
+// The source filename must be stripped from the embedded cc1 command line
+// whether it's passed to the driver as an absolute or a relative path.
+// See https://github.com/llvm/llvm-project/issues/193900.
+
+// RUN: %clang_cl --target=i686-windows-msvc /c /Z7 /Fo%t.obj -- %s
+// RUN: llvm-pdbutil dump --types %t.obj | FileCheck %s --check-prefix ABSPATH
+
+// RUN: rm -rf %t.relpath && mkdir %t.relpath
+// RUN: cp %s %t.relpath/hello.cpp
+// RUN: cd %t.relpath && %clang_cl --target=i686-windows-msvc /c /Z7 /Fo:hello.obj -- hello.cpp
+// RUN: llvm-pdbutil dump --types %t.relpath/hello.obj | FileCheck %s --check-prefix RELPATH
+
 int main(void) { return 42; }
 
 // CHECK:                       Types (.debug$T)
@@ -45,3 +57,14 @@ int main(void) { return 42; }
 // MESSAGELEN: ============================================================
 // MESSAGELEN: 0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
 // MESSAGELEN-NOT: -fmessage-length
+
+// The cmdline LF_STRING_ID quotes each cc1 arg, so a leaked source
+// positional appears as a quoted token. The FILEPATH LF_STRING_ID prints
+// the path without surrounding quotes, so it won't trigger the negative.
+// ABSPATH:     0x{{.+}} | LF_STRING_ID [size = {{.+}}] ID: <no type>, String: "-cc1
+// ABSPATH-NOT: "{{[^"]*[\\/]codeview-buildinfo\.c}}"
+// ABSPATH:     0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
+
+// RELPATH:     0x{{.+}} | LF_STRING_ID [size = {{.+}}] ID: <no type>, String: "-cc1
+// RELPATH-NOT: "hello.cpp"
+// RELPATH:     0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
