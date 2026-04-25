@@ -186,6 +186,24 @@ OpFoldResult math::Atan2Op::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// CbrtOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::CbrtOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (APFloat::SemanticsToEnum(a.getSemantics())) {
+        case APFloat::Semantics::S_IEEEdouble:
+          return APFloat(cbrt(a.convertToDouble()));
+        case APFloat::Semantics::S_IEEEsingle:
+          return APFloat(cbrtf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // CeilOp folder
 //===----------------------------------------------------------------------===//
 
@@ -284,13 +302,42 @@ OpFoldResult math::SinhOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// SinCosOp getShapeForUnroll
+// SinCosOp
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>> math::SincosOp::getShapeForUnroll() {
   if (auto vt = mlir::dyn_cast<VectorType>(getOperand().getType()))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
+}
+
+LogicalResult math::SincosOp::fold(FoldAdaptor adaptor,
+                                   SmallVectorImpl<OpFoldResult> &result) {
+  auto foldSincos = [](const APFloat &a, double (*fnDouble)(double),
+                       float (*fnFloat)(float)) -> std::optional<APFloat> {
+    switch (APFloat::SemanticsToEnum(a.getSemantics())) {
+    case APFloat::Semantics::S_IEEEdouble:
+      return APFloat(fnDouble(a.convertToDouble()));
+    case APFloat::Semantics::S_IEEEsingle:
+      return APFloat(fnFloat(a.convertToFloat()));
+    default:
+      return {};
+    }
+  };
+
+  Attribute sinRes = constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(),
+      [&](const APFloat &a) { return foldSincos(a, sin, sinf); });
+  Attribute cosRes = constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(),
+      [&](const APFloat &a) { return foldSincos(a, cos, cosf); });
+
+  if (sinRes && cosRes) {
+    result.push_back(sinRes);
+    result.push_back(cosRes);
+    return success();
+  }
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
