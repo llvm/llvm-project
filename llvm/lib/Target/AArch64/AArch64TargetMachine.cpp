@@ -251,7 +251,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ExpandPseudoLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptLegacyPass(PR);
-  initializeAArch64SIMDInstrOptPass(PR);
+  initializeAArch64SIMDInstrOptLegacyPass(PR);
   initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);

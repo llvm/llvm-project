@@ -17955,6 +17955,8 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
 static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
                                     const ARMSubtarget *ST) {
   SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // Check for sign- and zero-extensions of vector extract operations of 8- and
   // 16-bit vector elements. NEON and MVE support these directly. They are
@@ -17964,7 +17966,6 @@ static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
       N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     SDValue Vec = N0.getOperand(0);
     SDValue Lane = N0.getOperand(1);
-    EVT VT = N->getValueType(0);
     EVT EltVT = N0.getValueType();
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
@@ -17984,13 +17985,32 @@ static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
         Opc = ARMISD::VGETLANEu;
         break;
       }
-      return DAG.getNode(Opc, SDLoc(N), VT, Vec, Lane);
+      return DAG.getNode(Opc, DL, VT, Vec, Lane);
     }
   }
 
   if (ST->hasMVEIntegerOps())
     if (SDValue NewLoad = PerformSplittingToWideningLoad(N, DAG))
       return NewLoad;
+
+  // Combine sext(buildvector(..)) to buildvector(sext(..)) to help avoid
+  // difficult to lower i1 buildvector.
+  if (ST->hasMVEIntegerOps() && N0.getValueType().getScalarSizeInBits() == 1 &&
+      N0.getOpcode() == ISD::BUILD_VECTOR && VT.getScalarSizeInBits() <= 32) {
+    SmallVector<SDValue> Ops;
+    for (unsigned I = 0; I < N0.getNumOperands(); I++) {
+      SDValue InReg = N0.getOperand(I);
+      if (N->getOpcode() == ISD::ZERO_EXTEND)
+        InReg = DAG.getNode(ISD::AND, DL, InReg.getValueType(), InReg,
+                            DAG.getConstant(1, DL, InReg.getValueType()));
+      else if (N->getOpcode() == ISD::SIGN_EXTEND)
+        InReg = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, InReg.getValueType(),
+                            InReg, DAG.getValueType(MVT::i1));
+      SDValue Ext = DAG.getNode(N->getOpcode(), DL, MVT::i32, InReg);
+      Ops.push_back(Ext);
+    }
+    return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
+  }
 
   return SDValue();
 }
