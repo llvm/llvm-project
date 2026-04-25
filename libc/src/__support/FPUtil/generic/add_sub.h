@@ -52,8 +52,11 @@ add_or_sub(InType x, InType y) {
   if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
                     x_bits.is_zero() || y_bits.is_zero())) {
     if (x_bits.is_nan() || y_bits.is_nan()) {
-      if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
-        raise_except_if_required(FE_INVALID);
+      if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan()) {
+        if (!__builtin_is_constant_evaluated()) {
+          raise_except_if_required(FE_INVALID);
+        }
+      }
 
       if (x_bits.is_quiet_nan()) {
         InStorageType x_payload = x_bits.get_mantissa();
@@ -77,7 +80,9 @@ add_or_sub(InType x, InType y) {
     if (x_bits.is_inf()) {
       if (y_bits.is_inf()) {
         if (!is_effectively_add) {
-          raise_except_if_required(FE_INVALID);
+          if (!__builtin_is_constant_evaluated()) {
+            raise_except_if_required(FE_INVALID);
+          }
           return OutFPBits::quiet_nan().get_val();
         }
 
@@ -98,11 +103,15 @@ add_or_sub(InType x, InType y) {
       if (y_bits.is_zero()) {
         if (is_effectively_add)
           return OutFPBits::zero(x_bits.sign()).get_val();
-        switch (quick_get_round()) {
-        case FE_DOWNWARD:
-          return OutFPBits::zero(Sign::NEG).get_val();
-        default:
+        if (__builtin_is_constant_evaluated()) {
           return OutFPBits::zero(Sign::POS).get_val();
+        } else {
+          switch (quick_get_round()) {
+          case FE_DOWNWARD:
+            return OutFPBits::zero(Sign::NEG).get_val();
+          default:
+            return OutFPBits::zero(Sign::POS).get_val();
+          }
         }
       }
 
@@ -117,10 +126,17 @@ add_or_sub(InType x, InType y) {
         // volatile prevents Clang from converting tmp to OutType and then
         // immediately back to InType before negating it, resulting in double
         // rounding.
-        volatile InType tmp = y;
-        if constexpr (IsSub)
-          tmp = -tmp;
-        return cast<OutType>(tmp);
+        if (__builtin_is_constant_evaluated()) {
+          InType tmp = y;
+          if constexpr (IsSub)
+            tmp = -tmp;
+          return cast<OutType>(tmp);
+        } else {
+          volatile InType tmp = y;
+          if constexpr (IsSub)
+            tmp = -tmp;
+          return cast<OutType>(tmp);
+        }
       }
     }
 
@@ -132,11 +148,15 @@ add_or_sub(InType x, InType y) {
   InType y_abs = y_bits.abs().get_val();
 
   if (x_abs == y_abs && !is_effectively_add) {
-    switch (quick_get_round()) {
-    case FE_DOWNWARD:
-      return OutFPBits::zero(Sign::NEG).get_val();
-    default:
+    if (__builtin_is_constant_evaluated()) {
       return OutFPBits::zero(Sign::POS).get_val();
+    } else {
+      switch (quick_get_round()) {
+      case FE_DOWNWARD:
+        return OutFPBits::zero(Sign::NEG).get_val();
+      default:
+        return OutFPBits::zero(Sign::POS).get_val();
+      }
     }
   }
 
@@ -155,7 +175,7 @@ add_or_sub(InType x, InType y) {
   InFPBits max_bits(cpp::max(x_abs, y_abs));
   InFPBits min_bits(cpp::min(x_abs, y_abs));
 
-  InStorageType result_mant;
+  InStorageType result_mant = 0;
 
   if (max_bits.is_subnormal()) {
     // min_bits must be subnormal too.
