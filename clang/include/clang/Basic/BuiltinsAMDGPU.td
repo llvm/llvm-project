@@ -630,12 +630,12 @@ def __builtin_amdgcn_mfma_f32_32x32x16_bf8_bf8 : AMDGPUBuiltin<"_Vector<16, floa
 def __builtin_amdgcn_mfma_f32_32x32x16_bf8_fp8 : AMDGPUBuiltin<"_Vector<16, float>(int64_t, int64_t, _Vector<16, float>, _Constant int, _Constant int, _Constant int)", [Const], "fp8-insts">;
 def __builtin_amdgcn_mfma_f32_32x32x16_fp8_bf8 : AMDGPUBuiltin<"_Vector<16, float>(int64_t, int64_t, _Vector<16, float>, _Constant int, _Constant int, _Constant int)", [Const], "fp8-insts">;
 def __builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8 : AMDGPUBuiltin<"_Vector<16, float>(int64_t, int64_t, _Vector<16, float>, _Constant int, _Constant int, _Constant int)", [Const], "fp8-insts">;
-def __builtin_amdgcn_smfmac_f32_16x16x32_f16 : AMDGPUBuiltin<"_Vector<4, float>(_Vector<4, _Float16>, _Vector<8, _Float16>, _Vector<4, float>, int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_smfmac_f32_32x32x16_f16 : AMDGPUBuiltin<"_Vector<16, float>(_Vector<4, _Float16>, _Vector<8, _Float16>, _Vector<16, float>, int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_smfmac_f32_16x16x32_bf16 : AMDGPUBuiltin<"_Vector<4, float>(_Vector<4, short>, _Vector<8, short>, _Vector<4, float>, int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_smfmac_f32_32x32x16_bf16 : AMDGPUBuiltin<"_Vector<16, float>(_Vector<4, short>, _Vector<8, short>, _Vector<16, float>, int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_smfmac_i32_16x16x64_i8 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<2, int>, _Vector<4, int>, _Vector<4, int>, int, _Constant int, _Constant int)", [Const], "mai-insts">;
-def __builtin_amdgcn_smfmac_i32_32x32x32_i8 : AMDGPUBuiltin<"_Vector<16, int>(_Vector<2, int>, _Vector<4, int>, _Vector<16, int>, int, _Constant int, _Constant int)", [Const], "mai-insts">;
+def __builtin_amdgcn_smfmac_f32_16x16x32_f16 : AMDGPUBuiltin<"_Vector<4, float>(_Vector<4, _Float16>, _Vector<8, _Float16>, _Vector<4, float>, int, _Constant int, _Constant int)", [Const], "gfx940-insts">;
+def __builtin_amdgcn_smfmac_f32_32x32x16_f16 : AMDGPUBuiltin<"_Vector<16, float>(_Vector<4, _Float16>, _Vector<8, _Float16>, _Vector<16, float>, int, _Constant int, _Constant int)", [Const], "gfx940-insts">;
+def __builtin_amdgcn_smfmac_f32_16x16x32_bf16 : AMDGPUBuiltin<"_Vector<4, float>(_Vector<4, short>, _Vector<8, short>, _Vector<4, float>, int, _Constant int, _Constant int)", [Const], "gfx940-insts">;
+def __builtin_amdgcn_smfmac_f32_32x32x16_bf16 : AMDGPUBuiltin<"_Vector<16, float>(_Vector<4, short>, _Vector<8, short>, _Vector<16, float>, int, _Constant int, _Constant int)", [Const], "gfx940-insts">;
+def __builtin_amdgcn_smfmac_i32_16x16x64_i8 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<2, int>, _Vector<4, int>, _Vector<4, int>, int, _Constant int, _Constant int)", [Const], "gfx940-insts">;
+def __builtin_amdgcn_smfmac_i32_32x32x32_i8 : AMDGPUBuiltin<"_Vector<16, int>(_Vector<2, int>, _Vector<4, int>, _Vector<16, int>, int, _Constant int, _Constant int)", [Const], "gfx940-insts">;
 def __builtin_amdgcn_smfmac_f32_16x16x64_bf8_bf8 : AMDGPUBuiltin<"_Vector<4, float>(_Vector<2, int>, _Vector<4, int>, _Vector<4, float>, int, _Constant int, _Constant int)", [Const], "fp8-insts">;
 def __builtin_amdgcn_smfmac_f32_16x16x64_bf8_fp8 : AMDGPUBuiltin<"_Vector<4, float>(_Vector<2, int>, _Vector<4, int>, _Vector<4, float>, int, _Constant int, _Constant int)", [Const], "fp8-insts">;
 def __builtin_amdgcn_smfmac_f32_16x16x64_fp8_bf8 : AMDGPUBuiltin<"_Vector<4, float>(_Vector<2, int>, _Vector<4, int>, _Vector<4, float>, int, _Constant int, _Constant int)", [Const], "fp8-insts">;
