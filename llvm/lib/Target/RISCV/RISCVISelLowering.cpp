@@ -873,7 +873,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SHL,         ISD::VP_REDUCE_ADD,  ISD::VP_REDUCE_AND,
         ISD::VP_REDUCE_OR,   ISD::VP_REDUCE_XOR,  ISD::VP_REDUCE_SMAX,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
-        ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_SETCC,
+        ISD::VP_MERGE,       ISD::VP_SELECT,
         ISD::VP_SIGN_EXTEND,
         ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,
         ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
@@ -883,7 +883,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
         ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,
         ISD::VP_SELECT,
-        ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
         ISD::VP_IS_FPCLASS,  ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM};
 
@@ -969,7 +968,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          OtherVT, Expand);
       }
 
-      setOperationAction({ISD::VP_TRUNCATE, ISD::VP_SETCC}, VT, Custom);
+      setOperationAction(ISD::VP_TRUNCATE, VT, Custom);
 
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
@@ -1298,7 +1297,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
       setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
                          Custom);
-      setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
       setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
       setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
       setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
@@ -1352,7 +1350,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
       setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
                          Custom);
-      setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
       setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
       setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
       setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
@@ -1530,7 +1527,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::OR, ISD::XOR},
                              VT, Custom);
 
-          setOperationAction({ISD::VP_SETCC, ISD::VP_TRUNCATE}, VT, Custom);
+          setOperationAction(ISD::VP_TRUNCATE, VT, Custom);
 
           setOperationAction(ISD::VP_MERGE, VT, Custom);
 
@@ -1667,7 +1664,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         if (VT.getVectorElementType() == MVT::f16 &&
             !Subtarget.hasVInstructionsF16()) {
-          setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
@@ -1698,7 +1694,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         if (VT.getVectorElementType() == MVT::bf16) {
-          setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
           setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
           setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
           if (Subtarget.hasStdExtZfbfmin()) {
@@ -7558,7 +7553,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(UDIV)       // VP_UDIV
   VP_CASE(UREM)       // VP_UREM
   VP_CASE(SHL)        // VP_SHL
-  VP_CASE(SETCC)      // VP_SETCC
   case ISD::CTLZ_ZERO_UNDEF:
     return RISCVISD::CTLZ_VL;
   case ISD::CTTZ_ZERO_UNDEF:
@@ -7651,37 +7645,6 @@ static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
   SmallVector<SDValue, 4> HiOperands(Op.getNumOperands());
 
   for (unsigned j = 0; j != Op.getNumOperands(); ++j) {
-    if (!Op.getOperand(j).getValueType().isVector()) {
-      LoOperands[j] = Op.getOperand(j);
-      HiOperands[j] = Op.getOperand(j);
-      continue;
-    }
-    std::tie(LoOperands[j], HiOperands[j]) =
-        DAG.SplitVector(Op.getOperand(j), DL);
-  }
-
-  SDValue LoRes =
-      DAG.getNode(Op.getOpcode(), DL, LoVT, LoOperands, Op->getFlags());
-  SDValue HiRes =
-      DAG.getNode(Op.getOpcode(), DL, HiVT, HiOperands, Op->getFlags());
-
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, Op.getValueType(), LoRes, HiRes);
-}
-
-static SDValue SplitVPOp(SDValue Op, SelectionDAG &DAG) {
-  assert(ISD::isVPOpcode(Op.getOpcode()) && "Not a VP op");
-  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(Op.getValueType());
-  SDLoc DL(Op);
-
-  SmallVector<SDValue, 4> LoOperands(Op.getNumOperands());
-  SmallVector<SDValue, 4> HiOperands(Op.getNumOperands());
-
-  for (unsigned j = 0; j != Op.getNumOperands(); ++j) {
-    if (ISD::getVPExplicitVectorLengthIdx(Op.getOpcode()) == j) {
-      std::tie(LoOperands[j], HiOperands[j]) =
-          DAG.SplitEVL(Op.getOperand(j), Op.getValueType(), DL);
-      continue;
-    }
     if (!Op.getOperand(j).getValueType().isVector()) {
       LoOperands[j] = Op.getOperand(j);
       HiOperands[j] = Op.getOperand(j);
@@ -8060,7 +8023,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFMAXIMUM_FMINIMUM(Op, DAG, Subtarget);
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND:
-    return lowerVectorFPExtendOrRoundLike(Op, DAG);
+    return lowerVectorFPExtendOrRound(Op, DAG);
   case ISD::STRICT_FP_ROUND:
   case ISD::STRICT_FP_EXTEND:
     return lowerStrictFPExtendOrRoundLike(Op, DAG);
@@ -9030,15 +8993,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPOp(Op, DAG);
   case ISD::VP_TRUNCATE:
     return lowerVectorTruncLike(Op, DAG);
-  case ISD::VP_FP_EXTEND:
-  case ISD::VP_FP_ROUND:
-    return lowerVectorFPExtendOrRoundLike(Op, DAG);
-  case ISD::VP_SETCC:
-    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget, *this))
-      return SplitVPOp(Op, DAG);
-    if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
-      return lowerVPSetCCMaskOp(Op, DAG);
-    return lowerVPOp(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     return lowerVPStridedLoad(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
@@ -10663,12 +10617,9 @@ RISCVTargetLowering::lowerStrictFPExtendOrRoundLike(SDValue Op,
 }
 
 SDValue
-RISCVTargetLowering::lowerVectorFPExtendOrRoundLike(SDValue Op,
-                                                    SelectionDAG &DAG) const {
-  bool IsVP =
-      Op.getOpcode() == ISD::VP_FP_ROUND || Op.getOpcode() == ISD::VP_FP_EXTEND;
-  bool IsExtend =
-      Op.getOpcode() == ISD::VP_FP_EXTEND || Op.getOpcode() == ISD::FP_EXTEND;
+RISCVTargetLowering::lowerVectorFPExtendOrRound(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  bool IsExtend = Op.getOpcode() == ISD::FP_EXTEND;
   // RVV can only do truncate fp to types half the size as the source. We
   // custom-lower f64->f16 rounds via RVV's round-to-odd float
   // conversion instruction.
@@ -10691,30 +10642,19 @@ RISCVTargetLowering::lowerVectorFPExtendOrRoundLike(SDValue Op,
   bool IsDirectConv = IsDirectExtend || IsDirectTrunc;
 
   // We have regular SD node patterns for direct non-VL extends.
-  if (VT.isScalableVector() && IsDirectConv && !IsVP)
+  if (VT.isScalableVector() && IsDirectConv)
     return Op;
 
   // Prepare any fixed-length vector operands.
   MVT ContainerVT = VT;
-  SDValue Mask, VL;
-  if (IsVP) {
-    Mask = Op.getOperand(1);
-    VL = Op.getOperand(2);
-  }
   if (VT.isFixedLengthVector()) {
     MVT SrcContainerVT = getContainerForFixedLengthVector(SrcVT);
     ContainerVT =
         SrcContainerVT.changeVectorElementType(VT.getVectorElementType());
     Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
-    if (IsVP) {
-      MVT MaskVT = getMaskTypeFor(ContainerVT);
-      Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
-    }
   }
 
-  if (!IsVP)
-    std::tie(Mask, VL) =
-        getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
 
   unsigned ConvOpc = IsExtend ? RISCVISD::FP_EXTEND_VL : RISCVISD::FP_ROUND_VL;
 
@@ -13991,85 +13931,6 @@ SDValue RISCVTargetLowering::lowerVPExtMaskOp(SDValue Op,
 
   SDValue Result = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, Src, Splat,
                                ZeroSplat, DAG.getUNDEF(ContainerVT), VL);
-  if (!VT.isFixedLengthVector())
-    return Result;
-  return convertFromScalableVector(VT, Result, DAG, Subtarget);
-}
-
-SDValue RISCVTargetLowering::lowerVPSetCCMaskOp(SDValue Op,
-                                                SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  MVT VT = Op.getSimpleValueType();
-
-  SDValue Op1 = Op.getOperand(0);
-  SDValue Op2 = Op.getOperand(1);
-  ISD::CondCode Condition = cast<CondCodeSDNode>(Op.getOperand(2))->get();
-  // NOTE: Mask is dropped.
-  SDValue VL = Op.getOperand(4);
-
-  MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(VT);
-    Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
-    Op2 = convertToScalableVector(ContainerVT, Op2, DAG, Subtarget);
-  }
-
-  SDValue Result;
-  SDValue AllOneMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
-
-  switch (Condition) {
-  default:
-    break;
-  // X != Y  --> (X^Y)
-  case ISD::SETNE:
-    Result = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op1, Op2, VL);
-    break;
-  // X == Y  --> ~(X^Y)
-  case ISD::SETEQ: {
-    SDValue Temp =
-        DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op1, Op2, VL);
-    Result =
-        DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Temp, AllOneMask, VL);
-    break;
-  }
-  // X >s Y   -->  X == 0 & Y == 1  -->  ~X & Y
-  // X <u Y   -->  X == 0 & Y == 1  -->  ~X & Y
-  case ISD::SETGT:
-  case ISD::SETULT: {
-    SDValue Temp =
-        DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op1, AllOneMask, VL);
-    Result = DAG.getNode(RISCVISD::VMAND_VL, DL, ContainerVT, Temp, Op2, VL);
-    break;
-  }
-  // X <s Y   --> X == 1 & Y == 0  -->  ~Y & X
-  // X >u Y   --> X == 1 & Y == 0  -->  ~Y & X
-  case ISD::SETLT:
-  case ISD::SETUGT: {
-    SDValue Temp =
-        DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op2, AllOneMask, VL);
-    Result = DAG.getNode(RISCVISD::VMAND_VL, DL, ContainerVT, Op1, Temp, VL);
-    break;
-  }
-  // X >=s Y  --> X == 0 | Y == 1  -->  ~X | Y
-  // X <=u Y  --> X == 0 | Y == 1  -->  ~X | Y
-  case ISD::SETGE:
-  case ISD::SETULE: {
-    SDValue Temp =
-        DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op1, AllOneMask, VL);
-    Result = DAG.getNode(RISCVISD::VMOR_VL, DL, ContainerVT, Temp, Op2, VL);
-    break;
-  }
-  // X <=s Y  --> X == 1 | Y == 0  -->  ~Y | X
-  // X >=u Y  --> X == 1 | Y == 0  -->  ~Y | X
-  case ISD::SETLE:
-  case ISD::SETUGE: {
-    SDValue Temp =
-        DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op2, AllOneMask, VL);
-    Result = DAG.getNode(RISCVISD::VMOR_VL, DL, ContainerVT, Temp, Op1, VL);
-    break;
-  }
-  }
-
   if (!VT.isFixedLengthVector())
     return Result;
   return convertFromScalableVector(VT, Result, DAG, Subtarget);
@@ -19447,9 +19308,8 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   SDValue Mask = N->getOperand(1);
   SDValue VL = N->getOperand(2);
 
-  // Input should be a vp_srl with same mask and VL.
-  if (In.getOpcode() != ISD::VP_SRL || In.getOperand(2) != Mask ||
-      In.getOperand(3) != VL)
+  // Input should be a srl.
+  if (In.getOpcode() != ISD::SRL)
     return SDValue();
 
   // Shift amount should be 1.

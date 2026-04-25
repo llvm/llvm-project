@@ -22,7 +22,9 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Target/TargetMachine.h"
+#include <map>
 #include <memory>
+#include <unordered_map>
 
 struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
@@ -163,7 +165,7 @@ void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationLegacyPass(PassRegistry &);
 void initializeAArch64RedundantCondBranchLegacyPass(PassRegistry &);
-void initializeAArch64SIMDInstrOptPass(PassRegistry &);
+void initializeAArch64SIMDInstrOptLegacyPass(PassRegistry &);
 void initializeAArch64SLSHardeningPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);
 void initializeAArch64StackTaggingPass(PassRegistry &);
@@ -260,6 +262,15 @@ public:
 
 class AArch64ConditionOptimizerPass
     : public PassInfoMixin<AArch64ConditionOptimizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64SIMDInstrOptPass : public PassInfoMixin<AArch64SIMDInstrOptPass> {
+  std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
+  std::unordered_map<std::string, bool> InterlEarlyExit;
+
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
