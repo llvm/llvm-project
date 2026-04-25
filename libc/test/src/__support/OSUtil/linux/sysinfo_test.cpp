@@ -19,7 +19,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 static int write_test_file(cpp::string_view path, cpp::string_view contents) {
-  int fd = LIBC_NAMESPACE::open(path.data(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+  int fd =
+      LIBC_NAMESPACE::open(path.data(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
   if (fd < 0)
     return fd;
 
@@ -39,8 +40,9 @@ TEST(LlvmLibcOSUtilSysinfoTest, PossibleCpuCountMatchesHostSysconf) {
       sysinfo::parse_nproc_from(sysinfo::POSSIBLE_NPROC_PATH);
   ASSERT_TRUE(static_cast<bool>(parsed));
   EXPECT_EQ(*parsed, static_cast<size_t>(cpu_count));
-  EXPECT_EQ(sysinfo::parse_nproc_with_fallback_from(sysinfo::POSSIBLE_NPROC_PATH),
-            static_cast<size_t>(cpu_count));
+  EXPECT_EQ(
+      sysinfo::parse_nproc_with_fallback_from(sysinfo::POSSIBLE_NPROC_PATH),
+      static_cast<size_t>(cpu_count));
 }
 
 TEST(LlvmLibcOSUtilSysinfoTest, OnlineCpuCountMatchesHostSysconf) {
@@ -82,7 +84,8 @@ TEST(LlvmLibcOSUtilSysinfoTest, SyntheticCpuLists) {
     EXPECT_EQ(static_cast<bool>(parsed), static_cast<bool>(test_case.expected));
     if (parsed)
       EXPECT_EQ(*parsed, *test_case.expected);
-    EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(test_file_path), size_t(0));
+    EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(test_file_path),
+              size_t(0));
   }
 
   ASSERT_EQ(LIBC_NAMESPACE::unlink(test_file_path.data()), 0);
