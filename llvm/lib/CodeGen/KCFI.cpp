@@ -73,7 +73,7 @@ PreservedAnalyses MachineKCFIPass::run(MachineFunction &MF,
   if (!KCFI().run(MF))
     return PreservedAnalyses::all();
 
-  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
