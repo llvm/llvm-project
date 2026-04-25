@@ -182,7 +182,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::fdimf(0.0f, 0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::floorf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::fmaxf(0.0f, 0.0f));
-  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmaximum_mag_numf(0.0f, 0.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::fmaximum_mag_numf(0.0f, 0.0f));
 
   float getpayloadf_x = 0.0f;
   EXPECT_FP_EQ(-1.0f, LIBC_NAMESPACE::shared::getpayloadf(&getpayloadf_x));

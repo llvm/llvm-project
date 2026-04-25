@@ -37,6 +37,9 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
 constexpr_max(T x, T y) {
   FPBits<T> x_bits(x);
   FPBits<T> y_bits(y);
+  // To make sure that fmax(+0, -0) == +0 == fmax(-0, +0), whenever x and y
+  // have different signs and both are not NaNs, we return the number with
+  // positive sign.
   if (x_bits.sign() != y_bits.sign())
     return x_bits.is_pos() ? x : y;
   return x > y ? x : y;
