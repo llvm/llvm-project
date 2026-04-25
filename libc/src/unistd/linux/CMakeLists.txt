@@ -614,6 +614,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.unistd
     libc.include.sys_auxv
+    libc.src.__support.OSUtil.linux.sysinfo
     libc.src.__support.libc_errno
     libc.src.__support.OSUtil.linux.auxv
 )
