@@ -30,7 +30,7 @@ asm(R"(
     .set memset, __sanitizer_internal_memset
     )");
 #      else
-#        error Don't know how to assign symbols
+#        error "Don't know how to assign symbols"
 #      endif
 
 #      if defined(__cplusplus) && \
