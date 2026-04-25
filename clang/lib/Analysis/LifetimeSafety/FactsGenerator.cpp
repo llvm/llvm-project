@@ -631,6 +631,7 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
 
 void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   OriginList *NewList = getOriginsList(*NE);
+  const Expr *Init = NE->getInitializer();
 
   // Check if we have a placement new where the second argument is void*, to
   // avoid flowing from non-pointer parameters, such as std::nothrow.
@@ -645,9 +646,8 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
       const Expr *PlacementArg = NE->getPlacementArg(0)->IgnoreImpCasts();
       OriginList *PlacementList =
           getRValueOrigins(PlacementArg, getOriginsList(*PlacementArg));
-      if (PlacementList->peelOuterOrigin())
-        flow(PlacementList->peelOuterOrigin(),
-             getOriginsList(*NE->getInitializer()), true);
+      if (Init)
+        flow(PlacementList->peelOuterOrigin(), getOriginsList(*Init), true);
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
           true));
@@ -660,7 +660,7 @@ void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
 
   NewList = NewList->peelOuterOrigin();
 
-  if (!NewList || !NE->getInitializer())
+  if (!NewList || !Init)
     return;
 
   // FIXME: OriginList is null for `new[]` initializers. Remove this `Init`
