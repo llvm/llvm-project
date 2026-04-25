@@ -51,7 +51,7 @@ public:
   ///
   /// \returns LU summary containing all the deduplicated and patched entity
   /// summaries.
-  LUSummaryEncoding getOutput() && { return std::move(Output); }
+  LUSummaryEncoding takeOutput() && { return std::move(Output); }
 
 private:
   /// Resolves a TU entity name to an LU entity name and ID.

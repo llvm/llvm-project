@@ -138,3 +138,23 @@ defm : VPatBinaryV_VV<"int_riscv_vpairo", "PseudoVPAIRO", AllVectors,
 defm : VPatBinaryW_VV<"int_riscv_vzip", "PseudoVZIP", AllZvzipVectors,
                       ExtraPreds = [HasStdExtZvzip],
                       requireMinimal = true>;
+
+def SDT_RISCVVecBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                                SDTCisSameAs<0, 2>,
+                                                SDTCisVec<0>,
+                                                SDTCisSameAs<0, 3>,
+                                                SDTCVecEltisVT<4, i1>,
+                                                SDTCisSameNumEltsAs<0, 4>,
+                                                SDTCisVT<5, XLenVT>]>;
+
+let HasPassthruOp = true, HasMaskOp = true in {
+def vpaire_vl  : RVSDNode<"VPAIRE_VL", SDT_RISCVVecBinOp_VL>;
+def vpairo_vl  : RVSDNode<"VPAIRO_VL", SDT_RISCVVecBinOp_VL>;
+} // HasPassthruOp = true, HasMaskOp = true
+
+defm : VPatBinaryVL_VV<vpaire_vl, "PseudoVPAIRE", AllVectors,
+                       ExtraPreds = [HasStdExtZvzip],
+                       requireMinimal = true>;
+defm : VPatBinaryVL_VV<vpairo_vl, "PseudoVPAIRO", AllVectors,
+                       ExtraPreds = [HasStdExtZvzip],
+                       requireMinimal = true>;
