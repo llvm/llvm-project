@@ -307,22 +307,16 @@ protected:
 private:
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();
 
-  /// Helper struct for the Execute{Set,Remove}Breakpoint methods.
-  struct BreakpointResult {
-    enum class Kind { OK, Error, IllFormed };
-
-    Kind kind;
-    uint8_t error_code = 0; // Only meaningful when kind == Error.
-    std::string message;    // Only meaningful when kind == IllFormed.
-
-    static BreakpointResult CreateOK() { return {Kind::OK, 0, {}}; }
-    static BreakpointResult CreateError(uint8_t code) {
-      return {Kind::Error, code, {}};
-    }
-    static BreakpointResult CreateIllFormed(std::string msg) {
-      return {Kind::IllFormed, 0, std::move(msg)};
-    }
+  struct BreakpointOK {};
+  struct BreakpointIllFormed {
+    std::string message;
   };
+  struct BreakpointError {
+    uint8_t error_code;
+  };
+
+  using BreakpointResult =
+      std::variant<BreakpointOK, BreakpointIllFormed, BreakpointError>;
 
   /// Core logic for a Z (set breakpoint/watchpoint) request.
   BreakpointResult ExecuteSetBreakpoint(llvm::StringRef packet_str);
