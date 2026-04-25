@@ -1703,15 +1703,8 @@ LogicalResult CppEmitter::emitOperand(Value value, bool isInBrackets) {
     return success();
   }
 
-  auto expressionOp = value.getDefiningOp<ExpressionOp>();
-  if (expressionOp && shouldBeInlined(expressionOp))
-    return emitExpression(expressionOp);
-
-  if (auto cExpression =
-          dyn_cast_if_present<CExpressionInterface>(value.getDefiningOp())) {
-    if (cExpression.alwaysInline())
-      return emitExpression(value.getDefiningOp());
-  }
+  if (Operation *def = value.getDefiningOp(); def && shouldBeInlined(def))
+    return emitExpression(def);
 
   if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     // If this operand is a block argument of an expression, emit instead the
