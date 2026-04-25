@@ -114,9 +114,6 @@ add_or_sub(InType x, InType y) {
         return y_bits.get_val();
       } else {
 
-        // volatile prevents Clang from converting tmp to OutType and then
-        // immediately back to InType before negating it, resulting in double
-        // rounding.
 #ifdef LIBC_HAS_CONSTANT_EVALUATION
         InType tmp = y;
 #else
