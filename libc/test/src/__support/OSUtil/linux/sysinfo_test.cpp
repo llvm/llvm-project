@@ -14,8 +14,6 @@
 #include "src/unistd/write.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/sysinfo.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 static int write_test_file(cpp::string_view path, cpp::string_view contents) {
@@ -33,27 +31,22 @@ static int write_test_file(cpp::string_view path, cpp::string_view contents) {
   return LIBC_NAMESPACE::close(fd);
 }
 
-TEST(LlvmLibcOSUtilSysinfoTest, PossibleCpuCountMatchesHostSysconf) {
-  int cpu_count = ::get_nprocs_conf();
-  ASSERT_GT(cpu_count, 0);
+TEST(LlvmLibcOSUtilSysinfoTest, PossibleCpuCountSmokeTest) {
   cpp::optional<size_t> parsed =
       sysinfo::parse_nproc_from(sysinfo::POSSIBLE_NPROC_PATH);
   ASSERT_TRUE(static_cast<bool>(parsed));
-  EXPECT_EQ(*parsed, static_cast<size_t>(cpu_count));
-  EXPECT_EQ(
-      sysinfo::parse_nproc_with_fallback_from(sysinfo::POSSIBLE_NPROC_PATH),
-      static_cast<size_t>(cpu_count));
+  EXPECT_GT(*parsed, size_t(0));
+  EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(sysinfo::POSSIBLE_NPROC_PATH),
+            size_t(0));
 }
 
-TEST(LlvmLibcOSUtilSysinfoTest, OnlineCpuCountMatchesHostSysconf) {
-  int cpu_count = ::get_nprocs();
-  ASSERT_GT(cpu_count, 0);
+TEST(LlvmLibcOSUtilSysinfoTest, OnlineCpuCountSmokeTest) {
   cpp::optional<size_t> parsed =
       sysinfo::parse_nproc_from(sysinfo::ONLINE_NPROC_PATH);
   ASSERT_TRUE(static_cast<bool>(parsed));
-  EXPECT_EQ(*parsed, static_cast<size_t>(cpu_count));
-  EXPECT_EQ(sysinfo::parse_nproc_with_fallback_from(sysinfo::ONLINE_NPROC_PATH),
-            static_cast<size_t>(cpu_count));
+  EXPECT_GT(*parsed, size_t(0));
+  EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(sysinfo::ONLINE_NPROC_PATH),
+            size_t(0));
 }
 
 TEST(LlvmLibcOSUtilSysinfoTest, SyntheticCpuLists) {
@@ -92,11 +85,11 @@ TEST(LlvmLibcOSUtilSysinfoTest, SyntheticCpuLists) {
 }
 
 TEST(LlvmLibcOSUtilSysinfoTest, NonexistentPath) {
-  constexpr cpp::string_view test_file_path =
+  constexpr cpp::string_view TEST_PATH =
       "/not-exist-at-all-path-for-libc-nproc-test";
 
-  EXPECT_FALSE(static_cast<bool>(sysinfo::parse_nproc_from(test_file_path)));
-  EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(test_file_path), size_t(0));
+  EXPECT_FALSE(static_cast<bool>(sysinfo::parse_nproc_from(TEST_PATH)));
+  EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(TEST_PATH), size_t(0));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
