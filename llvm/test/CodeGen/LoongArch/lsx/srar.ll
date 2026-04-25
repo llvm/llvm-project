@@ -5,13 +5,7 @@
 define <16 x i8> @srar_b(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; CHECK-LABEL: srar_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsra.b $vr2, $vr0, $vr1
-; CHECK-NEXT:    vsubi.bu $vr3, $vr1, 1
-; CHECK-NEXT:    vsrl.b $vr3, $vr0, $vr3
-; CHECK-NEXT:    vandi.b $vr3, $vr3, 1
-; CHECK-NEXT:    vadd.b $vr2, $vr3, $vr2
-; CHECK-NEXT:    vseqi.b $vr1, $vr1, 0
-; CHECK-NEXT:    vbitsel.v $vr0, $vr2, $vr0, $vr1
+; CHECK-NEXT:    vsrar.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <16 x i8> %a, %b
@@ -27,14 +21,7 @@ entry:
 define <8 x i16> @srar_h(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; CHECK-LABEL: srar_h:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsra.h $vr2, $vr0, $vr1
-; CHECK-NEXT:    vsubi.hu $vr3, $vr1, 1
-; CHECK-NEXT:    vsrl.h $vr3, $vr0, $vr3
-; CHECK-NEXT:    vrepli.h $vr4, 1
-; CHECK-NEXT:    vand.v $vr3, $vr3, $vr4
-; CHECK-NEXT:    vadd.h $vr2, $vr3, $vr2
-; CHECK-NEXT:    vseqi.h $vr1, $vr1, 0
-; CHECK-NEXT:    vbitsel.v $vr0, $vr2, $vr0, $vr1
+; CHECK-NEXT:    vsrar.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <8 x i16> %a, %b
@@ -50,14 +37,7 @@ entry:
 define <4 x i32> @srar_w(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; CHECK-LABEL: srar_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsra.w $vr2, $vr0, $vr1
-; CHECK-NEXT:    vsubi.wu $vr3, $vr1, 1
-; CHECK-NEXT:    vsrl.w $vr3, $vr0, $vr3
-; CHECK-NEXT:    vrepli.w $vr4, 1
-; CHECK-NEXT:    vand.v $vr3, $vr3, $vr4
-; CHECK-NEXT:    vadd.w $vr2, $vr3, $vr2
-; CHECK-NEXT:    vseqi.w $vr1, $vr1, 0
-; CHECK-NEXT:    vbitsel.v $vr0, $vr2, $vr0, $vr1
+; CHECK-NEXT:    vsrar.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <4 x i32> %a, %b
@@ -73,14 +53,7 @@ entry:
 define <2 x i64> @srar_d(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-LABEL: srar_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsra.d $vr2, $vr0, $vr1
-; CHECK-NEXT:    vsubi.du $vr3, $vr1, 1
-; CHECK-NEXT:    vsrl.d $vr3, $vr0, $vr3
-; CHECK-NEXT:    vrepli.d $vr4, 1
-; CHECK-NEXT:    vand.v $vr3, $vr3, $vr4
-; CHECK-NEXT:    vadd.d $vr2, $vr3, $vr2
-; CHECK-NEXT:    vseqi.d $vr1, $vr1, 0
-; CHECK-NEXT:    vbitsel.v $vr0, $vr2, $vr0, $vr1
+; CHECK-NEXT:    vsrar.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <2 x i64> %a, %b
@@ -96,9 +69,7 @@ entry:
 define <16 x i8> @srar_b_1(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: srar_b_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsrai.b $vr1, $vr0, 1
-; CHECK-NEXT:    vandi.b $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsrari.b $vr0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <16 x i8> %a, splat (i8 1)
@@ -110,10 +81,7 @@ entry:
 define <16 x i8> @srar_b_7(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: srar_b_7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsrai.b $vr1, $vr0, 7
-; CHECK-NEXT:    vsrli.b $vr0, $vr0, 6
-; CHECK-NEXT:    vandi.b $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsrari.b $vr0, $vr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <16 x i8> %a, splat (i8 7)
@@ -126,10 +94,7 @@ entry:
 define <8 x i16> @srar_h_1(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: srar_h_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsrai.h $vr1, $vr0, 1
-; CHECK-NEXT:    vrepli.h $vr2, 1
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsrari.h $vr0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <8 x i16> %a, splat (i16 1)
@@ -141,11 +106,7 @@ entry:
 define <8 x i16> @srar_h_15(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: srar_h_15:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsrai.h $vr1, $vr0, 15
-; CHECK-NEXT:    vsrli.h $vr0, $vr0, 14
-; CHECK-NEXT:    vrepli.h $vr2, 1
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsrari.h $vr0, $vr0, 15
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <8 x i16> %a, splat (i16 15)
@@ -158,10 +119,7 @@ entry:
 define <4 x i32> @srar_w_1(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: srar_w_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsrai.w $vr1, $vr0, 1
-; CHECK-NEXT:    vrepli.w $vr2, 1
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsrari.w $vr0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <4 x i32> %a, splat (i32 1)
@@ -173,11 +131,7 @@ entry:
 define <4 x i32> @srar_w_31(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: srar_w_31:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsrai.w $vr1, $vr0, 31
-; CHECK-NEXT:    vsrli.w $vr0, $vr0, 30
-; CHECK-NEXT:    vrepli.w $vr2, 1
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsrari.w $vr0, $vr0, 31
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <4 x i32> %a, splat (i32 31)
@@ -190,10 +144,7 @@ entry:
 define <2 x i64> @srar_d_1(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: srar_d_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsrai.d $vr1, $vr0, 1
-; CHECK-NEXT:    vrepli.d $vr2, 1
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsrari.d $vr0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <2 x i64> %a, splat (i64 1)
@@ -205,11 +156,7 @@ entry:
 define <2 x i64> @srar_d_63(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: srar_d_63:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsrai.d $vr1, $vr0, 63
-; CHECK-NEXT:    vsrli.d $vr0, $vr0, 62
-; CHECK-NEXT:    vrepli.d $vr2, 1
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsrari.d $vr0, $vr0, 63
 ; CHECK-NEXT:    ret
 entry:
   %0 = ashr <2 x i64> %a, splat (i64 63)

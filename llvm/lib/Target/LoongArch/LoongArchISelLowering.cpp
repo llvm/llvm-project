@@ -484,8 +484,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set DAG combine for 'LSX' feature.
 
   if (Subtarget.hasExtLSX()) {
+    setTargetDAGCombine(ISD::ADD);
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
     setTargetDAGCombine(ISD::BITCAST);
+    setTargetDAGCombine(ISD::VSELECT);
   }
 
   // Set DAG combine for 'LASX' feature.
@@ -5620,6 +5622,137 @@ static SDValue combineAndNotIntoVANDN(SDNode *N, const SDLoc &DL,
   return DAG.getNode(LoongArchISD::VANDN, DL, VT, X, Y);
 }
 
+static bool isConstantSplatVector(SDValue N, APInt &SplatValue,
+                                  unsigned MinSizeInBits) {
+  N = peekThroughBitcasts(N);
+  BuildVectorSDNode *Node = dyn_cast<BuildVectorSDNode>(N);
+
+  if (!Node)
+    return false;
+
+  APInt SplatUndef;
+  unsigned SplatBitSize;
+  bool HasAnyUndefs;
+
+  return Node->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
+                               HasAnyUndefs, MinSizeInBits,
+                               /*IsBigEndian=*/false);
+}
+
+static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector())
+    return SDValue();
+
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  EVT EltVT = VT.getVectorElementType();
+  if (!EltVT.isInteger())
+    return SDValue();
+
+  // match:
+  //
+  //   add
+  //     (and
+  //        (srl X, shift-1) / X
+  //        1)
+  //     (srl/sra X, shift)
+
+  SDValue Add0 = N->getOperand(0);
+  SDValue Add1 = N->getOperand(1);
+  SDValue And;
+  SDValue Shr;
+
+  if (Add0.getOpcode() == ISD::AND) {
+    And = Add0;
+    Shr = Add1;
+  } else if (Add1.getOpcode() == ISD::AND) {
+    And = Add1;
+    Shr = Add0;
+  } else {
+    return SDValue();
+  }
+
+  // match:
+  //
+  //   srl/sra X, shift
+
+  if (Shr.getOpcode() != ISD::SRL && Shr.getOpcode() != ISD::SRA)
+    return SDValue();
+
+  SDValue X = Shr.getOperand(0);
+  SDValue Shift = Shr.getOperand(1);
+  APInt ShiftVal;
+
+  if (!isConstantSplatVector(Shift, ShiftVal, EltVT.getSizeInBits()))
+    return SDValue();
+
+  if (ShiftVal == 0)
+    return SDValue();
+
+  // match:
+  //
+  //   and
+  //      (srl X, shift-1) / X
+  //      1
+
+  SDValue One = And.getOperand(1);
+  APInt SplatVal;
+
+  if (!isConstantSplatVector(One, SplatVal, EltVT.getSizeInBits()))
+    return SDValue();
+
+  if (SplatVal != 1)
+    return SDValue();
+
+  if (And.getOperand(0) == X) {
+    // match:
+    //
+    // shift == 1
+
+    if (ShiftVal != 1)
+      return SDValue();
+  } else {
+    // match:
+    //
+    // srl X, shift-1
+
+    SDValue Srl = And.getOperand(0);
+
+    if (Srl.getOpcode() != ISD::SRL)
+      return SDValue();
+
+    if (Srl.getOperand(0) != X)
+      return SDValue();
+
+    // match:
+    //
+    // shift-1
+
+    SDValue ShiftMinus1 = Srl.getOperand(1);
+
+    if (!isConstantSplatVector(ShiftMinus1, SplatVal, EltVT.getSizeInBits()))
+      return SDValue();
+
+    if (ShiftVal != (SplatVal + 1))
+      return SDValue();
+  }
+
+  // We matched a rounded right shift pattern and can lower it
+  // to a single vector rounded shift instruction.
+
+  SDLoc DL(N);
+  return DAG.getNode(Shr.getOpcode() == ISD::SRL ? LoongArchISD::VSRLR
+                                                 : LoongArchISD::VSRAR,
+                     DL, VT, X, Shift);
+}
+
 static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
@@ -7513,12 +7646,145 @@ performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const LoongArchSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector())
+    return SDValue();
+
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  EVT EltVT = VT.getVectorElementType();
+  if (!EltVT.isInteger())
+    return SDValue();
+
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
+
+  // match:
+  //
+  // vselect (setcc shift, 0, seteq),
+  //         x,
+  //         rounded_shift
+
+  if (Cond.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  if (!ISD::isConstantSplatVectorAllZeros(Cond.getOperand(1).getNode()))
+    return SDValue();
+
+  auto *CC = cast<CondCodeSDNode>(Cond.getOperand(2));
+  if (CC->get() != ISD::SETEQ)
+    return SDValue();
+
+  SDValue Shift = Cond.getOperand(0);
+
+  // True branch must be original value:
+  //
+  //   vselect cond, x, ...
+
+  SDValue X = TrueVal;
+
+  // Now match rounded shift pattern:
+  //
+  //   add
+  //     (and
+  //        (srl X, shift-1)
+  //        1)
+  //     (srl/sra X, shift)
+
+  if (FalseVal.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  SDValue Add0 = FalseVal.getOperand(0);
+  SDValue Add1 = FalseVal.getOperand(1);
+  SDValue And;
+  SDValue Shr;
+
+  if (Add0.getOpcode() == ISD::AND) {
+    And = Add0;
+    Shr = Add1;
+  } else if (Add1.getOpcode() == ISD::AND) {
+    And = Add1;
+    Shr = Add0;
+  } else {
+    return SDValue();
+  }
+
+  // match:
+  //
+  //   srl/sra X, shift
+
+  if (Shr.getOpcode() != ISD::SRL && Shr.getOpcode() != ISD::SRA)
+    return SDValue();
+
+  if (Shr.getOperand(0) != X)
+    return SDValue();
+
+  if (Shr.getOperand(1) != Shift)
+    return SDValue();
+
+  // match:
+  //
+  //   and
+  //      (srl X, shift-1)
+  //      1
+
+  SDValue Srl = And.getOperand(0);
+  SDValue One = And.getOperand(1);
+  APInt SplatVal;
+
+  if (Srl.getOpcode() != ISD::SRL)
+    return SDValue();
+
+  One = peekThroughBitcasts(One);
+  if (!isConstantSplatVector(One, SplatVal, EltVT.getSizeInBits()))
+    return SDValue();
+
+  if (SplatVal != 1)
+    return SDValue();
+
+  if (Srl.getOperand(0) != X)
+    return SDValue();
+
+  // match:
+  //
+  // shift-1
+
+  SDValue ShiftMinus1 = Srl.getOperand(1);
+
+  if (ShiftMinus1.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  if (ShiftMinus1.getOperand(0) != Shift)
+    return SDValue();
+
+  if (!ISD::isConstantSplatVectorAllOnes(ShiftMinus1.getOperand(1).getNode()))
+    return SDValue();
+
+  // We matched a rounded right shift pattern and can lower it
+  // to a single vector rounded shift instruction.
+
+  SDLoc DL(N);
+  return DAG.getNode(Shr.getOpcode() == ISD::SRL ? LoongArchISD::VSRLR
+                                                 : LoongArchISD::VSRAR,
+                     DL, VT, X, Shift);
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   switch (N->getOpcode()) {
   default:
     break;
+  case ISD::ADD:
+    return performADDCombine(N, DAG, DCI, Subtarget);
   case ISD::AND:
     return performANDCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
@@ -7556,6 +7822,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performVANDNCombine(N, DAG, DCI, Subtarget);
   case ISD::CONCAT_VECTORS:
     return performCONCAT_VECTORSCombine(N, DAG, DCI, Subtarget);
+  case ISD::VSELECT:
+    return performVSELECTCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::VPACKEV:
     if (SDValue Result =
             combineFP_ROUND(SDValue(N, 0), SDLoc(N), DAG, Subtarget))

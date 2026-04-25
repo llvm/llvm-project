@@ -1469,10 +1469,18 @@ defm : PatShiftXrXr<srl, "XVSRL">;
 defm : PatShiftXrSplatUimm<srl, "XVSRLI">;
 defm : PatShiftXrUimm<loongarch_vsrli, "XVSRLI">;
 
+// XVSRLR[I]_{B/H/W/D}
+defm : PatXrXr<loongarch_vsrlr, "XVSRLR">;
+defm : PatShiftXrSplatUimm<loongarch_vsrlr, "XVSRLRI">;
+
 // XVSRA[I]_{B/H/W/D}
 defm : PatXrXr<sra, "XVSRA">;
 defm : PatShiftXrXr<sra, "XVSRA">;
 defm : PatShiftXrSplatUimm<sra, "XVSRAI">;
+
+// XVSRAR[I]_{B/H/W/D}
+defm : PatXrXr<loongarch_vsrar, "XVSRAR">;
+defm : PatShiftXrSplatUimm<loongarch_vsrar, "XVSRARI">;
 
 // XVROTR[I]_{B/H/W/D}
 defm : PatXrXr<rotr, "XVROTR">;
