@@ -171,7 +171,7 @@ add_or_sub(InType x, InType y) {
   InFPBits max_bits(cpp::max(x_abs, y_abs));
   InFPBits min_bits(cpp::min(x_abs, y_abs));
 
-  InStorageType result_mant = 0;
+  InStorageType result_mant{};
 
   if (max_bits.is_subnormal()) {
     // min_bits must be subnormal too.
