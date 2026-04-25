@@ -117,17 +117,17 @@ add_or_sub(InType x, InType y) {
         // volatile prevents Clang from converting tmp to OutType and then
         // immediately back to InType before negating it, resulting in double
         // rounding.
-        if (cpp::is_constant_evaluated()) {
-          InType tmp = y;
-          if constexpr (IsSub)
-            tmp = -tmp;
-          return cast<OutType>(tmp);
-        } else {
-          volatile InType tmp = y;
-          if constexpr (IsSub)
-            tmp = -tmp;
-          return cast<OutType>(tmp);
-        }
+#ifdef LIBC_HAS_CONSTANT_EVALUATION
+        InType tmp = y;
+#else
+        // volatile prevents Clang from converting tmp to OutType and then
+        // immediately back to InType before negating it, resulting in double
+        // rounding.
+        volatile InType tmp = y;
+#endif // LIBC_HAS_CONSTANT_EVALUATION
+        if constexpr (IsSub)
+          tmp = -tmp;
+        return cast<OutType>(tmp);
       }
     }
 
